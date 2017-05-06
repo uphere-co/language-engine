@@ -11,19 +11,9 @@ import           Data.Time.Clock        (UTCTime)
 import           Data.Time.Format       (parseTimeM, defaultTimeLocale)
 import           Text.Taggy.Lens
 --
+import           HFrameNet.Util
+import           HFrameNet.Type.Common
 import           HFrameNet.Type.Frame
-
-readDecimal :: Text -> Maybe Int
-readDecimal = either (\_ -> Nothing) (Just . fst) . decimal 
-
-
-readBoolean :: Text -> Maybe Bool
-readBoolean "true" = Just True
-readBoolean "false" = Just False
-readBoolean _ = Nothing
-
-readTime :: Text -> Maybe UTCTime
-readTime txt = parseTimeM True defaultTimeLocale "%m/%d/%0Y %H:%M:%S %Z %a" (T.unpack txt)
 
 
 p_frame :: Element -> Maybe Frame

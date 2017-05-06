@@ -25,17 +25,14 @@ process fp = do
   case p_frame frame of
     Nothing -> error fp
     Just _ -> return ()
-  -- print (p_frame frame)
 
-main :: IO ()
-main = do
+main' :: IO ()
+main' = do
   let dir = "/scratch/wavewave/fndata/fndata-1.7/frame"
   cnts <- getDirectoryContents dir
   let lst = filter (\x -> takeExtensions x == ".xml") cnts
   mapM_ process $ map (\x -> dir </> x) lst
-  {- 
-  txt <- TLIO.readFile "Revenge.xml"
-  let frame = head (txt ^.. (html . allNamed (only "frame")))
-  print (p_frame frame)
--}
-  
+
+main :: IO ()
+main = do
+  putStrLn "lu parse"

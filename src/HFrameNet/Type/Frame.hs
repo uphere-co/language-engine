@@ -6,6 +6,9 @@ import           Control.Lens
 import           Data.Text      (Text)
 import qualified Data.Text as T
 import           Data.Time.Clock
+--
+import           HFrameNet.Type.Common
+
 
 type DateTime = UTCTime
 
@@ -56,16 +59,6 @@ data FrameRelation = FrameRelation { _frel_type :: Text
                            
 makeLenses ''FrameRelation
 
-
-
-data Lexeme = Lexeme { _lexeme_name :: Text
-                     , _lexeme_POS :: Text
-                     , _lexeme_breakBefore :: Bool
-                     , _lexeme_headword :: Bool
-                     , _lexeme_order :: Int }
-            deriving (Show)
-
-makeLenses ''Lexeme
 
 data SentenceCount = SentenceCount { _scount_total :: Int
                                    , _scount_annotated :: Int }
