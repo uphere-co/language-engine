@@ -2,6 +2,7 @@
 
 import           Control.Lens ((^?),(^.),(^..), only )
 import           Control.Monad (join)
+import           Control.Monad.Identity
 import           Data.Maybe (fromJust,listToMaybe)
 import           Data.Text (Text)
 import qualified Data.Text         as T
@@ -9,6 +10,8 @@ import qualified Data.Text.IO      as TIO
 import qualified Data.Text.Lazy    as TL
 import qualified Data.Text.Lazy.IO as TLIO
 import           Data.Text.Read (decimal)
+import           Data.Time.Clock
+import           Data.Time.Format (parseTimeM,defaultTimeLocale)
 import           Text.Taggy.Lens
 --
 import           HFrameNet.Type
@@ -27,10 +30,14 @@ readBoolean "true" = Just True
 readBoolean "false" = Just False
 readBoolean _ = Nothing
 
+readTime :: Text -> Maybe UTCTime
+readTime txt = parseTimeM True defaultTimeLocale "%m/%d/%0Y %H:%M:%S %Z %a" (T.unpack txt)
+
+
 p_frame :: Element -> Maybe Frame
 p_frame x = Frame <$> (readDecimal =<< (x ^. attr "ID"))
                   <*> x ^. attr "name"
-                  <*> x ^. attr "cDate"
+                  <*> (readTime =<< (x ^. attr "cDate"))
                   <*> listToMaybe (x ^.. elements . named (only "definition") . element . contents)
                   <*> mapM p_FE (x ^.. elements . named (only "FE"))
                   <*> mapM p_FEcoreSet (x ^.. elements . named (only "FEcoreSet"))
@@ -42,7 +49,7 @@ p_FE :: Element -> Maybe FE
 p_FE x = FE <$> (readDecimal =<< (x ^. attr "ID"))
             <*> x ^. attr "name"
             <*> x ^. attr "abbrev"
-            <*> x ^. attr "cDate"
+            <*> (readTime =<< (x ^. attr "cDate"))
             <*> x ^. attr "coreType"
             <*> x ^. attr "fgColor"
             <*> x ^. attr "bgColor"
@@ -75,7 +82,7 @@ p_lexUnit x = LexUnit <$> (readDecimal =<< (x ^. attr "ID"))
                       <*> x ^. attr "name"
                       <*> x ^. attr "POS"
                       <*> x ^. attr "status"
-                      <*> x ^. attr "cDate"
+                      <*> (readTime =<< (x ^. attr "cDate"))
                       <*> x ^. attr "cBy"
                       <*> (readDecimal =<< (x ^. attr "lemmaID"))
                       <*> listToMaybe (x ^.. elements . named (only "definition") . element . contents)
@@ -111,3 +118,9 @@ main = do
   print (frame_id,frame_name,frame_cDate,frame_definition)
   -}
   print (p_frame frame)
+
+  let testtxt = "06/10/2002 03:32:39 PDT Mon"
+      --- t = runIdentity $ parseTimeM True defaultTimeLocale "%m/%d/%0Y %H:%M:%S %Z %a" testtxt
+  print (readTime testtxt)
+  -- print $ readTime testtxt
+  

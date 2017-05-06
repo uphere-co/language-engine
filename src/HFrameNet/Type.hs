@@ -5,8 +5,9 @@ module HFrameNet.Type where
 import           Control.Lens
 import           Data.Text      (Text)
 import qualified Data.Text as T
+import           Data.Time.Clock
 
-type DateTime = Text
+type DateTime = UTCTime
 
 data SemType = SemType { _semtype_ID :: Int
                        , _semtype_name :: Text }
