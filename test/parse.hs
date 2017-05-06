@@ -76,6 +76,7 @@ p_lexUnit x = LexUnit <$> (readDecimal =<< (x ^. attr "ID"))
                       <*> x ^. attr "POS"
                       <*> x ^. attr "status"
                       <*> x ^. attr "cDate"
+                      <*> x ^. attr "cBy"
                       <*> (readDecimal =<< (x ^. attr "lemmaID"))
                       <*> listToMaybe (x ^.. elements . named (only "definition") . element . contents)
                       <*> (p_sentenceCount =<< listToMaybe (x ^.. elements . named (only "sentenceCount")))

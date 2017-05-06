@@ -77,6 +77,7 @@ data LexUnit = LexUnit { _lexunit_ID :: Int
                        , _lexunit_POS :: Text
                        , _lexunit_status :: Text
                        , _lexunit_cDate :: DateTime
+                       , _lexunit_cBy :: Text
                        , _lexunit_lemmaID :: Int
                        , _lexunit_definition :: Text
                        , _lexunit_sentenceCount :: SentenceCount 
