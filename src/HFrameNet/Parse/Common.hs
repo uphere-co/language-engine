@@ -16,4 +16,9 @@ p_lexeme x = Lexeme <$> x ^. attr "name"
                     <*> pure (readBoolean =<< (x ^. attr "headword"))
                     <*> pure (readDecimal =<< (x ^. attr "order"))
 
+p_semType :: Element -> Maybe SemType
+p_semType x = SemType <$> (readDecimal =<< (x ^. attr "ID"))
+                      <*> x ^. attr "name"
+
+
 

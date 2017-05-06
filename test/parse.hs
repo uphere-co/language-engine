@@ -27,8 +27,8 @@ processFrame fp = do
     Nothing -> error fp
     Just _ -> return ()
 
-main :: IO ()
-main = do
+main' :: IO ()
+main' = do
   let dir = "/scratch/wavewave/fndata/fndata-1.7/frame"
   cnts <- getDirectoryContents dir
   let lst = filter (\x -> takeExtensions x == ".xml") cnts
@@ -46,8 +46,8 @@ processLU fp = do
 
 
 
-main' :: IO ()
-main' = do
+main :: IO ()
+main = do
   putStrLn "lu parse"
   let dir = "/scratch/wavewave/fndata/fndata-1.7/lu"
       fp = dir </> "lu10075.xml"

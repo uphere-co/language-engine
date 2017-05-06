@@ -12,11 +12,6 @@ import           HFrameNet.Type.Common
 
 type DateTime = UTCTime
 
-data SemType = SemType { _semtype_ID :: Int
-                       , _semtype_name :: Text }
-             deriving (Show)
-
-makeLenses ''SemType
 
 data FE = FE { _fe_ID :: Int
              , _fe_name :: Text

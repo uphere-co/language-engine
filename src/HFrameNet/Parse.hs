@@ -55,10 +55,6 @@ p_relatedFrame x = RelatedFrame <$> (readDecimal =<< (x ^. attr "ID"))
                                 <*> pure (x ^. element . contents)
 
 
-p_semType :: Element -> Maybe SemType
-p_semType x = SemType <$> (readDecimal =<< (x ^. attr "ID"))
-                      <*> x ^. attr "name"
-
 
 p_lexUnit :: Element -> Maybe LexUnit
 p_lexUnit x = LexUnit <$> (readDecimal =<< (x ^. attr "ID"))
