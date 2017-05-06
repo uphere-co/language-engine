@@ -71,11 +71,19 @@ data FERealization = FERealization { _fereal_FE :: Maybe FEValence
 makeLenses ''FERealization 
 
 
--- data FEGroupRealization = FEGroupRealization { _fegroup_ }
+data FEGroupRealization = FEGroupRealization { _fegroup_FE :: [FEValence]
+                                             , _fegroup_pattern :: [Pattern]
+                                             , _fegroup_total :: Int
+                                             }
+                        deriving (Show)
+
+makeLenses ''FEGroupRealization 
+
+
 
 data Valences = Valences { _val_governor :: [Governor]
                          , _val_FERealization :: [FERealization]
-                         -- , _val_FEGroupRealization :: [FEGroupRealization]
+                         , _val_FEGroupRealization :: [FEGroupRealization]
                          }
               deriving (Show)
 

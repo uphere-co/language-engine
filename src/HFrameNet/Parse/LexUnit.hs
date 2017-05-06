@@ -22,6 +22,7 @@ p_lexUnit x = LexUnit <$> (p_header =<< getOnly1 x "header")
 p_valences :: Element -> Maybe Valences
 p_valences x = Valences <$> mapM p_governor (getOnly x "governor")
                         <*> mapM p_FERealization (getOnly x "FERealization")
+                        <*> mapM p_FEGroupRealization (getOnly x "FEGroupRealization")
 
 p_governor :: Element -> Maybe Governor
 p_governor x = Governor <$> mapM p_annoSet (getOnly x "annoSet")
@@ -33,6 +34,12 @@ p_FERealization :: Element -> Maybe FERealization
 p_FERealization x = FERealization <$> pure (p_FEValence =<< getOnly1 x "FEValence")
                                   <*> mapM p_pattern (getOnly x "pattern")
                                   <*> (readDecimal =<< x ^. attr "total")
+
+p_FEGroupRealization :: Element -> Maybe FEGroupRealization
+p_FEGroupRealization x = FEGroupRealization <$> mapM p_FEValence (getOnly x "FEValence")
+                                            <*> mapM p_pattern (getOnly x "pattern")
+                                            <*> (readDecimal =<< x ^. attr "total")
+
 
 p_FEValence :: Element -> Maybe FEValence
 p_FEValence x = FEValence <$> x ^. attr "name"
