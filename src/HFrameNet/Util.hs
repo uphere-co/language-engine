@@ -25,5 +25,6 @@ readTime :: Text -> Maybe UTCTime
 readTime txt = parseTimeM True defaultTimeLocale "%m/%d/%0Y %H:%M:%S %Z %a" (T.unpack txt)
 
 
+getOnly x k = x ^.. elements . named (only k)
 
-getOnly x k = listToMaybe (x ^.. elements . named (only k))
+getOnly1 x k = listToMaybe (getOnly x k)

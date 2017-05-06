@@ -20,8 +20,7 @@ p_frame :: Element -> Maybe Frame
 p_frame x = Frame <$> (readDecimal =<< (x ^. attr "ID"))
                   <*> x ^. attr "name"
                   <*> (readTime =<< (x ^. attr "cDate"))
-                  <*> (getOnly x "definition" ^? _Just.element.contents)
-                  -- listToMaybe (x ^.. elements . named (only "definition") . element . contents)
+                  <*> getOnly1 x "definition" ^? _Just.element.contents
                   <*> mapM p_FE (x ^.. elements . named (only "FE"))
                   <*> mapM p_FEcoreSet (x ^.. elements . named (only "FEcoreSet"))
                   <*> mapM p_frameRelation (x ^.. elements . named (only "frameRelation"))
@@ -36,11 +35,11 @@ p_FE x = FE <$> (readDecimal =<< (x ^. attr "ID"))
             <*> x ^. attr "coreType"
             <*> x ^. attr "fgColor"
             <*> x ^. attr "bgColor"
-            <*> listToMaybe (x ^.. elements . named (only "definition") . element . contents)
-            <*> mapM p_semType (x ^.. elements . named (only "semType"))
+            <*> getOnly1 x "definition" ^? _Just.element.contents
+            <*> mapM p_semType (getOnly x "semType")
 
 p_FEcoreSet :: Element -> Maybe FEcoreSet
-p_FEcoreSet x = FEcoreSet <$> mapM p_memberFE (x ^.. elements . named (only "memberFE"))
+p_FEcoreSet x = FEcoreSet <$> mapM p_memberFE (getOnly x "memberFE")
 
 p_memberFE :: Element -> Maybe MemberFE
 p_memberFE x = MemberFE <$> (readDecimal =<< (x ^. attr "ID"))
@@ -48,7 +47,7 @@ p_memberFE x = MemberFE <$> (readDecimal =<< (x ^. attr "ID"))
 
 p_frameRelation :: Element -> Maybe FrameRelation
 p_frameRelation x = FrameRelation <$> x ^. attr "type"
-                                  <*> mapM p_relatedFrame (x ^.. elements . named (only "relatedFrame"))
+                                  <*> mapM p_relatedFrame (getOnly x "relatedFrame")
 
 p_relatedFrame :: Element -> Maybe RelatedFrame
 p_relatedFrame x = RelatedFrame <$> (readDecimal =<< (x ^. attr "ID"))
@@ -68,10 +67,10 @@ p_lexUnit x = LexUnit <$> (readDecimal =<< (x ^. attr "ID"))
                       <*> (readTime =<< (x ^. attr "cDate"))
                       <*> x ^. attr "cBy"
                       <*> (readDecimal =<< (x ^. attr "lemmaID"))
-                      <*> listToMaybe (x ^.. elements . named (only "definition") . element . contents)
-                      <*> (p_sentenceCount =<< listToMaybe (x ^.. elements . named (only "sentenceCount")))
-                      <*> mapM p_lexeme  (x ^.. elements . named (only "lexeme"))
-                      <*> mapM p_semType (x ^.. elements . named (only "semType"))
+                      <*> getOnly1 x "definition" ^? _Just.element.contents
+                      <*> (p_sentenceCount =<< getOnly1 x "sentenceCount")
+                      <*> mapM p_lexeme  (getOnly x "lexeme")
+                      <*> mapM p_semType (getOnly x "semType")
 
 p_sentenceCount :: Element -> Maybe SentenceCount
 p_sentenceCount x = SentenceCount <$> (readDecimal =<< (x ^. attr "total"))
