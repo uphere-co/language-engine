@@ -28,6 +28,35 @@ data FE = FE { _fe_ID :: Int
 
 makeLenses ''FE
 
+data MemberFE = MemberFE { _memberfe_ID :: Int
+                          , _memberfe_name :: Text
+                          }
+              deriving (Show)
+
+makeLenses ''MemberFE
+
+data FEcoreSet = FEcoreSet { _fecore_memberFE :: [MemberFE]
+                           }
+               deriving (Show)
+
+makeLenses ''FEcoreSet
+
+data RelatedFrame = RelatedFrame { _relframe_ID :: Int
+                                 , _relframe_content :: Text
+                                 }
+                  deriving (Show)
+
+makeLenses ''RelatedFrame
+
+data FrameRelation = FrameRelation { _frel_type :: Text
+                                   , _frel_relatedFrame :: [RelatedFrame]
+                                   }
+                   deriving (Show)
+                           
+makeLenses ''FrameRelation
+
+
+
 data Lexeme = Lexeme { _lexeme_name :: Text
                      , _lexeme_POS :: Text
                      , _lexeme_breakBefore :: Bool
@@ -37,6 +66,12 @@ data Lexeme = Lexeme { _lexeme_name :: Text
 
 makeLenses ''Lexeme
 
+data SentenceCount = SentenceCount { _scount_total :: Int
+                                   , _scount_annotated :: Int }
+                   deriving (Show)
+
+makeLenses ''SentenceCount
+
 data LexUnit = LexUnit { _lexunit_ID :: Int
                        , _lexunit_name :: Text
                        , _lexunit_POS :: Text
@@ -44,7 +79,7 @@ data LexUnit = LexUnit { _lexunit_ID :: Int
                        , _lexunit_cDate :: DateTime
                        , _lexunit_lemmaID :: Int
                        , _lexunit_definition :: Text
-                       -- , _lexunit_annotation :: Annotation
+                       , _lexunit_sentenceCount :: SentenceCount 
                        , _lexunit_lexeme :: [Lexeme]
                        , _lexunit_semType :: [SemType]
                                             
@@ -58,7 +93,9 @@ data Frame = Frame { _frame_ID :: Int
                    , _frame_name :: Text
                    , _frame_cDate :: DateTime
                    , _frame_definition :: Text
-                   , _frame_fe :: [FE]
+                   , _frame_FE :: [FE]
+                   , _frame_FEcoreSet :: [FEcoreSet]
+                   , _frame_frameRelation :: [FrameRelation]
                    , _frame_lexUnit :: [LexUnit]
                    }
            deriving (Show)
