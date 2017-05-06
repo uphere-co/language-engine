@@ -12,6 +12,8 @@ import qualified Data.Text.Lazy.IO as TLIO
 import           Data.Text.Read (decimal)
 import           Data.Time.Clock
 import           Data.Time.Format (parseTimeM,defaultTimeLocale)
+import           System.FilePath
+import           System.Directory
 import           Text.Taggy.Lens
 --
 import           HFrameNet.Type
@@ -102,25 +104,24 @@ p_lexeme x = Lexeme <$> x ^. attr "name"
                     <*> (readBoolean =<< (x ^. attr "headword"))
                     <*> (readDecimal =<< (x ^. attr "order"))
 
+process fp = do
+  putStrLn fp
+  txt <- TLIO.readFile fp
+  let frame = head (txt ^.. (html . allNamed (only "frame")))
+  case p_frame frame of
+    Nothing -> error fp
+    Just _ -> return ()
+  -- print (p_frame frame)
+
 main :: IO ()
 main = do
-  txt <- TLIO.readFile "/scratch/wavewave/fndata/fndata-1.7/frame/Revenge.xml"
-  let frame = head (txt ^.. (html . allNamed (only "frame")))
-  
-  -- TLIO.putStrLn txt
+  let dir = "/scratch/wavewave/fndata/fndata-1.7/frame"
+  cnts <- getDirectoryContents dir
+  let lst = filter (\x -> takeExtensions x == ".xml") cnts
+  mapM_ process $ map (\x -> dir </> x) lst
   {- 
+  txt <- TLIO.readFile "Revenge.xml"
   let frame = head (txt ^.. (html . allNamed (only "frame")))
-      frame_id = fromJust (frame ^. attr "ID")
-      frame_name = fromJust (frame ^. attr "name")
-      frame_cDate = fromJust (frame ^. attr "cDate")
-      frame_definition = head (frame ^.. elements . named (only "definition") . element . contents) -- id
- 
-  print (frame_id,frame_name,frame_cDate,frame_definition)
-  -}
   print (p_frame frame)
-
-  let testtxt = "06/10/2002 03:32:39 PDT Mon"
-      --- t = runIdentity $ parseTimeM True defaultTimeLocale "%m/%d/%0Y %H:%M:%S %Z %a" testtxt
-  print (readTime testtxt)
-  -- print $ readTime testtxt
+-}
   
