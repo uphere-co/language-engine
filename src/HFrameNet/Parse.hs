@@ -2,7 +2,7 @@
 
 module HFrameNet.Parse where
 
-import           Control.Lens           ((^?),(^.),(^..),only)
+import           Control.Lens           ((^?),(^.),(^..),_Just,only)
 import           Data.Maybe             (fromJust,listToMaybe)
 import           Data.Text              (Text)
 import qualified Data.Text        as T
@@ -11,16 +11,17 @@ import           Data.Time.Clock        (UTCTime)
 import           Data.Time.Format       (parseTimeM, defaultTimeLocale)
 import           Text.Taggy.Lens
 --
-import           HFrameNet.Util
 import           HFrameNet.Type.Common
 import           HFrameNet.Type.Frame
+import           HFrameNet.Util
 
 
 p_frame :: Element -> Maybe Frame
 p_frame x = Frame <$> (readDecimal =<< (x ^. attr "ID"))
                   <*> x ^. attr "name"
                   <*> (readTime =<< (x ^. attr "cDate"))
-                  <*> listToMaybe (x ^.. elements . named (only "definition") . element . contents)
+                  <*> (getOnly x "definition" ^? _Just.element.contents)
+                  -- listToMaybe (x ^.. elements . named (only "definition") . element . contents)
                   <*> mapM p_FE (x ^.. elements . named (only "FE"))
                   <*> mapM p_FEcoreSet (x ^.. elements . named (only "FEcoreSet"))
                   <*> mapM p_frameRelation (x ^.. elements . named (only "frameRelation"))
