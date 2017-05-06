@@ -16,7 +16,7 @@ import           System.FilePath
 import           System.Directory
 import           Text.Taggy.Lens
 --
-import           HFrameNet.Type
+import           HFrameNet.Type.Frame
 --
 import           Debug.Trace
 

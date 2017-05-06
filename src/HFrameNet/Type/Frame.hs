@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module HFrameNet.Type where
+module HFrameNet.Type.Frame where
 
 import           Control.Lens
 import           Data.Text      (Text)
