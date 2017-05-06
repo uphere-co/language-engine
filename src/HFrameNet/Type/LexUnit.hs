@@ -30,6 +30,9 @@ makeLenses ''Header
 
 
 data LexUnit = LexUnit { _lexunit_header :: Header
+                       , _lexunit_definition :: Text
+                       , _lexunit_lexeme :: [Lexeme]
+                       -- , _lexunit_semType :: [SemType]
                        , _lexunit_totalAnnotated :: Int
                        }
              deriving (Show)

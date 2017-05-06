@@ -17,8 +17,9 @@ import           System.Directory
 import           Text.Taggy.Lens
 --
 import           HFrameNet.Parse
+import qualified HFrameNet.Parse.LexUnit as LU
 
-process fp = do
+processFrame fp = do
   putStrLn fp
   txt <- TLIO.readFile fp
   let frame = head (txt ^.. (html . allNamed (only "frame")))
@@ -31,8 +32,26 @@ main = do
   let dir = "/scratch/wavewave/fndata/fndata-1.7/frame"
   cnts <- getDirectoryContents dir
   let lst = filter (\x -> takeExtensions x == ".xml") cnts
-  mapM_ process $ map (\x -> dir </> x) lst
+  mapM_ processFrame $ map (\x -> dir </> x) lst
+
+processLU fp = do
+  putStrLn fp
+  txt <- TLIO.readFile fp
+  let lu = head (txt ^.. (html . allNamed (only "lexUnit")))
+  -- print lu
+  print (LU.p_lexUnit lu)
+  {- case p_lexUnit lu of
+    Nothing -> error fp
+    Just x -> print x -}
+
+
 
 main' :: IO ()
 main' = do
   putStrLn "lu parse"
+  let dir = "/scratch/wavewave/fndata/fndata-1.7/lu"
+      fp = dir </> "lu10075.xml"
+  -- cnts <- getDirectoryContents dir
+  -- let lst = filter (\x -> takeExtensions x == ".xml") cnts
+  -- mapM_ processFrame $ map (\x -> dir </> x) lst
+  processLU fp

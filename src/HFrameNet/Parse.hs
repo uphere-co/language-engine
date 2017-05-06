@@ -11,6 +11,7 @@ import           Data.Time.Clock        (UTCTime)
 import           Data.Time.Format       (parseTimeM, defaultTimeLocale)
 import           Text.Taggy.Lens
 --
+import           HFrameNet.Parse.Common
 import           HFrameNet.Type.Common
 import           HFrameNet.Type.Frame
 import           HFrameNet.Util
@@ -77,9 +78,3 @@ p_sentenceCount x = SentenceCount <$> (readDecimal =<< (x ^. attr "total"))
                                   <*> (readDecimal =<< (x ^. attr "annotated"))
   
 
-p_lexeme :: Element -> Maybe Lexeme
-p_lexeme x = Lexeme <$> x ^. attr "name"
-                    <*> x ^. attr "POS"
-                    <*> (readBoolean =<< (x ^. attr "breakBefore"))
-                    <*> (readBoolean =<< (x ^. attr "headword"))
-                    <*> (readDecimal =<< (x ^. attr "order"))
