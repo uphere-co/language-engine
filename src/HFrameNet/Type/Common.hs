@@ -46,3 +46,9 @@ data BasicLUAttributes = BasicLUAttributes { _bluattr_ID :: Int
 
 makeLenses ''BasicLUAttributes
 
+data FrameReference = FrameReference { _fr_frameID :: Maybe Int
+                                     , _fr_frame :: Maybe Text
+                                     }
+                    deriving (Show)
+
+makeLenses ''FrameReference                             

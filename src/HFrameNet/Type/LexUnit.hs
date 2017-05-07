@@ -103,8 +103,9 @@ data LexUnit = LexUnit { _lexunit_header :: Header
                        , _lexunit_semType :: [SemType]
                        , _lexunit_valences :: Maybe Valences
                        , _lexunit_subCorpus :: [SubCorpus]
-                       , _lexunit_totalAnnotated :: Int
                        , _lexunit_basicLUAttributes :: BasicLUAttributes
+                       , _lexunit_frameReference :: FrameReference
+                       , _lexunit_totalAnnotated :: Int
                        }
              deriving (Show)
 

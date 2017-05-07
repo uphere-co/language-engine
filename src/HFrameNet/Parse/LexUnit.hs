@@ -22,8 +22,9 @@ p_lexUnit x = LexUnit <$> (p_header =<< getOnly1 x "header")
                       <*> mapM p_semType (getOnly x "semType")
                       <*> optional (p_valences =<< getOnly1 x "valences")
                       <*> mapM p_subCorpus (getOnly x "subCorpus")
-                      <*> (readDecimal =<< x ^. attr "totalAnnotated")
                       <*> p_basicLUAttributes x
+                      <*> p_frameReference x
+                      <*> (readDecimal =<< x ^. attr "totalAnnotated")
 
 p_basicLUAttributes :: Element -> Maybe BasicLUAttributes
 p_basicLUAttributes x =
@@ -49,6 +50,12 @@ p_POS "PRON" = Just PRON
 p_POS "SCON" = Just SCON
 p_POS "V"    = Just V
 p_POS _      = Nothing
+
+p_frameReference :: Element -> Maybe FrameReference
+p_frameReference x
+  = FrameReference <$> optional (readDecimal =<< x ^. attr "frameID")
+                   <*> optional (x ^. attr "frame")
+
 
 p_valences :: Element -> Maybe Valences
 p_valences x = Valences <$> mapM p_governor (getOnly x "governor")
