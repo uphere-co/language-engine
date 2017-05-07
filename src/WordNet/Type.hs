@@ -7,7 +7,7 @@ import Data.Text (Text)
 
 data LexItem = LexItem { _lex_lemma :: Text
                        , _lex_pos :: Text
-                       , _lex_synset_cnt :: Text
+                       , _lex_synset_cnt :: Int
                        , _lex_p_cnt :: Int
                        , _lex_ptr_symbol :: [Text]
                        , _lex_sense_cnt :: Int
