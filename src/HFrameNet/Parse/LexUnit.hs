@@ -7,7 +7,9 @@ import           Control.Lens ((^?),(^.),(^..),_Just,only)
 import           Text.Taggy.Lens
 --
 import           HFrameNet.Parse.Common
+import           HFrameNet.Parse.Sentence
 import           HFrameNet.Type.LexUnit
+import           HFrameNet.Type.Sentence
 import           HFrameNet.Util
 
 
@@ -17,12 +19,17 @@ p_lexUnit x = LexUnit <$> (p_header =<< getOnly1 x "header")
                       <*> mapM p_lexeme (getOnly x "lexeme")
                       <*> mapM p_semType (getOnly x "semType")
                       <*> pure (p_valences =<< getOnly1 x "valences")
+                      <*> mapM p_subCorpus (getOnly x "subCorpus")
                       <*> (readDecimal =<< x ^. attr "totalAnnotated")
 
 p_valences :: Element -> Maybe Valences
 p_valences x = Valences <$> mapM p_governor (getOnly x "governor")
                         <*> mapM p_FERealization (getOnly x "FERealization")
                         <*> mapM p_FEGroupRealization (getOnly x "FEGroupRealization")
+
+p_subCorpus :: Element -> Maybe SubCorpus
+p_subCorpus x = SubCorpus <$> mapM p_sentence (getOnly x "sentence")
+                          <*> x ^. attr "name"
 
 p_governor :: Element -> Maybe Governor
 p_governor x = Governor <$> mapM p_annoSet (getOnly x "annoSet")

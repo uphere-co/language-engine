@@ -6,7 +6,7 @@ import           Control.Lens
 import           Data.Text
 --
 import           HFrameNet.Type.Common
-
+import           HFrameNet.Type.Sentence
 
 
 data Document = Document { _doc_ID :: Int
@@ -90,11 +90,19 @@ data Valences = Valences { _val_governor :: [Governor]
 makeLenses ''Valences
 
 
+data SubCorpus = SubCorpus { _subcorp_sentence :: [Sentence]
+                           , _subcorp_name :: Text
+                           }
+               deriving (Show)
+
+makeLenses ''SubCorpus
+
 data LexUnit = LexUnit { _lexunit_header :: Header
                        , _lexunit_definition :: Text
                        , _lexunit_lexeme :: [Lexeme]
                        , _lexunit_semType :: [SemType]
                        , _lexunit_valences :: Maybe Valences
+                       , _lexunit_subCorpus :: [SubCorpus]
                        , _lexunit_totalAnnotated :: Int
                        }
              deriving (Show)
