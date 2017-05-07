@@ -4,10 +4,12 @@ module HFrameNet.Parse.LexUnit where
 
 import           Control.Applicative
 import           Control.Lens ((^?),(^.),(^..),_Just,only)
+import           Data.Text  (Text)
 import           Text.Taggy.Lens
 --
 import           HFrameNet.Parse.Common
 import           HFrameNet.Parse.Sentence
+import           HFrameNet.Type.Common
 import           HFrameNet.Type.LexUnit
 import           HFrameNet.Type.Sentence
 import           HFrameNet.Util
@@ -21,6 +23,32 @@ p_lexUnit x = LexUnit <$> (p_header =<< getOnly1 x "header")
                       <*> optional (p_valences =<< getOnly1 x "valences")
                       <*> mapM p_subCorpus (getOnly x "subCorpus")
                       <*> (readDecimal =<< x ^. attr "totalAnnotated")
+                      <*> p_basicLUAttributes x
+
+p_basicLUAttributes :: Element -> Maybe BasicLUAttributes
+p_basicLUAttributes x =
+  BasicLUAttributes <$> (readDecimal =<< x ^. attr "ID")
+                    <*> x ^. attr "name"
+                    <*> (p_POS =<< x ^. attr "POS")
+                    <*> optional (x ^. attr "incorporatedFE")
+                    <*> optional (x ^. attr "status")
+
+p_POS :: Text -> Maybe POS
+p_POS "A"   = Just A
+p_POS "ADV" = Just ADV
+p_POS "ART" = Just ART
+p_POS "AVP" = Just AVP
+p_POS "C"   = Just C
+p_POS "CCON" = Just CCON
+p_POS "IDIO" = Just IDIO
+p_POS "INTJ" = Just INTJ
+p_POS "N"    = Just N
+p_POS "NUM"  = Just NUM
+p_POS "PREP" = Just PREP
+p_POS "PRON" = Just PRON
+p_POS "SCON" = Just SCON
+p_POS "V"    = Just V
+p_POS _      = Nothing
 
 p_valences :: Element -> Maybe Valences
 p_valences x = Valences <$> mapM p_governor (getOnly x "governor")
