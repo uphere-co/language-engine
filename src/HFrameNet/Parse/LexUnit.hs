@@ -18,7 +18,7 @@ p_lexUnit x = LexUnit <$> (p_header =<< getOnly1 x "header")
                       <*> getOnly1 x "definition" ^? _Just.element.contents
                       <*> mapM p_lexeme (getOnly x "lexeme")
                       <*> mapM p_semType (getOnly x "semType")
-                      <*> pure (p_valences =<< getOnly1 x "valences")
+                      <*> optional (p_valences =<< getOnly1 x "valences")
                       <*> mapM p_subCorpus (getOnly x "subCorpus")
                       <*> (readDecimal =<< x ^. attr "totalAnnotated")
 
@@ -38,7 +38,7 @@ p_governor x = Governor <$> mapM p_annoSet (getOnly x "annoSet")
 
 
 p_FERealization :: Element -> Maybe FERealization
-p_FERealization x = FERealization <$> pure (p_FEValence =<< getOnly1 x "FEValence")
+p_FERealization x = FERealization <$> optional (p_FEValence =<< getOnly1 x "FEValence")
                                   <*> mapM p_pattern (getOnly x "pattern")
                                   <*> (readDecimal =<< x ^. attr "total")
 
@@ -52,7 +52,7 @@ p_FEValence :: Element -> Maybe FEValence
 p_FEValence x = FEValence <$> x ^. attr "name"
 
 p_pattern :: Element -> Maybe Pattern
-p_pattern x = Pattern <$> pure (p_valenceUnit =<< getOnly1 x "valenceUnit")
+p_pattern x = Pattern <$> optional (p_valenceUnit =<< getOnly1 x "valenceUnit")
                       <*> mapM p_annoSet (getOnly x "annoSet")
                       <*> (readDecimal =<< x ^. attr "total")
 

@@ -8,14 +8,15 @@ import           Data.Time.Clock  (UTCTime)
 --
 import           HFrameNet.Type.Common
 
--- data IType = APos | CNI | INI | DNI | INC
+data IType = APos | CNI | INI | DNI | INC
+           deriving (Show)
 
 data Label = Label { _label_name :: Text
                    , _label_start :: Maybe Int
                    , _label_end :: Maybe Int
                    , _label_fgColor :: Maybe Text 
                    , _label_bgColor :: Maybe Text
-                   {- , _label_itype -}
+                   , _label_itype :: Maybe IType
                    }
            deriving (Show)
                     
@@ -30,15 +31,15 @@ data Layer = Layer { _layer_label :: [Label]
 makeLenses ''Layer                    
                  
 data AnnotationSet = AnnotationSet { _annoset_layer :: [Layer]
-                                   {- , _annoset_ID :: Int
-                                   , _annoset_status :: Text
-                                   , _annoset_frameName :: Text
-                                   , _annoset_frameID :: Int
-                                   , _annoset_luName :: Text
-                                   , _annoset_luID :: Int
-                                   , _annoset_cxnName :: Text
-                                   , _annoset_cxnID :: Int
-                                   , _annoset_cDate :: UTCTime -}
+                                   , _annoset_ID :: Maybe Int
+                                   {- , _annoset_status :: Maybe Text
+                                   , _annoset_frameName :: Maybe Text
+                                   , _annoset_frameID :: Maybe Int
+                                   , _annoset_luName :: Maybe Text
+                                   , _annoset_luID :: Maybe Int
+                                   , _annoset_cxnName :: Maybe Text
+                                   , _annoset_cxnID :: Maybe Int
+                                   , _annoset_cDate :: Maybe UTCTime -}
                                    }
                    deriving (Show)
 
