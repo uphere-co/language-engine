@@ -3,6 +3,7 @@
 import           Control.Lens ((^?),(^.),(^..), only )
 import           Control.Monad (join)
 import           Control.Monad.Identity
+import           Data.List (sort)
 import           Data.Maybe (fromJust,listToMaybe)
 import           Data.Text (Text)
 import qualified Data.Text         as T
@@ -36,22 +37,25 @@ main' = do
 
 processLU fp = do
   putStrLn fp
+  
   txt <- TLIO.readFile fp
   let lu = head (txt ^.. (html . allNamed (only "lexUnit")))
-  -- print lu
-  print (LU.p_lexUnit lu)
-  {- case p_lexUnit lu of
+  --print lu
+  --print (LU.p_lexUnit lu)
+  case LU.p_lexUnit lu of
     Nothing -> error fp
-    Just x -> print x -}
-
+    Just x -> return () --print x
+  
 
 
 main :: IO ()
 main = do
   putStrLn "lu parse"
   let dir = "/scratch/wavewave/fndata/fndata-1.7/lu"
-      fp = dir </> "lu10075.xml"
-  -- cnts <- getDirectoryContents dir
-  -- let lst = filter (\x -> takeExtensions x == ".xml") cnts
-  -- mapM_ processFrame $ map (\x -> dir </> x) lst
-  processLU fp
+  --    fp = dir </> "lu6646.xml"
+  --processLU fp
+  
+  cnts <- getDirectoryContents dir
+  let lst = filter (\x -> takeExtensions x == ".xml") $ sort cnts
+  mapM_ processLU $ map (\x -> dir </> x) lst
+  

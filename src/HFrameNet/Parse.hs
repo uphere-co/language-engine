@@ -2,6 +2,7 @@
 
 module HFrameNet.Parse where
 
+import           Control.Applicative    ((<$>),(<*>),optional)
 import           Control.Lens           ((^?),(^.),(^..),_Just,only)
 import           Data.Maybe             (fromJust,listToMaybe)
 import           Data.Text              (Text)
