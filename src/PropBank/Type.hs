@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module NomBank.Type where
+module PropBank.Type where
 
 import Control.Lens
 import Data.Text

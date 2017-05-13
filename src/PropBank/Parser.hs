@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module NomBank.Parser where
+module PropBank.Parser where
 
 import           Control.Lens       hiding (element,elements)
 import           Data.Text                 (Text)
@@ -10,7 +10,7 @@ import qualified Data.Text.IO      as TIO
 import qualified Data.Text.Lazy.IO as TLIO
 import           Text.Taggy.Lens
 --
-import           NomBank.Type
+import           PropBank.Type
 
 class FromAttr a where
   fromAttr :: Element -> Text -> Either String a
