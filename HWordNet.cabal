@@ -3,9 +3,10 @@
 
 name:                HWordNet
 version:             0.1.0.0
--- synopsis:            
--- description:         
-license:             NotYet
+synopsis:            WordNet database parser and query engine
+description:         This library is for parsing WordNet database
+                     and create queriable DB.
+license:             OtherLicenses
 license-file:        LICENSE
 author:              UpHere, Inc.
 maintainer:          ianwookim@gmail.com
@@ -19,9 +20,8 @@ library
   exposed-modules:
                      WordNet
                      WordNet.Type
+                     WordNet.Parser.Index
                   
-  -- other-modules:       
-  -- other-extensions:    
   build-depends:       base,
                        lens,
                        text
