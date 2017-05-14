@@ -2,21 +2,15 @@
 
 module WordNet.Parser.Index where
 
-import Control.Lens
+import           Control.Lens
 import           Data.Text           (Text)
 import qualified Data.Text    as T
 import           Data.Text.Read
 --
-import WordNet.Type
+import           WordNet.Type
+import           WordNet.Parser.Common
 
-isComment :: Text -> Bool
-isComment t | T.length t > 2 = T.take 2 t == "  "
-            | otherwise    = True
-
-eitherToMaybe (Left x) = Nothing
-eitherToMaybe (Right x) = Just x
-
-parse :: Text -> Maybe LexItem
+parse :: Text -> Maybe IndexItem
 parse = worker . T.words
   where
     worker (lem:pos:cnt1:cnt2:rem) = do
@@ -26,7 +20,7 @@ parse = worker . T.words
       sense_cnt <- fst <$> eitherToMaybe (decimal cnt3)
       tagsense_cnt <- fst <$> eitherToMaybe (decimal cnt4)
       synset_offset <- mapM (fmap fst . eitherToMaybe . decimal) rem'
-      return (LexItem lem pos synset_cnt p_cnt ptr_symbol sense_cnt tagsense_cnt synset_offset)
+      return (IndexItem lem pos synset_cnt p_cnt ptr_symbol sense_cnt tagsense_cnt synset_offset)
     worker _ = Nothing
 
 

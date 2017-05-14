@@ -2,8 +2,6 @@ import qualified Data.Text    as T
 import qualified Data.Text.IO as TIO
 --
 import WordNet
--- import WordNet.Type
-
 
 parseFile :: FilePath -> IO ()
 parseFile fp = do
