@@ -20,10 +20,13 @@ library
   exposed-modules:
                      WordNet
                      WordNet.Type
+                     WordNet.Parser.Common
+                     WordNet.Parser.Data
                      WordNet.Parser.Index
                   
   build-depends:       base,
                        lens,
+                       split,
                        text
   
   hs-source-dirs:      src
