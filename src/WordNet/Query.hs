@@ -22,23 +22,55 @@ parseFile p fp = do
   let lst = filter (not.isComment) (T.lines txt)
   return $ map p lst
 
-data WordNetDB = WNDB { _indexDB :: HM.HashMap Text [Int]
-                      , _dataDB  :: IM.IntMap [LexItem] }
+data WordNetDB = WNDB { _indexNounDB :: HM.HashMap Text [Int]
+                      , _indexVerbDB :: HM.HashMap Text [Int]
+                      , _indexAdjDB  :: HM.HashMap Text [Int]
+                      , _indexAdvDB  :: HM.HashMap Text [Int]
+                      , _dataNounDB  :: IM.IntMap [LexItem]
+                      , _dataVerbDB  :: IM.IntMap [LexItem]
+                      , _dataAdjDB   :: IM.IntMap [LexItem]
+                      , _dataAdvDB   :: IM.IntMap [LexItem]
+                      }
 
 makeLenses ''WordNetDB                 
 
-createWordNetDB :: [IndexItem] -> [DataItem] -> WordNetDB 
-createWordNetDB ilst dlst = WNDB (createLemmaSynsetMap ilst) (createLexItemMap dlst)
+createWordNetDB :: ([IndexItem],[IndexItem],[IndexItem],[IndexItem])
+                -> ([DataItem],[DataItem],[DataItem],[DataItem])
+                -> WordNetDB 
+createWordNetDB ilsts dlsts =
+  WNDB (createLemmaSynsetMap (ilsts^._1))
+       (createLemmaSynsetMap (ilsts^._2))
+       (createLemmaSynsetMap (ilsts^._3))
+       (createLemmaSynsetMap (ilsts^._4))
+       (createLexItemMap False (dlsts^._1))
+       (createLexItemMap True  (dlsts^._2))
+       (createLexItemMap False (dlsts^._3))
+       (createLexItemMap False (dlsts^._4))
+
 
 createLemmaSynsetMap :: [IndexItem] -> HM.HashMap Text [Int]
 createLemmaSynsetMap = HM.fromList . map (\x->(x^.idx_lemma,x^.idx_synset_offset))
 
-createLexItemMap :: [DataItem] -> IM.IntMap [LexItem]
-createLexItemMap = IM.fromList . map (\x->(x^.data_syn_offset,x^.data_word_lex_id))
+createLexItemMap :: Bool -> [DataItem] -> IM.IntMap [LexItem]
+createLexItemMap isVerb
+  = IM.fromList . map (\x->(x^.data_syn_offset,x^.data_word_lex_id))
 
-lookupLI :: WordNetDB -> Text -> [LexItem]
-lookupLI w t = do
-   x <- join . maybeToList $ HM.lookup t (w^.indexDB)
-   join . maybeToList $ IM.lookup x (w^.dataDB)
+indexDB :: WordNetDB -> POS -> HM.HashMap Text [Int]
+indexDB w POS_N = w^.indexNounDB
+indexDB w POS_V = w^.indexVerbDB
+indexDB w POS_A = w^.indexAdjDB
+indexDB w POS_R = w^.indexAdvDB
+
+dataDB :: WordNetDB -> POS -> IM.IntMap [LexItem]
+dataDB w POS_N = w^.dataNounDB
+dataDB w POS_V = w^.dataVerbDB
+dataDB w POS_A = w^.dataAdjDB
+dataDB w POS_R = w^.dataAdvDB
+
+
+lookupLI :: WordNetDB -> POS -> Text -> [LexItem]
+lookupLI w p t = do
+   x <- join . maybeToList $ HM.lookup t (indexDB w p)
+   join . maybeToList $ IM.lookup x (dataDB w p)
 
 
