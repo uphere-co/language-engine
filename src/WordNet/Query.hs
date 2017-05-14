@@ -7,16 +7,14 @@ import           Control.Lens
 import           Control.Monad              (join)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.IntMap         as IM
-import           Data.Maybe                 (catMaybes,maybeToList)
+import           Data.Maybe                 (maybeToList)
 import           Data.Text                  (Text)
 import qualified Data.Text           as T
 import qualified Data.Text.IO        as TIO
-import qualified Data.Text.Lazy      as TL
 --
 import WordNet.Type
 import WordNet.Parser.Common
-import WordNet.Parser.Index
-import WordNet.Parser.Data
+
 
 parseFile :: (Text -> Maybe a) -> FilePath -> IO [Maybe a]
 parseFile p fp = do

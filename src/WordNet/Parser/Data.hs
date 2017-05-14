@@ -2,12 +2,9 @@
 
 module WordNet.Parser.Data where
 
-import           Control.Lens
 import           Data.List.Split     (chunksOf)
-import           Data.Monoid         (mconcat)
 import           Data.Text           (Text)
 import qualified Data.Text    as T
-import           Data.Text.Read
 --
 import           WordNet.Type
 import           WordNet.Parser.Common
@@ -20,26 +17,26 @@ readSSType 's' = Just AdjectiveSatellite
 readSSType 'r' = Just Adverb
 readSSType _   = Nothing
 
+parseLexItem :: [Text] -> Maybe LexItem
 parseLexItem (x:y:[]) = LI <$> pure x <*> readDecimal y
 parseLexItem _        = Nothing
 
-
 parseFrame :: Int -> [Text] -> Maybe ([Frame],[Text])
 parseFrame n txts = do
-  let (frametxts, rem) = splitAt n (chunksOf 3 txts)
+  let (frametxts,r) = splitAt n (chunksOf 3 txts)
       p_frame (_:x:y:[]) = do f_num <- readDecimal x
                               w_num <- readDecimal y
                               return (Frame f_num w_num)
       p_frame _ = Nothing
   fs <- mapM p_frame frametxts
-  return (fs,concat rem)
+  return (fs,concat r)
 
 
 parseData :: Bool -> Text -> Maybe DataItem
 parseData isVerb = worker . T.words
   where
-    worker (off':num':typ':cnt':rem0) = do
-      off <- readDecimal off'
+    worker (o':num':typ':cnt':rem0) = do
+      o <- readDecimal o'
       num <- readDecimal num'
       typ <- if T.null typ' then Nothing else readSSType (T.head typ')
       cnt <- readDecimal cnt'
@@ -62,6 +59,6 @@ parseData isVerb = worker . T.words
                        parseFrame n rem2s
                      else return ([],rem2')
       let _:comments = rem3 
-      return (DataItem off num typ wordlexids ptrs fs (T.intercalate " " comments))
+      return (DataItem o num typ wordlexids ptrs fs (T.intercalate " " comments))
     worker _ = Nothing
   

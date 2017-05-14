@@ -2,10 +2,8 @@
 
 module WordNet.Parser.Index where
 
-import           Control.Lens
 import           Data.Text           (Text)
 import qualified Data.Text    as T
-import           Data.Text.Read
 --
 import           WordNet.Type
 import           WordNet.Parser.Common
@@ -16,19 +14,17 @@ readPOS 'n' = Just POS_N
 readPOS 'v' = Just POS_V
 readPOS 'a' = Just POS_A
 readPOS 'r' = Just POS_R
-readPos _   = Nothing
+readPOS _   = Nothing
   
 parseIndex :: Text -> Maybe IndexItem
 parseIndex = worker . T.words
   where
-    worker (lem:pos':cnt1:cnt2:rem) = do
+    worker (lem:pos':_:cnt2:r) = do
       pos <- readPOS (T.head pos')
-      synset_cnt <- readDecimal cnt1
       p_cnt <- readDecimal cnt2
-      let (ptr_symbol,_cnt3:cnt4:rem') = splitAt p_cnt rem
-      -- sense_cnt <- readDecimal cnt3
+      let (ptr_symbol,_:cnt4:r') = splitAt p_cnt r
       tagsense_cnt <- readDecimal cnt4
-      synset_offset <- mapM readDecimal rem'
+      synset_offset <- mapM readDecimal r'
       return (IndexItem lem pos ptr_symbol tagsense_cnt synset_offset)
     worker _ = Nothing
 

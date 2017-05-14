@@ -3,7 +3,6 @@
 
 module Main where
 
-import           Control.Lens
 import           Control.Monad.IO.Class     (liftIO)
 import           Control.Monad.Loops        (whileJust_)
 import           Data.Maybe                 (catMaybes)
@@ -25,6 +24,7 @@ pOptions = ProgOption <$> strOption (long "dir" <> short 'd' <> help "Directory"
 progOption :: ParserInfo ProgOption 
 progOption = info pOptions (fullDesc <> progDesc "WordNet lookup")
 
+main :: IO ()
 main = do
   opt <- execParser progOption
   indexverb <- parseFile parseIndex (dir opt </> "index.verb")
