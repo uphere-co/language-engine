@@ -1,14 +1,16 @@
+import           Data.Text           (Text)
 import qualified Data.Text    as T
 import qualified Data.Text.IO as TIO
 --
 import WordNet
-import WordNet.Type
 
-
-parseFile :: FilePath -> IO ()
-parseFile fp = do
+parseFile :: (Show a) => (Text -> Maybe a) -> FilePath -> IO ()
+parseFile p fp = do
   txt <- TIO.readFile fp 
   let lst = take 100 $ filter (not.isComment) (T.lines txt)
-  mapM_ (print . (\x -> (x,parse x))) lst
+  mapM_ (print . (\x -> (x,p x))) lst
 
-main = parseFile "/scratch/wavewave/wordnet/WordNet-3.0/dict/index.verb"
+
+main = do
+  -- parseFile parseIndex "/scratch/wavewave/wordnet/WordNet-3.0/dict/index.verb"
+  parseFile (parseData True) "/scratch/wavewave/wordnet/WordNet-3.0/dict/data.verb"
