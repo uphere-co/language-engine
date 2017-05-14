@@ -16,19 +16,56 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
-library
+Library
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  ghc-options:          -Wall -O2
+                        -threaded
+                        -funbox-strict-fields
+                        -fno-warn-unused-do-bind
+
+  ghc-prof-options:     -auto-all
   exposed-modules:
                      WordNet
                      WordNet.Type
                      WordNet.Parser.Common
                      WordNet.Parser.Data
                      WordNet.Parser.Index
+                     WordNet.Query
                   
   build-depends:       base,
+                       --
+                       containers,
                        lens,
                        split,
                        text,
-                       text-format
-  
-  hs-source-dirs:      src
+                       text-format,
+                       unordered-containers
+
+Executable query
+  Main-is:              query.hs
+  hs-source-dirs:       app
   default-language:    Haskell2010
+  ghc-options:          -Wall -O2
+                        -threaded
+                        -funbox-strict-fields
+                        -fno-warn-unused-do-bind
+
+  ghc-prof-options:     -auto-all
+  extra-libraries:     
+  c-sources:
+  other-modules:       
+  
+  build-depends:        base,
+                        --
+                        filepath,
+                        haskeline,
+                        lens,
+                        monad-loops,
+                        optparse-applicative,
+                        text,
+                        --
+                        HWordNet
+           
+
+        
