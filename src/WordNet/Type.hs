@@ -28,8 +28,8 @@ data SSType = Noun | Verb | Adjective | AdjectiveSatellite | Adverb
 
 data LexItem = LI { _lex_word :: Text, _lex_id :: Int } deriving Show
 
-formatLI :: LexItem -> TL.Text
-formatLI (LI w i) = format "{}.{}" (w,i)
+formatLI :: LexItem -> Text
+formatLI (LI w i) = TL.toStrict $ format "{}.{}" (w,i)
 
 
 data Pointer = Pointer { _ptr_pointer_symbol :: Text
