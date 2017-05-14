@@ -12,13 +12,17 @@ import           Data.Text.Read
 import           WordNet.Type
 import           WordNet.Parser.Common
 
-parseSSType :: Char -> Maybe SSType
-parseSSType 'n' = Just Noun
-parseSSType 'v' = Just Verb
-parseSSType 'a' = Just Adjective
-parseSSType 's' = Just AdjectiveSatellite
-parseSSType 'r' = Just Adverb
-parseSSType _   = Nothing
+readSSType :: Char -> Maybe SSType
+readSSType 'n' = Just Noun
+readSSType 'v' = Just Verb
+readSSType 'a' = Just Adjective
+readSSType 's' = Just AdjectiveSatellite
+readSSType 'r' = Just Adverb
+readSSType _   = Nothing
+
+parseLexItem (x:y:[]) = LI <$> pure x <*> readDecimal y
+parseLexItem _        = Nothing
+
 
 parseFrame :: Int -> [Text] -> Maybe ([Frame],[Text])
 parseFrame n txts = do
@@ -37,14 +41,12 @@ parseData isVerb = worker . T.words
     worker (off':num':typ':cnt':rem0) = do
       off <- readDecimal off'
       num <- readDecimal num'
-      typ <- if T.null typ' then Nothing else parseSSType (T.head typ')
+      typ <- if T.null typ' then Nothing else readSSType (T.head typ')
       cnt <- readDecimal cnt'
       let (wlexstr,rem') = splitAt cnt (chunksOf 2 rem0)
-          p_wordlexid (x:y:[]) = LI <$> pure x <*> readDecimal y
-          p_wordlexid _ = Nothing
           pcnt':rem1 = concat rem'
       
-      wordlexids <- mapM p_wordlexid wlexstr
+      wordlexids <- mapM parseLexItem wlexstr
       pcnt <- readDecimal pcnt'
       let (ptrstr,rem2) = splitAt pcnt (chunksOf 4 rem1)
           p_ptr (z1:z2:z3:z4:[]) = do

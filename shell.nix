@@ -6,7 +6,12 @@ with pkgs;
 let 
     newHaskellPackages = haskellPackages;
     hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
-              attoparsec lens split text monad-loops
+              attoparsec
+              haskeline
+              lens
+              monad-loops
+              split
+              text text-format 
             ]);
 in stdenv.mkDerivation {
   name = "textview-dev";
