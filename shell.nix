@@ -10,6 +10,7 @@ let
               haskeline
               lens
               monad-loops
+              optparse-applicative
               split
               text text-format 
             ]);

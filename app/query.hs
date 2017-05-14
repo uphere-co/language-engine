@@ -15,9 +15,11 @@ import           Data.Text                  (Text)
 import qualified Data.Text           as T
 import qualified Data.Text.IO        as TIO
 import qualified Data.Text.Lazy      as TL
+import           Options.Applicative
 import           System.Console.Haskeline
+import           System.FilePath            ((</>))
 --
-import WordNet
+import           WordNet
 
 parseFile :: (Show a) => (Text -> Maybe a) -> FilePath -> IO [Maybe a]
 parseFile p fp = do
@@ -50,30 +52,22 @@ lookupLI w t = do
    join . maybeToList $ IM.lookup x (w^.dataDB)
 
 
+data ProgOption = ProgOption { dir :: FilePath } deriving Show
+
+pOptions :: Parser ProgOption
+pOptions = ProgOption <$> strOption (long "dir" <> short 'd' <> help "Directory")
+
+progOption :: ParserInfo ProgOption 
+progOption = info pOptions (fullDesc <> progDesc "WordNet lookup")
+
 main = do
-  indexverb <- parseFile parseIndex "/scratch/wavewave/wordnet/WordNet-3.0/dict/index.verb"
-  dataverb <- parseFile (parseData True) "/scratch/wavewave/wordnet/WordNet-3.0/dict/data.verb"
+  opt <- execParser progOption
+  indexverb <- parseFile parseIndex (dir opt </> "index.verb")
+  dataverb <- parseFile (parseData True) (dir opt </> "data.verb")
   let indexverb' = catMaybes indexverb
       dataverb' = catMaybes dataverb
       db = createWordNetDB indexverb' dataverb'
 
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     mapM_ (TIO.putStrLn . formatLI) $ lookupLI db (T.pack input')
-  {- print (length indexverb,length indexverb')
-  print (length dataverb,length dataverb')
-
-  mapM_ (print . format2) $ take 10 indexverb'
-  mapM_ (print . format1) $ take 10 dataverb' -}
-
-  {- 
-  let m1 = createLemmaSynsetMap indexverb'
-      m2 = createLexItemMap dataverb'
-  print $ HM.lookup "test" m1
-  print $ IM.lookup 3133 m2
-
-  print $ do
-    x <- join . maybeToList $ HM.lookup "test" m1
-    y <- join . maybeToList $ IM.lookup x m2
-    return (formatLI y) -}
-
   
