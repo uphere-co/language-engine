@@ -74,3 +74,6 @@ lookupLI w p t = do
    y <- maybeToList $ IM.lookup x (dataDB w p)
    return y
 
+lookupM :: WordNetDB -> POS -> Int -> Maybe ([LexItem],Text)
+lookupM w p n = IM.lookup n (dataDB w p)
+

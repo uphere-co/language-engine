@@ -10,6 +10,7 @@ import           Data.Monoid                ((<>))
 import           Data.Text                  (Text)
 import qualified Data.Text           as T
 import qualified Data.Text.IO        as TIO
+import           Data.Text.Read             (decimal)
 import           Options.Applicative
 import           System.Console.Haskeline
 import           System.FilePath            ((</>))
@@ -28,6 +29,37 @@ progOption = info pOptions (fullDesc <> progDesc "WordNet lookup")
 format :: ([LexItem],Text) -> Text
 format (xs,txt) = T.intercalate "," (map formatLI xs) <> " | " <> txt
 
+lookupLemma db input = do
+    putStrLn "-- Noun --"
+    mapM_ (TIO.putStrLn . format) $ lookupLI db POS_N input
+    --
+    putStrLn "-- Verb --"
+    mapM_ (TIO.putStrLn . format) $ lookupLI db POS_V input
+    --
+    putStrLn "-- Adjective --"
+    mapM_ (TIO.putStrLn . format) $ lookupLI db POS_A input
+    --
+    putStrLn "-- Adverb --"
+    mapM_ (TIO.putStrLn . format) $ lookupLI db POS_R input
+
+
+lookupMeaning db n = do
+    putStrLn "-- Noun --"
+    mapM_ (TIO.putStrLn . format) $ lookupM db POS_N n
+    --
+    putStrLn "-- Verb --"
+    mapM_ (TIO.putStrLn . format) $ lookupM db POS_V n
+    --
+    putStrLn "-- Adjective --"
+    mapM_ (TIO.putStrLn . format) $ lookupM db POS_A n
+    --
+    putStrLn "-- Adverb --"
+    mapM_ (TIO.putStrLn . format) $ lookupM db POS_R n
+
+
+
+
+
 main :: IO ()
 main = do
   opt <- execParser progOption
@@ -45,15 +77,7 @@ main = do
     
   let db = createWordNetDB is ds
 
-  runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
-    putStrLn "-- Noun --"
-    mapM_ (TIO.putStrLn . format) $ lookupLI db POS_N (T.pack input')
-    --
-    putStrLn "-- Verb --"
-    mapM_ (TIO.putStrLn . format) $ lookupLI db POS_V (T.pack input')
-    --
-    putStrLn "-- Adjective --"
-    mapM_ (TIO.putStrLn . format) $ lookupLI db POS_A (T.pack input')
-    --
-    putStrLn "-- Adverb --"
-    mapM_ (TIO.putStrLn . format) $ lookupLI db POS_R (T.pack input')
+  runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input -> liftIO $ do
+    case decimal (T.pack input) of
+      Left str -> lookupLemma db (T.pack input)
+      Right (n,_) -> lookupMeaning db n
