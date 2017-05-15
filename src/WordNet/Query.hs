@@ -70,10 +70,10 @@ dataDB w POS_R = w^.dataAdvDB
 
 lookupLI :: WordNetDB -> POS -> Text -> [([LexItem],Text)]
 lookupLI w p t = do
-   x <- join . maybeToList $ HM.lookup t (indexDB w p)
-   y <- maybeToList $ IM.lookup x (dataDB w p)
-   return y
+   n <- join . maybeToList $ HM.lookup t (indexDB w p)
+   maybeToList (lookupMeaning w p n)
 
-lookupM :: WordNetDB -> POS -> Int -> Maybe ([LexItem],Text)
-lookupM w p n = IM.lookup n (dataDB w p)
+
+lookupMeaning :: WordNetDB -> POS -> Int -> Maybe ([LexItem],Text)
+lookupMeaning w p n = IM.lookup n (dataDB w p)
 
