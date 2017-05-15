@@ -26,10 +26,10 @@ data WordNetDB = WNDB { _indexNounDB :: HM.HashMap Text [Int]
                       , _indexVerbDB :: HM.HashMap Text [Int]
                       , _indexAdjDB  :: HM.HashMap Text [Int]
                       , _indexAdvDB  :: HM.HashMap Text [Int]
-                      , _dataNounDB  :: IM.IntMap [LexItem]
-                      , _dataVerbDB  :: IM.IntMap [LexItem]
-                      , _dataAdjDB   :: IM.IntMap [LexItem]
-                      , _dataAdvDB   :: IM.IntMap [LexItem]
+                      , _dataNounDB  :: IM.IntMap ([LexItem],Text)
+                      , _dataVerbDB  :: IM.IntMap ([LexItem],Text)
+                      , _dataAdjDB   :: IM.IntMap ([LexItem],Text)
+                      , _dataAdvDB   :: IM.IntMap ([LexItem],Text)
                       }
 
 makeLenses ''WordNetDB                 
@@ -51,9 +51,9 @@ createWordNetDB ilsts dlsts =
 createLemmaSynsetMap :: [IndexItem] -> HM.HashMap Text [Int]
 createLemmaSynsetMap = HM.fromList . map (\x->(x^.idx_lemma,x^.idx_synset_offset))
 
-createLexItemMap :: Bool -> [DataItem] -> IM.IntMap [LexItem]
+createLexItemMap :: Bool -> [DataItem] -> IM.IntMap ([LexItem],Text)
 createLexItemMap isVerb
-  = IM.fromList . map (\x->(x^.data_syn_offset,x^.data_word_lex_id))
+  = IM.fromList . map (\x->(x^.data_syn_offset,(x^.data_word_lex_id,x^.data_gloss)))
 
 indexDB :: WordNetDB -> POS -> HM.HashMap Text [Int]
 indexDB w POS_N = w^.indexNounDB
@@ -61,16 +61,16 @@ indexDB w POS_V = w^.indexVerbDB
 indexDB w POS_A = w^.indexAdjDB
 indexDB w POS_R = w^.indexAdvDB
 
-dataDB :: WordNetDB -> POS -> IM.IntMap [LexItem]
+dataDB :: WordNetDB -> POS -> IM.IntMap ([LexItem],Text)
 dataDB w POS_N = w^.dataNounDB
 dataDB w POS_V = w^.dataVerbDB
 dataDB w POS_A = w^.dataAdjDB
 dataDB w POS_R = w^.dataAdvDB
 
 
-lookupLI :: WordNetDB -> POS -> Text -> [LexItem]
+lookupLI :: WordNetDB -> POS -> Text -> [([LexItem],Text)]
 lookupLI w p t = do
    x <- join . maybeToList $ HM.lookup t (indexDB w p)
-   join . maybeToList $ IM.lookup x (dataDB w p)
-
+   y <- maybeToList $ IM.lookup x (dataDB w p)
+   return y
 
