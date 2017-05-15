@@ -31,30 +31,30 @@ format (xs,txt) = T.intercalate "," (map formatLI xs) <> " | " <> txt
 
 queryLemma db input = do
     putStrLn "-- Noun --"
-    mapM_ (TIO.putStrLn . format) $ lookupLI db POS_N input
+    mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_N input
     --
     putStrLn "-- Verb --"
-    mapM_ (TIO.putStrLn . format) $ lookupLI db POS_V input
+    mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_V input
     --
     putStrLn "-- Adjective --"
-    mapM_ (TIO.putStrLn . format) $ lookupLI db POS_A input
+    mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_A input
     --
     putStrLn "-- Adverb --"
-    mapM_ (TIO.putStrLn . format) $ lookupLI db POS_R input
+    mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_R input
 
 
-queryMeaning db n = do
+queryConcept db n = do
     putStrLn "-- Noun --"
-    mapM_ (TIO.putStrLn . format) $ lookupMeaning db POS_N n
+    mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_N n
     --
     putStrLn "-- Verb --"
-    mapM_ (TIO.putStrLn . format) $ lookupMeaning db POS_V n
+    mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_V n
     --
     putStrLn "-- Adjective --"
-    mapM_ (TIO.putStrLn . format) $ lookupMeaning db POS_A n
+    mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_A n
     --
     putStrLn "-- Adverb --"
-    mapM_ (TIO.putStrLn . format) $ lookupMeaning db POS_R n
+    mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_R n
 
 
 
@@ -80,4 +80,4 @@ main = do
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input -> liftIO $ do
     case decimal (T.pack input) of
       Left str -> queryLemma db (T.pack input)
-      Right (n,_) -> queryMeaning db n
+      Right (n,_) -> queryConcept db n

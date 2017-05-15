@@ -38,21 +38,21 @@ createWordNetDB :: ([IndexItem],[IndexItem],[IndexItem],[IndexItem])
                 -> ([DataItem],[DataItem],[DataItem],[DataItem])
                 -> WordNetDB 
 createWordNetDB ilsts dlsts =
-  WNDB (createLemmaSynsetMap (ilsts^._1))
-       (createLemmaSynsetMap (ilsts^._2))
-       (createLemmaSynsetMap (ilsts^._3))
-       (createLemmaSynsetMap (ilsts^._4))
-       (createLexItemMap False (dlsts^._1))
-       (createLexItemMap True  (dlsts^._2))
-       (createLexItemMap False (dlsts^._3))
-       (createLexItemMap False (dlsts^._4))
+  WNDB (createLemmaMap (ilsts^._1))
+       (createLemmaMap (ilsts^._2))
+       (createLemmaMap (ilsts^._3))
+       (createLemmaMap (ilsts^._4))
+       (createConceptMap False (dlsts^._1))
+       (createConceptMap True  (dlsts^._2))
+       (createConceptMap False (dlsts^._3))
+       (createConceptMap False (dlsts^._4))
 
 
-createLemmaSynsetMap :: [IndexItem] -> HM.HashMap Text [Int]
-createLemmaSynsetMap = HM.fromList . map (\x->(x^.idx_lemma,x^.idx_synset_offset))
+createLemmaMap :: [IndexItem] -> HM.HashMap Text [Int]
+createLemmaMap = HM.fromList . map (\x->(x^.idx_lemma,x^.idx_synset_offset))
 
-createLexItemMap :: Bool -> [DataItem] -> IM.IntMap ([LexItem],Text)
-createLexItemMap isVerb
+createConceptMap :: Bool -> [DataItem] -> IM.IntMap ([LexItem],Text)
+createConceptMap isVerb
   = IM.fromList . map (\x->(x^.data_syn_offset,(x^.data_word_lex_id,x^.data_gloss)))
 
 indexDB :: WordNetDB -> POS -> HM.HashMap Text [Int]
@@ -68,12 +68,12 @@ dataDB w POS_A = w^.dataAdjDB
 dataDB w POS_R = w^.dataAdvDB
 
 
-lookupLI :: WordNetDB -> POS -> Text -> [([LexItem],Text)]
-lookupLI w p t = do
+lookupLemma :: WordNetDB -> POS -> Text -> [([LexItem],Text)]
+lookupLemma w p t = do
    n <- join . maybeToList $ HM.lookup t (indexDB w p)
-   maybeToList (lookupMeaning w p n)
+   maybeToList (lookupConcept w p n)
 
 
-lookupMeaning :: WordNetDB -> POS -> Int -> Maybe ([LexItem],Text)
-lookupMeaning w p n = IM.lookup n (dataDB w p)
+lookupConcept :: WordNetDB -> POS -> Int -> Maybe ([LexItem],Text)
+lookupConcept w p n = IM.lookup n (dataDB w p)
 
