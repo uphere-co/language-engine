@@ -6,7 +6,7 @@ version:             0.1.0.0
 synopsis:            WordNet database parser and query engine
 description:         This library is for parsing WordNet database
                      and create queriable DB.
-license:             OtherLicenses
+-- license:             OtherLicenses
 license-file:        LICENSE
 author:              UpHere, Inc.
 maintainer:          ianwookim@gmail.com
