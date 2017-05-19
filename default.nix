@@ -1,5 +1,5 @@
 { mkDerivation, base, containers, filepath, haskeline, lens
-, monad-loops, optparse-applicative, split, stdenv, text
+, monad-loops, nlp-types, optparse-applicative, split, stdenv, text
 , text-format, unordered-containers
 }:
 mkDerivation {
@@ -9,7 +9,7 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    base containers lens split text text-format unordered-containers
+    base containers lens nlp-types split text text-format unordered-containers
   ];
   executableHaskellDepends = [
     base filepath haskeline lens monad-loops optparse-applicative text

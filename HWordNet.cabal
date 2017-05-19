@@ -42,7 +42,9 @@ Library
                        split,
                        text,
                        text-format,
-                       unordered-containers
+                       unordered-containers,
+                       --
+                       nlp-types
 
 Executable query
   Main-is:              query.hs

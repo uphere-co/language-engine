@@ -7,8 +7,8 @@ import           Control.Lens
 import           Data.Text             (Text)
 import           Data.Text.Format 
 import qualified Data.Text.Lazy  as TL
-
-data POS = POS_N | POS_V | POS_A | POS_R deriving (Show,Eq,Ord)
+--
+import           NLP.Type.WordNet
 
 data IndexItem = IndexItem { _idx_lemma :: Text
                            , _idx_pos :: POS
@@ -21,10 +21,6 @@ data IndexItem = IndexItem { _idx_lemma :: Text
                deriving (Show)
 
 makeLenses ''IndexItem
-
-
-data SSType = Noun | Verb | Adjective | AdjectiveSatellite | Adverb
-            deriving (Show,Eq,Ord)
 
 data LexItem = LI { _lex_word :: Text, _lex_id :: Int } deriving Show
 
