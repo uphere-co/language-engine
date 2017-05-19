@@ -13,9 +13,7 @@ import           System.FilePath            ((</>))
 --
 import           WordNet
 
-loadDB :: FilePath
-       -> IO ( ([IndexItem], [IndexItem], [IndexItem], [IndexItem])
-             , ([DataItem ], [DataItem ], [DataItem ], [DataItem ]) )
+loadDB :: FilePath -> IO WordNetDB
 
 loadDB fp = do
   is@(inoun,iverb,iadj,iadv) <-
@@ -28,7 +26,7 @@ loadDB fp = do
           <*> (catMaybes <$> parseFile (parseData True ) (fp </> "data.verb"))
           <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adj"))
           <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adv"))
-  return (is,ds)
+  return (createWordNetDB is ds) -- (is,ds)
 
 runSingleQuery input db = do
   case decimal (T.pack input) of
