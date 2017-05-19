@@ -14,7 +14,6 @@ import           System.FilePath            ((</>))
 import           WordNet
 
 loadDB :: FilePath -> IO WordNetDB
-
 loadDB fp = do
   is@(inoun,iverb,iadj,iadv) <-
     (,,,) <$> (catMaybes <$> parseFile parseIndex (fp </> "index.noun"))
@@ -26,39 +25,27 @@ loadDB fp = do
           <*> (catMaybes <$> parseFile (parseData True ) (fp </> "data.verb"))
           <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adj"))
           <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adv"))
-  return (createWordNetDB is ds) -- (is,ds)
+  return (createWordNetDB is ds)
 
-runSingleQuery input db = do
+runSingleQuery input typ db = do
   case decimal (T.pack input) of
-    Left str    -> queryLemma db (T.pack input)
-    Right (n,_) -> queryConcept db n
+    Left str    -> queryLemma (T.pack input) typ db
+    Right (n,_) -> queryConcept n typ db
 
-queryLemma db input = do
-  putStrLn "-- Noun --"
-  mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_N input
-  --
-  putStrLn "-- Verb --"
-  mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_V input
-  --
-  putStrLn "-- Adjective --"
-  mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_A input
-  --
-  putStrLn "-- Adverb --"
-  mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_R input
+queryLemma input typ db = do
+  case typ of
+    POS_N -> putStrLn "-- Noun --" >> (mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_N input)
+    POS_V -> putStrLn "-- Verb --" >> (mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_V input)
+    POS_A -> putStrLn "-- Adjective --" >> (mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_A input)
+    POS_R -> putStrLn "-- Adverb --" >> (mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_R input)
 
 
-queryConcept db n = do
-  putStrLn "-- Noun --"
-  mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_N n
-  --
-  putStrLn "-- Verb --"
-  mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_V n
-  --
-  putStrLn "-- Adjective --"
-  mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_A n
-  --
-  putStrLn "-- Adverb --"
-  mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_R n
+queryConcept n typ db = do
+  case typ of
+    POS_N -> putStrLn "-- Noun --" >> (mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_N n)
+    POS_V -> putStrLn "-- Verb --" >> (mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_V n)
+    POS_A -> putStrLn "-- Adjective --" >> (mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_A n)
+    POS_R -> putStrLn "-- Adverb --" >> (mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_R n)
 
 format :: ([LexItem],Text) -> Text
 format (xs,txt) = T.intercalate "," (map formatLI xs) <> " | " <> txt
