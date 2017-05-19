@@ -28,6 +28,7 @@ Library
   exposed-modules:
                      WordNet
                      WordNet.Type
+                     WordNet.API.Query
                      WordNet.Parser.Common
                      WordNet.Parser.Data
                      WordNet.Parser.Index
