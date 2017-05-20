@@ -12,9 +12,10 @@ import           Data.Text                  (Text)
 import qualified Data.Text           as T
 import qualified Data.Text.IO        as TIO
 --
-import WordNet.Type
-import WordNet.Parser.Common
-
+import           WordNet.Type
+import           WordNet.Parser.Common
+--
+import           NLP.Type.WordNet
 
 parseFile :: (Text -> Maybe a) -> FilePath -> IO [Maybe a]
 parseFile p fp = do

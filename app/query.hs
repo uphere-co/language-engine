@@ -16,7 +16,8 @@ import           System.Console.Haskeline
 import           System.FilePath            ((</>))
 --
 import           WordNet
-
+--
+import           NLP.Type.WordNet
 
 data ProgOption = ProgOption { dir :: FilePath } deriving Show
 

@@ -28,6 +28,7 @@ Library
   exposed-modules:
                      WordNet
                      WordNet.Type
+                     WordNet.API.Query
                      WordNet.Parser.Common
                      WordNet.Parser.Data
                      WordNet.Parser.Index
@@ -36,11 +37,14 @@ Library
   build-depends:       base,
                        --
                        containers,
+                       filepath,
                        lens,
                        split,
                        text,
                        text-format,
-                       unordered-containers
+                       unordered-containers,
+                       --
+                       nlp-types
 
 Executable query
   Main-is:              query.hs
@@ -64,6 +68,8 @@ Executable query
                         monad-loops,
                         optparse-applicative,
                         text,
+                        --
+                        nlp-types,
                         --
                         HWordNet
            

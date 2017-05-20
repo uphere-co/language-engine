@@ -8,6 +8,8 @@ import qualified Data.Text    as T
 --
 import           WordNet.Type
 import           WordNet.Parser.Common
+--
+import           NLP.Type.WordNet
 
 readSSType :: Char -> Maybe SSType
 readSSType 'n' = Just Noun
