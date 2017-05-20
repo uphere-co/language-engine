@@ -13,19 +13,25 @@ import           Data.Text                  (Text)
 import qualified Data.Text           as T
 import qualified Data.Text.IO        as TIO
 import           Data.Text.Read             (decimal)
-import           Options.Applicative
+import qualified Options.Applicative as O
 import           System.Console.Haskeline
 import           System.FilePath            ((</>))
 --
 import           PropBank
 
-main = do
-  putStrLn "parse propbank xml files"
-  x <- constructFrameDB "/home/wavewave/repo/srcc/propbank-frames/frames"
-  print (HM.size (x^.frameDB))
+data ProgOption = ProgOption { dir :: FilePath } deriving Show
 
-{- 
+pOptions :: O.Parser ProgOption
+pOptions = ProgOption <$> O.strOption (O.long "dir" <> O.short 'd' <> O.help "Directory")
+
+progOption :: O.ParserInfo ProgOption 
+progOption = O.info pOptions (O.fullDesc <> O.progDesc "PropBank lookup")
+
+queryPredicate db input = do
+  print (HM.lookup input (db^.predicateDB))
+  
 main = do
-  frame <- parseFrameFile "/home/wavewave/repo/srcc/propbank-frames/frames/salivate.xml"
-  print frame
--}
+  opt <- O.execParser progOption
+  db <- constructPredicateDBFromFrameDB <$> constructFrameDB (dir opt)
+  runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input -> liftIO $
+    queryPredicate db (T.pack input) 
