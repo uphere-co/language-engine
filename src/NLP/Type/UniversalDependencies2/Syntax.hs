@@ -81,4 +81,4 @@ parseDepRel "reparandum" = Just REPARANDUM
 parseDepRel "root"       = Just ROOT
 parseDepRel "vocative"   = Just VOCATIVE
 parseDepRel "xcomp"      = Just XCOMP
-parseDeprel _            = Nothing
+parseDepRel _            = Nothing
