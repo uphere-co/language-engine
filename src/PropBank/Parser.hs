@@ -170,3 +170,12 @@ p_form "participle" = Right (Just Participle)
 p_form "full"       = Right (Just Full)
 p_form "ns"         = Right Nothing
 p_form x            = Left ("form:" ++ T.unpack x)
+
+
+parseFile :: FilePath -> IO (Either String FrameSet)
+parseFile fp = do
+  txt <- TLIO.readFile fp
+  case txt ^? html . allNamed (only "frameset") of
+    Nothing -> return (Left "no frameset")
+    Just f -> return (p_frameset f)
+
