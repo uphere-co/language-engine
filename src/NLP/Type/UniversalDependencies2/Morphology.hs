@@ -1,4 +1,7 @@
-module NLP.Type.UniversalDependencies2 where
+module NLP.Type.UniversalDependencies2.Morphology where
+
+data Morphology = POSTag UniversalPOSTag | Feature UniversalFeature
+                deriving (Show,Eq,Ord)
 
 data UniversalPOSTag = Open OpenClassWord
                      | Closed ClosedClassWord
