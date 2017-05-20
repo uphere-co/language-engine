@@ -172,8 +172,8 @@ p_form "ns"         = Right Nothing
 p_form x            = Left ("form:" ++ T.unpack x)
 
 
-parseFile :: FilePath -> IO (Either String FrameSet)
-parseFile fp = do
+parseFrameFile :: FilePath -> IO (Either String FrameSet)
+parseFrameFile fp = do
   txt <- TLIO.readFile fp
   case txt ^? html . allNamed (only "frameset") of
     Nothing -> return (Left "no frameset")

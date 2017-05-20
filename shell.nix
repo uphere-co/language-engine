@@ -6,6 +6,15 @@ with pkgs;
 let
 
   hsenv = haskellPackages.ghcWithPackages (p: with p; [
+            attoparsec
+            haskeline
+            lens
+            monad-loops
+            optparse-applicative
+            split
+            text text-format
+            #yayaml
+
             lens
             taggy-lens
           ]);
@@ -13,7 +22,7 @@ let
 in
 
 stdenv.mkDerivation {
-  name = "NomBank-dev";
+  name = "PropBank-dev";
   buildInputs = [ hsenv ];
   shellHook = ''
   '';

@@ -146,18 +146,3 @@ data FrameSet = FrameSet { _frameset_note :: [Note]
 
 makeLenses ''FrameSet
 
-
-
-
-
-
-{- 
-
-data Example
-
-data Inflection
-
-data Arg
-
-data Rel
--}
