@@ -7,7 +7,8 @@ import qualified Data.Text    as T
 --
 import           WordNet.Type
 import           WordNet.Parser.Common
-
+--
+import           NLP.Type.WordNet
 
 readPOS :: Char -> Maybe POS
 readPOS 'n' = Just POS_N

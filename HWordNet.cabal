@@ -69,6 +69,8 @@ Executable query
                         optparse-applicative,
                         text,
                         --
+                        nlp-types,
+                        --
                         HWordNet
            
 
