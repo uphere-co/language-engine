@@ -41,9 +41,9 @@ data LexicalFeature = PronType  -- pronominal type
                     | Abbr      -- abbreviation
                     deriving (Show,Eq,Ord)
 
-data InfletionalFeature = Nominal NominalFeature
-                        | Verbal VerbalFeature
-                        deriving (Show,Eq,Ord)
+data InflectionalFeature = Nominal NominalFeature
+                         | Verbal VerbalFeature
+                         deriving (Show,Eq,Ord)
  
 data NominalFeature = Gender    -- gender
                     | Animacy   -- animacy
