@@ -25,6 +25,10 @@ newtype PredicateDB = PredicateDB { _predicateDB :: HashMap Text Predicate }
 
 makeLenses ''PredicateDB
 
+newtype RoleSetDB = RoleSetDB { _rolesetDB :: HashMap Text RoleSet }
+
+makeLenses ''RoleSetDB
+
 constructFrameDB :: FilePath -> IO FrameDB
 constructFrameDB dir = do
   cnts <- getDirectoryContents dir
@@ -38,7 +42,10 @@ constructFrameDB dir = do
       Left err -> putStrLn err >> return m
       Right fr -> return $ HM.insert (T.pack (takeBaseName f)) (fr^.frameset_predicate) m
 
-constructPredicateDBFromFrameDB :: FrameDB -> PredicateDB
-constructPredicateDBFromFrameDB (FrameDB m) = PredicateDB (foldl' f HM.empty (concat (toList m)))
+constructPredicateDB :: FrameDB -> PredicateDB
+constructPredicateDB (FrameDB m) = PredicateDB (foldl' f HM.empty (concat (toList m)))
   where f !acc !x = HM.insert (x^.predicate_lemma) x acc
-        
+
+constructRoleSetDB :: PredicateDB -> RoleSetDB 
+constructRoleSetDB (PredicateDB m) = RoleSetDB (foldl' f HM.empty (concatMap (^.predicate_roleset) (toList m)))
+  where f !acc !x = HM.insert (x^.roleset_id) x acc

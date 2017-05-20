@@ -29,9 +29,15 @@ progOption = O.info pOptions (O.fullDesc <> O.progDesc "PropBank lookup")
 
 queryPredicate db input = do
   print (HM.lookup input (db^.predicateDB))
+
+queryRoleSet db input = do
+  print (HM.lookup input (db^.rolesetDB))
+
   
 main = do
   opt <- O.execParser progOption
-  db <- constructPredicateDBFromFrameDB <$> constructFrameDB (dir opt)
+  pdb <- constructPredicateDB <$> constructFrameDB (dir opt)
+  let rdb = constructRoleSetDB pdb
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input -> liftIO $
-    queryPredicate db (T.pack input) 
+    -- queryPredicate db (T.pack input) 
+    queryRoleSet rdb (T.pack input)
