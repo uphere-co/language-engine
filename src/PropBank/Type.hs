@@ -64,25 +64,35 @@ data Example = Example { _example_inflection :: Maybe Inflection
 makeLenses ''Example
 
 
-data VNTheta = Actor1
+data VNTheta = Actor
+             | Actor1
              | Actor2
              | Agent
              | Asset
              | Attribute
              | Beneficiary
              | Cause
+             | CoAgent
+             | CoPatient
+             | CoTheme
              | Destination
              | Experiencer
              | Extent
+             | Goal
+             | InitialLocation
              | Instrument
              | Location
              | Material
              | Patient
              | Patient1
              | Patient2
+             | Pivot
              | Predicate
              | Product
+             | Proposition
              | Recipient
+             | Reflexive
+             | Result
              | Source
              | Stimulus
              | Theme
@@ -90,6 +100,8 @@ data VNTheta = Actor1
              | Theme2
              | Time
              | Topic
+             | Trajectory
+             | Value
              deriving (Show,Ord,Eq)
 
 data VNRole = VNRole { _vnrole_vncls :: Text
