@@ -38,6 +38,9 @@ main = do
   opt <- O.execParser progOption
   pdb <- constructPredicateDB <$> constructFrameDB (dir opt)
   let rdb = constructRoleSetDB pdb
-  runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input -> liftIO $
-    -- queryPredicate db (T.pack input) 
-    queryRoleSet rdb (T.pack input)
+  runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ 
+    let input = T.pack input'
+    in case T.split (== '.') input of
+         (x:n:_) -> queryRoleSet rdb input
+         (x:[])  -> queryPredicate pdb input
+         [] -> putStrLn "query is not recognized."
