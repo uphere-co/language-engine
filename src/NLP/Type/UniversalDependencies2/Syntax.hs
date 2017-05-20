@@ -10,6 +10,7 @@ data DependencyRelation = ACL        -- ^ clausal modifier of noun (adjectival c
                         | AMOD       -- ^ adjectival modifier
                         | APPOS      -- ^ appositional modifier
                         | AUX        -- ^ auxiliary
+                        | AUXPASS    -- ^ auxiliary passive
                         | CASE       -- ^ case marking
                         | CC         -- ^ coordinating conjunction
                         | CCOMP      -- ^ clausal complement
@@ -22,6 +23,7 @@ data DependencyRelation = ACL        -- ^ clausal modifier of noun (adjectival c
                         | DET        -- ^ determiner
                         | DISCOURSE  -- ^ discourse element
                         | DISLOCATED -- ^ dislocated element
+                        | DOBJ       -- ^ direct object 
                         | EXPL       -- ^ expletive
                         | FIXED      -- ^ fixed multiword expression
                         | FLAT       -- ^ flat multiword expression
@@ -30,7 +32,8 @@ data DependencyRelation = ACL        -- ^ clausal modifier of noun (adjectival c
                         | LIST       -- ^ list
                         | MARK       -- ^ marker
                         | NMOD       -- ^ nominal modifier
-                        | NSUBJ      -- ^ nominal subject 
+                        | NSUBJ      -- ^ nominal subject
+                        | NSUBJPASS  -- ^ nominal subject passive
                         | NUMMOD     -- ^ numeric modifier
                         | OBJ        -- ^ object
                         | OBL        -- ^ oblique nominal
@@ -50,6 +53,7 @@ parseDepRel "advmod"     = Just ADVMOD
 parseDepRel "amod"       = Just AMOD
 parseDepRel "appos"      = Just APPOS
 parseDepRel "aux"        = Just AUX
+parseDepRel "auxpass"    = Just AUXPASS
 parseDepRel "case"       = Just CASE
 parseDepRel "cc"         = Just CC
 parseDepRel "ccomp"      = Just CCOMP
@@ -62,6 +66,7 @@ parseDepRel "dep"        = Just DEP
 parseDepRel "det"        = Just DET
 parseDepRel "discourse"  = Just DISCOURSE
 parseDepRel "dislocated" = Just DISLOCATED
+parseDepRel "dobj"       = Just DOBJ
 parseDepRel "expl"       = Just EXPL
 parseDepRel "fixed"      = Just FIXED
 parseDepRel "flat"       = Just FLAT
@@ -71,6 +76,7 @@ parseDepRel "list"       = Just LIST
 parseDepRel "mark"       = Just MARK
 parseDepRel "nmod"       = Just NMOD
 parseDepRel "nsubj"      = Just NSUBJ
+parseDepRel "nsubjpass"  = Just NSUBJPASS
 parseDepRel "nummod"     = Just NUMMOD
 parseDepRel "obj"        = Just OBJ
 parseDepRel "obl"        = Just OBL
