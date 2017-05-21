@@ -8,7 +8,7 @@ import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import           Data.Monoid
 
-data NamedEntityClass = Org | Person | Loc | Time | Date | Other
+data NamedEntityClass = Org | Person | Loc | Time | Date | Number | Other
                       deriving(Show, Eq)
 
 data NamedEntity = NamedEntity { _str  :: Text
@@ -26,14 +26,22 @@ data OrderedNamedEntity = OrderedNamedEntity { _order  :: Int
 isSameType :: NamedEntityFrag -> NamedEntityFrag -> Bool
 isSameType frag1 frag2 = _ftype frag1 == _ftype frag2
 
+
+classify :: Text -> Maybe NamedEntityClass 
+classify "PERSON"       = Just Person
+classify "ORGANIZATION" = Just Org
+classify "LOCATION"     = Just Loc
+classify "TIME"         = Just Time
+classify "DATE"         = Just Date
+classify "NUMBER"       = Just Number
+classify "O"            = Just Other
+classify _              = Nothing
+
 parseStr :: Text -> Text -> NamedEntityFrag
-parseStr str t | t== "PERSON"      = NamedEntityFrag str Person
-               | t== "ORGANIZATION"= NamedEntityFrag str Org
-               | t== "LOCATION"    = NamedEntityFrag str Loc
-               | t== "TIME"        = NamedEntityFrag str Time
-               | t== "DATE"        = NamedEntityFrag str Date
-               | t== "O"           = NamedEntityFrag str Other
-parseStr _ _  = error "Unknown named entity class"
+parseStr str t =
+  case classify t of
+    Nothing -> error ("Unknown named entity class: " ++ T.unpack t)
+    Just c  -> NamedEntityFrag str c
 
 partitionFrags :: [NamedEntityFrag] -> [[NamedEntityFrag]]
 partitionFrags frags = foldr f [] frags
