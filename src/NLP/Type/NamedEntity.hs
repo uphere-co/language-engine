@@ -8,7 +8,7 @@ import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import           Data.Monoid
 
-data NamedEntityClass = Org | Person | Loc | Time | Date | Number | Other
+data NamedEntityClass = Org | Person | Loc | Time | Date | Number | Money | Set | Other
                       deriving(Show, Eq)
 
 data NamedEntity = NamedEntity { _str  :: Text
@@ -34,6 +34,8 @@ classify "LOCATION"     = Just Loc
 classify "TIME"         = Just Time
 classify "DATE"         = Just Date
 classify "NUMBER"       = Just Number
+classify "MONEY"        = Just Money
+classify "SET"          = Just Set
 classify "O"            = Just Other
 classify _              = Nothing
 
