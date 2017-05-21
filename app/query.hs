@@ -7,9 +7,10 @@ module Main where
 import           Control.Lens
 import           Control.Monad.IO.Class     (liftIO)
 import           Control.Monad.Loops        (whileJust_)
+import           Data.Function              (on)
 import qualified Data.HashMap.Strict as HM
-import           Data.List                  (sort)
-import           Data.Maybe                 (catMaybes,maybeToList)
+import           Data.List                  (sortBy)
+import           Data.Maybe                 (catMaybes,fromMaybe,maybeToList)
 import           Data.Monoid                ((<>))
 import           Data.Text                  (Text)
 import qualified Data.Text           as T
@@ -86,10 +87,13 @@ progOption = O.info pOptions (O.fullDesc <> O.progDesc "PropBank lookup")
 queryPredicate db input = do
   let result = do
         p <- maybeToList (HM.lookup input (db^.predicateDB))
-        p ^.. (predicate_roleset . traverse . roleset_id)
+        r <- p ^. predicate_roleset
+        let (i,n) = (r^.roleset_id,fromMaybe "" (r^.roleset_name))
+        return (i,n)
+        -- p ^.. (predicate_roleset . traverse . roleset_id)
   if null result
     then putStrLn "No such predicate"
-    else mapM_ TIO.putStrLn (sort result)
+    else mapM_ (\(i,n) -> TIO.putStrLn (i <> "\t" <> n)) (sortBy (compare `on` fst) result)
 
 queryRoleSet db input = do
   case HM.lookup input (db^.rolesetDB) of
