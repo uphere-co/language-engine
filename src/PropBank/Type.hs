@@ -109,7 +109,7 @@ data VNRole = VNRole { _vnrole_vncls :: Text
                      }
             deriving Show
 
-makeLenses ''VNTheta                     
+makeLenses ''VNRole
 
 data Role = Role { _role_vnrole :: [VNRole]
                  , _role_n :: Text
