@@ -62,5 +62,6 @@ Executable query
                         optparse-applicative,
                         text,
                         unordered-containers,
+                        yayaml,
                         --
                         PropBank

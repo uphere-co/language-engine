@@ -1,11 +1,18 @@
 { pkgs ? import <nixpkgs> {}
+, uphere-nix-overlay ? <uphere-nix-overlay>
 }:
 
 with pkgs;
 
 let
+  hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix")
+               { inherit pkgs; };
+  newHaskellPackages = haskellPackages.override {
+    overrides = hsconfig;
+  };
 
-  hsenv = haskellPackages.ghcWithPackages (p: with p; [
+
+  hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
             attoparsec
             haskeline
             lens
@@ -13,7 +20,7 @@ let
             optparse-applicative
             split
             text text-format
-            #yayaml
+            yayaml
 
             lens
             taggy-lens
