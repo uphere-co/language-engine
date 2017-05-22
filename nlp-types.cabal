@@ -19,6 +19,8 @@ library
   exposed-modules:     
                        NLP.Type.PennTreebankII
                        NLP.Type.WordNet
+                       NLP.Type.UniversalDependencies2.Morphology
+                       NLP.Type.UniversalDependencies2.Syntax                       
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base,
