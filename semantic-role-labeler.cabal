@@ -23,6 +23,7 @@ library
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base,
+                       lens,
                        split,
                        text
   hs-source-dirs:      src
