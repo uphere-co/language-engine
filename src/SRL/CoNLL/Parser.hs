@@ -9,7 +9,51 @@ import           Data.List.Split     (splitWhen)
 import           Data.Text           (Text)
 import qualified Data.Text    as T
 import qualified Data.Text.IO as TIO
+--
+import           SRL.Type
 
+parseDeprel :: Text -> Deprel
+parseDeprel "ADV"   = ADV
+parseDeprel "AMOD"  = AMOD
+parseDeprel "APPO"  = APPO
+parseDeprel "CONJ"  = CONJ
+parseDeprel "COORD" = COORD
+parseDeprel "DEP"   = DEP
+parseDeprel "DEP-GAP" = DEP_GAP
+parseDeprel "DIR"   = DIR
+parseDeprel "DTV"   = DTV
+parseDeprel "EXT"   = EXT
+parseDeprel "EXTR"  = EXTR
+parseDeprel "GAP-PRD" = GAP_PRD
+parseDeprel "HMOD"  = HMOD
+parseDeprel "HYPH"  = HYPH
+parseDeprel "IM"    = IM
+parseDeprel "LGS"   = LGS
+parseDeprel "LOC"   = LOC
+parseDeprel "LOC-PRD" = LOC_PRD
+parseDeprel "MNR"   = MNR
+parseDeprel "NAME"  = NAME
+parseDeprel "NMOD"  = NMOD
+parseDeprel "OBJ"   = OBJ
+parseDeprel "OPRD"  = OPRD
+parseDeprel "P"     = P 
+parseDeprel "PMOD"  = PMOD
+parseDeprel "PRD"   = PRD
+parseDeprel "PRN"   = PRN
+parseDeprel "PRP"   = PRP
+parseDeprel "PRT"   = PRT      
+parseDeprel "ROOT"  = ROOT
+parseDeprel "SBJ"   = SBJ
+parseDeprel "SUB"   = SUB
+parseDeprel "SUFFIX" = SUFFIX
+parseDeprel "TITLE" = TITLE
+parseDeprel "TMP"   = TMP
+parseDeprel "VOC"   = VOC
+parseDeprel "VC"    = VC
+parseDeprel x       = error ("parseDeprel: " ++ (T.unpack x))
+
+
+  
 data Line =
   Line { _line_id          :: Text   -- ^ Token counter, starting at 1 for each new sentence.
        , _line_form        :: Text   -- ^ Word form or punctuation symbol. The FORM field uses the original
@@ -41,7 +85,7 @@ data Line =
        , _line_head        :: Text   -- ^ Syntactic head of the current token, which is either a value of ID or
                                      --   zero ("0"). Note that both syntactic and semantic dependencies annotate
                                      --   the split-form tokens.
-       , _line_deprel      :: Text   -- ^ Syntactic dependency relation to the HEAD. The syntactic dependency
+       , _line_deprel      :: Deprel -- ^ Syntactic dependency relation to the HEAD. The syntactic dependency
                                      --   analysis is very similar to that used for the English data sets in the
                                      --   CoNLL 2007 shared task and is further described here.
        , _line_pred        :: Text   -- ^ Rolesets of the semantic predicates in this sentence. This includes both
@@ -67,18 +111,18 @@ makeLenses ''Sentence
 
 parseLine :: Text -> Line
 parseLine txt =
-  let _line_id:_line_form:_line_lemma:_line_gpos:_line_ppos:_line_split_form:_line_split_lemma:_line_pposs:_line_head:_line_deprel:_line_pred:_line_args = T.split (== '\t') txt
+  let _line_id:_line_form:_line_lemma:_line_gpos:_line_ppos:_line_split_form:_line_split_lemma:_line_pposs:_line_head:_line_deprel':_line_pred:_line_args = T.split (== '\t') txt
+      _line_deprel = parseDeprel _line_deprel'
   in Line {..}
 
      
 parseSentence :: [Text] -> Sentence
 parseSentence = Sentence . map parseLine
 
-parseFile :: FilePath -> IO ()
+parseFile :: FilePath -> IO [Sentence]
 parseFile fp = do
   putStrLn $ "parsing " ++ fp
   txt <- TIO.readFile fp
   let xs = T.lines txt
       ys = splitWhen T.null xs
-      zs =map parseSentence ys
-  mapM_ print zs
+  return (map parseSentence ys)
