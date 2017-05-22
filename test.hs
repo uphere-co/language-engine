@@ -1,17 +1,23 @@
 module Main where
 
 import Control.Lens
-import qualified Data.HashSet as S
+-- import qualified Data.HashSet as S
+import System.Directory
+import System.FilePath
+--
 import SRL.CoNLL.Parser
 
 
 main = do
-  sents <- parseFile "/scratch/wavewave/MASC/masc-conll/data/written/ch5.conll"
-  let ds = do s <- sents
-              l <- s^.sentence_lines
-              return (l^.line_deprel)
-  --    s = S.fromList ds  
-  mapM_ print ds
-  -- print $ length s 
-  -- mapM_ putStrLn $ map (^..sentence_lines.folded.line_deprel.folded) sents 
+  let dir = "/scratch/wavewave/MASC/masc-conll/data/written"
+  cnts <- getDirectoryContents dir
+  let fs = filter (\x->takeExtensions x == ".conll") cnts
+  flip mapM_ fs $  \f -> do
+    let fp = dir </> f
+    print fp
+    sents <- parseFile fp
+    let ds = do s <- sents
+                l <- s^.sentence_lines
+                return (l^.line_deprel)
+    print (length ds)
   
