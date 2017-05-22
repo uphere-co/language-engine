@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module SRL.CoNLL.Parser where
+module SRL.CoNLL.CoNLL08.Parser where
 
 import           Control.Lens
 import           Data.List.Split     (splitWhen)
@@ -10,7 +10,7 @@ import           Data.Text           (Text)
 import qualified Data.Text    as T
 import qualified Data.Text.IO as TIO
 --
-import           SRL.Type
+import           SRL.CoNLL.CoNLL08.Type
 
 parseDeprel :: Text -> Deprel
 parseDeprel "ADV"   = ADV

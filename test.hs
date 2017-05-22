@@ -1,11 +1,10 @@
 module Main where
 
 import Control.Lens
--- import qualified Data.HashSet as S
 import System.Directory
 import System.FilePath
 --
-import SRL.CoNLL.Parser
+import SRL.CoNLL.CoNLL08.Parser
 
 
 main = do
@@ -19,5 +18,5 @@ main = do
     let ds = do s <- sents
                 l <- s^.sentence_lines
                 return (l^.line_deprel)
-    print (length ds)
+    print ds
   
