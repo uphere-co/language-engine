@@ -109,33 +109,47 @@ p_vnrole x = VNRole <$> x .: "vncls"
                     <*> (p_vntheta =<< (x .: "vntheta"))
 
 p_vntheta :: Text -> Parser VNTheta
-p_vntheta "Actor1"      = Right Actor1
-p_vntheta "Actor2"      = Right Actor2
-p_vntheta "Agent"       = Right Agent
-p_vntheta "Asset"       = Right Asset
-p_vntheta "Attribute"   = Right Attribute
-p_vntheta "Beneficiary" = Right Beneficiary
-p_vntheta "Cause"       = Right Cause
-p_vntheta "Destination" = Right Destination
-p_vntheta "Experiencer" = Right Experiencer
-p_vntheta "Extent"      = Right Extent
-p_vntheta "Instrument"  = Right Instrument
-p_vntheta "Location"    = Right Location
-p_vntheta "Material"    = Right Material
-p_vntheta "Patient"     = Right Patient
-p_vntheta "Patient1"    = Right Patient1
-p_vntheta "Patient2"    = Right Patient2
-p_vntheta "Predicate"   = Right Predicate
-p_vntheta "Product"     = Right Product
-p_vntheta "Recipient"   = Right Recipient
-p_vntheta "Source"      = Right Source
-p_vntheta "Stimulus"    = Right Stimulus
-p_vntheta "Theme"       = Right Theme
-p_vntheta "Theme1"      = Right Theme1
-p_vntheta "Theme2"      = Right Theme2
-p_vntheta "Time"        = Right Time
-p_vntheta "Topic"       = Right Topic
-p_vntheta x             = Left ("VNTheta:" ++ (T.unpack x))
+p_vntheta t = c (T.toLower t)
+  where
+    c "actor"       = Right Actor
+    c "actor1"      = Right Actor1
+    c "actor2"      = Right Actor2
+    c "agent"       = Right Agent
+    c "asset"       = Right Asset
+    c "attribute"   = Right Attribute
+    c "beneficiary" = Right Beneficiary
+    c "cause"       = Right Cause
+    c "co-agent"    = Right CoAgent
+    c "co-patient"  = Right CoPatient
+    c "co-theme"    = Right CoTheme
+    c "destination" = Right Destination
+    c "experiencer" = Right Experiencer
+    c "extent"      = Right Extent
+    c "goal"        = Right Goal
+    c "initial_location" = Right InitialLocation
+    c "instrument"  = Right Instrument
+    c "location"    = Right Location
+    c "material"    = Right Material
+    c "patient"     = Right Patient
+    c "patient1"    = Right Patient1
+    c "patient2"    = Right Patient2
+    c "pivot"       = Right Pivot
+    c "predicate"   = Right Predicate
+    c "product"     = Right Product
+    c "proposition" = Right Proposition
+    c "recipient"   = Right Recipient
+    c "reflexive"   = Right Reflexive
+    c "result"      = Right Result
+    c "source"      = Right Source
+    c "stimulus"    = Right Stimulus
+    c "theme"       = Right Theme
+    c "theme1"      = Right Theme1
+    c "theme2"      = Right Theme2
+    c "time"        = Right Time
+    c "topic"       = Right Topic
+    c "trajectory"  = Right Trajectory
+    c "value"       = Right Value    
+    c x             = Left ("VNTheta:" ++ (T.unpack x))
 
 p_person :: Text -> Parser (Maybe Person)
 p_person "third" = Right (Just Third)
@@ -170,3 +184,12 @@ p_form "participle" = Right (Just Participle)
 p_form "full"       = Right (Just Full)
 p_form "ns"         = Right Nothing
 p_form x            = Left ("form:" ++ T.unpack x)
+
+
+parseFrameFile :: FilePath -> IO (Either String FrameSet)
+parseFrameFile fp = do
+  txt <- TLIO.readFile fp
+  case txt ^? html . allNamed (only "frameset") of
+    Nothing -> return (Left "no frameset")
+    Just f -> return (p_frameset f)
+
