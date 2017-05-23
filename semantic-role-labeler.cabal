@@ -18,8 +18,17 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        SRL
+                       SRL.Type
+                       SRL.CoNLL.CoNLL08.Parser
+                       SRL.CoNLL.CoNLL08.Type
+                  
   -- other-modules:       
   -- other-extensions:    
-  build-depends:       base >=4.9 && <4.10
+  build-depends:       base,
+                       directory,
+                       filepath,
+                       lens,
+                       split,
+                       text
   hs-source-dirs:      src
   default-language:    Haskell2010
