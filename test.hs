@@ -1,10 +1,37 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
-import Control.Lens
-import System.Directory
-import System.FilePath
+import           Control.Lens
+import qualified Data.IntMap as IM
+import           Data.Monoid               ((<>))
+import           Data.Text                 (Text)
+import qualified Data.Text           as T
+import qualified Data.Text.IO        as TIO
+import           System.Directory
+import           System.FilePath
 --
-import SRL.CoNLL.CoNLL08.Parser
+import           SRL.CoNLL.CoNLL08.Parser
+
+
+showSent :: Sentence -> Text
+showSent s = T.intercalate " " (s^.sentence_tokens) 
+
+format :: Sentence -> Text
+format s = let m = IM.fromList (zip [1..] (s^.sentence_tokens))
+               formatArg (a,n) = a <> " : " <> case IM.lookup n m of {Nothing -> "" ; Just w -> w} 
+                       
+               f ((i0,rset),args) = rset <> "\n" <> "-----\n" <> 
+                                    T.intercalate "\n" (map formatArg args) <>
+                                    "\n------"
+           in T.intercalate "\n" (map f (s^.sentence_preds))
+
+display :: Sentence -> IO ()
+display s = do
+  putStrLn "============"
+  TIO.putStrLn (showSent s)
+  putStrLn "------------"
+  TIO.putStrLn (format s)
 
 
 main = do
@@ -18,5 +45,5 @@ main = do
     let ds = do s <- sents
                 l <- s^.sentence_lines
                 return (l^.line_deprel)
-    mapM_ (print . view sentence_preds) (take 10 sents)
+    mapM_ display (take 10 sents)
   

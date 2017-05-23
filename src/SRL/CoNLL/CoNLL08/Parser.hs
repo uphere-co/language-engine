@@ -150,6 +150,7 @@ type Arg = (Text,Int)
 
 
 data Sentence = Sentence { _sentence_lines :: [Line]
+                         , _sentence_tokens :: [Text]
                          , _sentence_preds :: [(RoleSet,[Arg])]
                          }
               deriving (Show,Ord,Eq)
@@ -171,9 +172,10 @@ takeJustAfterEnum = catMaybes . zipWith (\x y -> (x,) <$> y) [1..]
   
 parseSentence :: [Text] -> Sentence
 parseSentence txts = let ls = map parseLine txts
+                         toks = map (view line_form) ls
                          preds =  takeJustAfterEnum (map (view line_pred) ls)
                          predargs = zip preds . map parseArgs . transpose . map (view line_args) $ ls
-                     in Sentence ls predargs
+                     in Sentence ls toks predargs
                          
 
 parseFile :: FilePath -> IO [Sentence]
