@@ -1,11 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 
 module SRL.CoNLL.CoNLL08.Parser where
 
 import           Control.Lens
 import           Data.List.Split     (splitWhen)
+import           Data.Maybe          (catMaybes, isJust)
 import           Data.Text           (Text)
 import qualified Data.Text    as T
 import qualified Data.Text.IO as TIO
@@ -121,7 +123,8 @@ data Line =
        , _line_deprel      :: Deprel -- ^ Syntactic dependency relation to the HEAD. The syntactic dependency
                                      --   analysis is very similar to that used for the English data sets in the
                                      --   CoNLL 2007 shared task and is further described here.
-       , _line_pred        :: Text   -- ^ Rolesets of the semantic predicates in this sentence. This includes both
+       , _line_pred        :: Maybe Text
+                                     -- ^ Rolesets of the semantic predicates in this sentence. This includes both
                                      --   nominal and verbal predicates. The split-form tokens that are not
                                      --   semantic predicates must be marked with "_". We use the same roleset
                                      --   names as the PropBank and NomBank frames.
@@ -137,20 +140,31 @@ data Line =
 
 makeLenses ''Line
 
-newtype Sentence = Sentence { _sentence_lines :: [Line] }
-                 deriving (Show,Ord,Eq)
+type RoleSet = (Int,Text) -- ,[Arg])
+
+-- type Arg = (Text,Int)
+
+
+data Sentence = Sentence { _sentence_lines :: [Line]
+                         , _sentence_preds :: [RoleSet]
+                         }
+              deriving (Show,Ord,Eq)
 
 makeLenses ''Sentence
 
 parseLine :: Text -> Line
 parseLine txt =
-  let _line_id:_line_form:_line_lemma:_line_gpos:_line_ppos:_line_split_form:_line_split_lemma:_line_pposs:_line_head:_line_deprel':_line_pred:_line_args = T.split (== '\t') txt
+  let _line_id:_line_form:_line_lemma:_line_gpos:_line_ppos:_line_split_form:_line_split_lemma:_line_pposs:_line_head:_line_deprel':_line_pred':_line_args = T.split (== '\t') txt
       _line_deprel = parseDeprel _line_deprel'
+      _line_pred = if _line_pred' == "_" then Nothing else Just _line_pred'
   in Line {..}
 
      
 parseSentence :: [Text] -> Sentence
-parseSentence = Sentence . map parseLine
+parseSentence txts = let ls = map parseLine txts
+                         preds = zipWith (\x y -> (x,) <$> y) [1..] (map (view line_pred) ls)
+                     in Sentence ls (catMaybes preds)
+                         
 
 parseFile :: FilePath -> IO [Sentence]
 parseFile fp = do
