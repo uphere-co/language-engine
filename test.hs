@@ -3,7 +3,6 @@
 module Main where
 
 import           Control.Lens
-import           Data.Array                (array)
 import           Data.Graph
 import qualified Data.IntMap as IM
 import           Data.List                 (sort)
@@ -41,8 +40,6 @@ display :: Sentence -> IO ()
 display s = do
   putStrLn "============"
   TIO.putStrLn (showSent s)
-  putStrLn "------------"
-  -- print (s^.sentence_deps)
   putStrLn "------------"
   TIO.putStrLn (format s)
 
