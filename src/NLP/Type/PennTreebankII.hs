@@ -1,5 +1,8 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -225,6 +228,12 @@ instance FromJSON AnchorTag where
 instance ToJSON AnchorTag where
   toJSON = genericToJSON defaultOptions
 
+
+data PennTreeGen c p a = PN c [PennTreeGen c p a]
+                       | PL p a
+                   deriving (Show, Functor, Foldable, Traversable)
+                            
+type PennTree = PennTreeGen Text Text Text
 
 
 
