@@ -6,11 +6,13 @@
 module SRL.CoNLL.CoNLL08.Parser where
 
 import           Control.Lens
+import           Data.List           (transpose)
 import           Data.List.Split     (splitWhen)
 import           Data.Maybe          (catMaybes, isJust)
 import           Data.Text           (Text)
 import qualified Data.Text    as T
 import qualified Data.Text.IO as TIO
+import           Data.Tuple          (swap)
 --
 import           SRL.CoNLL.CoNLL08.Type
 
@@ -128,7 +130,8 @@ data Line =
                                      --   nominal and verbal predicates. The split-form tokens that are not
                                      --   semantic predicates must be marked with "_". We use the same roleset
                                      --   names as the PropBank and NomBank frames.
-       , _line_args        :: [Text] -- ^ Columns with argument labels for the each semantic predicate following
+       , _line_args        :: [Maybe Text]
+                                     -- ^ Columns with argument labels for the each semantic predicate following
                                      --   textual order, i.e., the first column corresponds to the first predicate
                                      --   in PRED, the second column to the second predicate, etc. Note that,
                                      --   because this algorithm uniquely identifies the ID of the corresponding
@@ -142,11 +145,12 @@ makeLenses ''Line
 
 type RoleSet = (Int,Text) -- ,[Arg])
 
--- type Arg = (Text,Int)
+
+type Arg = (Text,Int)
 
 
 data Sentence = Sentence { _sentence_lines :: [Line]
-                         , _sentence_preds :: [RoleSet]
+                         , _sentence_preds :: [(RoleSet,[Arg])]
                          }
               deriving (Show,Ord,Eq)
 
@@ -154,16 +158,22 @@ makeLenses ''Sentence
 
 parseLine :: Text -> Line
 parseLine txt =
-  let _line_id:_line_form:_line_lemma:_line_gpos:_line_ppos:_line_split_form:_line_split_lemma:_line_pposs:_line_head:_line_deprel':_line_pred':_line_args = T.split (== '\t') txt
+  let _line_id:_line_form:_line_lemma:_line_gpos:_line_ppos:_line_split_form:_line_split_lemma:_line_pposs:_line_head:_line_deprel':_line_pred':_line_args' = T.split (== '\t') txt
       _line_deprel = parseDeprel _line_deprel'
       _line_pred = if _line_pred' == "_" then Nothing else Just _line_pred'
+      _line_args = map (\x -> if x == "_" then Nothing else Just x) _line_args' 
   in Line {..}
 
-     
+parseArgs :: [Maybe Text] -> [Arg]
+parseArgs ws = map swap $ takeJustAfterEnum ws
+
+takeJustAfterEnum = catMaybes . zipWith (\x y -> (x,) <$> y) [1..]
+  
 parseSentence :: [Text] -> Sentence
 parseSentence txts = let ls = map parseLine txts
-                         preds = zipWith (\x y -> (x,) <$> y) [1..] (map (view line_pred) ls)
-                     in Sentence ls (catMaybes preds)
+                         preds =  takeJustAfterEnum (map (view line_pred) ls)
+                         predargs = zip preds . map parseArgs . transpose . map (view line_args) $ ls
+                     in Sentence ls predargs
                          
 
 parseFile :: FilePath -> IO [Sentence]
