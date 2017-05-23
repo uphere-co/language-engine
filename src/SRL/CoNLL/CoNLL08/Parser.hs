@@ -12,6 +12,7 @@ import           Data.Maybe          (catMaybes, isJust)
 import           Data.Text           (Text)
 import qualified Data.Text    as T
 import qualified Data.Text.IO as TIO
+import           Data.Text.Read      (decimal)
 import           Data.Tuple          (swap)
 --
 import           SRL.CoNLL.CoNLL08.Type
@@ -92,7 +93,7 @@ parseDeprel x       = error ("parseDeprel: " ++ (T.unpack x))
 
   
 data Line =
-  Line { _line_id          :: Text   -- ^ Token counter, starting at 1 for each new sentence.
+  Line { _line_id          :: Int    -- ^ Token counter, starting at 1 for each new sentence.
        , _line_form        :: Text   -- ^ Word form or punctuation symbol. The FORM field uses the original
                                      --   WSJ tokenization, i.e., hyphenated words such as "Atlanta-based"
                                      --   are not split.
@@ -119,7 +120,7 @@ data Line =
                                      --   SPLIT_LEMMA is set to the lower-case version of SPLIT_FORM.
        , _line_pposs       :: Text   -- ^ Predicted POS tags of the split forms. These tags are generated using
                                      --   the same state-of-the-art tagger and cross-validation process as PPOS.
-       , _line_head        :: Text   -- ^ Syntactic head of the current token, which is either a value of ID or
+       , _line_head        :: Int    -- ^ Syntactic head of the current token, which is either a value of ID or
                                      --   zero ("0"). Note that both syntactic and semantic dependencies annotate
                                      --   the split-form tokens.
        , _line_deprel      :: Deprel -- ^ Syntactic dependency relation to the HEAD. The syntactic dependency
@@ -143,8 +144,7 @@ data Line =
 
 makeLenses ''Line
 
-type RoleSet = (Int,Text) -- ,[Arg])
-
+type RoleSet = (Int,Text)
 
 type Arg = (Text,Int)
 
@@ -152,17 +152,22 @@ type Arg = (Text,Int)
 data Sentence = Sentence { _sentence_lines :: [Line]
                          , _sentence_tokens :: [Text]
                          , _sentence_preds :: [(RoleSet,[Arg])]
+                         , _sentence_deps :: [(Int,Int)]
                          }
               deriving (Show,Ord,Eq)
 
 makeLenses ''Sentence
 
+readDecimal x = case decimal x of {Left err -> error err; Right (n,_) -> n } 
+
 parseLine :: Text -> Line
 parseLine txt =
-  let _line_id:_line_form:_line_lemma:_line_gpos:_line_ppos:_line_split_form:_line_split_lemma:_line_pposs:_line_head:_line_deprel':_line_pred':_line_args' = T.split (== '\t') txt
+  let _line_id':_line_form:_line_lemma:_line_gpos:_line_ppos:_line_split_form:_line_split_lemma:_line_pposs:_line_head':_line_deprel':_line_pred':_line_args' = T.split (== '\t') txt
+      _line_id     = readDecimal _line_id'
+      _line_head   = readDecimal _line_head' 
       _line_deprel = parseDeprel _line_deprel'
-      _line_pred = if _line_pred' == "_" then Nothing else Just _line_pred'
-      _line_args = map (\x -> if x == "_" then Nothing else Just x) _line_args' 
+      _line_pred   = if _line_pred' == "_" then Nothing else Just _line_pred'
+      _line_args   = map (\x -> if x == "_" then Nothing else Just x) _line_args'
   in Line {..}
 
 parseArgs :: [Maybe Text] -> [Arg]
@@ -175,7 +180,8 @@ parseSentence txts = let ls = map parseLine txts
                          toks = map (view line_form) ls
                          preds =  takeJustAfterEnum (map (view line_pred) ls)
                          predargs = zip preds . map parseArgs . transpose . map (view line_args) $ ls
-                     in Sentence ls toks predargs
+                         deps = map (\l->(l^.line_id,l^.line_head)) ls
+                     in Sentence ls toks predargs deps
                          
 
 parseFile :: FilePath -> IO [Sentence]
