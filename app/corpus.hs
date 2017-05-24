@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import qualified Data.Attoparsec.Text as A
@@ -33,4 +35,8 @@ main =  do
   TIO.putStrLn testtxt
   case A.parseOnly penntree testtxt of
     Left err -> print err
-    Right tr -> print $ zip [0..] $ toList tr
+    Right tr -> do -- print $ zip [0..] $ toList tr
+      let mn = findNode (2,2) tr
+      case mn of
+        Nothing -> error "your index was wrong"
+        Just n -> (TIO.putStrLn . T.intercalate " " . map snd . toList) n

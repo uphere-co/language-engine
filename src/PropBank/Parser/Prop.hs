@@ -4,10 +4,15 @@
 module PropBank.Parser.Prop where
 
 import           Control.Applicative       (many)
+import           Control.Monad.Trans.State
 import qualified Data.Attoparsec.Text as A
+import           Data.Maybe                (listToMaybe)
 import           Data.Text                 (Text)
 import qualified Data.Text            as T
 import           Data.Text.Read            (decimal)
+--
+import           NLP.Type.PennTreebankII
+
 
 data Node = Node { _node_id :: Int
                  , _node_height :: Int }
@@ -58,3 +63,21 @@ parseProp :: Text -> [Instance]
 parseProp = map parseInst . T.lines
 
 
+
+mkIndexedTree :: PennTree -> PennTreeGen Text Text (Int,Text)
+mkIndexedTree tr = evalState (traverse tagidx tr) 0
+  where tagidx x = get >>= \n -> put (n+1) >> return (n,x)
+        
+
+contain :: Int -> PennTreeGen Text Text (Int,Text) -> [PennTreeGen Text Text (Int,Text)]
+contain i y@(PN _ xs) = case (filter (not.null) . map (contain i)) xs of
+                          [] -> []
+                          ys:_ -> y:ys
+contain i x@(PL _ (j,_)) | i == j = [x]
+                         | otherwise = []
+
+findNodePathForLeaf :: Int -> PennTree -> [PennTreeGen Text Text (Int,Text)]
+findNodePathForLeaf i tr = contain i (mkIndexedTree tr)
+
+findNode :: (Int,Int) -> PennTree -> Maybe (PennTreeGen Text Text (Int,Text))
+findNode (i,d) tr = listToMaybe $ drop d $ reverse (findNodePathForLeaf i tr)
