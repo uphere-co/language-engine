@@ -1,14 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 
 module SRL.CoNLL.CoNLL08.Parser where
 
 import           Control.Lens
+import           Data.List           (transpose)
 import           Data.List.Split     (splitWhen)
+import           Data.Maybe          (catMaybes, isJust)
 import           Data.Text           (Text)
 import qualified Data.Text    as T
 import qualified Data.Text.IO as TIO
+import           Data.Text.Read      (decimal)
+import           Data.Tuple          (swap)
 --
 import           SRL.CoNLL.CoNLL08.Type
 
@@ -88,7 +93,7 @@ parseDeprel x       = error ("parseDeprel: " ++ (T.unpack x))
 
   
 data Line =
-  Line { _line_id          :: Text   -- ^ Token counter, starting at 1 for each new sentence.
+  Line { _line_id          :: Int    -- ^ Token counter, starting at 1 for each new sentence.
        , _line_form        :: Text   -- ^ Word form or punctuation symbol. The FORM field uses the original
                                      --   WSJ tokenization, i.e., hyphenated words such as "Atlanta-based"
                                      --   are not split.
@@ -115,17 +120,19 @@ data Line =
                                      --   SPLIT_LEMMA is set to the lower-case version of SPLIT_FORM.
        , _line_pposs       :: Text   -- ^ Predicted POS tags of the split forms. These tags are generated using
                                      --   the same state-of-the-art tagger and cross-validation process as PPOS.
-       , _line_head        :: Text   -- ^ Syntactic head of the current token, which is either a value of ID or
+       , _line_head        :: Int    -- ^ Syntactic head of the current token, which is either a value of ID or
                                      --   zero ("0"). Note that both syntactic and semantic dependencies annotate
                                      --   the split-form tokens.
        , _line_deprel      :: Deprel -- ^ Syntactic dependency relation to the HEAD. The syntactic dependency
                                      --   analysis is very similar to that used for the English data sets in the
                                      --   CoNLL 2007 shared task and is further described here.
-       , _line_pred        :: Text   -- ^ Rolesets of the semantic predicates in this sentence. This includes both
+       , _line_pred        :: Maybe Text
+                                     -- ^ Rolesets of the semantic predicates in this sentence. This includes both
                                      --   nominal and verbal predicates. The split-form tokens that are not
                                      --   semantic predicates must be marked with "_". We use the same roleset
                                      --   names as the PropBank and NomBank frames.
-       , _line_args        :: [Text] -- ^ Columns with argument labels for the each semantic predicate following
+       , _line_args        :: [Maybe Text]
+                                     -- ^ Columns with argument labels for the each semantic predicate following
                                      --   textual order, i.e., the first column corresponds to the first predicate
                                      --   in PRED, the second column to the second predicate, etc. Note that,
                                      --   because this algorithm uniquely identifies the ID of the corresponding
@@ -137,20 +144,45 @@ data Line =
 
 makeLenses ''Line
 
-newtype Sentence = Sentence { _sentence_lines :: [Line] }
-                 deriving (Show,Ord,Eq)
+type RoleSet = (Int,Text)
+
+type Arg = (Text,Int)
+
+
+data Sentence = Sentence { _sentence_lines :: [Line]
+                         , _sentence_tokens :: [Text]
+                         , _sentence_preds :: [(RoleSet,[Arg])]
+                         , _sentence_deps :: [(Int,Int)]
+                         }
+              deriving (Show,Ord,Eq)
 
 makeLenses ''Sentence
 
+readDecimal x = case decimal x of {Left err -> error err; Right (n,_) -> n } 
+
 parseLine :: Text -> Line
 parseLine txt =
-  let _line_id:_line_form:_line_lemma:_line_gpos:_line_ppos:_line_split_form:_line_split_lemma:_line_pposs:_line_head:_line_deprel':_line_pred:_line_args = T.split (== '\t') txt
+  let _line_id':_line_form:_line_lemma:_line_gpos:_line_ppos:_line_split_form:_line_split_lemma:_line_pposs:_line_head':_line_deprel':_line_pred':_line_args' = T.split (== '\t') txt
+      _line_id     = readDecimal _line_id'
+      _line_head   = readDecimal _line_head' 
       _line_deprel = parseDeprel _line_deprel'
+      _line_pred   = if _line_pred' == "_" then Nothing else Just _line_pred'
+      _line_args   = map (\x -> if x == "_" then Nothing else Just x) _line_args'
   in Line {..}
 
-     
+parseArgs :: [Maybe Text] -> [Arg]
+parseArgs ws = map swap $ takeJustAfterEnum ws
+
+takeJustAfterEnum = catMaybes . zipWith (\x y -> (x,) <$> y) [1..]
+  
 parseSentence :: [Text] -> Sentence
-parseSentence = Sentence . map parseLine
+parseSentence txts = let ls = map parseLine txts
+                         toks = map (view line_form) ls
+                         preds =  takeJustAfterEnum (map (view line_pred) ls)
+                         predargs = zip preds . map parseArgs . transpose . map (view line_args) $ ls
+                         deps = map (\l->(l^.line_id,l^.line_head)) ls
+                     in Sentence ls toks predargs deps
+                         
 
 parseFile :: FilePath -> IO [Sentence]
 parseFile fp = do
