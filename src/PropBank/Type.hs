@@ -4,6 +4,8 @@ module PropBank.Type where
 
 import Control.Lens
 import Data.Text
+--
+import           YAML.Builder
 
 data Note = Note { _note_content :: Text }
             deriving Show
@@ -158,3 +160,44 @@ data FrameSet = FrameSet { _frameset_note :: [Note]
 
 makeLenses ''FrameSet
 
+
+instance MakeYaml Int where
+  makeYaml _ x = YPrim (YInteger x)
+
+instance MakeYaml (Int,Int) where
+  makeYaml n (x,y) = YLArray Inline [ makeYaml n x, makeYaml n y ] 
+
+instance MakeYaml Text where
+  makeYaml _ txt = YPrim (YString Plain (TL.fromStrict txt))
+
+
+instance MakeYaml RoleSet where
+  makeYaml n s =
+    YObject $
+      [("id"     , makeYaml n (s^.roleset_id))]
+      <> single n "name"  (s^.roleset_name)
+      <> single n "source" (s^.roleset_source)
+      <> single n "vncls" (s^.roleset_vncls)
+      <> single n "roleset" (s^.roleset_roleset)
+      <> single n "framenet" (s^.roleset_framenet)
+      <> [("roles", makeYaml n (s^.roleset_roles))]
+
+instance MakeYaml Roles where
+  makeYaml n s = YIArray (map (makeYaml n) (s^.roles_role))
+
+
+instance MakeYaml Role where
+  makeYaml n s =
+    YObject $ [("n", makeYaml n (s^.role_n))]
+              <> single n "f" (s^.role_f)
+              <> single n "source" (s^.role_source)
+              <> single n "description" (s^.role_descr)
+              <> [("vnrole", YIArray (map (makeYaml n) (s^.role_vnrole)))]
+
+instance MakeYaml VNRole where
+  makeYaml n s =
+    YObject $ [ ("vncls",makeYaml n (s^.vnrole_vncls))
+              , ("vntheta",makeYaml n (T.pack (show (s^.vntheta)))) 
+              ]
+
+data ProgOption = ProgOption { dir :: FilePath } deriving Show
