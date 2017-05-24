@@ -4,14 +4,17 @@
 
 module PropBank.Parser.Prop where
 
-import           Control.Applicative       (many)
+import           Control.Applicative         (many)
 import           Control.Lens
 import           Control.Monad.Trans.State
 import qualified Data.Attoparsec.Text as A
-import           Data.Maybe                (listToMaybe)
-import           Data.Text                 (Text)
+import           Data.Foldable               (toList)
+import           Data.Maybe                  (listToMaybe)
+import           Data.Monoid                 ((<>))
+import           Data.Text                   (Text)
 import qualified Data.Text            as T
-import           Data.Text.Read            (decimal)
+import qualified Data.Text.IO         as TIO
+import           Data.Text.Read              (decimal)
 --
 import           NLP.Type.PennTreebankII
 
@@ -89,3 +92,20 @@ findNodePathForLeaf i tr = contain i (mkIndexedTree tr)
 
 findNode :: Node -> PennTree -> Maybe (PennTreeGen Text Text (Int,Text))
 findNode (Node i d) tr = listToMaybe $ drop d $ reverse (findNodePathForLeaf i tr)
+
+
+display :: (PennTree,Instance) -> IO ()
+display (tr,prop) = do
+  TIO.putStrLn "---------------"
+  TIO.putStrLn (prop^.inst_lemma_roleset_id)
+  TIO.putStrLn "---------------"
+  mapM_ (displayArg tr) (prop^.inst_arguments)
+  
+displayArg :: PennTree -> Argument -> IO ()
+displayArg tr arg = do
+  TIO.putStr (arg^.arg_label <> ": ")
+  let format n = (T.intercalate " " . map snd . toList) n
+  mapM_ (\x -> TIO.putStr (maybe "Nothing" format (findNode x tr)) >> TIO.putStr ", ") (arg^.arg_terminals)
+  TIO.putStr "\n"
+
+

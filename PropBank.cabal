@@ -30,6 +30,7 @@ library
   build-depends:       base,
                        attoparsec,
                        directory,
+                       discrimination,
                        filepath,
                        lens,
                        taggy-lens,
@@ -86,6 +87,8 @@ Executable corpus
   build-depends:        base,
                         --
                         attoparsec,
+                        containers,
+                        discrimination,
                         filepath,
                         haskeline,
                         lens,
