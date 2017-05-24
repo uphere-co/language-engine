@@ -81,13 +81,17 @@ Executable corpus
   
   build-depends:        base,
                         --
+                        attoparsec,
                         filepath,
                         haskeline,
                         lens,
                         monad-loops,
                         optparse-applicative,
+                        split,
                         text,
                         unordered-containers,
                         yayaml,
+                        --
+                        nlp-types,
                         --
                         PropBank

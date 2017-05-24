@@ -1,5 +1,6 @@
 { pkgs ? import <nixpkgs> {}
 , uphere-nix-overlay ? <uphere-nix-overlay>
+, nlp-types
 }:
 
 with pkgs;
@@ -7,8 +8,13 @@ with pkgs;
 let
   hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix")
                { inherit pkgs; };
+
+  config2 =
+    self: super: {
+      "nlp-types" = self.callPackage (import nlp-types) {};
+    };
   newHaskellPackages = haskellPackages.override {
-    overrides = hsconfig;
+    overrides = self: super: hsconfig self super // config2 self super;
   };
 
 
@@ -24,6 +30,7 @@ let
 
             lens
             taggy-lens
+            p.nlp-types
           ]);
 
 in
