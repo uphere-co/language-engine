@@ -90,9 +90,12 @@ contain i x@(PL _ (j,_)) | i == j = [x]
 findNodePathForLeaf :: Int -> PennTree -> [PennTreeGen Text Text (Int,Text)]
 findNodePathForLeaf i tr = contain i (mkIndexedTree tr)
 
-findNode :: Node -> PennTree -> Maybe (PennTreeGen Text Text (Int,Text))
-findNode (Node i d) tr = listToMaybe $ drop d $ reverse (findNodePathForLeaf i tr)
-
+findNode :: Node -> PennTree -> Maybe (Text, PennTreeGen Text Text (Int,Text))
+findNode (Node i d) tr = do
+  let lst = reverse (findNodePathForLeaf i tr)
+  PL _ (_,headword) <- listToMaybe (take 1 lst)
+  r <- listToMaybe $ drop d lst
+  return (headword,r)
 
 display :: (PennTree,Instance) -> IO ()
 display (tr,prop) = do
@@ -104,7 +107,9 @@ display (tr,prop) = do
 displayArg :: PennTree -> Argument -> IO ()
 displayArg tr arg = do
   TIO.putStr (arg^.arg_label <> ": ")
-  let format n = (T.intercalate " " . map snd . toList) n
+  let format (t,n) = "(" <> t <> ") " <>   (T.intercalate " " . map snd . toList) n
+
+  
   mapM_ (\x -> TIO.putStr (maybe "Nothing" format (findNode x tr)) >> TIO.putStr ", ") (arg^.arg_terminals)
   TIO.putStr "\n"
 
