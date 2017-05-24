@@ -1,9 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module PropBank.Parser.Prop where
 
 import           Control.Applicative       (many)
+import           Control.Lens
 import           Control.Monad.Trans.State
 import qualified Data.Attoparsec.Text as A
 import           Data.Maybe                (listToMaybe)
@@ -18,11 +20,15 @@ data Node = Node { _node_id :: Int
                  , _node_height :: Int }
           deriving (Show,Eq,Ord)
 
+makeLenses ''Node
+
 data Argument = Argument { _arg_terminals :: [Node]
                          , _arg_label       :: Text
                          }
               deriving (Show,Eq,Ord)
-                         
+
+makeLenses ''Argument
+                       
 data Instance = Instance { _inst_tree_id      :: Int
                          , _inst_predicate_id :: Int
                          , _inst_annotator_id :: Text
@@ -31,6 +37,8 @@ data Instance = Instance { _inst_tree_id      :: Int
                          , _inst_arguments :: [Argument]
                          }
               deriving (Show,Eq,Ord)
+
+makeLenses ''Instance
 
 readDecimal x = case decimal x of {Left err -> error err; Right (n,_) -> n } 
 
@@ -79,5 +87,5 @@ contain i x@(PL _ (j,_)) | i == j = [x]
 findNodePathForLeaf :: Int -> PennTree -> [PennTreeGen Text Text (Int,Text)]
 findNodePathForLeaf i tr = contain i (mkIndexedTree tr)
 
-findNode :: (Int,Int) -> PennTree -> Maybe (PennTreeGen Text Text (Int,Text))
-findNode (i,d) tr = listToMaybe $ drop d $ reverse (findNodePathForLeaf i tr)
+findNode :: Node -> PennTree -> Maybe (PennTreeGen Text Text (Int,Text))
+findNode (Node i d) tr = listToMaybe $ drop d $ reverse (findNodePathForLeaf i tr)
