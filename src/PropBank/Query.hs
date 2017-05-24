@@ -14,7 +14,7 @@ import qualified Data.Text           as T
 import           System.Directory          (getDirectoryContents)
 import           System.FilePath           ((</>),takeBaseName,takeExtensions)
 --
-import           PropBank.Parser
+import           PropBank.Parser.Frame
 import           PropBank.Type
 
 newtype FrameDB = FrameDB { _frameDB :: HashMap Text [Predicate] }

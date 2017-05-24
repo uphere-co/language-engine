@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module PropBank.Parser where
+module PropBank.Parser.Frame where
 
 import           Control.Lens       hiding (element,elements)
 import           Data.Text                 (Text)
