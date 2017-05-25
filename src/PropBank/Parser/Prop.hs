@@ -9,6 +9,7 @@ import           Control.Lens
 import           Control.Monad.Trans.State
 import qualified Data.Attoparsec.Text as A
 import           Data.Foldable               (toList)
+import qualified Data.List            as L   (lookup)
 import           Data.Maybe                  (listToMaybe)
 import           Data.Monoid                 ((<>))
 import           Data.Text                   (Text)
@@ -98,6 +99,24 @@ showInstance (tr,prop) = do
   TIO.putStrLn (prop^.inst_lemma_roleset_id)
   TIO.putStrLn "---------------"
   mapM_ (showArgument tr) (prop^.inst_arguments)
+
+showNomInstance :: (PennTree,NomInstance) -> IO ()
+showNomInstance (tr,nom) = do
+  TIO.putStrLn "---------------"
+  -- putStrLn (show (nom^.nominst_sense_number))
+  showNomSense (tr,nom)
+  TIO.putStrLn "---------------"
+  mapM_ (showArgument tr) (nom^.nominst_arguments)
+
+
+showNomSense :: (PennTree,NomInstance) -> IO ()
+showNomSense (tr,nom) = do
+  let itr = zip [0..] $ toList tr
+  print itr
+  print (nom^.nominst_predicate_id)
+  case L.lookup (nom^.nominst_predicate_id) $ zip [0..] $ toList tr of
+    Nothing -> putStrLn "non-sense?"
+    Just n -> TIO.putStrLn (n <> "." <> T.pack (show (nom^.nominst_sense_number)))
   
 showArgument :: PennTree -> Argument -> IO ()
 showArgument tr arg = do
@@ -106,10 +125,17 @@ showArgument tr arg = do
   mapM_ (\x -> TIO.putStr (maybe "Nothing" format (findNode x tr)) >> TIO.putStr ", ") (arg^.arg_terminals)
   TIO.putStr "\n"
 
-showSentenceAnnotation :: (Int,(PennTree,[Instance])) -> IO ()
-showSentenceAnnotation (i,(tr,props)) = do
+showSentenceProp :: (Int,(PennTree,[Instance])) -> IO ()
+showSentenceProp (i,(tr,props)) = do
   TIO.putStrLn "================================================="
   TIO.putStr ("Sentence " <> T.pack (show i) <> ": ") 
   (TIO.putStrLn . T.intercalate " " . toList) tr
   mapM_ (showInstance . (tr,)) props
+
+showSentenceNom :: (Int,(PennTree,[NomInstance])) -> IO ()
+showSentenceNom (i,(tr,props)) = do
+  TIO.putStrLn "================================================="
+  TIO.putStr ("Sentence " <> T.pack (show i) <> ": ") 
+  (TIO.putStrLn . T.intercalate " " . toList) tr
+  mapM_ (showNomInstance . (tr,)) props
 
