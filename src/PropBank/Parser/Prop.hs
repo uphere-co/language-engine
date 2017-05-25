@@ -35,6 +35,20 @@ parseInst txt =
                           Just xs -> xs
   in Instance {..}
 
+
+parseNomInst :: Text -> NomInstance
+parseNomInst txt = 
+  let _nominst_tree_file':_nominst_tree_id':_nominst_predicate_id':_nominst_base_form:_nominst_sense_number':_nominst_arguments'
+        = T.words txt
+      _nominst_tree_file = T.unpack _nominst_tree_file'
+      _nominst_tree_id = readDecimal _nominst_tree_id'
+      _nominst_predicate_id = readDecimal _nominst_predicate_id'
+      _nominst_sense_number = readDecimal _nominst_sense_number'
+      _nominst_arguments = case mapM parseArg _nominst_arguments' of
+                             Nothing -> error "parseArg"
+                             Just xs -> xs
+  in NomInstance {..}
+
 parseArg :: Text -> Maybe Argument
 parseArg txt = case A.parseOnly p_arg txt of
                  Left _ -> Nothing
@@ -52,6 +66,8 @@ parseArg txt = case A.parseOnly p_arg txt of
 parseProp :: Text -> [Instance]
 parseProp = map parseInst . T.lines
 
+parseNomProp :: Text -> [NomInstance]
+parseNomProp = map parseNomInst . T.lines
 
 
 mkIndexedTree :: PennTree -> PennTreeGen Text Text (Int,Text)
