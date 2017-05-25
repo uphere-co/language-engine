@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
 
 module Main where
 
@@ -7,30 +6,16 @@ import           Control.Lens
 import qualified Data.Attoparsec.Text as A
 import           Data.Discrimination         (leftOuter)
 import           Data.Discrimination.Grouping (grouping)
-import           Data.Foldable               (toList)
 import           Data.Function               (on)
-import qualified Data.IntMap          as IM
 import           Data.List                   (groupBy)
 import           Data.List.Split             (splitWhen)
-import           Data.Monoid                 ((<>))
-import           Data.Text                   (Text)
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as TIO
-import           Options.Applicative
 --
 import           NLP.Parser.PennTreebankII
-import           NLP.Type.PennTreebankII
 --
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
-
-showSentenceAnnotation :: (Int,(PennTree,[Instance])) -> IO ()
-showSentenceAnnotation (i,(tr,props)) = do
-  TIO.putStrLn "================================================="
-  TIO.putStr ("Sentence " <> T.pack (show i) <> ": ") 
-  (TIO.putStrLn . T.intercalate " " . toList) tr
-  mapM_ (showInstance . (tr,)) props
-
 
 main :: IO ()
 main =  do

@@ -40,14 +40,13 @@ newtype RoleSetDB = RoleSetDB { _rolesetDB :: HashMap Text RoleSet }
 makeLenses ''RoleSetDB
 
 constructFrameDB :: FilePath -> IO FrameDB
-constructFrameDB dir = do
-  cnts <- getDirectoryContents dir
+constructFrameDB d = do
+  cnts <- getDirectoryContents d
   let flst = sort (filter (\x -> takeExtensions x == ".xml") cnts)
   FrameDB <$> foldM action HM.empty flst
  where
   action m f = do
-    -- putStrLn f
-    e <- parseFrameFile (dir </> f)
+    e <- parseFrameFile (d </> f)
     case e of
       Left err -> putStrLn err >> return m
       Right fr -> return $ HM.insert (T.pack (takeBaseName f)) (fr^.frameset_predicate) m
@@ -67,7 +66,6 @@ queryPredicate db input = do
         r <- p ^. predicate_roleset
         let (i,n) = (r^.roleset_id,fromMaybe "" (r^.roleset_name))
         return (i,n)
-        -- p ^.. (predicate_roleset . traverse . roleset_id)
   if null result
     then putStrLn "No such predicate"
     else mapM_ (\(i,n) -> TIO.putStrLn (i <> "\t" <> n)) (sortBy (compare `on` fst) result)

@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
 
 module PropBank.Parser.Prop where
 
@@ -20,6 +21,7 @@ import           NLP.Type.PennTreebankII     (PennTreeGen(..),PennTree)
 import           PropBank.Type.Prop
 
 
+readDecimal :: Text -> Int
 readDecimal x = case decimal x of {Left err -> error err; Right (n,_) -> n } 
 
 parseInst :: Text -> Instance
@@ -88,4 +90,10 @@ showArgument tr arg = do
   mapM_ (\x -> TIO.putStr (maybe "Nothing" format (findNode x tr)) >> TIO.putStr ", ") (arg^.arg_terminals)
   TIO.putStr "\n"
 
+showSentenceAnnotation :: (Int,(PennTree,[Instance])) -> IO ()
+showSentenceAnnotation (i,(tr,props)) = do
+  TIO.putStrLn "================================================="
+  TIO.putStr ("Sentence " <> T.pack (show i) <> ": ") 
+  (TIO.putStrLn . T.intercalate " " . toList) tr
+  mapM_ (showInstance . (tr,)) props
 

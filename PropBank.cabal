@@ -27,6 +27,7 @@ library
                         -threaded
                         -funbox-strict-fields
                         -fno-warn-unused-do-bind
+                        -fno-warn-orphans
                         
 
   ghc-prof-options:     -auto-all
@@ -55,6 +56,7 @@ Executable query
                         -threaded
                         -funbox-strict-fields
                         -fno-warn-unused-do-bind
+                        -fno-warn-orphans
 
   ghc-prof-options:     -auto-all
   extra-libraries:     
@@ -63,14 +65,10 @@ Executable query
   
   build-depends:        base,
                         --
-                        filepath,
                         haskeline,
-                        lens,
                         monad-loops,
                         optparse-applicative,
                         text,
-                        unordered-containers,
-                        yayaml,
                         --
                         PropBank
 
@@ -82,6 +80,7 @@ Executable corpus
                         -threaded
                         -funbox-strict-fields
                         -fno-warn-unused-do-bind
+                        -fno-warn-orphans
 
   ghc-prof-options:     -auto-all
   extra-libraries:     
@@ -94,14 +93,11 @@ Executable corpus
                         containers,
                         discrimination,
                         filepath,
-                        haskeline,
                         lens,
-                        monad-loops,
                         optparse-applicative,
                         split,
                         text,
                         unordered-containers,
-                        yayaml,
                         --
                         nlp-types,
                         --
