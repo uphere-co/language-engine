@@ -4,13 +4,11 @@
 
 module PropBank.Type where
 
-
-import           Data.Monoid                ((<>))
 import           Control.Lens
-import           Data.Text      (Text)
-import qualified Data.Text           as T
-import qualified Data.Text.Lazy             as TL
-
+import           Data.Monoid          ((<>))
+import           Data.Text            (Text)
+import qualified Data.Text      as T
+import qualified Data.Text.Lazy as TL
 --
 import           YAML.Builder
 
@@ -209,6 +207,7 @@ instance MakeYaml VNRole where
 
 data ProgOption = ProgOption { dir :: FilePath } deriving Show
 
+single :: MakeYaml a => Int -> k -> Maybe a -> [(k, YamlValue)]
 single n k = maybe [] (inj k . makeYaml n)
 
 inj :: k -> a -> [(k,a)]

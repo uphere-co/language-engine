@@ -26,6 +26,7 @@ library
                         -threaded
                         -funbox-strict-fields
                         -fno-warn-unused-do-bind
+                        
 
   ghc-prof-options:     -auto-all
   build-depends:       base,
