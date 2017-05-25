@@ -25,6 +25,7 @@ library
                         -threaded
                         -funbox-strict-fields
                         -fno-warn-unused-do-bind
+                        
 
   ghc-prof-options:     -auto-all
   build-depends:       base,
@@ -34,7 +35,8 @@ library
                        lens,
                        taggy-lens,
                        text,
-                       unordered-containers
+                       unordered-containers,
+                       yayaml
   hs-source-dirs:      src
   default-language:    Haskell2010
 
