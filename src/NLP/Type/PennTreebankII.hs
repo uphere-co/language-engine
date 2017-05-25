@@ -228,9 +228,9 @@ instance FromJSON AnchorTag where
 instance ToJSON AnchorTag where
   toJSON = genericToJSON defaultOptions
 
-
-data PennTreeGen c p a = PN c [PennTreeGen c p a]
-                       | PL p a
+-- | chunk = chunktag, pos = postag, a = content
+data PennTreeGen chunk pos a = PN chunk [PennTreeGen chunk pos a]
+                             | PL pos a
                    deriving (Show, Functor, Foldable, Traversable)
                             
 type PennTree = PennTreeGen Text Text Text
