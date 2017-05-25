@@ -5,6 +5,7 @@
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module NLP.Type.PennTreebankII where
 
@@ -235,6 +236,7 @@ data PennTreeGen chunk pos a = PN chunk [PennTreeGen chunk pos a]
                             
 type PennTree = PennTreeGen Text Text Text
 
-
+deriving instance (Eq chunk, Eq pos, Eq a) => Eq (PennTreeGen chunk pos a)
+  
 
 
