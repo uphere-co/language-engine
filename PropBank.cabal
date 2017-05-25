@@ -15,7 +15,6 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        PropBank
-                       PropBank.API.Query
                        PropBank.Parser.Frame
                        PropBank.Parser.Prop
                        PropBank.Query
