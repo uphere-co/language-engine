@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module PropBank.Parser.Prop where
 
@@ -17,31 +16,9 @@ import qualified Data.Text.IO         as TIO
 import           Data.Text.Read              (decimal)
 --
 import           NLP.Type.PennTreebankII
+--
+import           PropBank.Type.Prop
 
-
-data Node = Node { _node_id :: Int
-                 , _node_height :: Int }
-          deriving (Show,Eq,Ord)
-
-makeLenses ''Node
-
-data Argument = Argument { _arg_terminals :: [Node]
-                         , _arg_label       :: Text
-                         }
-              deriving (Show,Eq,Ord)
-
-makeLenses ''Argument
-                       
-data Instance = Instance { _inst_tree_id      :: Int
-                         , _inst_predicate_id :: Int
-                         , _inst_annotator_id :: Text
-                         , _inst_lemma_type       :: Text
-                         , _inst_lemma_roleset_id :: Text
-                         , _inst_arguments :: [Argument]
-                         }
-              deriving (Show,Eq,Ord)
-
-makeLenses ''Instance
 
 readDecimal x = case decimal x of {Left err -> error err; Right (n,_) -> n } 
 

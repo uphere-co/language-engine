@@ -19,6 +19,8 @@ library
                        PropBank.Parser.Prop
                        PropBank.Query
                        PropBank.Type
+                       PropBank.Type.Frame
+                       PropBank.Type.Prop
   -- other-modules:       
   -- other-extensions:
   ghc-options:          -Wall -O2

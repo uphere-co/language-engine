@@ -21,7 +21,7 @@ import           NLP.Parser.PennTreebankII
 import           NLP.Type.PennTreebankII
 --
 import           PropBank.Parser.Prop
-
+import           PropBank.Type.Prop
 
 display1 :: (Int,(PennTree,[Instance])) -> IO ()
 display1 (i,(tr,props)) = do
@@ -37,10 +37,6 @@ main =  do
   txt <- TIO.readFile "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written/chZ.mrg"
   let xs = T.lines txt
       txts = map T.unlines . filter (not.null) $ splitWhen T.null xs
-      -- testtxt = htxts
-  -- A.parseOnly penntree
-  -- TIO.putStrLn txt
-  -- TIO.putStrLn testtxt
   case mapM (A.parseOnly penntree) txts of
     Left err -> print err
     Right trs -> do
@@ -51,6 +47,3 @@ main =  do
                   m1 (i,x) = (i,(x,[]))
 
       mapM_ display1 lst
-      -- let pennprops = zip trs props  
-      -- flip mapM_ pennprops $ \x@(tr,prop) -> do
-      --  display x
