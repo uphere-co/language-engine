@@ -1,9 +1,16 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module PropBank.Type where
 
-import Control.Lens
-import Data.Text
+
+import           Data.Monoid                ((<>))
+import           Control.Lens
+import           Data.Text      (Text)
+import qualified Data.Text           as T
+import qualified Data.Text.Lazy             as TL
+
 --
 import           YAML.Builder
 
@@ -201,3 +208,8 @@ instance MakeYaml VNRole where
               ]
 
 data ProgOption = ProgOption { dir :: FilePath } deriving Show
+
+single n k = maybe [] (inj k . makeYaml n)
+
+inj :: k -> a -> [(k,a)]
+inj k x = [(k,x)]

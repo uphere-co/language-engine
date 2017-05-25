@@ -3,11 +3,22 @@
 
 module PropBank.API.Query where
 
+import           Control.Lens
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text.IO        as TIO
 import qualified Data.Text.Lazy.Builder     as TLB  (toLazyText)
 import qualified Data.Text.Lazy.IO   as TLIO
 
+import           Data.Maybe                 (fromMaybe,maybeToList)
+import           Data.Monoid                ((<>))
+import           Data.List                  (sortBy)
+import           Data.Function              (on)
+
+
+import           YAML.Builder
+
+import           PropBank.Query
+import           PropBank.Type
 
 queryPredicate db input = do
   let result = do

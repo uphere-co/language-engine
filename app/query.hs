@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -26,11 +25,6 @@ import           System.FilePath            ((</>))
 import           YAML.Builder
 --
 import           PropBank
-
-inj :: k -> a -> [(k,a)]
-inj k x = [(k,x)]
-
-single n k = maybe [] (inj k . makeYaml n)
 
 pOptions :: O.Parser ProgOption
 pOptions = ProgOption <$> O.strOption (O.long "dir" <> O.short 'd' <> O.help "Directory")
