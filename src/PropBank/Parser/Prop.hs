@@ -15,7 +15,7 @@ import qualified Data.Text            as T
 import qualified Data.Text.IO         as TIO
 import           Data.Text.Read              (decimal)
 --
-import           NLP.Type.PennTreebankII
+import           NLP.Type.PennTreebankII     (PennTreeGen(..),PennTree)
 --
 import           PropBank.Type.Prop
 
@@ -74,19 +74,17 @@ findNode (Node i d) tr = do
   r <- listToMaybe $ drop d lst
   return (headword,r)
 
-display :: (PennTree,Instance) -> IO ()
-display (tr,prop) = do
+showInstance :: (PennTree,Instance) -> IO ()
+showInstance (tr,prop) = do
   TIO.putStrLn "---------------"
   TIO.putStrLn (prop^.inst_lemma_roleset_id)
   TIO.putStrLn "---------------"
-  mapM_ (displayArg tr) (prop^.inst_arguments)
+  mapM_ (showArgument tr) (prop^.inst_arguments)
   
-displayArg :: PennTree -> Argument -> IO ()
-displayArg tr arg = do
+showArgument :: PennTree -> Argument -> IO ()
+showArgument tr arg = do
   TIO.putStr (arg^.arg_label <> ": ")
   let format (t,n) = "(" <> t <> ") " <>   (T.intercalate " " . map snd . toList) n
-
-  
   mapM_ (\x -> TIO.putStr (maybe "Nothing" format (findNode x tr)) >> TIO.putStr ", ") (arg^.arg_terminals)
   TIO.putStr "\n"
 

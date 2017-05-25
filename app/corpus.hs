@@ -16,6 +16,7 @@ import           Data.Monoid                 ((<>))
 import           Data.Text                   (Text)
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as TIO
+import           Options.Applicative
 --
 import           NLP.Parser.PennTreebankII
 import           NLP.Type.PennTreebankII
@@ -23,12 +24,12 @@ import           NLP.Type.PennTreebankII
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 
-display1 :: (Int,(PennTree,[Instance])) -> IO ()
-display1 (i,(tr,props)) = do
+showSentenceAnnotation :: (Int,(PennTree,[Instance])) -> IO ()
+showSentenceAnnotation (i,(tr,props)) = do
   TIO.putStrLn "================================================="
   TIO.putStr ("Sentence " <> T.pack (show i) <> ": ") 
   (TIO.putStrLn . T.intercalate " " . toList) tr
-  mapM_ (display . (tr,)) props
+  mapM_ (showInstance . (tr,)) props
 
 
 main :: IO ()
@@ -46,4 +47,4 @@ main =  do
             where joiner (i,x) (_,y) = (i,(x,y))
                   m1 (i,x) = (i,(x,[]))
 
-      mapM_ display1 lst
+      mapM_ showSentenceAnnotation lst
