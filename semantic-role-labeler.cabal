@@ -28,6 +28,7 @@ library
                        array,
                        containers,
                        directory,
+                       either,
                        filepath,
                        lens,
                        split,

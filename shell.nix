@@ -27,6 +27,7 @@ let
 
   hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
             attoparsec
+            either
             haskeline
             lens
             monad-loops
@@ -48,6 +49,7 @@ stdenv.mkDerivation {
   name = "SRL-dev";
   buildInputs = [ hsenv ];
   shellHook = ''
+    export CLASSPATH="${corenlp_models}:${corenlp}/stanford-corenlp-3.7.0.jar:${corenlp}/protobuf.jar:${corenlp}/joda-time.jar:${corenlp}/jollyday.jar:${hsenv}/share/x86_64-linux-ghc-8.0.2/HCoreNLP-0.1.0.0/HCoreNLPProto.jar";
   '';
 }
 
