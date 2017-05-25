@@ -6,7 +6,6 @@ module PropBank.Parser.Frame where
 import           Control.Lens       hiding (element,elements)
 import           Data.Text                 (Text)
 import qualified Data.Text         as T
-import qualified Data.Text.IO      as TIO
 import qualified Data.Text.Lazy.IO as TLIO
 import           Text.Taggy.Lens
 --
@@ -32,7 +31,7 @@ getOnly x k = x ^.. elements . named (only k)
 getOnly1 :: Element -> Text -> Parser Element
 getOnly1 x k = case getOnly x k of
                  [] -> Left (T.unpack k)
-                 (x:_) -> Right x
+                 (x':_) -> Right x'
 
 
 type Parser = Either String
@@ -68,7 +67,7 @@ p_example x = Example <$> inf
                       <*> x .: "src"
   where inf = case getOnly x "inflection" of
                 [] -> Right Nothing
-                (x:_) -> Just <$> p_inflection x 
+                (x':_) -> Just <$> p_inflection x' 
 
 p_inflection :: Element -> Parser Inflection 
 p_inflection x = Inflection <$> (p_person =<< x .: "person")

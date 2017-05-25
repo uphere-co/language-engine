@@ -5,4 +5,3 @@ module PropBank.Type
 
 import PropBank.Type.Frame
 import PropBank.Type.Prop
-

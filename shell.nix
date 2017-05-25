@@ -21,6 +21,7 @@ let
   hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
             attoparsec
             discrimination
+            cabal-install
             haskeline
             lens
             monad-loops
