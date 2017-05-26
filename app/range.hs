@@ -17,7 +17,9 @@ import           Data.Default
 import           Data.Foldable                     (toList)
 import           Data.List                         (zip4)
 import           Data.Maybe                        (fromJust,fromMaybe,mapMaybe)
+import qualified Data.Sequence              as Seq
 import           Data.Text                         (Text)
+import qualified Data.Text                  as T   (intercalate)
 import qualified Data.Text.IO               as TIO
 import           Data.Time.Calendar                (fromGregorian)
 import           Language.Java              as J
@@ -58,6 +60,14 @@ processDoc ann  = do
   return $ fmap fst (messageGet lbstr :: Either String (D.Document,BL.ByteString))
 
 
+
+mkDocFromPennTree :: PennTree -> Document
+mkDocFromPennTree = flip Document (fromGregorian 2017 4 17)
+                  . T.intercalate " "
+                  . map snd
+                  . filter (\(t :: Text,_) -> t /= "-NONE-")
+                  . getLeaves  
+
 propbank :: EitherT String IO ([PennTree],[Instance])
 propbank =  do
   props <- liftIO $ parseProp <$> TIO.readFile "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written/wsj_0026.prop"
@@ -77,7 +87,10 @@ main = do
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do 
   
     void . runEitherT $ do
-      rdoc <- liftIO $ do 
+      (trs,props) <- propbank
+      
+      rdocs <- liftIO $ do
+        
         txt <- liftIO $ TIO.readFile "/scratch/wavewave/MASC/Propbank/MASC1_textfiles/written/wsj_0026.txt"
 
         let pcfg = def & ( tokenizer .~ True )
@@ -89,38 +102,32 @@ main = do
                        . ( constituency .~ True )
                        . ( ner .~ False )
         pp <- prepare pcfg
-        let doc = Document txt (fromGregorian 2017 4 17) 
-        ann <- annotate pp doc
-        rdoc <- processDoc ann
-        return rdoc
-      d <- hoistEither rdoc 
-      let sents = d ^.. D.sentence . traverse
-          Just newsents = mapM (convertSentence d) sents
+        let docs = map mkDocFromPennTree trs -- Document txt (fromGregorian 2017 4 17) 
+        anns <- mapM (annotate pp) docs
+        rdocs <- mapM processDoc anns
+        return rdocs
+      ds <- mapM hoistEither rdocs
+      {- liftIO $ print ds -}
+
+      let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
+          -- Just newsents = mapM (convertSentence d) sents
           cpts = mapMaybe (^.S.parseTree) sents
           pts = map convertPennTree cpts
 
 
 
 
-      (trs,props) <- propbank
       let rs = merge (^.inst_tree_id) (zip pts trs) props
 
-      liftIO $ process (head rs)
-      -- liftIO $ print (length rs)
-
-{-
-      liftIO $ do
-        TIO.putStrLn (pennTreePrint 0 pt)
-        let rs = termRangeForAllNode (mkIndexedTree pt)
-        print rs
--}
+      liftIO $ findMatchedNode (head rs)
 
 
-process (i,((pt,tr),pr)) = do
+
+findMatchedNode (i,((pt,tr),pr)) = do
   print i
-  print pt
-  print tr
-  print pr
+  TIO.putStrLn $ prettyPrint 0 pt
+  -- print tr
+  -- print pr
 
   let pr0 = pr !! 1
       args = pr0 ^. inst_arguments
