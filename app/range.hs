@@ -73,11 +73,8 @@ main = do
   
     void . runEitherT $ do
       (trs,props) <- propbank
-      
       rdocs <- liftIO $ do
-        
         txt <- liftIO $ TIO.readFile "/scratch/wavewave/MASC/Propbank/MASC1_textfiles/written/wsj_0026.txt"
-
         let pcfg = def & ( tokenizer .~ True )
                        . ( words2sentences .~ True )
                        . ( postagger .~ True )
@@ -87,18 +84,15 @@ main = do
                        . ( constituency .~ True )
                        . ( ner .~ False )
         pp <- prepare pcfg
-        let docs = map mkDocFromPennTree trs -- Document txt (fromGregorian 2017 4 17) 
+        let docs = map mkDocFromPennTree trs
         anns <- mapM (annotate pp) docs
         rdocs <- mapM protobufDoc anns
         return rdocs
       ds <- mapM hoistEither rdocs
-
       let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
           cpts = mapMaybe (^.S.parseTree) sents
           pts = map convertPennTree cpts
-
-      let rs = merge (^.inst_tree_id) (zip pts trs) props
-
+          rs = merge (^.inst_tree_id) (zip pts trs) props
       liftIO $ findMatchedNode (head rs)
 
 
@@ -121,27 +115,15 @@ findMatchedNode (i,((pt,tr),pr)) = do
 
   
   let adjf = adjustIndexFromTree tr
-
       rng = ((adjf *** adjf) . termRange . snd) nd
-
   putStrLn . formatRngText terms $ rng
-  -- print rng
-  --  print (clippedText rng terms)
   putStrLn "-----------"
-  
   let xs = termRangeForAllNode (mkIndexedTree pt)
-
   mapM_ (putStrLn . formatRngText terms) xs
-
   --
   let ipt = mkIndexedTree pt
   print $ termRangeTree ipt
-
   let zs = maximalEmbeddedRange ipt rng
   mapM_ print zs
 
-  
-
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
-  
-  -- mapM_ findNode 
