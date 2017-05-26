@@ -42,9 +42,14 @@ termRangeTree (PL t (n,x))     = PL (t,(n,n)) (n,x)
 (x0,y0) `isInside` (x1,y1) = x1 <= x0 && y0 <= y1
 
 
-maximalEmbeddedRange :: PennTreeGen c t (Int,a) -> (Int,Int) -> [(Int,Int)]
+maximalEmbeddedRange :: PennTreeGen c t (Int,a) -> (Int,Int) -> [((Int,Int),PennTreeGen c t a)]
 maximalEmbeddedRange tr r = go trt
   where trt = termRangeTree tr
 
-        go (PN (_,r1) xs) = if r1 `isInside` r then [r1] else concatMap go xs
-        go (PL (t,r1) x) = if r1 `isInside` r then [r1] else []
+        go y@(PN (c,r1) xs) = if r1 `isInside` r then [(r1,extractIndexOut y)] else concatMap go xs
+        go y@(PL (t,r1) x) = if r1 `isInside` r then [(r1,extractIndexOut y)] else []
+
+extractIndexOut :: PennTreeGen (c,i1) (t,i2) (i3,a) -> PennTreeGen c t a
+extractIndexOut (PN (c,_) xs) = PN c (map extractIndexOut xs)
+extractIndexOut (PL (t,_) (_,x)) = PL t x 
+
