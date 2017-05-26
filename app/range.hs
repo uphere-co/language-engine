@@ -134,7 +134,10 @@ findMatchedNode (i,((pt,tr),pr)) = do
   mapM_ (putStrLn . formatRngText terms) xs
 
   --
+  let ipt = mkIndexedTree pt
+  print $ termRangeTree ipt
 
+  print $ maximalEmbeddedRange ipt rng
 
   
 
