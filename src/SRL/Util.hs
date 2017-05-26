@@ -2,15 +2,20 @@
 
 module SRL.Util where
 
-import           Data.Foldable               (toList)
-import           Data.Function               (on)
-import           Data.List                   (sortBy)
-import           Data.Text                   (Text)
+import           Data.Foldable                   (toList)
+import           Data.Function                   (on)
+import           Data.List                       (sortBy)
+import           Data.Text                       (Text)
+import qualified Data.Text                  as T
 --
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 
+
+clippedText (b,e) = T.intercalate " " . drop b . take (e+1) 
+
+formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
 termRange :: PennTreeGen c t (Int,a) -> (Int,Int)
 termRange tr = let is = (map fst . toList) tr 

@@ -5,7 +5,6 @@
 module Main where
 
 import           Control.Applicative               (many,(*>))
-import           Control.Arrow                     ((***))
 import           Control.Lens
 import           Control.Monad                     (void)
 import           Control.Monad.IO.Class            (liftIO)
@@ -41,14 +40,8 @@ import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
+import           SRL.Match
 import           SRL.Util
-
-adjustIndexFromTree :: PennTree -> Int -> Int
-adjustIndexFromTree tr =
-  let itr = mkIndexedTree tr
-      rs = termRangeForAllNode itr
-      excl = map (^._2._1) (findNoneLeaf itr)
-  in adjustIndex excl 
 
 
 mkDocFromPennTree :: PennTree -> Document
@@ -93,28 +86,13 @@ main = do
           cpts = mapMaybe (^.S.parseTree) sents
           pts = map convertPennTree cpts
           rs = merge (^.inst_tree_id) (zip pts trs) props
-      let action r@(i,((pt,tr),pr)) = liftIO $ do
+      let action (i,((pt,tr),pr)) = liftIO $ do
             let terms = toList pt
             TIO.putStrLn "================="
             TIO.putStrLn $ prettyPrint 0 pt
             TIO.putStrLn (T.intercalate " " terms)
+            print pr
             TIO.putStrLn "-----------------"
-            mapM_ print $ findMatchedNode r
+            mapM_ print $ findMatchedNode ((pt,tr),pr)
       mapM_ action rs
       
-clippedText (b,e) = T.intercalate " " . drop b . take (e+1) 
-
-findMatchedNode (i,((pt,tr),pr)) = 
-  [findMatchedNodeEach pt tr pr0 arg0 | pr0 <- pr , arg0 <- pr0^.inst_arguments ]
-
-findMatchedNodeEach pt tr pr0 arg0 =
-  let nds = map (flip findNode tr) (arg0 ^. arg_terminals)
-      nd = fromJust (head nds)
-      adjf = adjustIndexFromTree tr
-      rng = ((adjf *** adjf) . termRange . snd) nd
-      xs = termRangeForAllNode (mkIndexedTree pt)
-      ipt = mkIndexedTree pt
-      zs = maximalEmbeddedRange ipt rng
-  in (rng,zs)
-
-formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
