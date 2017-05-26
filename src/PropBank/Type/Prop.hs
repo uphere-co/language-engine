@@ -29,3 +29,15 @@ data Instance = Instance { _inst_tree_id      :: Int
               deriving (Show,Eq,Ord)
 
 makeLenses ''Instance
+
+
+data NomInstance = NomInstance { _nominst_tree_file    :: FilePath
+                               , _nominst_tree_id      :: Int
+                               , _nominst_predicate_id :: Int
+                               , _nominst_base_form    :: Text
+                               , _nominst_sense_number :: Int
+                               , _nominst_arguments :: [Argument]
+                               }
+                 deriving (Show,Eq,Ord)
+
+makeLenses ''NomInstance
