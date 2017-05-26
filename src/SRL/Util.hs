@@ -11,9 +11,6 @@ import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 
-minimalSpanNode :: (Int,Int) -> PennTree -> PennTree
-minimalSpanNode = undefined
-
 
 termRange :: PennTreeGen c t (Int,a) -> (Int,Int)
 termRange tr = let is = (map fst . toList) tr 
