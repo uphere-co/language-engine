@@ -2,6 +2,7 @@
 , uphere-nix-overlay ? <uphere-nix-overlay>
 , HCoreNLP ? <HCoreNLP>
 , nlp-types ? <nlp-types>
+, PropBank ? <PropBank>
 }:
 
 with pkgs;
@@ -18,6 +19,8 @@ let
   hsconfig2 =
     self: super: {
       "nlp-types" = self.callPackage (import nlp-types) {};
+      "PropBank" = self.callPackage (import PropBank) {};
+      
       "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
     };  
   newHaskellPackages = haskellPackages.override {
@@ -40,6 +43,7 @@ let
             taggy-lens
 
             p.nlp-types
+            p.PropBank
             p.HCoreNLP
           ]);
 
