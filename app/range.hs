@@ -24,16 +24,16 @@ import qualified Data.Text.IO               as TIO
 import           Data.Time.Calendar                (fromGregorian)
 import           Language.Java              as J
 import           System.Environment                (getEnv)
-import           Text.ProtocolBuffers.WireMessage  (messageGet)
+-- import           Text.ProtocolBuffers.WireMessage  (messageGet)
 --
-import           CoreNLP.Simple
-import           CoreNLP.Simple.Convert
-import           CoreNLP.Simple.Type
-import           CoreNLP.Simple.Type.Simplified
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
 import qualified CoreNLP.Proto.CoreNLPProtos.ParseTree as PT
+import           CoreNLP.Simple
+import           CoreNLP.Simple.Convert
+import           CoreNLP.Simple.Type
+import           CoreNLP.Simple.Type.Simplified
 --
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
@@ -50,15 +50,6 @@ adjustIndexFromTree tr =
       rs = termRangeForAllNode itr
       excl = map (^._2._1) (findNoneLeaf itr)
   in adjustIndex excl 
-
- 
-processDoc :: J ('Class "edu.stanford.nlp.pipeline.Annotation")
-           -> IO (Either String D.Document) 
-processDoc ann  = do
-  bstr <- serializeDoc ann
-  let lbstr = BL.fromStrict bstr
-  return $ fmap fst (messageGet lbstr :: Either String (D.Document,BL.ByteString))
-
 
 
 mkDocFromPennTree :: PennTree -> Document
@@ -104,7 +95,7 @@ main = do
         pp <- prepare pcfg
         let docs = map mkDocFromPennTree trs -- Document txt (fromGregorian 2017 4 17) 
         anns <- mapM (annotate pp) docs
-        rdocs <- mapM processDoc anns
+        rdocs <- mapM protobufDoc anns
         return rdocs
       ds <- mapM hoistEither rdocs
       {- liftIO $ print ds -}
