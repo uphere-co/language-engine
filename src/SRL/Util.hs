@@ -42,12 +42,11 @@ getLeaves (PL t a) = [(t,a)]
 findNoneLeaf :: PennTreeGen c Text a -> [(Text,a)]
 findNoneLeaf = filter (\(t,_) -> t == "-NONE-") . getLeaves 
 
-adjustIndex :: [Int] -> Int -> Maybe Int
-adjustIndex xs n = if n `elem` xs
-                   then Nothing
-                   else let m = length (filter (<n) xs) in Just (n-m)
+adjustIndex :: [Int] -> Int -> Either Int Int
+adjustIndex xs n = let m = length (filter (<n) xs)
+                   in if n `elem` xs then Left (n-m) else Right (n-m)
 
-adjustIndexFromTree :: PennTree -> Int -> Maybe Int
+adjustIndexFromTree :: PennTree -> Int -> Either Int Int
 adjustIndexFromTree tr =
   let itr = mkIndexedTree tr
       rs = termRangeForAllNode itr
@@ -76,18 +75,24 @@ extractIndexOut (PN (c,_) xs) = PN c (map extractIndexOut xs)
 extractIndexOut (PL (t,_) (_,x)) = PL t x 
 
 
-findMatchedNode :: ((PennTree,PennTree),[Instance]) -> [[(Range,[(Range,PennTree)])]]
+findMatchedNode :: ((PennTree,PennTree),[Instance]) -> [[((Range,Argument),[(Range,PennTree)])]]
 findMatchedNode ((pt,tr),prs) = 
   [findMatchedNodeEach (pt,tr) pr arg0 | pr <- prs , arg0 <- pr^.inst_arguments ]
 
-findMatchedNodeEach :: (PennTree,PennTree) -> Instance -> Argument -> [(Range,[(Range,PennTree)])]
-findMatchedNodeEach (pt,tr) pr0 arg0 = do
-  let nds = map (flip findNode tr) (arg0 ^. arg_terminals)
+findMatchedNodeEach :: (PennTree,PennTree) -> Instance -> Argument
+                    -> [((Range,Argument),[(Range,PennTree)])]
+findMatchedNodeEach (pt,tr) pr arg = do
+  let nds = map (flip findNode tr) (arg ^. arg_terminals)
   nd <- fromJust <$> nds
   let adjf = adjustIndexFromTree tr
-  rng <- (maybeToList . (\(x,y) -> (,) <$> adjf x <*> adjf y) . termRange . snd) nd
+      adjrange (x,y) = case (adjf x, adjf y) of
+                         (Left b,Left e) -> if b == e then [] else [(b,e)]
+                         (Left b,Right e) -> [(b,e)]
+                         (Right b,Left e) -> [(b,e-1)]
+                         (Right b,Right e) -> [(b,e)]
+  rng <- (adjrange . termRange . snd) nd
   let xs = termRangeForAllNode (mkIndexedTree pt)
       ipt = mkIndexedTree pt
       zs = maximalEmbeddedRange ipt rng
-  return (rng,zs)
+  return ((rng,arg),zs)
 
