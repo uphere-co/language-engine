@@ -1,6 +1,7 @@
-{ mkDerivation, attoparsec, base, directory, filepath, haskeline
-, lens, monad-loops, optparse-applicative, stdenv, taggy-lens, text
-, unordered-containers, yayaml
+{ mkDerivation, attoparsec, base, containers, directory
+, discrimination, filepath, haskeline, lens, monad-loops, nlp-types
+, optparse-applicative, split, stdenv, taggy-lens, text
+, transformers, unordered-containers, yayaml
 }:
 mkDerivation {
   pname = "PropBank";
@@ -9,12 +10,13 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    attoparsec base directory filepath lens taggy-lens text
-    unordered-containers
+    attoparsec base directory discrimination filepath lens nlp-types
+    split taggy-lens text transformers unordered-containers yayaml
   ];
   executableHaskellDepends = [
-    base filepath haskeline lens monad-loops optparse-applicative text
-    unordered-containers yayaml
+    attoparsec base containers discrimination filepath haskeline lens
+    monad-loops nlp-types optparse-applicative split text
+    unordered-containers
   ];
   description = "PropBank/NomBank parser and query engine";
   license = stdenv.lib.licenses.unfree;
