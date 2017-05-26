@@ -18,7 +18,6 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        SRL
-                       SRL.Match
                        SRL.Type
                        SRL.Util
                        SRL.CoNLL.CoNLL08.Parser

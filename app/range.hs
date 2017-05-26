@@ -40,7 +40,6 @@ import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
-import           SRL.Match
 import           SRL.Util
 
 
@@ -90,8 +89,13 @@ main = do
             let terms = toList pt
             TIO.putStrLn "================="
             TIO.putStrLn $ prettyPrint 0 pt
+            TIO.putStrLn "-----------------"
+            TIO.putStrLn $ prettyPrint 0 tr
+            TIO.putStrLn "-----------------"            
             TIO.putStrLn (T.intercalate " " terms)
+            TIO.putStrLn "-----------------"                        
             print pr
+            
             TIO.putStrLn "-----------------"
             mapM_ print $ findMatchedNode ((pt,tr),pr)
       mapM_ action rs

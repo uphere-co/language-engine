@@ -2,27 +2,35 @@
 
 module SRL.Util where
 
+import           Control.Lens
 import           Data.Foldable                   (toList)
 import           Data.Function                   (on)
 import           Data.List                       (sortBy)
+import           Data.Maybe                      (fromJust,maybeToList)
 import           Data.Text                       (Text)
 import qualified Data.Text                  as T
 --
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
+import           PropBank.Parser.Prop
+import           PropBank.Type.Prop
+import           PropBank.Util
+
+
+type Range = (Int,Int)
 
 
 clippedText (b,e) = T.intercalate " " . drop b . take (e+1) 
 
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
-termRange :: PennTreeGen c t (Int,a) -> (Int,Int)
+termRange :: PennTreeGen c t (Int,a) -> Range
 termRange tr = let is = (map fst . toList) tr 
                in (minimum is,maximum is)
 
 
-termRangeForAllNode :: PennTreeGen c t (Int,a) -> [(Int,Int)]
+termRangeForAllNode :: PennTreeGen c t (Int,a) -> [Range]
 termRangeForAllNode x@(PN _ ys) = termRange x : concatMap termRangeForAllNode ys
 termRangeForAllNode (PL _ (i,_)) = [(i,i)]
 
@@ -34,11 +42,20 @@ getLeaves (PL t a) = [(t,a)]
 findNoneLeaf :: PennTreeGen c Text a -> [(Text,a)]
 findNoneLeaf = filter (\(t,_) -> t == "-NONE-") . getLeaves 
 
-adjustIndex :: [Int] -> Int -> Int
-adjustIndex xs n = let m = length (filter (<n) xs) in n-m
+adjustIndex :: [Int] -> Int -> Maybe Int
+adjustIndex xs n = if n `elem` xs
+                   then Nothing
+                   else let m = length (filter (<n) xs) in Just (n-m)
+
+adjustIndexFromTree :: PennTree -> Int -> Maybe Int
+adjustIndexFromTree tr =
+  let itr = mkIndexedTree tr
+      rs = termRangeForAllNode itr
+      excl = map (^._2._1) (findNoneLeaf itr)
+  in adjustIndex excl 
 
 
-termRangeTree :: PennTreeGen c t (Int,a) -> PennTreeGen (c,(Int,Int)) (t,(Int,Int)) (Int,a)
+termRangeTree :: PennTreeGen c t (Int,a) -> PennTreeGen (c,Range) (t,Range) (Int,a)
 termRangeTree tr@(PN c xs) = let is = (map fst . toList) tr 
                                  rng = (minimum is,maximum is)
                              in PN (c,rng) (map termRangeTree xs)
@@ -47,7 +64,7 @@ termRangeTree (PL t (n,x))     = PL (t,(n,n)) (n,x)
 (x0,y0) `isInside` (x1,y1) = x1 <= x0 && y0 <= y1
 
 
-maximalEmbeddedRange :: PennTreeGen c t (Int,a) -> (Int,Int) -> [((Int,Int),PennTreeGen c t a)]
+maximalEmbeddedRange :: PennTreeGen c t (Int,a) -> Range -> [(Range,PennTreeGen c t a)]
 maximalEmbeddedRange tr r = go trt
   where trt = termRangeTree tr
 
@@ -57,4 +74,20 @@ maximalEmbeddedRange tr r = go trt
 extractIndexOut :: PennTreeGen (c,i1) (t,i2) (i3,a) -> PennTreeGen c t a
 extractIndexOut (PN (c,_) xs) = PN c (map extractIndexOut xs)
 extractIndexOut (PL (t,_) (_,x)) = PL t x 
+
+
+findMatchedNode :: ((PennTree,PennTree),[Instance]) -> [[(Range,[(Range,PennTree)])]]
+findMatchedNode ((pt,tr),prs) = 
+  [findMatchedNodeEach (pt,tr) pr arg0 | pr <- prs , arg0 <- pr^.inst_arguments ]
+
+findMatchedNodeEach :: (PennTree,PennTree) -> Instance -> Argument -> [(Range,[(Range,PennTree)])]
+findMatchedNodeEach (pt,tr) pr0 arg0 = do
+  let nds = map (flip findNode tr) (arg0 ^. arg_terminals)
+  nd <- fromJust <$> nds
+  let adjf = adjustIndexFromTree tr
+  rng <- (maybeToList . (\(x,y) -> (,) <$> adjf x <*> adjf y) . termRange . snd) nd
+  let xs = termRangeForAllNode (mkIndexedTree pt)
+      ipt = mkIndexedTree pt
+      zs = maximalEmbeddedRange ipt rng
+  return (rng,zs)
 
