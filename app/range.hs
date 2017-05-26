@@ -19,12 +19,11 @@ import           Data.List                         (zip4)
 import           Data.Maybe                        (fromJust,fromMaybe,mapMaybe)
 import qualified Data.Sequence              as Seq
 import           Data.Text                         (Text)
-import qualified Data.Text                  as T   (intercalate)
+import qualified Data.Text                  as T   (intercalate,unpack)
 import qualified Data.Text.IO               as TIO
 import           Data.Time.Calendar                (fromGregorian)
 import           Language.Java              as J
 import           System.Environment                (getEnv)
--- import           Text.ProtocolBuffers.WireMessage  (messageGet)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
@@ -44,7 +43,7 @@ import           PropBank.Util
 --
 import           SRL.Util
 
-adjustIndexFromTree :: PennTree -> Int -> Int --  [(Int,Int)] 
+adjustIndexFromTree :: PennTree -> Int -> Int
 adjustIndexFromTree tr =
   let itr = mkIndexedTree tr
       rs = termRangeForAllNode itr
@@ -63,14 +62,9 @@ propbank :: EitherT String IO ([PennTree],[Instance])
 propbank =  do
   props <- liftIO $ parseProp <$> TIO.readFile "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written/wsj_0026.prop"
   txt <- liftIO $ TIO.readFile "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written/wsj_0026.mrg"
-  -- let xs = T.lines txt
-  --    txts = map T.unlines . filter (not.null) $ splitWhen T.null xs
   trs <- hoistEither $ A.parseOnly (many (A.skipSpace *> penntree)) txt
   return (trs,props)
-{-     Left err -> print err
-    Right trs -> do
-      mapM_ showSentenceProp (merge (^.inst_tree_id) trs props) -- lst
--}
+
 
 main :: IO ()
 main = do
@@ -98,15 +92,10 @@ main = do
         rdocs <- mapM protobufDoc anns
         return rdocs
       ds <- mapM hoistEither rdocs
-      {- liftIO $ print ds -}
 
       let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
-          -- Just newsents = mapM (convertSentence d) sents
           cpts = mapMaybe (^.S.parseTree) sents
           pts = map convertPennTree cpts
-
-
-
 
       let rs = merge (^.inst_tree_id) (zip pts trs) props
 
@@ -114,25 +103,41 @@ main = do
 
 
 
-findMatchedNode (i,((pt,tr),pr)) = do
-  print i
-  TIO.putStrLn $ prettyPrint 0 pt
-  -- print tr
-  -- print pr
+clippedText (b,e) = T.intercalate " " . drop b . take (e+1) 
 
+findMatchedNode (i,((pt,tr),pr)) = do
+  let terms =  toList pt
+
+  TIO.putStrLn $ prettyPrint 0 pt
+  TIO.putStrLn (T.intercalate " " terms)
+  TIO.putStrLn "================="
   let pr0 = pr !! 1
       args = pr0 ^. inst_arguments
       arg0 = args !! 1
   print arg0
+  
   let nds = map (flip findNode tr) (arg0 ^. arg_terminals)
       nd = fromJust (head nds)
 
+  
   let adjf = adjustIndexFromTree tr
 
-      rng =  termRange (snd nd)
-  print ((adjf *** adjf) rng)
+      rng = ((adjf *** adjf) . termRange . snd) nd
 
-  print $ termRangeForAllNode (mkIndexedTree pt)
+  putStrLn . formatRngText terms $ rng
+  -- print rng
+  --  print (clippedText rng terms)
+  putStrLn "-----------"
+  
+  let xs = termRangeForAllNode (mkIndexedTree pt)
 
-  mapM_ print . toList . mkIndexedTree $ pt
+  mapM_ (putStrLn . formatRngText terms) xs
+
+  --
+
+
+  
+
+formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
+  
   -- mapM_ findNode 

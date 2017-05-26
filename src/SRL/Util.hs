@@ -31,3 +31,7 @@ findNoneLeaf = filter (\(t,_) -> t == "-NONE-") . getLeaves
 
 adjustIndex :: [Int] -> Int -> Int
 adjustIndex xs n = let m = length (filter (<n) xs) in n-m
+
+
+
+
