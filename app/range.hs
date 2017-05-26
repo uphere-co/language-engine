@@ -93,37 +93,28 @@ main = do
           cpts = mapMaybe (^.S.parseTree) sents
           pts = map convertPennTree cpts
           rs = merge (^.inst_tree_id) (zip pts trs) props
-      liftIO $ findMatchedNode (head rs)
-
-
-
+      let action r@(i,((pt,tr),pr)) = liftIO $ do
+            let terms = toList pt
+            TIO.putStrLn "================="
+            TIO.putStrLn $ prettyPrint 0 pt
+            TIO.putStrLn (T.intercalate " " terms)
+            TIO.putStrLn "-----------------"
+            mapM_ print $ findMatchedNode r
+      mapM_ action rs
+      
 clippedText (b,e) = T.intercalate " " . drop b . take (e+1) 
 
-findMatchedNode (i,((pt,tr),pr)) = do
-  let terms =  toList pt
+findMatchedNode (i,((pt,tr),pr)) = 
+  [findMatchedNodeEach pt tr pr0 arg0 | pr0 <- pr , arg0 <- pr0^.inst_arguments ]
 
-  TIO.putStrLn $ prettyPrint 0 pt
-  TIO.putStrLn (T.intercalate " " terms)
-  TIO.putStrLn "================="
-  let pr0 = pr !! 1
-      args = pr0 ^. inst_arguments
-      arg0 = args !! 1
-  print arg0
-  
+findMatchedNodeEach pt tr pr0 arg0 =
   let nds = map (flip findNode tr) (arg0 ^. arg_terminals)
       nd = fromJust (head nds)
-
-  
-  let adjf = adjustIndexFromTree tr
+      adjf = adjustIndexFromTree tr
       rng = ((adjf *** adjf) . termRange . snd) nd
-  putStrLn . formatRngText terms $ rng
-  putStrLn "-----------"
-  let xs = termRangeForAllNode (mkIndexedTree pt)
-  mapM_ (putStrLn . formatRngText terms) xs
-  --
-  let ipt = mkIndexedTree pt
-  print $ termRangeTree ipt
-  let zs = maximalEmbeddedRange ipt rng
-  mapM_ print zs
+      xs = termRangeForAllNode (mkIndexedTree pt)
+      ipt = mkIndexedTree pt
+      zs = maximalEmbeddedRange ipt rng
+  in (rng,zs)
 
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
