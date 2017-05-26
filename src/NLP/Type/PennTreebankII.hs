@@ -239,4 +239,3 @@ type PennTree = PennTreeGen Text Text Text
 deriving instance (Eq chunk, Eq pos, Eq a) => Eq (PennTreeGen chunk pos a)
   
 
-

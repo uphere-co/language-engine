@@ -18,6 +18,7 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        NLP.Parser.PennTreebankII
+                       NLP.Printer.PennTreebankII
                        NLP.Type.NamedEntity
                        NLP.Type.PennTreebankII
                        NLP.Type.WordNet
