@@ -14,20 +14,21 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:
-                       PropBank
-                       PropBank.Parser.Frame
-                       PropBank.Parser.Prop
-                       PropBank.Query
-                       PropBank.Type
-                       PropBank.Type.Frame
-                       PropBank.Type.Prop
+                   PropBank
+                   PropBank.Parser.Frame
+                   PropBank.Parser.Prop
+                   PropBank.Query
+                   PropBank.Type
+                   PropBank.Type.Frame
+                   PropBank.Type.Prop
+                   PropBank.Util
   -- other-modules:       
   -- other-extensions:
-  ghc-options:          -Wall -O2
-                        -threaded
-                        -funbox-strict-fields
-                        -fno-warn-unused-do-bind
-                        -fno-warn-orphans
+  ghc-options:     -Wall -O2
+                   -threaded
+                   -funbox-strict-fields
+                   -fno-warn-unused-do-bind
+                   -fno-warn-orphans
                         
 
   ghc-prof-options:     -auto-all
