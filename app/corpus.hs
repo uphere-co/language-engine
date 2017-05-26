@@ -7,8 +7,6 @@ import           Control.Lens
 import           Control.Monad                     (forM_)
 import qualified Data.Attoparsec.Text         as A
 import           Data.Char
-import           Data.Discrimination               (leftOuter)
-import           Data.Discrimination.Grouping      (grouping)
 import           Data.Function                     (on)
 import           Data.List                         (groupBy,sortBy)
 import           Data.List.Split                   (splitWhen)
@@ -21,14 +19,7 @@ import           NLP.Type.PennTreebankII
 --
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
-
-merge :: (b -> Int) -> [a] -> [b] -> [(Int,(a,[b]))] 
-merge idxf trs props =
-   let itrs = (zip [0..] trs)
-       propgrps = (map (\x->(idxf (head x),x)) . groupBy ((==) `on` idxf)) props
-   in concat $ leftOuter grouping joiner m1 fst fst itrs propgrps
- where joiner (i,x) (_,y) = (i,(x,y))
-       m1 (i,x) = (i,(x,[]))
+import           PropBank.Util
   
 propbank :: IO ()
 propbank =  do
