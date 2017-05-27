@@ -40,6 +40,7 @@ import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
+import           SRL.Feature
 import           SRL.Util
 
 
@@ -93,11 +94,10 @@ main = do
             TIO.putStrLn $ prettyPrint 0 tr
             TIO.putStrLn "-----------------"            
             TIO.putStrLn (T.intercalate " " terms)
-            -- TIO.putStrLn "-----------------"                        
-            -- print pr
-            
             TIO.putStrLn "-----------------"
             mapM_ printMatchedInst $ matchInstances (pt,tr) pr
-
+            TIO.putStrLn "-----------------"
+            print $ getADTPennTree pt 
+ 
       mapM_ action rs
       
