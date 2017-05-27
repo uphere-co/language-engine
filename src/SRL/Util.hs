@@ -20,19 +20,10 @@ import           PropBank.Type.Prop
 import           PropBank.Util
 
 
-type Range = (Int,Int)
-
-type PennTreeIdxG c t a = PennTreeGen (Range,c) (Range,t) (Int,a)
-
-type PennTreeIdx = PennTreeIdxG Text Text Text
-
 clippedText (b,e) = T.intercalate " " . drop b . take (e+1) 
 
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
-
-mkPennTreeIdx :: PennTree -> PennTreeIdx
-mkPennTreeIdx = termRangeTree . mkIndexedTree
 
   
   
@@ -54,9 +45,6 @@ printMatchedNode ((r,_),lst) = do
   TIO.putStrLn $ T.pack (show r) <> ":"
   print lst
 
-termRange :: PennTreeGen c t (Int,a) -> Range
-termRange tr = let is = (map fst . toList) tr 
-               in (minimum is,maximum is)
 
 
 termRangeForAllNode :: PennTreeGen c t (Int,a) -> [Range]
@@ -82,12 +70,6 @@ adjustIndexFromTree tr =
       excl = map (^._2._1) (findNoneLeaf itr)
   in adjustIndex excl 
 
-
-termRangeTree :: PennTreeGen c t (Int,a) -> PennTreeIdxG c t a 
-termRangeTree tr@(PN c xs) = let is = (map fst . toList) tr 
-                                 rng = (minimum is,maximum is)
-                             in PN (rng,c) (map termRangeTree xs)
-termRangeTree (PL t (n,x))     = PL ((n,n),t) (n,x)
 
 x `isInside` (x1,y1) = x1 <= x && x <= y1
 

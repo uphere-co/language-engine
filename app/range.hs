@@ -110,10 +110,10 @@ main = do
             let sampletree = mkPennTreeIdx pt
             -- print (getADTPennTree pt)
             TIO.putStrLn (prettyPrint 0 pt)
-            let parsetree@(mhead,ptpath_s,ptpath_t) = parseTreePath (5,(13,36)) sampletree
+            let parsetree@(mhead,ptpath_s,ptpath_t) = parseTreePathFull (5,(13,36)) sampletree
             print $ fmap phraseType mhead
             print $ map phraseType ptpath_s
             print $ map phraseType ptpath_t
-            print $ parseTreePathSimplified parsetree
+            print $ parseTreePath parsetree
       action2 (head rs)
       
