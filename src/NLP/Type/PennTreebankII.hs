@@ -251,9 +251,12 @@ deriving instance (Eq chunk, Eq pos, Eq a) => Eq (PennTreeGen chunk pos a)
   
 
 
+trimap :: (c->c') -> (t->t') -> (a->a') -> PennTreeGen c t a -> PennTreeGen c' t' a'
+trimap cf tf af (PN c xs) = PN (cf c) (map (trimap cf tf af) xs)
+trimap cf tf af (PL t x) = PL (tf t) (af x)
+
 getADTPennTree :: PennTree -> PennTreeGen ChunkTag POSTag Text
-getADTPennTree (PN c xs) = PN (identifyChunk c) (map getADTPennTree xs)
-getADTPennTree (PL t x) = PL (identifyPOS t) x
+getADTPennTree = trimap identifyChunk identifyPOS id 
 
 pruneOutNone :: Monoid m => PennTreeGen ChunkTag POSTag m -> PennTreeGen ChunkTag POSTag m
 pruneOutNone (PN t xs) = let xs' = (filter (not . isNone) . map pruneOutNone) xs
