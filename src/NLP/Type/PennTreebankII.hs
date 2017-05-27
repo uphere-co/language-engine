@@ -65,7 +65,8 @@ data POSTag = CC          -- ^ conjunction, coordinating
             | D_NONE      -- ^ none                              (original -NONE-)
             deriving (Generic, Show, Eq, Ord, Enum)
 
-data ChunkTag = NP        -- ^ noun phrase
+data ChunkTag = ROOT
+              | NP        -- ^ noun phrase
               | PP        -- ^ prepositional phrase
               | VP        -- ^ verb phrase
               | ADVP      -- ^ adverb phrase
@@ -169,7 +170,8 @@ identifyPOS t
 identifyChunk :: Text -> ChunkTag
 identifyChunk t =
     let p = T.takeWhile (/= '-') t
-    in if | p == "NP"   -> NP
+    in if | p == "ROOT" -> ROOT
+          | p == "NP"   -> NP
           | p == "PP"   -> PP
           | p == "VP"   -> VP
           | p == "ADVP" -> ADVP
