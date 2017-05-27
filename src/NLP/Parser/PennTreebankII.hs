@@ -8,19 +8,6 @@ import           NLP.Type.PennTreebankII
 --
 import Debug.Trace
 
-isNone (PL D_NONE _) = True
-isNone _             = False
-
-{- 
-xformPennTree :: PennTreeGen Text Text Text -> PennTreeGen ChunkTag POSTag Text
-xformPennTree (PN tn xs) = PN (identifyChunk tn) (map xformPennTree xs)
-xformPennTree (PL tl x)  = PL (identifyPOS tl) x
-
-pruneOutNone :: Monoid m => PennTreeGen ChunkTag POSTag m -> PennTreeGen ChunkTag POSTag m
-pruneOutNone (PN t xs) = let xs' = (filter (not . isNone) . map pruneOutNone) xs
-                         in if null xs' then PL D_NONE mempty else PN t xs' 
-pruneOutNone x = x 
--}
 
 
 penntree :: A.Parser (PennTreeGen Text Text Text)

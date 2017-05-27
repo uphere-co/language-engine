@@ -65,6 +65,13 @@ data POSTag = CC          -- ^ conjunction, coordinating
             | D_NONE      -- ^ none                              (original -NONE-)
             deriving (Generic, Show, Eq, Ord, Enum)
 
+instance FromJSON POSTag where
+  parseJSON = genericParseJSON defaultOptions
+
+instance ToJSON POSTag where
+  toJSON = genericToJSON defaultOptions
+
+
 data ChunkTag = ROOT
               | NP        -- ^ noun phrase
               | PP        -- ^ prepositional phrase
@@ -95,10 +102,24 @@ data ChunkTag = ROOT
               | SQ        -- ^ inverted yes/no question
               deriving (Generic, Show,Eq,Ord,Enum)
 
+instance FromJSON ChunkTag where
+  parseJSON = genericParseJSON defaultOptions
+
+instance ToJSON ChunkTag where
+  toJSON = genericToJSON defaultOptions
+
+
 data IOBPrefix = I_       -- ^ inside the chunk 
                | B_       -- ^ inside the chunk, preceding word is part of a different chunk
                | O_       -- ^ not part of a chunk
                deriving (Generic, Show,Eq,Ord,Enum) 
+
+instance FromJSON IOBPrefix where
+  parseJSON = genericParseJSON defaultOptions
+
+instance ToJSON IOBPrefix where
+  toJSON = genericToJSON defaultOptions
+
 
 data RelationTag = R_SBJ  -- ^ sentence subject
                  | R_OBJ  -- ^ sentence object
@@ -111,9 +132,26 @@ data RelationTag = R_SBJ  -- ^ sentence subject
                  | R_PRP  -- ^ purpose
                  deriving (Generic, Show,Eq,Ord,Enum)
 
+instance FromJSON RelationTag where
+  parseJSON = genericParseJSON defaultOptions
+
+instance ToJSON RelationTag where
+  toJSON = genericToJSON defaultOptions
+
+
 data AnchorTag = A1       -- ^ anchor chunks that corresponds to P1
                | P1       -- ^ PNP that corresponds to A1
                deriving (Generic, Show,Eq,Ord,Enum)
+
+instance FromJSON AnchorTag where
+  parseJSON = genericParseJSON defaultOptions
+
+instance ToJSON AnchorTag where
+  toJSON = genericToJSON defaultOptions
+
+
+isNone (PL D_NONE _) = True
+isNone _             = False
 
 
 identifyPOS :: Text -> POSTag
@@ -201,35 +239,6 @@ identifyChunk t =
           | otherwise   -> error ("no such chunk tag : " ++ T.unpack t)
 
 
-instance FromJSON POSTag where
-  parseJSON = genericParseJSON defaultOptions
-
-instance ToJSON POSTag where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON ChunkTag where
-  parseJSON = genericParseJSON defaultOptions
-
-instance ToJSON ChunkTag where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON IOBPrefix where
-  parseJSON = genericParseJSON defaultOptions
-
-instance ToJSON IOBPrefix where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON RelationTag where
-  parseJSON = genericParseJSON defaultOptions
-
-instance ToJSON RelationTag where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON AnchorTag where
-  parseJSON = genericParseJSON defaultOptions
-
-instance ToJSON AnchorTag where
-  toJSON = genericToJSON defaultOptions
 
 -- | chunk = chunktag, pos = postag, a = content
 data PennTreeGen chunk pos a = PN chunk [PennTreeGen chunk pos a]
@@ -241,3 +250,12 @@ type PennTree = PennTreeGen Text Text Text
 deriving instance (Eq chunk, Eq pos, Eq a) => Eq (PennTreeGen chunk pos a)
   
 
+
+getADTPennTree :: PennTree -> PennTreeGen ChunkTag POSTag Text
+getADTPennTree (PN c xs) = PN (identifyChunk c) (map getADTPennTree xs)
+getADTPennTree (PL t x) = PL (identifyPOS t) x
+
+pruneOutNone :: Monoid m => PennTreeGen ChunkTag POSTag m -> PennTreeGen ChunkTag POSTag m
+pruneOutNone (PN t xs) = let xs' = (filter (not . isNone) . map pruneOutNone) xs
+                         in if null xs' then PL D_NONE mempty else PN t xs' 
+pruneOutNone x = x 
