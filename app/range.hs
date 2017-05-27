@@ -93,10 +93,11 @@ main = do
             TIO.putStrLn $ prettyPrint 0 tr
             TIO.putStrLn "-----------------"            
             TIO.putStrLn (T.intercalate " " terms)
-            TIO.putStrLn "-----------------"                        
-            print pr
+            -- TIO.putStrLn "-----------------"                        
+            -- print pr
             
             TIO.putStrLn "-----------------"
-            mapM_ print $ findMatchedNode ((pt,tr),pr)
+            mapM_ printMatchedInst $ matchInstances (pt,tr) pr
+
       mapM_ action rs
       
