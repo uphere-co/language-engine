@@ -22,13 +22,16 @@ import           PropBank.Util
 
 type Range = (Int,Int)
 
+type PennTreeIdxG c t a = PennTreeGen (Range,c) (Range,t) (Int,a)
+
+type PennTreeIdx = PennTreeIdxG Text Text Text
 
 clippedText (b,e) = T.intercalate " " . drop b . take (e+1) 
 
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
  
-printMatchedInst ::(Instance,[(Argument,[((Range,Node),[(Range,PennTree)])])]) -> IO ()
+printMatchedInst ::(Instance,[(Argument,[((Range,Node),[(Range,PennTreeIdx)])])]) -> IO ()
 printMatchedInst (inst,lst) = do
   TIO.putStrLn (inst^.inst_lemma_type)
   putStrLn "---"  
@@ -36,12 +39,12 @@ printMatchedInst (inst,lst) = do
   putStrLn "---"  
 
 
-printMatchedArg :: (Argument,[((Range,Node),[(Range,PennTree)])]) -> IO ()
+printMatchedArg :: (Argument,[((Range,Node),[(Range,PennTreeIdx)])]) -> IO ()
 printMatchedArg (arg,lst) = do
   TIO.putStrLn $ arg^.arg_label 
   mapM_ printMatchedNode lst  
 
-printMatchedNode :: ((Range,Node),[(Range,PennTree)]) -> IO ()
+printMatchedNode :: ((Range,Node),[(Range,PennTreeIdx)]) -> IO ()
 printMatchedNode ((r,_),lst) = do
   TIO.putStrLn $ T.pack (show r) <> ":"
   print lst
@@ -75,36 +78,37 @@ adjustIndexFromTree tr =
   in adjustIndex excl 
 
 
-termRangeTree :: PennTreeGen c t (Int,a) -> PennTreeGen (c,Range) (t,Range) (Int,a)
+termRangeTree :: PennTreeGen c t (Int,a) -> PennTreeIdxG c t a -- PennTreeGen (Range,c) (Range,t) (Int,a)
 termRangeTree tr@(PN c xs) = let is = (map fst . toList) tr 
                                  rng = (minimum is,maximum is)
-                             in PN (c,rng) (map termRangeTree xs)
-termRangeTree (PL t (n,x))     = PL (t,(n,n)) (n,x)
+                             in PN (rng,c) (map termRangeTree xs)
+termRangeTree (PL t (n,x))     = PL ((n,n),t) (n,x)
 
 x `isInside` (x1,y1) = x1 <= x && x <= y1
 
 (x0,y0) `isInsideR` (x1,y1) = x1 <= x0 && y0 <= y1
 
 
-maximalEmbeddedRange :: PennTreeGen c t (Int,a) -> Range -> [(Range,PennTreeGen c t a)]
+maximalEmbeddedRange :: PennTreeGen c t (Int,a) -> Range -> [(Range,PennTreeIdxG c t a)]
 maximalEmbeddedRange tr r = go (termRangeTree tr)
-  where go y@(PN (c,r1) xs) = if r1 `isInsideR` r then [(r1,extractIndexOut y)] else concatMap go xs
-        go y@(PL (t,r1) x) = if r1 `isInsideR` r then [(r1,extractIndexOut y)] else []
+  where go y@(PN (r1,c) xs) = if r1 `isInsideR` r then [(r1,y)] else concatMap go xs
+        go y@(PL (r1,t) x) = if r1 `isInsideR` r then [(r1,y)] else []
 
-extractIndexOut :: PennTreeGen (c,i1) (t,i2) (i3,a) -> PennTreeGen c t a
-extractIndexOut (PN (c,_) xs) = PN c (map extractIndexOut xs)
-extractIndexOut (PL (t,_) (_,x)) = PL t x 
+
+extractIndexOut :: PennTreeGen (i1,c) (i2,t) (i3,a) -> PennTreeGen c t a
+extractIndexOut (PN (_,c) xs) = PN c (map extractIndexOut xs)
+extractIndexOut (PL (_,t) (_,x)) = PL t x 
 
 
 matchInstances :: (PennTree,PennTree)
                -> [Instance]
-               -> [(Instance,[(Argument,[((Range,Node),[(Range,PennTree)])])])]
+               -> [(Instance,[(Argument,[((Range,Node),[(Range,PennTreeIdx)])])])]
 matchInstances (pt,tr) prs = [(pr,matchInstArgs (pt,tr) pr) | pr <- prs ]
 
-matchInstArgs :: (PennTree,PennTree) -> Instance -> [(Argument,[((Range,Node),[(Range,PennTree)])])]
+matchInstArgs :: (PennTree,PennTree) -> Instance -> [(Argument,[((Range,Node),[(Range,PennTreeIdx)])])]
 matchInstArgs (pt,tr) pr = [(arg,matchArgNodes (pt,tr) arg) | arg <- pr^.inst_arguments ]
 
-matchArgNodes :: (PennTree,PennTree) -> Argument -> [((Range,Node),[(Range,PennTree)])]
+matchArgNodes :: (PennTree,PennTree) -> Argument -> [((Range,Node),[(Range,PennTreeIdx)])]
 matchArgNodes (pt,tr) arg = do
         n <- arg ^. arg_terminals
         let nd = fromJust (findNode n tr)

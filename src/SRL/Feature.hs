@@ -21,7 +21,7 @@ position n tr = let (b,e) = termRange tr
                       | n > e     -> After
                       | otherwise -> Embed
 
-parseTreePath :: (Int,Int) -> PennTreeGen ((Int,Int),c) ((Int,Int),p) (Int,a) -> Maybe ([c],[c])
+parseTreePath :: (Int,Range) -> PennTreeGen (Range,c) (Range,p) (Int,a) -> Maybe ([c],[c])
 parseTreePath (start,target) tr =
           if start `isInside` (b,e) && target `isInsideR` (b,e)
              then Just ([],[])

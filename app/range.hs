@@ -99,5 +99,11 @@ main = do
             TIO.putStrLn "-----------------"
             print $ getADTPennTree pt 
  
-      mapM_ action rs
+      -- mapM_ action rs
+      let action2 (i,((pt,tr),pr)) = liftIO $ do
+            let lst =  matchInstances (pt,tr) pr
+                lst' = snd (head lst) !! 1
+            print lst'
+            
+      action2 (head rs)
       
