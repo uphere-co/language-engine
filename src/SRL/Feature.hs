@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE TupleSections #-}
 
 module SRL.Feature where
 
@@ -9,8 +10,12 @@ import           NLP.Type.PennTreebankII
 import           SRL.Util
 
 
-data Position = Before | After | Embed 
+data Position = Before | After | Embed
+              deriving (Show,Eq,Ord)
 
+data Direction = Up | Down
+               deriving (Show,Eq,Ord)
+                          
 phraseType :: PennTreeIdxG c p a -> (Range,Either c p)
 phraseType (PN (i,c) _) = (i,Left c)
 phraseType (PL (i,p) _) = (i,Right p)
@@ -58,8 +63,12 @@ elimCommonHead (lst1,lst2) = go lst1 lst2
 parseTreePath :: (Int,Range) -> PennTreeIdxG c p a
               -> (Maybe (PennTreeIdxG c p a),[PennTreeIdxG c p a],[PennTreeIdxG c p a])
 parseTreePath (start,target) tr = elimCommonHead (contain start tr, containR target tr)
-  -- where (b,e) = termRange tr
 
---getRoot (PN c _) = Just c
--- getRoot (PL t _) = Nothing
-
+parseTreePathSimplified :: (Maybe (PennTreeIdxG c p a),[PennTreeIdxG c p a],[PennTreeIdxG c p a])
+                        -> [(Either c p,Direction)]
+parseTreePathSimplified (mh,tostart,totarget) =
+  case mh of
+    Nothing -> []
+    Just h -> let lst1 = ((snd.phraseType) h,Down):map ((,Down).snd.phraseType) totarget
+                  lst2 = map ((,Up).snd.phraseType) . reverse $ tostart
+              in lst2 ++ lst1
