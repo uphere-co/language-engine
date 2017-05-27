@@ -30,7 +30,12 @@ clippedText (b,e) = T.intercalate " " . drop b . take (e+1)
 
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
- 
+
+mkPennTreeIdx :: PennTree -> PennTreeIdx
+mkPennTreeIdx = termRangeTree . mkIndexedTree
+
+  
+  
 printMatchedInst ::(Instance,[(Argument,[((Range,Node),[(Range,PennTreeIdx)])])]) -> IO ()
 printMatchedInst (inst,lst) = do
   TIO.putStrLn (inst^.inst_lemma_type)
@@ -78,7 +83,7 @@ adjustIndexFromTree tr =
   in adjustIndex excl 
 
 
-termRangeTree :: PennTreeGen c t (Int,a) -> PennTreeIdxG c t a -- PennTreeGen (Range,c) (Range,t) (Int,a)
+termRangeTree :: PennTreeGen c t (Int,a) -> PennTreeIdxG c t a 
 termRangeTree tr@(PN c xs) = let is = (map fst . toList) tr 
                                  rng = (minimum is,maximum is)
                              in PN (rng,c) (map termRangeTree xs)

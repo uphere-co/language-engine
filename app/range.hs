@@ -102,8 +102,18 @@ main = do
       -- mapM_ action rs
       let action2 (i,((pt,tr),pr)) = liftIO $ do
             let lst =  matchInstances (pt,tr) pr
-                lst' = snd (head lst) !! 1
-            print lst'
+                lst0 = snd (head lst) !! 0
+                lst1 = snd (head lst) !! 1
+                (tgt,_) = head (snd (head (snd lst1)))
+            print lst0
+            print tgt
+            let sampletree = mkPennTreeIdx pt
+            -- print (getADTPennTree pt)
+            TIO.putStrLn (prettyPrint 0 pt)
+            let (mhead,ptpath_s,ptpath_t) = parseTreePath (5,(13,36)) sampletree
+            print $ fmap phraseType mhead
+            print $ map phraseType ptpath_s
+            print $ map phraseType ptpath_t
             
       action2 (head rs)
       
