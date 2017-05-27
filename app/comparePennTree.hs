@@ -90,9 +90,9 @@ main2 clspath (lst1,lst2) = do
             printfunc (w,x,y,z) = do
               print w
               putStrLn "--------------------"
-              TIO.putStrLn (pennTreePrint 0 x)
+              TIO.putStrLn (prettyPrint 0 x)
               putStrLn "--------------------"
-              TIO.putStrLn (pennTreePrint 0 y)
+              TIO.putStrLn (prettyPrint 0 y)
               -- putStrLn "--------------------"
               -- TIO.putStrLn (pennTreePrint 0 z)
               putStrLn "==================="
