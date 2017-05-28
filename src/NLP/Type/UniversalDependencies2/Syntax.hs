@@ -2,7 +2,8 @@
 
 module NLP.Type.UniversalDependencies2.Syntax where
 
-import Data.Text (Text)
+import           Data.Text      (Text)
+import qualified Data.Text as T (unpack)
 
 data DependencyRelation = ACL        -- ^ clausal modifier of noun (adjectival clause)
                         | ADVCL      -- ^ adverbial clause modifier
@@ -31,6 +32,8 @@ data DependencyRelation = ACL        -- ^ clausal modifier of noun (adjectival c
                         | IOBJ       -- ^ indirect object
                         | LIST       -- ^ list
                         | MARK       -- ^ marker
+                        | MWE        -- ^ multiword expression
+                        | NEG        -- ^ negation                     *
                         | NMOD       -- ^ nominal modifier
                         | NSUBJ      -- ^ nominal subject
                         | NSUBJPASS  -- ^ nominal subject passive
@@ -46,45 +49,49 @@ data DependencyRelation = ACL        -- ^ clausal modifier of noun (adjectival c
                         | XCOMP      -- ^ open clausal complement
                         deriving (Show,Eq,Ord)
 
-parseDepRel :: Text -> Maybe DependencyRelation
-parseDepRel "acl"        = Just ACL
-parseDepRel "advcl"      = Just ADVCL
-parseDepRel "advmod"     = Just ADVMOD
-parseDepRel "amod"       = Just AMOD
-parseDepRel "appos"      = Just APPOS
-parseDepRel "aux"        = Just AUX
-parseDepRel "auxpass"    = Just AUXPASS
-parseDepRel "case"       = Just CASE
-parseDepRel "cc"         = Just CC
-parseDepRel "ccomp"      = Just CCOMP
-parseDepRel "clf"        = Just CLF
-parseDepRel "compound"   = Just COMPOUND
-parseDepRel "conj"       = Just CONJ
-parseDepRel "cop"        = Just COP
-parseDepRel "csubj"      = Just CSUBJ
-parseDepRel "dep"        = Just DEP
-parseDepRel "det"        = Just DET
-parseDepRel "discourse"  = Just DISCOURSE
-parseDepRel "dislocated" = Just DISLOCATED
-parseDepRel "dobj"       = Just DOBJ
-parseDepRel "expl"       = Just EXPL
-parseDepRel "fixed"      = Just FIXED
-parseDepRel "flat"       = Just FLAT
-parseDepRel "goeswith"   = Just GOESWITH
-parseDepRel "iobj"       = Just IOBJ
-parseDepRel "list"       = Just LIST
-parseDepRel "mark"       = Just MARK
-parseDepRel "nmod"       = Just NMOD
-parseDepRel "nsubj"      = Just NSUBJ
-parseDepRel "nsubjpass"  = Just NSUBJPASS
-parseDepRel "nummod"     = Just NUMMOD
-parseDepRel "obj"        = Just OBJ
-parseDepRel "obl"        = Just OBL
-parseDepRel "orphan"     = Just ORPHAN
-parseDepRel "parataxis"  = Just PARATAXIS
-parseDepRel "punct"      = Just PUNCT
-parseDepRel "reparandum" = Just REPARANDUM
-parseDepRel "root"       = Just ROOT
-parseDepRel "vocative"   = Just VOCATIVE
-parseDepRel "xcomp"      = Just XCOMP
-parseDepRel _            = Nothing
+parseDepRel :: Text -> Either String DependencyRelation
+parseDepRel "acl"        = Right ACL
+parseDepRel "advcl"      = Right ADVCL
+parseDepRel "advmod"     = Right ADVMOD
+parseDepRel "amod"       = Right AMOD
+parseDepRel "appos"      = Right APPOS
+parseDepRel "aux"        = Right AUX
+parseDepRel "auxpass"    = Right AUXPASS
+parseDepRel "case"       = Right CASE
+parseDepRel "cc"         = Right CC
+parseDepRel "ccomp"      = Right CCOMP
+parseDepRel "clf"        = Right CLF
+parseDepRel "compound"   = Right COMPOUND
+parseDepRel "conj"       = Right CONJ
+parseDepRel "cop"        = Right COP
+parseDepRel "csubj"      = Right CSUBJ
+parseDepRel "dep"        = Right DEP
+parseDepRel "det"        = Right DET
+parseDepRel "discourse"  = Right DISCOURSE
+parseDepRel "dislocated" = Right DISLOCATED
+parseDepRel "dobj"       = Right DOBJ
+parseDepRel "expl"       = Right EXPL
+parseDepRel "fixed"      = Right FIXED
+parseDepRel "flat"       = Right FLAT
+parseDepRel "goeswith"   = Right GOESWITH
+parseDepRel "iobj"       = Right IOBJ
+parseDepRel "list"       = Right LIST
+parseDepRel "mark"       = Right MARK
+parseDepRel "mwe"        = Right MWE
+parseDepRel "neg"        = Right NEG
+parseDepRel "nmod"       = Right NMOD
+parseDepRel "nsubj"      = Right NSUBJ
+parseDepRel "nsubjpass"  = Right NSUBJPASS
+parseDepRel "nummod"     = Right NUMMOD
+parseDepRel "obj"        = Right OBJ
+parseDepRel "obl"        = Right OBL
+parseDepRel "orphan"     = Right ORPHAN
+parseDepRel "parataxis"  = Right PARATAXIS
+parseDepRel "punct"      = Right PUNCT
+parseDepRel "reparandum" = Right REPARANDUM
+parseDepRel "root"       = Right ROOT
+parseDepRel "vocative"   = Right VOCATIVE
+parseDepRel "xcomp"      = Right XCOMP
+--
+-- parseDepRel ""
+parseDepRel x            = Left (T.unpack x)
