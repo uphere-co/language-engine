@@ -110,15 +110,25 @@ showParseTree (i,sentinfo,prs) = do
   print $ map phraseType ptpath_s
   print $ map phraseType ptpath_t
   print $ parseTreePath parsetree
-  print dep
+  -- print dep
   let Dependency root nods edgs' = dep
       bnds = let xs = map fst nods in (minimum xs, maximum xs)
       edgs = map fst edgs'
   let searchtree = head (dfs (buildG bnds edgs) [root])
-      levelmap = IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
-  print levelmap
+      levelMap = IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
+  -- print levelMap
 
-  -- print $ fmap (annotateLevel levelmap) sampletree
+
+
+  let sampletree1 = fmap (annotateLevel levelMap) sampletree
+
+  mapM_forNode (print . getLeaves) sampletree1
+
+
+annotateLevel levelmap (n,txt) = (IM.lookup n levelmap,txt)
+
+mapM_forNode f x@(PN c xs) = f x >> mapM_ (mapM_forNode f) xs
+mapM_forNode f (PL t x ) = return ()
 
 
 
