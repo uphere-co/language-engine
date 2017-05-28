@@ -2,11 +2,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main where
 
 import           Control.Applicative               (many,(*>))
-import           Control.Lens
+import           Control.Lens               hiding (levels)
 import           Control.Monad                     (void)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
@@ -15,13 +16,16 @@ import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
 import           Data.Foldable                     (toList)
+import           Data.Graph                        (buildG,dfs,dff,scc,topSort)
 import           Data.List                         (zip4)
+import qualified Data.IntMap                as IM
 import           Data.Maybe                        (fromJust,fromMaybe,mapMaybe)
 import qualified Data.Sequence              as Seq
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T   (intercalate,unpack)
 import qualified Data.Text.IO               as TIO
 import           Data.Time.Calendar                (fromGregorian)
+import           Data.Tree                         (levels)
 import           Language.Java              as J
 import           System.Environment                (getEnv)
 --
@@ -29,6 +33,9 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
 import qualified CoreNLP.Proto.CoreNLPProtos.ParseTree as PT
+import qualified CoreNLP.Proto.CoreNLPProtos.DependencyGraph       as DG
+import qualified CoreNLP.Proto.CoreNLPProtos.DependencyGraph.Node  as DN
+import qualified CoreNLP.Proto.CoreNLPProtos.DependencyGraph.Edge  as DE
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
@@ -62,7 +69,7 @@ propbank =  do
 
 data SentenceInfo = SentInfo { _corenlp_tree :: PennTree
                              , _propbank_tree :: PennTree
-                             , _corenlp_dep  ::  Maybe Dependency
+                             , _corenlp_dep  :: Dependency
                              }
                   deriving Show
 
@@ -104,7 +111,19 @@ showParseTree (i,sentinfo,prs) = do
   print $ map phraseType ptpath_t
   print $ parseTreePath parsetree
   print dep
+  let Dependency root nods edgs' = dep
+      bnds = let xs = map fst nods in (minimum xs, maximum xs)
+      edgs = map fst edgs'
+  let searchtree = head (dfs (buildG bnds edgs) [root])
+      levelmap = IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
+  print levelmap
 
+  -- print $ fmap (annotateLevel levelmap) sampletree
+
+
+
+--    where f xs n = (\n -> map (n,)) xs 
+-- getpaths 
 
 main :: IO ()
 main = do
@@ -130,12 +149,20 @@ main = do
         return rdocs
       ds <- mapM hoistEither rdocs
       let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
-          deps = map sentToDep sents
-          cpts = mapMaybe (^.S.parseTree) sents
+      deps <- hoistEither $ mapM sentToDep sents
+          -- deps' = map (^. S.
+      let cpts = mapMaybe (^.S.parseTree) sents
           pts = map decodeToPennTree cpts
           rs = map (\(i,((pt,tr,dep),pr)) -> (i,SentInfo pt tr dep,pr))
              . merge (^.inst_tree_id) (zip3 pts trs deps)
              $ props
       -- mapM_ action rs
-      liftIO $ mapM_ showParseTree rs
-      
+      liftIO $ mapM_ showParseTree rs -- (head rs)
+
+      -- liftIO $ mapM_ testsent sents
+
+
+testsent sent = do
+  let Just g = sent ^. S.basicDependencies
+  print $ sent ^.. S.token . traverse . TK.word
+  mapM_ print $ toList (g^.DG.node)
