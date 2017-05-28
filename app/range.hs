@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
@@ -58,8 +59,19 @@ propbank =  do
   trs <- hoistEither $ A.parseOnly (many (A.skipSpace *> penntree)) txt
   return (trs,props)
 
-showMatchedInstance (i,((pt,tr),pr)) = do
-  let terms = toList pt
+
+data SentenceInfo = SentInfo { _corenlp_tree :: PennTree
+                             , _propbank_tree :: PennTree
+                             }
+                  deriving Show
+
+makeLenses ''SentenceInfo
+
+showMatchedInstance :: (Int,SentenceInfo,[Instance]) -> IO ()
+showMatchedInstance (i,sentinfo,prs) = do
+  let pt = sentinfo^.corenlp_tree
+      tr = sentinfo^.propbank_tree
+      terms = toList pt
   TIO.putStrLn "================="
   TIO.putStrLn $ prettyPrint 0 pt
   TIO.putStrLn "-----------------"
@@ -67,12 +79,15 @@ showMatchedInstance (i,((pt,tr),pr)) = do
   TIO.putStrLn "-----------------"            
   TIO.putStrLn (T.intercalate " " terms)
   TIO.putStrLn "-----------------"
-  mapM_ printMatchedInst $ matchInstances (pt,tr) pr
+  mapM_ printMatchedInst $ matchInstances (pt,tr) prs
   TIO.putStrLn "-----------------"
   print $ getADTPennTree pt 
 
-showParseTree (i,((pt,tr),pr)) = do
-  let lst =  matchInstances (pt,tr) pr
+showParseTree :: (Int,SentenceInfo,[Instance]) -> IO ()
+showParseTree (i,sentinfo,prs) = do
+  let pt = sentinfo^.corenlp_tree
+      tr = sentinfo^.propbank_tree
+      lst =  matchInstances (pt,tr) prs
       lst0 = snd (head lst) !! 0
       lst1 = snd (head lst) !! 1
       (tgt,_) = head (snd (head (snd lst1)))
@@ -115,8 +130,9 @@ main = do
       let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
           cpts = mapMaybe (^.S.parseTree) sents
           pts = map convertPennTree cpts
-          rs = merge (^.inst_tree_id) (zip pts trs) props
- 
+          rs = map (\(i,((pt,tr),pr)) -> (i,SentInfo pt tr,pr))
+             . merge (^.inst_tree_id) (zip pts trs)
+             $ props
       -- mapM_ action rs
       liftIO $ mapM_ showParseTree rs
       
