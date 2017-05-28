@@ -58,6 +58,36 @@ propbank =  do
   trs <- hoistEither $ A.parseOnly (many (A.skipSpace *> penntree)) txt
   return (trs,props)
 
+showMatchedInstance (i,((pt,tr),pr)) = do
+  let terms = toList pt
+  TIO.putStrLn "================="
+  TIO.putStrLn $ prettyPrint 0 pt
+  TIO.putStrLn "-----------------"
+  TIO.putStrLn $ prettyPrint 0 tr
+  TIO.putStrLn "-----------------"            
+  TIO.putStrLn (T.intercalate " " terms)
+  TIO.putStrLn "-----------------"
+  mapM_ printMatchedInst $ matchInstances (pt,tr) pr
+  TIO.putStrLn "-----------------"
+  print $ getADTPennTree pt 
+
+showParseTree (i,((pt,tr),pr)) = do
+  let lst =  matchInstances (pt,tr) pr
+      lst0 = snd (head lst) !! 0
+      lst1 = snd (head lst) !! 1
+      (tgt,_) = head (snd (head (snd lst1)))
+  print lst0
+  print tgt
+  let sampletree = mkPennTreeIdx pt
+  -- print (getADTPennTree pt)
+  TIO.putStrLn (prettyPrint 0 pt)
+  let parsetree@(mhead,ptpath_s,ptpath_t) = parseTreePathFull (5,(13,36)) sampletree
+  print $ fmap phraseType mhead
+  print $ map phraseType ptpath_s
+  print $ map phraseType ptpath_t
+  print $ parseTreePath parsetree
+
+
 
 main :: IO ()
 main = do
@@ -72,7 +102,7 @@ main = do
                        . ( words2sentences .~ True )
                        . ( postagger .~ True )
                        . ( lemma .~ True )
-                       . ( sutime .~ True )
+                       . ( sutime .~ False )
                        . ( depparse .~ False )
                        . ( constituency .~ True )
                        . ( ner .~ False )
@@ -86,34 +116,7 @@ main = do
           cpts = mapMaybe (^.S.parseTree) sents
           pts = map convertPennTree cpts
           rs = merge (^.inst_tree_id) (zip pts trs) props
-      let action (i,((pt,tr),pr)) = liftIO $ do
-            let terms = toList pt
-            TIO.putStrLn "================="
-            TIO.putStrLn $ prettyPrint 0 pt
-            TIO.putStrLn "-----------------"
-            TIO.putStrLn $ prettyPrint 0 tr
-            TIO.putStrLn "-----------------"            
-            TIO.putStrLn (T.intercalate " " terms)
-            TIO.putStrLn "-----------------"
-            mapM_ printMatchedInst $ matchInstances (pt,tr) pr
-            TIO.putStrLn "-----------------"
-            print $ getADTPennTree pt 
  
       -- mapM_ action rs
-      let action2 (i,((pt,tr),pr)) = liftIO $ do
-            let lst =  matchInstances (pt,tr) pr
-                lst0 = snd (head lst) !! 0
-                lst1 = snd (head lst) !! 1
-                (tgt,_) = head (snd (head (snd lst1)))
-            print lst0
-            print tgt
-            let sampletree = mkPennTreeIdx pt
-            -- print (getADTPennTree pt)
-            TIO.putStrLn (prettyPrint 0 pt)
-            let parsetree@(mhead,ptpath_s,ptpath_t) = parseTreePathFull (5,(13,36)) sampletree
-            print $ fmap phraseType mhead
-            print $ map phraseType ptpath_s
-            print $ map phraseType ptpath_t
-            print $ parseTreePath parsetree
-      action2 (head rs)
+      liftIO $ mapM_ showParseTree rs
       
