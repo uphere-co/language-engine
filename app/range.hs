@@ -62,6 +62,7 @@ propbank =  do
 
 data SentenceInfo = SentInfo { _corenlp_tree :: PennTree
                              , _propbank_tree :: PennTree
+                             , _corenlp_dep  ::  Maybe Dependency
                              }
                   deriving Show
 
@@ -87,6 +88,7 @@ showParseTree :: (Int,SentenceInfo,[Instance]) -> IO ()
 showParseTree (i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
+      dep = sentinfo^.corenlp_dep
       lst =  matchInstances (pt,tr) prs
       lst0 = snd (head lst) !! 0
       lst1 = snd (head lst) !! 1
@@ -101,7 +103,7 @@ showParseTree (i,sentinfo,prs) = do
   print $ map phraseType ptpath_s
   print $ map phraseType ptpath_t
   print $ parseTreePath parsetree
-
+  print dep
 
 
 main :: IO ()
@@ -118,7 +120,7 @@ main = do
                        . ( postagger .~ True )
                        . ( lemma .~ True )
                        . ( sutime .~ False )
-                       . ( depparse .~ False )
+                       . ( depparse .~ True )
                        . ( constituency .~ True )
                        . ( ner .~ False )
         pp <- prepare pcfg
@@ -128,10 +130,11 @@ main = do
         return rdocs
       ds <- mapM hoistEither rdocs
       let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
+          deps = map sentToDep sents
           cpts = mapMaybe (^.S.parseTree) sents
-          pts = map convertPennTree cpts
-          rs = map (\(i,((pt,tr),pr)) -> (i,SentInfo pt tr,pr))
-             . merge (^.inst_tree_id) (zip pts trs)
+          pts = map decodeToPennTree cpts
+          rs = map (\(i,((pt,tr,dep),pr)) -> (i,SentInfo pt tr dep,pr))
+             . merge (^.inst_tree_id) (zip3 pts trs deps)
              $ props
       -- mapM_ action rs
       liftIO $ mapM_ showParseTree rs
