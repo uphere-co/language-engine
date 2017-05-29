@@ -67,8 +67,6 @@ propbank =  do
   trs <- hoistEither $ A.parseOnly (many (A.skipSpace *> penntree)) txt
   return (trs,props)
 
-
-
 showMatchedInstance :: (Int,SentenceInfo,[Instance]) -> IO ()
 showMatchedInstance (i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
@@ -84,9 +82,6 @@ showMatchedInstance (i,sentinfo,prs) = do
   TIO.putStrLn (T.intercalate " " terms)
   TIO.putStrLn "-----------------"
   mapM_ printMatchedInst $ matchInstances (pt,tr) prs
-  -- TIO.putStrLn "-----------------"
-  -- print $ getADTPennTree pt 
-
 
 findRelNode :: [MatchedArgument] -> Int
 findRelNode args =
@@ -104,12 +99,7 @@ showFeaturesForArgNode sentinfo predidx arg node =
         paths = map parseTreePath parsetrees
         headWordTree = headWord dep ipt
         heads = map (\rng -> pickHeadWord =<< matchR rng (headWord dep ipt)) rngs
-        
-    -- print $ fmap phraseType mhead
-    mapM_ print (zip3 rngs paths heads) -- (zip rngs parsetrees)
-    -- mapM_forNode (print . getLeaves) (headWord dep ipt)
-    -- print $ 
-    -- print $ mcontainR (16,18) headWordTree
+    mapM_ print (zip3 rngs paths heads)
 
 safeHead [] = Nothing
 safeHead (x:_) = Just x
@@ -127,22 +117,13 @@ showFeaturesForInstance sentinfo inst = do
   print (inst ^. mi_instance.inst_lemma_type)
   let predidx = findRelNode (inst^.mi_arguments)
   mapM_ (showFeaturesForArg sentinfo predidx) (inst^.mi_arguments)
-  
-  
-  
 
 showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
 showFeatures (i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
-      -- lst = matchInstances (pt,tr) prs
-      -- lst0 = (head lst ^. mi_arguments ) !! 0
-      -- lst1 = (head lst ^. mi_arguments ) !! 1
-      -- (tgt,_) = head ( (head (lst1 ^. ma_nodes)) ^. mn_trees )
-
       insts = matchInstances (pt,tr) prs
   showFeaturesForInstance sentinfo (head insts)
-
   
 main :: IO ()
 main = do
