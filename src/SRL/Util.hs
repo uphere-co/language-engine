@@ -16,6 +16,7 @@ getLeaves :: PennTreeGen c t a -> [(t,a)]
 getLeaves (PN _ xs) = concatMap getLeaves xs
 getLeaves (PL t a) = [(t,a)]
 
+
 findNoneLeaf :: PennTreeGen c Text a -> [(Text,a)]
 findNoneLeaf = filter (\(t,_) -> t == "-NONE-") . getLeaves 
 

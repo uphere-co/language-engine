@@ -67,7 +67,7 @@ parseTreePath (mh,tostart,totarget) =
 mapM_forNode f x@(PN c xs) = f x >> mapM_ (mapM_forNode f) xs
 mapM_forNode f (PL t x ) = return ()
 
-annotateLevel levelmap (n,txt) = (IM.lookup n levelmap,txt)
+annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))
 
 headWord (Dependency root nods edgs') tr =
   let bnds = let xs = map fst nods in (minimum xs, maximum xs)

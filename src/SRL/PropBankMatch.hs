@@ -7,7 +7,7 @@ import           Control.Lens
 import           Data.Foldable                   (toList)
 import           Data.Function                   (on)
 import           Data.List                       (sortBy)
-import           Data.Maybe                      (fromJust,maybeToList)
+import           Data.Maybe                      (fromJust,mapMaybe,maybeToList,listToMaybe)
 import           Data.Monoid                     ((<>))
 import           Data.Text                       (Text)
 import qualified Data.Text                  as T
@@ -80,6 +80,13 @@ maximalEmbeddedRange tr r = go (termRangeTree tr)
         go y@(PL (r1,t) x) = if r1 `isInsideR` r then [(r1,y)] else []
 
 
+matchR :: Range -> PennTreeIdxG c t a -> Maybe (PennTreeIdxG c t a)
+matchR r0 y@(PN (r,_) xs)
+  | r0 == r = Just y 
+  | otherwise = listToMaybe (mapMaybe (matchR r0) xs)
+matchR (b,e) x@(PL _ (n,_))
+  | b == n && e == n = Just x
+  | otherwise = Nothing
 
 matchArgNodes :: (PennTree,PennTree) -> Argument -> [MatchedArgNode] -- [((Range,Node),[(Range,PennTreeIdx)])]
 matchArgNodes (pt,tr) arg = do

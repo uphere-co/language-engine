@@ -8,7 +8,7 @@ module Main where
 
 import           Control.Applicative               (many,(*>))
 import           Control.Lens               hiding (levels)
-import           Control.Monad                     (void,when)
+import           Control.Monad                     (void,when,(>=>))
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.Attoparsec.Text       as A
@@ -16,7 +16,8 @@ import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
 import           Data.Foldable                     (toList)
-import           Data.List                         (zip4)
+import           Data.Function                     (on)
+import           Data.List                         (sortBy,zip4)
 import           Data.Monoid                       ((<>))
 import qualified Data.IntMap                as IM
 import           Data.Maybe                        (fromJust,fromMaybe,mapMaybe)
@@ -101,10 +102,20 @@ showFeaturesForArgNode sentinfo predidx arg node =
         dep = sentinfo^.corenlp_dep
         parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
         paths = map parseTreePath parsetrees
+        headWordTree = headWord dep ipt
+        heads = map (\rng -> pickHeadWord =<< matchR rng (headWord dep ipt)) rngs
+        
     -- print $ fmap phraseType mhead
-    mapM_ print (zip rngs paths)
-    -- mapM_forNode (print . getLeaves) (headWord dep ipt) 
+    mapM_ print (zip3 rngs paths heads) -- (zip rngs parsetrees)
+    -- mapM_forNode (print . getLeaves) (headWord dep ipt)
+    -- print $ 
+    -- print $ mcontainR (16,18) headWordTree
 
+safeHead [] = Nothing
+safeHead (x:_) = Just x
+
+pickHeadWord  = safeHead . map snd . sortBy (compare `on` fst)
+              . mapMaybe (\(_,(_,(ml,t))) -> (,) <$> ml <*> pure t) . getLeaves 
     
 showFeaturesForArg :: SentenceInfo -> Int -> MatchedArgument -> IO ()
 showFeaturesForArg sentinfo predidx arg = 
@@ -117,9 +128,6 @@ showFeaturesForInstance sentinfo inst = do
   let predidx = findRelNode (inst^.mi_arguments)
   mapM_ (showFeaturesForArg sentinfo predidx) (inst^.mi_arguments)
   
-  {- 
-  TIO.putStrLn (prettyPrint 0 pt)
-  -}
   
   
 
