@@ -254,33 +254,33 @@ deriving instance (Eq chunk, Eq pos, Eq a) => Eq (PennTreeGen chunk pos a)
 
 type Range = (Int,Int)
 
-type PennTreeIdxG c t a = PennTreeGen (Range,c) t (Int,a)
+type PennTreeIdxG chunk pos a = PennTreeGen (Range,chunk) pos (Int,a)
 
 type PennTreeIdx = PennTreeIdxG Text Text Text
 
 
-trimap :: (c->c') -> (t->t') -> (a->a') -> PennTreeGen c t a -> PennTreeGen c' t' a'
-trimap cf tf af (PN c xs) = PN (cf c) (map (trimap cf tf af) xs)
-trimap cf tf af (PL t x) = PL (tf t) (af x)
+trimap :: (c->c') -> (p->p') -> (a->a') -> PennTreeGen c p a -> PennTreeGen c' p' a'
+trimap cf pf af (PN c xs) = PN (cf c) (map (trimap cf pf af) xs)
+trimap cf pf af (PL p x) = PL (pf p) (af x)
 
 mkIndexedTree :: PennTreeGen c p a -> PennTreeGen c p (Int,a)
 mkIndexedTree tr = evalState (traverse tagidx tr) 0
   where tagidx x = get >>= \n -> put (n+1) >> return (n,x)
 
-termRange :: PennTreeGen c t (Int,a) -> Range
+termRange :: PennTreeGen c p (Int,a) -> Range
 termRange tr = let is = (map fst . toList) tr 
                in (minimum is,maximum is)
 
-termRangeTree :: PennTreeGen c t (Int,a) -> PennTreeIdxG c t a 
+termRangeTree :: PennTreeGen c p (Int,a) -> PennTreeIdxG c p a 
 termRangeTree tr@(PN c xs) = let is = (map fst . toList) tr 
                                  rng = (minimum is,maximum is)
                              in PN (rng,c) (map termRangeTree xs)
-termRangeTree (PL t (n,x)) = PL t (n,x)
+termRangeTree (PL p (n,x)) = PL p (n,x)
 
 mkPennTreeIdx :: PennTree -> PennTreeIdx
 mkPennTreeIdx = termRangeTree . mkIndexedTree
 
-contain :: Int -> PennTreeGen c t (Int,a) -> [PennTreeGen c t  (Int,a)]
+contain :: Int -> PennTreeGen c p (Int,a) -> [PennTreeGen c p  (Int,a)]
 contain i y@(PN _ xs) = case (filter (not.null) . map (contain i)) xs of
                           [] -> []
                           ys:_ -> y:ys
@@ -288,7 +288,7 @@ contain i x@(PL _ (j,_)) | i == j = [x]
                          | otherwise = []
 
 
-containR :: Range -> PennTreeIdxG c t a -> [PennTreeIdxG c t a]
+containR :: Range -> PennTreeIdxG c p a -> [PennTreeIdxG c p a]
 containR r0 y@(PN (r,_) xs) | r0 == r = [y]
                             | otherwise = case (filter (not.null) . map (containR r0)) xs of
                                             [] -> []
