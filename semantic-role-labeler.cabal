@@ -19,6 +19,7 @@ library
   exposed-modules:
                        SRL
                        SRL.Feature
+                       SRL.PropBankMatch
                        SRL.Type
                        SRL.Util
                        SRL.CoNLL.CoNLL08.Parser

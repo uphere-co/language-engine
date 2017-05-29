@@ -17,6 +17,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
 import           Data.Foldable                     (toList)
 import           Data.List                         (zip4)
+import           Data.Monoid                       ((<>))
 import qualified Data.IntMap                as IM
 import           Data.Maybe                        (fromJust,fromMaybe,mapMaybe)
 import qualified Data.Sequence              as Seq
@@ -47,6 +48,7 @@ import           PropBank.Type.Prop
 import           PropBank.Util
 --
 import           SRL.Feature
+import           SRL.PropBankMatch
 import           SRL.Util
 
 
@@ -86,29 +88,32 @@ showMatchedInstance (i,sentinfo,prs) = do
   TIO.putStrLn (T.intercalate " " terms)
   TIO.putStrLn "-----------------"
   mapM_ printMatchedInst $ matchInstances (pt,tr) prs
-  TIO.putStrLn "-----------------"
-  print $ getADTPennTree pt 
+  -- TIO.putStrLn "-----------------"
+  -- print $ getADTPennTree pt 
 
-showParseTree :: (Int,SentenceInfo,[Instance]) -> IO ()
-showParseTree (i,sentinfo,prs) = do
+
+-- printParseTreePathForArgument :: 
+
+showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
+showFeatures (i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
       dep = sentinfo^.corenlp_dep
-      lst =  matchInstances (pt,tr) prs
-      lst0 = snd (head lst) !! 0
-      lst1 = snd (head lst) !! 1
-      (tgt,_) = head (snd (head (snd lst1)))
-  print lst0
-  print tgt
+      lst = matchInstances (pt,tr) prs
+      lst0 = (head lst ^. mi_arguments ) !! 0
+      lst1 = (head lst ^. mi_arguments ) !! 1
+      (tgt,_) = head ( (head (lst1 ^. ma_nodes)) ^. mn_trees )
+  -- print lst0
+  -- print tgt
   let sampletree = mkPennTreeIdx pt
   -- print (getADTPennTree pt)
   TIO.putStrLn (prettyPrint 0 pt)
   let parsetree@(mhead,ptpath_s,ptpath_t) = parseTreePathFull (5,(13,36)) sampletree
   print $ fmap phraseType mhead
-  print $ map phraseType ptpath_s
-  print $ map phraseType ptpath_t
+  --  print $ map phraseType ptpath_s
+  --  print $ map phraseType ptpath_t
   print $ parseTreePath parsetree
-  print dep
+  --print dep
   -- print levelMap
   -- headWord dep sampletree
   mapM_forNode (print . getLeaves) (headWord dep sampletree) 
@@ -138,19 +143,10 @@ main = do
       ds <- mapM hoistEither rdocs
       let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
       deps <- hoistEither $ mapM sentToDep sents
-          -- deps' = map (^. S.
       let cpts = mapMaybe (^.S.parseTree) sents
           pts = map decodeToPennTree cpts
           rs = map (\(i,((pt,tr,dep),pr)) -> (i,SentInfo pt tr dep,pr))
              . merge (^.inst_tree_id) (zip3 pts trs deps)
              $ props
-      -- mapM_ action rs
-      liftIO $ mapM_ showParseTree rs -- (head rs)
+      liftIO $ mapM_ (showMatchedInstance <> showFeatures) rs
 
-      -- liftIO $ mapM_ testsent sents
-
-
-testsent sent = do
-  let Just g = sent ^. S.basicDependencies
-  print $ sent ^.. S.token . traverse . TK.word
-  mapM_ print $ toList (g^.DG.node)
