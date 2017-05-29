@@ -48,6 +48,7 @@ library
                        --
                        nlp-types,
                        HCoreNLP,
+                       HCoreNLP-Proto,
                        PropBank
                        
   hs-source-dirs:      src
