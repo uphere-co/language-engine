@@ -16,7 +16,6 @@ import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
 import           Data.Foldable                     (toList)
-import           Data.Graph                        (buildG,dfs,dff,scc,topSort)
 import           Data.List                         (zip4)
 import qualified Data.IntMap                as IM
 import           Data.Maybe                        (fromJust,fromMaybe,mapMaybe)
@@ -25,7 +24,6 @@ import           Data.Text                         (Text)
 import qualified Data.Text                  as T   (intercalate,unpack)
 import qualified Data.Text.IO               as TIO
 import           Data.Time.Calendar                (fromGregorian)
-import           Data.Tree                         (levels)
 import           Language.Java              as J
 import           System.Environment                (getEnv)
 --
@@ -110,30 +108,10 @@ showParseTree (i,sentinfo,prs) = do
   print $ map phraseType ptpath_s
   print $ map phraseType ptpath_t
   print $ parseTreePath parsetree
-  -- print dep
-  let Dependency root nods edgs' = dep
-      bnds = let xs = map fst nods in (minimum xs, maximum xs)
-      edgs = map fst edgs'
-  let searchtree = head (dfs (buildG bnds edgs) [root])
-      levelMap = IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
+  print dep
   -- print levelMap
-
-
-
-  let sampletree1 = fmap (annotateLevel levelMap) sampletree
-
-  mapM_forNode (print . getLeaves) sampletree1
-
-
-annotateLevel levelmap (n,txt) = (IM.lookup n levelmap,txt)
-
-mapM_forNode f x@(PN c xs) = f x >> mapM_ (mapM_forNode f) xs
-mapM_forNode f (PL t x ) = return ()
-
-
-
---    where f xs n = (\n -> map (n,)) xs 
--- getpaths 
+  -- headWord dep sampletree
+  mapM_forNode (print . getLeaves) (headWord dep sampletree) 
 
 main :: IO ()
 main = do

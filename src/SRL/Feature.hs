@@ -3,8 +3,12 @@
 
 module SRL.Feature where
 
-import           Data.Text (Text)
+import           Data.Graph                     (buildG,dfs,dff,scc,topSort)
+import qualified Data.IntMap             as IM
+import           Data.Text                      (Text)
+import           Data.Tree                      (levels)
 --
+import           CoreNLP.Simple.Type.Simplified
 import           NLP.Type.PennTreebankII
 --
 import           SRL.Util
@@ -58,3 +62,18 @@ parseTreePath (mh,tostart,totarget) =
     Just h -> let lst1 = ((snd.phraseType) h,Down):map ((,Down).snd.phraseType) totarget
                   lst2 = map ((,Up).snd.phraseType) . reverse $ tostart
               in lst2 ++ lst1
+
+
+mapM_forNode f x@(PN c xs) = f x >> mapM_ (mapM_forNode f) xs
+mapM_forNode f (PL t x ) = return ()
+
+annotateLevel levelmap (n,txt) = (IM.lookup n levelmap,txt)
+
+headWord (Dependency root nods edgs') tr =
+  let bnds = let xs = map fst nods in (minimum xs, maximum xs)
+      edgs = map fst edgs'
+      searchtree = head (dfs (buildG bnds edgs) [root])
+      levelMap = IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
+
+      
+  in fmap (annotateLevel levelMap) tr 
