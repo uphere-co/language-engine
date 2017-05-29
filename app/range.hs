@@ -8,7 +8,7 @@ module Main where
 
 import           Control.Applicative               (many,(*>))
 import           Control.Lens               hiding (levels)
-import           Control.Monad                     (void)
+import           Control.Monad                     (void,when)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.Attoparsec.Text       as A
@@ -67,13 +67,6 @@ propbank =  do
   return (trs,props)
 
 
-data SentenceInfo = SentInfo { _corenlp_tree :: PennTree
-                             , _propbank_tree :: PennTree
-                             , _corenlp_dep  :: Dependency
-                             }
-                  deriving Show
-
-makeLenses ''SentenceInfo
 
 showMatchedInstance :: (Int,SentenceInfo,[Instance]) -> IO ()
 showMatchedInstance (i,sentinfo,prs) = do
@@ -81,9 +74,11 @@ showMatchedInstance (i,sentinfo,prs) = do
       tr = sentinfo^.propbank_tree
       terms = toList pt
   TIO.putStrLn "================="
-  TIO.putStrLn $ prettyPrint 0 pt
-  TIO.putStrLn "-----------------"
+  TIO.putStrLn "PropBank"
   TIO.putStrLn $ prettyPrint 0 tr
+  TIO.putStrLn "-----------------"
+  TIO.putStrLn "CoreNLP"  
+  TIO.putStrLn $ prettyPrint 0 pt
   TIO.putStrLn "-----------------"            
   TIO.putStrLn (T.intercalate " " terms)
   TIO.putStrLn "-----------------"
@@ -92,32 +87,55 @@ showMatchedInstance (i,sentinfo,prs) = do
   -- print $ getADTPennTree pt 
 
 
--- printParseTreePathForArgument :: 
+findRelNode :: [MatchedArgument] -> Int
+findRelNode args =
+  let arg = head $ filter (\arg -> arg ^. ma_argument.arg_label == "rel") args
+  in head (arg^..ma_nodes.traverse.mn_node._1._1)
+
+showFeaturesForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode -> IO ()
+showFeaturesForArgNode sentinfo predidx arg node = 
+  when (arg ^. arg_label /= "rel")  $ do
+    print (arg ^. arg_label)
+    let rngs = node ^.. mn_trees . traverse . _1
+    let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
+        dep = sentinfo^.corenlp_dep
+        parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
+        paths = map parseTreePath parsetrees
+    -- print $ fmap phraseType mhead
+    mapM_ print (zip rngs paths)
+    -- mapM_forNode (print . getLeaves) (headWord dep ipt) 
+
+    
+showFeaturesForArg :: SentenceInfo -> Int -> MatchedArgument -> IO ()
+showFeaturesForArg sentinfo predidx arg = 
+  mapM_ (showFeaturesForArgNode sentinfo predidx (arg^.ma_argument)) (arg^.ma_nodes)
+
+  
+showFeaturesForInstance :: SentenceInfo -> MatchedInstance -> IO ()
+showFeaturesForInstance sentinfo inst = do
+  print (inst ^. mi_instance.inst_lemma_type)
+  let predidx = findRelNode (inst^.mi_arguments)
+  mapM_ (showFeaturesForArg sentinfo predidx) (inst^.mi_arguments)
+  
+  {- 
+  TIO.putStrLn (prettyPrint 0 pt)
+  -}
+  
+  
 
 showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
 showFeatures (i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
-      dep = sentinfo^.corenlp_dep
-      lst = matchInstances (pt,tr) prs
-      lst0 = (head lst ^. mi_arguments ) !! 0
-      lst1 = (head lst ^. mi_arguments ) !! 1
-      (tgt,_) = head ( (head (lst1 ^. ma_nodes)) ^. mn_trees )
-  -- print lst0
-  -- print tgt
-  let sampletree = mkPennTreeIdx pt
-  -- print (getADTPennTree pt)
-  TIO.putStrLn (prettyPrint 0 pt)
-  let parsetree@(mhead,ptpath_s,ptpath_t) = parseTreePathFull (5,(13,36)) sampletree
-  print $ fmap phraseType mhead
-  --  print $ map phraseType ptpath_s
-  --  print $ map phraseType ptpath_t
-  print $ parseTreePath parsetree
-  --print dep
-  -- print levelMap
-  -- headWord dep sampletree
-  mapM_forNode (print . getLeaves) (headWord dep sampletree) 
+      -- lst = matchInstances (pt,tr) prs
+      -- lst0 = (head lst ^. mi_arguments ) !! 0
+      -- lst1 = (head lst ^. mi_arguments ) !! 1
+      -- (tgt,_) = head ( (head (lst1 ^. ma_nodes)) ^. mn_trees )
 
+      insts = matchInstances (pt,tr) prs
+  showFeaturesForInstance sentinfo (head insts)
+
+  
 main :: IO ()
 main = do
   clspath <- getEnv "CLASSPATH"

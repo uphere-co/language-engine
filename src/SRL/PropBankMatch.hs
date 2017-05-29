@@ -13,6 +13,7 @@ import           Data.Text                       (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
 --
+import qualified CoreNLP.Simple.Type.Simplified as S
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
@@ -21,6 +22,15 @@ import           PropBank.Type.Prop
 import           PropBank.Util
 --
 import           SRL.Util
+
+data SentenceInfo = SentInfo { _corenlp_tree :: PennTree
+                             , _propbank_tree :: PennTree
+                             , _corenlp_dep  :: S.Dependency
+                             }
+                  deriving Show
+
+makeLenses ''SentenceInfo
+
 
 data MatchedArgNode
   = MatchedArgNode { _mn_node :: (Range,Node)
