@@ -293,7 +293,7 @@ containR r0 y@(PN (r,_) xs) | r0 == r = [y]
                             | otherwise = case (filter (not.null) . map (containR r0)) xs of
                                             [] -> []
                                             ys:_ -> y:ys
-containR r0 x@(PL _ _) = []
+containR r0@(b,e) x@(PL _ (n,_)) = if b == n && e == n then [x] else []
 
 
 
