@@ -22,7 +22,7 @@ data Direction = Up | Down
                           
 phraseType :: PennTreeIdxG c p a -> (Range,Either c p)
 phraseType (PN (i,c) _) = (i,Left c)
-phraseType (PL (i,p) _) = (i,Right p)
+phraseType (PL p (n,_)) = ((n,n),Right p)
 
 position :: Int ->  PennTreeGen c p (Int,a) -> Position
 position n tr = let (b,e) = termRange tr

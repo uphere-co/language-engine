@@ -77,7 +77,7 @@ adjustIndexFromTree tr =
 maximalEmbeddedRange :: PennTreeGen c t (Int,a) -> Range -> [(Range,PennTreeIdxG c t a)]
 maximalEmbeddedRange tr r = go (termRangeTree tr)
   where go y@(PN (r1,c) xs) = if r1 `isInsideR` r then [(r1,y)] else concatMap go xs
-        go y@(PL (r1,t) x) = if r1 `isInsideR` r then [(r1,y)] else []
+        go y@(PL t (n,x)) = if n `isInside` r then [((n,n),y)] else []
 
 
 matchR :: Range -> PennTreeIdxG c t a -> Maybe (PennTreeIdxG c t a)
