@@ -254,7 +254,7 @@ deriving instance (Eq chunk, Eq pos, Eq a) => Eq (PennTreeGen chunk pos a)
 
 type Range = (Int,Int)
 
-type PennTreeIdxG c t a = PennTreeGen (Range,c) (Range,t) (Int,a)
+type PennTreeIdxG c t a = PennTreeGen (Range,c) t (Int,a)
 
 type PennTreeIdx = PennTreeIdxG Text Text Text
 
@@ -275,7 +275,7 @@ termRangeTree :: PennTreeGen c t (Int,a) -> PennTreeIdxG c t a
 termRangeTree tr@(PN c xs) = let is = (map fst . toList) tr 
                                  rng = (minimum is,maximum is)
                              in PN (rng,c) (map termRangeTree xs)
-termRangeTree (PL t (n,x))     = PL ((n,n),t) (n,x)
+termRangeTree (PL t (n,x)) = PL t (n,x)
 
 mkPennTreeIdx :: PennTree -> PennTreeIdx
 mkPennTreeIdx = termRangeTree . mkIndexedTree
