@@ -70,17 +70,6 @@ parseProp = map parseInst . T.lines
 parseNomProp :: Text -> [NomInstance]
 parseNomProp = map parseNomInst . T.lines
 
-
-        
-{-
-contain :: Int -> PennTreeGen Text Text (Int,Text) -> [PennTreeGen Text Text (Int,Text)]
-contain i y@(PN _ xs) = case (filter (not.null) . map (contain i)) xs of
-                          [] -> []
-                          ys:_ -> y:ys
-contain i x@(PL _ (j,_)) | i == j = [x]
-                         | otherwise = []
--}
-
 findNodePathForLeaf :: Int -> PennTree -> [PennTreeGen Text Text (Int,Text)]
 findNodePathForLeaf i tr = contain i (mkIndexedTree tr)
 
@@ -101,7 +90,6 @@ showInstance (tr,prop) = do
 showNomInstance :: (PennTree,NomInstance) -> IO ()
 showNomInstance (tr,nom) = do
   TIO.putStrLn "---------------"
-  -- putStrLn (show (nom^.nominst_sense_number))
   showNomSense (tr,nom)
   TIO.putStrLn "---------------"
   mapM_ (showArgument tr) (nom^.nominst_arguments)
