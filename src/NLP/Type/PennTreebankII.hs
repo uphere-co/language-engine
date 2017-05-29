@@ -256,7 +256,7 @@ type Range = (Int,Int)
 
 type PennTreeIdxG chunk pos a = PennTreeGen (Range,chunk) pos (Int,a)
 
-type PennTreeIdx = PennTreeIdxG Text Text Text
+type PennTreeIdx = PennTreeIdxG ChunkTag POSTag Text -- Text Text Text
 
 
 trimap :: (c->c') -> (p->p') -> (a->a') -> PennTreeGen c p a -> PennTreeGen c' p' a'
@@ -277,8 +277,6 @@ termRangeTree tr@(PN c xs) = let is = (map fst . toList) tr
                              in PN (rng,c) (map termRangeTree xs)
 termRangeTree (PL p (n,x)) = PL p (n,x)
 
-mkPennTreeIdx :: PennTree -> PennTreeIdx
-mkPennTreeIdx = termRangeTree . mkIndexedTree
 
 contain :: Int -> PennTreeGen c p (Int,a) -> [PennTreeGen c p  (Int,a)]
 contain i y@(PN _ xs) = case (filter (not.null) . map (contain i)) xs of
@@ -301,7 +299,12 @@ containR r0@(b,e) x@(PL _ (n,_)) = if b == n && e == n then [x] else []
 getADTPennTree :: PennTree -> PennTreeGen ChunkTag POSTag Text
 getADTPennTree = trimap identifyChunk identifyPOS id 
 
+
+
 pruneOutNone :: Monoid m => PennTreeGen ChunkTag POSTag m -> PennTreeGen ChunkTag POSTag m
 pruneOutNone (PN t xs) = let xs' = (filter (not . isNone) . map pruneOutNone) xs
                          in if null xs' then PL D_NONE mempty else PN t xs' 
 pruneOutNone x = x 
+
+mkPennTreeIdx :: PennTree -> PennTreeIdx
+mkPennTreeIdx = termRangeTree . mkIndexedTree . getADTPennTree 
