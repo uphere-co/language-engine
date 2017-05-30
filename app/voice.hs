@@ -105,8 +105,6 @@ showFeaturesForArgNode sentinfo predidx arg node =
         heads = map (\rng -> pickHeadWord =<< matchR rng (headWord dep ipt)) rngs
     mapM_ print (zip3 rngs paths heads)
 
-safeHead [] = Nothing
-safeHead (x:_) = Just x
 
 pickHeadWord  = safeHead . map snd . sortBy (compare `on` fst)
               . mapMaybe (\(_,(_,(ml,t))) -> (,) <$> ml <*> pure t) . getLeaves 
@@ -169,17 +167,20 @@ showVoice (pt,sent) = do
       -- Just newsents = convertSentence d sents
   
   let ipt = mkPennTreeIdx pt
-      apt = getADTPennTree pt
-      atree = ancestorTree apt
+      -- apt = getADTPennTree pt
   TIO.putStrLn (prettyPrint 0 pt)     
   -- print $ fmap (\(xs,y) -> (lefts (map getTag xs),y)) atree
   
-  print $ ancestorTreeTagOnly apt
+  -- print $ ancestorTreeTagOnly apt
   -- print $ fmap (\(xs,y) -> (map getTag xs,y)) (siblings atree)
   let lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
                     zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
-
-  print (lemmatize lemmamap ipt)
+      lemmapt = lemmatize lemmamap ipt
+      atree = ancestorTreeR lemmapt
+      sib = siblings atree
+  print $ getLeavesI $ fmap (\(n,x) -> (n,uncurry rule1 x)) sib
+   --   print (siblings atree) -- () -- (siblings (ancestorTree lemmapt))
+  -- print ()
   -- toklst
   -- let m = IM.fromList (toList ipt)
   -- print (lemmatize m ipt)

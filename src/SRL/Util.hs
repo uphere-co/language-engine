@@ -12,9 +12,19 @@ clippedText (b,e) = T.intercalate " " . drop b . take (e+1)
 
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
+
+safeHead [] = Nothing
+safeHead (x:_) = Just x
+
+
 getLeaves :: PennTreeGen c t a -> [(t,a)]
 getLeaves (PN _ xs) = concatMap getLeaves xs
 getLeaves (PL t a) = [(t,a)]
+
+getLeavesI :: PennTreeIdxG c t a -> [(Int,(t,a))]
+getLeavesI (PN _ xs) = concatMap getLeavesI xs
+getLeavesI (PL t (n,a)) = [(n,(t,a))]
+
 
 
 findNoneLeaf :: PennTreeGen c Text a -> [(Text,a)]
