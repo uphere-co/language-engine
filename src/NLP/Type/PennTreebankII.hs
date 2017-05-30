@@ -246,6 +246,8 @@ identifyChunk t =
 data PennTreeGen chunk pos a = PN chunk [PennTreeGen chunk pos a]
                              | PL pos a
                    deriving (Show, Functor, Foldable, Traversable)
+
+
                             
 type PennTree = PennTreeGen Text Text Text
 
@@ -266,6 +268,11 @@ trimap cf pf af (PL p x) = PL (pf p) (af x)
 getTag :: PennTreeGen c p a -> Either c p
 getTag (PN c _) = Left c
 getTag (PL p _) = Right p
+
+getRange :: PennTreeIdxG c p a -> Range
+getRange (PN (r,_) _) = r
+getRange (PL p (n,_)) = (n,n)
+
 
 mkIndexedTree :: PennTreeGen c p a -> PennTreeGen c p (Int,a)
 mkIndexedTree tr = evalState (traverse tagidx tr) 0
