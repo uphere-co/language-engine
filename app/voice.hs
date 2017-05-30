@@ -175,7 +175,7 @@ showVoice (pt,sent) = do
   -- print $ fmap (\(xs,y) -> (lefts (map getTag xs),y)) atree
   
   print $ ancestorTreeTagOnly apt
-  print $ fmap (\(xs,y) -> (map getTag xs,y)) (siblings atree)
+  -- print $ fmap (\(xs,y) -> (map getTag xs,y)) (siblings atree)
   let lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
                     zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
 
@@ -191,7 +191,7 @@ main :: IO ()
 main = do
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do 
-    let txt = "He was fined $25,000. He will be fined $25,000. He has been fined $25,000."
+    let txt = "He was fined $25,000. He will be fined $25,000. He has been fined $25,000. The move had been widely expected. The man, it seems, has a Lichtenstein corporation, licensed in Libya and sheltered in the Bahamas. Coke introduced a caffeine-free sugared cola based on its original formula in 1983. But there were fewer price swings than expected. Two big stocks involved in takeover activity saw this."
     let pcfg = def & ( tokenizer .~ True )
                    . ( words2sentences .~ True )
                    . ( postagger .~ True )
