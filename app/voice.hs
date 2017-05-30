@@ -69,18 +69,6 @@ propbank =  do
   return (trs,props)
 
 
-showVoice :: (Int,SentenceInfo,[Instance]) -> IO ()
-showVoice (i,sentinfo,prs) = do
-  let pt = sentinfo^.corenlp_tree
-      apt = getADTPennTree pt
-      atree = ancestorTree apt
-  TIO.putStrLn (prettyPrint 0 pt)     
-  -- print $ fmap (\(xs,y) -> (lefts (map getTag xs),y)) atree
-  
-  print $ ancestorTreeTagOnly apt
-  print $ fmap (\(xs,y) -> (map getTag xs,y)) (siblings atree)
-  -- print (siblings atree)
-
   
 showMatchedInstance :: (Int,SentenceInfo,[Instance]) -> IO ()
 showMatchedInstance (i,sentinfo,prs) = do
@@ -140,8 +128,8 @@ showFeatures (i,sentinfo,prs) = do
       insts = matchInstances (pt,tr) prs
   showFeaturesForInstance sentinfo (head insts)
   
-main :: IO ()
-main = do
+main' :: IO ()
+main' = do
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do 
   
@@ -170,5 +158,44 @@ main = do
           rs = map (\(i,((pt,tr,dep),pr)) -> (i,SentInfo pt tr dep,pr))
              . merge (^.inst_tree_id) (zip3 pts trs deps)
              $ props
-      -- liftIO $ mapM_ (showMatchedInstance <> showFeatures) rs
-      liftIO $ showVoice (head rs)
+      liftIO $ mapM_ (showMatchedInstance <> showFeatures) rs
+      -- liftIO $ showVoice (head rs)
+
+
+showVoice :: PennTree -> IO ()
+showVoice pt = do
+  let apt = getADTPennTree pt
+      atree = ancestorTree apt
+  TIO.putStrLn (prettyPrint 0 pt)     
+  -- print $ fmap (\(xs,y) -> (lefts (map getTag xs),y)) atree
+  
+  print $ ancestorTreeTagOnly apt
+  print $ fmap (\(xs,y) -> (map getTag xs,y)) (siblings atree)
+  -- print (siblings atree)
+
+
+
+main :: IO ()
+main = do
+  clspath <- getEnv "CLASSPATH"
+  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do 
+    let txt = "He was fined $25,000. He will be fined $25,000. He has been fined $25,000."
+    let pcfg = def & ( tokenizer .~ True )
+                   . ( words2sentences .~ True )
+                   . ( postagger .~ True )
+                   . ( lemma .~ True )
+                   . ( sutime .~ False )
+                   . ( depparse .~ False ) -- True )
+                   . ( constituency .~ True )
+                   . ( ner .~ False )
+    pp <- prepare pcfg
+    let doc = Document txt (fromGregorian 2017 4 17)
+    ann <- annotate pp doc
+    rdoc <- protobufDoc ann
+    case rdoc of
+      Left e -> print e
+      Right d -> do
+        let sents = d ^.. D.sentence . traverse
+            cpts = mapMaybe (^.S.parseTree) sents
+            pts = map decodeToPennTree cpts
+        mapM_ showVoice pts
