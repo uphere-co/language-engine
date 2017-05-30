@@ -18,13 +18,13 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        SRL
+                       SRL.CoNLL.CoNLL08.Parser
+                       SRL.CoNLL.CoNLL08.Type
                        SRL.Feature
                        SRL.PropBankMatch
                        SRL.Type
                        SRL.Util
-                       SRL.CoNLL.CoNLL08.Parser
-                       SRL.CoNLL.CoNLL08.Type
-                  
+                       SRL.VoiceIdentify
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base,

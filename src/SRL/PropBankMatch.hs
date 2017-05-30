@@ -88,7 +88,7 @@ matchR (b,e) x@(PL _ (n,_))
   | b == n && e == n = Just x
   | otherwise = Nothing
 
-matchArgNodes :: (PennTree,PennTree) -> Argument -> [MatchedArgNode] -- [((Range,Node),[(Range,PennTreeIdx)])]
+matchArgNodes :: (PennTree,PennTree) -> Argument -> [MatchedArgNode]
 matchArgNodes (pt,tr) arg = do
   n <- arg ^. arg_terminals
   let nd = fromJust (findNode n tr)
@@ -99,19 +99,19 @@ matchArgNodes (pt,tr) arg = do
                          (Right b,Left e) -> [(b,e-1)]
                          (Right b,Right e) -> [(b,e)]
   rng <- (adjrange . termRange . snd) nd
-  let xs = termRangeForAllNode (mkIndexedTree pt)
-      ipt = mkIndexedTree pt
+  let ipt = (mkIndexedTree . getADTPennTree) pt
+      xs = termRangeForAllNode ipt 
       zs = maximalEmbeddedRange ipt rng
   return MatchedArgNode { _mn_node = (rng,n), _mn_trees = zs }
 
 
-matchArgs :: (PennTree,PennTree) -> Instance -> [MatchedArgument] -- [(Argument,[((Range,Node),[(Range,PennTreeIdx)])])]
+matchArgs :: (PennTree,PennTree) -> Instance -> [MatchedArgument]
 matchArgs (pt,tr) pr
   = [ MatchedArgument { _ma_argument = arg, _ma_nodes = matchArgNodes (pt,tr) arg }
       | arg <- pr^.inst_arguments ]
 
 
-matchInstances :: (PennTree,PennTree) -> [Instance] -> [MatchedInstance] -- [(Instance,[(Argument,[((Range,Node),[(Range,PennTreeIdx)])])])]
+matchInstances :: (PennTree,PennTree) -> [Instance] -> [MatchedInstance]
 matchInstances (pt,tr) insts
   = [ MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (pt,tr) inst }
       | inst <- insts ]
