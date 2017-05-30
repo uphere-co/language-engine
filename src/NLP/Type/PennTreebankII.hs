@@ -256,12 +256,16 @@ type Range = (Int,Int)
 
 type PennTreeIdxG chunk pos a = PennTreeGen (Range,chunk) pos (Int,a)
 
-type PennTreeIdx = PennTreeIdxG ChunkTag POSTag Text -- Text Text Text
+type PennTreeIdx = PennTreeIdxG ChunkTag POSTag Text
 
 
 trimap :: (c->c') -> (p->p') -> (a->a') -> PennTreeGen c p a -> PennTreeGen c' p' a'
 trimap cf pf af (PN c xs) = PN (cf c) (map (trimap cf pf af) xs)
 trimap cf pf af (PL p x) = PL (pf p) (af x)
+
+getTag :: PennTreeGen c p a -> Either c p
+getTag (PN c _) = Left c
+getTag (PL p _) = Right p
 
 mkIndexedTree :: PennTreeGen c p a -> PennTreeGen c p (Int,a)
 mkIndexedTree tr = evalState (traverse tagidx tr) 0
