@@ -2,21 +2,23 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
-module WikiNamedEntityTagger where
+module WikiEL.WikiNamedEntityTagger where
 
 import           Data.Text                             (Text)
 import           Data.Vector                           (Vector,toList,fromList,ifoldr,foldl')
 import           Control.Arrow                         (second)
-import           Misc                                  (IRange(..),RelativePosition(..), relativePos, untilNoOverlap)
-import           WikiEntity                            (parseEntityLine,loadEntityReprs,nameWords)
-import           WikiEntityTagger                      (NameUIDTable,buildEntityTable,wikiAnnotator)
-import           WikiEntityClass                       (WikiUID2NETag,getNEClass)
-import           NamedEntity                           (NamedEntity,NamedEntityFrag,NamedEntityClass,parseStr)
 import qualified Data.Vector                   as V
 import qualified Data.Text                     as T
-import qualified WikiEntity                    as Wiki
-import qualified NamedEntity                   as N
-import qualified CoreNLP                       as C
+
+
+import           WikiEL.Misc                           (IRange(..),RelativePosition(..), relativePos, untilNoOverlap)
+import           WikiEL.WikiEntity                     (parseEntityLine,loadEntityReprs,nameWords)
+import           WikiEL.WikiEntityTagger               (NameUIDTable,buildEntityTable,wikiAnnotator)
+import           WikiEL.WikiEntityClass                (WikiUID2NETag,getNEClass)
+import           WikiEL.NamedEntity                    (NamedEntity,NamedEntityFrag,NamedEntityClass,parseStr)
+import qualified WikiEL.WikiEntity             as Wiki
+import qualified WikiEL.NamedEntity            as N
+import qualified WikiEL.CoreNLP                as C
 
 
 type NEClass = NamedEntityClass

@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
-module WikiEntityTagger where
+module WikiEL.WikiEntityTagger where
 
 import           Data.Maybe                            (fromJust, isNothing)
 import           Data.List                             (inits, transpose)
@@ -14,16 +14,16 @@ import           Data.Vector.Generic.Mutable           (MVector)
 import           Data.Vector                           (Vector,backpermute,findIndices
                                                        ,slice,fromList,toList,unsafeThaw,modify)
 import           Data.Ord                              (Ord)
-
-import           Misc                                  (IRange(..))
-import           Assert                                (massertEqual,eassertEqual)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
-import           WikiEntity                            (parseEntityLine,loadEntityReprs,nameWords)
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 import qualified Data.Vector                   as V
 import qualified Data.Vector.Algorithms.Search as VS
-import qualified WikiEntity                    as Wiki
+
+import qualified WikiEL.WikiEntity                    as Wiki
+import           WikiEL.WikiEntity                            (parseEntityLine,loadEntityReprs,nameWords)
+import           WikiEL.Misc                                  (IRange(..))
+import           Assert                                (massertEqual,eassertEqual)
 {-
 import qualified Data.Vector.Unboxed.Mutable   as MV
 import qualified Data.Vector.Unboxed           as V

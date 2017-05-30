@@ -1,4 +1,4 @@
-module Misc where
+module WikiEL.Misc where
 
 import qualified Data.Vector                   as V
 import           Data.Vector                           (Vector,toList,fromList,ifoldr,foldl')

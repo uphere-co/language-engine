@@ -1,4 +1,4 @@
-module WikiEntityClass where
+module WikiEL.WikiEntityClass where
 
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
@@ -6,8 +6,8 @@ import qualified Data.Map                      as M
 import           Data.Map                              (Map)
 import           Data.Maybe                            (fromMaybe,fromJust)
 
-import           NamedEntity                           (NamedEntityClass)
-import qualified WikiEntity                    as Wiki
+import           WikiEL.NamedEntity                    (NamedEntityClass)
+import qualified WikiEL.WikiEntity             as Wiki
 
 
 
