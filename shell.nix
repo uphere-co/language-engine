@@ -20,7 +20,7 @@ let
     self: super: {
       "nlp-types" = self.callPackage (import nlp-types) {};
       "PropBank" = self.callPackage (import PropBank) {};
-      
+      "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
       "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
     };  
   newHaskellPackages = haskellPackages.override {
@@ -45,6 +45,7 @@ let
             p.nlp-types
             p.PropBank
             p.HCoreNLP
+            p.HCoreNLP-Proto
           ]);
 
 in
