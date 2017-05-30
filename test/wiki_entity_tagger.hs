@@ -101,7 +101,7 @@ unitTestsGreedyMatching =
 
 testWikiEntityTagging = testCaseSteps "Wiki entity tagger with greedy-matching strategy" $ \step -> do
   entities <- do
-     reprs <- loadEntityReprs "../rnn++/tests/data/wikidata.test.entities"
+     reprs <- loadEntityReprs "data/wikidata.test.entities"
      return (buildEntityTable reprs)
   let
     text = "Google and Facebook Inc. are famous AI companies . NLP stands for natural language processing ."
