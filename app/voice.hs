@@ -75,7 +75,9 @@ showVoice (i,sentinfo,prs) = do
       apt = getADTPennTree pt
       atree = ancestorTree apt
   TIO.putStrLn (prettyPrint 0 pt)     
-  print $ fmap (\(xs,y) -> (lefts (map getTag xs),y)) atree
+  -- print $ fmap (\(xs,y) -> (lefts (map getTag xs),y)) atree
+  
+  print $ ancestorTreeTagOnly apt
   print $ fmap (\(xs,y) -> (map getTag xs,y)) (siblings atree)
   -- print (siblings atree)
 
