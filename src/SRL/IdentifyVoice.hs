@@ -1,6 +1,11 @@
-module SRL.VoiceIdentify where
+module SRL.IdentifyVoice where
 
-import           Data.Either             (lefts)
+import           Data.Either                   (lefts)
+import qualified Data.IntMap             as IM
+import           Data.Maybe                    (fromJust)
+import           Data.Text                     (Text)
+import qualified Data.Text               as T
+--
 import           NLP.Type.PennTreebankII
   
   
@@ -23,5 +28,10 @@ siblings = trimap id id f
     f ([],x) = ([],x)
     f (y:ys,x) = (daughters y,x)
 
+-- rule1 :: [PennTreeGen ChunkTag POSTag Text]
 
-    
+lemmatize :: IM.IntMap Text
+          -> PennTreeIdxG ChunkTag POSTag Text
+          -> PennTreeIdxG ChunkTag POSTag (Text,Text)
+lemmatize m = trimap id id f where f (i,t) = (i,(t,fromJust (IM.lookup i m)))
+  

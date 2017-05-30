@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -18,10 +19,10 @@ import           Data.Default
 import           Data.Either                       (lefts)
 import           Data.Foldable                     (toList)
 import           Data.Function                     (on)
-import           Data.List                         (sortBy,zip4)
+import           Data.List                         (foldl',sortBy,zip4)
 import           Data.Monoid                       ((<>))
 import qualified Data.IntMap                as IM
-import           Data.Maybe                        (fromJust,fromMaybe,mapMaybe)
+import           Data.Maybe                        (catMaybes,fromJust,fromMaybe,mapMaybe)
 import qualified Data.Sequence              as Seq
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T   (intercalate,unpack)
@@ -52,7 +53,7 @@ import           PropBank.Util
 import           SRL.Feature
 import           SRL.PropBankMatch
 import           SRL.Util
-import           SRL.VoiceIdentify
+import           SRL.IdentifyVoice
 
 mkDocFromPennTree :: PennTree -> Document
 mkDocFromPennTree = flip Document (fromGregorian 2017 4 17)
@@ -162,15 +163,26 @@ main' = do
       -- liftIO $ showVoice (head rs)
 
 
-showVoice :: PennTree -> IO ()
-showVoice pt = do
-  let apt = getADTPennTree pt
+showVoice :: (PennTree,S.Sentence) -> IO ()
+showVoice (pt,sent) = do
+  -- let Just (toklst :: [Token]) = mapM convertToken (sent ^.. S.token . traverse) -- map convertToken ( toListOf (S.token . traverse) $ sent
+      -- Just newsents = convertSentence d sents
+  
+  let ipt = mkPennTreeIdx pt
+      apt = getADTPennTree pt
       atree = ancestorTree apt
   TIO.putStrLn (prettyPrint 0 pt)     
   -- print $ fmap (\(xs,y) -> (lefts (map getTag xs),y)) atree
   
   print $ ancestorTreeTagOnly apt
   print $ fmap (\(xs,y) -> (map getTag xs,y)) (siblings atree)
+  let lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
+                    zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
+
+  print (lemmatize lemmamap ipt)
+  -- toklst
+  -- let m = IM.fromList (toList ipt)
+  -- print (lemmatize m ipt)
   -- print (siblings atree)
 
 
@@ -198,4 +210,4 @@ main = do
         let sents = d ^.. D.sentence . traverse
             cpts = mapMaybe (^.S.parseTree) sents
             pts = map decodeToPennTree cpts
-        mapM_ showVoice pts
+        mapM_ showVoice (zip pts sents)
