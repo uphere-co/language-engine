@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
@@ -6,7 +7,6 @@ module PropBank.Parser.Prop where
 
 import           Control.Applicative         (many)
 import           Control.Lens
-import           Control.Monad.Trans.State
 import qualified Data.Attoparsec.Text as A
 import           Data.Foldable               (toList)
 import qualified Data.List            as L   (lookup)
@@ -70,13 +70,13 @@ parseProp = map parseInst . T.lines
 parseNomProp :: Text -> [NomInstance]
 parseNomProp = map parseNomInst . T.lines
 
-findNodePathForLeaf :: Int -> PennTree -> [PennTreeGen Text Text (Int,Text)]
+findNodePathForLeaf :: Int -> PennTree -> [PennTreeGen Text (Int,(Text,Text))]
 findNodePathForLeaf i tr = contain i (mkIndexedTree tr)
 
-findNode :: Node -> PennTree -> Maybe (Text, PennTreeGen Text Text (Int,Text))
+findNode :: Node -> PennTree -> Maybe (Text, PennTreeGen Text (Int,(Text,Text)))
 findNode (Node i d) tr = do
   let lst = reverse (findNodePathForLeaf i tr)
-  PL _ (_,headword) <- listToMaybe (take 1 lst)
+  PL (_,(headword,_)) <- listToMaybe (take 1 lst)
   r <- listToMaybe $ drop d lst
   return (headword,r)
 
@@ -102,12 +102,12 @@ showNomSense (tr,nom) = do
   print (nom^.nominst_predicate_id)
   case L.lookup (nom^.nominst_predicate_id) $ zip [0..] $ toList tr of
     Nothing -> putStrLn "non-sense?"
-    Just n -> TIO.putStrLn (n <> "." <> T.pack (show (nom^.nominst_sense_number)))
+    Just (_,n) -> TIO.putStrLn (n <> "." <> T.pack (show (nom^.nominst_sense_number)))
   
 showArgument :: PennTree -> Argument -> IO ()
 showArgument tr arg = do
   TIO.putStr (arg^.arg_label <> ": ")
-  let format (t,n) = "(" <> t <> ") " <>   (T.intercalate " " . map snd . toList) n
+  let format (t,n) = "(" <> t <> ") " <>   (T.intercalate " " . map (^._2._2) . toList) n
   mapM_ (\x -> TIO.putStr (maybe "Nothing" format (findNode x tr)) >> TIO.putStr ", ") (arg^.arg_terminals)
   TIO.putStr "\n"
 
@@ -115,13 +115,13 @@ showSentenceProp :: (Int,(PennTree,[Instance])) -> IO ()
 showSentenceProp (i,(tr,props)) = do
   TIO.putStrLn "================================================="
   TIO.putStr ("Sentence " <> T.pack (show i) <> ": ") 
-  (TIO.putStrLn . T.intercalate " " . toList) tr
+  (TIO.putStrLn . T.intercalate " " . map (^._2) . toList) tr
   mapM_ (showInstance . (tr,)) props
 
 showSentenceNom :: (Int,(PennTree,[NomInstance])) -> IO ()
 showSentenceNom (i,(tr,props)) = do
   TIO.putStrLn "================================================="
   TIO.putStr ("Sentence " <> T.pack (show i) <> ": ") 
-  (TIO.putStrLn . T.intercalate " " . toList) tr
+  (TIO.putStrLn . T.intercalate " " . map (^._2) . toList) tr
   mapM_ (showNomInstance . (tr,)) props
 
