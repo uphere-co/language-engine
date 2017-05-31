@@ -13,6 +13,7 @@ import           Control.Monad                     (void,when,(>=>))
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.Attoparsec.Text       as A
+import           Data.Bifoldable
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
@@ -46,6 +47,7 @@ import           CoreNLP.Simple.Type.Simplified
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
+import           NLP.Type.TreeZipper
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 import           PropBank.Util
@@ -83,7 +85,7 @@ showMatchedInstance (i,sentinfo,prs) = do
   TIO.putStrLn "CoreNLP"  
   TIO.putStrLn $ prettyPrint 0 pt
   TIO.putStrLn "-----------------"            
-  TIO.putStrLn (T.intercalate " " terms)
+  TIO.putStrLn (T.intercalate " " . map snd $ terms)
   TIO.putStrLn "-----------------"
   mapM_ printMatchedInst $ matchInstances (pt,tr) prs
 
@@ -105,9 +107,9 @@ showFeaturesForArgNode sentinfo predidx arg node =
         heads = map (\rng -> pickHeadWord =<< matchR rng (headWord dep ipt)) rngs
     mapM_ print (zip3 rngs paths heads)
 
-
+pickHeadWord :: PennTreeIdxG ChunkTag (Maybe Int,(POSTag,Text)) -> Maybe Text
 pickHeadWord  = safeHead . map snd . sortBy (compare `on` fst)
-              . mapMaybe (\(_,(_,(ml,t))) -> (,) <$> ml <*> pure t) . getLeaves 
+              . mapMaybe (\(_,(ml,(_,t))) -> (,) <$> ml <*> pure t) . getLeaves 
     
 showFeaturesForArg :: SentenceInfo -> Int -> MatchedArgument -> IO ()
 showFeaturesForArg sentinfo predidx arg = 
@@ -176,9 +178,15 @@ showVoice (pt,sent) = do
   let lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
                     zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
       lemmapt = lemmatize lemmamap ipt
-      atree = ancestorTreeR lemmapt
-      sib = siblings atree
-  print $ getLeavesI $ fmap (\(n,x) -> (n,uncurry rule1 x)) sib
+      -- atree = ancestorTreeR lemmapt
+      -- sib = siblings atree
+  print lemmapt
+  let getf (PL x) = Right x
+      getf (PN x _) = Left x
+      testf z = putStrLn (show (getf (current z)) ++ " " ++
+                          show (isVBN z, withCopula z,isInNP z,isInPP z))
+  bimapM_ testf testf (mkTreeZipper [] lemmapt)
+  -- print $ getLeavesI $ fmap (\(n,x) -> (n,uncurry rule1 x)) sib
    --   print (siblings atree) -- () -- (siblings (ancestorTree lemmapt))
   -- print ()
   -- toklst

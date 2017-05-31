@@ -31,6 +31,7 @@ library
                        --
                        array,
                        attoparsec,
+                       bifunctors,
                        bytestring,
                        containers,
                        data-default,

@@ -30,6 +30,7 @@ let
 
   hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
             attoparsec
+            bifunctors
             either
             haskeline
             lens
