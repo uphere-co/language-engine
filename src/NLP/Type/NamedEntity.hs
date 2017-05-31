@@ -8,7 +8,7 @@ import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import           Data.Monoid
 
-data NamedEntityClass = Org | Person | Loc | Time | Date | Number | Money | Set | Other
+data NamedEntityClass = Org | Person | Loc | Time | Date | Money | Percent| Other
                       deriving(Show, Eq)
 
 data NamedEntity = NamedEntity { _str  :: Text
@@ -33,9 +33,8 @@ classify "ORGANIZATION" = Just Org
 classify "LOCATION"     = Just Loc
 classify "TIME"         = Just Time
 classify "DATE"         = Just Date
-classify "NUMBER"       = Just Number
 classify "MONEY"        = Just Money
-classify "SET"          = Just Set
+classify "PERCENT"      = Just PERCENT
 classify "O"            = Just Other
 classify _              = Nothing
 
@@ -44,17 +43,3 @@ parseStr str t =
   case classify t of
     Nothing -> error ("Unknown named entity class: " ++ T.unpack t)
     Just c  -> NamedEntityFrag str c
-
-partitionFrags :: [NamedEntityFrag] -> [[NamedEntityFrag]]
-partitionFrags frags = foldr f [] frags
-  where
-    f e [] = [[e]]
-    f e xss'@(es:ess) | isSameType e (head es) = (e:es): ess
-                      | otherwise              = [e] : xss'
-
-mergeToken :: [NamedEntityFrag] -> Maybe NamedEntity
-mergeToken xs'@(NamedEntityFrag str tag : es) | tag /= Other = Just (NamedEntity ss tag) where ss = T.unwords (map _fstr xs')
-mergeToken _ = Nothing
-
-mergeTokens :: [NamedEntityFrag] -> [NamedEntity]
-mergeTokens es = catMaybes (map mergeToken (partitionFrags es))
