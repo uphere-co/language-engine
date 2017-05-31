@@ -33,25 +33,27 @@ mkTreeZipper zs p@(PN x xs) = PN (TZ p zs) lst
 
 mkListZipper :: [a] -> [([a],a,[a])]
 mkListZipper [] = error "cannot make a zipper for empty list"
-mkListZipper (k:ks) = ([],k,ks) : unfoldr next ([],k,ks)
-  where next (xs,y,[]) = Nothing
-        next (xs,y,z:zs) = let w = (y:xs,z,zs) in Just (w,w)
+mkListZipper (k:ks) = ([],k,ks) : unfoldr succ ([],k,ks)
+  where succ (xs,y,[]) = Nothing
+        succ (xs,y,z:zs) = let w = (y:xs,z,zs) in Just (w,w)
 
 
 current :: TreeZipper c t -> Tree c t
 current (TZ x _) = x
 
-prevSibling :: TreeZipper c t -> Maybe (Tree c t)
-prevSibling (TZ _ (x:xs)) = case x of
-                              (_,y:_,_) -> Just y
-                              _         -> Nothing
-prevSibling _             = Nothing
+prev :: TreeZipper c t -> Maybe (TreeZipper c t)
+prev (TZ x (y:ys)) = case y of
+                              (c,z:zs,ws) -> Just (TZ z ((c,zs,x:ws):ys))
+                              _           -> Nothing
+prev _             = Nothing
                               
-nextSibling :: TreeZipper c t -> Maybe (Tree c t)
-nextSibling (TZ _ (x:xs)) = case x of
-                              (_,_,y:_) -> Just y
-                              _         -> Nothing
-nextSibling _             = Nothing      
+next :: TreeZipper c t -> Maybe (TreeZipper c t)
+next (TZ x (y:ys)) = case y of
+                              (c,zs,w:ws) -> Just (TZ w ((c,x:zs,ws):ys))
+                              _           -> Nothing
+next _             = Nothing      
+
+-- parent :: TreeZipper c t ->
 
 {- 
 parent :: TreeZipper c t -> Maybe (TreeZipper c t)

@@ -2,7 +2,7 @@
 
 module Main where
 
--- import           Control.Monad.State
+import           Control.Monad       ((<=<))
 import           Data.Bifoldable
 import           Data.List           (unfoldr)
 import           Data.Monoid
@@ -29,12 +29,14 @@ main = do
   let z = mkTreeZipper [] tree
   bimapM_ print print z
   putStrLn "==========="
-  let PN _ [PN z' [_,PL z'',_]  , _ ] = z
+  let PN _ [PN z' [PL z'',_,_]  , _ ] = z
   print (current z')
-  print (nextSibling z')
+  print (current <$> (next z'))
 
   print (current z'')
-  print (prevSibling z'')
+  print (current <$> (next z''))
+  print (current <$> ((next <=< next) z''))
+  print (current z'')
 
   print $ match_test1 z
   print $ match_test2 z
