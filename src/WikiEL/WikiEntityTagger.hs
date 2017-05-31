@@ -105,6 +105,14 @@ buildEntityTable entities = NameUIDTable uids names
     uids  = V.map fst entitiesByName
     names = V.map snd entitiesByName
 
+loadWETagger :: FilePath -> IO NameUIDTable
+loadWETagger file = do
+     reprs <- loadEntityReprs file
+     let 
+       table = buildEntityTable reprs
+     return table 
+
+
 wikiAnnotator:: NameUIDTable -> [Text] -> [(IRange, Vector Wiki.UID)]
 wikiAnnotator entities words = matchedItems
   where
