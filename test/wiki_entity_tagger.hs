@@ -6,17 +6,17 @@
 import           Data.Text                             (Text)
 import           Data.Vector                           (Vector,backpermute,findIndices
                                                        ,slice,fromList,toList,unsafeThaw,modify)
-
-import           Misc                                  (IRange(..))
-import           Assert                                (massertEqual,eassertEqual)
 import           Test.Tasty.HUnit                      (testCase,testCaseSteps)
 import           Test.Tasty                            (defaultMain, testGroup)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
-import           WikiEntity                            (parseEntityLine,loadEntityReprs,nameWords)
-import           WikiEntityTagger
 import qualified Data.Vector                   as V
 import qualified Data.Text                     as T
-import qualified WikiEntity                    as Wiki
+
+import           WikiEL.WikiEntity                     (parseEntityLine,loadEntityReprs,nameWords)
+import           WikiEL.Misc                           (IRange(..))
+import           Assert                                (massertEqual,eassertEqual)
+import           WikiEL.WikiEntityTagger
+import qualified WikiEL.WikiEntity             as Wiki
 
 
 testVectorSlicing = testCaseSteps "API usages for vector slicing" $ \step -> do
@@ -101,7 +101,7 @@ unitTestsGreedyMatching =
 
 testWikiEntityTagging = testCaseSteps "Wiki entity tagger with greedy-matching strategy" $ \step -> do
   entities <- do
-     reprs <- loadEntityReprs "../rnn++/tests/data/wikidata.test.entities"
+     reprs <- loadEntityReprs "data/wikidata.test.entities"
      return (buildEntityTable reprs)
   let
     text = "Google and Facebook Inc. are famous AI companies . NLP stands for natural language processing ."

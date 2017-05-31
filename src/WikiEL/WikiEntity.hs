@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module WikiEntity where
+module WikiEL.WikiEntity where
 
 import           Data.Text                         (Text)
 import qualified Data.Text                     as T

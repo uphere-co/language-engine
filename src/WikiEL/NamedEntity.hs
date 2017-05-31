@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module NamedEntity where
+module WikiEL.NamedEntity where
 
 import           Data.Maybe                        (mapMaybe,catMaybes)
 import           Data.Text                         (Text)

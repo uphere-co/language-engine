@@ -3,16 +3,16 @@
 
 import           Data.Maybe                        (fromJust)
 import           Data.List                         (inits)
-import           Assert                                (assert,massertEqual,eassertEqual)
-import           Test.Tasty.HUnit                      (testCase,testCaseSteps)
-import           Test.Tasty                            (defaultMain, testGroup)
+import           Assert                            (assert,massertEqual,eassertEqual)
+import           Test.Tasty.HUnit                  (testCase,testCaseSteps)
+import           Test.Tasty                        (defaultMain, testGroup)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 
-import qualified EntityLinking              as L
-import           NamedEntity                       (NamedEntity)
-import qualified NamedEntity                as N
-import qualified CoreNLP                    as C
+import qualified WikiEL.EntityLinking       as L
+import           WikiEL.NamedEntity                (NamedEntity)
+import qualified WikiEL.NamedEntity         as N
+import qualified WikiEL.CoreNLP             as C
 
 
 parseStanfordNE (C.EntityToken (C.WordToken word) (C.NETag tag)) =  N.parseStr word tag

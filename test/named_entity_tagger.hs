@@ -13,19 +13,19 @@ import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 import qualified Data.Vector                   as V
 
-import           CoreNLP                               (parseNEROutputStr)
-import           WikiEntity                            (parseEntityLine,loadEntityReprs,nameWords)
-import           WikiEntityTagger                      (buildEntityTable,wikiAnnotator)
-import           WikiEntityClass                       (fromFiles,getNEClass)
-import           WikiNamedEntityTagger                 (resolveNEs,buildTagUIDTable,getStanfordNEs,parseStanfordNE,namedEntityAnnotator)
-import           WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
-import           EntityLinking                         (EntityMention(..),entityLinking,entityLinkings,buildEntityMentions)
+import           WikiEL.CoreNLP                               (parseNEROutputStr)
+import           WikiEL.WikiEntity                            (parseEntityLine,loadEntityReprs,nameWords)
+import           WikiEL.WikiEntityTagger                      (buildEntityTable,wikiAnnotator)
+import           WikiEL.WikiEntityClass                       (fromFiles,getNEClass)
+import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,buildTagUIDTable,getStanfordNEs,parseStanfordNE,namedEntityAnnotator)
+import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
+import           WikiEL.EntityLinking                         (EntityMention(..),entityLinking,entityLinkings,buildEntityMentions)
 
 -- For testing:
-import           Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
-import qualified NamedEntity                   as N
-import qualified WikiEntity                    as Wiki
-import qualified WikiEntityClass               as WC
+import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
+import qualified WikiEL.NamedEntity                   as N
+import qualified WikiEL.WikiEntity                    as Wiki
+import qualified WikiEL.WikiEntityClass               as WC
 
 uid = Wiki.UID
 uids = fromList . map uid
@@ -45,7 +45,7 @@ facebook     = org "Q380"
 testNamedEntityTagging :: TestTree
 testNamedEntityTagging = testCaseSteps "Named entity tagging on CoreNLP NER output" $ \step -> do
   entities <- do
-     reprs <- loadEntityReprs "../rnn++/tests/data/wikidata.test.entities"
+     reprs <- loadEntityReprs "data/wikidata.test.entities"
      return (buildEntityTable reprs)  
   let
     ner_text = "Google/ORGANIZATION and/O Facebook/ORGANIZATION Inc./ORGANIZATION are/O famous/O AI/O companies/O ./O NLP/ORGANIZATION stands/O for/O natural/O language/O processing/O ./O"

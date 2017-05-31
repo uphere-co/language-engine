@@ -1,16 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module EntityLinking where
+module WikiEL.EntityLinking where
 
 import           Data.List                             (inits,foldl')
 import           Data.Vector                           (Vector)
 import qualified Data.Text                  as T
 import           Data.Text                             (Text)
 
-import           Misc                                  (IRange(..),RelativePosition(..),relativePos,isContain,subVector) 
-import           NamedEntity                           (NamedEntity, OrderedNamedEntity)
-import           WikiNamedEntityTagger                 (PreNE(..))
-import qualified NamedEntity                as N
+import           WikiEL.Misc                           (IRange(..),RelativePosition(..),relativePos,isContain,subVector) 
+import           WikiEL.NamedEntity                    (NamedEntity, OrderedNamedEntity)
+import           WikiEL.WikiNamedEntityTagger          (PreNE(..))
+import qualified WikiEL.NamedEntity         as N
 
 mayRefer :: NamedEntity -> NamedEntity -> Bool
 mayRefer src target = (N._type src == N._type target) && T.isInfixOf (N._str src) (N._str target)
