@@ -20,20 +20,20 @@ data Position = Before | After | Embed
 data Direction = Up | Down
                deriving (Show,Eq,Ord)
                           
-phraseType :: PennTreeIdxG c p a -> (Range,Either c p)
-phraseType (PN (i,c) _) = (i,Left c)
-phraseType (PL (i,p) _) = (i,Right p)
+phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
+phraseType (PN (i,c) _)   = (i,Left c)
+phraseType (PL (n,(p,_))) = ((n,n),Right p)
 
-position :: Int ->  PennTreeGen c p (Int,a) -> Position
+position :: Int ->  PennTreeGen c (Int,(p,a)) -> Position
 position n tr = let (b,e) = termRange tr
                 in if | n < b     -> Before
                       | n > e     -> After
                       | otherwise -> Embed
 
 
-elimCommonHead :: [PennTreeIdxG c p a]
-               -> [PennTreeIdxG c p a]
-               -> (Maybe (PennTreeIdxG c p a),[PennTreeIdxG c p a],[PennTreeIdxG c p a])
+elimCommonHead :: [PennTreeIdxG c (p,a)]
+               -> [PennTreeIdxG c (p,a)]
+               -> (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
 elimCommonHead lst1 lst2 = go lst1 lst2
   where
     range = fst . phraseType 
@@ -50,12 +50,12 @@ elimCommonHead lst1 lst2 = go lst1 lst2
     go []     ys     = (Nothing,[],ys)
     go xs     []     = (Nothing,xs,[])
 
-parseTreePathFull :: (Int,Range) -> PennTreeIdxG c p a
-              -> (Maybe (PennTreeIdxG c p a),[PennTreeIdxG c p a],[PennTreeIdxG c p a])
+parseTreePathFull :: (Int,Range) -> PennTreeIdxG c (p,a)
+                  -> (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
 parseTreePathFull (start,target) tr = elimCommonHead (contain start tr) (containR target tr)
 
-parseTreePath :: (Maybe (PennTreeIdxG c p a),[PennTreeIdxG c p a],[PennTreeIdxG c p a])
-                        -> [(Either c p,Direction)]
+parseTreePath :: (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
+              -> [(Either c p,Direction)]
 parseTreePath (mh,tostart,totarget) =
   case mh of
     Nothing -> []
@@ -65,7 +65,7 @@ parseTreePath (mh,tostart,totarget) =
 
 
 mapM_forNode f x@(PN c xs) = f x >> mapM_ (mapM_forNode f) xs
-mapM_forNode f (PL t x ) = return ()
+mapM_forNode f (PL x)      = return ()
 
 annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))
 
@@ -74,6 +74,4 @@ headWord (Dependency root nods edgs') tr =
       edgs = map fst edgs'
       searchtree = head (dfs (buildG bnds edgs) [root])
       levelMap = IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
-
-      
   in fmap (annotateLevel levelMap) tr 

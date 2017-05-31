@@ -18,19 +18,20 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        SRL
+                       SRL.CoNLL.CoNLL08.Parser
+                       SRL.CoNLL.CoNLL08.Type
                        SRL.Feature
                        SRL.PropBankMatch
                        SRL.Type
                        SRL.Util
-                       SRL.CoNLL.CoNLL08.Parser
-                       SRL.CoNLL.CoNLL08.Type
-                  
+                       SRL.IdentifyVoice
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base,
                        --
                        array,
                        attoparsec,
+                       bifunctors,
                        bytestring,
                        containers,
                        data-default,

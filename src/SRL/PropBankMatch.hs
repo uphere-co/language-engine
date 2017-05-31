@@ -57,9 +57,9 @@ data MatchedInstance
 makeLenses ''MatchedInstance
 
 
-termRangeForAllNode :: PennTreeGen c t (Int,a) -> [Range]
+termRangeForAllNode :: PennTreeGen c (Int,t) -> [Range]
 termRangeForAllNode x@(PN _ ys) = termRange x : concatMap termRangeForAllNode ys
-termRangeForAllNode (PL _ (i,_)) = [(i,i)]
+termRangeForAllNode (PL (i,_)) = [(i,i)]
 
 
 adjustIndex :: [Int] -> Int -> Either Int Int
@@ -70,25 +70,25 @@ adjustIndexFromTree :: PennTree -> Int -> Either Int Int
 adjustIndexFromTree tr =
   let itr = mkIndexedTree tr
       rs = termRangeForAllNode itr
-      excl = map (^._2._1) (findNoneLeaf itr)
+      excl = map (^._1) (findNoneLeaf itr)
   in adjustIndex excl 
 
 
-maximalEmbeddedRange :: PennTreeGen c t (Int,a) -> Range -> [(Range,PennTreeIdxG c t a)]
+maximalEmbeddedRange :: PennTreeGen c (Int,t) -> Range -> [(Range,PennTreeIdxG c t)]
 maximalEmbeddedRange tr r = go (termRangeTree tr)
   where go y@(PN (r1,c) xs) = if r1 `isInsideR` r then [(r1,y)] else concatMap go xs
-        go y@(PL (r1,t) x) = if r1 `isInsideR` r then [(r1,y)] else []
+        go y@(PL (n,x)) = if n `isInside` r then [((n,n),y)] else []
 
 
-matchR :: Range -> PennTreeIdxG c t a -> Maybe (PennTreeIdxG c t a)
+matchR :: Range -> PennTreeIdxG c t -> Maybe (PennTreeIdxG c t)
 matchR r0 y@(PN (r,_) xs)
   | r0 == r = Just y 
   | otherwise = listToMaybe (mapMaybe (matchR r0) xs)
-matchR (b,e) x@(PL _ (n,_))
+matchR (b,e) x@(PL (n,_))
   | b == n && e == n = Just x
   | otherwise = Nothing
 
-matchArgNodes :: (PennTree,PennTree) -> Argument -> [MatchedArgNode] -- [((Range,Node),[(Range,PennTreeIdx)])]
+matchArgNodes :: (PennTree,PennTree) -> Argument -> [MatchedArgNode]
 matchArgNodes (pt,tr) arg = do
   n <- arg ^. arg_terminals
   let nd = fromJust (findNode n tr)
@@ -99,19 +99,19 @@ matchArgNodes (pt,tr) arg = do
                          (Right b,Left e) -> [(b,e-1)]
                          (Right b,Right e) -> [(b,e)]
   rng <- (adjrange . termRange . snd) nd
-  let xs = termRangeForAllNode (mkIndexedTree pt)
-      ipt = mkIndexedTree pt
+  let ipt = (mkIndexedTree . getADTPennTree) pt
+      xs = termRangeForAllNode ipt 
       zs = maximalEmbeddedRange ipt rng
   return MatchedArgNode { _mn_node = (rng,n), _mn_trees = zs }
 
 
-matchArgs :: (PennTree,PennTree) -> Instance -> [MatchedArgument] -- [(Argument,[((Range,Node),[(Range,PennTreeIdx)])])]
+matchArgs :: (PennTree,PennTree) -> Instance -> [MatchedArgument]
 matchArgs (pt,tr) pr
   = [ MatchedArgument { _ma_argument = arg, _ma_nodes = matchArgNodes (pt,tr) arg }
       | arg <- pr^.inst_arguments ]
 
 
-matchInstances :: (PennTree,PennTree) -> [Instance] -> [MatchedInstance] -- [(Instance,[(Argument,[((Range,Node),[(Range,PennTreeIdx)])])])]
+matchInstances :: (PennTree,PennTree) -> [Instance] -> [MatchedInstance]
 matchInstances (pt,tr) insts
   = [ MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (pt,tr) inst }
       | inst <- insts ]
