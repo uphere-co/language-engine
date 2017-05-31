@@ -34,7 +34,7 @@ classify "LOCATION"     = Just Loc
 classify "TIME"         = Just Time
 classify "DATE"         = Just Date
 classify "MONEY"        = Just Money
-classify "PERCENT"      = Just PERCENT
+classify "PERCENT"      = Just Percent
 classify "O"            = Just Other
 classify _              = Nothing
 
