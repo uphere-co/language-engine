@@ -21,15 +21,18 @@ library
                        NLP.Printer.PennTreebankII
                        NLP.Type.NamedEntity
                        NLP.Type.PennTreebankII
-                       NLP.Type.WordNet
+                       NLP.Type.TreeZipper
                        NLP.Type.UniversalDependencies2.Morphology
-                       NLP.Type.UniversalDependencies2.Syntax                       
+                       NLP.Type.UniversalDependencies2.Syntax
+                       NLP.Type.WordNet
+                                     
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base,
                        --
                        aeson,
                        attoparsec,
+                       bifunctors,
                        text,
                        transformers
   hs-source-dirs:      src

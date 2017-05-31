@@ -9,12 +9,14 @@
 
 module NLP.Type.PennTreebankII where
 
--- import           Control.Arrow                  (first)
 import           Control.Monad.Trans.State      (evalState,get,put)
 import           Data.Aeson
 import           Data.Aeson.Types
+import           Data.Bifoldable
 import           Data.Bifunctor
+import           Data.Bitraversable
 import           Data.Foldable                  (toList)
+import           Data.Monoid                    ((<>))
 import           Data.Text                      (Text)
 import qualified Data.Text                 as T  
 import           GHC.Generics
@@ -256,7 +258,15 @@ instance Bifunctor PennTreeGen where
   bimap f g (PN x xs) = PN (f x) (map (bimap f g) xs)
   bimap f g (PL y)    = PL (g y) 
 
-                            
+instance Bifoldable PennTreeGen where
+  bifoldMap f g (PN x xs) = f x <> foldMap (bifoldMap f g) xs
+  bifoldMap f g (PL y)    = g y
+  
+instance Bitraversable PennTreeGen where
+  bitraverse f g (PN x xs) = PN <$> f x <*> traverse (bitraverse f g) xs
+  bitraverse f g (PL y)    = PL <$> g y
+
+    
 type PennTree = PennTreeGen Text (Text,Text)
 
 deriving instance (Eq chunk, Eq word) => Eq (PennTreeGen chunk word)
