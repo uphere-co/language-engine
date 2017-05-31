@@ -60,12 +60,15 @@ import           SRL.IdentifyVoice
 
 showVoice :: (PennTree,S.Sentence) -> IO ()
 showVoice (pt,sent) = do
+  let lst = catMaybes (sent ^.. S.token . traverse . TK.originalText . to (fmap cutf8))
+  TIO.putStrLn "========================================"
+  TIO.putStrLn $ T.intercalate " " lst                       
   let ipt = mkPennTreeIdx pt
   TIO.putStrLn (prettyPrint 0 pt)     
   let lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
                     zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
       lemmapt = lemmatize lemmamap ipt
-  print lemmapt
+  -- print lemmapt
   let getf (PL x) = Right x
       getf (PN x _) = Left x
       testf z = case getf (current z) of
