@@ -71,7 +71,7 @@ showMatchedInstance :: (Int,SentenceInfo,[Instance]) -> IO ()
 showMatchedInstance (i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
-      terms = toList pt
+      terms = map (^._2) . toList $ pt
   TIO.putStrLn "================="
   TIO.putStrLn "PropBank"
   TIO.putStrLn $ prettyPrint 0 tr
@@ -101,11 +101,9 @@ showFeaturesForArgNode sentinfo predidx arg node =
         heads = map (\rng -> pickHeadWord =<< matchR rng (headWord dep ipt)) rngs
     mapM_ print (zip3 rngs paths heads)
 
-safeHead [] = Nothing
-safeHead (x:_) = Just x
-
+pickHeadWord :: PennTreeIdxG ChunkTag (Maybe Int,(POSTag,Text)) -> Maybe Text
 pickHeadWord  = safeHead . map snd . sortBy (compare `on` fst)
-              . mapMaybe (\(_,(_,(ml,t))) -> (,) <$> ml <*> pure t) . getLeaves 
+              . mapMaybe (\(_,(ml,(_,t))) -> (,) <$> ml <*> pure t) . getLeaves 
     
 showFeaturesForArg :: SentenceInfo -> Int -> MatchedArgument -> IO ()
 showFeaturesForArg sentinfo predidx arg = 

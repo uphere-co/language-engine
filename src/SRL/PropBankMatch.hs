@@ -57,9 +57,9 @@ data MatchedInstance
 makeLenses ''MatchedInstance
 
 
-termRangeForAllNode :: PennTreeGen c t (Int,a) -> [Range]
+termRangeForAllNode :: PennTreeGen c (Int,t) -> [Range]
 termRangeForAllNode x@(PN _ ys) = termRange x : concatMap termRangeForAllNode ys
-termRangeForAllNode (PL _ (i,_)) = [(i,i)]
+termRangeForAllNode (PL (i,_)) = [(i,i)]
 
 
 adjustIndex :: [Int] -> Int -> Either Int Int
@@ -70,21 +70,21 @@ adjustIndexFromTree :: PennTree -> Int -> Either Int Int
 adjustIndexFromTree tr =
   let itr = mkIndexedTree tr
       rs = termRangeForAllNode itr
-      excl = map (^._2._1) (findNoneLeaf itr)
+      excl = map (^._1) (findNoneLeaf itr)
   in adjustIndex excl 
 
 
-maximalEmbeddedRange :: PennTreeGen c t (Int,a) -> Range -> [(Range,PennTreeIdxG c t a)]
+maximalEmbeddedRange :: PennTreeGen c (Int,t) -> Range -> [(Range,PennTreeIdxG c t)]
 maximalEmbeddedRange tr r = go (termRangeTree tr)
   where go y@(PN (r1,c) xs) = if r1 `isInsideR` r then [(r1,y)] else concatMap go xs
-        go y@(PL t (n,x)) = if n `isInside` r then [((n,n),y)] else []
+        go y@(PL (n,x)) = if n `isInside` r then [((n,n),y)] else []
 
 
-matchR :: Range -> PennTreeIdxG c t a -> Maybe (PennTreeIdxG c t a)
+matchR :: Range -> PennTreeIdxG c t -> Maybe (PennTreeIdxG c t)
 matchR r0 y@(PN (r,_) xs)
   | r0 == r = Just y 
   | otherwise = listToMaybe (mapMaybe (matchR r0) xs)
-matchR (b,e) x@(PL _ (n,_))
+matchR (b,e) x@(PL (n,_))
   | b == n && e == n = Just x
   | otherwise = Nothing
 

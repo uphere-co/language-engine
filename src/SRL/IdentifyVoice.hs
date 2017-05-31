@@ -2,6 +2,7 @@
 
 module SRL.IdentifyVoice where
 
+{- 
 import           Control.Lens
 import           Data.Either                   (lefts)
 import qualified Data.IntMap             as IM
@@ -86,4 +87,5 @@ rule1 v (x:xs)
                      _ -> False
   | otherwise    = False             
                    
+-}
 -}
