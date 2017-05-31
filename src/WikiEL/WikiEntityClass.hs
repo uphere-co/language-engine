@@ -6,7 +6,7 @@ import qualified Data.Map                      as M
 import           Data.Map                              (Map)
 import           Data.Maybe                            (fromMaybe,fromJust)
 
-import           WikiEL.NamedEntity                    (NamedEntityClass)
+import           NLP.Type.NamedEntity                  (NamedEntityClass)
 import qualified WikiEL.WikiEntity             as Wiki
 
 

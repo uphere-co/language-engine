@@ -8,9 +8,9 @@ import qualified Data.Text                  as T
 import           Data.Text                             (Text)
 
 import           WikiEL.Misc                           (IRange(..),RelativePosition(..),relativePos,isContain,subVector) 
-import           WikiEL.NamedEntity                    (NamedEntity, OrderedNamedEntity)
+import           NLP.Type.NamedEntity                  (NamedEntity, OrderedNamedEntity)
 import           WikiEL.WikiNamedEntityTagger          (PreNE(..))
-import qualified WikiEL.NamedEntity         as N
+import qualified NLP.Type.NamedEntity       as N
 
 mayRefer :: NamedEntity -> NamedEntity -> Bool
 mayRefer src target = (N._type src == N._type target) && T.isInfixOf (N._str src) (N._str target)

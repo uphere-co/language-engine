@@ -11,11 +11,11 @@ import qualified Data.Vector                   as V
 import qualified Data.Text                     as T
 
 
+import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
 import           WikiEL.Misc                           (IRange(..),RelativePosition(..), relativePos, untilNoOverlap)
 import           WikiEL.WikiEntity                     (parseEntityLine,loadEntityReprs,nameWords)
 import           WikiEL.WikiEntityTagger               (NameUIDTable,buildEntityTable,wikiAnnotator)
 import           WikiEL.WikiEntityClass                (WikiUID2NETag,getNEClass)
-import           WikiEL.NamedEntity                    (NamedEntity,NamedEntityFrag,NamedEntityClass,parseStr)
 import qualified WikiEL.WikiEntity             as Wiki
 import qualified WikiEL.NamedEntity            as N
 import qualified WikiEL.CoreNLP                as C
@@ -31,7 +31,7 @@ namedEntityAnnotator:: NameUIDTable -> WikiUID2NETag -> [NamedEntityFrag] -> [(I
 namedEntityAnnotator entities uidTypes frags = reverse (map (second (V.map f)) matchedItems)
   where
     f uid= (uid, getNEClass uidTypes uid)
-    words = map N._fstr frags
+    words = map _fstr frags
     matchedItems = wikiAnnotator entities words
 
 partitonFrags:: [NamedEntityFrag] -> [(IRange, NEClass)]
@@ -39,14 +39,14 @@ partitonFrags frags = ifoldr f [] (fromList frags)
   where
     decL (IRange beg end) = IRange (beg-1) end
     toRange idx = IRange idx (idx+1)
-    tagType = N._ftype
+    tagType = _ftype
     g idx frag = (toRange idx, tagType frag)
     f idx frag [] = [g idx frag]
     f idx frag accum@((range, tag):ss) | tagType frag == tag = (decL range, tag):ss
                                        | otherwise            = g idx frag : accum
 
 dropNonNE:: [(IRange, NEClass)] -> [(IRange, NEClass)]
-dropNonNE = filter (\x-> snd x /= N.Other)
+dropNonNE = filter (\x-> snd x /= Other)
 
 getStanfordNEs :: [NamedEntityFrag] -> [(IRange, NEClass)]
 getStanfordNEs = dropNonNE . partitonFrags

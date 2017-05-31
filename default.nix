@@ -1,6 +1,7 @@
 { mkDerivation, base
 , containers, text, vector-algorithms
 , tasty-hunit
+, nlp-types
 }:
 
 mkDerivation {
@@ -11,13 +12,16 @@ mkDerivation {
     ./.;
 
   libraryHaskellDepends = [
-    containers text vector-algorithms tasty-hunit 
+    containers text vector-algorithms tasty-hunit
+    nlp-types
   ];
   executableHaskellDepends = [
     containers text vector-algorithms tasty-hunit
+    nlp-types
   ];
   testHaskellDepends = [
     containers text vector-algorithms tasty-hunit
+    nlp-types
   ];
   license = "unknown";
   doHaddock = false;
