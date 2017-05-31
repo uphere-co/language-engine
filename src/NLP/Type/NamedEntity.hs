@@ -37,6 +37,8 @@ classify "DATE"         = Just Date     --only for 7 class
 classify "MONEY"        = Just Money    --only for 7 class
 classify "PERCENT"      = Just Percent  --only for 7 class
 classify "NUMBER"       = Just Other    --Why HCoreNLP gives this? Ignore it for now.
+classify "ORDINAL"      = Just Other    --Why HCoreNLP gives this? Ignore it for now.
+classify "DURATION"     = Just Other    --Why HCoreNLP gives this? Ignore it for now.
 classify "O"            = Just Other
 classify _              = Nothing
 
