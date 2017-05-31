@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module CoreNLP where
+module WikiEL.CoreNLP where
 
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
