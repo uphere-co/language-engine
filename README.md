@@ -1,6 +1,7 @@
 ## Wiki named entity annotator
 ### Using nix-shell
 ```
+#Set nlp-types in $NIX_PATH or add `--argstr nlp-types (nlp-types)` option.
 nix-shell shell.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 20 --cores 20
 
 cabal configure --enable-tests
