@@ -8,7 +8,7 @@ import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import           Data.Monoid
 
-data NamedEntityClass = Org | Person | Loc | Time | Date | Number | Money | Set | Other
+data NamedEntityClass = Org | Person | Loc | Time | Date | Money | Percent| Misc | Other
                       deriving(Show, Eq)
 
 data NamedEntity = NamedEntity { _str  :: Text
@@ -31,11 +31,14 @@ classify :: Text -> Maybe NamedEntityClass
 classify "PERSON"       = Just Person
 classify "ORGANIZATION" = Just Org
 classify "LOCATION"     = Just Loc
-classify "TIME"         = Just Time
-classify "DATE"         = Just Date
-classify "NUMBER"       = Just Number
-classify "MONEY"        = Just Money
-classify "SET"          = Just Set
+classify "MISC"         = Just Misc     --only for 4 class
+classify "TIME"         = Just Time     --only for 7 class
+classify "DATE"         = Just Date     --only for 7 class
+classify "MONEY"        = Just Money    --only for 7 class
+classify "PERCENT"      = Just Percent  --only for 7 class
+classify "NUMBER"       = Just Other    --Why HCoreNLP gives this? Ignore it for now.
+classify "ORDINAL"      = Just Other    --Why HCoreNLP gives this? Ignore it for now.
+classify "DURATION"     = Just Other    --Why HCoreNLP gives this? Ignore it for now.
 classify "O"            = Just Other
 classify _              = Nothing
 
@@ -44,17 +47,3 @@ parseStr str t =
   case classify t of
     Nothing -> error ("Unknown named entity class: " ++ T.unpack t)
     Just c  -> NamedEntityFrag str c
-
-partitionFrags :: [NamedEntityFrag] -> [[NamedEntityFrag]]
-partitionFrags frags = foldr f [] frags
-  where
-    f e [] = [[e]]
-    f e xss'@(es:ess) | isSameType e (head es) = (e:es): ess
-                      | otherwise              = [e] : xss'
-
-mergeToken :: [NamedEntityFrag] -> Maybe NamedEntity
-mergeToken xs'@(NamedEntityFrag str tag : es) | tag /= Other = Just (NamedEntity ss tag) where ss = T.unwords (map _fstr xs')
-mergeToken _ = Nothing
-
-mergeTokens :: [NamedEntityFrag] -> [NamedEntity]
-mergeTokens es = catMaybes (map mergeToken (partitionFrags es))
