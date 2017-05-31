@@ -49,4 +49,8 @@ isInPP z = case current <$> (parent z) of
              Just (PN (_,c) _) -> c == PP
              _                 -> False
 
--- rule3 z :: TreeZipperICP (Text,
+isPassive z = let b1 = isVBN z
+                  b2 = withCopula z
+                  b3 = isInNP z
+                  b4 = isInPP z
+              in (b1 && b2) || (b1 && b3) || (b1 && b4)

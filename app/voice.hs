@@ -57,142 +57,21 @@ import           SRL.PropBankMatch
 import           SRL.Util
 import           SRL.IdentifyVoice
 
-mkDocFromPennTree :: PennTree -> Document
-mkDocFromPennTree = flip Document (fromGregorian 2017 4 17)
-                  . T.intercalate " "
-                  . map snd
-                  . filter (\(t :: Text,_) -> t /= "-NONE-")
-                  . getLeaves  
-
-propbank :: EitherT String IO ([PennTree],[Instance])
-propbank =  do
-  props <- liftIO $ parseProp <$> TIO.readFile "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written/wsj_0026.prop"
-  txt <- liftIO $ TIO.readFile "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written/wsj_0026.mrg"
-  trs <- hoistEither $ A.parseOnly (many (A.skipSpace *> penntree)) txt
-  return (trs,props)
-
-
-  
-showMatchedInstance :: (Int,SentenceInfo,[Instance]) -> IO ()
-showMatchedInstance (i,sentinfo,prs) = do
-  let pt = sentinfo^.corenlp_tree
-      tr = sentinfo^.propbank_tree
-      terms = toList pt
-  TIO.putStrLn "================="
-  TIO.putStrLn "PropBank"
-  TIO.putStrLn $ prettyPrint 0 tr
-  TIO.putStrLn "-----------------"
-  TIO.putStrLn "CoreNLP"  
-  TIO.putStrLn $ prettyPrint 0 pt
-  TIO.putStrLn "-----------------"            
-  TIO.putStrLn (T.intercalate " " . map snd $ terms)
-  TIO.putStrLn "-----------------"
-  mapM_ printMatchedInst $ matchInstances (pt,tr) prs
-
-findRelNode :: [MatchedArgument] -> Int
-findRelNode args =
-  let arg = head $ filter (\arg -> arg ^. ma_argument.arg_label == "rel") args
-  in head (arg^..ma_nodes.traverse.mn_node._1._1)
-
-showFeaturesForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode -> IO ()
-showFeaturesForArgNode sentinfo predidx arg node = 
-  when (arg ^. arg_label /= "rel")  $ do
-    print (arg ^. arg_label)
-    let rngs = node ^.. mn_trees . traverse . _1
-    let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
-        dep = sentinfo^.corenlp_dep
-        parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
-        paths = map parseTreePath parsetrees
-        headWordTree = headWord dep ipt
-        heads = map (\rng -> pickHeadWord =<< matchR rng (headWord dep ipt)) rngs
-    mapM_ print (zip3 rngs paths heads)
-
-pickHeadWord :: PennTreeIdxG ChunkTag (Maybe Int,(POSTag,Text)) -> Maybe Text
-pickHeadWord  = safeHead . map snd . sortBy (compare `on` fst)
-              . mapMaybe (\(_,(ml,(_,t))) -> (,) <$> ml <*> pure t) . getLeaves 
-    
-showFeaturesForArg :: SentenceInfo -> Int -> MatchedArgument -> IO ()
-showFeaturesForArg sentinfo predidx arg = 
-  mapM_ (showFeaturesForArgNode sentinfo predidx (arg^.ma_argument)) (arg^.ma_nodes)
-
-  
-showFeaturesForInstance :: SentenceInfo -> MatchedInstance -> IO ()
-showFeaturesForInstance sentinfo inst = do
-  print (inst ^. mi_instance.inst_lemma_type)
-  let predidx = findRelNode (inst^.mi_arguments)
-  mapM_ (showFeaturesForArg sentinfo predidx) (inst^.mi_arguments)
-
-showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
-showFeatures (i,sentinfo,prs) = do
-  let pt = sentinfo^.corenlp_tree
-      tr = sentinfo^.propbank_tree
-      insts = matchInstances (pt,tr) prs
-  showFeaturesForInstance sentinfo (head insts)
-  
-main' :: IO ()
-main' = do
-  clspath <- getEnv "CLASSPATH"
-  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do 
-  
-    void . runEitherT $ do
-      (trs,props) <- propbank
-      rdocs <- liftIO $ do
-        txt <- liftIO $ TIO.readFile "/scratch/wavewave/MASC/Propbank/MASC1_textfiles/written/wsj_0026.txt"
-        let pcfg = def & ( tokenizer .~ True )
-                       . ( words2sentences .~ True )
-                       . ( postagger .~ True )
-                       . ( lemma .~ True )
-                       . ( sutime .~ False )
-                       . ( depparse .~ True )
-                       . ( constituency .~ True )
-                       . ( ner .~ False )
-        pp <- prepare pcfg
-        let docs = map mkDocFromPennTree trs
-        anns <- mapM (annotate pp) docs
-        rdocs <- mapM protobufDoc anns
-        return rdocs
-      ds <- mapM hoistEither rdocs
-      let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
-      deps <- hoistEither $ mapM sentToDep sents
-      let cpts = mapMaybe (^.S.parseTree) sents
-          pts = map decodeToPennTree cpts
-          rs = map (\(i,((pt,tr,dep),pr)) -> (i,SentInfo pt tr dep,pr))
-             . merge (^.inst_tree_id) (zip3 pts trs deps)
-             $ props
-      liftIO $ mapM_ (showMatchedInstance <> showFeatures) rs
-      -- liftIO $ showVoice (head rs)
-
 
 showVoice :: (PennTree,S.Sentence) -> IO ()
 showVoice (pt,sent) = do
-  -- let Just (toklst :: [Token]) = mapM convertToken (sent ^.. S.token . traverse) -- map convertToken ( toListOf (S.token . traverse) $ sent
-      -- Just newsents = convertSentence d sents
-  
   let ipt = mkPennTreeIdx pt
-      -- apt = getADTPennTree pt
   TIO.putStrLn (prettyPrint 0 pt)     
-  -- print $ fmap (\(xs,y) -> (lefts (map getTag xs),y)) atree
-  
-  -- print $ ancestorTreeTagOnly apt
-  -- print $ fmap (\(xs,y) -> (map getTag xs,y)) (siblings atree)
   let lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
                     zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
       lemmapt = lemmatize lemmamap ipt
-      -- atree = ancestorTreeR lemmapt
-      -- sib = siblings atree
   print lemmapt
   let getf (PL x) = Right x
       getf (PN x _) = Left x
-      testf z = putStrLn (show (getf (current z)) ++ " " ++
-                          show (isVBN z, withCopula z,isInNP z,isInPP z))
-  bimapM_ testf testf (mkTreeZipper [] lemmapt)
-  -- print $ getLeavesI $ fmap (\(n,x) -> (n,uncurry rule1 x)) sib
-   --   print (siblings atree) -- () -- (siblings (ancestorTree lemmapt))
-  -- print ()
-  -- toklst
-  -- let m = IM.fromList (toList ipt)
-  -- print (lemmatize m ipt)
-  -- print (siblings atree)
+      testf z = case getf (current z) of
+                  Right (n,(VBN,(txt,_))) -> putStrLn (show n ++ ": " ++  T.unpack txt ++ ": " ++ show (isPassive z))
+                  x -> return ()
+  mapM_ testf (mkTreeZipper [] lemmapt)
 
 
 
