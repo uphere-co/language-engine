@@ -10,7 +10,7 @@ import Debug.Trace
 
 
 
-penntree :: A.Parser (PennTreeGen Text Text Text)
+penntree :: A.Parser PennTree
 penntree = do
   oparen
   A.skipSpace
@@ -19,7 +19,7 @@ penntree = do
   cparen
   return n
 
-pnode :: A.Parser (PennTreeGen Text Text Text)
+pnode :: A.Parser PennTree
 pnode =
     (do oparen
         t <- tag
@@ -35,7 +35,7 @@ pnode =
         c <- (A.takeWhile1 (A.notInClass " ()"))
         A.skipWhile (/= ')')
         cparen
-        return (PL t c))
+        return (PL (t,c)))
 
 
 oparen :: A.Parser Char
