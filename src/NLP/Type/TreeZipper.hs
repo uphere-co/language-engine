@@ -37,17 +37,23 @@ mkListZipper (k:ks) = ([],k,ks) : unfoldr next ([],k,ks)
   where next (xs,y,[]) = Nothing
         next (xs,y,z:zs) = let w = (y:xs,z,zs) in Just (w,w)
 
-{- 
+
 current :: TreeZipper c t -> Tree c t
-current 
+current (TZ x _) = x
 
+prevSibling :: TreeZipper c t -> Maybe (Tree c t)
+prevSibling (TZ _ (x:xs)) = case x of
+                              (_,y:_,_) -> Just y
+                              _         -> Nothing
+prevSibling _             = Nothing
+                              
+nextSibling :: TreeZipper c t -> Maybe (Tree c t)
+nextSibling (TZ _ (x:xs)) = case x of
+                              (_,_,y:_) -> Just y
+                              _         -> Nothing
+nextSibling _             = Nothing      
 
-prevSibling :: TreeZipper c t -> Maybe (TreeZipper c t)
-
-
-
-nextSibling :: TreeZipper c t -> Maybe (TreeZipper c t)
-
+{- 
 parent :: TreeZipper c t -> Maybe (TreeZipper c t)
 
 -}
