@@ -42,8 +42,10 @@ next (TZ x (y:ys)) = case y of
 next _             = Nothing      
 
 parent :: TreeZipper c t -> Maybe (TreeZipper c t)
-parent (TZ x (y:ys)) = case y of
-                         (c,zs,ws) -> Just (TZ (PN c ((reverse zs)++(x:ws))) ys)
+parent (TZ x (y:ys)) =
+  case y of
+    (c,zs,ws) -> Just (TZ (PN c (f (x:ws))) ys)
+      where f = foldr (\x acc -> acc . (x:)) id zs 
 parent _             = Nothing 
 
  
