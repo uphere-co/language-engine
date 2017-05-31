@@ -10,32 +10,32 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 
 import qualified WikiEL.EntityLinking       as L
-import           WikiEL.NamedEntity                (NamedEntity)
-import qualified WikiEL.NamedEntity         as N
+import           WikiEL.NamedEntity                (mergeToken)
+import           NLP.Type.NamedEntity              (NamedEntity(..),parseStr)
 import qualified WikiEL.CoreNLP             as C
 
 
-parseStanfordNE (C.EntityToken (C.WordToken word) (C.NETag tag)) =  N.parseStr word tag
+parseStanfordNE (C.EntityToken (C.WordToken word) (C.NETag tag)) =  parseStr word tag
 
 testNEParsing = testCaseSteps "Parsing text outputs of CoreNLP NER " $ \step -> do
 -- Following rotines are for internal testing. User should not use these functions directly:
-  eassertEqual (N.NamedEntityFrag "Oscar" N.Person)  (parseStanfordNE (C.parseNERToken "Oscar/PERSON"))
-  eassertEqual (N.NamedEntity "Oscar Munoz" N.Person)  (fromJust (N.mergeToken (map parseStanfordNE (C.parseNEROutputStr "Oscar/PERSON Munoz/PERSON"))))
-  eassertEqual (N.NamedEntity "United Airlines" N.Org) (fromJust (N.mergeToken [N.parseStr "United" "ORGANIZATION", N.parseStr "Airlines" "ORGANIZATION"]))
-  eassertEqual (N.NamedEntityFrag "United Airlines" N.Org) (N.parseStr "United Airlines" "ORGANIZATION")
+  eassertEqual (NamedEntityFrag "Oscar" Person)  (parseStanfordNE (C.parseNERToken "Oscar/PERSON"))
+  eassertEqual (NamedEntity "Oscar Munoz" Person)  (fromJust (mergeToken (map parseStanfordNE (C.parseNEROutputStr "Oscar/PERSON Munoz/PERSON"))))
+  eassertEqual (NamedEntity "United Airlines" Org) (fromJust (mergeToken [parseStr "United" "ORGANIZATION", parseStr "Airlines" "ORGANIZATION"]))
+  eassertEqual (NamedEntityFrag "United Airlines" Org) (parseStr "United Airlines" "ORGANIZATION")
 
 
 testContextedEntityLinkingImple = testCaseSteps "Modules for contexted entity linking " $ \step -> do
   let
-    oscarMunoz = N.NamedEntity "Oscar Munoz" N.Person
-    munoz      = N.NamedEntity "Munoz" N.Person
-    munozOrg   = N.NamedEntity "Munoz" N.Org
+    oscarMunoz = NamedEntity "Oscar Munoz" Person
+    munoz      = NamedEntity "Munoz" Person
+    munozOrg   = NamedEntity "Munoz" Org
 
-    e0 = N.OrderedNamedEntity 0 oscarMunoz
-    e1 = N.OrderedNamedEntity 1 munoz
+    e0 = OrderedNamedEntity 0 oscarMunoz
+    e1 = OrderedNamedEntity 1 munoz
 
-    f0 = N.OrderedNamedEntity 0 munoz
-    f1 = N.OrderedNamedEntity 1 oscarMunoz
+    f0 = OrderedNamedEntity 0 munoz
+    f1 = OrderedNamedEntity 1 oscarMunoz
 
   assert (L.mayRefer munoz oscarMunoz)
   assert (not (L.mayRefer munozOrg oscarMunoz))
@@ -46,7 +46,7 @@ testContextedEntityLinking = testCaseSteps "Contexted entity linking " $ \step -
   let 
     corenlp_output = "Oscar/PERSON Munoz/PERSON is/O a/O CEO/O of/O United/ORGANIZATION Airlines/ORGANIZATION ./O Munoz/PERSON apologized/O to/O Dao/PERSON ./O"
     tokens   = map parseStanfordNE (C.parseNEROutputStr corenlp_output)
-  eassertEqual (N.mergeTokens tokens) [N.NamedEntity "Oscar Munoz" N.Person, N.NamedEntity "United Airlines" N.Org, N.NamedEntity "Munoz" N.Person, N.NamedEntity "Dao" N.Person]
+  eassertEqual (mergeTokens tokens) [NamedEntity "Oscar Munoz" Person, NamedEntity "United Airlines" Org, NamedEntity "Munoz" Person, NamedEntity "Dao" Person]
 
 unitTestsAll =
   testGroup

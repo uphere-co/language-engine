@@ -23,7 +23,7 @@ import           WikiEL.EntityLinking                         (EntityMention(..)
 
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
-import qualified WikiEL.NamedEntity                   as N
+import qualified NLP.Type.NamedEntity                 as N
 import qualified WikiEL.WikiEntity                    as Wiki
 import qualified WikiEL.WikiEntityClass               as WC
 
