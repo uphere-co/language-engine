@@ -15,6 +15,7 @@ let
   hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
             aeson
             attoparsec
+            bifunctors
             cabal-install
           ]);
 
