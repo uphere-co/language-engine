@@ -45,7 +45,7 @@ facebook     = org "Q380"
 testNamedEntityTagging :: TestTree
 testNamedEntityTagging = testCaseSteps "Named entity tagging on CoreNLP NER output" $ \step -> do
   entities <- do
-     reprs <- loadEntityReprs "../rnn++/tests/data/wikidata.test.entities"
+     reprs <- loadEntityReprs "data/wikidata.test.entities"
      return (buildEntityTable reprs)  
   let
     ner_text = "Google/ORGANIZATION and/O Facebook/ORGANIZATION Inc./ORGANIZATION are/O famous/O AI/O companies/O ./O NLP/ORGANIZATION stands/O for/O natural/O language/O processing/O ./O"
