@@ -9,12 +9,14 @@
 
 module NLP.Type.PennTreebankII where
 
-import           Control.Monad.Trans.State (evalState,get,put)
+-- import           Control.Arrow                  (first)
+import           Control.Monad.Trans.State      (evalState,get,put)
 import           Data.Aeson
 import           Data.Aeson.Types
-import           Data.Foldable         (toList)
-import           Data.Text             (Text)
-import qualified Data.Text        as T  
+import           Data.Bifunctor
+import           Data.Foldable                  (toList)
+import           Data.Text                      (Text)
+import qualified Data.Text                 as T  
 import           GHC.Generics
 
 -- based on http://www.clips.ua.ac.be/pages/mbsp-tags
@@ -151,10 +153,10 @@ instance FromJSON AnchorTag where
 instance ToJSON AnchorTag where
   toJSON = genericToJSON defaultOptions
 
-
+{- 
 isNone (PL D_NONE _) = True
 isNone _             = False
-
+-}
 
 identifyPOS :: Text -> POSTag
 identifyPOS t
@@ -242,73 +244,88 @@ identifyChunk t =
 
 
 
--- | chunk = chunktag, pos = postag, a = content
-data PennTreeGen chunk pos a = PN chunk [PennTreeGen chunk pos a]
-                             | PL pos a
-                   deriving (Show, Functor, Foldable, Traversable)
-                            
-type PennTree = PennTreeGen Text Text Text
+-- | chunk = chunktag, token = token in node. 
+--   typically token will be (pos = postag, a = content)
 
-deriving instance (Eq chunk, Eq pos, Eq a) => Eq (PennTreeGen chunk pos a)
+data PennTreeGen chunk word = PN chunk [PennTreeGen chunk word]
+                            | PL word
+                   deriving (Show, Functor, Foldable, Traversable)
+
+
+instance Bifunctor PennTreeGen where
+  bimap f g (PN x xs) = PN (f x) (map (bimap f g) xs)
+  bimap f g (PL y)    = PL (g y) 
+
+                            
+type PennTree = PennTreeGen Text (Text,Text)
+
+deriving instance (Eq chunk, Eq word) => Eq (PennTreeGen chunk word)
   
 
 type Range = (Int,Int)
 
-type PennTreeIdxG chunk pos a = PennTreeGen (Range,chunk) pos (Int,a)
+type PennTreeIdxG chunk token = PennTreeGen (Range,chunk) (Int,token)
 
-type PennTreeIdx = PennTreeIdxG ChunkTag POSTag Text
+type PennTreeIdx = PennTreeIdxG ChunkTag (POSTag,Text)
 
-
+{-
 trimap :: (c->c') -> (p->p') -> (a->a') -> PennTreeGen c p a -> PennTreeGen c' p' a'
 trimap cf pf af (PN c xs) = PN (cf c) (map (trimap cf pf af) xs)
 trimap cf pf af (PL p x) = PL (pf p) (af x)
+-}
 
-getTag :: PennTreeGen c p a -> Either c p
-getTag (PN c _) = Left c
-getTag (PL p _) = Right p
+getTag :: PennTreeIdxG c (p,a) -> Either c p
+getTag (PN (_,c) _)   = Left c
+getTag (PL (_,(p,_))) = Right p
 
-mkIndexedTree :: PennTreeGen c p a -> PennTreeGen c p (Int,a)
+getRange :: PennTreeIdxG c t -> Range
+getRange (PN (r,_) _) = r
+getRange (PL (n,_)) = (n,n)
+
+
+mkIndexedTree :: PennTreeGen c t -> PennTreeGen c (Int,t)
 mkIndexedTree tr = evalState (traverse tagidx tr) 0
   where tagidx x = get >>= \n -> put (n+1) >> return (n,x)
 
-termRange :: PennTreeGen c p (Int,a) -> Range
+termRange :: PennTreeGen c (Int,t) -> Range
 termRange tr = let is = (map fst . toList) tr 
                in (minimum is,maximum is)
 
-termRangeTree :: PennTreeGen c p (Int,a) -> PennTreeIdxG c p a 
+termRangeTree :: PennTreeGen c (Int,t) -> PennTreeIdxG c t
 termRangeTree tr@(PN c xs) = let is = (map fst . toList) tr 
                                  rng = (minimum is,maximum is)
                              in PN (rng,c) (map termRangeTree xs)
-termRangeTree (PL p (n,x)) = PL p (n,x)
+termRangeTree (PL (n,t)) = PL (n,t)
 
 
-contain :: Int -> PennTreeGen c p (Int,a) -> [PennTreeGen c p  (Int,a)]
+contain :: Int -> PennTreeGen c (Int,t) -> [PennTreeGen c (Int,t)]
 contain i y@(PN _ xs) = case (filter (not.null) . map (contain i)) xs of
                           [] -> []
                           ys:_ -> y:ys
-contain i x@(PL _ (j,_)) | i == j = [x]
-                         | otherwise = []
+contain i x@(PL (j,_)) | i == j = [x]
+                       | otherwise = []
 
 
-containR :: Range -> PennTreeIdxG c p a -> [PennTreeIdxG c p a]
+containR :: Range -> PennTreeIdxG c t -> [PennTreeIdxG c t]
 containR r0 y@(PN (r,_) xs) | r0 == r = [y]
                             | otherwise = case (filter (not.null) . map (containR r0)) xs of
                                             [] -> []
                                             ys:_ -> y:ys
-containR r0@(b,e) x@(PL _ (n,_)) = if b == n && e == n then [x] else []
+containR r0@(b,e) x@(PL (n,_)) = if b == n && e == n then [x] else []
 
 
 
 
-getADTPennTree :: PennTree -> PennTreeGen ChunkTag POSTag Text
-getADTPennTree = trimap identifyChunk identifyPOS id 
+getADTPennTree :: PennTree -> PennTreeGen ChunkTag (POSTag, Text)
+getADTPennTree = bimap identifyChunk (first identifyPOS)
 
 
-
+{- 
 pruneOutNone :: Monoid m => PennTreeGen ChunkTag POSTag m -> PennTreeGen ChunkTag POSTag m
 pruneOutNone (PN t xs) = let xs' = (filter (not . isNone) . map pruneOutNone) xs
                          in if null xs' then PL D_NONE mempty else PN t xs' 
 pruneOutNone x = x 
+-}
 
 mkPennTreeIdx :: PennTree -> PennTreeIdx
 mkPennTreeIdx = termRangeTree . mkIndexedTree . getADTPennTree 
