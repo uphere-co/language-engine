@@ -32,12 +32,17 @@ main = do
   let PN _ [PN z' [PL z'',_,_]  , _ ] = z
   print (current z')
   print (current <$> (next z'))
-
+  putStrLn "----------"
   print (current z'')
   print (current <$> (next z''))
   print (current <$> ((next <=< next) z''))
   print (current z'')
+  putStrLn "-----------"
+  print (current <$> (parent z''))
+  print (current <$> ((parent <=< parent) z''))
+  print (current <$> ((parent <=< parent <=< parent) z''))
 
+  putStrLn "-----------"
   print $ match_test1 z
   print $ match_test2 z
 

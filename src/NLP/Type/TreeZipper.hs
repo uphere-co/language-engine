@@ -43,17 +43,22 @@ current (TZ x _) = x
 
 prev :: TreeZipper c t -> Maybe (TreeZipper c t)
 prev (TZ x (y:ys)) = case y of
-                              (c,z:zs,ws) -> Just (TZ z ((c,zs,x:ws):ys))
-                              _           -> Nothing
+                       (c,z:zs,ws) -> Just (TZ z ((c,zs,x:ws):ys))
+                       _           -> Nothing
 prev _             = Nothing
                               
 next :: TreeZipper c t -> Maybe (TreeZipper c t)
 next (TZ x (y:ys)) = case y of
-                              (c,zs,w:ws) -> Just (TZ w ((c,x:zs,ws):ys))
-                              _           -> Nothing
+                       (c,zs,w:ws) -> Just (TZ w ((c,x:zs,ws):ys))
+                       _           -> Nothing
 next _             = Nothing      
 
--- parent :: TreeZipper c t ->
+parent :: TreeZipper c t -> Maybe (TreeZipper c t)
+parent (TZ x (y:ys)) = case y of
+                         (c,zs,ws) -> Just (TZ (PN c ((reverse zs)++(x:ws))) ys)
+                         _         -> Nothing
+parent _             = Nothing 
+
 
 {- 
 parent :: TreeZipper c t -> Maybe (TreeZipper c t)
