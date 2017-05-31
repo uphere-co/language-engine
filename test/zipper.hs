@@ -29,7 +29,7 @@ main = do
   let z = mkTreeZipper [] tree
   bimapM_ print print z
   putStrLn "==========="
-  let PN _ [PN z' [PL z'',_,_]  , _ ] = z
+  let PN r [PN z' [PL z'',_,_]  , _ ] = z
   print (current z')
   print (current <$> (next z'))
   putStrLn "----------"
@@ -41,7 +41,10 @@ main = do
   print (current <$> (parent z''))
   print (current <$> ((parent <=< parent) z''))
   print (current <$> ((parent <=< parent <=< parent) z''))
-
+  putStrLn "-----------"
+  print (current <$> (child1 r))
+  print (current <$> ((child1 <=< child1) r))
+  print (current <$> ((child1 <=< child1 <=< child1) r))
   putStrLn "-----------"
   print $ match_test1 z
   print $ match_test2 z
