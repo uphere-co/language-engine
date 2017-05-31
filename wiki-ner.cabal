@@ -18,6 +18,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Assert
+                     , WikiEL
                      , WikiEL.WikiEntity
                      , WikiEL.EntityLinking
                      , WikiEL.Misc
