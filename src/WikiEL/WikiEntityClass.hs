@@ -54,15 +54,13 @@ newtype SuperclassUID   = SuperclassUID { _super :: Wiki.UID}
 
 type SuperClasses = M.Map SubclassUID [Wiki.UID]
 
-lookups :: SuperClasses -> Wiki.UID -> [Wiki.UID]
-lookups map key = fromMaybe [] (M.lookup (SubclassUID key) map)
-
 buildRelations :: [(SubclassUID, SuperclassUID)] -> SuperClasses
 buildRelations relations = M.fromListWith (++) (map (second (\(SuperclassUID x) -> [x])) relations)
 
 getAncestors :: SuperClasses -> Wiki.UID -> [Wiki.UID]
 getAncestors map key = g key (lookups map key)
-  where    
+  where
+    lookups map key = fromMaybe [] (M.lookup (SubclassUID key) map)
     g key [] = [key]
     g key vals = key : concatMap (\v -> g v (lookups map v)) vals
         
