@@ -112,33 +112,47 @@ unitTestsGreedyMatching =
     "Text based, greedy matching algorithm for list of words"
     [testNameOrdering, testGreedyMatching]
 
+newtype SubclassUID   = SubclassUID { _sub :: Wiki.UID}
+                      deriving (Show, Ord, Eq)
+newtype SuperclassUID   = SuperclassUID { _super :: Wiki.UID}
+                      deriving (Show, Ord, Eq)
 
-buildRelations :: [(Wiki.UID, Wiki.UID)] -> M.Map Wiki.UID [Wiki.UID]
-buildRelations relations = M.fromListWith (++) (map (second (: [])) relations)
+type SuperClasses = M.Map SubclassUID [Wiki.UID]
 
-getAncestors :: M.Map Wiki.UID [Wiki.UID] -> Wiki.UID -> [Wiki.UID]
+lookups :: SuperClasses -> Wiki.UID -> [Wiki.UID]
+lookups map key = fromMaybe [] (M.lookup (SubclassUID key) map)
+
+buildRelations :: [(SubclassUID, SuperclassUID)] -> SuperClasses
+buildRelations relations = M.fromListWith (++) (map (second (\(SuperclassUID x) -> [x])) relations)
+
+getAncestors :: SuperClasses -> Wiki.UID -> [Wiki.UID]
 getAncestors map key = g key (lookups map key)
-  where
-    lookups map key = fromMaybe [] (M.lookup key map)
+  where    
     g key [] = [key]
     g key vals = key : concatMap (\v -> g v (lookups map v)) vals
         
 
-parseRelationLine :: Text -> (Wiki.UID, Wiki.UID)
+--parseRelationLine :: Text -> (Relation Wiki.UID, Relation Wiki.UID)
+parseRelationLine :: Text -> (SubclassUID, SuperclassUID)
 --parseRelationLine line = TypeRelation (Wiki.UID sub) (Wiki.UID super)
-parseRelationLine line = (Wiki.UID sub, Wiki.UID super)
+--parseRelationLine line = (Sub (Wiki.UID sub), Super (Wiki.UID super))
+parseRelationLine line = (SubclassUID (Wiki.UID sub), SuperclassUID (Wiki.UID super))
   where
     [sub, subStr, super, superStr] = T.splitOn "\t" line
 
-getKeys :: M.Map Wiki.UID [Wiki.UID] -> [Wiki.UID]
-getKeys = M.foldlWithKey' (\ks k x -> k:ks) []
+getKeys :: SuperClasses -> [Wiki.UID]
+getKeys = M.foldlWithKey' (\ks (SubclassUID k) x -> k:ks) []
 
+allRelationPairs :: [(SubclassUID, SuperclassUID)] -> S.Set (SubclassUID, SuperclassUID)
 allRelationPairs relTuples = pairs
   where
-    allUIDs = (S.toList . S.fromList) (concatMap (\(x,y) -> [x,y]) relTuples)
+    unique = S.toList . S.fromList
+    allUIDs = unique (concatMap (\(SubclassUID x, SuperclassUID y) -> [x,y]) relTuples)
     relations = buildRelations relTuples
-    pairs = S.fromList (concatMap (\key -> map (\x -> (key,x)) (getAncestors relations key)) allUIDs)
+    f uid = map (\x -> (SubclassUID uid, SuperclassUID x)) (getAncestors relations uid)
+    pairs = S.fromList (concatMap f allUIDs)
 
+isSubclass :: S.Set (SubclassUID, SuperclassUID) -> SuperclassUID -> SubclassUID -> Bool
 isSubclass pairs super sub = S.member (sub, super) pairs
 
 testWikiEntityTypes :: TestTree
@@ -152,14 +166,15 @@ testWikiEntityTypes = testCaseSteps "Test on hierarchy of Wiki entity types" $ \
             , "Q1\t1\tQ12\t12"
             ]
     relTuples = map parseRelationLine lines
-    allUIDs = S.toList (S.fromList (concatMap (\(x,y) -> [x,y]) relTuples))
     relations = buildRelations relTuples
     pairs = allRelationPairs relTuples
 
     uid = Wiki.UID
+    super uid = SuperclassUID (Wiki.UID uid)
+    sub   uid = SubclassUID (Wiki.UID uid)
   eassertEqual (getAncestors relations (uid "Q1")) [uid "Q1",uid "Q12",uid "Q122",uid "Q121",uid "Q11",uid "Q112",uid "Q111"]
-  assert (isSubclass pairs (uid "Q122") (uid "Q1"))
-  assert (not (isSubclass pairs (uid "Q122") (uid "Q11")))
+  assert (isSubclass pairs (super "Q122") (sub "Q1"))
+  assert (not (isSubclass pairs (super "Q122") (sub "Q11")))
 
 
 
