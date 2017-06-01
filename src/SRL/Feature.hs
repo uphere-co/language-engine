@@ -9,7 +9,7 @@ import           Data.Bifunctor                 (bimap)
 import           Data.Function                  (on)
 import           Data.Graph                     (buildG,dfs)
 import qualified Data.IntMap             as IM
-import           Data.List                      (sortBy)
+import           Data.List                      (group,sortBy)
 import           Data.Maybe                     (fromJust,mapMaybe)
 import           Data.Text                      (Text)
 import           Data.Tree                      (levels)
@@ -70,6 +70,11 @@ parseTreePath (mh,tostart,totarget) =
     Just h -> let lst1 = ((snd.phraseType) h,Down):map ((,Down).snd.phraseType) totarget
                   lst2 = map ((,Up).snd.phraseType) . reverse $ tostart
               in lst2 ++ lst1
+
+
+
+simplifyPTP :: (Eq c,Eq p) => [(Either c p, Direction)] -> [(Either c p, Direction)]
+simplifyPTP xs = map head (group xs)
 
 annotateLevel :: IM.IntMap Int -> (Int, t) -> (Int,(Maybe Int,t))
 annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))

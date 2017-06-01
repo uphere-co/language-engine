@@ -87,9 +87,11 @@ showFeaturesForArgNode sentinfo predidx arg node =
     let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
         dep = sentinfo^.corenlp_dep
         parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
-        paths = map parseTreePath parsetrees
+        opaths = map parseTreePath parsetrees
+        paths = map (simplifyPTP . parseTreePath) parsetrees
+        
         heads = map (\rng -> headWord =<< matchR rng (headWordTree dep ipt)) rngs
-    mapM_ print (zip3 rngs paths heads)
+    mapM_ print (zip4 rngs opaths paths heads)
 
     
 showFeaturesForArg :: SentenceInfo -> Int -> MatchedArgument -> IO ()
