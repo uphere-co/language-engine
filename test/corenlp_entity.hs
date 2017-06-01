@@ -10,8 +10,8 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 
 import qualified WikiEL.EntityLinking       as L
-import           WikiEL.NamedEntity                (mergeToken)
-import           NLP.Type.NamedEntity              (NamedEntity(..),parseStr)
+import           WikiEL.NamedEntity                (mergeToken,mergeTokens)
+import           NLP.Type.NamedEntity              (NamedEntity(..),NamedEntityFrag(..),OrderedNamedEntity(..),NamedEntityClass(..),parseStr)
 import qualified WikiEL.CoreNLP             as C
 
 
