@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
   
-import           Data.Maybe                             (fromMaybe)
+import           Data.Maybe                            (fromMaybe)
 import           Data.Text                             (Text)
 import           Data.Vector                           (Vector,backpermute,findIndices
                                                        ,slice,fromList,toList,unsafeThaw,modify)
@@ -17,12 +17,13 @@ import qualified Data.Text.IO                  as T.IO
 import           WikiEL.WikiEntity                     (parseEntityLine,loadEntityReprs,nameWords)
 --import           WikiEL.WikiEntityClass                (parseRelationLine)
 import           WikiEL.Misc                           (IRange(..))
-import           Assert                                (massertEqual,eassertEqual)
+import           Assert                                (assert,massertEqual,eassertEqual)
 import           WikiEL.WikiEntityTagger
 import qualified WikiEL.WikiEntity             as Wiki
 
 --for testing
 import qualified Data.Map                      as M
+import qualified Data.Set                      as S
 import           Data.List                             (foldl')
 import           Control.Arrow                         (second)
 
@@ -132,6 +133,8 @@ parseRelationLine line = (Wiki.UID sub, Wiki.UID super)
 getKeys :: M.Map Wiki.UID [Wiki.UID] -> [Wiki.UID]
 getKeys = M.foldlWithKey' (\ks k x -> k:ks) []
 
+isSubclass pairs super sub = S.member (sub, super) pairs
+
 testWikiEntityTypes :: TestTree
 testWikiEntityTypes = testCaseSteps "Test on hierarchy of Wiki entity types" $ \step -> do
   let
@@ -142,11 +145,19 @@ testWikiEntityTypes = testCaseSteps "Test on hierarchy of Wiki entity types" $ \
             , "Q1\t1\tQ11\t11"
             , "Q1\t1\tQ12\t12"
             ]
-    relations = buildRelations (map parseRelationLine lines)
+    relTuples = map parseRelationLine lines
+    allUIDs = S.toList (S.fromList (concatMap (\(x,y) -> [x,y]) relTuples))
+    relations = buildRelations relTuples
     as = getAncestors relations (Wiki.UID "Q1")
+    --pairs = concatMap (getAncestors relations) (getKeys relations)
+    pairs = S.fromList (concatMap (\key -> map (\x -> (key,x)) (getAncestors relations key)) allUIDs)
+
     uid = Wiki.UID
+    x = getAncestors relations (Wiki.UID "Q111")
 
   eassertEqual as [uid "Q1",uid "Q12",uid "Q122",uid "Q121",uid "Q11",uid "Q112",uid "Q111"]
+  assert (isSubclass pairs (uid "Q122") (uid "Q1"))
+  assert (not (isSubclass pairs (uid "Q122") (uid "Q11")))
 
 
 
