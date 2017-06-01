@@ -26,9 +26,10 @@ main = do
       -- fastTextprintWordVectors t
       fastTextgetVector t v str_word
       print =<< fastTextVectornorm v
+      c_size <- fastTextVectorsize v
       cfloat <- c_get_fasttextvector v
       ptr <- newForeignPtr_ cfloat
-      let mv = MVector 30000 ptr
+      let mv = MVector (fromIntegral c_size) ptr
       let v = create (return mv)
-      
+
       print v

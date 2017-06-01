@@ -44,6 +44,7 @@ vector =
   [
     Constructor [ cint "m" ] Nothing
   , NonVirtual float_ "norm" [ ] Nothing
+  , NonVirtual int_  "size" [ ] Nothing
   ]
   
 classes = [ string, fasttext, vector]
