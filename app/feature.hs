@@ -9,19 +9,17 @@ module Main where
 
 import           Control.Applicative               (many,(*>))
 import           Control.Lens               hiding (levels)
-import           Control.Monad                     (void,when,(>=>))
+import           Control.Monad                     (void,when)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.Attoparsec.Text       as A
 import qualified Data.ByteString.Char8      as B
-import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
 import           Data.Foldable                     (toList)
-import           Data.Function                     (on)
-import           Data.List                         (foldl',sortBy,zip4)
+import           Data.List                         (foldl',zip4)
 import           Data.Monoid                       ((<>))
 import qualified Data.IntMap                as IM
-import           Data.Maybe                        (catMaybes,fromJust,fromMaybe,mapMaybe)
+import           Data.Maybe                        (catMaybes,mapMaybe)
 import qualified Data.Sequence              as Seq
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T   (intercalate,unpack)
@@ -33,14 +31,9 @@ import           System.Environment                (getEnv)
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
-import qualified CoreNLP.Proto.CoreNLPProtos.ParseTree as PT
-import qualified CoreNLP.Proto.CoreNLPProtos.DependencyGraph       as DG
-import qualified CoreNLP.Proto.CoreNLPProtos.DependencyGraph.Node  as DN
-import qualified CoreNLP.Proto.CoreNLPProtos.DependencyGraph.Edge  as DE
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
-import           CoreNLP.Simple.Type.Simplified
 --
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
@@ -70,7 +63,7 @@ propbank =  do
   return (trs,props)
 
 showMatchedInstance :: (Int,SentenceInfo,[Instance]) -> IO ()
-showMatchedInstance (i,sentinfo,prs) = do
+showMatchedInstance (_i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
       terms = map (^._2) . toList $ pt
@@ -95,8 +88,7 @@ showFeaturesForArgNode sentinfo predidx arg node =
         dep = sentinfo^.corenlp_dep
         parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
         paths = map parseTreePath parsetrees
-        headWordTree = headWord dep ipt
-        heads = map (\rng -> pickHeadWord =<< matchR rng (headWord dep ipt)) rngs
+        heads = map (\rng -> headWord =<< matchR rng (headWordTree dep ipt)) rngs
     mapM_ print (zip3 rngs paths heads)
 
     
@@ -114,7 +106,6 @@ showFeaturesForInstance sentinfo inst = do
 
 showVoice :: (PennTree,S.Sentence) -> IO ()
 showVoice (pt,sent) = do
-  let lst = catMaybes (sent ^.. S.token . traverse . TK.originalText . to (fmap cutf8))
   TIO.putStrLn "---------- VOICE -----------------"
   -- TIO.putStrLn $ T.intercalate " " lst                       
   let ipt = mkPennTreeIdx pt
@@ -126,13 +117,13 @@ showVoice (pt,sent) = do
       getf (PN x _) = Left x
       testf z = case getf (current z) of
                   Right (n,(VBN,(txt,_))) -> putStrLn (show n ++ ": " ++  T.unpack txt ++ ": " ++ show (isPassive z))
-                  x -> return ()
+                  _ -> return ()
   mapM_ testf (mkTreeZipper [] lemmapt)
 
 
 
 showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
-showFeatures (i,sentinfo,prs) = do
+showFeatures (_i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
       insts = matchInstances (pt,tr) prs
@@ -147,7 +138,7 @@ main = do
     void . runEitherT $ do
       (trs,props) <- propbank
       rdocs <- liftIO $ do
-        txt <- liftIO $ TIO.readFile "/scratch/wavewave/MASC/Propbank/MASC1_textfiles/written/wsj_0026.txt"
+        -- txt <- liftIO $ TIO.readFile "/scratch/wavewave/MASC/Propbank/MASC1_textfiles/written/wsj_0026.txt"
         let pcfg = def & ( tokenizer .~ True )
                        . ( words2sentences .~ True )
                        . ( postagger .~ True )

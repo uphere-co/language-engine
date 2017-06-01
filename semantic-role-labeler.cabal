@@ -51,6 +51,49 @@ library
                        HCoreNLP,
                        HCoreNLP-Proto,
                        PropBank
-                       
   hs-source-dirs:      src
   default-language:    Haskell2010
+  ghc-options:         -O2 -Wall -Werror
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+  ghc-prof-options:    -caf-all -auto-all
+
+Executable feature
+  Main-is:             feature.hs
+  hs-source-dirs:      app
+  default-language:    Haskell2010
+  ghc-options:         -O2 -Wall -Werror
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+  ghc-prof-options:    -caf-all -auto-all
+  other-modules:       
+  build-depends:       base,
+                       --
+                       array,
+                       attoparsec,
+                       bifunctors,
+                       bytestring,
+                       containers,
+                       data-default,
+                       directory,
+                       either,
+                       filepath,
+                       inline-java,
+                       jvm,
+                       lens,
+                       protocol-buffers,
+                       split,
+                       text,
+                       time,
+                       unordered-containers,
+                       --
+                       nlp-types,
+                       HCoreNLP,
+                       HCoreNLP-Proto,
+                       PropBank,
+                       --
+                       semantic-role-labeler                       
+  
+  

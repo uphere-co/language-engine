@@ -8,7 +8,7 @@ module SRL.CoNLL.CoNLL08.Parser where
 import           Control.Lens
 import           Data.List           (transpose)
 import           Data.List.Split     (splitWhen)
-import           Data.Maybe          (catMaybes, isJust)
+import           Data.Maybe          (catMaybes)
 import           Data.Text           (Text)
 import qualified Data.Text    as T
 import qualified Data.Text.IO as TIO
@@ -158,6 +158,7 @@ data Sentence = Sentence { _sentence_lines :: [Line]
 
 makeLenses ''Sentence
 
+readDecimal :: Text -> Int
 readDecimal x = case decimal x of {Left err -> error err; Right (n,_) -> n } 
 
 parseLine :: Text -> Line
@@ -173,6 +174,7 @@ parseLine txt =
 parseArgs :: [Maybe Text] -> [Arg]
 parseArgs ws = map swap $ takeJustAfterEnum ws
 
+takeJustAfterEnum :: [Maybe t] -> [(Int,t)]
 takeJustAfterEnum = catMaybes . zipWith (\x y -> (x,) <$> y) [1..]
   
 parseSentence :: [Text] -> Sentence

@@ -7,7 +7,7 @@ module SRL.Feature where
 import           Control.Monad                  ((<=<))
 import           Data.Bifunctor                 (bimap)
 import           Data.Function                  (on)
-import           Data.Graph                     (buildG,dfs,dff,scc,topSort)
+import           Data.Graph                     (buildG,dfs)
 import qualified Data.IntMap             as IM
 import           Data.List                      (sortBy)
 import           Data.Maybe                     (fromJust,mapMaybe)
@@ -71,23 +71,20 @@ parseTreePath (mh,tostart,totarget) =
                   lst2 = map ((,Up).snd.phraseType) . reverse $ tostart
               in lst2 ++ lst1
 
-
-{- mapM_forNode f x@(PN c xs) = f x >> mapM_ (mapM_forNode f) xs
-mapM_forNode f (PL x)      = return ()
--}
-
+annotateLevel :: IM.IntMap Int -> (Int, t) -> (Int,(Maybe Int,t))
 annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))
 
-headWord (Dependency root nods edgs') tr =
+headWordTree :: Dependency -> Tree c (Int,t) -> Tree c (Int,(Maybe Int,t))
+headWordTree (Dependency root nods edgs') tr =
   let bnds = let xs = map fst nods in (minimum xs, maximum xs)
       edgs = map fst edgs'
       searchtree = head (dfs (buildG bnds edgs) [root])
       levelMap = IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
   in fmap (annotateLevel levelMap) tr 
 
-pickHeadWord :: PennTreeIdxG ChunkTag (Maybe Int,(POSTag,Text)) -> Maybe Text
-pickHeadWord  = safeHead . map snd . sortBy (compare `on` fst)
-              . mapMaybe (\(_,(ml,(_,t))) -> (,) <$> ml <*> pure t) . getLeaves 
+headWord :: PennTreeIdxG ChunkTag (Maybe Int,(POSTag,Text)) -> Maybe Text
+headWord  = safeHead . map snd . sortBy (compare `on` fst)
+          . mapMaybe (\(_,(ml,(_,t))) -> (,) <$> ml <*> pure t) . getLeaves 
 
 lemmatize :: IM.IntMap Text
           -> PennTreeIdxG ChunkTag (POSTag,Text)
@@ -120,6 +117,7 @@ isInPP z = case current <$> (parent z) of
              Just (PN (_,c) _) -> c == PP
              _                 -> False
 
+isPassive :: TreeZipperICP (Text,Text) -> Bool
 isPassive z = let b1 = isVBN z
                   b2 = withCopula z
                   b3 = isInNP z

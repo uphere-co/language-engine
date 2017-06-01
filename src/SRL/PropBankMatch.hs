@@ -4,23 +4,16 @@
 module SRL.PropBankMatch where
 
 import           Control.Lens
-import           Data.Foldable                   (toList)
-import           Data.Function                   (on)
-import           Data.List                       (sortBy)
-import           Data.Maybe                      (fromJust,mapMaybe,maybeToList,listToMaybe)
+import           Data.Maybe                      (fromJust,mapMaybe,listToMaybe)
 import           Data.Monoid                     ((<>))
-import           Data.Text                       (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
 import qualified CoreNLP.Simple.Type.Simplified as S
-import           NLP.Parser.PennTreebankII
-import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
-import           PropBank.Util
 --
 import           SRL.Util
 
@@ -71,15 +64,14 @@ adjustIndex xs n = let m = length (filter (<n) xs)
 adjustIndexFromTree :: PennTree -> Int -> Either Int Int
 adjustIndexFromTree tr =
   let itr = mkIndexedTree tr
-      rs = termRangeForAllNode itr
       excl = map (^._1) (findNoneLeaf itr)
   in adjustIndex excl 
 
 
 maximalEmbeddedRange :: PennTreeGen c (Int,t) -> Range -> [(Range,PennTreeIdxG c t)]
 maximalEmbeddedRange tr r = go (termRangeTree tr)
-  where go y@(PN (r1,c) xs) = if r1 `isInsideR` r then [(r1,y)] else concatMap go xs
-        go y@(PL (n,x)) = if n `isInside` r then [((n,n),y)] else []
+  where go y@(PN (r1,_) xs) = if r1 `isInsideR` r then [(r1,y)] else concatMap go xs
+        go y@(PL (n,_)) = if n `isInside` r then [((n,n),y)] else []
 
 
 matchR :: Range -> PennTreeIdxG c t -> Maybe (PennTreeIdxG c t)
@@ -102,15 +94,13 @@ matchArgNodes (pt,tr) arg = do
                          (Right b,Right e) -> [(b,e)]
   rng <- (adjrange . termRange . snd) nd
   let ipt = (mkIndexedTree . getADTPennTree) pt
-      xs = termRangeForAllNode ipt 
       zs = maximalEmbeddedRange ipt rng
   return MatchedArgNode { _mn_node = (rng,n), _mn_trees = zs }
 
 
 matchArgs :: (PennTree,PennTree) -> Instance -> [MatchedArgument]
 matchArgs (pt,tr) pr
-  = [ MatchedArgument { _ma_argument = arg, _ma_nodes = matchArgNodes (pt,tr) arg }
-      | arg <- pr^.inst_arguments ]
+  = [ MatchedArgument { _ma_argument = a, _ma_nodes = matchArgNodes (pt,tr) a } | a <- pr^.inst_arguments ]
 
 
 matchInstances :: (PennTree,PennTree) -> [Instance] -> [MatchedInstance]
@@ -140,6 +130,6 @@ printMatchedInst x = do
 
 findRelNode :: [MatchedArgument] -> Int
 findRelNode args =
-  let arg = head $ filter (\arg -> arg ^. ma_argument.arg_label == "rel") args
-  in head (arg^..ma_nodes.traverse.mn_node._1._1)
+  let a1 = head $ filter (\a -> a ^. ma_argument.arg_label == "rel") args
+  in head (a1^..ma_nodes.traverse.mn_node._1._1)
 
