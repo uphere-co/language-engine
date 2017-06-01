@@ -13,6 +13,7 @@ import           Data.Text                       (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
 --
+import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
 import qualified CoreNLP.Simple.Type.Simplified as S
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
@@ -23,7 +24,8 @@ import           PropBank.Util
 --
 import           SRL.Util
 
-data SentenceInfo = SentInfo { _corenlp_tree :: PennTree
+data SentenceInfo = SentInfo { _corenlp_sent :: CS.Sentence
+                             , _corenlp_tree :: PennTree
                              , _propbank_tree :: PennTree
                              , _corenlp_dep  :: S.Dependency
                              }
