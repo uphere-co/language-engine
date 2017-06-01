@@ -3,6 +3,7 @@
 , HCoreNLP ? <HCoreNLP>
 , nlp-types ? <nlp-types>
 , PropBank ? <PropBank>
+, wiki-ner ? <wiki-ner>
 }:
 
 with pkgs;
@@ -22,6 +23,7 @@ let
       "PropBank" = self.callPackage (import PropBank) {};
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
       "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
+      "wiki-ner" = self.callPackage (import wiki-ner) { };
     };  
   newHaskellPackages = haskellPackages.override {
     overrides = self: super: hsconfig self super // hsconfig2 self super;
