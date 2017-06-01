@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -8,19 +9,17 @@ module Main where
 
 import           Control.Applicative               (many,(*>))
 import           Control.Lens               hiding (levels)
-import           Control.Monad                     (void,when,(>=>))
+import           Control.Monad                     (void,when)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.Attoparsec.Text       as A
 import qualified Data.ByteString.Char8      as B
-import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
 import           Data.Foldable                     (toList)
-import           Data.Function                     (on)
-import           Data.List                         (sortBy,zip4)
+import           Data.List                         (foldl',zip4)
 import           Data.Monoid                       ((<>))
 import qualified Data.IntMap                as IM
-import           Data.Maybe                        (fromJust,fromMaybe,mapMaybe)
+import           Data.Maybe                        (catMaybes,mapMaybe)
 import qualified Data.Sequence              as Seq
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T   (intercalate,unpack)
@@ -32,18 +31,14 @@ import           System.Environment                (getEnv)
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
-import qualified CoreNLP.Proto.CoreNLPProtos.ParseTree as PT
-import qualified CoreNLP.Proto.CoreNLPProtos.DependencyGraph       as DG
-import qualified CoreNLP.Proto.CoreNLPProtos.DependencyGraph.Node  as DN
-import qualified CoreNLP.Proto.CoreNLPProtos.DependencyGraph.Edge  as DE
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
-import           CoreNLP.Simple.Type.Simplified
 --
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
+import           NLP.Type.TreeZipper
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 import           PropBank.Util
@@ -68,7 +63,7 @@ propbank =  do
   return (trs,props)
 
 showMatchedInstance :: (Int,SentenceInfo,[Instance]) -> IO ()
-showMatchedInstance (i,sentinfo,prs) = do
+showMatchedInstance (_i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
       terms = map (^._2) . toList $ pt
@@ -83,10 +78,6 @@ showMatchedInstance (i,sentinfo,prs) = do
   TIO.putStrLn "-----------------"
   mapM_ printMatchedInst $ matchInstances (pt,tr) prs
 
-findRelNode :: [MatchedArgument] -> Int
-findRelNode args =
-  let arg = head $ filter (\arg -> arg ^. ma_argument.arg_label == "rel") args
-  in head (arg^..ma_nodes.traverse.mn_node._1._1)
 
 showFeaturesForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode -> IO ()
 showFeaturesForArgNode sentinfo predidx arg node = 
@@ -97,13 +88,9 @@ showFeaturesForArgNode sentinfo predidx arg node =
         dep = sentinfo^.corenlp_dep
         parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
         paths = map parseTreePath parsetrees
-        headWordTree = headWord dep ipt
-        heads = map (\rng -> pickHeadWord =<< matchR rng (headWord dep ipt)) rngs
+        heads = map (\rng -> headWord =<< matchR rng (headWordTree dep ipt)) rngs
     mapM_ print (zip3 rngs paths heads)
 
-pickHeadWord :: PennTreeIdxG ChunkTag (Maybe Int,(POSTag,Text)) -> Maybe Text
-pickHeadWord  = safeHead . map snd . sortBy (compare `on` fst)
-              . mapMaybe (\(_,(ml,(_,t))) -> (,) <$> ml <*> pure t) . getLeaves 
     
 showFeaturesForArg :: SentenceInfo -> Int -> MatchedArgument -> IO ()
 showFeaturesForArg sentinfo predidx arg = 
@@ -116,12 +103,32 @@ showFeaturesForInstance sentinfo inst = do
   let predidx = findRelNode (inst^.mi_arguments)
   mapM_ (showFeaturesForArg sentinfo predidx) (inst^.mi_arguments)
 
+
+showVoice :: (PennTree,S.Sentence) -> IO ()
+showVoice (pt,sent) = do
+  TIO.putStrLn "---------- VOICE -----------------"
+  -- TIO.putStrLn $ T.intercalate " " lst                       
+  let ipt = mkPennTreeIdx pt
+  -- TIO.putStrLn (prettyPrint 0 pt)     
+  let lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
+                    zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
+      lemmapt = lemmatize lemmamap ipt
+  let getf (PL x) = Right x
+      getf (PN x _) = Left x
+      testf z = case getf (current z) of
+                  Right (n,(VBN,(txt,_))) -> putStrLn (show n ++ ": " ++  T.unpack txt ++ ": " ++ show (isPassive z))
+                  _ -> return ()
+  mapM_ testf (mkTreeZipper [] lemmapt)
+
+
+
 showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
-showFeatures (i,sentinfo,prs) = do
+showFeatures (_i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
       insts = matchInstances (pt,tr) prs
   showFeaturesForInstance sentinfo (head insts)
+  showVoice (pt,sentinfo^.corenlp_sent)
   
 main :: IO ()
 main = do
@@ -131,7 +138,7 @@ main = do
     void . runEitherT $ do
       (trs,props) <- propbank
       rdocs <- liftIO $ do
-        txt <- liftIO $ TIO.readFile "/scratch/wavewave/MASC/Propbank/MASC1_textfiles/written/wsj_0026.txt"
+        -- txt <- liftIO $ TIO.readFile "/scratch/wavewave/MASC/Propbank/MASC1_textfiles/written/wsj_0026.txt"
         let pcfg = def & ( tokenizer .~ True )
                        . ( words2sentences .~ True )
                        . ( postagger .~ True )
@@ -150,8 +157,8 @@ main = do
       deps <- hoistEither $ mapM sentToDep sents
       let cpts = mapMaybe (^.S.parseTree) sents
           pts = map decodeToPennTree cpts
-          rs = map (\(i,((pt,tr,dep),pr)) -> (i,SentInfo pt tr dep,pr))
-             . merge (^.inst_tree_id) (zip3 pts trs deps)
+          rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt tr dep,pr))
+             . merge (^.inst_tree_id) (zip4 pts trs deps sents)
              $ props
       liftIO $ mapM_ (showMatchedInstance <> showFeatures) rs
 

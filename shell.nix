@@ -31,12 +31,14 @@ let
   hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
             attoparsec
             bifunctors
+            bindings-svm
             either
             haskeline
             lens
             monad-loops
             optparse-applicative
             split
+            svm-simple
             text text-format
             yayaml
 
