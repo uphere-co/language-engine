@@ -1,15 +1,22 @@
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
 module SRL.Feature where
 
+import           Control.Monad                  ((<=<))
+import           Data.Bifunctor                 (bimap)
+import           Data.Function                  (on)
 import           Data.Graph                     (buildG,dfs,dff,scc,topSort)
 import qualified Data.IntMap             as IM
+import           Data.List                      (sortBy)
+import           Data.Maybe                     (fromJust,mapMaybe)
 import           Data.Text                      (Text)
 import           Data.Tree                      (levels)
 --
 import           CoreNLP.Simple.Type.Simplified
 import           NLP.Type.PennTreebankII
+import           NLP.Type.TreeZipper
 --
 import           SRL.Util
 
@@ -50,6 +57,7 @@ elimCommonHead lst1 lst2 = go lst1 lst2
     go []     ys     = (Nothing,[],ys)
     go xs     []     = (Nothing,xs,[])
 
+
 parseTreePathFull :: (Int,Range) -> PennTreeIdxG c (p,a)
                   -> (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
 parseTreePathFull (start,target) tr = elimCommonHead (contain start tr) (containR target tr)
@@ -64,8 +72,9 @@ parseTreePath (mh,tostart,totarget) =
               in lst2 ++ lst1
 
 
-mapM_forNode f x@(PN c xs) = f x >> mapM_ (mapM_forNode f) xs
+{- mapM_forNode f x@(PN c xs) = f x >> mapM_ (mapM_forNode f) xs
 mapM_forNode f (PL x)      = return ()
+-}
 
 annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))
 
@@ -75,3 +84,44 @@ headWord (Dependency root nods edgs') tr =
       searchtree = head (dfs (buildG bnds edgs) [root])
       levelMap = IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
   in fmap (annotateLevel levelMap) tr 
+
+pickHeadWord :: PennTreeIdxG ChunkTag (Maybe Int,(POSTag,Text)) -> Maybe Text
+pickHeadWord  = safeHead . map snd . sortBy (compare `on` fst)
+              . mapMaybe (\(_,(ml,(_,t))) -> (,) <$> ml <*> pure t) . getLeaves 
+
+lemmatize :: IM.IntMap Text
+          -> PennTreeIdxG ChunkTag (POSTag,Text)
+          -> PennTreeIdxG ChunkTag (POSTag,(Text,Text))
+lemmatize m = bimap id (\(i,(p,x)) -> (i,(p,(x,fromJust (IM.lookup i m)))))
+
+
+type TreeICP a = Tree (Range,ChunkTag) (Int,(POSTag,a))
+
+type TreeZipperICP a = TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
+
+isVBN :: TreeZipperICP a -> Bool
+isVBN z = case current z of
+            PL (_,(p,_)) -> p == VBN
+            _            -> False 
+
+withCopula :: TreeZipperICP (Text,Text) -> Bool
+withCopula z = case current <$> (prev <=< parent) z of
+                 Just (PL (_,(_,(_,l)))) -> l == "be"
+                 _                       -> False
+
+isInNP :: TreeZipperICP (Text,Text) -> Bool
+isInNP z = case current <$> (parent <=< parent) z of
+             Just (PN (_,c) _) -> c == NP
+             _             -> False
+
+
+isInPP :: TreeZipperICP (Text,Text) -> Bool
+isInPP z = case current <$> (parent z) of
+             Just (PN (_,c) _) -> c == PP
+             _                 -> False
+
+isPassive z = let b1 = isVBN z
+                  b2 = withCopula z
+                  b3 = isInNP z
+                  b4 = isInPP z
+              in (b1 && b2) || (b1 && b3) || (b1 && b4)

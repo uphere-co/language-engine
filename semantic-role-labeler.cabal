@@ -24,7 +24,7 @@ library
                        SRL.PropBankMatch
                        SRL.Type
                        SRL.Util
-                       SRL.IdentifyVoice
+
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base,

@@ -51,7 +51,6 @@ import           PropBank.Type.Prop
 import           PropBank.Util
 --
 import           SRL.Feature
-import           SRL.IdentifyVoice
 import           SRL.PropBankMatch
 import           SRL.Util
 
@@ -86,10 +85,6 @@ showMatchedInstance (i,sentinfo,prs) = do
   TIO.putStrLn "-----------------"
   mapM_ printMatchedInst $ matchInstances (pt,tr) prs
 
-findRelNode :: [MatchedArgument] -> Int
-findRelNode args =
-  let arg = head $ filter (\arg -> arg ^. ma_argument.arg_label == "rel") args
-  in head (arg^..ma_nodes.traverse.mn_node._1._1)
 
 showFeaturesForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode -> IO ()
 showFeaturesForArgNode sentinfo predidx arg node = 
@@ -104,9 +99,6 @@ showFeaturesForArgNode sentinfo predidx arg node =
         heads = map (\rng -> pickHeadWord =<< matchR rng (headWord dep ipt)) rngs
     mapM_ print (zip3 rngs paths heads)
 
-pickHeadWord :: PennTreeIdxG ChunkTag (Maybe Int,(POSTag,Text)) -> Maybe Text
-pickHeadWord  = safeHead . map snd . sortBy (compare `on` fst)
-              . mapMaybe (\(_,(ml,(_,t))) -> (,) <$> ml <*> pure t) . getLeaves 
     
 showFeaturesForArg :: SentenceInfo -> Int -> MatchedArgument -> IO ()
 showFeaturesForArg sentinfo predidx arg = 

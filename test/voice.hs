@@ -55,7 +55,6 @@ import           PropBank.Util
 import           SRL.Feature
 import           SRL.PropBankMatch
 import           SRL.Util
-import           SRL.IdentifyVoice
 
 
 showVoice :: (PennTree,S.Sentence) -> IO ()

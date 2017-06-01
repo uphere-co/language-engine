@@ -137,3 +137,9 @@ printMatchedInst x = do
   putStrLn "---"  
   mapM_ printMatchedArg (x^.mi_arguments)
   putStrLn "---"  
+
+findRelNode :: [MatchedArgument] -> Int
+findRelNode args =
+  let arg = head $ filter (\arg -> arg ^. ma_argument.arg_label == "rel") args
+  in head (arg^..ma_nodes.traverse.mn_node._1._1)
+
