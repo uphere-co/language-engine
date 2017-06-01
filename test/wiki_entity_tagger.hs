@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
   
+import           Data.Maybe                             (fromMaybe)
 import           Data.Text                             (Text)
 import           Data.Vector                           (Vector,backpermute,findIndices
                                                        ,slice,fromList,toList,unsafeThaw,modify)
@@ -110,27 +111,14 @@ unitTestsGreedyMatching =
     "Text based, greedy matching algorithm for list of words"
     [testNameOrdering, testGreedyMatching]
 
-{-
-buildRelations = foldl' update M.empty
-  where 
-    update acc (sub, super) = M.alter f sub acc
-      where
-        f Nothing  = Just [super]
-        f (Just supers) = Just (super:supers)
--}
 
 buildRelations :: [(Wiki.UID, Wiki.UID)] -> M.Map Wiki.UID [Wiki.UID]
 buildRelations relations = M.fromListWith (++) (map (second (: [])) relations)
 
-
-lookups map key = let f Nothing     = []
-                      f (Just vals) = vals
-              in 
-                f (M.lookup key map)
-
 getAncestors :: M.Map Wiki.UID [Wiki.UID] -> Wiki.UID -> [Wiki.UID]
 getAncestors map key = g key (lookups map key)
   where
+    lookups map key = fromMaybe [] (M.lookup key map)
     g key [] = [key]
     g key vals = key : concatMap (\v -> g v (lookups map v)) vals
         
@@ -140,6 +128,9 @@ parseRelationLine :: Text -> (Wiki.UID, Wiki.UID)
 parseRelationLine line = (Wiki.UID sub, Wiki.UID super)
   where
     [sub, subStr, super, superStr] = T.splitOn "\t" line
+
+getKeys :: M.Map Wiki.UID [Wiki.UID] -> [Wiki.UID]
+getKeys = M.foldlWithKey' (\ks k x -> k:ks) []
 
 testWikiEntityTypes :: TestTree
 testWikiEntityTypes = testCaseSteps "Test on hierarchy of Wiki entity types" $ \step -> do
@@ -152,7 +143,6 @@ testWikiEntityTypes = testCaseSteps "Test on hierarchy of Wiki entity types" $ \
             , "Q1\t1\tQ12\t12"
             ]
     relations = buildRelations (map parseRelationLine lines)
-    tt = lookups relations (Wiki.UID "Q1")
     as = getAncestors relations (Wiki.UID "Q1")
     uid = Wiki.UID
 
