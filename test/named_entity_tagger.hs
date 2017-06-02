@@ -69,6 +69,7 @@ testNamedEntityTagging = testCaseSteps "Named entity tagging on CoreNLP NER outp
   eassertEqual tt expected_tt
   eassertEqual matchedItems expected_matches
 
+
 testIRangeOps :: TestTree
 testIRangeOps = testCaseSteps "Test operations on IRange" $ \step -> do
   let
@@ -170,6 +171,7 @@ testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \ste
   --eassertEqual (entityLinking [] t4) (Self 0 t4)
 
   print "Named entities"
+  {-
   mapM_ print named_entities
   print "Wiki entities"
   mapM_ print wiki_entities
@@ -179,7 +181,7 @@ testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \ste
   mapM_ print mentions
   print "Entity-linked named entities"
   mapM_ print linked_mentions
-  
+  -}
 
 testHelperUtils :: TestTree
 testHelperUtils = testCaseSteps "Test for helper functions on general algorithms" $ \step -> do

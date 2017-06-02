@@ -3,22 +3,25 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
   
+import           Data.Maybe                            (fromMaybe)
 import           Data.Text                             (Text)
 import           Data.Vector                           (Vector,backpermute,findIndices
                                                        ,slice,fromList,toList,unsafeThaw,modify)
 import           Test.Tasty.HUnit                      (testCase,testCaseSteps)
-import           Test.Tasty                            (defaultMain, testGroup)
+import           Test.Tasty                            (defaultMain, testGroup,TestTree)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
 import qualified Data.Vector                   as V
 import qualified Data.Text                     as T
+import qualified Data.Text.IO                  as T.IO
 
 import           WikiEL.WikiEntity                     (parseEntityLine,loadEntityReprs,nameWords)
+import           WikiEL.WikiEntityClass                (SuperclassUID(..),SubclassUID(..),parseRelationLine,buildRelations,allRelationPairs,getAncestors,isSubclass)
 import           WikiEL.Misc                           (IRange(..))
-import           Assert                                (massertEqual,eassertEqual)
+import           Assert                                (assert,massertEqual,eassertEqual)
 import           WikiEL.WikiEntityTagger
 import qualified WikiEL.WikiEntity             as Wiki
 
-
+testVectorSlicing :: TestTree
 testVectorSlicing = testCaseSteps "API usages for vector slicing" $ \step -> do
   let 
     vec = fromList ([[1],[2],[3,4],[5,6],[7]] :: [[Int]])
@@ -28,6 +31,7 @@ testVectorSlicing = testCaseSteps "API usages for vector slicing" $ \step -> do
   eassertEqual (toList sub) [[2],[3,4],[5,6]]
   eassertEqual (filter (\x -> length x == 2) (toList sub)) [[3,4],[5,6]]
 
+testBinarySearch :: TestTree
 testBinarySearch = testCaseSteps "API usages for binary searches" $ \step -> do
   let
     wordss = fromList ([["B"], ["B", "C"], ["B", "B"], ["B","C","B"],  ["A","B"], ["A"], ["B"], ["B"], ["A", "C"], ["C"],["C"], ["C", "B"], ["E","A"], ["E"], ["G"]] :: [[Text]])
@@ -53,17 +57,20 @@ testBinarySearch = testCaseSteps "API usages for binary searches" $ \step -> do
   eassertEqual (tl0, tr0) (12,14)
   massertEqual (binarySearchLRByBounds (ithElementOrdering 1) tt ["E", "B"] tl0 tr0) (14,14)
 
+unitTestsVector :: TestTree
 unitTestsVector =
   testGroup
     "Usages for Data.Vector and Data.Vector.Algorithms"
     [testVectorSlicing, testBinarySearch]
 
 
+testNameOrdering :: TestTree
 testNameOrdering = testCaseSteps "Ordering of entity names(list of words)" $ \step -> do
   eassertEqual LT (ithElementOrdering 0 ["A", "B"] ["B", "A"])
   eassertEqual GT (ithElementOrdering 1 ["A", "B"] ["B", "A"])
   eassertEqual EQ (ithElementOrdering 1 ["A", "A"] ["A", "A", "A"])
 
+testGreedyMatching :: TestTree
 testGreedyMatching = testCaseSteps "Greedy matching of two lists of words" $ \step -> do
   let 
     entities = fromList ([["A"], ["B"], ["B","C"], ["B","D","E"],["B","D","F"],["C"],["C","D","E","F"],["C","D","E","F"]] :: [[Text]])
@@ -93,12 +100,39 @@ testGreedyMatching = testCaseSteps "Greedy matching of two lists of words" $ \st
                ,(IRange 1 3,   fromList [2])]
   eassertEqual (greedyAnnotation entities text) expected  
 
+unitTestsGreedyMatching :: TestTree
 unitTestsGreedyMatching =
   testGroup
     "Text based, greedy matching algorithm for list of words"
     [testNameOrdering, testGreedyMatching]
 
 
+testWikiEntityTypes :: TestTree
+testWikiEntityTypes = testCaseSteps "Test on hierarchy of Wiki entity types" $ \step -> do
+  let
+    lines = ["Q12\t12\tQ121\t121"
+            , "Q12\t12\tQ122\t122"
+            , "Q11\t11\tQ111\t111"
+            , "Q11\t11\tQ112\t112"
+            , "Q1\t1\tQ11\t11"
+            , "Q1\t1\tQ12\t12"
+            ]
+    relTuples = map parseRelationLine lines
+    relations = buildRelations relTuples
+    pairs = allRelationPairs relTuples
+
+    uid = Wiki.UID
+    super uid = SuperclassUID (Wiki.UID uid)
+    sub   uid = SubclassUID (Wiki.UID uid)
+  eassertEqual (getAncestors relations (uid "Q1")) [uid "Q1",uid "Q12",uid "Q122",uid "Q121",uid "Q11",uid "Q112",uid "Q111"]
+  assert (isSubclass pairs (super "Q122") (sub "Q1"))
+  assert (not (isSubclass pairs (super "Q122") (sub "Q11")))
+  mapM_ T.IO.putStrLn lines
+
+
+
+
+testWikiEntityTagging :: TestTree
 testWikiEntityTagging = testCaseSteps "Wiki entity tagger with greedy-matching strategy" $ \step -> do
   entities <- do
      reprs <- loadEntityReprs "data/wikidata.test.entities"
@@ -118,9 +152,11 @@ testWikiEntityTagging = testCaseSteps "Wiki entity tagger with greedy-matching s
   --print ""
   --mapM_ print matchedItems
 
+
+unitTests :: TestTree
 unitTests =
   testGroup
     "All Unit tests"
-    [unitTestsVector, unitTestsGreedyMatching, testWikiEntityTagging]    
+    [unitTestsVector, unitTestsGreedyMatching, testWikiEntityTagging, testWikiEntityTypes]    
 
 main = defaultMain unitTests
