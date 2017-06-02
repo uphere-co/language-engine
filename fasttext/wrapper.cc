@@ -1,5 +1,5 @@
-#include </home/modori/repo/srcc/fastText/src/vector.h>
-#include </home/modori/repo/src/semantic-role-labeler/fasttext/fastText/csrc/fastTextType.h>
+#include <vectorwrapper.h>
+#include <fastTextType.h>
 
 extern "C" {
     float* get_vector(Vector_t* vec);
