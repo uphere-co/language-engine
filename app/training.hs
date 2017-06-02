@@ -40,14 +40,14 @@ import           SRL.PropBankMatch
   
 process :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
         -> (FilePath,FilePath)
-        -> FilePath
+        -> (FilePath,IsOmit)
         -> IO ()
-process pp (dirpenn,dirprop) fp = do
+process pp (dirpenn,dirprop) (fp,omit) = do
   r <- try $ do    
     let pennfile = dirpenn </> fp <.> "mrg"
         propfile = dirprop </> fp <.> "prop"
     void . runEitherT $ do
-      (trs,props) <- propbank (pennfile,propfile)
+      (trs,props) <- propbank (pennfile,propfile,omit)
       rdocs <- liftIO $ do
         let docs = map mkDocFromPennTree trs
         anns <- mapM (annotate pp) docs
@@ -61,12 +61,12 @@ process pp (dirpenn,dirprop) fp = do
           rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt tr dep,pr))
              . merge (^.inst_tree_id) (zip4 pts trs deps sents)
              $ props
-      liftIO $ mapM_ (showMatchedInstance <> showFeatures) rs
+      liftIO $ mapM_ (showMatchedInstance <> showFeatures) rs 
   case r of
     Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
     Right _ -> return ()
 
-header fp = do
+header (fp,_) = do
   putStrLn "*****************************"
   putStrLn "*****************************"
   putStrLn "*****************************"
@@ -78,9 +78,7 @@ header fp = do
   putStrLn "*****************************"
 
 
-run = do
-  let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
-      dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
+preparePP = do
   let pcfg = def & ( tokenizer .~ True )
                  . ( words2sentences .~ True )
                  . ( postagger .~ True )
@@ -89,18 +87,20 @@ run = do
                  . ( depparse .~ True )
                  . ( constituency .~ True )
                  . ( ner .~ False )
-  pp <- prepare pcfg
-  mapM_ (header <> process pp (dirpenn,dirprop)) ["wsj_0026" ]-- propbankFiles
+  prepare pcfg
+
+run pp = do
+  let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
+      dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
+  mapM_ (header <> process pp (dirpenn,dirprop)) propbankFiles
 
 
 initGHCi :: IO J.JVM
 initGHCi = do
   clspath <- getEnv "CLASSPATH"
   J.newJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] 
-  
-  
 
 main :: IO ()
 main = do
   clspath <- getEnv "CLASSPATH"
-  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] run
+  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] (preparePP >>= run)
