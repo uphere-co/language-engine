@@ -60,9 +60,9 @@ process pp (dirpenn,dirprop) fp = do
           rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt tr dep,pr))
              . merge (^.inst_tree_id) (zip4 pts trs deps sents)
              $ props
-      liftIO $ mapM_ (showMatchedInstance <> showFeatures ) rs
+      liftIO $ mapM_ (showMatchedInstance {- <> showFeatures -} ) rs
   case r of
-    Left (e :: SomeException) -> error $ "error in " ++ fp
+    Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
     Right _ -> return ()
 
 header fp = do
@@ -92,4 +92,4 @@ main = do
                    . ( constituency .~ True )
                    . ( ner .~ False )
     pp <- prepare pcfg
-    mapM_ (header <> process pp (dirpenn,dirprop)) (sort propbankFiles)
+    mapM_ (header <> process pp (dirpenn,dirprop)) propbankFiles
