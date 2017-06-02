@@ -18,6 +18,9 @@ import           Data.List                         (sort,zip4)
 import           Data.Monoid                       ((<>))
 import           Data.Maybe                        (mapMaybe)
 import qualified Data.Sequence              as Seq
+import           Data.Vector.Storable (MVector (..),create)
+import           Foreign.C.String
+import           Foreign.ForeignPtr
 import           Foreign.JNI                as J
 import           Language.Java              as J
 import           System.Environment                (getEnv)
@@ -30,13 +33,14 @@ import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
 --
+import           FastText.Binding
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
 import           SRL.DataSet.PropBank
 import           SRL.Feature
 import           SRL.PropBankMatch
-
+import           SRL.Vectorize
   
 process :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
         -> (FilePath,FilePath)
@@ -89,7 +93,20 @@ preparePP = do
                  . ( ner .~ False )
   prepare pcfg
 
-run pp = do
+run t pp = do
+  withCString "vector" $ \cstr_word -> do
+    let c_size = 300
+    v <- newFastTextVector c_size
+    str_word <- newCppString cstr_word
+    fastTextgetVector t v str_word
+    -- c_size <- fastTextVectorsize v
+    cfloat <- c_get_fasttextvector v
+    ptr <- newForeignPtr_ cfloat
+    let mv = MVector (fromIntegral c_size) ptr
+    let v = create (return mv)
+    print v
+    
+  
   let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
       dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
   mapM_ (header <> process pp (dirpenn,dirprop)) propbankFiles
@@ -98,9 +115,16 @@ run pp = do
 initGHCi :: IO J.JVM
 initGHCi = do
   clspath <- getEnv "CLASSPATH"
-  J.newJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] 
+  j <- J.newJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] 
+  return j
+
+init2 = initWVDB "/scratch/wavewave/wordvector/wiki.en.bin"
+
+
 
 main :: IO ()
 main = do
   clspath <- getEnv "CLASSPATH"
-  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] (preparePP >>= run)
+  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
+    t <- init2
+    (preparePP >>= run t)
