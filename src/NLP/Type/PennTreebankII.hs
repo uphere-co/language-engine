@@ -65,7 +65,8 @@ data POSTag = CC          -- ^ conjunction, coordinating
             | M_COLON     -- ^ punctuation mark, colon           (original :)
             | M_DQUOTE    -- ^ double quotation mark             (original '')
             | M_DBACKQUOTE -- ^ double back quotation mark       (original ``)
-            | M_DOLLAR    -- ^ dollar sign                       (original $) 
+            | M_DOLLAR    -- ^ dollar sign                       (original $)
+            | M_HASH      -- ^ hash sign                         (original #)
             | D_LRB       -- ^ left parenthesis                  (original -LRB-)
             | D_RRB       -- ^ right parentheis                  (original -RRB-)
             | D_NONE      -- ^ none                              (original -NONE-)
@@ -209,6 +210,7 @@ identifyPOS t
           | p == "''"   -> M_DQUOTE
           | p == "``"   -> M_DBACKQUOTE
           | p == "$"    -> M_DOLLAR
+          | p == "#"    -> M_HASH
           | otherwise   -> error ("invalid tag: " ++ T.unpack t)
 
 identifyChunk :: Text -> ChunkTag
