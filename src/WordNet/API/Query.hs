@@ -63,5 +63,7 @@ getQueryConcept n typ db = do
     POS_A -> lookupConcept db POS_A n
     POS_R -> lookupConcept db POS_R n
 
+getQuerySense t i db = lookupSense db t i
+
 format :: ([LexItem],Text) -> Text
 format (xs,txt) = T.intercalate "," (map formatLI xs) <> " | " <> txt
