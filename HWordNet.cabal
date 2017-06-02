@@ -32,6 +32,7 @@ Library
                      WordNet.Parser.Common
                      WordNet.Parser.Data
                      WordNet.Parser.Index
+                     WordNet.Parser.Sense
                      WordNet.Query
                   
   build-depends:       base,
