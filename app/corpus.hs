@@ -23,7 +23,8 @@ import           PropBank.Util
   
 propbank :: IO ()
 propbank =  do
-  props <- parseProp <$> TIO.readFile "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written/chZ.prop"
+  let omit = NoOmit
+  props <- parseProp NoOmit <$> TIO.readFile "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written/chZ.prop"
   txt <- TIO.readFile "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written/chZ.mrg"
   let xs = T.lines txt
       txts = map T.unlines . filter (not.null) $ splitWhen T.null xs
