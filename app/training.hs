@@ -18,6 +18,7 @@ import           Data.List                         (sort,zip4)
 import           Data.Monoid                       ((<>))
 import           Data.Maybe                        (mapMaybe)
 import qualified Data.Sequence              as Seq
+import           Foreign.JNI                as J
 import           Language.Java              as J
 import           System.Environment                (getEnv)
 import           System.FilePath                   ((</>),(<.>))
@@ -60,7 +61,7 @@ process pp (dirpenn,dirprop) fp = do
           rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt tr dep,pr))
              . merge (^.inst_tree_id) (zip4 pts trs deps sents)
              $ props
-      liftIO $ mapM_ (showMatchedInstance {- <> showFeatures -} ) rs
+      liftIO $ mapM_ (showMatchedInstance <> showFeatures) rs
   case r of
     Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
     Right _ -> return ()
@@ -77,19 +78,29 @@ header fp = do
   putStrLn "*****************************"
 
 
-main :: IO ()
-main = do
+run = do
   let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
       dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
+  let pcfg = def & ( tokenizer .~ True )
+                 . ( words2sentences .~ True )
+                 . ( postagger .~ True )
+                 . ( lemma .~ True )
+                 . ( sutime .~ False )
+                 . ( depparse .~ True )
+                 . ( constituency .~ True )
+                 . ( ner .~ False )
+  pp <- prepare pcfg
+  mapM_ (header <> process pp (dirpenn,dirprop)) ["wsj_0026" ]-- propbankFiles
+
+
+initGHCi :: IO J.JVM
+initGHCi = do
   clspath <- getEnv "CLASSPATH"
-  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
-    let pcfg = def & ( tokenizer .~ True )
-                   . ( words2sentences .~ True )
-                   . ( postagger .~ True )
-                   . ( lemma .~ True )
-                   . ( sutime .~ False )
-                   . ( depparse .~ True )
-                   . ( constituency .~ True )
-                   . ( ner .~ False )
-    pp <- prepare pcfg
-    mapM_ (header <> process pp (dirpenn,dirprop)) propbankFiles
+  J.newJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] 
+  
+  
+
+main :: IO ()
+main = do
+  clspath <- getEnv "CLASSPATH"
+  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] run
