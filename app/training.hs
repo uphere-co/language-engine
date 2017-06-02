@@ -8,6 +8,7 @@
 module Main where
 
 import           Control.Lens               hiding (levels,(<.>))
+import           Control.Exception
 import           Control.Monad                     (void)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
@@ -36,22 +37,17 @@ import           SRL.Feature
 import           SRL.PropBankMatch
 
   
-process :: (FilePath,FilePath) -> FilePath -> IO ()
-process (dirpenn,dirprop) fp = do
+process :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+        -> (FilePath,FilePath)
+        -> FilePath
+        -> IO ()
+process pp (dirpenn,dirprop) fp = do
+  r <- try $ do    
     let pennfile = dirpenn </> fp <.> "mrg"
         propfile = dirprop </> fp <.> "prop"
     void . runEitherT $ do
       (trs,props) <- propbank (pennfile,propfile)
       rdocs <- liftIO $ do
-        let pcfg = def & ( tokenizer .~ True )
-                       . ( words2sentences .~ True )
-                       . ( postagger .~ True )
-                       . ( lemma .~ True )
-                       . ( sutime .~ False )
-                       . ( depparse .~ True )
-                       . ( constituency .~ True )
-                       . ( ner .~ False )
-        pp <- prepare pcfg
         let docs = map mkDocFromPennTree trs
         anns <- mapM (annotate pp) docs
         rdocs <- mapM protobufDoc anns
@@ -65,7 +61,9 @@ process (dirpenn,dirprop) fp = do
              . merge (^.inst_tree_id) (zip4 pts trs deps sents)
              $ props
       liftIO $ mapM_ (showMatchedInstance <> showFeatures ) rs
-
+  case r of
+    Left (e :: SomeException) -> error $ "error in " ++ fp
+    Right _ -> return ()
 
 header fp = do
   putStrLn "*****************************"
@@ -84,5 +82,14 @@ main = do
   let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
       dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
   clspath <- getEnv "CLASSPATH"
-  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do 
-    mapM_ (header <> process (dirpenn,dirprop)) (take 1 (sort propbankFiles))
+  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
+    let pcfg = def & ( tokenizer .~ True )
+                   . ( words2sentences .~ True )
+                   . ( postagger .~ True )
+                   . ( lemma .~ True )
+                   . ( sutime .~ False )
+                   . ( depparse .~ True )
+                   . ( constituency .~ True )
+                   . ( ner .~ False )
+    pp <- prepare pcfg
+    mapM_ (header <> process pp (dirpenn,dirprop)) (sort propbankFiles)
