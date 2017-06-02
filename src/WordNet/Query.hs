@@ -31,14 +31,16 @@ data WordNetDB = WNDB { _indexNounDB :: HM.HashMap Text [Int]
                       , _dataVerbDB  :: IM.IntMap ([LexItem],Text)
                       , _dataAdjDB   :: IM.IntMap ([LexItem],Text)
                       , _dataAdvDB   :: IM.IntMap ([LexItem],Text)
+                      , _senseIdxDB  :: HM.HashMap (Text,Int) Int
                       }
 
 makeLenses ''WordNetDB                 
 
 createWordNetDB :: ([IndexItem],[IndexItem],[IndexItem],[IndexItem])
                 -> ([DataItem],[DataItem],[DataItem],[DataItem])
+                -> [SenseItem]
                 -> WordNetDB 
-createWordNetDB ilsts dlsts =
+createWordNetDB ilsts dlsts slists =
   WNDB (createLemmaMap (ilsts^._1))
        (createLemmaMap (ilsts^._2))
        (createLemmaMap (ilsts^._3))
@@ -47,7 +49,7 @@ createWordNetDB ilsts dlsts =
        (createConceptMap True  (dlsts^._2))
        (createConceptMap False (dlsts^._3))
        (createConceptMap False (dlsts^._4))
-
+       (createSenseMap slists)
 
 createLemmaMap :: [IndexItem] -> HM.HashMap Text [Int]
 createLemmaMap = HM.fromList . map (\x->(x^.idx_lemma,x^.idx_synset_offset))
@@ -55,6 +57,9 @@ createLemmaMap = HM.fromList . map (\x->(x^.idx_lemma,x^.idx_synset_offset))
 createConceptMap :: Bool -> [DataItem] -> IM.IntMap ([LexItem],Text)
 createConceptMap isVerb
   = IM.fromList . map (\x->(x^.data_syn_offset,(x^.data_word_lex_id,x^.data_gloss)))
+
+createSenseMap :: [SenseItem] -> HM.HashMap (Text,Int) Int
+createSenseMap = HM.fromList . map (\x->((x^.sense_lemma,x^.sense_lexid),x^.sense_ss))
 
 indexDB :: WordNetDB -> POS -> HM.HashMap Text [Int]
 indexDB w POS_N = w^.indexNounDB
@@ -68,13 +73,15 @@ dataDB w POS_V = w^.dataVerbDB
 dataDB w POS_A = w^.dataAdjDB
 dataDB w POS_R = w^.dataAdvDB
 
+senseDB w = w^.senseIdxDB
 
 lookupLemma :: WordNetDB -> POS -> Text -> [([LexItem],Text)]
 lookupLemma w p t = do
    n <- join . maybeToList $ HM.lookup t (indexDB w p)
    maybeToList (lookupConcept w p n)
 
-
 lookupConcept :: WordNetDB -> POS -> Int -> Maybe ([LexItem],Text)
 lookupConcept w p n = IM.lookup n (dataDB w p)
 
+lookupSense :: WordNetDB -> Text -> Int -> Maybe Int
+lookupSense w t i = HM.lookup (t,i) (senseDB w)

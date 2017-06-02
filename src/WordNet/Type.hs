@@ -79,8 +79,9 @@ data DataItem = DataItem { _data_syn_offset :: Int
 
 makeLenses ''DataItem                             
                                            
-data SenseItem = SenseItem { _sense_ss :: Int
-                           , _sense_filename :: Text
+data SenseItem = SenseItem { _sense_lemma :: Text
+                           , _sense_ss :: Int
+                           , _sense_lexfilenum :: Int
                            , _sense_lexid :: Int
                            , _sense_headword :: Text
                            , _sense_headid :: Int

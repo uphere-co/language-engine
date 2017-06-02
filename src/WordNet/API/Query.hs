@@ -27,7 +27,8 @@ loadDB fp = do
           <*> (catMaybes <$> parseFile (parseData True ) (fp </> "data.verb"))
           <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adj"))
           <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adv"))
-  return (createWordNetDB is ds)
+  ss <- (catMaybes <$> parseFile parseSense (fp </> "index.sense"))
+  return (createWordNetDB is ds ss)
 
 runSingleQuery input typ db = do
   case decimal (T.pack input) of
