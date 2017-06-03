@@ -65,7 +65,7 @@ process pp (dirpenn,dirprop) (fp,omit) = do
           rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt tr dep,pr))
              . merge (^.inst_tree_id) (zip4 pts trs deps sents)
              $ props
-      liftIO $ mapM_ (showMatchedInstance <> showFeatures) rs 
+      liftIO $ mapM_ (showMatchedInstance <> features) rs 
   case r of
     Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
     Right _ -> return ()
@@ -109,7 +109,7 @@ run t pp = do
   
   let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
       dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
-  mapM_ (header <> process pp (dirpenn,dirprop)) propbankFiles
+  mapM_ (header <> process pp (dirpenn,dirprop)) [("wsj_0161",Omit)] --  propbankFiles
 
 
 initGHCi :: IO J.JVM
