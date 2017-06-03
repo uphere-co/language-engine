@@ -31,7 +31,7 @@ import           PropBank.Type.Prop
 import           SRL.PropBankMatch
 import           SRL.Util
 --
-import Debug.Trace
+-- import Debug.Trace
 
 
 data Position = Before | After | Embed
@@ -156,35 +156,45 @@ findHeadNode rngs headwordtree =
   
 featuresForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode
                    -> [(Range,ParseTreePath,Maybe (Int,Text))]
-featuresForArgNode sentinfo predidx arg node 
-  | arg^.arg_label == "rel" = [] 
-  | otherwise =
-    let rngs = node ^.. mn_trees . traverse . _1
-        ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
-        dep = sentinfo^.corenlp_dep
-        parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
-        opaths = map parseTreePath parsetrees
-        paths = map (simplifyPTP . parseTreePath) parsetrees
-        headwordtrees = headWordTree dep ipt
-        heads = map (\rng -> headWord =<< matchR rng headwordtrees) rngs
-        comparef Nothing  _        = LT
-        comparef _        Nothing  = GT
-        comparef (Just x) (Just y) = (compare `on` (^._1)) x y
-    in  sortBy (comparef `on` (view _3)) $ zip3 rngs paths heads        
-{-     in Just (findHeadNode rngs headwordtrees, 
+featuresForArgNode sentinfo predidx arg node =
+  let rngs = node ^.. mn_trees . traverse . _1
+      ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
+      dep = sentinfo^.corenlp_dep
+      parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
+      opaths = map parseTreePath parsetrees
+      paths = map (simplifyPTP . parseTreePath) parsetrees
+      headwordtrees = headWordTree dep ipt
+      heads = map (\rng -> headWord =<< matchR rng headwordtrees) rngs
+      comparef Nothing  _        = LT
+      comparef _        Nothing  = GT
+      comparef (Just x) (Just y) = (compare `on` (^._1)) x y
+  in  sortBy (comparef `on` (view _3)) $ zip3 rngs paths heads        
 
-             (map (fmap (^._2)) heads)) -}
-    
-featuresForArg :: SentenceInfo -> Int -> MatchedArgument -> [[(Range,ParseTreePath,Maybe (Int,Text))]]
-featuresForArg sentinfo predidx arg = map (featuresForArgNode sentinfo predidx (arg^.ma_argument)) (arg^.ma_nodes)
+
+type ArgNodeFeature = (Text,(Range,ParseTreePath,Maybe (Int,Text)))
+      
+featuresForArg :: SentenceInfo -> Int -> MatchedArgument -> [ArgNodeFeature]
+featuresForArg sentinfo predidx arg =
+  flip mapMaybe (arg^.ma_nodes) $ \node -> do
+    let label = arg^.ma_argument.arg_label
+    fs <- safeHead (featuresForArgNode sentinfo predidx (arg^.ma_argument) node)
+    return (label,fs)
+  -- map ((,) . featuresForArgNode sentinfo predidx (arg^.ma_argument)) 
 
   
-featuresForInstance :: SentenceInfo -> MatchedInstance -> IO ()
-featuresForInstance sentinfo inst = do
-  print (inst ^. mi_instance.inst_lemma_type)
-  print inst
+featuresForInstance :: SentenceInfo -> MatchedInstance -> (Int,Text,[[ArgNodeFeature]])
+featuresForInstance sentinfo inst = 
+  -- print (inst ^. mi_instance.inst_lemma_type)
+  -- print inst
   let predidx = findRelNode (inst^.mi_arguments)
-  mapM_ (print . featuresForArg sentinfo predidx) (inst^.mi_arguments)
+      rolesetid = inst^.mi_instance.inst_lemma_roleset_id
+      argfeatures = map (featuresForArg sentinfo predidx) . filter ((/= "rel") . (^.ma_argument.arg_label)) $ inst^.mi_arguments
+  in (predidx,rolesetid,argfeatures)
+  {- (inst^.mi_arguments)
+    let arg' = filter  arg
+  in  -}
+
+
 
 data Voice = Active | Passive deriving Show
 
@@ -208,7 +218,7 @@ features (_i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
       insts = matchInstances (pt,tr) prs
-  mapM_ (featuresForInstance sentinfo) insts
+  mapM_ (print . featuresForInstance sentinfo) insts
   putStrLn "voice"
   print $ voice (pt,sentinfo^.corenlp_sent)
   putStrLn "end voice"
