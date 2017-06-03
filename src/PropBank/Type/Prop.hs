@@ -5,6 +5,7 @@ module PropBank.Type.Prop where
 import           Control.Lens
 import           Data.Text                   (Text)
 
+data IsOmit = NoOmit | Omit
 
 data Node = Node { _node_id :: Int
                  , _node_height :: Int }

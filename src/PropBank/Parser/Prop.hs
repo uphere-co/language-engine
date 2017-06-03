@@ -36,6 +36,19 @@ parseInst txt =
                           Just xs -> xs
   in Instance {..}
 
+parseInstOmit :: Text -> Instance
+parseInstOmit txt =
+  let _inst_tree_id':_inst_predicate_id':_inst_annotator_id:_inst_lemma_roleset_id:_:_inst_arguments'
+        = T.words txt
+      _inst_lemma_type = ""        
+      _inst_tree_id = readDecimal _inst_tree_id'
+      _inst_predicate_id = readDecimal _inst_predicate_id'
+      _inst_arguments = case mapM parseArg _inst_arguments' of
+                          Nothing -> error "parseArg"
+                          Just xs -> xs
+  in Instance {..}
+
+
 
 parseNomInst :: Text -> NomInstance
 parseNomInst txt = 
@@ -64,8 +77,10 @@ parseArg txt = case A.parseOnly p_arg txt of
                     return (Node (readDecimal i) (readDecimal h))
 
         
-parseProp :: Text -> [Instance]
-parseProp = map parseInst . T.lines
+parseProp :: IsOmit -> Text -> [Instance]
+parseProp omit = case omit of
+                   NoOmit -> map parseInst . T.lines
+                   Omit -> map parseInstOmit . T.lines
 
 parseNomProp :: Text -> [NomInstance]
 parseNomProp = map parseNomInst . T.lines
