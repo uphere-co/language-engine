@@ -169,8 +169,8 @@ featuresForArgNode sentinfo predidx arg node =
       paths = map (simplifyPTP . parseTreePath) parsetrees
       headwordtrees = headWordTree dep ipt
       heads = map (\rng -> headWord =<< matchR rng headwordtrees) rngs
-      comparef Nothing  _        = LT
-      comparef _        Nothing  = GT
+      comparef Nothing  _        = GT
+      comparef _        Nothing  = LT
       comparef (Just x) (Just y) = (compare `on` (^._1)) x y
   in  sortBy (comparef `on` (view _3)) $ zip3 rngs paths heads        
 

@@ -78,7 +78,7 @@ process pp (dirpenn,dirprop) (fp,omit) = do
           rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt tr dep,pr))
              . merge (^.inst_tree_id) (zip4 pts trs deps sents)
              $ props
-      liftIO $ mapM_ ({- showMatchedInstance <> -} features) rs 
+      liftIO $ mapM_ (showMatchedInstance <> features) rs 
   case r of
     Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
     Right _ -> return ()

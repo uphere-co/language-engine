@@ -181,6 +181,6 @@ showMatchedInstance (_i,sentinfo,prs) = do
   TIO.putStrLn "-----------------"            
   TIO.putStrLn (T.intercalate " " terms)
   TIO.putStrLn "-----------------"
-  mapM_ printMatchedInst $ matchInstances (pt,tr) prs
+  -- mapM_ printMatchedInst $ matchInstances (pt,tr) prs
 
 
