@@ -83,7 +83,7 @@ process pp (dirpenn,dirprop) (fp,omit) = do
     Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
     Right _ -> return ()
 
-
+preparePP :: IO (J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
 preparePP = do
   let pcfg = def & ( tokenizer .~ True )
                  . ( words2sentences .~ True )
@@ -95,6 +95,7 @@ preparePP = do
                  . ( ner .~ False )
   prepare pcfg
 
+run :: FastText -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline") -> IO ()
 run t pp = do
   withCString "vector" $ \cstr_word -> do
     let c_size = 300
@@ -107,11 +108,9 @@ run t pp = do
     let mv = MVector (fromIntegral c_size) ptr
     let v = create (return mv)
     print v
-    
-  
   let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
       dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
-  mapM_ (header <> process pp (dirpenn,dirprop)) [("wsj_0161",Omit)] --  propbankFiles
+  mapM_ (header <> process pp (dirpenn,dirprop)) propbankFiles
 
 
 initGHCi :: IO J.JVM
@@ -120,6 +119,7 @@ initGHCi = do
   j <- J.newJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] 
   return j
 
+init2 :: IO FastText
 init2 = initWVDB "/scratch/wavewave/wordvector/wiki.en.bin"
 
 

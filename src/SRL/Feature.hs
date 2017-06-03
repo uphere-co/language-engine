@@ -18,9 +18,7 @@ import           Data.List                      (foldl',group,sortBy,zip4)
 import           Data.Maybe                     (catMaybes,fromJust,mapMaybe)
 import           Data.Text                      (Text)
 import qualified Data.Text               as T   (intercalate,unpack)
--- import qualified Data.Text.Format        as TF
 import qualified Data.Text.IO            as TIO
--- import qualified Data.Text.Lazy          as TL
 import           Data.Tree                      (levels)
 import           Text.Printf
 --
@@ -35,8 +33,6 @@ import           PropBank.Type.Prop
 import           SRL.PropBankMatch
 import           SRL.Util
 --
--- import Debug.Trace
-
 
 data Position = Before | After | Embed
               deriving (Show,Eq,Ord)
@@ -45,7 +41,18 @@ data Direction = Up | Down
                deriving (Show,Eq,Ord)
 
 type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
-                        
+
+data Voice = Active | Passive deriving Show
+
+type TreeICP a = Tree (Range,ChunkTag) (Int,(POSTag,a))
+
+type TreeZipperICP a = TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
+
+type ArgNodeFeature = (Text,(Range,ParseTreePath,Maybe (Int,Text)))
+
+type InstanceFeature = (Int,Text,Maybe Voice, [[ArgNodeFeature]])
+
+                     
 phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
 phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
@@ -117,10 +124,6 @@ lemmatize :: IntMap Text
 lemmatize m = bimap id (\(i,(p,x)) -> (i,(p,(x,fromJust (IM.lookup i m)))))
 
 
-type TreeICP a = Tree (Range,ChunkTag) (Int,(POSTag,a))
-
-type TreeZipperICP a = TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
-
 isVBN :: TreeZipperICP a -> Bool
 isVBN z = case current z of
             PL (_,(p,_)) -> p == VBN
@@ -148,15 +151,6 @@ isPassive z = let b1 = isVBN z
                   b3 = isInNP z
                   b4 = isInPP z
               in (b1 && b2) || (b1 && b3) || (b1 && b4)
-
-{- 
-findHeadNode :: [Range] -> PennTreeIdxG ChunkTag (Maybe Int,(POSTag,Text)) -> [Range]
-findHeadNode rngs headwordtree =
-  let headranges :: [(Range, (Int,Text))]
-      headranges = mapMaybe (\rng -> fmap (rng,) . headWord =<< matchR rng headwordtree) rngs
-  in map (^._1) $ sortBy (compare `on` (^. _2 . _1)) headranges
--}
-
   
 featuresForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode
                    -> [(Range,ParseTreePath,Maybe (Int,Text))]
@@ -174,8 +168,6 @@ featuresForArgNode sentinfo predidx arg node =
       comparef (Just x) (Just y) = (compare `on` (^._1)) x y
   in  sortBy (comparef `on` (view _3)) $ zip3 rngs paths heads        
 
-
-type ArgNodeFeature = (Text,(Range,ParseTreePath,Maybe (Int,Text)))
       
 featuresForArg :: SentenceInfo -> Int -> MatchedArgument -> [ArgNodeFeature]
 featuresForArg sentinfo predidx arg =
@@ -184,8 +176,6 @@ featuresForArg sentinfo predidx arg =
     fs <- safeHead (featuresForArgNode sentinfo predidx (arg^.ma_argument) node)
     return (label,fs)
 
-
-type InstanceFeature = (Int,Text,Maybe Voice, [[ArgNodeFeature]])
   
 featuresForInstance :: SentenceInfo -> IntMap (Text,Voice) -> MatchedInstance -> InstanceFeature
 featuresForInstance sentinfo voicemap inst = 
@@ -195,10 +185,6 @@ featuresForInstance sentinfo voicemap inst =
       voicefeature = fmap snd (IM.lookup predidx voicemap)
   in (predidx,rolesetid,voicefeature,argfeatures)
 
-
-
-
-data Voice = Active | Passive deriving Show
 
 formatVoice :: Maybe Voice -> String
 formatVoice Nothing = " "
@@ -220,9 +206,6 @@ formatArgNodeFeature (label,(rng,ptp,mhead)) =
   where
     hstr Nothing = ""
     hstr (Just (_,w)) = (T.unpack w)
-
---   (Text,(Range,ParseTreePath,Maybe (Int,Text)))
-
 
 
 formatInstanceFeature :: InstanceFeature -> String
@@ -254,7 +237,3 @@ features (_i,sentinfo,prs) = do
       vmap = IM.fromList $ voice (pt,sentinfo^.corenlp_sent)
       ifeats = map (featuresForInstance sentinfo vmap) insts
   mapM_ (putStrLn . formatInstanceFeature) ifeats
-  -- mapM_ (print . 
-  {- putStrLn "voice"
-  print $ 
-  putStrLn "end voice" -}
