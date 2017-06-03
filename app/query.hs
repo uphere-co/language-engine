@@ -81,11 +81,12 @@ main = do
   let db = createWordNetDB is ds ss
 
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input -> liftIO $ do
-    case (words input) of
-      t:i:[]    -> print $ lookupSense db (T.pack t) (read i)
-      otherwise -> print "Invalid Input." 
-    {-
     case decimal (T.pack input) of
       Left str -> queryLemma db (T.pack input)
       Right (n,_) -> queryConcept db n
+
+    {-
+    case (words input) of
+      t:i:[]    -> print $ lookupSense db (T.pack t) (read i)
+      otherwise -> print "Invalid Input." 
     -}
