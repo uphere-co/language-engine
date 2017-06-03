@@ -20,6 +20,7 @@ library
                        SRL
                        SRL.CoNLL.CoNLL08.Parser
                        SRL.CoNLL.CoNLL08.Type
+                       SRL.DataSet.PropBank
                        SRL.Feature
                        SRL.PropBankMatch
                        SRL.Type
@@ -80,5 +81,36 @@ Executable feature
                        nlp-types,
                        --
                        semantic-role-labeler                       
-  
+
+
+Executable training
+  Main-is:             training.hs
+  hs-source-dirs:      app
+  default-language:    Haskell2010
+  ghc-options:         -O2 -Wall
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+  ghc-prof-options:    -caf-all -auto-all
+  other-modules:       
+  build-depends:       base,
+                       --
+                       attoparsec,
+                       bytestring,
+                       containers,
+                       data-default,
+                       either,
+                       filepath,
+                       jvm,
+                       lens,
+                       text,
+                       time,
+                       --
+                       HCoreNLP,
+                       HCoreNLP-Proto,
+                       PropBank,
+                       nlp-types,
+                       --
+                       semantic-role-labeler                       
+                         
   

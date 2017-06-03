@@ -1,23 +1,32 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
 module SRL.Feature where
 
-import           Control.Monad                  ((<=<))
+import           Control.Lens            hiding (levels)
+import           Control.Monad                  ((<=<),when)
 import           Data.Bifunctor                 (bimap)
 import           Data.Function                  (on)
 import           Data.Graph                     (buildG,dfs)
 import qualified Data.IntMap             as IM
-import           Data.List                      (sortBy)
-import           Data.Maybe                     (fromJust,mapMaybe)
+import           Data.List                      (foldl',group,sortBy,zip4)
+import           Data.Maybe                     (catMaybes,fromJust,mapMaybe)
 import           Data.Text                      (Text)
+import qualified Data.Text               as T   (intercalate,unpack)
+import qualified Data.Text.IO            as TIO
 import           Data.Tree                      (levels)
 --
+import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
+import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
+import           CoreNLP.Simple.Convert                      (cutf8)
 import           CoreNLP.Simple.Type.Simplified
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
+import           PropBank.Type.Prop
 --
+import           SRL.PropBankMatch
 import           SRL.Util
 
 
@@ -71,6 +80,11 @@ parseTreePath (mh,tostart,totarget) =
                   lst2 = map ((,Up).snd.phraseType) . reverse $ tostart
               in lst2 ++ lst1
 
+
+
+simplifyPTP :: (Eq c,Eq p) => [(Either c p, Direction)] -> [(Either c p, Direction)]
+simplifyPTP xs = map head (group xs)
+
 annotateLevel :: IM.IntMap Int -> (Int, t) -> (Int,(Maybe Int,t))
 annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))
 
@@ -123,3 +137,54 @@ isPassive z = let b1 = isVBN z
                   b3 = isInNP z
                   b4 = isInPP z
               in (b1 && b2) || (b1 && b3) || (b1 && b4)
+
+showFeaturesForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode -> IO ()
+showFeaturesForArgNode sentinfo predidx arg node = 
+  when (arg ^. arg_label /= "rel")  $ do
+    print (arg ^. arg_label)
+    let rngs = node ^.. mn_trees . traverse . _1
+    let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
+        dep = sentinfo^.corenlp_dep
+        parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
+        opaths = map parseTreePath parsetrees
+        paths = map (simplifyPTP . parseTreePath) parsetrees
+        
+        heads = map (\rng -> headWord =<< matchR rng (headWordTree dep ipt)) rngs
+    mapM_ print (zip4 rngs opaths paths heads)
+
+    
+showFeaturesForArg :: SentenceInfo -> Int -> MatchedArgument -> IO ()
+showFeaturesForArg sentinfo predidx arg = 
+  mapM_ (showFeaturesForArgNode sentinfo predidx (arg^.ma_argument)) (arg^.ma_nodes)
+
+  
+showFeaturesForInstance :: SentenceInfo -> MatchedInstance -> IO ()
+showFeaturesForInstance sentinfo inst = do
+  print (inst ^. mi_instance.inst_lemma_type)
+  let predidx = findRelNode (inst^.mi_arguments)
+  mapM_ (showFeaturesForArg sentinfo predidx) (inst^.mi_arguments)
+
+
+showVoice :: (PennTree,S.Sentence) -> IO ()
+showVoice (pt,sent) = do
+  TIO.putStrLn "---------- VOICE -----------------"
+  let ipt = mkPennTreeIdx pt
+      lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
+                    zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
+      lemmapt = lemmatize lemmamap ipt
+      getf (PL x) = Right x
+      getf (PN x _) = Left x
+      testf z = case getf (current z) of
+                  Right (n,(VBN,(txt,_))) -> putStrLn (show n ++ ": " ++  T.unpack txt ++ ": " ++ show (isPassive z))
+                  _ -> return ()
+  mapM_ testf (mkTreeZipper [] lemmapt)
+
+
+
+showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
+showFeatures (_i,sentinfo,prs) = do
+  let pt = sentinfo^.corenlp_tree
+      tr = sentinfo^.propbank_tree
+      insts = matchInstances (pt,tr) prs
+  mapM_ (showFeaturesForInstance sentinfo) insts
+  showVoice (pt,sentinfo^.corenlp_sent)

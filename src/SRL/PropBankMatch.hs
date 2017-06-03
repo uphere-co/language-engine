@@ -1,21 +1,35 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module SRL.PropBankMatch where
 
+import           Control.Applicative             (many)
 import           Control.Lens
+import           Control.Monad.IO.Class          (liftIO)
+import           Control.Monad.Trans.Either      (EitherT,hoistEither)
+import qualified Data.Attoparsec.Text       as A
+import           Data.Foldable                   (toList)
 import           Data.Maybe                      (fromJust,mapMaybe,listToMaybe)
 import           Data.Monoid                     ((<>))
+import           Data.Text                       (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
+import           Data.Time.Calendar              (fromGregorian)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
-import qualified CoreNLP.Simple.Type.Simplified as S
+import qualified CoreNLP.Simple.Type                   as S
+import qualified CoreNLP.Simple.Type.Simplified        as S
+import           NLP.Parser.PennTreebankII
+import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 --
 import           SRL.Util
+--
+import           Debug.Trace
 
 data SentenceInfo = SentInfo { _corenlp_sent :: CS.Sentence
                              , _corenlp_tree :: PennTree
@@ -83,7 +97,7 @@ matchR (b,e) x@(PL (n,_))
   | otherwise = Nothing
 
 matchArgNodes :: (PennTree,PennTree) -> Argument -> [MatchedArgNode]
-matchArgNodes (pt,tr) arg = do
+matchArgNodes (pt,tr) arg =   trace (show arg) $ do
   n <- arg ^. arg_terminals
   let nd = fromJust (findNode n tr)
   let adjf = adjustIndexFromTree tr
@@ -132,4 +146,37 @@ findRelNode :: [MatchedArgument] -> Int
 findRelNode args =
   let a1 = head $ filter (\a -> a ^. ma_argument.arg_label == "rel") args
   in head (a1^..ma_nodes.traverse.mn_node._1._1)
+
+propbank :: (FilePath,FilePath) -> EitherT String IO ([PennTree],[Instance])
+propbank (pennfile,propfile) =  do
+  txt <- liftIO $ TIO.readFile pennfile
+  trs <- hoistEither $ A.parseOnly (many (A.skipSpace *> penntree)) txt
+  props <- liftIO $ parseProp <$> TIO.readFile propfile
+  return (trs,props)
+
+
+mkDocFromPennTree :: PennTree -> S.Document
+mkDocFromPennTree = flip S.Document (fromGregorian 2017 4 17)
+                  . T.intercalate " "
+                  . map snd
+                  . filter (\(t :: Text,_) -> t /= "-NONE-")
+                  . getLeaves  
+
+
+showMatchedInstance :: (Int,SentenceInfo,[Instance]) -> IO ()
+showMatchedInstance (_i,sentinfo,prs) = do
+  let pt = sentinfo^.corenlp_tree
+      tr = sentinfo^.propbank_tree
+      terms = map (^._2) . toList $ pt
+  TIO.putStrLn "================="
+  TIO.putStrLn "PropBank"
+  TIO.putStrLn $ prettyPrint 0 tr
+  TIO.putStrLn "-----------------"
+  TIO.putStrLn "CoreNLP"  
+  TIO.putStrLn $ prettyPrint 0 pt
+  TIO.putStrLn "-----------------"            
+  TIO.putStrLn (T.intercalate " " terms)
+  TIO.putStrLn "-----------------"
+  mapM_ printMatchedInst $ matchInstances (pt,tr) prs
+
 
