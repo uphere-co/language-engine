@@ -12,13 +12,17 @@ import           Data.Bifunctor                 (bimap)
 import           Data.Foldable                  (toList)
 import           Data.Function                  (on)
 import           Data.Graph                     (buildG,dfs)
+import           Data.IntMap                    (IntMap)
 import qualified Data.IntMap             as IM
 import           Data.List                      (foldl',group,sortBy,zip4)
 import           Data.Maybe                     (catMaybes,fromJust,mapMaybe)
 import           Data.Text                      (Text)
 import qualified Data.Text               as T   (intercalate,unpack)
+-- import qualified Data.Text.Format        as TF
 import qualified Data.Text.IO            as TIO
+-- import qualified Data.Text.Lazy          as TL
 import           Data.Tree                      (levels)
+import           Text.Printf
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
@@ -92,7 +96,7 @@ parseTreePath (mh,tostart,totarget) =
 simplifyPTP :: (Eq c,Eq p) => [(Either c p, Direction)] -> [(Either c p, Direction)]
 simplifyPTP xs = map head (group xs)
 
-annotateLevel :: IM.IntMap Int -> (Int, t) -> (Int,(Maybe Int,t))
+annotateLevel :: IntMap Int -> (Int, t) -> (Int,(Maybe Int,t))
 annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))
 
 headWordTree :: Dependency -> Tree c (Int,t) -> Tree c (Int,(Maybe Int,t))
@@ -107,7 +111,7 @@ headWord :: PennTreeIdxG ChunkTag (Maybe Int,(POSTag,Text)) -> Maybe (Int,Text)
 headWord  = safeHead . sortBy (compare `on` fst)
           . mapMaybe (\(_,(ml,(_,t))) -> (,) <$> ml <*> pure t) . getLeaves 
 
-lemmatize :: IM.IntMap Text
+lemmatize :: IntMap Text
           -> PennTreeIdxG ChunkTag (POSTag,Text)
           -> PennTreeIdxG ChunkTag (POSTag,(Text,Text))
 lemmatize m = bimap id (\(i,(p,x)) -> (i,(p,(x,fromJust (IM.lookup i m)))))
@@ -179,26 +183,55 @@ featuresForArg sentinfo predidx arg =
     let label = arg^.ma_argument.arg_label
     fs <- safeHead (featuresForArgNode sentinfo predidx (arg^.ma_argument) node)
     return (label,fs)
-  -- map ((,) . featuresForArgNode sentinfo predidx (arg^.ma_argument)) 
 
+
+type InstanceFeature = (Int,Text,Maybe Voice, [[ArgNodeFeature]])
   
-featuresForInstance :: SentenceInfo -> MatchedInstance -> (Int,Text,[[ArgNodeFeature]])
-featuresForInstance sentinfo inst = 
-  -- print (inst ^. mi_instance.inst_lemma_type)
-  -- print inst
+featuresForInstance :: SentenceInfo -> IntMap (Text,Voice) -> MatchedInstance -> InstanceFeature
+featuresForInstance sentinfo voicemap inst = 
   let predidx = findRelNode (inst^.mi_arguments)
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
       argfeatures = map (featuresForArg sentinfo predidx) . filter ((/= "rel") . (^.ma_argument.arg_label)) $ inst^.mi_arguments
-  in (predidx,rolesetid,argfeatures)
-  {- (inst^.mi_arguments)
-    let arg' = filter  arg
-  in  -}
+      voicefeature = fmap snd (IM.lookup predidx voicemap)
+  in (predidx,rolesetid,voicefeature,argfeatures)
+
 
 
 
 data Voice = Active | Passive deriving Show
 
-voice :: (PennTree,S.Sentence) -> [(Int,Text,Voice)]
+formatVoice :: Maybe Voice -> String
+formatVoice Nothing = " "
+formatVoice (Just Active) = "active"
+formatVoice (Just Passive) = "passive"
+
+formatPTP :: ParseTreePath -> String
+formatPTP = foldMap f 
+  where
+    f (Left  c,Up  ) = show c ++ "↑"
+    f (Left  c,Down) = show c ++ "↓"
+    f (Right p,Up  ) = show p ++ "↑"
+    f (Right p,Down) = show p ++ "↓"
+
+
+formatArgNodeFeature :: ArgNodeFeature -> String
+formatArgNodeFeature (label,(rng,ptp,mhead)) =
+    printf "%10s %10s %30s %s" (T.unpack label) (show rng) (formatPTP ptp) (hstr mhead)
+  where
+    hstr Nothing = ""
+    hstr (Just (_,w)) = (T.unpack w)
+
+--   (Text,(Range,ParseTreePath,Maybe (Int,Text)))
+
+
+
+formatInstanceFeature :: InstanceFeature -> String
+formatInstanceFeature (predidx,rolesetid,voicefeature,argfeatures) =
+  let fs = concat argfeatures
+  in foldMap (\x -> printf "%10s %20s %10s %s\n" (show predidx) (T.unpack rolesetid) (formatVoice voicefeature) (formatArgNodeFeature x)) fs
+
+
+voice :: (PennTree,S.Sentence) -> [(Int,(Text,Voice))]
 voice (pt,sent) = 
   let ipt = mkPennTreeIdx pt
       lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
@@ -207,7 +240,7 @@ voice (pt,sent) =
       getf (PL x) = Right x
       getf (PN x _) = Left x
       testf z = case getf (current z) of
-                  Right (n,(VBN,(txt,_))) -> Just (n,txt,if isPassive z then Passive else Active)
+                  Right (n,(VBN,(txt,_))) -> Just (n,(txt,if isPassive z then Passive else Active))
                   _ -> Nothing
   in mapMaybe testf $ toList (mkTreeZipper [] lemmapt)
 
@@ -218,7 +251,10 @@ features (_i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
       insts = matchInstances (pt,tr) prs
-  mapM_ (print . featuresForInstance sentinfo) insts
-  putStrLn "voice"
-  print $ voice (pt,sentinfo^.corenlp_sent)
-  putStrLn "end voice"
+      vmap = IM.fromList $ voice (pt,sentinfo^.corenlp_sent)
+      ifeats = map (featuresForInstance sentinfo vmap) insts
+  mapM_ (putStrLn . formatInstanceFeature) ifeats
+  -- mapM_ (print . 
+  {- putStrLn "voice"
+  print $ 
+  putStrLn "end voice" -}

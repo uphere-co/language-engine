@@ -39,6 +39,7 @@ library
                        lens,
                        split,
                        text,
+                       -- text-format,
                        time,
                        --
                        fastText,
