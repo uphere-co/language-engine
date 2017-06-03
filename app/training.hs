@@ -123,7 +123,6 @@ init2 :: IO FastText
 init2 = initWVDB "/scratch/wavewave/wordvector/wiki.en.bin"
 
 
-
 main :: IO ()
 main = do
   clspath <- getEnv "CLASSPATH"

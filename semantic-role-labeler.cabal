@@ -41,6 +41,7 @@ library
                        text,
                        -- text-format,
                        time,
+                       vector,
                        --
                        fastText,
                        nlp-types,
@@ -73,8 +74,10 @@ Executable feature
                        containers,
                        data-default,
                        either,
+                       filepath,
                        jvm,
                        lens,
+                       optparse-applicative,
                        text,
                        time,
                        --
@@ -104,10 +107,12 @@ Executable training
                        data-default,
                        either,
                        filepath,
+                       jni,
                        jvm,
                        lens,
                        text,
                        time,
+                       vector,
                        --
                        fastText,
                        HCoreNLP,
