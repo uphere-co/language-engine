@@ -11,6 +11,7 @@ import           Control.Monad.IO.Class          (liftIO)
 import           Control.Monad.Trans.Either      (EitherT,hoistEither)
 import qualified Data.Attoparsec.Text       as A
 import           Data.Foldable                   (toList)
+import Data.List (intercalate)
 import           Data.Maybe                      (fromJust,mapMaybe,listToMaybe)
 import           Data.Monoid                     ((<>))
 import           Data.Text                       (Text)
@@ -144,14 +145,17 @@ printMatchedInst x = do
 
 findRelNode :: [MatchedArgument] -> Int
 findRelNode args =
-  let a1 = head $ filter (\a -> a ^. ma_argument.arg_label == "rel") args
-  in head (a1^..ma_nodes.traverse.mn_node._1._1)
+    let a1 = headf $ filter (\a -> a ^. ma_argument.arg_label == "rel") args
+    in headf (a1^..ma_nodes.traverse.mn_node._1._1)
+  where headf [] = error ("findRelNode: " ++ intercalate "\n" (map show args))
+        headf (x:_) = x
 
-propbank :: (FilePath,FilePath) -> EitherT String IO ([PennTree],[Instance])
-propbank (pennfile,propfile) =  do
+
+propbank :: (FilePath,FilePath,IsOmit) -> EitherT String IO ([PennTree],[Instance])
+propbank (pennfile,propfile,omit) =  do
   txt <- liftIO $ TIO.readFile pennfile
   trs <- hoistEither $ A.parseOnly (many (A.skipSpace *> penntree)) txt
-  props <- liftIO $ parseProp <$> TIO.readFile propfile
+  props <- liftIO $ parseProp omit <$> TIO.readFile propfile
   return (trs,props)
 
 

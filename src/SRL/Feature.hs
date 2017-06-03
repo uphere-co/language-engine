@@ -28,6 +28,8 @@ import           PropBank.Type.Prop
 --
 import           SRL.PropBankMatch
 import           SRL.Util
+--
+import Debug.Trace
 
 
 data Position = Before | After | Embed
@@ -67,7 +69,8 @@ elimCommonHead lst1 lst2 = go lst1 lst2
     go xs     []     = (Nothing,xs,[])
 
 
-parseTreePathFull :: (Int,Range) -> PennTreeIdxG c (p,a)
+parseTreePathFull :: (Show c, Show p, Show a) =>
+                     (Int,Range) -> PennTreeIdxG c (p,a)
                   -> (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
 parseTreePathFull (start,target) tr = elimCommonHead (contain start tr) (containR target tr)
 
@@ -150,6 +153,9 @@ showFeaturesForArgNode sentinfo predidx arg node =
         paths = map (simplifyPTP . parseTreePath) parsetrees
         
         heads = map (\rng -> headWord =<< matchR rng (headWordTree dep ipt)) rngs
+    if rngs == [(6,7)]
+      then print (containR (6,7) ipt)
+      else return ()
     mapM_ print (zip4 rngs opaths paths heads)
 
     

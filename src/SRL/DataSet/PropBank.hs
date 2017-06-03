@@ -1,94 +1,96 @@
 module SRL.DataSet.PropBank where
 
-propbankFiles :: [FilePath]
-propbankFiles = [ "110CYL067"
-                , "110CYL068"
-                , "110CYL069"
-                , "110CYL070"  
-                , "110CYL071"  
-                , "110CYL072"  
-                , "110CYL200"  
-                , "112C-L012"  
-                , "112C-L013"  
-                , "112C-L014"  
-                , "112C-L015"  
-                , "112C-L016"  
-                , "113CWL017" 
-                , "113CWL018"  
-                , "114CUL057"  
-                , "114CUL058"  
-                , "114CUL059"  
-                , "114CUL060"  
-                , "115CVL035"  
-                , "115CVL036"  
-                , "115CVL037"  
-                , "116CUL032"  
-                , "116CUL033"  
-                , "116CUL034"  
-                , "117CWL008"  
-                  -- , "117CWL009" -- * with .txt
-                , "118CWL048"  
-                , "118CWL049"  
-                , "118CWL050" 
-                , "119CWL041"
-                , "20000410_nyt-NEW"                    
-                , "20000415_apw_eng-NEW"                
-                , "20000419_apw_eng-NEW"                
-                , "20000424_nyt-NEW"                    
-                -- , "20000815_AFP_ARB.0084.IBM-HA-NEW-en"  --  no prop file
-                , "602CZL285"                           
-                , "A1.E1-NEW"                           
-                , "A1.E2-NEW"                           
-                , "Article247_327"                      
-                , "Article247_328"                      
-                , "Article247_3500"                     
-                , "Article247_400"                      
-                , "Article247_500"                      
-                , "Article247_66"                       
-                -- , "ch5"    --   no prop file           
-                , "chapter-10"                          
-                , "chZ"                                 
-                -- , "ENRON-pearson-email-25jul02"     -- file didn't match
-                , "enron-thread-159550"                 
-                , "HistoryGreek"                        
-                , "HistoryJerusalem"                    
-                , "lw1"                                 
-                , "pmed.0010029"                        
-                , "VOL15_3"                             
-                , "wsj_0006"                            
-                , "wsj_0026"                            
-                , "wsj_0027"                            
-                , "wsj_0032"                            
-                , "wsj_0068"                            
-                , "wsj_0073"
-                , "wsj_0106"    
-                -- , "wsj_0120"   -- no prop file
-                , "wsj_0124"
-                , "wsj_0127"
-                , "wsj_0132"
-                , "wsj_0135"
-                , "wsj_0136"
-                , "wsj_0144"
-                , "wsj_0150"
-                , "wsj_0151"
-                , "wsj_0152"
-                , "wsj_0157"
-                , "wsj_0158"
-                , "wsj_0159"
-                , "wsj_0160"
-                , "wsj_0161"
-                , "wsj_0165"
-                , "wsj_0167"
-                , "wsj_0168"
-                , "wsj_0169"
-                , "wsj_0171"
-                , "wsj_0172"
-                , "wsj_0173"
-                , "wsj_0175"
-                , "wsj_0176"
-                , "wsj_0184"
-                , "wsj_0187"
-                , "wsj_0189"
-                  -- "wsj_1640"  -- * with -NEW
-                , "wsj_2465"
+import PropBank.Type.Prop
+
+propbankFiles :: [(FilePath,IsOmit)]
+propbankFiles = [ ("110CYL067", NoOmit)
+                , ("110CYL068", NoOmit)
+                , ("110CYL069", NoOmit)
+                , ("110CYL070", NoOmit)
+                , ("110CYL071", NoOmit)  
+                , ("110CYL072", NoOmit)
+                , ("110CYL200", NoOmit)
+                , ("112C-L012", NoOmit)
+                , ("112C-L013", NoOmit)
+                , ("112C-L014", NoOmit)
+                , ("112C-L015", NoOmit)
+                , ("112C-L016", NoOmit)
+                , ("113CWL017", NoOmit)
+                , ("113CWL018", NoOmit)
+                , ("114CUL057", NoOmit)
+                , ("114CUL058", NoOmit)
+                , ("114CUL059", NoOmit)
+                , ("114CUL060", NoOmit)
+                , ("115CVL035", NoOmit)
+                , ("115CVL036", NoOmit)
+                , ("115CVL037", NoOmit)
+                , ("116CUL032", NoOmit)
+                , ("116CUL033", NoOmit)
+                , ("116CUL034", NoOmit)
+                , ("117CWL008", NoOmit)
+                  -- , ("117CWL009" -- * with .txt
+                , ("118CWL048", NoOmit)
+                , ("118CWL049", NoOmit)
+                , ("118CWL050", NoOmit) 
+                , ("119CWL041", NoOmit)
+                , ("20000410_nyt-NEW", NoOmit)                  
+                , ("20000415_apw_eng-NEW", NoOmit)              
+                , ("20000419_apw_eng-NEW", NoOmit)              
+                , ("20000424_nyt-NEW", NoOmit)                  
+                -- , ("20000815_AFP_ARB.0084.IBM-HA-NEW-en", NoOmit)--  no prop file
+                , ("602CZL285", NoOmit)                         
+                , ("A1.E1-NEW", NoOmit)                         
+                , ("A1.E2-NEW", NoOmit)                         
+                , ("Article247_327", NoOmit)                    
+                , ("Article247_328", NoOmit)                    
+                , ("Article247_3500", NoOmit)                   
+                , ("Article247_400", NoOmit)                    
+                , ("Article247_500", NoOmit)                    
+                , ("Article247_66", NoOmit)                     
+                -- , ("ch5", NoOmit)  --   no prop file           
+                , ("chapter-10", NoOmit)                        
+                , ("chZ", NoOmit)                               
+                -- , ("ENRON-pearson-email-25jul02", NoOmit)   -- file didn't match
+                , ("enron-thread-159550", NoOmit)               
+                , ("HistoryGreek", NoOmit)                      
+                , ("HistoryJerusalem", NoOmit)                  
+                , ("lw1", NoOmit)                         
+                , ("pmed.0010029", NoOmit)                      
+                , ("VOL15_3", NoOmit)                           
+                , ("wsj_0006", Omit)                          
+                , ("wsj_0026", Omit)                          
+                , ("wsj_0027", Omit)                          
+                , ("wsj_0032", Omit)                          
+                , ("wsj_0068", Omit)                          
+                , ("wsj_0073", Omit)
+                , ("wsj_0106", Omit)  
+                -- , ("wsj_0120", Omit) -- no prop file
+                , ("wsj_0124", Omit)
+                , ("wsj_0127", Omit)
+                , ("wsj_0132", Omit)
+                , ("wsj_0135", Omit)
+                , ("wsj_0136", Omit)
+                , ("wsj_0144", Omit)
+                , ("wsj_0150", Omit)
+                , ("wsj_0151", Omit)
+                , ("wsj_0152", Omit)
+                , ("wsj_0157", Omit)
+                , ("wsj_0158", Omit)
+                , ("wsj_0159", Omit)
+                , ("wsj_0160", Omit)
+                , ("wsj_0161", Omit)
+                , ("wsj_0165", Omit)
+                , ("wsj_0167", Omit)
+                , ("wsj_0168", Omit)
+                , ("wsj_0169", Omit)
+                , ("wsj_0171", Omit)
+                , ("wsj_0172", Omit)
+                , ("wsj_0173", Omit)
+                , ("wsj_0175", Omit)
+                , ("wsj_0176", Omit)
+                , ("wsj_0184", Omit)
+                , ("wsj_0187", Omit)
+                , ("wsj_0189", Omit)
+                  -- "wsj_1640", Omit)-- * with -NEW
+                , ("wsj_2465", Omit)
                 ]
