@@ -23,6 +23,7 @@ library
                        SRL.DataSet.PropBank
                        SRL.Feature
                        SRL.PropBankMatch
+                       SRL.Train
                        SRL.Type
                        SRL.Util
                        SRL.Vectorize

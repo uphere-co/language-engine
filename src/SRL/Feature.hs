@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
@@ -9,6 +10,7 @@ module SRL.Feature where
 import           Control.Lens            hiding (levels,Level)
 import           Control.Monad                  ((<=<),when)
 import           Data.Bifunctor                 (bimap)
+import           Data.Bifoldable
 import           Data.Foldable                  (toList)
 import           Data.Function                  (on)
 import           Data.Graph                     (buildG,dfs)
@@ -58,12 +60,18 @@ phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
 phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
 
+{- 
 position :: Int ->  PennTreeGen c (Int,(p,a)) -> Position
 position n tr = let (b,e) = termRange tr
                 in if | n < b     -> Before
                       | n > e     -> After
                       | otherwise -> Embed
+-}
 
+position :: Int -> Range -> Position
+position n (b,e) = if | n < b     -> Before
+                      | n > e     -> After
+                      | otherwise -> Embed
 
 elimCommonHead :: [PennTreeIdxG c (p,a)]
                -> [PennTreeIdxG c (p,a)]
@@ -179,13 +187,46 @@ featuresForArg sentinfo predidx arg =
     return (label,fs)
 
   
-featuresForInstance :: SentenceInfo -> IntMap (Text,Voice) -> MatchedInstance -> InstanceFeature
+featuresForInstance :: SentenceInfo -> IntMap (Text,Voice)  -> MatchedInstance -> InstanceFeature
 featuresForInstance sentinfo voicemap inst = 
   let predidx = findRelNode (inst^.mi_arguments)
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
       argfeatures = map (featuresForArg sentinfo predidx) . filter ((/= "rel") . (^.ma_argument.arg_label)) $ inst^.mi_arguments
       voicefeature = fmap snd (IM.lookup predidx voicemap)
   in (predidx,rolesetid,voicefeature,argfeatures)
+
+
+(b1,e1) `isPriorTo` (b2,e2) = e1 < b2
+r1 `isAfter` r2 = r2 `isPriorTo` r1
+
+r1 `isNotOverlappedWith` r2 = r1 `isPriorTo` r2 || r1 `isAfter` r2
+
+duplicate (PN x xs) = PN (PN x xs) (map duplicate xs)
+duplicate (PL x) = PL (PL x)
+
+
+fakeFeaturesForInstance :: SentenceInfo -> MatchedInstance -> IO ()
+fakeFeaturesForInstance sentinfo inst = do 
+  let predidx = findRelNode (inst^.mi_arguments)
+      rolesetid = inst^.mi_instance.inst_lemma_roleset_id
+      args = filter ((/= "rel") . (^.ma_argument.arg_label)) $ inst^.mi_arguments
+      rngss = map (^..ma_nodes . traverse . mn_node . _1) args
+      ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
+  -- print args
+  flip mapM_ rngss $ \rngs ->  
+    case rngs of
+      [] -> return ()
+      (x:xs) -> do
+        let rng = (minimum (map (^._1) rngs), maximum (map (^._2) rngs))
+            -- chkoverlap rng (rng
+            exclst = filter (`isNotOverlappedWith` rng)
+                   .  map (\(PN (r,_) _) -> r)
+                   .  filter (\case PN _ _ -> True ; _ -> False)
+                   . biList . duplicate $ ipt
+        print (rng,exclst)
+                
+--    in (predidx,rolesetid,voicefeature,argfeatures)
+
 
 
 formatVoice :: Maybe Voice -> String
@@ -202,9 +243,10 @@ formatPTP = foldMap f
     f (Right p,Down) = show p ++ "↓"
 
 
-formatArgNodeFeature :: ArgNodeFeature -> String
-formatArgNodeFeature (label,(rng,ptp,mhead)) =
-    printf "%10s %10s %30s %5s %s" (T.unpack label) (show rng) (formatPTP ptp) (w^._1) (w^._2)
+formatArgNodeFeature :: Int -> ArgNodeFeature -> String
+formatArgNodeFeature predidx (label,(rng,ptp,mhead)) =
+    printf "%10s %10s %6s %30s %5s %s" (T.unpack label) (show rng) (show (position predidx rng))
+                                       (formatPTP ptp) (w^._1) (w^._2)
   where
     w = hstr mhead
     hstr Nothing = ("","")
@@ -214,7 +256,7 @@ formatArgNodeFeature (label,(rng,ptp,mhead)) =
 formatInstanceFeature :: InstanceFeature -> String
 formatInstanceFeature (predidx,rolesetid,voicefeature,argfeatures) =
   let fs = concat argfeatures
-  in foldMap (\x -> printf "%3s %20s %10s %s\n" (show predidx) (T.unpack rolesetid) (formatVoice voicefeature) (formatArgNodeFeature x)) fs
+  in foldMap (\x -> printf "%3s %20s %7s %s\n" (show predidx) (T.unpack rolesetid) (formatVoice voicefeature) (formatArgNodeFeature predidx x)) fs
 
 
 voice :: (PennTree,S.Sentence) -> [(Int,(Text,Voice))]
@@ -243,4 +285,13 @@ features (sentinfo,prs) =
 
 showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
 showFeatures (_i,sentinfo,prs) = mapM_ (putStrLn . formatInstanceFeature) (features (sentinfo,prs))
+
+
+
+showFakeFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
+showFakeFeatures (_i,sentinfo,prs) = do
+  let pt = sentinfo^.corenlp_tree
+      tr = sentinfo^.propbank_tree
+      insts = matchInstances (pt,tr) prs
+  mapM_ (fakeFeaturesForInstance  sentinfo) insts
 
