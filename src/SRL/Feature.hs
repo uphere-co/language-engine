@@ -6,7 +6,7 @@
 
 module SRL.Feature where
 
-import           Control.Lens            hiding (levels)
+import           Control.Lens            hiding (levels,Level)
 import           Control.Monad                  ((<=<),when)
 import           Data.Bifunctor                 (bimap)
 import           Data.Foldable                  (toList)
@@ -48,10 +48,11 @@ type TreeICP a = Tree (Range,ChunkTag) (Int,(POSTag,a))
 
 type TreeZipperICP a = TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
 
-type ArgNodeFeature = (Text,(Range,ParseTreePath,Maybe (Int,Text)))
+type ArgNodeFeature = (Text,(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text)))))
 
 type InstanceFeature = (Int,Text,Maybe Voice, [[ArgNodeFeature]])
 
+type Level = Int
                      
 phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
 phraseType (PN (i,c) _)   = (i,Left c)
@@ -103,10 +104,10 @@ parseTreePath (mh,tostart,totarget) =
 simplifyPTP :: (Eq c,Eq p) => [(Either c p, Direction)] -> [(Either c p, Direction)]
 simplifyPTP xs = map head (group xs)
 
-annotateLevel :: IntMap Int -> (Int, t) -> (Int,(Maybe Int,t))
+annotateLevel :: IntMap Int -> (Int, t) -> (Int,(Maybe Level,t))
 annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))
 
-headWordTree :: Dependency -> Tree c (Int,t) -> Tree c (Int,(Maybe Int,t))
+headWordTree :: Dependency -> Tree c (Int,t) -> Tree c (Int,(Maybe Level,t))
 headWordTree (Dependency root nods edgs') tr =
   let bnds = let xs = map fst nods in (minimum xs, maximum xs)
       edgs = map fst edgs'
@@ -114,9 +115,10 @@ headWordTree (Dependency root nods edgs') tr =
       levelMap = IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
   in fmap (annotateLevel levelMap) tr 
 
-headWord :: PennTreeIdxG ChunkTag (Maybe Int,(POSTag,Text)) -> Maybe (Int,Text)
-headWord  = safeHead . sortBy (compare `on` fst)
-          . mapMaybe (\(_,(ml,(_,t))) -> (,) <$> ml <*> pure t) . getLeaves 
+
+headWord :: PennTreeIdxG ChunkTag (Maybe Level,(POSTag,Text)) -> Maybe (Int,(Level,(POSTag,Text)))
+headWord  = safeHead . sortBy (compare `on` view (_2._1))
+          . mapMaybe (\(i,(ml,postxt)) -> fmap (i,) (fmap (,postxt) ml)) . getLeaves 
 
 lemmatize :: IntMap Text
           -> PennTreeIdxG ChunkTag (POSTag,Text)
@@ -153,7 +155,7 @@ isPassive z = let b1 = isVBN z
               in (b1 && b2) || (b1 && b3) || (b1 && b4)
   
 featuresForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode
-                   -> [(Range,ParseTreePath,Maybe (Int,Text))]
+                   -> [(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))]
 featuresForArgNode sentinfo predidx arg node =
   let rngs = node ^.. mn_trees . traverse . _1
       ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
@@ -165,7 +167,7 @@ featuresForArgNode sentinfo predidx arg node =
       heads = map (\rng -> headWord =<< matchR rng headwordtrees) rngs
       comparef Nothing  _        = GT
       comparef _        Nothing  = LT
-      comparef (Just x) (Just y) = (compare `on` (^._1)) x y
+      comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
   in  sortBy (comparef `on` (view _3)) $ zip3 rngs paths heads        
 
       
@@ -202,16 +204,17 @@ formatPTP = foldMap f
 
 formatArgNodeFeature :: ArgNodeFeature -> String
 formatArgNodeFeature (label,(rng,ptp,mhead)) =
-    printf "%10s %10s %30s %s" (T.unpack label) (show rng) (formatPTP ptp) (hstr mhead)
+    printf "%10s %10s %30s %5s %s" (T.unpack label) (show rng) (formatPTP ptp) (w^._1) (w^._2)
   where
-    hstr Nothing = ""
-    hstr (Just (_,w)) = (T.unpack w)
+    w = hstr mhead
+    hstr Nothing = ("","")
+    hstr (Just (_,(_,(p,w)))) = (show p, T.unpack w)
 
 
 formatInstanceFeature :: InstanceFeature -> String
 formatInstanceFeature (predidx,rolesetid,voicefeature,argfeatures) =
   let fs = concat argfeatures
-  in foldMap (\x -> printf "%10s %20s %10s %s\n" (show predidx) (T.unpack rolesetid) (formatVoice voicefeature) (formatArgNodeFeature x)) fs
+  in foldMap (\x -> printf "%3s %20s %10s %s\n" (show predidx) (T.unpack rolesetid) (formatVoice voicefeature) (formatArgNodeFeature x)) fs
 
 
 voice :: (PennTree,S.Sentence) -> [(Int,(Text,Voice))]
@@ -229,11 +232,15 @@ voice (pt,sent) =
 
 
 
-features :: (Int,SentenceInfo,[Instance]) -> IO ()
-features (_i,sentinfo,prs) = do
+features :: (SentenceInfo,[Instance]) -> [InstanceFeature]
+features (sentinfo,prs) = 
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
       insts = matchInstances (pt,tr) prs
       vmap = IM.fromList $ voice (pt,sentinfo^.corenlp_sent)
-      ifeats = map (featuresForInstance sentinfo vmap) insts
-  mapM_ (putStrLn . formatInstanceFeature) ifeats
+  in map (featuresForInstance sentinfo vmap) insts
+
+
+showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
+showFeatures (_i,sentinfo,prs) = mapM_ (putStrLn . formatInstanceFeature) (features (sentinfo,prs))
+
