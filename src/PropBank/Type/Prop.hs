@@ -38,6 +38,7 @@ data ModifierType = ADJ  -- ^ Adjectivals (modifies nouns)
 data LinkType     = PRO  -- ^ semantic link of the *PRO* argument if semantically recoverable in the sentence
                   | PSV  -- ^ semantic link of the passive trace to the SBJ constituent
                   | SLC
+                  | PCR
                   deriving (Show,Enum,Eq,Ord)
                     
 data PropBankLabel = Relation

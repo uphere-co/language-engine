@@ -32,7 +32,7 @@ parseInst txt =
       _inst_tree_id = readDecimal _inst_tree_id'
       _inst_predicate_id = readDecimal _inst_predicate_id'
       _inst_arguments = case mapM parseArg _inst_arguments' of
-                          Nothing -> error "parseArg"
+                          Nothing -> error ("parseArg : " ++ T.unpack txt) -- "parseArg"
                           Just xs -> xs
   in Instance {..}
 
@@ -102,7 +102,8 @@ parseLinkType :: A.Parser LinkType
 parseLinkType =
   (A.string "PRO" >> return PRO) <|>
   (A.string "PSV" >> return PSV) <|>
-  (A.string "SLC" >> return SLC) 
+  (A.string "SLC" >> return SLC) <|>
+  (A.string "PCR" >> return PCR)
 
 
 parsePropBankLabel :: A.Parser PropBankLabel
@@ -126,6 +127,10 @@ parseProp omit = case omit of
 
 parseNomProp :: Text -> [NomInstance]
 parseNomProp = map parseNomInst . T.lines
+
+
+-- showPropBankLabel :: PropBankLabel 
+
 
 findNodePathForLeaf :: Int -> PennTree -> [PennTreeGen Text (Int,(Text,Text))]
 findNodePathForLeaf i tr = contain i (mkIndexedTree tr)
