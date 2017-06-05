@@ -76,7 +76,7 @@ data Instance = Instance { _inst_tree_id      :: Int
                          , _inst_predicate_id :: Int
                          , _inst_annotator_id :: Text
                          , _inst_lemma_type       :: Text
-                         , _inst_lemma_roleset_id :: Text
+                         , _inst_lemma_roleset_id :: (Text,Text)
                          , _inst_arguments :: [Argument]
                          }
               deriving (Show,Eq,Ord)

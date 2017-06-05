@@ -27,24 +27,30 @@ readDecimal x = case decimal x of {Left err -> error err; Right (n,_) -> n }
 
 parseInst :: Text -> Instance
 parseInst txt =
-  let _inst_tree_id':_inst_predicate_id':_inst_annotator_id:_inst_lemma_type:_inst_lemma_roleset_id:_:_inst_arguments'
+  let _inst_tree_id':_inst_predicate_id':_inst_annotator_id:_inst_lemma_type:_inst_lemma_roleset_id':_:_inst_arguments'
         = T.words txt
       _inst_tree_id = readDecimal _inst_tree_id'
       _inst_predicate_id = readDecimal _inst_predicate_id'
+      _inst_lemma_roleset_id = case parseRoleSetId _inst_lemma_roleset_id' of
+                                 Nothing -> error ("parseRoleSetId: " ++ T.unpack txt)
+                                 Just xs -> xs
       _inst_arguments = case mapM parseArg _inst_arguments' of
-                          Nothing -> error ("parseArg: " ++ T.unpack txt) -- "parseArg"
+                          Nothing -> error ("parseArg: " ++ T.unpack txt)
                           Just xs -> xs
   in Instance {..}
 
 parseInstOmit :: Text -> Instance
 parseInstOmit txt =
-  let _inst_tree_id':_inst_predicate_id':_inst_annotator_id:_inst_lemma_roleset_id:_:_inst_arguments'
+  let _inst_tree_id':_inst_predicate_id':_inst_annotator_id:_inst_lemma_roleset_id':_:_inst_arguments'
         = T.words txt
       _inst_lemma_type = ""        
       _inst_tree_id = readDecimal _inst_tree_id'
       _inst_predicate_id = readDecimal _inst_predicate_id'
+      _inst_lemma_roleset_id = case parseRoleSetId _inst_lemma_roleset_id' of
+                                 Nothing -> error ("parseRoleSetId: " ++ T.unpack txt)
+                                 Just xs -> xs      
       _inst_arguments = case mapM parseArg _inst_arguments' of
-                          Nothing -> error ("parseArg: " ++ show txt) -- (T.unpack txt)
+                          Nothing -> error ("parseArg: " ++ show txt)
                           Just xs -> xs
   in Instance {..}
 
@@ -62,6 +68,15 @@ parseNomInst txt =
                              Nothing -> error "parseArg"
                              Just xs -> xs
   in NomInstance {..}
+
+parseRoleSetId :: Text -> Maybe (Text,Text)
+parseRoleSetId txt = case A.parseOnly p txt of
+                       Left _ -> Nothing
+                       Right x -> Just x
+  where p = do lemma <- A.takeTill (== '.')
+               A.char '.'
+               sensenum <- A.takeTill (== ' ')
+               return (lemma,sensenum)
 
 parseArg :: Text -> Maybe Argument
 parseArg txt = case A.parseOnly p_arg txt of
@@ -151,7 +166,8 @@ findNode (Node i d) tr = do
 showInstance :: (PennTree,Instance) -> IO ()
 showInstance (tr,prop) = do
   TIO.putStrLn "---------------"
-  TIO.putStrLn (prop^.inst_lemma_roleset_id)
+  let roleset = prop^.inst_lemma_roleset_id
+  TIO.putStrLn (roleset^._1 <> "." <> T.pack (show (roleset^._2)))
   TIO.putStrLn "---------------"
   mapM_ (showArgument tr) (prop^.inst_arguments)
 
