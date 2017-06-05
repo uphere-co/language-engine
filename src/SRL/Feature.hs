@@ -8,7 +8,7 @@
 module SRL.Feature where
 
 import           Control.Lens            hiding (levels,Level)
-import           Control.Monad                  ((<=<),when)
+import           Control.Monad                  ((<=<),guard,when)
 import           Data.Bifunctor                 (bimap)
 import           Data.Bifoldable
 import           Data.Foldable                  (toList)
@@ -32,30 +32,13 @@ import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
 import           PropBank.Type.Prop
 --
+import           SRL.Format
 import           SRL.PropBankMatch
+import           SRL.Type
 import           SRL.Util
 --
 
-data Position = Before | After | Embed
-              deriving (Show,Eq,Ord)
-
-data Direction = Up | Down
-               deriving (Show,Eq,Ord)
-
-type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
-
-data Voice = Active | Passive deriving Show
-
-type TreeICP a = Tree (Range,ChunkTag) (Int,(POSTag,a))
-
-type TreeZipperICP a = TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
-
-type ArgNodeFeature = (Text,(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text)))))
-
-type InstanceFeature = (Int,Text,Maybe Voice, [[ArgNodeFeature]])
-
-type Level = Int
-                     
+             
 phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
 phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
@@ -68,10 +51,6 @@ position n tr = let (b,e) = termRange tr
                       | otherwise -> Embed
 -}
 
-position :: Int -> Range -> Position
-position n (b,e) = if | n < b     -> Before
-                      | n > e     -> After
-                      | otherwise -> Embed
 
 elimCommonHead :: [PennTreeIdxG c (p,a)]
                -> [PennTreeIdxG c (p,a)]
@@ -161,7 +140,8 @@ isPassive z = let b1 = isVBN z
                   b3 = isInNP z
                   b4 = isInPP z
               in (b1 && b2) || (b1 && b3) || (b1 && b4)
-  
+
+
 featuresForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode
                    -> [(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))]
 featuresForArgNode sentinfo predidx arg node =
@@ -178,6 +158,9 @@ featuresForArgNode sentinfo predidx arg node =
       comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
   in  sortBy (comparef `on` (view _3)) $ zip3 rngs paths heads        
 
+
+
+
       
 featuresForArg :: SentenceInfo -> Int -> MatchedArgument -> [ArgNodeFeature]
 featuresForArg sentinfo predidx arg =
@@ -186,7 +169,25 @@ featuresForArg sentinfo predidx arg =
     fs <- safeHead (featuresForArgNode sentinfo predidx (arg^.ma_argument) node)
     return (label,fs)
 
-  
+
+fakeFeaturesForArg :: SentenceInfo -> Int -> Argument -> Range
+                       -> (Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))
+fakeFeaturesForArg sentinfo predidx arg rng =
+  let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
+      dep = sentinfo^.corenlp_dep
+      parsetree = parseTreePathFull (predidx,rng) ipt
+      opath = parseTreePath parsetree
+      path = (simplifyPTP . parseTreePath) parsetree
+      headwordtrees = headWordTree dep ipt
+      hd = headWord =<< matchR rng headwordtrees
+      comparef Nothing  _        = GT
+      comparef _        Nothing  = LT
+      comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
+  in  (rng,path,hd)
+
+
+
+    
 featuresForInstance :: SentenceInfo -> IntMap (Text,Voice)  -> MatchedInstance -> InstanceFeature
 featuresForInstance sentinfo voicemap inst = 
   let predidx = findRelNode (inst^.mi_arguments)
@@ -196,67 +197,42 @@ featuresForInstance sentinfo voicemap inst =
   in (predidx,rolesetid,voicefeature,argfeatures)
 
 
-(b1,e1) `isPriorTo` (b2,e2) = e1 < b2
-r1 `isAfter` r2 = r2 `isPriorTo` r1
 
-r1 `isNotOverlappedWith` r2 = r1 `isPriorTo` r2 || r1 `isAfter` r2
-
-duplicate (PN x xs) = PN (PN x xs) (map duplicate xs)
-duplicate (PL x) = PL (PL x)
-
-
-fakeFeaturesForInstance :: SentenceInfo -> MatchedInstance -> IO ()
-fakeFeaturesForInstance sentinfo inst = do 
+fakeFeaturesForInstance :: SentenceInfo -> IntMap (Text,Voice) -> MatchedInstance -> InstanceFeature
+                               -- [(Argument,[Range])] -- 
+fakeFeaturesForInstance sentinfo voicemap inst = 
   let predidx = findRelNode (inst^.mi_arguments)
+      voicefeature = fmap snd (IM.lookup predidx voicemap)
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
       args = filter ((/= "rel") . (^.ma_argument.arg_label)) $ inst^.mi_arguments
-      rngss = map (^..ma_nodes . traverse . mn_node . _1) args
+      -- rngss = map (^..ma_nodes . traverse . mn_node . _1) args
       ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
   -- print args
-  flip mapM_ rngss $ \rngs ->  
-    case rngs of
-      [] -> return ()
-      (x:xs) -> do
+      argfeatures = do
+        arg <- args
+        let label = arg^.ma_argument.arg_label
+        let rngs = arg ^.. ma_nodes . traverse . mn_node . _1 -- rngss
+        guard ((not.null) rngs)
         let rng = (minimum (map (^._1) rngs), maximum (map (^._2) rngs))
-            -- chkoverlap rng (rng
             exclst = filter (`isNotOverlappedWith` rng)
                    .  map (\(PN (r,_) _) -> r)
                    .  filter (\case PN _ _ -> True ; _ -> False)
                    . biList . duplicate $ ipt
-        print (rng,exclst)
+        --     argfeatures = map (fakeFeaturesForArgs sentinfo predidx) exclst
+        -- return (predidx,rolesetid,voicefeatures,argfeatures)
+        rngeach <- exclst
+        return [(label,fakeFeaturesForArg sentinfo predidx (arg^.ma_argument) rngeach)]
+  in (predidx,rolesetid,voicefeature,argfeatures)
+{- 
+flip mapM_ rngss $ \rngs ->  
+    case rngs of
+      [] -> return []
+      (x:xs) -> do
+        let rng = (minimum (map (^._1) rngs), maximum (map (^._2) rngs))
+            -- chkoverlap rng (rng
                 
 --    in (predidx,rolesetid,voicefeature,argfeatures)
-
-
-
-formatVoice :: Maybe Voice -> String
-formatVoice Nothing = " "
-formatVoice (Just Active) = "active"
-formatVoice (Just Passive) = "passive"
-
-formatPTP :: ParseTreePath -> String
-formatPTP = foldMap f 
-  where
-    f (Left  c,Up  ) = show c ++ "↑"
-    f (Left  c,Down) = show c ++ "↓"
-    f (Right p,Up  ) = show p ++ "↑"
-    f (Right p,Down) = show p ++ "↓"
-
-
-formatArgNodeFeature :: Int -> ArgNodeFeature -> String
-formatArgNodeFeature predidx (label,(rng,ptp,mhead)) =
-    printf "%10s %10s %6s %30s %5s %s" (T.unpack label) (show rng) (show (position predidx rng))
-                                       (formatPTP ptp) (w^._1) (w^._2)
-  where
-    w = hstr mhead
-    hstr Nothing = ("","")
-    hstr (Just (_,(_,(p,w)))) = (show p, T.unpack w)
-
-
-formatInstanceFeature :: InstanceFeature -> String
-formatInstanceFeature (predidx,rolesetid,voicefeature,argfeatures) =
-  let fs = concat argfeatures
-  in foldMap (\x -> printf "%3s %20s %7s %s\n" (show predidx) (T.unpack rolesetid) (formatVoice voicefeature) (formatArgNodeFeature predidx x)) fs
+-}
 
 
 voice :: (PennTree,S.Sentence) -> [(Int,(Text,Voice))]
@@ -282,10 +258,22 @@ features (sentinfo,prs) =
       vmap = IM.fromList $ voice (pt,sentinfo^.corenlp_sent)
   in map (featuresForInstance sentinfo vmap) insts
 
+fakeFeatures :: (SentenceInfo,[Instance]) -> [InstanceFeature] -- [[(Range,[Range])]] -- [InstanceFeature]
+fakeFeatures (sentinfo,prs) = 
+  let pt = sentinfo^.corenlp_tree
+      tr = sentinfo^.propbank_tree
+      insts = matchInstances (pt,tr) prs
+      vmap = IM.fromList $ voice (pt,sentinfo^.corenlp_sent)
+  in map (fakeFeaturesForInstance sentinfo vmap) insts
+
 
 showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
-showFeatures (_i,sentinfo,prs) = mapM_ (putStrLn . formatInstanceFeature) (features (sentinfo,prs))
-
+showFeatures (_i,sentinfo,prs) = do
+  putStrLn "Truth items"
+  putStrLn "---------------"
+  mapM_ (putStrLn . formatInstanceFeature) (features (sentinfo,prs))
+  putStrLn "---------------"
+  
 
 
 showFakeFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
@@ -293,5 +281,10 @@ showFakeFeatures (_i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
       insts = matchInstances (pt,tr) prs
-  mapM_ (fakeFeaturesForInstance  sentinfo) insts
+  putStrLn "Falsity items"
+  putStrLn "---------------"
+  -- mapM_ (putStrLn . formatInstanceFeature) (fakeFeatures (sentinfo,prs))
+  mapM_ (putStrLn . formatInstanceFeature) (fakeFeatures (sentinfo,prs))
+  
+  putStrLn "---------------"
 
