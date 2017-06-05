@@ -3,6 +3,8 @@
 
 module SRL.Train where
 
+import           AI.SVM.Simple
+import           AI.SVM.Base
 import           Control.Lens               hiding (levels,(<.>))
 import           Control.Monad                     (void)
 import           Control.Monad.IO.Class            (liftIO)
@@ -33,7 +35,7 @@ process :: FastText
         -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
         -> (FilePath,FilePath)
         -> (FilePath,IsOmit)
-        -> IO (Either String ([(CFloat,Vector CFloat)]))
+        -> IO (Either String ([(Double,Vector Double)]))
 process ft pp (dirpenn,dirprop) (fp,omit) = do
   let pennfile = dirpenn </> fp <.> "mrg"
       propfile = dirprop </> fp <.> "prop"
@@ -53,27 +55,29 @@ process ft pp (dirpenn,dirprop) (fp,omit) = do
            . merge (^.inst_tree_id) (zip4 pts trs deps sents)
            $ props
     liftIO $ mapM_ (showMatchedInstance <> showFeatures <> showFakeFeatures) rs
-    results :: [[(CFloat,Vector CFloat)]]
+    results :: [[(Double,Vector Double)]]
      <-  liftIO $ flip mapM rs $ \(_,sentinfo,prs) -> do
       let ifeats = features (sentinfo,prs)
       ts <- concat <$> mapM (inst2vec ft) ifeats
       let ts' = filter ((== NumberedArgument 0) . (^._1)) ts 
-          ts'' = map (\(_,v) -> (1,v)) ts'
+          ts'' = map (\(_,v) -> (1 :: Double,v)) ts'
           ifakefeats = fakeFeatures (sentinfo,prs)
       fs <- concat <$> mapM (inst2vec ft) ifakefeats
       let fs' = filter ((== NumberedArgument 0) . (^._1)) fs
-          fs'' = map (\(_,v) -> (-1,v)) fs'
-      return (ts''++fs'')
-    return (concat results)
+          fs'' = map (\(_,v) -> (-1 :: Double,v)) fs'
+      return (map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs''))
+    return $ concat results
 
 
 test ft pp svm = do
   runEitherT $ do
     let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
         dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
-    (trs,props) <- propbank (dirpenn </> "wsj_0189" <.> "mrg" ,dirprop </> "wsj_0189" <.> "prop", Omit)
-    let tr = head trs
-        pr = head props
+        fp = "wsj_0189"
+    (trs,props) <- propbank (dirpenn </> fp <.> "mrg" ,dirprop </> fp <.> "prop", Omit)
+    let n = 2 
+        tr = trs !! n
+        -- pr = props !! 2
         doc = mkDocFromPennTree tr
     rdoc <- liftIO $ do
       ann <- annotate pp doc
@@ -83,13 +87,31 @@ test ft pp svm = do
     dep <- hoistEither (sentToDep sent)
     let cpt = fromJust (sent ^.S.parseTree)
         pt = decodeToPennTree cpt
-        r = (SentInfo sent pt tr dep,pr)
-
+        prs = filter (\x -> x^.inst_tree_id == n) props 
+        r = (SentInfo sent pt tr dep,prs)
+        {- rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt tr dep,pr))
+           . merge (^.inst_tree_id) (zip4 pts trs deps sents)
+           $ props
+        -}
         ifeats = features r
         ifakefeats = fakeFeatures r
-    ts <- concat <$> mapM (inst2vec ft) ifeats
-    fs <- concat <$> mapM (inst2vec ft) ifakefeats
-      
-    liftIO $ print (head ts)
+    ts <- liftIO (concat <$> mapM (inst2vec ft) ifeats)
+    fs <- liftIO (concat <$> mapM (inst2vec ft) ifakefeats)
+
+    let ts' = map (V.map realToFrac . snd) $ filter (\x -> fst x==NumberedArgument 0) ts
+        fs' = map (V.map realToFrac . snd) $ filter (\x -> fst x==NumberedArgument 0) fs
+        
+    -- return $ map (V.map realToFrac) (concat results)
+    {- liftIO $ do
+      print ts'
+      print fs' -}
+        
+    liftIO $ mapM_ (print . predict svm) (ts' :: [Vector Double])
+    liftIO $ putStrLn "-----------------------------------------"
+    liftIO $ mapM_ (print . predict svm) (fs' :: [Vector Double])
+
+{- 
+    int (head ts)
 
     liftIO $ print (head fs)
+-}
