@@ -30,13 +30,13 @@ data ModifierType = ADJ  -- ^ Adjectivals (modifies nouns)
                   | PRR  -- ^ Nominal predicates in light verb constructions
                   | REC  -- ^ Reciprocals
                   | TMP  -- ^ Temporals
-                  deriving (Show,Enum,Eq,Ord)
+                  deriving (Show,Enum,Bounded,Eq,Ord)
 
 data LinkType     = PRO  -- ^ semantic link of the *PRO* argument if semantically recoverable in the sentence
                   | PSV  -- ^ semantic link of the passive trace to the SBJ constituent
                   | SLC
                   | PCR
-                  deriving (Show,Enum,Eq,Ord)
+                  deriving (Show,Enum,Bounded,Eq,Ord)
                     
 data PropBankLabel = Relation
                    | NumberedArgument Int          -- ^ Argument roles that are semantically
