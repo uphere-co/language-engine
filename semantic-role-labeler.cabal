@@ -115,6 +115,7 @@ Executable training
                        jni,
                        jvm,
                        lens,
+                       svm-simple,
                        text,
                        time,
                        vector,

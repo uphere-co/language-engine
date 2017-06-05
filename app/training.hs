@@ -75,7 +75,7 @@ run :: FastText -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline") -> 
 run ft pp = do
   let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
       dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
-  lsts <- flip mapM (take 10 propbankFiles) $ \(fp,omit) -> do
+  lsts <- flip mapM propbankFiles $ \(fp,omit) -> do
     r <- try $ do 
       header fp
       process ft pp (dirpenn,dirprop) (fp,omit)

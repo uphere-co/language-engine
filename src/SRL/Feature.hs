@@ -38,7 +38,7 @@ import           SRL.Type
 import           SRL.Util
 --
 
-             
+                 
 phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
 phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
@@ -200,8 +200,9 @@ fakeFeaturesForInstance sentinfo voicemap inst =
             exclst = filter (`isNotOverlappedWith` rng)
                    . map (\(PN (r,_) _) -> r)
                    . filter (\case PN _ _ -> True ; _ -> False)
-                   . biList . duplicate
-                   $ ipt
+                   . biList
+                   . duplicate 
+                   $ ipt 
         rngeach <- exclst
         guard (position predidx rngeach /= Embed)
         return [(label,fakeFeaturesForArg sentinfo predidx (arg^.ma_argument) rngeach)]
