@@ -10,9 +10,6 @@ import           PropBank.Type.Prop
 --
 import           SRL.CoNLL.CoNLL08.Type
 
--- data VArrow = Upward | Downward
-
--- newtype DeprelPath = DeprelPath [(Deprel,VArrow)] 
 
 data Position = Before | After | Embed
               deriving (Show,Eq,Ord,Enum,Bounded)
@@ -47,6 +44,9 @@ position n (b,e) = if | n < b     -> Before
                       | n > e     -> After
                       | otherwise -> Embed
 
+-- | duplicate of comonad is dual to join of monad, i.e. duplicate :: w a -> w (w a)
+--   In Tree case, we can make a tree where each node is the subtree at the node point using duplicate 
+duplicate :: Tree c a -> Tree (Tree c a) (Tree c a)
 duplicate (PN x xs) = PN (PN x xs) (map duplicate xs)
 duplicate (PL x) = PL (PL x)
 

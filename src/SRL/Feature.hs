@@ -10,7 +10,7 @@ module SRL.Feature where
 import           Control.Lens            hiding (levels,Level)
 import           Control.Monad                  ((<=<),guard,when)
 import           Data.Bifunctor                 (bimap)
-import           Data.Bifoldable
+import           Data.Bifoldable                (biList)
 import           Data.Foldable                  (toList)
 import           Data.Function                  (on)
 import           Data.Graph                     (buildG,dfs)
@@ -168,9 +168,6 @@ fakeFeaturesForArg sentinfo predidx arg rng =
       path = (simplifyPTP . parseTreePath) parsetree
       headwordtrees = headWordTree dep ipt
       hd = headWord =<< matchR rng headwordtrees
-      comparef Nothing  _        = GT
-      comparef _        Nothing  = LT
-      comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
   in  (rng,path,hd)
 
     
@@ -201,9 +198,10 @@ fakeFeaturesForInstance sentinfo voicemap inst =
         guard ((not.null) rngs)
         let rng = (minimum (map (^._1) rngs), maximum (map (^._2) rngs))
             exclst = filter (`isNotOverlappedWith` rng)
-                   .  map (\(PN (r,_) _) -> r)
-                   .  filter (\case PN _ _ -> True ; _ -> False)
-                   . biList . duplicate $ ipt
+                   . map (\(PN (r,_) _) -> r)
+                   . filter (\case PN _ _ -> True ; _ -> False)
+                   . biList . duplicate
+                   $ ipt
         rngeach <- exclst
         guard (position predidx rngeach /= Embed)
         return [(label,fakeFeaturesForArg sentinfo predidx (arg^.ma_argument) rngeach)]
