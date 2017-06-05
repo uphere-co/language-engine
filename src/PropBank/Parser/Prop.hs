@@ -5,7 +5,7 @@
 
 module PropBank.Parser.Prop where
 
-import           Control.Applicative         (many)
+import           Control.Applicative         (many,(<|>))
 import           Control.Lens
 import qualified Data.Attoparsec.Text as A
 import           Data.Foldable               (toList)
@@ -69,14 +69,56 @@ parseArg txt = case A.parseOnly p_arg txt of
                  Right x -> Just x
   where p_arg = do ns <- p_node `A.sepBy` A.char '*'
                    A.char '-'
-                   l <- T.pack <$> many A.anyChar
+                   -- l <- T.pack <$> many A.anyChar
+                   l <- parsePropBankLabel 
                    return (Argument ns l)
         p_node = do i <- A.takeTill (== ':')
                     A.char ':'
                     h <- A.takeTill (`elem`  ['-', '*'])
                     return (Node (readDecimal i) (readDecimal h))
 
-        
+parseModifierType :: A.Parser ModifierType
+parseModifierType = 
+  (A.string "ADJ" >> return ADJ) <|>
+  (A.string "ADV" >> return ADV) <|>
+  (A.string "CAU" >> return CAU) <|>
+  (A.string "COM" >> return COM) <|>
+  (A.string "DIR" >> return DIR) <|>
+  (A.string "DIS" >> return DIS) <|>
+  (A.string "DSP" >> return DSP) <|>
+  (A.string "EXT" >> return EXT) <|>
+  (A.string "GOL" >> return GOL) <|>
+  (A.string "LOC" >> return LOC) <|>
+  (A.string "MNR" >> return MNR) <|>
+  (A.string "MOD" >> return MOD) <|>
+  (A.string "NEG" >> return NEG) <|>
+  (A.string "PRD" >> return PRD) <|>
+  (A.string "PRP" >> return PRP) <|>
+  (A.string "PRR" >> return PRR) <|>
+  (A.string "REC" >> return REC) <|>
+  (A.string "TMP" >> return TMP)
+
+parseLinkType :: A.Parser LinkType
+parseLinkType =
+  (A.string "PRO" >> return PRO) <|>
+  (A.string "PSV" >> return PSV) <|>
+  (A.string "SLC" >> return SLC) 
+
+
+parsePropBankLabel :: A.Parser PropBankLabel
+parsePropBankLabel =
+  (do A.string "rel"
+      return Relation)
+  <|>
+  (do A.string "ARG"
+      ((NumberedArgument <$> A.decimal) <|>
+       (A.char 'M' >> A.char '-' >> (Modifier <$> parseModifierType)))
+  )
+  <|>
+  (do A.string "LINK-"
+      LinkArgument <$> parseLinkType
+  )
+   
 parseProp :: IsOmit -> Text -> [Instance]
 parseProp omit = case omit of
                    NoOmit -> map parseInst . T.lines
@@ -121,7 +163,7 @@ showNomSense (tr,nom) = do
   
 showArgument :: PennTree -> Argument -> IO ()
 showArgument tr arg = do
-  TIO.putStr (arg^.arg_label <> ": ")
+  putStr (show (arg^.arg_label) <> ": ")
   let format (t,n) = "(" <> t <> ") " <>   (T.intercalate " " . map (^._2._2) . toList) n
   mapM_ (\x -> TIO.putStr (maybe "Nothing" format (findNode x tr)) >> TIO.putStr ", ") (arg^.arg_terminals)
   TIO.putStr "\n"
