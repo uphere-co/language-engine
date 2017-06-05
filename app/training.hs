@@ -68,30 +68,16 @@ preparePP = do
   prepare pcfg
 
 
-test_vector :: FastText -> IO ()
-test_vector t = 
-  withCString "vector" $ \cstr_word -> do
-    let c_size = 300
-    v <- newFastTextVector c_size
-    str_word <- newCppString cstr_word
-    fastTextgetVector t v str_word
-    -- c_size <- fastTextVectorsize v
-    cfloat <- c_get_fasttextvector v
-    ptr <- newForeignPtr_ cfloat
-    let mv = MVector (fromIntegral c_size) ptr
-    let v = create (return mv)
-    print v
 
-run :: Maybe FastText -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline") -> IO ()
-run mt pp = do
-  -- withCString "vector" $ \cstr_word -> do
-  mapM_ test_vector mt 
+run :: FastText -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline") -> IO ()
+run ft pp = do
+  -- mapM_ test_vector mt 
   let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
       dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
-  flip mapM_ propbankFiles $ \(fp,omit) -> do
+  flip mapM_ [head propbankFiles] $ \(fp,omit) -> do
     r <- try $ do 
       header fp
-      process pp (dirpenn,dirprop) (fp,omit)
+      process ft pp (dirpenn,dirprop) (fp,omit)
     case r of
       Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
       Right _ -> return ()
@@ -111,5 +97,5 @@ main :: IO ()
 main = do
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
-    -- t <- init2
-    (preparePP >>= run Nothing) -- (Just t)
+    t <- init2
+    (preparePP >>= run t)

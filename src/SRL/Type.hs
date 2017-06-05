@@ -15,10 +15,10 @@ import           SRL.CoNLL.CoNLL08.Type
 -- newtype DeprelPath = DeprelPath [(Deprel,VArrow)] 
 
 data Position = Before | After | Embed
-              deriving (Show,Eq,Ord)
+              deriving (Show,Eq,Ord,Enum,Bounded)
 
 data Direction = Up | Down
-               deriving (Show,Eq,Ord)
+               deriving (Show,Eq,Ord,Enum,Bounded)
 
 type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
 
@@ -30,7 +30,9 @@ type TreeZipperICP a = TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
 
 type ArgNodeFeature = (PropBankLabel,(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text)))))
 
-type InstanceFeature = (Int,Text,Maybe Voice, [[ArgNodeFeature]])
+type RoleSet = (Text,Text)
+
+type InstanceFeature = (Int,RoleSet,Maybe Voice, [[ArgNodeFeature]])
 
 type Level = Int
 

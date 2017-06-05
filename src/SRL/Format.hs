@@ -35,8 +35,12 @@ formatArgNodeFeature predidx (label,(rng,ptp,mhead)) =
 
 
 formatInstanceFeature :: InstanceFeature -> String
-formatInstanceFeature (predidx,rolesetid,voicefeature,argfeatures) =
+formatInstanceFeature (predidx,(lemma,sensenum),voicefeature,argfeatures) =
   let fs = concat argfeatures
-  in foldMap (\x -> printf "%3s %20s %7s %s\n" (show predidx) (T.unpack rolesetid) (formatVoice voicefeature) (formatArgNodeFeature predidx x)) fs
+  in flip foldMap fs $ \x -> printf "%3s %17s.%2s %7s %s\n"
+                              (show predidx)
+                              lemma sensenum
+                              (formatVoice voicefeature)
+                              (formatArgNodeFeature predidx x)
 
 
