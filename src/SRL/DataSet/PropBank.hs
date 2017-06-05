@@ -92,5 +92,5 @@ propbankFiles = [ ("110CYL067", NoOmit)
                 , ("wsj_0187", Omit)
                 , ("wsj_0189", Omit)
                   -- "wsj_1640", Omit)-- * with -NEW
-                , ("wsj_2465", Omit)
+                , ("wsj_2465", NoOmit)
                 ]

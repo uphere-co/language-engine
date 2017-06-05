@@ -175,7 +175,7 @@ featuresForInstance :: SentenceInfo -> IntMap (Text,Voice)  -> MatchedInstance -
 featuresForInstance sentinfo voicemap inst = 
   let predidx = findRelNode (inst^.mi_arguments)
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
-      argfeatures = map (featuresForArg sentinfo predidx) . filter ((/= "rel") . (^.ma_argument.arg_label)) $ inst^.mi_arguments
+      argfeatures = map (featuresForArg sentinfo predidx) . filter ((/= Relation) . (^.ma_argument.arg_label)) $ inst^.mi_arguments
       voicefeature = fmap snd (IM.lookup predidx voicemap)
   in (predidx,rolesetid,voicefeature,argfeatures)
 
@@ -185,7 +185,7 @@ fakeFeaturesForInstance sentinfo voicemap inst =
   let predidx = findRelNode (inst^.mi_arguments)
       voicefeature = fmap snd (IM.lookup predidx voicemap)
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
-      args = filter ((/= "rel") . (^.ma_argument.arg_label)) $ inst^.mi_arguments
+      args = filter ((/= Relation) . (^.ma_argument.arg_label)) $ inst^.mi_arguments
       ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
       argfeatures = do
         arg <- args

@@ -38,6 +38,8 @@ library
                        containers,
                        data-default,
                        either,
+                       filepath,
+                       jvm,
                        lens,
                        split,
                        text,
