@@ -221,6 +221,7 @@ fakeFeaturesForInstance sentinfo voicemap inst =
         --     argfeatures = map (fakeFeaturesForArgs sentinfo predidx) exclst
         -- return (predidx,rolesetid,voicefeatures,argfeatures)
         rngeach <- exclst
+        guard (position predidx rngeach /= Embed)
         return [(label,fakeFeaturesForArg sentinfo predidx (arg^.ma_argument) rngeach)]
   in (predidx,rolesetid,voicefeature,argfeatures)
 {- 
