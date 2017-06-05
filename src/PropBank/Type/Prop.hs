@@ -1,19 +1,15 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module PropBank.Type.Prop where
 
 import           Control.Lens
-import           Data.Text                   (Text)
+import           Data.Monoid       ((<>))
+import           Data.Text         (Text)
+import qualified Data.Text    as T
 
 data IsOmit = NoOmit | Omit
 
-{- 
-data NumberedArguments = ARG0
-                       | ARG1
-                       | ARG2
-                       | ARG3
-                       | ARG4
--}
 
 data ModifierType = ADJ  -- ^ Adjectivals (modifies nouns)
                   | ADV  -- ^ Adverbials (modifies verbs)
@@ -28,6 +24,7 @@ data ModifierType = ADJ  -- ^ Adjectivals (modifies nouns)
                   | MNR  -- ^ Manners
                   | MOD  -- ^ Modals
                   | NEG  -- ^ Negations
+                  | PNC
                   | PRD  -- ^ Secondary predications
                   | PRP  -- ^ Purpose
                   | PRR  -- ^ Nominal predicates in light verb constructions
@@ -47,6 +44,20 @@ data PropBankLabel = Relation
                    | Modifier         ModifierType -- ^ Predicate or phrasal modifiers
                    | LinkArgument     LinkType     -- ^ Labels that link two constituents together
                    deriving (Show,Eq,Ord)
+
+
+modifierText :: ModifierType -> Text
+modifierText m = T.pack (show m)
+
+linkText :: LinkType -> Text
+linkText l = T.pack (show l)
+
+
+pbLabelText :: PropBankLabel -> Text
+pbLabelText Relation             = "rel"
+pbLabelText (NumberedArgument n) = "ARG" <> T.pack (show n)
+pbLabelText (Modifier m)         = "ARGM-" <> modifierText m
+pbLabelText (LinkArgument l)     = "LINK-" <> linkText l
 
 data Node = Node { _node_id :: Int
                  , _node_height :: Int }
