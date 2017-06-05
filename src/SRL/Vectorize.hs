@@ -85,3 +85,12 @@ ptp2vec xs = if n < maxn then v0 V.++ V.replicate (maxn-n) 0 else V.take maxn v0
         dimp = fromEnum (maxBound :: POSTag) + 1
         maxn  = 10*(dimc + 2) + dimp+2 
 
+argnode2vec :: FastText -> ArgNodeFeature -> IO (Maybe (Vector CFloat))
+argnode2vec ft (arglabel,(_,ptp,Just (_,(_,(pos,word))))) = do
+  let v1 = pblabel2vec arglabel 
+      v2 = ptp2vec ptp
+      v3 = enum2vec pos
+  v4 <- word2vec ft word
+  let v = v1 V.++ v2 V.++ v3 V.++ v4
+  v `seq` return (Just v)
+argnode2vec ft (arglabel,(_,ptp,Nothing)) = return Nothing

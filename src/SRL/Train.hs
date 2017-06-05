@@ -59,6 +59,6 @@ process ft pp (dirpenn,dirprop) (fp,omit) = do
           let xs = concat (ifeat ^. _4)
           flip mapM_ xs $ \x -> do
             -- print $ (x^._1,pblabel2vec (x^._1))) xs
-            print (x^._2._2)
-            print (ptp2vec (x^._2._2))
-            
+            -- print (x^._2._2)
+            -- print (ptp2vec (x^._2._2))
+            argnode2vec ft x >>= print
