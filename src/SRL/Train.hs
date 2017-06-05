@@ -55,10 +55,12 @@ process ft pp (dirpenn,dirprop) (fp,omit) = do
         [] -> return ()
         (ifeat:_) -> do
           -- word2vec ft (ifeat ^. _2 . _1) >>= print
-          
-          let xs = concat (ifeat ^. _4)
+          inst2vec ft ifeat >>= print 
+{-           let xs = concat (ifeat ^. _4)
           flip mapM_ xs $ \x -> do
             -- print $ (x^._1,pblabel2vec (x^._1))) xs
             -- print (x^._2._2)
             -- print (ptp2vec (x^._2._2))
-            argnode2vec ft x >>= print
+            -- argnode2vec ft x >>= print
+            return  ()
+-}

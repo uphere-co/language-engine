@@ -22,7 +22,8 @@ data Direction = Up | Down
 
 type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
 
-data Voice = Active | Passive deriving Show
+data Voice = Active | Passive
+           deriving (Show,Eq,Ord,Enum,Bounded)
 
 type TreeICP a = Tree (Range,ChunkTag) (Int,(POSTag,a))
 
@@ -32,7 +33,7 @@ type ArgNodeFeature = (PropBankLabel,(Range,ParseTreePath,Maybe (Int,(Level,(POS
 
 type RoleSet = (Text,Text)
 
-type InstanceFeature = (Int,RoleSet,Maybe Voice, [[ArgNodeFeature]])
+type InstanceFeature = (Int,RoleSet,Voice, [[ArgNodeFeature]])
 
 type Level = Int
 

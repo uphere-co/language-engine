@@ -9,11 +9,12 @@ import           PropBank.Type.Prop
 --
 import           SRL.Type
 
-
-formatVoice :: Maybe Voice -> String
+{- 
+formatVoice :: Voice -> String
 formatVoice Nothing = " "
 formatVoice (Just Active) = "active"
 formatVoice (Just Passive) = "passive"
+-}
 
 formatPTP :: ParseTreePath -> String
 formatPTP = foldMap f 
@@ -40,7 +41,7 @@ formatInstanceFeature (predidx,(lemma,sensenum),voicefeature,argfeatures) =
   in flip foldMap fs $ \x -> printf "%3s %17s.%2s %7s %s\n"
                               (show predidx)
                               lemma sensenum
-                              (formatVoice voicefeature)
+                              (show voicefeature)
                               (formatArgNodeFeature predidx x)
 
 
