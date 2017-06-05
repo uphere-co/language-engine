@@ -5,7 +5,7 @@
 
 module PropBank.Parser.Prop where
 
-import           Control.Applicative         (many)
+import           Control.Applicative         (many,(<|>))
 import           Control.Lens
 import qualified Data.Attoparsec.Text as A
 import           Data.Foldable               (toList)
@@ -27,24 +27,30 @@ readDecimal x = case decimal x of {Left err -> error err; Right (n,_) -> n }
 
 parseInst :: Text -> Instance
 parseInst txt =
-  let _inst_tree_id':_inst_predicate_id':_inst_annotator_id:_inst_lemma_type:_inst_lemma_roleset_id:_:_inst_arguments'
+  let _inst_tree_id':_inst_predicate_id':_inst_annotator_id:_inst_lemma_type:_inst_lemma_roleset_id':_:_inst_arguments'
         = T.words txt
       _inst_tree_id = readDecimal _inst_tree_id'
       _inst_predicate_id = readDecimal _inst_predicate_id'
+      _inst_lemma_roleset_id = case parseRoleSetId _inst_lemma_roleset_id' of
+                                 Nothing -> error ("parseRoleSetId: " ++ T.unpack txt)
+                                 Just xs -> xs
       _inst_arguments = case mapM parseArg _inst_arguments' of
-                          Nothing -> error "parseArg"
+                          Nothing -> error ("parseArg: " ++ T.unpack txt)
                           Just xs -> xs
   in Instance {..}
 
 parseInstOmit :: Text -> Instance
 parseInstOmit txt =
-  let _inst_tree_id':_inst_predicate_id':_inst_annotator_id:_inst_lemma_roleset_id:_:_inst_arguments'
+  let _inst_tree_id':_inst_predicate_id':_inst_annotator_id:_inst_lemma_roleset_id':_:_inst_arguments'
         = T.words txt
       _inst_lemma_type = ""        
       _inst_tree_id = readDecimal _inst_tree_id'
       _inst_predicate_id = readDecimal _inst_predicate_id'
+      _inst_lemma_roleset_id = case parseRoleSetId _inst_lemma_roleset_id' of
+                                 Nothing -> error ("parseRoleSetId: " ++ T.unpack txt)
+                                 Just xs -> xs      
       _inst_arguments = case mapM parseArg _inst_arguments' of
-                          Nothing -> error "parseArg"
+                          Nothing -> error ("parseArg: " ++ show txt)
                           Just xs -> xs
   in Instance {..}
 
@@ -63,20 +69,78 @@ parseNomInst txt =
                              Just xs -> xs
   in NomInstance {..}
 
+parseRoleSetId :: Text -> Maybe (Text,Text)
+parseRoleSetId txt = case A.parseOnly p txt of
+                       Left _ -> Nothing
+                       Right x -> Just x
+  where p = do lemma <- A.takeTill (== '.')
+               A.char '.'
+               sensenum <- A.takeTill (== ' ')
+               return (lemma,sensenum)
+
 parseArg :: Text -> Maybe Argument
 parseArg txt = case A.parseOnly p_arg txt of
                  Left _ -> Nothing
                  Right x -> Just x
   where p_arg = do ns <- p_node `A.sepBy` A.char '*'
                    A.char '-'
-                   l <- T.pack <$> many A.anyChar
+                   -- l <- T.pack <$> many A.anyChar
+                   l <- parsePropBankLabel 
                    return (Argument ns l)
         p_node = do i <- A.takeTill (== ':')
                     A.char ':'
                     h <- A.takeTill (`elem`  ['-', '*'])
                     return (Node (readDecimal i) (readDecimal h))
 
-        
+parseModifierType :: A.Parser ModifierType
+parseModifierType = 
+  (A.string "ADJ" >> return ADJ) <|>
+  (A.string "ADV" >> return ADV) <|>
+  (A.string "CAU" >> return CAU) <|>
+  (A.string "COM" >> return COM) <|>
+  (A.string "DIR" >> return DIR) <|>
+  (A.string "DIS" >> return DIS) <|>
+  (A.string "DSP" >> return DSP) <|>
+  (A.string "EXT" >> return EXT) <|>
+  (A.string "GOL" >> return GOL) <|>
+  (A.string "LOC" >> return LOC) <|>
+  (A.string "MNR" >> return MNR) <|>
+  (A.string "MOD" >> return MOD) <|>
+  (A.string "NEG" >> return NEG) <|>
+  (A.string "PNC" >> return PNC) <|>
+  (A.string "PRD" >> return PRD) <|>
+  (A.string "PRP" >> return PRP) <|>
+  (A.string "PRR" >> return PRR) <|>
+  (A.string "REC" >> return REC) <|>
+  (A.string "TMP" >> return TMP)
+
+parseLinkType :: A.Parser LinkType
+parseLinkType =
+  (A.string "PRO" >> return PRO) <|>
+  (A.string "PSV" >> return PSV) <|>
+  (A.string "SLC" >> return SLC) <|>
+  (A.string "PCR" >> return PCR)
+
+
+parsePropBankLabel :: A.Parser PropBankLabel
+parsePropBankLabel =
+  (do A.string "rel"
+      return Relation)
+  <|>
+  (do A.string "ARG"
+      ((NumberedArgument <$> A.decimal) <|>
+       (A.char 'M' >> A.char '-' >> (Modifier <$> parseModifierType)))
+  )
+  <|>
+  (do A.string "LINK-"
+      LinkArgument <$> parseLinkType
+  )
+  <|>
+  (do A.string "ARGA"
+      return (NumberedArgument 0))  -- error case VOL15_3.prop
+
+      
+  
 parseProp :: IsOmit -> Text -> [Instance]
 parseProp omit = case omit of
                    NoOmit -> map parseInst . T.lines
@@ -84,6 +148,10 @@ parseProp omit = case omit of
 
 parseNomProp :: Text -> [NomInstance]
 parseNomProp = map parseNomInst . T.lines
+
+
+-- showPropBankLabel :: PropBankLabel 
+
 
 findNodePathForLeaf :: Int -> PennTree -> [PennTreeGen Text (Int,(Text,Text))]
 findNodePathForLeaf i tr = contain i (mkIndexedTree tr)
@@ -98,7 +166,8 @@ findNode (Node i d) tr = do
 showInstance :: (PennTree,Instance) -> IO ()
 showInstance (tr,prop) = do
   TIO.putStrLn "---------------"
-  TIO.putStrLn (prop^.inst_lemma_roleset_id)
+  let roleset = prop^.inst_lemma_roleset_id
+  TIO.putStrLn (roleset^._1 <> "." <> T.pack (show (roleset^._2)))
   TIO.putStrLn "---------------"
   mapM_ (showArgument tr) (prop^.inst_arguments)
 
@@ -121,7 +190,7 @@ showNomSense (tr,nom) = do
   
 showArgument :: PennTree -> Argument -> IO ()
 showArgument tr arg = do
-  TIO.putStr (arg^.arg_label <> ": ")
+  putStr (show (arg^.arg_label) <> ": ")
   let format (t,n) = "(" <> t <> ") " <>   (T.intercalate " " . map (^._2._2) . toList) n
   mapM_ (\x -> TIO.putStr (maybe "Nothing" format (findNode x tr)) >> TIO.putStr ", ") (arg^.arg_terminals)
   TIO.putStr "\n"
