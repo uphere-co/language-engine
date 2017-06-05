@@ -14,6 +14,7 @@ import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.ByteString.Char8      as B
 import           Data.Default
+import           Data.Either                       (rights)
 import           Data.List                         (sort,zip4)
 import           Data.Monoid                       ((<>))
 import           Data.Maybe                        (mapMaybe)
@@ -71,16 +72,17 @@ preparePP = do
 
 run :: FastText -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline") -> IO ()
 run ft pp = do
-  -- mapM_ test_vector mt 
   let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
       dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
-  flip mapM_ [head propbankFiles] $ \(fp,omit) -> do
+  lsts <- flip mapM propbankFiles $ \(fp,omit) -> do
     r <- try $ do 
       header fp
       process ft pp (dirpenn,dirprop) (fp,omit)
     case r of
       Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
-      Right _ -> return ()
+      Right (Right lst) -> return lst
+      _ -> error "in run"
+  print (length (concat lsts))
 
 
 initGHCi :: IO J.JVM

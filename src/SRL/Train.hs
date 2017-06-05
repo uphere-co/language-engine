@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module SRL.Train where
 
@@ -10,6 +11,9 @@ import           Data.List                         (zip4)
 import           Data.Maybe                        (mapMaybe)
 import           Data.Monoid                       ((<>))
 import qualified Data.Sequence              as Seq
+import           Data.Vector.Storable              (Vector)
+import qualified Data.Vector.Storable       as V
+import           Foreign.C.Types
 import           Language.Java              as J
 import           System.FilePath                   ((</>),(<.>))
 --
@@ -29,11 +33,11 @@ process :: FastText
         -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
         -> (FilePath,FilePath)
         -> (FilePath,IsOmit)
-        -> IO ()
+        -> IO (Either String ([(CFloat,Vector CFloat)]))
 process ft pp (dirpenn,dirprop) (fp,omit) = do
   let pennfile = dirpenn </> fp <.> "mrg"
       propfile = dirprop </> fp <.> "prop"
-  void . runEitherT $ do
+  runEitherT $ do
     (trs,props) <- propbank (pennfile,propfile,omit)
     rdocs <- liftIO $ do
       let docs = map mkDocFromPennTree trs
@@ -49,18 +53,25 @@ process ft pp (dirpenn,dirprop) (fp,omit) = do
            . merge (^.inst_tree_id) (zip4 pts trs deps sents)
            $ props
     liftIO $ mapM_ (showMatchedInstance <> showFeatures <> showFakeFeatures) rs
-    liftIO $ flip mapM_ rs $ \(_,sentinfo,prs) -> do
+    results :: [[(CFloat,Vector CFloat)]]
+     <-  liftIO $ flip mapM rs $ \(_,sentinfo,prs) -> do
       let ifeats = features (sentinfo,prs)
+      ts <- concat <$> mapM (inst2vec ft) ifeats
+      let ts' = filter ((== NumberedArgument 0) . (^._1)) ts 
+      -- mapM_ (print . V.length . snd) ts'
+      let ts'' = map (\(_,v) -> (1,v)) ts'
+      -- putStrLn "----"
+      let ifakefeats = fakeFeatures (sentinfo,prs)
+      fs <- concat <$> mapM (inst2vec ft) ifakefeats
+      let fs' = filter ((== NumberedArgument 0) . (^._1)) fs
+      let fs'' = map (\(_,v) -> (-1,v)) fs'
+      -- mapM_ (print . V.length . snd) fs'
+      -- putStrLn "----"
+      return (ts''++fs'')
+    return (concat results)
+      {-
       case ifeats of
         [] -> return ()
         (ifeat:_) -> do
-          -- word2vec ft (ifeat ^. _2 . _1) >>= print
-          inst2vec ft ifeat >>= print 
-{-           let xs = concat (ifeat ^. _4)
-          flip mapM_ xs $ \x -> do
-            -- print $ (x^._1,pblabel2vec (x^._1))) xs
-            -- print (x^._2._2)
-            -- print (ptp2vec (x^._2._2))
-            -- argnode2vec ft x >>= print
-            return  ()
--}
+          vs <- inst2vec ft ifeat
+      -}
