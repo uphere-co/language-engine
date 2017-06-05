@@ -43,15 +43,6 @@ phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
 phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
 
-{- 
-position :: Int ->  PennTreeGen c (Int,(p,a)) -> Position
-position n tr = let (b,e) = termRange tr
-                in if | n < b     -> Before
-                      | n > e     -> After
-                      | otherwise -> Embed
--}
-
-
 elimCommonHead :: [PennTreeIdxG c (p,a)]
                -> [PennTreeIdxG c (p,a)]
                -> (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
@@ -157,11 +148,8 @@ featuresForArgNode sentinfo predidx arg node =
       comparef _        Nothing  = LT
       comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
   in  sortBy (comparef `on` (view _3)) $ zip3 rngs paths heads        
-
-
-
-
       
+
 featuresForArg :: SentenceInfo -> Int -> MatchedArgument -> [ArgNodeFeature]
 featuresForArg sentinfo predidx arg =
   flip mapMaybe (arg^.ma_nodes) $ \node -> do
@@ -185,8 +173,6 @@ fakeFeaturesForArg sentinfo predidx arg rng =
       comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
   in  (rng,path,hd)
 
-
-
     
 featuresForInstance :: SentenceInfo -> IntMap (Text,Voice)  -> MatchedInstance -> InstanceFeature
 featuresForInstance sentinfo voicemap inst = 
@@ -197,43 +183,27 @@ featuresForInstance sentinfo voicemap inst =
   in (predidx,rolesetid,voicefeature,argfeatures)
 
 
-
 fakeFeaturesForInstance :: SentenceInfo -> IntMap (Text,Voice) -> MatchedInstance -> InstanceFeature
-                               -- [(Argument,[Range])] -- 
 fakeFeaturesForInstance sentinfo voicemap inst = 
   let predidx = findRelNode (inst^.mi_arguments)
       voicefeature = fmap snd (IM.lookup predidx voicemap)
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
       args = filter ((/= "rel") . (^.ma_argument.arg_label)) $ inst^.mi_arguments
-      -- rngss = map (^..ma_nodes . traverse . mn_node . _1) args
       ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
-  -- print args
       argfeatures = do
         arg <- args
         let label = arg^.ma_argument.arg_label
-        let rngs = arg ^.. ma_nodes . traverse . mn_node . _1 -- rngss
+        let rngs = arg ^.. ma_nodes . traverse . mn_node . _1
         guard ((not.null) rngs)
         let rng = (minimum (map (^._1) rngs), maximum (map (^._2) rngs))
             exclst = filter (`isNotOverlappedWith` rng)
                    .  map (\(PN (r,_) _) -> r)
                    .  filter (\case PN _ _ -> True ; _ -> False)
                    . biList . duplicate $ ipt
-        --     argfeatures = map (fakeFeaturesForArgs sentinfo predidx) exclst
-        -- return (predidx,rolesetid,voicefeatures,argfeatures)
         rngeach <- exclst
         guard (position predidx rngeach /= Embed)
         return [(label,fakeFeaturesForArg sentinfo predidx (arg^.ma_argument) rngeach)]
   in (predidx,rolesetid,voicefeature,argfeatures)
-{- 
-flip mapM_ rngss $ \rngs ->  
-    case rngs of
-      [] -> return []
-      (x:xs) -> do
-        let rng = (minimum (map (^._1) rngs), maximum (map (^._2) rngs))
-            -- chkoverlap rng (rng
-                
---    in (predidx,rolesetid,voicefeature,argfeatures)
--}
 
 
 voice :: (PennTree,S.Sentence) -> [(Int,(Text,Voice))]
@@ -250,7 +220,6 @@ voice (pt,sent) =
   in mapMaybe testf $ toList (mkTreeZipper [] lemmapt)
 
 
-
 features :: (SentenceInfo,[Instance]) -> [InstanceFeature]
 features (sentinfo,prs) = 
   let pt = sentinfo^.corenlp_tree
@@ -259,7 +228,8 @@ features (sentinfo,prs) =
       vmap = IM.fromList $ voice (pt,sentinfo^.corenlp_sent)
   in map (featuresForInstance sentinfo vmap) insts
 
-fakeFeatures :: (SentenceInfo,[Instance]) -> [InstanceFeature] -- [[(Range,[Range])]] -- [InstanceFeature]
+
+fakeFeatures :: (SentenceInfo,[Instance]) -> [InstanceFeature]
 fakeFeatures (sentinfo,prs) = 
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
@@ -276,7 +246,6 @@ showFeatures (_i,sentinfo,prs) = do
   putStrLn "---------------"
   
 
-
 showFakeFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
 showFakeFeatures (_i,sentinfo,prs) = do
   let pt = sentinfo^.corenlp_tree
@@ -284,8 +253,5 @@ showFakeFeatures (_i,sentinfo,prs) = do
       insts = matchInstances (pt,tr) prs
   putStrLn "Falsity items"
   putStrLn "---------------"
-  -- mapM_ (putStrLn . formatInstanceFeature) (fakeFeatures (sentinfo,prs))
   mapM_ (putStrLn . formatInstanceFeature) (fakeFeatures (sentinfo,prs))
-  
   putStrLn "---------------"
-
