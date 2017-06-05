@@ -11,7 +11,7 @@ import           Control.Monad.IO.Class          (liftIO)
 import           Control.Monad.Trans.Either      (EitherT,hoistEither)
 import qualified Data.Attoparsec.Text       as A
 import           Data.Foldable                   (toList)
-import Data.List (intercalate)
+import           Data.List (intercalate)
 import           Data.Maybe                      (fromJust,mapMaybe,listToMaybe)
 import           Data.Monoid                     ((<>))
 import           Data.Text                       (Text)

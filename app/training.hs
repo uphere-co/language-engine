@@ -40,9 +40,10 @@ import           PropBank.Util
 import           SRL.DataSet.PropBank
 import           SRL.Feature
 import           SRL.PropBankMatch
+import           SRL.Train
 import           SRL.Vectorize
 
-header (fp,_) = do
+header fp = do
   putStrLn "*****************************"
   putStrLn "*****************************"
   putStrLn "*****************************"
@@ -53,35 +54,6 @@ header (fp,_) = do
   putStrLn "*****************************"
   putStrLn "*****************************"
 
-
-                 
-process :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
-        -> (FilePath,FilePath)
-        -> (FilePath,IsOmit)
-        -> IO ()
-process pp (dirpenn,dirprop) (fp,omit) = do
-  r <- try $ do    
-    let pennfile = dirpenn </> fp <.> "mrg"
-        propfile = dirprop </> fp <.> "prop"
-    void . runEitherT $ do
-      (trs,props) <- propbank (pennfile,propfile,omit)
-      rdocs <- liftIO $ do
-        let docs = map mkDocFromPennTree trs
-        anns <- mapM (annotate pp) docs
-        rdocs <- mapM protobufDoc anns
-        return rdocs
-      ds <- mapM hoistEither rdocs
-      let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
-      deps <- hoistEither $ mapM sentToDep sents
-      let cpts = mapMaybe (^.S.parseTree) sents
-          pts = map decodeToPennTree cpts
-          rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt tr dep,pr))
-             . merge (^.inst_tree_id) (zip4 pts trs deps sents)
-             $ props
-      liftIO $ mapM_ (showMatchedInstance <> showFeatures) rs 
-  case r of
-    Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
-    Right _ -> return ()
 
 preparePP :: IO (J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
 preparePP = do
@@ -95,8 +67,9 @@ preparePP = do
                  . ( ner .~ False )
   prepare pcfg
 
-run :: FastText -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline") -> IO ()
-run t pp = do
+
+test_vector :: FastText -> IO ()
+test_vector t = 
   withCString "vector" $ \cstr_word -> do
     let c_size = 300
     v <- newFastTextVector c_size
@@ -108,9 +81,20 @@ run t pp = do
     let mv = MVector (fromIntegral c_size) ptr
     let v = create (return mv)
     print v
+
+run :: Maybe FastText -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline") -> IO ()
+run mt pp = do
+  -- withCString "vector" $ \cstr_word -> do
+  mapM_ test_vector mt 
   let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
       dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
-  mapM_ (header <> process pp (dirpenn,dirprop)) propbankFiles
+  flip mapM_ propbankFiles $ \(fp,omit) -> do
+    r <- try $ do 
+      header fp
+      process pp (dirpenn,dirprop) (fp,omit)
+    case r of
+      Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
+      Right _ -> return ()
 
 
 initGHCi :: IO J.JVM
@@ -127,5 +111,5 @@ main :: IO ()
 main = do
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
-    t <- init2
-    (preparePP >>= run t)
+    -- t <- init2
+    (preparePP >>= run Nothing) -- (Just t)
