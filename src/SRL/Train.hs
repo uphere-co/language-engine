@@ -8,7 +8,7 @@ import           Control.Monad                     (void)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import           Data.List                         (zip4)
-import           Data.Maybe                        (mapMaybe)
+import           Data.Maybe                        (fromJust,mapMaybe)
 import           Data.Monoid                       ((<>))
 import qualified Data.Sequence              as Seq
 import           Data.Vector.Storable              (Vector)
@@ -58,20 +58,38 @@ process ft pp (dirpenn,dirprop) (fp,omit) = do
       let ifeats = features (sentinfo,prs)
       ts <- concat <$> mapM (inst2vec ft) ifeats
       let ts' = filter ((== NumberedArgument 0) . (^._1)) ts 
-      -- mapM_ (print . V.length . snd) ts'
-      let ts'' = map (\(_,v) -> (1,v)) ts'
-      -- putStrLn "----"
-      let ifakefeats = fakeFeatures (sentinfo,prs)
+          ts'' = map (\(_,v) -> (1,v)) ts'
+          ifakefeats = fakeFeatures (sentinfo,prs)
       fs <- concat <$> mapM (inst2vec ft) ifakefeats
       let fs' = filter ((== NumberedArgument 0) . (^._1)) fs
-      let fs'' = map (\(_,v) -> (-1,v)) fs'
-      -- mapM_ (print . V.length . snd) fs'
-      -- putStrLn "----"
+          fs'' = map (\(_,v) -> (-1,v)) fs'
       return (ts''++fs'')
     return (concat results)
-      {-
-      case ifeats of
-        [] -> return ()
-        (ifeat:_) -> do
-          vs <- inst2vec ft ifeat
-      -}
+
+
+test ft pp svm = do
+  runEitherT $ do
+    let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
+        dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
+    (trs,props) <- propbank (dirpenn </> "wsj_0189" <.> "mrg" ,dirprop </> "wsj_0189" <.> "prop", Omit)
+    let tr = head trs
+        pr = head props
+        doc = mkDocFromPennTree tr
+    rdoc <- liftIO $ do
+      ann <- annotate pp doc
+      protobufDoc ann
+    d <- hoistEither rdoc
+    let sent = Seq.index (d^.D.sentence) 0
+    dep <- hoistEither (sentToDep sent)
+    let cpt = fromJust (sent ^.S.parseTree)
+        pt = decodeToPennTree cpt
+        r = (SentInfo sent pt tr dep,pr)
+
+        ifeats = features r
+        ifakefeats = fakeFeatures r
+    ts <- concat <$> mapM (inst2vec ft) ifeats
+    fs <- concat <$> mapM (inst2vec ft) ifakefeats
+      
+    liftIO $ print (head ts)
+
+    liftIO $ print (head fs)
