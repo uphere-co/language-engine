@@ -27,7 +27,8 @@ loadDB fp = do
           <*> (catMaybes <$> parseFile (parseData True ) (fp </> "data.verb"))
           <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adj"))
           <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adv"))
-  return (createWordNetDB is ds)
+  ss <- (catMaybes <$> parseFile parseSense (fp </> "index.sense"))
+  return (createWordNetDB is ds ss)
 
 runSingleQuery input typ db = do
   case decimal (T.pack input) of
@@ -41,13 +42,28 @@ queryLemma input typ db = do
     POS_A -> putStrLn "-- Adjective --" >> (mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_A input)
     POS_R -> putStrLn "-- Adverb --" >> (mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_R input)
 
-
 queryConcept n typ db = do
   case typ of
     POS_N -> putStrLn "-- Noun --" >> (mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_N n)
     POS_V -> putStrLn "-- Verb --" >> (mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_V n)
     POS_A -> putStrLn "-- Adjective --" >> (mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_A n)
     POS_R -> putStrLn "-- Adverb --" >> (mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_R n)
+
+getQueryLemma input typ db = do
+  case typ of
+    POS_N -> fmap format $ lookupLemma db POS_N input
+    POS_V -> fmap format $ lookupLemma db POS_V input
+    POS_A -> fmap format $ lookupLemma db POS_A input
+    POS_R -> fmap format $ lookupLemma db POS_R input
+
+getQueryConcept n typ db = do
+  case typ of
+    POS_N -> lookupConcept db POS_N n
+    POS_V -> lookupConcept db POS_V n
+    POS_A -> lookupConcept db POS_A n
+    POS_R -> lookupConcept db POS_R n
+
+getQuerySense t i db = lookupSense db t i
 
 format :: ([LexItem],Text) -> Text
 format (xs,txt) = T.intercalate "," (map formatLI xs) <> " | " <> txt

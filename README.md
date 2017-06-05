@@ -37,3 +37,13 @@ lend.0
 loan.0
 lend.0
 ```
+
+API Structure
+getQueryLemma and getQueryConcept are API version of queryConcept and queryLemma,
+which are just IO () functions.
+DB of WordNet is loaded by function loadDB. Then, API is
+```
+wdb <- loadDB <filepath>
+(concept :: Maybe ([LexItem],Text)) <- getQueryConcept <ili> <pos> wdb
+(sense :: Maybe Int) <- getQuerySense <lex-word> <lex-id> wdb
+```
