@@ -1,15 +1,18 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
 module SRL.Feature where
 
-import           Control.Lens            hiding (levels)
+import           Control.Lens            hiding (levels,Level)
 import           Control.Monad                  ((<=<),when)
 import           Data.Bifunctor                 (bimap)
+import           Data.Foldable                  (toList)
 import           Data.Function                  (on)
 import           Data.Graph                     (buildG,dfs)
+import           Data.IntMap                    (IntMap)
 import qualified Data.IntMap             as IM
 import           Data.List                      (foldl',group,sortBy,zip4)
 import           Data.Maybe                     (catMaybes,fromJust,mapMaybe)
@@ -17,6 +20,7 @@ import           Data.Text                      (Text)
 import qualified Data.Text               as T   (intercalate,unpack)
 import qualified Data.Text.IO            as TIO
 import           Data.Tree                      (levels)
+import           Text.Printf
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
@@ -29,15 +33,27 @@ import           PropBank.Type.Prop
 import           SRL.PropBankMatch
 import           SRL.Util
 --
-import Debug.Trace
-
 
 data Position = Before | After | Embed
               deriving (Show,Eq,Ord)
 
 data Direction = Up | Down
                deriving (Show,Eq,Ord)
-                          
+
+type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
+
+data Voice = Active | Passive deriving Show
+
+type TreeICP a = Tree (Range,ChunkTag) (Int,(POSTag,a))
+
+type TreeZipperICP a = TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
+
+type ArgNodeFeature = (Text,(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text)))))
+
+type InstanceFeature = (Int,Text,Maybe Voice, [[ArgNodeFeature]])
+
+type Level = Int
+                     
 phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
 phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
@@ -69,8 +85,8 @@ elimCommonHead lst1 lst2 = go lst1 lst2
     go xs     []     = (Nothing,xs,[])
 
 
-parseTreePathFull :: (Show c, Show p, Show a) =>
-                     (Int,Range) -> PennTreeIdxG c (p,a)
+parseTreePathFull :: (Int,Range)
+                  -> PennTreeIdxG c (p,a)
                   -> (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
 parseTreePathFull (start,target) tr = elimCommonHead (contain start tr) (containR target tr)
 
@@ -88,10 +104,10 @@ parseTreePath (mh,tostart,totarget) =
 simplifyPTP :: (Eq c,Eq p) => [(Either c p, Direction)] -> [(Either c p, Direction)]
 simplifyPTP xs = map head (group xs)
 
-annotateLevel :: IM.IntMap Int -> (Int, t) -> (Int,(Maybe Int,t))
+annotateLevel :: IntMap Int -> (Int, t) -> (Int,(Maybe Level,t))
 annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))
 
-headWordTree :: Dependency -> Tree c (Int,t) -> Tree c (Int,(Maybe Int,t))
+headWordTree :: Dependency -> Tree c (Int,t) -> Tree c (Int,(Maybe Level,t))
 headWordTree (Dependency root nods edgs') tr =
   let bnds = let xs = map fst nods in (minimum xs, maximum xs)
       edgs = map fst edgs'
@@ -99,19 +115,16 @@ headWordTree (Dependency root nods edgs') tr =
       levelMap = IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
   in fmap (annotateLevel levelMap) tr 
 
-headWord :: PennTreeIdxG ChunkTag (Maybe Int,(POSTag,Text)) -> Maybe Text
-headWord  = safeHead . map snd . sortBy (compare `on` fst)
-          . mapMaybe (\(_,(ml,(_,t))) -> (,) <$> ml <*> pure t) . getLeaves 
 
-lemmatize :: IM.IntMap Text
+headWord :: PennTreeIdxG ChunkTag (Maybe Level,(POSTag,Text)) -> Maybe (Int,(Level,(POSTag,Text)))
+headWord  = safeHead . sortBy (compare `on` view (_2._1))
+          . mapMaybe (\(i,(ml,postxt)) -> fmap (i,) (fmap (,postxt) ml)) . getLeaves 
+
+lemmatize :: IntMap Text
           -> PennTreeIdxG ChunkTag (POSTag,Text)
           -> PennTreeIdxG ChunkTag (POSTag,(Text,Text))
 lemmatize m = bimap id (\(i,(p,x)) -> (i,(p,(x,fromJust (IM.lookup i m)))))
 
-
-type TreeICP a = Tree (Range,ChunkTag) (Int,(POSTag,a))
-
-type TreeZipperICP a = TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
 
 isVBN :: TreeZipperICP a -> Bool
 isVBN z = case current z of
@@ -140,40 +153,72 @@ isPassive z = let b1 = isVBN z
                   b3 = isInNP z
                   b4 = isInPP z
               in (b1 && b2) || (b1 && b3) || (b1 && b4)
+  
+featuresForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode
+                   -> [(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))]
+featuresForArgNode sentinfo predidx arg node =
+  let rngs = node ^.. mn_trees . traverse . _1
+      ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
+      dep = sentinfo^.corenlp_dep
+      parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
+      opaths = map parseTreePath parsetrees
+      paths = map (simplifyPTP . parseTreePath) parsetrees
+      headwordtrees = headWordTree dep ipt
+      heads = map (\rng -> headWord =<< matchR rng headwordtrees) rngs
+      comparef Nothing  _        = GT
+      comparef _        Nothing  = LT
+      comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
+  in  sortBy (comparef `on` (view _3)) $ zip3 rngs paths heads        
 
-showFeaturesForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode -> IO ()
-showFeaturesForArgNode sentinfo predidx arg node = 
-  when (arg ^. arg_label /= "rel")  $ do
-    print (arg ^. arg_label)
-    let rngs = node ^.. mn_trees . traverse . _1
-    let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
-        dep = sentinfo^.corenlp_dep
-        parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
-        opaths = map parseTreePath parsetrees
-        paths = map (simplifyPTP . parseTreePath) parsetrees
-        
-        heads = map (\rng -> headWord =<< matchR rng (headWordTree dep ipt)) rngs
-    if rngs == [(6,7)]
-      then print (containR (6,7) ipt)
-      else return ()
-    mapM_ print (zip4 rngs opaths paths heads)
-
-    
-showFeaturesForArg :: SentenceInfo -> Int -> MatchedArgument -> IO ()
-showFeaturesForArg sentinfo predidx arg = 
-  mapM_ (showFeaturesForArgNode sentinfo predidx (arg^.ma_argument)) (arg^.ma_nodes)
+      
+featuresForArg :: SentenceInfo -> Int -> MatchedArgument -> [ArgNodeFeature]
+featuresForArg sentinfo predidx arg =
+  flip mapMaybe (arg^.ma_nodes) $ \node -> do
+    let label = arg^.ma_argument.arg_label
+    fs <- safeHead (featuresForArgNode sentinfo predidx (arg^.ma_argument) node)
+    return (label,fs)
 
   
-showFeaturesForInstance :: SentenceInfo -> MatchedInstance -> IO ()
-showFeaturesForInstance sentinfo inst = do
-  print (inst ^. mi_instance.inst_lemma_type)
+featuresForInstance :: SentenceInfo -> IntMap (Text,Voice) -> MatchedInstance -> InstanceFeature
+featuresForInstance sentinfo voicemap inst = 
   let predidx = findRelNode (inst^.mi_arguments)
-  mapM_ (showFeaturesForArg sentinfo predidx) (inst^.mi_arguments)
+      rolesetid = inst^.mi_instance.inst_lemma_roleset_id
+      argfeatures = map (featuresForArg sentinfo predidx) . filter ((/= "rel") . (^.ma_argument.arg_label)) $ inst^.mi_arguments
+      voicefeature = fmap snd (IM.lookup predidx voicemap)
+  in (predidx,rolesetid,voicefeature,argfeatures)
 
 
-showVoice :: (PennTree,S.Sentence) -> IO ()
-showVoice (pt,sent) = do
-  TIO.putStrLn "---------- VOICE -----------------"
+formatVoice :: Maybe Voice -> String
+formatVoice Nothing = " "
+formatVoice (Just Active) = "active"
+formatVoice (Just Passive) = "passive"
+
+formatPTP :: ParseTreePath -> String
+formatPTP = foldMap f 
+  where
+    f (Left  c,Up  ) = show c ++ "↑"
+    f (Left  c,Down) = show c ++ "↓"
+    f (Right p,Up  ) = show p ++ "↑"
+    f (Right p,Down) = show p ++ "↓"
+
+
+formatArgNodeFeature :: ArgNodeFeature -> String
+formatArgNodeFeature (label,(rng,ptp,mhead)) =
+    printf "%10s %10s %30s %5s %s" (T.unpack label) (show rng) (formatPTP ptp) (w^._1) (w^._2)
+  where
+    w = hstr mhead
+    hstr Nothing = ("","")
+    hstr (Just (_,(_,(p,w)))) = (show p, T.unpack w)
+
+
+formatInstanceFeature :: InstanceFeature -> String
+formatInstanceFeature (predidx,rolesetid,voicefeature,argfeatures) =
+  let fs = concat argfeatures
+  in foldMap (\x -> printf "%3s %20s %10s %s\n" (show predidx) (T.unpack rolesetid) (formatVoice voicefeature) (formatArgNodeFeature x)) fs
+
+
+voice :: (PennTree,S.Sentence) -> [(Int,(Text,Voice))]
+voice (pt,sent) = 
   let ipt = mkPennTreeIdx pt
       lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
                     zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
@@ -181,16 +226,21 @@ showVoice (pt,sent) = do
       getf (PL x) = Right x
       getf (PN x _) = Left x
       testf z = case getf (current z) of
-                  Right (n,(VBN,(txt,_))) -> putStrLn (show n ++ ": " ++  T.unpack txt ++ ": " ++ show (isPassive z))
-                  _ -> return ()
-  mapM_ testf (mkTreeZipper [] lemmapt)
+                  Right (n,(VBN,(txt,_))) -> Just (n,(txt,if isPassive z then Passive else Active))
+                  _ -> Nothing
+  in mapMaybe testf $ toList (mkTreeZipper [] lemmapt)
 
 
 
-showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
-showFeatures (_i,sentinfo,prs) = do
+features :: (SentenceInfo,[Instance]) -> [InstanceFeature]
+features (sentinfo,prs) = 
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
       insts = matchInstances (pt,tr) prs
-  mapM_ (showFeaturesForInstance sentinfo) insts
-  showVoice (pt,sentinfo^.corenlp_sent)
+      vmap = IM.fromList $ voice (pt,sentinfo^.corenlp_sent)
+  in map (featuresForInstance sentinfo vmap) insts
+
+
+showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
+showFeatures (_i,sentinfo,prs) = mapM_ (putStrLn . formatInstanceFeature) (features (sentinfo,prs))
+

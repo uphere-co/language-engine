@@ -7,7 +7,7 @@
 
 module Main where
 
-import           Control.Lens               hiding (levels)
+import           Control.Lens               hiding (levels,(<.>))
 import           Control.Monad                     (void)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
@@ -18,7 +18,9 @@ import           Data.Monoid                       ((<>))
 import           Data.Maybe                        (mapMaybe)
 import qualified Data.Sequence              as Seq
 import           Language.Java              as J
+import           Options.Applicative
 import           System.Environment                (getEnv)
+import           System.FilePath                   ((</>),(<.>))
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
@@ -33,16 +35,32 @@ import           PropBank.Util
 import           SRL.Feature
 import           SRL.PropBankMatch
 
+data ProgOption = ProgOption { penndir :: FilePath
+                             , propdir :: FilePath
+                             , filename :: FilePath
+                             , omitflag :: Bool
+                             } deriving Show
+
+pOptions :: Parser ProgOption
+pOptions = ProgOption <$> strOption (long "penn" <> short 'n' <> help "Penn Treebank directory")
+                      <*> strOption (long "prop" <> short 'p' <> help "PropBank directory")
+                      <*> strOption (long "name" <> short 'f' <> help "File name")
+                      <*> switch (long "omit" <> short 'o' <> help "Omit lemma-type or not")
+
+progOption :: ParserInfo ProgOption 
+progOption = info pOptions (fullDesc <> progDesc "Test features for PropBank corpus")
 
   
 main :: IO ()
 main = do
+  opt <- execParser progOption
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do 
-    let pennfile = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written/wsj_0026.mrg"
-        propfile = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written/wsj_0026.prop"
     void . runEitherT $ do
-      (trs,props) <- propbank (pennfile,propfile)
+      let omit = case omitflag opt of 
+                   True -> Omit
+                   False -> NoOmit
+      (trs,props) <- propbank (penndir opt </> filename opt <.> "mrg", propdir opt </> filename opt <.> "prop",omit)
       rdocs <- liftIO $ do
         let pcfg = def & ( tokenizer .~ True )
                        . ( words2sentences .~ True )

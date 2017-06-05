@@ -30,7 +30,7 @@ import           PropBank.Type.Prop
 --
 import           SRL.Util
 --
-import           Debug.Trace
+-- import           Debug.Trace
 
 data SentenceInfo = SentInfo { _corenlp_sent :: CS.Sentence
                              , _corenlp_tree :: PennTree
@@ -98,7 +98,7 @@ matchR (b,e) x@(PL (n,_))
   | otherwise = Nothing
 
 matchArgNodes :: (PennTree,PennTree) -> Argument -> [MatchedArgNode]
-matchArgNodes (pt,tr) arg =   trace (show arg) $ do
+matchArgNodes (pt,tr) arg = do
   n <- arg ^. arg_terminals
   let nd = fromJust (findNode n tr)
   let adjf = adjustIndexFromTree tr
@@ -181,6 +181,6 @@ showMatchedInstance (_i,sentinfo,prs) = do
   TIO.putStrLn "-----------------"            
   TIO.putStrLn (T.intercalate " " terms)
   TIO.putStrLn "-----------------"
-  mapM_ printMatchedInst $ matchInstances (pt,tr) prs
+  -- mapM_ printMatchedInst $ matchInstances (pt,tr) prs
 
 
