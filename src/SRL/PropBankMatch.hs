@@ -30,7 +30,6 @@ import           PropBank.Type.Prop
 --
 import           SRL.Util
 --
--- import           Debug.Trace
 
 data SentenceInfo = SentInfo { _corenlp_sent :: CS.Sentence
                              , _corenlp_tree :: PennTree
@@ -132,7 +131,7 @@ printMatchedNode x = do
 
 printMatchedArg :: MatchedArgument -> IO ()
 printMatchedArg x = do
-  TIO.putStrLn $ x^.ma_argument.arg_label 
+  putStrLn $ show (x^.ma_argument.arg_label)
   mapM_ printMatchedNode (x^.ma_nodes)
 
 
@@ -145,7 +144,7 @@ printMatchedInst x = do
 
 findRelNode :: [MatchedArgument] -> Int
 findRelNode args =
-    let a1 = headf $ filter (\a -> a ^. ma_argument.arg_label == "rel") args
+    let a1 = headf $ filter (\a -> a ^. ma_argument.arg_label == Relation) args
     in headf (a1^..ma_nodes.traverse.mn_node._1._1)
   where headf [] = error ("findRelNode: " ++ intercalate "\n" (map show args))
         headf (x:_) = x

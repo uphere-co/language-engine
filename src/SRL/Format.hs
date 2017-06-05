@@ -5,6 +5,7 @@ import qualified Data.Text               as T
 import           Text.Printf
 --
 import           NLP.Type.PennTreebankII
+import           PropBank.Type.Prop
 --
 import           SRL.Type
 
@@ -25,7 +26,7 @@ formatPTP = foldMap f
 
 formatArgNodeFeature :: Int -> ArgNodeFeature -> String
 formatArgNodeFeature predidx (label,(rng,ptp,mhead)) =
-    printf "%10s %10s %6s %30s %5s %s" (T.unpack label) (show rng) (show (position predidx rng))
+    printf "%10s %10s %6s %30s %5s %s" (T.unpack (pbLabelText label)) (show rng) (show (position predidx rng))
                                        (formatPTP ptp) (w^._1) (w^._2)
   where
     w = hstr mhead

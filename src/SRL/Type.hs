@@ -6,6 +6,7 @@ import           Data.Text               (Text)
 --
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
+import           PropBank.Type.Prop
 --
 import           SRL.CoNLL.CoNLL08.Type
 
@@ -27,7 +28,7 @@ type TreeICP a = Tree (Range,ChunkTag) (Int,(POSTag,a))
 
 type TreeZipperICP a = TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
 
-type ArgNodeFeature = (Text,(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text)))))
+type ArgNodeFeature = (PropBankLabel,(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text)))))
 
 type InstanceFeature = (Int,Text,Maybe Voice, [[ArgNodeFeature]])
 
