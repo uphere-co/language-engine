@@ -93,14 +93,14 @@ argnode2vec ft (arglabel,(_,ptp,Just (_,(_,(pos,word))))) = do
       v2 = ptp2vec ptp
       v3 = enum2vec pos
   v4 <- word2vec ft word
-  let v = {- v1 V.++ -} v2 V.++ v3 V.++ v4
+  let v = {- v1 V.++ -} v2 V.++ v3 {- V.++ v4 -}
   v `seq` return (Just v)
 argnode2vec ft (arglabel,(_,ptp,Nothing)) = return Nothing
 
  
 inst2vec :: FastText -> InstanceFeature -> IO [(PropBankLabel,Vector CFloat)]
 inst2vec ft ifeat = do
-  predv <- (V.++) <$> word2vec ft (ifeat^._2._1) <*> pure (enum2vec (ifeat^._3))
+  predv <- {- (V.++) <$> word2vec ft (ifeat^._2._1) <*> -} pure (enum2vec (ifeat^._3))
   rs <- flip traverse (concat (ifeat^._4)) $ \nfeat -> do
     let label = nfeat^._1
     mvec <- argnode2vec ft nfeat

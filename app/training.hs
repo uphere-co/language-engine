@@ -75,24 +75,27 @@ run :: FastText -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline") -> 
 run ft pp = do
   let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
       dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
-  lsts <- flip mapM propbankFiles $ \(fp,omit) -> do
+
+  let (trainingFiles,testFiles) = splitAt 20 propbankFiles
+      -- testFiles = [("118CWL049",NoOmit),("118CWL050",NoOmit)]
+  lsts <- flip mapM trainingFiles $ \(fp,omit) -> do
     r <- try $ do 
       header fp
       process ft pp (dirpenn,dirprop) (fp,omit)
     case r of
       Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
       Right (Right lst) -> return lst
-      _ -> error "in run"
+      Right (Left e) -> error ("in run: " ++ e)
   let trainingData = concat lsts
   print (length trainingData)
 
   -- (msg,r) <- crossvalidate (C_SVC 1) (RBF 1) 2
   (msg,svm) <- trainSVM (C_SVC 1) (RBF 1) [] trainingData
   
-  void $ test ft pp svm
+  mapM_ (test ft pp svm (dirpenn,dirprop)) testFiles
   
   -- print (length (concat lsts))
-
+  --  [("chapter-10",NoOmit)] 
 
 initGHCi :: IO J.JVM
 initGHCi = do
