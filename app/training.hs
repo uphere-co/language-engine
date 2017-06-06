@@ -10,7 +10,6 @@ module Main where
 import           AI.SVM.Simple
 import           AI.SVM.Base
 import           Control.Lens               hiding (levels,(<.>))
-import           Control.Exception
 import           Control.Monad                     (void)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
@@ -45,17 +44,6 @@ import           SRL.PropBankMatch
 import           SRL.Train
 import           SRL.Vectorize
 
-header fp = do
-  putStrLn "*****************************"
-  putStrLn "*****************************"
-  putStrLn "*****************************"
-  putStrLn "*****************************"
-  putStrLn fp 
-  putStrLn "*****************************"
-  putStrLn "*****************************"
-  putStrLn "*****************************"
-  putStrLn "*****************************"
-
 
 preparePP :: IO (J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
 preparePP = do
@@ -76,20 +64,9 @@ run ft pp = do
   let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
       dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
 
-  let (trainingFiles,testFiles) = splitAt 50 propbankFiles
+  let (trainingFiles,testFiles) = splitAt 20 propbankFiles
 
-  lsts <- flip mapM trainingFiles $ \(fp,omit) -> do
-    r <- try $ do 
-      header fp
-      process ft pp (dirpenn,dirprop) (fp,omit)
-    case r of
-      Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
-      Right (Right lst) -> return lst
-      Right (Left e) -> error ("in run: " ++ e)
-  let trainingData = concat lsts
-  print (length trainingData)
-  (msg,svm) <- trainSVM (EPSILON_SVR 1 0.1) (RBF 1) [] trainingData
-  
+  (msg,svm) <- train ft pp (dirpenn,dirprop) trainingFiles   
   mapM_ (classifyFile ft pp svm (dirpenn,dirprop)) testFiles
   
 

@@ -1,11 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module SRL.Train where
 
 import           AI.SVM.Simple
 import           AI.SVM.Base
+import           Control.Exception
 import           Control.Lens               hiding (levels,(<.>))
 import           Control.Monad                     (void,when)
 import           Control.Monad.IO.Class            (liftIO)
@@ -39,6 +41,19 @@ import           SRL.PropBankMatch
 import           SRL.Vectorize
 
 
+data SVMFarm = SVMFarm { _svm_arg0 :: SVM
+                       , _svm_arg1 :: SVM
+                       }
+               
+makeLenses ''SVMFarm
+
+data TrainingFarm = TrainingFarm { _training_arg0 :: [(Double,Vector Double)]
+                                 , _training_arg1 :: [(Double,Vector Double)]
+                                 }
+
+makeLenses ''TrainingFarm                                                     
+
+
 getIdxSentProps pp (trs,props) = do
     rdocs <- liftIO $ do
       let docs = map mkDocFromPennTree trs
@@ -55,21 +70,79 @@ getIdxSentProps pp (trs,props) = do
            $ props
     return rs
 
-process :: FastText
-        -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
-        -> (FilePath,FilePath)
-        -> (FilePath,IsOmit)
-        -> IO (Either String ([(Double,Vector Double)]))
-process ft pp (dirpenn,dirprop) (fp,omit) = do
+
+
+
+
+header fp = do
+  putStrLn "*****************************"
+  putStrLn "*****************************"
+  putStrLn "*****************************"
+  putStrLn "*****************************"
+  putStrLn fp 
+  putStrLn "*****************************"
+  putStrLn "*****************************"
+  putStrLn "*****************************"
+  putStrLn "*****************************"
+
+
+
+
+train ft pp (dirpenn,dirprop) trainingFiles = do
+  lsts <- flip mapM trainingFiles $ \(fp,omit) -> do
+    r <- try $ do 
+      header fp
+      prepareTraining ft pp (dirpenn,dirprop) (fp,omit)
+    case r of
+      Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
+      Right (Right lst) -> return lst
+      Right (Left e) -> error ("in run: " ++ e)
+  let trainingData = concat lsts
+  -- print (length trainingData)
+  (msg,svm) <- trainSVM (EPSILON_SVR 1 0.1) (RBF 1) [] trainingData
+  return (msg,svm)
+
+
+
+trainingFarmPerFile ft rs =                         
+  flip mapM rs $ \(_,sentinfo,prs) -> do
+    let arglabel = NumberedArgument 1
+    let ifeats = features (sentinfo,prs)
+        ifakefeats = fakeFeatures (sentinfo,prs)
+    trainingVectorsForArg ft arglabel (ifeats,ifakefeats)
+
+trainingVectorsForArg ft arglabel (ifeats,ifakefeats) = do
+  ts <- concat <$> mapM (inst2vec ft) ifeats
+  let ts' = filter ((== arglabel) . (^._3)) ts 
+      ts'' = map (\x -> (1 :: Double,x^._5)) ts'
+  fs <- concat <$> mapM (inst2vec ft) ifakefeats
+  let fs' = filter ((== arglabel) . (^._3)) fs
+      fs'' = map (\x -> (-1 :: Double,x^._5)) fs'
+  return (map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs''))
+
+{-   
+    results :: [[(Double,Vector Double)]]
+-}                                                  
+
+prepareTraining :: FastText
+                -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+                -> (FilePath,FilePath)
+                -> (FilePath,IsOmit)
+                -- -> IO (Either String TrainingFarm)
+                -> IO (Either String ([(Double,Vector Double)]))
+prepareTraining ft pp (dirpenn,dirprop) (fp,omit) = do
   let pennfile = dirpenn </> fp <.> "mrg"
       propfile = dirprop </> fp <.> "prop"
-      arglabel = NumberedArgument 1
   runEitherT $ do
     (trs,props) <- propbank (pennfile,propfile,omit)
     rs <- getIdxSentProps pp (trs,props)
     liftIO $ mapM_ (showMatchedInstance <> showFeatures <> showFakeFeatures) rs
-    results :: [[(Double,Vector Double)]]
-     <-  liftIO $ flip mapM rs $ \(_,sentinfo,prs) -> do
+    results :: [[(Double,Vector Double)]] <- liftIO (trainingFarmPerFile ft rs)
+    return $ concat results
+
+
+
+{- flip mapM rs $ \(_,sentinfo,prs) -> do
       let ifeats = features (sentinfo,prs)
       ts <- concat <$> mapM (inst2vec ft) ifeats
       let ts' = filter ((== arglabel) . (^._3)) ts 
@@ -78,8 +151,7 @@ process ft pp (dirpenn,dirprop) (fp,omit) = do
       fs <- concat <$> mapM (inst2vec ft) ifakefeats
       let fs' = filter ((== arglabel) . (^._3)) fs
           fs'' = map (\x -> (-1 :: Double,x^._5)) fs'
-      return (map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs''))
-    return $ concat results
+      return (map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs'')) -}
 
 
 classifyFile ft pp svm (dirpenn,dirprop) (fp,omit) = do
