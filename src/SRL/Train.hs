@@ -9,7 +9,8 @@ import           Control.Lens               hiding (levels,(<.>))
 import           Control.Monad                     (void)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
-import           Data.List                         (group,sort,zip4)
+import           Data.Function                     (on)
+import           Data.List                         (group,sort,sortBy,zip4)
 import           Data.Maybe                        (fromJust,mapMaybe)
 import           Data.Monoid                       ((<>))
 import qualified Data.Sequence              as Seq
@@ -74,50 +75,49 @@ process ft pp (dirpenn,dirprop) (fp,omit) = do
     return $ concat results
 
 
-findArgument ft pp svm (dirpenn,dirprop) (fp,omit) = do
+classifyFile ft pp svm (dirpenn,dirprop) (fp,omit) = do
   runEitherT $ do
     liftIO $ print fp
     (trs,props) <- propbank (dirpenn </> fp <.> "mrg" ,dirprop </> fp <.> "prop", omit)
     runsvm ft pp svm (trs,props) 
 
 
+
+groupFeatures (i,roleset,voice,afeatss_t) (i',_,_,afeatss_f) = 
+  if i /= i'
+  then error "error in groupFeatues" 
+  else (i,roleset,voice,zipWith (++) afeatss_t afeatss_f)
+
+
+findArgument ft svm ifeat = do
+  ts <- liftIO (inst2vec ft ifeat)
+  let ts' = filter (\x -> x^._2 == NumberedArgument 0) ts
+      ts_v = map (V.map realToFrac . (^._4)) ts'
+      ts_result = map (predict svm) (ts_v :: [Vector Double])
+      ts'' = zipWith (\x r -> (_4 .~ r) x) ts' ts_result
+  return ts'' 
+
 runsvm ft pp svm (trs,props) = do
   rs <- getIdxSentProps pp (trs,props)
   flip mapM_ rs $ \(i,sentinfo,pr) -> do
     let ifeats = features (sentinfo,pr)
         ifakefeats = fakeFeatures (sentinfo,pr)
+        sortFun = sortBy (flip compare `on` (^._4))
+        
+    resultss <- mapM (fmap sortFun . findArgument ft svm) (zipWith groupFeatures ifeats ifakefeats)
+    liftIO $ putStrLn "========================================="
+    liftIO $ flip mapM_ resultss $ \results -> do
+      mapM_ print results
+      putStrLn "-----------------------------------------"
 
+    
+--     liftIO $ mapM_ print fs''
+
+{- 
     ts <- liftIO (concat <$> mapM (inst2vec ft) ifeats)
     fs <- liftIO (concat <$> mapM (inst2vec ft) ifakefeats)
-
-    
-
-    let ts' = filter (\x -> x^._2 == NumberedArgument 0) ts
-        fs' = filter (\x -> x^._2 == NumberedArgument 0) fs
-
-    let ts_v = map (V.map realToFrac . (^._4)) ts'
-    let fs_v = map (V.map realToFrac . (^._4)) fs'
-
-    
-    let ts_result = map (predict svm) (ts_v :: [Vector Double])
-        fs_result = map (predict svm) (fs_v :: [Vector Double])
+-}
 
 
-    let ts'' = zipWith (\x r -> (_4 .~ r) x) ts' ts_result
-        fs'' = zipWith (\x r -> (_4 .~ r) x) fs' fs_result
 
-    liftIO $ putStrLn "========================================="
-    liftIO $ mapM_ print ts''
-    liftIO $ putStrLn "-----------------------------------------"
-    liftIO $ mapM_ print fs''
-
-  {- 
-  let  -- pr = props !! 2
-      tr = trs !! n
-      prs = filter (\x -> x^.inst_tree_id == n) props -}
-
-  -- return $ map (V.map realToFrac) (concat results)
-  {- liftIO $ do
-    print ts'
-    print fs' -}
 
