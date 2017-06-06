@@ -63,6 +63,7 @@ process :: FastText
 process ft pp (dirpenn,dirprop) (fp,omit) = do
   let pennfile = dirpenn </> fp <.> "mrg"
       propfile = dirprop </> fp <.> "prop"
+      arglabel = NumberedArgument 1
   runEitherT $ do
     (trs,props) <- propbank (pennfile,propfile,omit)
     rs <- getIdxSentProps pp (trs,props)
@@ -71,11 +72,11 @@ process ft pp (dirpenn,dirprop) (fp,omit) = do
      <-  liftIO $ flip mapM rs $ \(_,sentinfo,prs) -> do
       let ifeats = features (sentinfo,prs)
       ts <- concat <$> mapM (inst2vec ft) ifeats
-      let ts' = filter ((== NumberedArgument 0) . (^._3)) ts 
+      let ts' = filter ((== arglabel) . (^._3)) ts 
           ts'' = map (\x -> (1 :: Double,x^._5)) ts'
           ifakefeats = fakeFeatures (sentinfo,prs)
       fs <- concat <$> mapM (inst2vec ft) ifakefeats
-      let fs' = filter ((== NumberedArgument 0) . (^._3)) fs
+      let fs' = filter ((== arglabel) . (^._3)) fs
           fs'' = map (\x -> (-1 :: Double,x^._5)) fs'
       return (map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs''))
     return $ concat results
@@ -95,9 +96,9 @@ groupFeatures (i,roleset,voice,afeatss_t) (i',_,_,afeatss_f) =
   else (i,roleset,voice,zipWith (++) afeatss_t afeatss_f)
 
 
-findArgument ft svm ifeat = do
+findArgument arglabel ft svm ifeat = do
   ts <- liftIO (inst2vec ft ifeat)
-  let ts' = filter (\x -> x^._3 == NumberedArgument 0) ts
+  let ts' = filter (\x -> x^._3 == arglabel) ts
       ts_v = map (V.map realToFrac . (^._5)) ts'
       ts_result = map (predict svm) (ts_v :: [Vector Double])
       ts'' = zipWith (\x r -> (_5 .~ r) x) ts' ts_result
@@ -109,8 +110,9 @@ runsvm ft pp svm (trs,props) = do
     let ifeats = features (sentinfo,pr)
         ifakefeats = fakeFeatures (sentinfo,pr)
         sortFun = sortBy (flip compare `on` (^._5))
+        arglabel = NumberedArgument 1
         
-    resultss <- mapM (fmap sortFun . findArgument ft svm) (zipWith groupFeatures ifeats ifakefeats)
+    resultss <- mapM (fmap sortFun . findArgument arglabel ft svm) (zipWith groupFeatures ifeats ifakefeats)
     let pt = sentinfo^.corenlp_tree
         ipt = mkPennTreeIdx pt
         terms = map (^._2) . toList $ pt
