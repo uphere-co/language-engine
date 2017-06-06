@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module SRL.Train where
@@ -6,25 +7,30 @@ module SRL.Train where
 import           AI.SVM.Simple
 import           AI.SVM.Base
 import           Control.Lens               hiding (levels,(<.>))
-import           Control.Monad                     (void)
+import           Control.Monad                     (void,when)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
+import           Data.Foldable                     (toList)
 import           Data.Function                     (on)
 import           Data.List                         (group,sort,sortBy,zip4)
 import           Data.Maybe                        (fromJust,mapMaybe)
 import           Data.Monoid                       ((<>))
 import qualified Data.Sequence              as Seq
+import qualified Data.Text                  as T
+import qualified Data.Text.IO               as TIO
 import           Data.Vector.Storable              (Vector)
 import qualified Data.Vector.Storable       as V
 import           Foreign.C.Types
 import           Language.Java              as J
 import           System.FilePath                   ((</>),(<.>))
+import           Text.Printf
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           FastText.Binding
+import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
@@ -65,12 +71,12 @@ process ft pp (dirpenn,dirprop) (fp,omit) = do
      <-  liftIO $ flip mapM rs $ \(_,sentinfo,prs) -> do
       let ifeats = features (sentinfo,prs)
       ts <- concat <$> mapM (inst2vec ft) ifeats
-      let ts' = filter ((== NumberedArgument 0) . (^._2)) ts 
-          ts'' = map (\x -> (1 :: Double,x^._4)) ts'
+      let ts' = filter ((== NumberedArgument 0) . (^._3)) ts 
+          ts'' = map (\x -> (1 :: Double,x^._5)) ts'
           ifakefeats = fakeFeatures (sentinfo,prs)
       fs <- concat <$> mapM (inst2vec ft) ifakefeats
-      let fs' = filter ((== NumberedArgument 0) . (^._2)) fs
-          fs'' = map (\x -> (-1 :: Double,x^._4)) fs'
+      let fs' = filter ((== NumberedArgument 0) . (^._3)) fs
+          fs'' = map (\x -> (-1 :: Double,x^._5)) fs'
       return (map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs''))
     return $ concat results
 
@@ -91,10 +97,10 @@ groupFeatures (i,roleset,voice,afeatss_t) (i',_,_,afeatss_f) =
 
 findArgument ft svm ifeat = do
   ts <- liftIO (inst2vec ft ifeat)
-  let ts' = filter (\x -> x^._2 == NumberedArgument 0) ts
-      ts_v = map (V.map realToFrac . (^._4)) ts'
+  let ts' = filter (\x -> x^._3 == NumberedArgument 0) ts
+      ts_v = map (V.map realToFrac . (^._5)) ts'
       ts_result = map (predict svm) (ts_v :: [Vector Double])
-      ts'' = zipWith (\x r -> (_4 .~ r) x) ts' ts_result
+      ts'' = zipWith (\x r -> (_5 .~ r) x) ts' ts_result
   return ts'' 
 
 runsvm ft pp svm (trs,props) = do
@@ -102,22 +108,24 @@ runsvm ft pp svm (trs,props) = do
   flip mapM_ rs $ \(i,sentinfo,pr) -> do
     let ifeats = features (sentinfo,pr)
         ifakefeats = fakeFeatures (sentinfo,pr)
-        sortFun = sortBy (flip compare `on` (^._4))
+        sortFun = sortBy (flip compare `on` (^._5))
         
     resultss <- mapM (fmap sortFun . findArgument ft svm) (zipWith groupFeatures ifeats ifakefeats)
-    liftIO $ putStrLn "========================================="
+    let pt = sentinfo^.corenlp_tree
+        ipt = mkPennTreeIdx pt
+        terms = map (^._2) . toList $ pt
+    liftIO $ putStrLn "======================================================================================="        
+    liftIO $ TIO.putStrLn (T.intercalate " " terms)
+    liftIO $ putStrLn "======================================================================================="
     liftIO $ flip mapM_ resultss $ \results -> do
-      mapM_ print results
-      putStrLn "-----------------------------------------"
+      when ((not.null) results) $ do
+        let result = head results
+        let mmatched = matchR (result^._4) ipt
+        case mmatched of
+          Nothing -> TIO.putStrLn "no matched?"
+          Just matched -> let txt = T.intercalate " " (map (^._2._2) (toList matched))
+                          in putStrLn $ formatResult result txt 
 
+formatResult (n,(lemma,sensenum),label,range,value) txt =
+  printf "%d %15s.%2s %8s %8s %f %s" n lemma sensenum (pbLabelText label) (show range) value txt
     
---     liftIO $ mapM_ print fs''
-
-{- 
-    ts <- liftIO (concat <$> mapM (inst2vec ft) ifeats)
-    fs <- liftIO (concat <$> mapM (inst2vec ft) ifakefeats)
--}
-
-
-
-
