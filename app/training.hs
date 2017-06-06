@@ -90,9 +90,9 @@ run ft pp = do
   print (length trainingData)
 
   -- (msg,r) <- crossvalidate (C_SVC 1) (RBF 1) 2
-  (msg,svm) <- trainSVM (C_SVC 1) (RBF 1) [] trainingData
+  (msg,svm) <- trainSVM {- (C_SVC 1) -} (EPSILON_SVR 1 0.1) (RBF 1) [] trainingData
   
-  mapM_ (test ft pp svm (dirpenn,dirprop)) testFiles
+  mapM_ (findArgument ft pp svm (dirpenn,dirprop)) testFiles
   
   -- print (length (concat lsts))
   --  [("chapter-10",NoOmit)] 

@@ -64,51 +64,52 @@ process ft pp (dirpenn,dirprop) (fp,omit) = do
      <-  liftIO $ flip mapM rs $ \(_,sentinfo,prs) -> do
       let ifeats = features (sentinfo,prs)
       ts <- concat <$> mapM (inst2vec ft) ifeats
-      let ts' = filter ((== NumberedArgument 0) . (^._1)) ts 
-          ts'' = map (\(_,v) -> (1 :: Double,v)) ts'
+      let ts' = filter ((== NumberedArgument 0) . (^._2)) ts 
+          ts'' = map (\x -> (1 :: Double,x^._4)) ts'
           ifakefeats = fakeFeatures (sentinfo,prs)
       fs <- concat <$> mapM (inst2vec ft) ifakefeats
-      let fs' = filter ((== NumberedArgument 0) . (^._1)) fs
-          fs'' = map (\(_,v) -> (-1 :: Double,v)) fs'
+      let fs' = filter ((== NumberedArgument 0) . (^._2)) fs
+          fs'' = map (\x -> (-1 :: Double,x^._4)) fs'
       return (map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs''))
     return $ concat results
 
 
-test ft pp svm (dirpenn,dirprop) (fp,omit) = do
+findArgument ft pp svm (dirpenn,dirprop) (fp,omit) = do
   runEitherT $ do
-    {- let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
-        dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
-        fp = "wsj_0189" -}
     liftIO $ print fp
     (trs,props) <- propbank (dirpenn </> fp <.> "mrg" ,dirprop </> fp <.> "prop", omit)
-    -- let n = 2 
     runsvm ft pp svm (trs,props) 
 
-{- 
-runsvm ft pp svm (trs,props) =
-  let ns = map head . group . sort . map (^.inst_tree_id) $ props
-  in do liftIO $ print ns
-        mapM_ (runsvm1 ft pp svm (trs,props)) ns
--}
 
 runsvm ft pp svm (trs,props) = do
   rs <- getIdxSentProps pp (trs,props)
   flip mapM_ rs $ \(i,sentinfo,pr) -> do
     let ifeats = features (sentinfo,pr)
         ifakefeats = fakeFeatures (sentinfo,pr)
+
     ts <- liftIO (concat <$> mapM (inst2vec ft) ifeats)
     fs <- liftIO (concat <$> mapM (inst2vec ft) ifakefeats)
 
-    let ts' = map (V.map realToFrac . snd) $ filter (\x -> fst x==NumberedArgument 0) ts
-        fs' = map (V.map realToFrac . snd) $ filter (\x -> fst x==NumberedArgument 0) fs
+    
 
+    let ts' = filter (\x -> x^._2 == NumberedArgument 0) ts
+        fs' = filter (\x -> x^._2 == NumberedArgument 0) fs
+
+    let ts_v = map (V.map realToFrac . (^._4)) ts'
+    let fs_v = map (V.map realToFrac . (^._4)) fs'
+
+    
+    let ts_result = map (predict svm) (ts_v :: [Vector Double])
+        fs_result = map (predict svm) (fs_v :: [Vector Double])
+
+
+    let ts'' = zipWith (\x r -> (_4 .~ r) x) ts' ts_result
+        fs'' = zipWith (\x r -> (_4 .~ r) x) fs' fs_result
 
     liftIO $ putStrLn "========================================="
-    liftIO $ mapM_ (print . predict svm) (ts' :: [Vector Double])
+    liftIO $ mapM_ print ts''
     liftIO $ putStrLn "-----------------------------------------"
-    liftIO $ mapM_ (print . predict svm) (fs' :: [Vector Double])
-
-
+    liftIO $ mapM_ print fs''
 
   {- 
   let  -- pr = props !! 2

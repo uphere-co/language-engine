@@ -98,11 +98,13 @@ argnode2vec ft (arglabel,(_,ptp,Just (_,(_,(pos,word))))) = do
 argnode2vec ft (arglabel,(_,ptp,Nothing)) = return Nothing
 
  
-inst2vec :: FastText -> InstanceFeature -> IO [(PropBankLabel,Vector CFloat)]
+inst2vec :: FastText -> InstanceFeature -> IO [(RoleSet,PropBankLabel,Range,Vector CFloat)]
 inst2vec ft ifeat = do
   predv <- {- (V.++) <$> word2vec ft (ifeat^._2._1) <*> -} pure (enum2vec (ifeat^._3))
   rs <- flip traverse (concat (ifeat^._4)) $ \nfeat -> do
-    let label = nfeat^._1
+    let roleset=  ifeat^._2
+        label = nfeat^._1
+        rng = nfeat^._2._1
     mvec <- argnode2vec ft nfeat
-    return $ fmap (\v -> (label, predv V.++ v)) mvec
+    return $ fmap (\v -> (roleset,label,rng, predv V.++ v)) mvec
   return (catMaybes rs)
