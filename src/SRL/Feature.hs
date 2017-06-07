@@ -133,6 +133,20 @@ isPassive z = let b1 = isVBN z
               in (b1 && b2) || (b1 && b3) || (b1 && b4)
 
 
+voice :: (PennTree,S.Sentence) -> [(Int,(Text,Voice))]
+voice (pt,sent) = 
+  let ipt = mkPennTreeIdx pt
+      lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
+                    zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
+      lemmapt = lemmatize lemmamap ipt
+      getf (PL x) = Right x
+      getf (PN x _) = Left x
+      testf z = case getf (current z) of
+                  Right (n,(VBN,(txt,_))) -> Just (n,(txt,if isPassive z then Passive else Active))
+                  _ -> Nothing
+  in mapMaybe testf $ toList (mkTreeZipper [] lemmapt)
+
+
 featuresForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode
                    -> [(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))]
 featuresForArgNode sentinfo predidx arg node =
@@ -171,23 +185,21 @@ fakeFeaturesForArg sentinfo predidx arg rng =
   in  (rng,path,hd)
 
     
-featuresForInstance :: SentenceInfo -> IntMap (Text,Voice)  -> MatchedInstance -> InstanceFeature
-featuresForInstance sentinfo voicemap inst = 
+featuresForInstance :: SentenceInfo -> MatchedInstance -> InstanceFeature
+featuresForInstance sentinfo inst = 
   let predidx = findRelNode (inst^.mi_arguments)
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
       argfeatures = map (featuresForArg sentinfo predidx) . filter ((/= Relation) . (^.ma_argument.arg_label)) $ inst^.mi_arguments
-      voicefeature = case IM.lookup predidx voicemap of
-                       Just x -> snd x
-                       Nothing -> Active
+      voicemap = IM.fromList $ voice (sentinfo^.corenlp_tree,sentinfo^.corenlp_sent)      
+      voicefeature = maybe Active snd (IM.lookup predidx voicemap)
   in (predidx,rolesetid,voicefeature,argfeatures)
 
 
-fakeFeaturesForInstance :: SentenceInfo -> IntMap (Text,Voice) -> MatchedInstance -> InstanceFeature
-fakeFeaturesForInstance sentinfo voicemap inst = 
+fakeFeaturesForInstance :: SentenceInfo -> MatchedInstance -> InstanceFeature
+fakeFeaturesForInstance sentinfo inst = 
   let predidx = findRelNode (inst^.mi_arguments)
-      voicefeature = case IM.lookup predidx voicemap of
-                       Just x -> snd x
-                       Nothing -> Active
+      voicemap = IM.fromList $ voice (sentinfo^.corenlp_tree,sentinfo^.corenlp_sent)      
+      voicefeature = maybe Active snd (IM.lookup predidx voicemap)
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
       args = filter ((/= Relation) . (^.ma_argument.arg_label)) $ inst^.mi_arguments
       ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
@@ -209,27 +221,12 @@ fakeFeaturesForInstance sentinfo voicemap inst =
   in (predidx,rolesetid,voicefeature,argfeatures)
 
 
-voice :: (PennTree,S.Sentence) -> [(Int,(Text,Voice))]
-voice (pt,sent) = 
-  let ipt = mkPennTreeIdx pt
-      lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
-                    zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
-      lemmapt = lemmatize lemmamap ipt
-      getf (PL x) = Right x
-      getf (PN x _) = Left x
-      testf z = case getf (current z) of
-                  Right (n,(VBN,(txt,_))) -> Just (n,(txt,if isPassive z then Passive else Active))
-                  _ -> Nothing
-  in mapMaybe testf $ toList (mkTreeZipper [] lemmapt)
-
-
 features :: (SentenceInfo,[Instance]) -> [InstanceFeature]
 features (sentinfo,prs) = 
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
       insts = matchInstances (pt,tr) prs
-      vmap = IM.fromList $ voice (pt,sentinfo^.corenlp_sent)
-  in map (featuresForInstance sentinfo vmap) insts
+  in map (featuresForInstance sentinfo) insts
 
 
 fakeFeatures :: (SentenceInfo,[Instance]) -> [InstanceFeature]
@@ -237,8 +234,7 @@ fakeFeatures (sentinfo,prs) =
   let pt = sentinfo^.corenlp_tree
       tr = sentinfo^.propbank_tree
       insts = matchInstances (pt,tr) prs
-      vmap = IM.fromList $ voice (pt,sentinfo^.corenlp_sent)
-  in map (fakeFeaturesForInstance sentinfo vmap) insts
+  in map (fakeFeaturesForInstance sentinfo) insts
 
 
 showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
