@@ -48,6 +48,7 @@ import           PropBank.Util
 --
 import           SRL.DataSet.PropBank
 import           SRL.Feature
+import           SRL.Format
 import           SRL.PropBankMatch
 import           SRL.Train
 import           SRL.Type
@@ -135,10 +136,24 @@ main = do
                      rs = zipWith3 SentInfo sents pts deps
                  flip mapM_ rs $ \sentinfo -> do
                    let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
-                       verbs = filter (isVerb . (^._2._1)) (toList ipt)
                        terms = map (^._2) . toList $ sentinfo^.corenlp_tree
+                       lemmamap = mkLemmaMap (sentinfo^.corenlp_sent)
+                       lemmapt = lemmatize lemmamap ipt
+                       verbs = filter (isVerb . (^._2._1)) (toList lemmapt)
+                       
                    liftIO $ TIO.putStrLn (T.intercalate " " terms)
-                   liftIO $ print verbs
+                   --  liftIO $ print verbs
+                   let arg0 = NumberedArgument 0
+                       arg1 = NumberedArgument 1
+                   let genArgInputs n = let rngss = map (\x->[x]) (findNotOverlappedNodes ipt (n,n))
+                                        in [ArgumentInput arg0 rngss, ArgumentInput arg1 rngss]
+                   let instInputs = flip map verbs $ \verb ->
+                                      let n = verb^._1
+                                          lma = verb^._2._2._2
+                                      in InstanceInput n (lma,"01") (genArgInputs n)
+                       ifeats = map (calcInstanceFeature sentinfo) instInputs
+                   liftIO $ mapM_ (putStrLn . formatInstanceFeature) ifeats
+                   -- liftIO $ mapM_ print instInputs
                    -- let ifeats = 
                    -- liftIO $ mapM_ print pts
                                              

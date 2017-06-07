@@ -98,11 +98,23 @@ headWord :: PennTreeIdxG ChunkTag (Maybe Level,(POSTag,Text)) -> Maybe (Int,(Lev
 headWord  = safeHead . sortBy (compare `on` view (_2._1))
           . mapMaybe (\(i,(ml,postxt)) -> fmap (i,) (fmap (,postxt) ml)) . getLeaves 
 
+
+mkLemmaMap sent = foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
+                    zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
+
 lemmatize :: IntMap Text
           -> PennTreeIdxG ChunkTag (POSTag,Text)
           -> PennTreeIdxG ChunkTag (POSTag,(Text,Text))
 lemmatize m = bimap id (\(i,(p,x)) -> (i,(p,(x,fromJust (IM.lookup i m)))))
 
+findNotOverlappedNodes :: PennTreeIdx -> Range -> [Range]
+findNotOverlappedNodes ipt rng = filter (`isNotOverlappedWith` rng)
+                               . map (\(PN (r,_) _) -> r)
+                               . filter (\case PN _ _ -> True ; _ -> False)
+                               . biList
+                               . duplicate 
+                               $ ipt 
+  
 
 isVBN :: TreeZipperICP a -> Bool
 isVBN z = case current z of
@@ -136,8 +148,7 @@ isPassive z = let b1 = isVBN z
 voice :: (PennTree,S.Sentence) -> [(Int,(Text,Voice))]
 voice (pt,sent) = 
   let ipt = mkPennTreeIdx pt
-      lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
-                    zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
+      lemmamap = mkLemmaMap sent
       lemmapt = lemmatize lemmamap ipt
       getf (PL x) = Right x
       getf (PN x _) = Left x
@@ -200,12 +211,14 @@ fakeFeaturesForInstance sentinfo inst =
         let rngs = arg ^.. ma_nodes . traverse . mn_node . _1
         guard ((not.null) rngs)
         let rng = (minimum (map (^._1) rngs), maximum (map (^._2) rngs))
-            exclst = filter (`isNotOverlappedWith` rng)
+            exclst = findNotOverlappedNodes ipt rng 
+{-
+              filter (`isNotOverlappedWith` rng)
                    . map (\(PN (r,_) _) -> r)
                    . filter (\case PN _ _ -> True ; _ -> False)
                    . biList
                    . duplicate 
-                   $ ipt 
+                   $ ipt  -}
         rngeach <- exclst
         guard (position predidx rngeach /= Embed)
         return [rngeach]
