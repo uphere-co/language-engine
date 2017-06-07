@@ -146,7 +146,7 @@ voice (pt,sent) =
                   _ -> Nothing
   in mapMaybe testf $ toList (mkTreeZipper [] lemmapt)
 
-
+{- 
 featuresForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode
                    -> [(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))]
 featuresForArgNode sentinfo predidx arg node =
@@ -170,8 +170,9 @@ featuresForArg sentinfo predidx arg =
     let label = arg^.ma_argument.arg_label
     fs <- safeHead (featuresForArgNode sentinfo predidx (arg^.ma_argument) node)
     return (label,fs)
+-}
 
-
+{-
 fakeFeaturesForArg :: SentenceInfo -> Int -> Argument -> Range
                        -> (Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))
 fakeFeaturesForArg sentinfo predidx arg rng =
@@ -183,6 +184,8 @@ fakeFeaturesForArg sentinfo predidx arg rng =
       headwordtrees = headWordTree dep ipt
       hd = headWord =<< matchR rng headwordtrees
   in  (rng,path,hd)
+
+-}
 
 
 calcArgNodeFeatureEach :: SentenceInfo -> Int -> [Range]
@@ -232,19 +235,20 @@ featuresForInstance sentinfo inst =
       voicemap = IM.fromList $ voice (sentinfo^.corenlp_tree,sentinfo^.corenlp_sent)      
       voicefeature = maybe Active snd (IM.lookup predidx voicemap)
   in (predidx,rolesetid,voicefeature,argfeatures)
+
+
+      voicemap = IM.fromList $ voice (sentinfo^.corenlp_tree,sentinfo^.corenlp_sent)      
+      voicefeature = maybe Active snd (IM.lookup predidx voicemap)
+
 -}
 
 fakeFeaturesForInstance :: SentenceInfo -> MatchedInstance -> InstanceFeature
 fakeFeaturesForInstance sentinfo inst = 
   let predidx = findRelNode (inst^.mi_arguments)
-      voicemap = IM.fromList $ voice (sentinfo^.corenlp_tree,sentinfo^.corenlp_sent)      
-      voicefeature = maybe Active snd (IM.lookup predidx voicemap)
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
-      args = filter ((/= Relation) . (^.ma_argument.arg_label)) $ inst^.mi_arguments
       ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
-      argfeatures = do
-        arg <- args
-        let label = arg^.ma_argument.arg_label
+      args = filter ((/= Relation) . (^.ma_argument.arg_label)) (inst^.mi_arguments)
+      mkRngss arg = do 
         let rngs = arg ^.. ma_nodes . traverse . mn_node . _1
         guard ((not.null) rngs)
         let rng = (minimum (map (^._1) rngs), maximum (map (^._2) rngs))
@@ -256,9 +260,15 @@ fakeFeaturesForInstance sentinfo inst =
                    $ ipt 
         rngeach <- exclst
         guard (position predidx rngeach /= Embed)
+        return [rngeach]
+      arginputs = map (\arg -> ArgumentInput (arg^.ma_argument.arg_label) (mkRngss arg)) args 
+      input = InstanceInput predidx rolesetid arginputs
+  in calcInstanceFeature sentinfo input      
+        
+{-        
         return [(label,fakeFeaturesForArg sentinfo predidx (arg^.ma_argument) rngeach)]
   in (predidx,rolesetid,voicefeature,argfeatures)
-
+-}
 
 features :: (SentenceInfo,[Instance]) -> [InstanceFeature]
 features (sentinfo,prs) = 
