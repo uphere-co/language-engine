@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -21,6 +22,8 @@ import           Data.List                         (sort,zip4)
 import           Data.Monoid                       ((<>))
 import           Data.Maybe                        (fromMaybe,mapMaybe)
 import qualified Data.Sequence              as Seq
+import qualified Data.Text.IO               as TIO
+import           Data.Time.Calendar                (fromGregorian)
 import           Data.Vector.Storable (MVector (..),create)
 import           Foreign.C.String
 import           Foreign.ForeignPtr
@@ -91,11 +94,11 @@ main = do
   let (trainingFiles,testFiles) = splitAt 20 propbankFiles
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
-    ft <- init2
-    pp <- preparePP 
     when (isTraining opt) $ do
       case (penndir opt,propdir opt) of
         (Just dirpenn,Just dirprop) -> do
+          ft <- init2
+          pp <- preparePP 
           let dirs = (dirpenn,dirprop)
           svmfarm <- train ft pp dirs trainingFiles   
           saveSVM "arg0.svm" (svmfarm^.svm_arg0)
@@ -107,15 +110,33 @@ main = do
         svmfile1 = fromMaybe "arg1.svm" (svmFile1 opt)
 
         
-    if isTesting opt
-      then do
-        case (penndir opt,propdir opt) of
-          (Just dirpenn,Just dirprop) -> do
-            let dirs = (dirpenn,dirprop)
-            svm0 <- loadSVM svmfile0
-            svm1 <- loadSVM svmfile1
-            let svmfarm = SVMFarm svm0 svm1
-            mapM_ (classifyFile ft pp svmfarm dirs) testFiles
-          _ -> error "penn/prop dir are not specified"
-      else do
-        print (textFile opt) 
+    if | isTesting opt -> do
+           case (penndir opt,propdir opt) of
+             (Just dirpenn,Just dirprop) -> do
+               ft <- init2
+               pp <- preparePP 
+               let dirs = (dirpenn,dirprop)
+               svm0 <- loadSVM svmfile0
+               svm1 <- loadSVM svmfile1
+               let svmfarm = SVMFarm svm0 svm1
+               mapM_ (classifyFile ft pp svmfarm dirs) testFiles
+             _ -> error "penn/prop dir are not specified"
+       | isTraining opt -> return ()
+       | otherwise      -> do
+           case textFile opt of
+             Nothing -> error "No text file was specified."
+             Just fp -> do
+               txt <- TIO.readFile fp
+               TIO.putStrLn txt
+               -- ft <- init2
+               pp <- preparePP 
+               ann <- annotate pp (Document txt (fromGregorian 2017 4 17))
+               rdoc <- protobufDoc ann
+               void . runEitherT $ do
+                 d <- hoistEither rdoc
+                 let sents = d^.. D.sentence . traverse
+                 deps <- hoistEither $ mapM sentToDep sents
+                 let cpts = mapMaybe (^.S.parseTree) sents
+                     pts = map decodeToPennTree cpts
+                 liftIO $ mapM_ print pts
+                                             
