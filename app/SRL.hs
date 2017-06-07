@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -18,10 +19,12 @@ import           Control.Monad.Trans.Either
 import qualified Data.ByteString.Char8      as B
 import           Data.Default
 import           Data.Either                       (rights)
+import           Data.Foldable                     (toList)
 import           Data.List                         (sort,zip4)
 import           Data.Monoid                       ((<>))
 import           Data.Maybe                        (fromMaybe,mapMaybe)
 import qualified Data.Sequence              as Seq
+import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
 import           Data.Time.Calendar                (fromGregorian)
 import           Data.Vector.Storable (MVector (..),create)
@@ -38,8 +41,8 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
---
 import           FastText.Binding
+import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
@@ -47,13 +50,12 @@ import           SRL.DataSet.PropBank
 import           SRL.Feature
 import           SRL.PropBankMatch
 import           SRL.Train
+import           SRL.Type
 import           SRL.Vectorize
 
 
 data ProgOption = ProgOption { penndir :: Maybe FilePath
                              , propdir :: Maybe FilePath
-                             -- , filename :: FilePath
-                             -- , omitflag :: Bool
                              , isTraining :: Bool
                              , isTesting :: Bool
                              , svmFile0 :: Maybe FilePath
@@ -130,5 +132,20 @@ main = do
                  deps <- hoistEither $ mapM sentToDep sents
                  let cpts = mapMaybe (^.S.parseTree) sents
                      pts = map decodeToPennTree cpts
-                 liftIO $ mapM_ print pts
+                     rs = zipWith3 SentInfo sents pts deps
+                 flip mapM_ rs $ \sentinfo -> do
+                   let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
+                       verbs = filter (isVerb . (^._2._1)) (toList ipt)
+                       terms = map (^._2) . toList $ sentinfo^.corenlp_tree
+                   liftIO $ TIO.putStrLn (T.intercalate " " terms)
+                   liftIO $ print verbs
+                   -- let ifeats = 
+                   -- liftIO $ mapM_ print pts
                                              
+isVerb VB  = True
+isVerb VBZ = True
+isVerb VBP = True
+isVerb VBD = True
+isVerb VBN = True
+isVerb VBG = True
+isVerb _   = False
