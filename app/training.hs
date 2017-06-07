@@ -66,8 +66,8 @@ run ft pp = do
 
   let (trainingFiles,testFiles) = splitAt 20 propbankFiles
 
-  (msg,svm) <- train ft pp (dirpenn,dirprop) trainingFiles   
-  mapM_ (classifyFile ft pp svm (dirpenn,dirprop)) testFiles
+  svmfarm <- train ft pp (dirpenn,dirprop) trainingFiles   
+  mapM_ (classifyFile ft pp svmfarm (dirpenn,dirprop)) testFiles
   
 
 initGHCi :: IO J.JVM

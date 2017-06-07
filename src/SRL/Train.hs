@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -16,7 +17,7 @@ import           Data.Foldable                     (toList)
 import           Data.Function                     (on)
 import           Data.List                         (group,sort,sortBy,zip4)
 import           Data.Maybe                        (fromJust,mapMaybe)
-import           Data.Monoid                       ((<>))
+import           Data.Monoid                       ((<>),Monoid(..))
 import qualified Data.Sequence              as Seq
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
@@ -47,11 +48,15 @@ data SVMFarm = SVMFarm { _svm_arg0 :: SVM
                
 makeLenses ''SVMFarm
 
-data TrainingFarm = TrainingFarm { _training_arg0 :: [(Double,Vector Double)]
+data TrainingData = TrainingData { _training_arg0 :: [(Double,Vector Double)]
                                  , _training_arg1 :: [(Double,Vector Double)]
                                  }
 
-makeLenses ''TrainingFarm                                                     
+makeLenses ''TrainingData                                              
+
+instance Monoid TrainingData where
+  mempty = TrainingData [] []
+  t1 `mappend` t2 = TrainingData (t1^.training_arg0 ++ t2^.training_arg0) (t1^.training_arg1 ++ t2^.training_arg1)
 
 
 getIdxSentProps pp (trs,props) = do
@@ -85,32 +90,7 @@ header fp = do
   putStrLn "*****************************"
   putStrLn "*****************************"
 
-
-
-
-train ft pp (dirpenn,dirprop) trainingFiles = do
-  lsts <- flip mapM trainingFiles $ \(fp,omit) -> do
-    r <- try $ do 
-      header fp
-      prepareTraining ft pp (dirpenn,dirprop) (fp,omit)
-    case r of
-      Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
-      Right (Right lst) -> return lst
-      Right (Left e) -> error ("in run: " ++ e)
-  let trainingData = concat lsts
-  -- print (length trainingData)
-  (msg,svm) <- trainSVM (EPSILON_SVR 1 0.1) (RBF 1) [] trainingData
-  return (msg,svm)
-
-
-
-trainingFarmPerFile ft rs =                         
-  flip mapM rs $ \(_,sentinfo,prs) -> do
-    let arglabel = NumberedArgument 1
-    let ifeats = features (sentinfo,prs)
-        ifakefeats = fakeFeatures (sentinfo,prs)
-    trainingVectorsForArg ft arglabel (ifeats,ifakefeats)
-
+      
 trainingVectorsForArg ft arglabel (ifeats,ifakefeats) = do
   ts <- concat <$> mapM (inst2vec ft) ifeats
   let ts' = filter ((== arglabel) . (^._3)) ts 
@@ -118,27 +98,39 @@ trainingVectorsForArg ft arglabel (ifeats,ifakefeats) = do
   fs <- concat <$> mapM (inst2vec ft) ifakefeats
   let fs' = filter ((== arglabel) . (^._3)) fs
       fs'' = map (\x -> (-1 :: Double,x^._5)) fs'
-  return (map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs''))
+  return $ map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs'')
 
-{-   
-    results :: [[(Double,Vector Double)]]
--}                                                  
+
+trainingFarmPerFile ft rs = do
+  rs <- flip mapM rs $ \(_,sentinfo,prs) -> do
+    let arglabel = NumberedArgument 1
+    let ifeats = features (sentinfo,prs)
+        ifakefeats = fakeFeatures (sentinfo,prs)
+    dat0 <- trainingVectorsForArg ft (NumberedArgument 0) (ifeats,ifakefeats)
+    dat1 <- trainingVectorsForArg ft (NumberedArgument 1) (ifeats,ifakefeats)
+    return (TrainingData dat0 dat1)
+  return (mconcat rs)
 
 prepareTraining :: FastText
                 -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
                 -> (FilePath,FilePath)
                 -> (FilePath,IsOmit)
-                -- -> IO (Either String TrainingFarm)
-                -> IO (Either String ([(Double,Vector Double)]))
+                -> EitherT String IO TrainingData
+                -- IO (Either String TrainingFarm)
+                -- -> IO (Either String ([(Double,Vector Double)]))
 prepareTraining ft pp (dirpenn,dirprop) (fp,omit) = do
   let pennfile = dirpenn </> fp <.> "mrg"
       propfile = dirprop </> fp <.> "prop"
-  runEitherT $ do
-    (trs,props) <- propbank (pennfile,propfile,omit)
-    rs <- getIdxSentProps pp (trs,props)
-    liftIO $ mapM_ (showMatchedInstance <> showFeatures <> showFakeFeatures) rs
-    results :: [[(Double,Vector Double)]] <- liftIO (trainingFarmPerFile ft rs)
-    return $ concat results
+  --  runEitherT $ do
+  (trs,props) <- propbank (pennfile,propfile,omit)
+  rs <- getIdxSentProps pp (trs,props)
+  liftIO $ mapM_ (showMatchedInstance <> showFeatures <> showFakeFeatures) rs
+  liftIO (trainingFarmPerFile ft rs)  
+
+  {- result :: [TrainingData] <- 
+  return $ mconcat results
+  -}
+  -- concat results
 
 
 
@@ -168,7 +160,10 @@ groupFeatures (i,roleset,voice,afeatss_t) (i',_,_,afeatss_f) =
   else (i,roleset,voice,zipWith (++) afeatss_t afeatss_f)
 
 
-findArgument arglabel ft svm ifeat = do
+findArgument arglabel ft svmfarm ifeat = do
+  let svm = if | arglabel == NumberedArgument 0 -> svmfarm^.svm_arg0
+               | arglabel == NumberedArgument 1 -> svmfarm^.svm_arg1
+               | otherwise                      -> error "only arg0 and arg1 are supported"
   ts <- liftIO (inst2vec ft ifeat)
   let ts' = filter (\x -> x^._3 == arglabel) ts
       ts_v = map (V.map realToFrac . (^._5)) ts'
@@ -182,16 +177,27 @@ runsvm ft pp svm (trs,props) = do
     let ifeats = features (sentinfo,pr)
         ifakefeats = fakeFeatures (sentinfo,pr)
         sortFun = sortBy (flip compare `on` (^._5))
-        arglabel = NumberedArgument 1
-        
-    resultss <- mapM (fmap sortFun . findArgument arglabel ft svm) (zipWith groupFeatures ifeats ifakefeats)
+        -- arglabel = NumberedArgument 1
+    let feats = zipWith groupFeatures ifeats ifakefeats
+    resultss0 <- mapM (fmap sortFun . findArgument (NumberedArgument 0) ft svm) feats
+    resultss1 <- mapM (fmap sortFun . findArgument (NumberedArgument 1) ft svm) feats
+    let results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
     let pt = sentinfo^.corenlp_tree
         ipt = mkPennTreeIdx pt
         terms = map (^._2) . toList $ pt
     liftIO $ putStrLn "======================================================================================="        
     liftIO $ TIO.putStrLn (T.intercalate " " terms)
     liftIO $ putStrLn "======================================================================================="
-    liftIO $ flip mapM_ resultss $ \results -> do
+    liftIO $ flip mapM_ results $ \result -> do
+      {- when ((not.null) results) $ do -}
+        -- let result = head results
+        let mmatched = matchR (result^._4) ipt
+        case mmatched of
+          Nothing -> TIO.putStrLn "no matched?"
+          Just matched -> let txt = T.intercalate " " (map (^._2._2) (toList matched))
+                          in putStrLn $ formatResult result txt
+{-                              
+    liftIO $ flip mapM_ resultss1 $ \results -> do
       when ((not.null) results) $ do
         let result = head results
         let mmatched = matchR (result^._4) ipt
@@ -199,7 +205,25 @@ runsvm ft pp svm (trs,props) = do
           Nothing -> TIO.putStrLn "no matched?"
           Just matched -> let txt = T.intercalate " " (map (^._2._2) (toList matched))
                           in putStrLn $ formatResult result txt 
+-}
 
 formatResult (n,(lemma,sensenum),label,range,value) txt =
   printf "%d %15s.%2s %8s %8s %f %s" n lemma sensenum (pbLabelText label) (show range) value txt
     
+
+train ft pp (dirpenn,dirprop) trainingFiles = do
+  lsts <- flip mapM trainingFiles $ \(fp,omit) -> do
+    r <- try $ do 
+      header fp
+      runEitherT $ prepareTraining ft pp (dirpenn,dirprop) (fp,omit)
+    case r of
+      Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
+      Right (Right lst) -> return lst
+      Right (Left e) -> error ("in run: " ++ e)
+  let trainingData = mconcat lsts
+  -- print (length trainingData)
+  
+  (msg0,svm0) <- trainSVM (EPSILON_SVR 1 0.1) (RBF 1) [] (trainingData ^.training_arg0)
+  (msg1,svm1) <- trainSVM (EPSILON_SVR 1 0.1) (RBF 1) [] (trainingData ^.training_arg1)
+
+  return (SVMFarm svm0 svm1)
