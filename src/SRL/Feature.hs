@@ -38,7 +38,7 @@ import           SRL.Type
 import           SRL.Util
 --
 
-             
+                 
 phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
 phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
@@ -176,14 +176,18 @@ featuresForInstance sentinfo voicemap inst =
   let predidx = findRelNode (inst^.mi_arguments)
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
       argfeatures = map (featuresForArg sentinfo predidx) . filter ((/= Relation) . (^.ma_argument.arg_label)) $ inst^.mi_arguments
-      voicefeature = fmap snd (IM.lookup predidx voicemap)
+      voicefeature = case IM.lookup predidx voicemap of
+                       Just x -> snd x
+                       Nothing -> Active
   in (predidx,rolesetid,voicefeature,argfeatures)
 
 
 fakeFeaturesForInstance :: SentenceInfo -> IntMap (Text,Voice) -> MatchedInstance -> InstanceFeature
 fakeFeaturesForInstance sentinfo voicemap inst = 
   let predidx = findRelNode (inst^.mi_arguments)
-      voicefeature = fmap snd (IM.lookup predidx voicemap)
+      voicefeature = case IM.lookup predidx voicemap of
+                       Just x -> snd x
+                       Nothing -> Active
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
       args = filter ((/= Relation) . (^.ma_argument.arg_label)) $ inst^.mi_arguments
       ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
@@ -196,8 +200,9 @@ fakeFeaturesForInstance sentinfo voicemap inst =
             exclst = filter (`isNotOverlappedWith` rng)
                    . map (\(PN (r,_) _) -> r)
                    . filter (\case PN _ _ -> True ; _ -> False)
-                   . biList . duplicate
-                   $ ipt
+                   . biList
+                   . duplicate 
+                   $ ipt 
         rngeach <- exclst
         guard (position predidx rngeach /= Embed)
         return [(label,fakeFeaturesForArg sentinfo predidx (arg^.ma_argument) rngeach)]

@@ -7,6 +7,8 @@
 
 module Main where
 
+import           AI.SVM.Simple
+import           AI.SVM.Base
 import           Control.Lens               hiding (levels,(<.>))
 import           Control.Exception
 import           Control.Monad                     (void)
@@ -14,6 +16,7 @@ import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.ByteString.Char8      as B
 import           Data.Default
+import           Data.Either                       (rights)
 import           Data.List                         (sort,zip4)
 import           Data.Monoid                       ((<>))
 import           Data.Maybe                        (mapMaybe)
@@ -28,7 +31,6 @@ import           System.FilePath                   ((</>),(<.>))
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
-
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
@@ -68,34 +70,32 @@ preparePP = do
   prepare pcfg
 
 
-test_vector :: FastText -> IO ()
-test_vector t = 
-  withCString "vector" $ \cstr_word -> do
-    let c_size = 300
-    v <- newFastTextVector c_size
-    str_word <- newCppString cstr_word
-    fastTextgetVector t v str_word
-    -- c_size <- fastTextVectorsize v
-    cfloat <- c_get_fasttextvector v
-    ptr <- newForeignPtr_ cfloat
-    let mv = MVector (fromIntegral c_size) ptr
-    let v = create (return mv)
-    print v
 
-run :: Maybe FastText -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline") -> IO ()
-run mt pp = do
-  -- withCString "vector" $ \cstr_word -> do
-  mapM_ test_vector mt 
+run :: FastText -> J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline") -> IO ()
+run ft pp = do
   let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
       dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
-  flip mapM_ propbankFiles $ \(fp,omit) -> do
+
+  let (trainingFiles,testFiles) = splitAt 20 propbankFiles
+      -- testFiles = [("118CWL049",NoOmit),("118CWL050",NoOmit)]
+  lsts <- flip mapM trainingFiles $ \(fp,omit) -> do
     r <- try $ do 
       header fp
-      process pp (dirpenn,dirprop) (fp,omit)
+      process ft pp (dirpenn,dirprop) (fp,omit)
     case r of
       Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
-      Right _ -> return ()
+      Right (Right lst) -> return lst
+      Right (Left e) -> error ("in run: " ++ e)
+  let trainingData = concat lsts
+  print (length trainingData)
 
+  -- (msg,r) <- crossvalidate (C_SVC 1) (RBF 1) 2
+  (msg,svm) <- trainSVM {- (C_SVC 1) -} (EPSILON_SVR 1 0.1) (RBF 1) [] trainingData
+  
+  mapM_ (classifyFile ft pp svm (dirpenn,dirprop)) testFiles
+  
+  -- print (length (concat lsts))
+  --  [("chapter-10",NoOmit)] 
 
 initGHCi :: IO J.JVM
 initGHCi = do
@@ -111,5 +111,5 @@ main :: IO ()
 main = do
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
-    -- t <- init2
-    (preparePP >>= run Nothing) -- (Just t)
+    t <- init2
+    (preparePP >>= run t)

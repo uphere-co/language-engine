@@ -12,14 +12,15 @@ import           SRL.CoNLL.CoNLL08.Type
 
 
 data Position = Before | After | Embed
-              deriving (Show,Eq,Ord)
+              deriving (Show,Eq,Ord,Enum,Bounded)
 
 data Direction = Up | Down
-               deriving (Show,Eq,Ord)
+               deriving (Show,Eq,Ord,Enum,Bounded)
 
 type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
 
-data Voice = Active | Passive deriving Show
+data Voice = Active | Passive
+           deriving (Show,Eq,Ord,Enum,Bounded)
 
 type TreeICP a = Tree (Range,ChunkTag) (Int,(POSTag,a))
 
@@ -27,7 +28,9 @@ type TreeZipperICP a = TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
 
 type ArgNodeFeature = (PropBankLabel,(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text)))))
 
-type InstanceFeature = (Int,Text,Maybe Voice, [[ArgNodeFeature]])
+type RoleSet = (Text,Text)
+
+type InstanceFeature = (Int,RoleSet,Voice, [[ArgNodeFeature]])
 
 type Level = Int
 
