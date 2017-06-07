@@ -13,6 +13,7 @@ import           Control.Lens               hiding (levels,(<.>))
 import           Control.Monad                     (void,when)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
+import           Data.Default
 import           Data.Foldable                     (toList)
 import           Data.Function                     (on)
 import           Data.List                         (group,sort,sortBy,zip4)
@@ -32,6 +33,7 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
+import           CoreNLP.Simple.Type
 import           FastText.Binding
 import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
@@ -75,10 +77,6 @@ getIdxSentProps pp (trs,props) = do
            $ props
     return rs
 
-
-
-
-
 header fp = do
   putStrLn "*****************************"
   putStrLn "*****************************"
@@ -103,7 +101,6 @@ trainingVectorsForArg ft arglabel (ifeats,ifakefeats) = do
 
 trainingFarmPerFile ft rs = do
   rs <- flip mapM rs $ \(_,sentinfo,prs) -> do
-    let arglabel = NumberedArgument 1
     let ifeats = features (sentinfo,prs)
         ifakefeats = fakeFeatures (sentinfo,prs)
     dat0 <- trainingVectorsForArg ft (NumberedArgument 0) (ifeats,ifakefeats)
@@ -116,34 +113,15 @@ prepareTraining :: FastText
                 -> (FilePath,FilePath)
                 -> (FilePath,IsOmit)
                 -> EitherT String IO TrainingData
-                -- IO (Either String TrainingFarm)
-                -- -> IO (Either String ([(Double,Vector Double)]))
 prepareTraining ft pp (dirpenn,dirprop) (fp,omit) = do
   let pennfile = dirpenn </> fp <.> "mrg"
       propfile = dirprop </> fp <.> "prop"
-  --  runEitherT $ do
   (trs,props) <- propbank (pennfile,propfile,omit)
   rs <- getIdxSentProps pp (trs,props)
   liftIO $ mapM_ (showMatchedInstance <> showFeatures <> showFakeFeatures) rs
   liftIO (trainingFarmPerFile ft rs)  
 
-  {- result :: [TrainingData] <- 
-  return $ mconcat results
-  -}
-  -- concat results
 
-
-
-{- flip mapM rs $ \(_,sentinfo,prs) -> do
-      let ifeats = features (sentinfo,prs)
-      ts <- concat <$> mapM (inst2vec ft) ifeats
-      let ts' = filter ((== arglabel) . (^._3)) ts 
-          ts'' = map (\x -> (1 :: Double,x^._5)) ts'
-          ifakefeats = fakeFeatures (sentinfo,prs)
-      fs <- concat <$> mapM (inst2vec ft) ifakefeats
-      let fs' = filter ((== arglabel) . (^._3)) fs
-          fs'' = map (\x -> (-1 :: Double,x^._5)) fs'
-      return (map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs'')) -}
 
 
 classifyFile ft pp svm (dirpenn,dirprop) (fp,omit) = do
@@ -177,8 +155,7 @@ runsvm ft pp svm (trs,props) = do
     let ifeats = features (sentinfo,pr)
         ifakefeats = fakeFeatures (sentinfo,pr)
         sortFun = sortBy (flip compare `on` (^._5))
-        -- arglabel = NumberedArgument 1
-    let feats = zipWith groupFeatures ifeats ifakefeats
+        feats = zipWith groupFeatures ifeats ifakefeats
     resultss0 <- mapM (fmap sortFun . findArgument (NumberedArgument 0) ft svm) feats
     resultss1 <- mapM (fmap sortFun . findArgument (NumberedArgument 1) ft svm) feats
     let results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
@@ -189,26 +166,14 @@ runsvm ft pp svm (trs,props) = do
     liftIO $ TIO.putStrLn (T.intercalate " " terms)
     liftIO $ putStrLn "======================================================================================="
     liftIO $ flip mapM_ results $ \result -> do
-      {- when ((not.null) results) $ do -}
-        -- let result = head results
-        let mmatched = matchR (result^._4) ipt
-        case mmatched of
-          Nothing -> TIO.putStrLn "no matched?"
-          Just matched -> let txt = T.intercalate " " (map (^._2._2) (toList matched))
-                          in putStrLn $ formatResult result txt
-{-                              
-    liftIO $ flip mapM_ resultss1 $ \results -> do
-      when ((not.null) results) $ do
-        let result = head results
-        let mmatched = matchR (result^._4) ipt
-        case mmatched of
-          Nothing -> TIO.putStrLn "no matched?"
-          Just matched -> let txt = T.intercalate " " (map (^._2._2) (toList matched))
-                          in putStrLn $ formatResult result txt 
--}
+      let mmatched = matchR (result^._4) ipt
+      case mmatched of
+        Nothing -> TIO.putStrLn "no matched?"
+        Just matched -> let txt = T.intercalate " " (map (^._2._2) (toList matched))
+                        in putStrLn $ formatResult result txt
 
 formatResult (n,(lemma,sensenum),label,range,value) txt =
-  printf "%d %15s.%2s %8s %8s %f %s" n lemma sensenum (pbLabelText label) (show range) value txt
+  printf "%d %15s.%2s %8s %8s %8.5f %s" n lemma sensenum (pbLabelText label) (show range) value txt
     
 
 train ft pp (dirpenn,dirprop) trainingFiles = do
@@ -221,9 +186,22 @@ train ft pp (dirpenn,dirprop) trainingFiles = do
       Right (Right lst) -> return lst
       Right (Left e) -> error ("in run: " ++ e)
   let trainingData = mconcat lsts
-  -- print (length trainingData)
   
   (msg0,svm0) <- trainSVM (EPSILON_SVR 1 0.1) (RBF 1) [] (trainingData ^.training_arg0)
   (msg1,svm1) <- trainSVM (EPSILON_SVR 1 0.1) (RBF 1) [] (trainingData ^.training_arg1)
 
   return (SVMFarm svm0 svm1)
+
+preparePP :: IO (J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
+preparePP = do
+  let pcfg = def & ( tokenizer .~ True )
+                 . ( words2sentences .~ True )
+                 . ( postagger .~ True )
+                 . ( lemma .~ True )
+                 . ( sutime .~ False )
+                 . ( depparse .~ True )
+                 . ( constituency .~ True )
+                 . ( ner .~ False )
+  prepare pcfg
+
+

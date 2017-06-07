@@ -1,0 +1,121 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
+
+module Main where
+
+import           AI.SVM.Simple
+import           AI.SVM.Base
+import           Control.Applicative               (optional)
+import           Control.Lens               hiding (levels,(<.>))
+import           Control.Monad                     (void,when)
+import           Control.Monad.IO.Class            (liftIO)
+import           Control.Monad.Trans.Either
+import qualified Data.ByteString.Char8      as B
+import           Data.Default
+import           Data.Either                       (rights)
+import           Data.List                         (sort,zip4)
+import           Data.Monoid                       ((<>))
+import           Data.Maybe                        (fromMaybe,mapMaybe)
+import qualified Data.Sequence              as Seq
+import           Data.Vector.Storable (MVector (..),create)
+import           Foreign.C.String
+import           Foreign.ForeignPtr
+import           Foreign.JNI                as J
+import           Language.Java              as J
+import           Options.Applicative
+import           System.Environment                (getEnv)
+import           System.FilePath                   ((</>),(<.>))
+--
+import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
+import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
+import           CoreNLP.Simple
+import           CoreNLP.Simple.Convert
+import           CoreNLP.Simple.Type
+--
+import           FastText.Binding
+import           PropBank.Type.Prop
+import           PropBank.Util
+--
+import           SRL.DataSet.PropBank
+import           SRL.Feature
+import           SRL.PropBankMatch
+import           SRL.Train
+import           SRL.Vectorize
+
+
+data ProgOption = ProgOption { penndir :: Maybe FilePath
+                             , propdir :: Maybe FilePath
+                             -- , filename :: FilePath
+                             -- , omitflag :: Bool
+                             , isTraining :: Bool
+                             , isTesting :: Bool
+                             , svmFile0 :: Maybe FilePath
+                             , svmFile1 :: Maybe FilePath
+                             , textFile :: Maybe FilePath
+                             } deriving Show
+
+pOptions :: Parser ProgOption
+pOptions = ProgOption <$> optional (strOption (long "penn" <> short 'n' <> help "Penn Treebank directory"))
+                      <*> optional (strOption (long "prop" <> short 'p' <> help "PropBank directory"))
+                      <*> switch (long "train" <> help "is training")
+                      <*> switch (long "test" <> help "is testing")
+                      <*> optional (strOption (long "arg0" <> help "SVM file for arg0"))
+                      <*> optional (strOption (long "arg1" <> help "SVM file for arg1"))
+                      <*> optional (strOption (long "file" <> help "text file"))
+
+progOption :: ParserInfo ProgOption 
+progOption = info pOptions (fullDesc <> progDesc "Test features for PropBank corpus")
+
+initGHCi :: IO J.JVM
+initGHCi = do
+  clspath <- getEnv "CLASSPATH"
+  J.newJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] 
+
+init2 :: IO FastText
+init2 = initWVDB "/scratch/wavewave/wordvector/wiki.en.bin"
+
+
+
+{- 
+  let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
+      dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
+-}
+  
+main :: IO ()
+main = do
+  opt <- execParser progOption
+  let (trainingFiles,testFiles) = splitAt 20 propbankFiles
+  clspath <- getEnv "CLASSPATH"
+  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
+    ft <- init2
+    pp <- preparePP 
+    when (isTraining opt) $ do
+      case (penndir opt,propdir opt) of
+        (Just dirpenn,Just dirprop) -> do
+          let dirs = (dirpenn,dirprop)
+          svmfarm <- train ft pp dirs trainingFiles   
+          saveSVM "arg0.svm" (svmfarm^.svm_arg0)
+          saveSVM "arg1.svm" (svmfarm^.svm_arg1)
+          -- run (dirpenn,dirprop) ft pp
+        _ -> error "penn/prop dir are not specified"
+    -- 
+    let svmfile0 = fromMaybe "arg0.svm" (svmFile0 opt)
+        svmfile1 = fromMaybe "arg1.svm" (svmFile1 opt)
+
+        
+    if isTesting opt
+      then do
+        case (penndir opt,propdir opt) of
+          (Just dirpenn,Just dirprop) -> do
+            let dirs = (dirpenn,dirprop)
+            svm0 <- loadSVM svmfile0
+            svm1 <- loadSVM svmfile1
+            let svmfarm = SVMFarm svm0 svm1
+            mapM_ (classifyFile ft pp svmfarm dirs) testFiles
+          _ -> error "penn/prop dir are not specified"
+      else do
+        print (textFile opt) 
