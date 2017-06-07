@@ -81,13 +81,6 @@ initGHCi = do
 init2 :: IO FastText
 init2 = initWVDB "/scratch/wavewave/wordvector/wiki.en.bin"
 
-
-
-{- 
-  let dirpenn = "/scratch/wavewave/MASC/Propbank/Penn_Treebank-orig/data/written"
-      dirprop = "/scratch/wavewave/MASC/Propbank/Propbank-orig/data/written"
--}
-  
 main :: IO ()
 main = do
   opt <- execParser progOption
@@ -103,7 +96,6 @@ main = do
           svmfarm <- train ft pp dirs trainingFiles   
           saveSVM "arg0.svm" (svmfarm^.svm_arg0)
           saveSVM "arg1.svm" (svmfarm^.svm_arg1)
-          -- run (dirpenn,dirprop) ft pp
         _ -> error "penn/prop dir are not specified"
     -- 
     let svmfile0 = fromMaybe "arg0.svm" (svmFile0 opt)
@@ -127,8 +119,8 @@ main = do
              Nothing -> error "No text file was specified."
              Just fp -> do
                txt <- TIO.readFile fp
-               TIO.putStrLn txt
-               -- ft <- init2
+               -- TIO.putStrLn txt
+               ft <- init2
                pp <- preparePP 
                ann <- annotate pp (Document txt (fromGregorian 2017 4 17))
                rdoc <- protobufDoc ann

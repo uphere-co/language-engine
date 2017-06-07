@@ -134,10 +134,10 @@ mkDocFromPennTree = flip S.Document (fromGregorian 2017 4 17)
                   . getLeaves  
 
 
-showMatchedInstance :: (Int,SentenceInfo,[Instance]) -> IO ()
-showMatchedInstance (_i,sentinfo,prs) = do
+showMatchedInstance :: (Int,SentenceInfo,PennTree,[Instance]) -> IO ()
+showMatchedInstance (_i,sentinfo,tr,prs) = do
   let pt = sentinfo^.corenlp_tree
-      tr = sentinfo^.propbank_tree
+      -- tr = sentinfo^.propbank_tree
       terms = map (^._2) . toList $ pt
   TIO.putStrLn "================="
   TIO.putStrLn "PropBank"

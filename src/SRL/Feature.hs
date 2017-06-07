@@ -214,32 +214,32 @@ fakeFeaturesForInstance sentinfo inst =
   in calcInstanceFeature sentinfo input      
         
 
-features :: (SentenceInfo,[Instance]) -> [InstanceFeature]
-features (sentinfo,prs) = 
-  let insts = matchInstances (sentinfo^.corenlp_tree,sentinfo^.propbank_tree) prs
+features :: (SentenceInfo,PennTree,[Instance]) -> [InstanceFeature]
+features (sentinfo,propbanktree,prs) = 
+  let insts = matchInstances (sentinfo^.corenlp_tree,propbanktree{- sentinfo^.propbank_tree -}) prs
   in map (featuresForInstance sentinfo) insts
 
 
-fakeFeatures :: (SentenceInfo,[Instance]) -> [InstanceFeature]
-fakeFeatures (sentinfo,prs) = 
-  let insts = matchInstances (sentinfo^.corenlp_tree,sentinfo^.propbank_tree) prs
+fakeFeatures :: (SentenceInfo,PennTree,[Instance]) -> [InstanceFeature]
+fakeFeatures (sentinfo,propbanktree,prs) = 
+  let insts = matchInstances (sentinfo^.corenlp_tree,propbanktree{-sentinfo^.propbank_tree-}) prs
   in map (fakeFeaturesForInstance sentinfo) insts
 
 
-showFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
-showFeatures (_i,sentinfo,prs) = do
+showFeatures :: (Int,SentenceInfo,PennTree,[Instance]) -> IO ()
+showFeatures (_i,sentinfo,propbanktree,prs) = do
   putStrLn "Truth items"
   putStrLn "---------------"
-  mapM_ (putStrLn . formatInstanceFeature) (features (sentinfo,prs))
+  mapM_ (putStrLn . formatInstanceFeature) (features (sentinfo,propbanktree,prs))
   putStrLn "---------------"
   
 
-showFakeFeatures :: (Int,SentenceInfo,[Instance]) -> IO ()
-showFakeFeatures (_i,sentinfo,prs) = do
-  let pt = sentinfo^.corenlp_tree
-      tr = sentinfo^.propbank_tree
-      insts = matchInstances (pt,tr) prs
+showFakeFeatures :: (Int,SentenceInfo,PennTree,[Instance]) -> IO ()
+showFakeFeatures (_i,sentinfo,propbanktree,prs) = do
+  --let pt = sentinfo^.corenlp_tree
+  --    -- tr = sentinfo^.propbank_tree
+  --    insts = matchInstances (pt,tr) prs
   putStrLn "Falsity items"
   putStrLn "---------------"
-  mapM_ (putStrLn . formatInstanceFeature) (fakeFeatures (sentinfo,prs))
+  mapM_ (putStrLn . formatInstanceFeature) (fakeFeatures (sentinfo,propbanktree,prs))
   putStrLn "---------------"

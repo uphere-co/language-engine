@@ -73,7 +73,7 @@ getIdxSentProps pp (trs,props) = do
     deps <- hoistEither $ mapM sentToDep sents
     let cpts = mapMaybe (^.S.parseTree) sents
         pts = map decodeToPennTree cpts
-        rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt tr dep,pr))
+        rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt dep,tr,pr))
            . merge (^.inst_tree_id) (zip4 pts trs deps sents)
            $ props
     return rs
@@ -101,9 +101,9 @@ trainingVectorsForArg ft arglabel (ifeats,ifakefeats) = do
 
 
 trainingFarmPerFile ft rs = do
-  rs <- flip mapM rs $ \(_,sentinfo,prs) -> do
-    let ifeats = features (sentinfo,prs)
-        ifakefeats = fakeFeatures (sentinfo,prs)
+  rs <- flip mapM rs $ \(_,sentinfo,propbanktree,prs) -> do
+    let ifeats = features (sentinfo,propbanktree,prs)
+        ifakefeats = fakeFeatures (sentinfo,propbanktree,prs)
     dat0 <- trainingVectorsForArg ft (NumberedArgument 0) (ifeats,ifakefeats)
     dat1 <- trainingVectorsForArg ft (NumberedArgument 1) (ifeats,ifakefeats)
     return (TrainingData dat0 dat1)
@@ -152,9 +152,9 @@ findArgument arglabel ft svmfarm ifeat = do
 
 runsvm ft pp svm (trs,props) = do
   rs <- getIdxSentProps pp (trs,props)
-  flip mapM_ rs $ \(i,sentinfo,pr) -> do
-    let ifeats = features (sentinfo,pr)
-        ifakefeats = fakeFeatures (sentinfo,pr)
+  flip mapM_ rs $ \(i,sentinfo,propbanktree,pr) -> do
+    let ifeats = features (sentinfo,propbanktree,pr)
+        ifakefeats = fakeFeatures (sentinfo,propbanktree,pr)
         sortFun = sortBy (flip compare `on` (^._5))
         feats = zipWith groupFeatures ifeats ifakefeats
     resultss0 <- mapM (fmap sortFun . findArgument (NumberedArgument 0) ft svm) feats

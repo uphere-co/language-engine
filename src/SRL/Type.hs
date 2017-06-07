@@ -41,7 +41,7 @@ type Level = Int
 
 data SentenceInfo = SentInfo { _corenlp_sent :: CS.Sentence
                              , _corenlp_tree :: PennTree
-                             , _propbank_tree :: PennTree
+                             -- , _propbank_tree :: PennTree
                              , _corenlp_dep  :: S.Dependency
                              }
                   deriving Show
