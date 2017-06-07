@@ -146,47 +146,6 @@ voice (pt,sent) =
                   _ -> Nothing
   in mapMaybe testf $ toList (mkTreeZipper [] lemmapt)
 
-{- 
-featuresForArgNode :: SentenceInfo -> Int -> Argument -> MatchedArgNode
-                   -> [(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))]
-featuresForArgNode sentinfo predidx arg node =
-  let rngs = node ^.. mn_trees . traverse . _1
-      ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
-      dep = sentinfo^.corenlp_dep
-      parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
-      opaths = map parseTreePath parsetrees
-      paths = map (simplifyPTP . parseTreePath) parsetrees
-      headwordtrees = headWordTree dep ipt
-      heads = map (\rng -> headWord =<< matchR rng headwordtrees) rngs
-      comparef Nothing  _        = GT
-      comparef _        Nothing  = LT
-      comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
-  in  sortBy (comparef `on` (view _3)) $ zip3 rngs paths heads        
-      
-
-featuresForArg :: SentenceInfo -> Int -> MatchedArgument -> [ArgNodeFeature]
-featuresForArg sentinfo predidx arg =
-  flip mapMaybe (arg^.ma_nodes) $ \node -> do
-    let label = arg^.ma_argument.arg_label
-    fs <- safeHead (featuresForArgNode sentinfo predidx (arg^.ma_argument) node)
-    return (label,fs)
--}
-
-{-
-fakeFeaturesForArg :: SentenceInfo -> Int -> Argument -> Range
-                       -> (Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))
-fakeFeaturesForArg sentinfo predidx arg rng =
-  let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
-      dep = sentinfo^.corenlp_dep
-      parsetree = parseTreePathFull (predidx,rng) ipt
-      opath = parseTreePath parsetree
-      path = (simplifyPTP . parseTreePath) parsetree
-      headwordtrees = headWordTree dep ipt
-      hd = headWord =<< matchR rng headwordtrees
-  in  (rng,path,hd)
-
--}
-
 
 calcArgNodeFeatureEach :: SentenceInfo -> Int -> [Range]
                         -> [(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))]
@@ -230,17 +189,6 @@ featuresForInstance sentinfo inst =
       input = InstanceInput predidx rolesetid arginputs
   in calcInstanceFeature sentinfo input 
 
-{-      
-      argfeatures = map (featuresForArg sentinfo predidx) . 
-      voicemap = IM.fromList $ voice (sentinfo^.corenlp_tree,sentinfo^.corenlp_sent)      
-      voicefeature = maybe Active snd (IM.lookup predidx voicemap)
-  in (predidx,rolesetid,voicefeature,argfeatures)
-
-
-      voicemap = IM.fromList $ voice (sentinfo^.corenlp_tree,sentinfo^.corenlp_sent)      
-      voicefeature = maybe Active snd (IM.lookup predidx voicemap)
-
--}
 
 fakeFeaturesForInstance :: SentenceInfo -> MatchedInstance -> InstanceFeature
 fakeFeaturesForInstance sentinfo inst = 
@@ -265,10 +213,6 @@ fakeFeaturesForInstance sentinfo inst =
       input = InstanceInput predidx rolesetid arginputs
   in calcInstanceFeature sentinfo input      
         
-{-        
-        return [(label,fakeFeaturesForArg sentinfo predidx (arg^.ma_argument) rngeach)]
-  in (predidx,rolesetid,voicefeature,argfeatures)
--}
 
 features :: (SentenceInfo,[Instance]) -> [InstanceFeature]
 features (sentinfo,prs) = 
