@@ -34,6 +34,7 @@ import           PropBank.Util
 --
 import           SRL.Feature
 import           SRL.PropBankMatch
+import           SRL.Type
 
 data ProgOption = ProgOption { penndir :: FilePath
                              , propdir :: FilePath

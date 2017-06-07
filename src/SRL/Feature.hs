@@ -184,16 +184,55 @@ fakeFeaturesForArg sentinfo predidx arg rng =
       hd = headWord =<< matchR rng headwordtrees
   in  (rng,path,hd)
 
-    
-featuresForInstance :: SentenceInfo -> MatchedInstance -> InstanceFeature
-featuresForInstance sentinfo inst = 
-  let predidx = findRelNode (inst^.mi_arguments)
-      rolesetid = inst^.mi_instance.inst_lemma_roleset_id
-      argfeatures = map (featuresForArg sentinfo predidx) . filter ((/= Relation) . (^.ma_argument.arg_label)) $ inst^.mi_arguments
+
+calcArgNodeFeatureEach :: SentenceInfo -> Int -> [Range]
+                        -> [(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))]
+calcArgNodeFeatureEach sentinfo predidx rngs = 
+  let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
+      dep = sentinfo^.corenlp_dep
+      parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
+      opaths = map parseTreePath parsetrees
+      paths = map (simplifyPTP . parseTreePath) parsetrees
+      headwordtrees = headWordTree dep ipt
+      heads = map (\rng -> headWord =<< matchR rng headwordtrees) rngs
+      comparef Nothing  _        = GT
+      comparef _        Nothing  = LT
+      comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
+  in  sortBy (comparef `on` (view _3)) $ zip3 rngs paths heads        
+
+calcArgNodeFeature :: SentenceInfo -> Int -> ArgumentInput -> [ArgNodeFeature]
+calcArgNodeFeature sentinfo predidx arginput =
+  flip mapMaybe (arginput^.nodes) $ \ns -> do
+    fs <- safeHead (calcArgNodeFeatureEach sentinfo predidx ns)
+    return (arginput^.pblabel,fs)
+  
+
+calcInstanceFeature :: SentenceInfo -> InstanceInput -> InstanceFeature
+calcInstanceFeature sentinfo input =
+  let predidx = input^.predicate_id
+      rolesetid = input^.lemma_roleset_id
+      argfeatures = map (calcArgNodeFeature sentinfo predidx) (input^.argument_inputs)
       voicemap = IM.fromList $ voice (sentinfo^.corenlp_tree,sentinfo^.corenlp_sent)      
       voicefeature = maybe Active snd (IM.lookup predidx voicemap)
   in (predidx,rolesetid,voicefeature,argfeatures)
 
+     
+featuresForInstance :: SentenceInfo -> MatchedInstance -> InstanceFeature
+featuresForInstance sentinfo inst = 
+  let predidx = findRelNode (inst^.mi_arguments)
+      rolesetid = inst^.mi_instance.inst_lemma_roleset_id
+      arginputs = map argumentInputFromMatchedArgument
+                . filter ((/= Relation) . (^.ma_argument.arg_label))
+                $ inst^.mi_arguments
+      input = InstanceInput predidx rolesetid arginputs
+  in calcInstanceFeature sentinfo input 
+
+{-      
+      argfeatures = map (featuresForArg sentinfo predidx) . 
+      voicemap = IM.fromList $ voice (sentinfo^.corenlp_tree,sentinfo^.corenlp_sent)      
+      voicefeature = maybe Active snd (IM.lookup predidx voicemap)
+  in (predidx,rolesetid,voicefeature,argfeatures)
+-}
 
 fakeFeaturesForInstance :: SentenceInfo -> MatchedInstance -> InstanceFeature
 fakeFeaturesForInstance sentinfo inst = 
@@ -223,17 +262,13 @@ fakeFeaturesForInstance sentinfo inst =
 
 features :: (SentenceInfo,[Instance]) -> [InstanceFeature]
 features (sentinfo,prs) = 
-  let pt = sentinfo^.corenlp_tree
-      tr = sentinfo^.propbank_tree
-      insts = matchInstances (pt,tr) prs
+  let insts = matchInstances (sentinfo^.corenlp_tree,sentinfo^.propbank_tree) prs
   in map (featuresForInstance sentinfo) insts
 
 
 fakeFeatures :: (SentenceInfo,[Instance]) -> [InstanceFeature]
 fakeFeatures (sentinfo,prs) = 
-  let pt = sentinfo^.corenlp_tree
-      tr = sentinfo^.propbank_tree
-      insts = matchInstances (pt,tr) prs
+  let insts = matchInstances (sentinfo^.corenlp_tree,sentinfo^.propbank_tree) prs
   in map (fakeFeaturesForInstance sentinfo) insts
 
 

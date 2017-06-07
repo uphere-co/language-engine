@@ -41,6 +41,7 @@ import           PropBank.Util
 --
 import           SRL.Feature 
 import           SRL.PropBankMatch
+import           SRL.Type
 import           SRL.Vectorize
 
 

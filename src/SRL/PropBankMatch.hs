@@ -28,42 +28,10 @@ import           NLP.Type.PennTreebankII
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 --
+import           SRL.Type
 import           SRL.Util
 --
 
-data SentenceInfo = SentInfo { _corenlp_sent :: CS.Sentence
-                             , _corenlp_tree :: PennTree
-                             , _propbank_tree :: PennTree
-                             , _corenlp_dep  :: S.Dependency
-                             }
-                  deriving Show
-
-makeLenses ''SentenceInfo
-
-
-data MatchedArgNode
-  = MatchedArgNode { _mn_node :: (Range,Node)
-                   , _mn_trees :: [(Range,PennTreeIdx)]
-                   }
-  deriving Show
-
-makeLenses ''MatchedArgNode
-
-data MatchedArgument
-  = MatchedArgument { _ma_argument :: Argument
-                    , _ma_nodes :: [MatchedArgNode]
-                    }
-  deriving Show
-
-makeLenses ''MatchedArgument
-
-data MatchedInstance
-  = MatchedInstance { _mi_instance :: Instance
-                    , _mi_arguments :: [MatchedArgument]
-                    }
-  deriving Show
-
-makeLenses ''MatchedInstance
 
 
 termRangeForAllNode :: PennTreeGen c (Int,t) -> [Range]
