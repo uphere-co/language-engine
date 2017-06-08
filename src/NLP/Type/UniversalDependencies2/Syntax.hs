@@ -20,6 +20,7 @@ data DependencyRelation = ACL        -- ^ clausal modifier of noun (adjectival c
                         | CONJ       -- ^ conjunct
                         | COP        -- ^ copula
                         | CSUBJ      -- ^ clausal subject
+                        | CSUBJPASS  -- ^ clausal subject passive
                         | DEP        -- ^ unspecified dependency 
                         | DET        -- ^ determiner
                         | DISCOURSE  -- ^ discourse element
@@ -65,6 +66,7 @@ parseDepRel "compound"   = Right COMPOUND
 parseDepRel "conj"       = Right CONJ
 parseDepRel "cop"        = Right COP
 parseDepRel "csubj"      = Right CSUBJ
+parseDepRel "csubjpass"  = Right CSUBJPASS
 parseDepRel "dep"        = Right DEP
 parseDepRel "det"        = Right DET
 parseDepRel "discourse"  = Right DISCOURSE

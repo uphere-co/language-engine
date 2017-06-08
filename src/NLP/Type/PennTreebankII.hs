@@ -70,7 +70,7 @@ data POSTag = CC          -- ^ conjunction, coordinating
             | D_LRB       -- ^ left parenthesis                  (original -LRB-)
             | D_RRB       -- ^ right parentheis                  (original -RRB-)
             | D_NONE      -- ^ none                              (original -NONE-)
-            deriving (Generic, Show, Eq, Ord, Enum)
+            deriving (Generic, Show, Eq, Ord, Enum, Bounded)
 
 instance FromJSON POSTag where
   parseJSON = genericParseJSON defaultOptions
@@ -107,7 +107,7 @@ data ChunkTag = ROOT
               | SBARQ     -- ^ direct question introduced by a wh-word or wh-phrase
               | SINV      -- ^ inverted declarative sentence
               | SQ        -- ^ inverted yes/no question
-              deriving (Generic, Show,Eq,Ord,Enum)
+              deriving (Generic, Show,Eq,Ord,Enum,Bounded)
 
 instance FromJSON ChunkTag where
   parseJSON = genericParseJSON defaultOptions
