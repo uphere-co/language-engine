@@ -9,6 +9,8 @@
 with pkgs;
 
 let
+  fasttext = import (uphere-nix-overlay + "/nix/cpp-modules/fasttext.nix") { inherit stdenv fetchgit; };
+
   res_corenlp = import (uphere-nix-overlay + "/nix/linguistic-resources/corenlp.nix") {
     inherit fetchurl fetchzip srcOnly;
   };
@@ -17,13 +19,22 @@ let
 
   hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix")
                { inherit pkgs; };
+
+  haskellPackages1 = haskellPackages.override { overrides = hsconfig; };
+
+  fastTextNix = import ./fasttext/default.nix {
+    inherit stdenv;
+    haskellPackages = haskellPackages1;
+  };
+
   hsconfig2 =
     self: super: {
       "nlp-types" = self.callPackage (import nlp-types) {};
       "PropBank" = self.callPackage (import PropBank) {};
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
       "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
-      "wiki-ner" = self.callPackage (import wiki-ner) {}; 
+      "wiki-ner" = self.callPackage (import wiki-ner) {};
+      "fastText" = self.callPackage fastTextNix { inherit fasttext; };
     };  
   newHaskellPackages = haskellPackages.override {
     overrides = self: super: hsconfig self super // hsconfig2 self super;
@@ -56,9 +67,9 @@ let
             p.HCoreNLP
             p.HCoreNLP-Proto
             p.wiki-ner
+            fastText
           ]);
 
-  fasttext = import (uphere-nix-overlay + "/nix/cpp-modules/fasttext.nix") { inherit stdenv fetchgit; };
 in
 
 stdenv.mkDerivation {
