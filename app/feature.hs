@@ -34,6 +34,7 @@ import           PropBank.Util
 --
 import           SRL.Feature
 import           SRL.PropBankMatch
+import           SRL.Type
 
 data ProgOption = ProgOption { penndir :: FilePath
                              , propdir :: FilePath
@@ -80,7 +81,7 @@ main = do
       deps <- hoistEither $ mapM sentToDep sents
       let cpts = mapMaybe (^.S.parseTree) sents
           pts = map decodeToPennTree cpts
-          rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt tr dep,pr))
+          rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt dep,tr,pr))
              . merge (^.inst_tree_id) (zip4 pts trs deps sents)
              $ props
       liftIO $ mapM_ (showMatchedInstance <> showFeatures) rs

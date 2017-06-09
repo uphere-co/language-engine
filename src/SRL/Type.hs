@@ -1,9 +1,13 @@
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module SRL.Type where
 
+import           Control.Lens     hiding (Level)
 import           Data.Text               (Text)
 --
+import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
+import qualified CoreNLP.Simple.Type.Simplified        as S
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
 import           PropBank.Type.Prop
@@ -33,6 +37,78 @@ type RoleSet = (Text,Text)
 type InstanceFeature = (Int,RoleSet,Voice, [[ArgNodeFeature]])
 
 type Level = Int
+
+
+data SentenceInfo = SentInfo { _corenlp_sent :: CS.Sentence
+                             , _corenlp_tree :: PennTree
+                             -- , _propbank_tree :: PennTree
+                             , _corenlp_dep  :: S.Dependency
+                             }
+                  deriving Show
+
+makeLenses ''SentenceInfo
+
+
+data MatchedArgNode
+  = MatchedArgNode { _mn_node :: (Range,Node)
+                   , _mn_trees :: [(Range,PennTreeIdx)]
+                   }
+  deriving Show
+
+makeLenses ''MatchedArgNode
+
+data MatchedArgument
+  = MatchedArgument { _ma_argument :: Argument
+                    , _ma_nodes :: [MatchedArgNode]
+                    }
+  deriving Show
+
+makeLenses ''MatchedArgument
+
+data MatchedInstance
+  = MatchedInstance { _mi_instance :: Instance
+                    , _mi_arguments :: [MatchedArgument]
+                    }
+  deriving Show
+
+makeLenses ''MatchedInstance
+
+
+data ArgumentInput = ArgumentInput { _pblabel :: PropBankLabel
+                                   , _nodes :: [[Range]]
+                                   }
+                   deriving (Show)
+                            
+makeLenses ''ArgumentInput
+
+
+argumentInputFromMatchedArgument :: MatchedArgument -> ArgumentInput
+argumentInputFromMatchedArgument arg =
+  let label = arg^.ma_argument.arg_label
+      rss = map (toListOf (mn_trees.traverse._1)) (arg^.ma_nodes)
+  in ArgumentInput label rss
+
+
+{- 
+mkArgumentInput :: PropBankLabel -> [[Range]] -> ArgumentInput
+mkArgumentInput l rss = ArgumentInput l rss
+-}
+
+data InstanceInput = InstanceInput { _predicate_id :: Int
+                                   , _lemma_roleset_id :: (Text,Text)
+                                   , _argument_inputs :: [ArgumentInput]
+                                   }
+                   deriving (Show)
+
+makeLenses ''InstanceInput
+
+{- 
+mkInstanceInput :: Int -> (Text,Text) -> [ArgumentInput] -> InstanceInput
+mkInstanceInput n r args = InstanceInput n r args
+-}
+
+
+
 
 (b1,e1) `isPriorTo` (b2,e2) = e1 < b2
 r1 `isAfter` r2 = r2 `isPriorTo` r1

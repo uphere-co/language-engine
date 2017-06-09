@@ -94,8 +94,8 @@ Executable feature
                        semantic-role-labeler                       
 
 
-Executable training
-  Main-is:             training.hs
+Executable SRL
+  Main-is:             SRL.hs
   hs-source-dirs:      app
   default-language:    Haskell2010
   ghc-options:         -O2 -Wall
@@ -115,6 +115,7 @@ Executable training
                        jni,
                        jvm,
                        lens,
+                       optparse-applicative,
                        svm-simple,
                        text,
                        time,
