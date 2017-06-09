@@ -40,3 +40,9 @@ grep -Fwf ne.company wikidata.items | awk -F"\t" 'NF==5{print}' > items.company
 # Print company and their organization types
 awk -F"\t" 'NR == FNR { a[$1]=$2; next } NF==5 {split($3, p31s, " "); for(i in p31s) {p31=p31s[i];if(p31 in a) print $1 "\t" $NF "\t" p31 "\t" a[p31]}}' org_types items.company > class.company
 
+
+# Get lines that contain property values
+# cd /scratch/groups/uphere/wikidata/
+cat wikidata.items | awk -F"\t" 'NF==5{print}' > wikidata.items.properties
+
+
