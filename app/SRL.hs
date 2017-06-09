@@ -142,24 +142,20 @@ main = do
                        lemmapt = lemmatize lemmamap ipt
                        verbs = filter (isVerb . (^._2._1)) (toList lemmapt)
                        
-                   -- liftIO $ TIO.putStrLn (T.intercalate " " terms)
-                   --  liftIO $ print verbs
                    let arg0 = NumberedArgument 0
                        arg1 = NumberedArgument 1
                    svm0 <- liftIO $ loadSVM svmfile0
                    svm1 <- liftIO $ loadSVM svmfile1
                        
                    let svmfarm = SVMFarm svm0 svm1
-                       
-                   let genArgInputs n = let rngss = map (\x->[x]) (findNotOverlappedNodes ipt (n,n))
+                       genArgInputs n = let rngss = map (\x->Single x) (findNotOverlappedNodes ipt (n,n))
                                         in [ArgumentInput arg0 rngss, ArgumentInput arg1 rngss]
-                   let instInputs = flip map verbs $ \verb ->
+                       instInputs = flip map verbs $ \verb ->
                                       let n = verb^._1
                                           lma = verb^._2._2._2
                                       in InstanceInput n (lma,"01") (genArgInputs n)
                        feats = map (calcInstanceFeature sentinfo) instInputs
-                   -- liftIO $ mapM_ (putStrLn . formatInstanceFeature) feats
-                   let sortFun = sortBy (flip compare `on` (^._5))
+                       sortFun = sortBy (flip compare `on` (^._5))
                    resultss0 <- mapM (fmap sortFun . findArgument arg0 ft svmfarm) feats
                    resultss1 <- mapM (fmap sortFun . findArgument arg1 ft svmfarm) feats
                    let results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
@@ -173,10 +169,6 @@ main = do
                        Just matched -> let txt = T.intercalate " " (map (^._2._2) (toList matched))
                                        in putStrLn $ formatResult result txt
                    
-                   
-                   -- liftIO $ mapM_ print instInputs
-                   -- let ifeats = 
-                   -- liftIO $ mapM_ print pts
                                              
 isVerb VB  = True
 isVerb VBZ = True

@@ -4,6 +4,7 @@
 module SRL.Type where
 
 import           Control.Lens     hiding (Level)
+import           Data.Maybe              (mapMaybe)
 import           Data.Text               (Text)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
@@ -73,9 +74,12 @@ data MatchedInstance
 
 makeLenses ''MatchedInstance
 
+data NodeRange = Single Range
+               | Multi [Range]
+               deriving (Show)
 
 data ArgumentInput = ArgumentInput { _pblabel :: PropBankLabel
-                                   , _nodes :: [[Range]]
+                                   , _nodes :: [NodeRange]
                                    }
                    deriving (Show)
                             
@@ -85,14 +89,13 @@ makeLenses ''ArgumentInput
 argumentInputFromMatchedArgument :: MatchedArgument -> ArgumentInput
 argumentInputFromMatchedArgument arg =
   let label = arg^.ma_argument.arg_label
-      rss = map (toListOf (mn_trees.traverse._1)) (arg^.ma_nodes)
-  in ArgumentInput label rss
+      rs = map (toListOf (mn_trees.traverse._1)) (arg^.ma_nodes)
+      rs' = flip mapMaybe rs $ \r -> case r of
+                                       []  -> Nothing
+                                       [x] -> Just (Single x)
+                                       xs  -> Just (Multi xs)
+  in ArgumentInput label rs'
 
-
-{- 
-mkArgumentInput :: PropBankLabel -> [[Range]] -> ArgumentInput
-mkArgumentInput l rss = ArgumentInput l rss
--}
 
 data InstanceInput = InstanceInput { _predicate_id :: Int
                                    , _lemma_roleset_id :: (Text,Text)
@@ -101,13 +104,6 @@ data InstanceInput = InstanceInput { _predicate_id :: Int
                    deriving (Show)
 
 makeLenses ''InstanceInput
-
-{- 
-mkInstanceInput :: Int -> (Text,Text) -> [ArgumentInput] -> InstanceInput
-mkInstanceInput n r args = InstanceInput n r args
--}
-
-
 
 
 (b1,e1) `isPriorTo` (b2,e2) = e1 < b2

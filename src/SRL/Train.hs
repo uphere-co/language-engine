@@ -136,7 +136,7 @@ classifyFile ft pp svm (dirpenn,dirprop) (fp,omit) = do
 groupFeatures (i,roleset,voice,afeatss_t) (i',_,_,afeatss_f) = 
   if i /= i'
   then error "error in groupFeatues" 
-  else (i,roleset,voice,zipWith (++) afeatss_t afeatss_f)
+  else (i,roleset,voice,afeatss_t ++ afeatss_f)
 
 
 findArgument arglabel ft svmfarm ifeat = do
@@ -157,6 +157,11 @@ runsvm ft pp svm (trs,props) = do
         ifakefeats = fakeFeatures (sentinfo,propbanktree,pr)
         sortFun = sortBy (flip compare `on` (^._5))
         feats = zipWith groupFeatures ifeats ifakefeats
+    {- liftIO $ do
+      mapM_ print ifeats
+      putStrLn "***"
+      mapM_ print ifakefeats
+      putStrLn "***" -}
     resultss0 <- mapM (fmap sortFun . findArgument (NumberedArgument 0) ft svm) feats
     resultss1 <- mapM (fmap sortFun . findArgument (NumberedArgument 1) ft svm) feats
     let results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
