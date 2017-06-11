@@ -1,10 +1,20 @@
-{ pkgs ? import <nixpkgs> {}
+{ opkgs ? import <nixpkgs> {}
 , uphere-nix-overlay ? <uphere-nix-overlay>
 , HCoreNLP ? <HCoreNLP>
 , nlp-types ? <nlp-types>
 , PropBank ? <PropBank>
 , wiki-ner ? <wiki-ner>
 }:
+
+
+let pkgs = import opkgs.path { 
+             overlays = [ (self: super: {
+                             libsvm = import (uphere-nix-overlay + "/nix/cpp-modules/libsvm/default.nix") { inherit (self) stdenv fetchurl; };
+                           })
+                        ];
+             #overlays = [ (self: super: { libsvm = super.libsvm; }) ] ;
+           };
+in
 
 with pkgs;
 
@@ -74,8 +84,9 @@ in
 
 stdenv.mkDerivation {
   name = "SRL-dev";
-  buildInputs = [ hsenv fasttext ];
+  buildInputs = [ hsenv fasttext libsvm ];
   shellHook = ''
+    export OMP_NUM_THREADS=8
     export CLASSPATH="${corenlp_models}:${corenlp}/stanford-corenlp-3.7.0.jar:${corenlp}/protobuf.jar:${corenlp}/joda-time.jar:${corenlp}/jollyday.jar:${hsenv}/share/x86_64-linux-ghc-8.0.2/HCoreNLP-0.1.0.0/HCoreNLPProto.jar";
   '';
 }
