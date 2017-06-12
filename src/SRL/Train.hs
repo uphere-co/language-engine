@@ -43,11 +43,12 @@ import           SRL.Feature
 import           SRL.PropBankMatch
 import           SRL.Type
 import           SRL.Vectorize.Sparse
+import           SVM
 
 
 predict = undefined 
 
-trainSVM = undefined
+-- trainSVM = undefined
 
 saveSVM = undefined
 
@@ -56,7 +57,6 @@ loadSVM = undefined
 data EPSILON_SVR = EPSILON_SVR Int Double
 data RBF = RBF Int
 
-type SVM = ()
 
 data SVMFarm = SVMFarm { _svm_arg0 :: SVM
                        , _svm_arg1 :: SVM
@@ -64,8 +64,8 @@ data SVMFarm = SVMFarm { _svm_arg0 :: SVM
                
 makeLenses ''SVMFarm
 
-data TrainingData = TrainingData { _training_arg0 :: [(Double,FeatureVector)] -- [(Double,Vector Double)]
-                                 , _training_arg1 :: [(Double,FeatureVector)] -- [(Double,Vector Double)]
+data TrainingData = TrainingData { _training_arg0 :: [(Double,[(Int,Double)])] -- [(Double,Vector Double)]
+                                 , _training_arg1 :: [(Double,[(Int,Double)])] -- [(Double,Vector Double)]
                                  }
 
 makeLenses ''TrainingData                                              
@@ -117,14 +117,14 @@ formatResult (n,(lmma,sensenum),label,range,value) txt =
 
 trainingVectorsForArg :: PropBankLabel
                       -> ([InstanceFeature],[InstanceFeature])
-                      -> [(Double,FeatureVector)] -- [(Double,Vector Double)]
+                      -> [(Double,[(Int,Double)])] -- [(Double,FeatureVector)] -- [(Double,Vector Double)]
 trainingVectorsForArg arglabel (ifeats,ifakefeats) = 
   let ts = concatMap inst2vec ifeats
       ts' = filter ((== arglabel) . (^._3)) ts 
-      ts'' = map (\x -> (1 :: Double,x^._5)) ts'
+      ts'' = map (\x -> (1 :: Double,x^._5.fv_nodes)) ts'
       fs = concatMap inst2vec ifakefeats
       fs' = filter ((== arglabel) . (^._3)) fs
-      fs'' = map (\x -> (-1 :: Double,x^._5)) fs'
+      fs'' = map (\x -> (-1 :: Double,x^._5.fv_nodes)) fs'
   in ts''++fs'' -- map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs'')
 
 
@@ -203,8 +203,10 @@ train pp (dirpenn,dirprop) trainingFiles = do
       Right (Left e) -> error ("in run: " ++ e)
   let trainingData = mconcat lsts
   
-  (_msg0,svm0) <- trainSVM (EPSILON_SVR 1 0.1) (RBF 1) [] (trainingData ^.training_arg0)
-  (_msg1,svm1) <- trainSVM (EPSILON_SVR 1 0.1) (RBF 1) [] (trainingData ^.training_arg1)
+  {- (_msg0,svm0) -}
+  svm0 <- trainSVM {- (EPSILON_SVR 1 0.1) (RBF 1) [] -} (trainingData ^.training_arg0)
+  {- (_msg1,svm1) -}
+  svm1 <- trainSVM {- (EPSILON_SVR 1 0.1) (RBF 1) [] -} (trainingData ^.training_arg1)
 
   return (SVMFarm svm0 svm1)
 

@@ -15,21 +15,17 @@ import           PropBank.Type.Prop
 import           SRL.Type
 
 
-pblabel2idx :: PropBankLabel -> Maybe Int
-pblabel2idx Relation = Nothing
-pblabel2idx (NumberedArgument n) | n <= 4 && n >= 0 = Just n
-                                 | otherwise        = Nothing
-pblabel2idx (Modifier m) = Just (fromEnum m + 5)
-pblabel2idx (LinkArgument l) = Just (fromEnum l + fromEnum (maxBound :: ModifierType) + 6)
-
 data FeatureVector = FV { _fv_dim   :: Int
                         , _fv_nodes :: [(Int,Double)]
                         }
                    deriving Show
-emptyFV = FV 0 []
 
 makeLenses ''FeatureVector
-                            
+
+
+emptyFV = FV 0 []
+
+  
 fitToDim :: Int -> FeatureVector -> FeatureVector
 fitToDim maxn (FV n xs) =
   if n < maxn then FV maxn xs else FV maxn (filter ((<maxn) . fst) xs)
@@ -43,12 +39,19 @@ concatFV fv1 fv2 = FV (n1+n2) (x1s ++ x2s)
     x1s = fv1^.fv_nodes
     x2s = map (\(i,v) -> (i+n1,v)) (fv2^.fv_nodes)
     
-    
 
-    
 mkFeatureVector :: Int -> Maybe Int -> FeatureVector -- [(Int,Double)] -- Vector CFloat
 mkFeatureVector dim Nothing  = FV dim [] -- V.replicate dim 0
 mkFeatureVector dim (Just n) = FV dim [(n,1.0)] -- V.generate dim (\i -> if i == n then 1.0 else 0.0)
+
+
+
+pblabel2idx :: PropBankLabel -> Maybe Int
+pblabel2idx Relation = Nothing
+pblabel2idx (NumberedArgument n) | n <= 4 && n >= 0 = Just n
+                                 | otherwise        = Nothing
+pblabel2idx (Modifier m) = Just (fromEnum m + 5)
+pblabel2idx (LinkArgument l) = Just (fromEnum l + fromEnum (maxBound :: ModifierType) + 6)
 
 
 pblabel2vec :: PropBankLabel -> FeatureVector -- Vector CFloat
