@@ -12,17 +12,17 @@ import           Foreign.C.String
 import           Foreign.Ptr
 import           Foreign.C.Types
 --
--- import           FastText.Binding
+import           FastText.Binding
 import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
 --
 import           SRL.Type
 
-{- 
+ 
 foreign import ccall "get_vector" c_get_fasttextvector :: FastTextVector -> IO (Ptr CFloat)
--}
 
-{-
+
+
 initWVDB :: FilePath -> IO FastText
 initWVDB binfile = do
   cstr_bin <- newCString binfile
@@ -30,9 +30,8 @@ initWVDB binfile = do
   str_bin <- newCppString cstr_bin
   fastTextloadModel t str_bin
   return t
--}
 
-{- 
+ 
 word2vec :: FastText -> Text -> IO (Vector CFloat)
 word2vec ft w =
   withCString (T.unpack w) $ \cstr_word -> do
@@ -45,7 +44,7 @@ word2vec ft w =
     let mv = MVector (fromIntegral c_size) ptr
     let v = V.create (return mv)
     return $! v
--}
+
 
 {- 
 data RolesetID = SenseID Int  -- ^ sense id

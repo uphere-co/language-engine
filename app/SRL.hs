@@ -97,7 +97,7 @@ main = do
           -- ft <- init2
           pp <- preparePP 
           let dirs = (dirpenn,dirprop)
-          svmfarm <- train {- ft -} pp dirs trainingFiles   
+          svmfarm <- train pp dirs trainingFiles   
           saveSVM "arg0.svm" (svmfarm^.svm_arg0)
           saveSVM "arg1.svm" (svmfarm^.svm_arg1)
         _ -> error "penn/prop dir are not specified"
@@ -115,7 +115,7 @@ main = do
                svm0 <- loadSVM svmfile0
                svm1 <- loadSVM svmfile1
                let svmfarm = SVMFarm svm0 svm1
-               mapM_ (classifyFile {- ft -} pp svmfarm dirs) testFiles
+               mapM_ (classifyFile pp svmfarm dirs) testFiles
              _ -> error "penn/prop dir are not specified"
        | isTraining opt -> return ()
        | otherwise      -> do
@@ -156,8 +156,8 @@ main = do
                                       in InstanceInput n (lma,"01") (genArgInputs n)
                        feats = map (calcInstanceFeature sentinfo) instInputs
                        sortFun = sortBy (flip compare `on` (^._5))
-                   resultss0 <- mapM (fmap sortFun . findArgument arg0 {- ft -} svmfarm) feats
-                   resultss1 <- mapM (fmap sortFun . findArgument arg1 {- ft -} svmfarm) feats
+                   resultss0 <- mapM (fmap sortFun . findArgument arg0 svmfarm) feats
+                   resultss1 <- mapM (fmap sortFun . findArgument arg1 svmfarm) feats
                    let results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
                    liftIO $ putStrLn "======================================================================================="        
                    liftIO $ TIO.putStrLn (T.intercalate " " terms)

@@ -90,8 +90,8 @@ header fp = do
   putStrLn "*****************************"
 
       
-trainingVectorsForArg {- ft -} arglabel (ifeats,ifakefeats) = do
-  ts <- concat <$> mapM (inst2vec {- ft -}) ifeats
+trainingVectorsForArg arglabel (ifeats,ifakefeats) = do
+  ts <- concat <$> mapM inst2vec ifeats
   let ts' = filter ((== arglabel) . (^._3)) ts 
       ts'' = map (\x -> (1 :: Double,x^._5)) ts'
   fs <- concat <$> mapM inst2vec ifakefeats
@@ -100,35 +100,35 @@ trainingVectorsForArg {- ft -} arglabel (ifeats,ifakefeats) = do
   return $ map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs'')
 
 
-trainingFarmPerFile {- ft -} rs = do
+trainingFarmPerFile rs = do
   rs <- flip mapM rs $ \(_,sentinfo,propbanktree,prs) -> do
     let ifeats = features (sentinfo,propbanktree,prs)
         ifakefeats = fakeFeatures (sentinfo,propbanktree,prs)
-    dat0 <- trainingVectorsForArg {- ft -} (NumberedArgument 0) (ifeats,ifakefeats)
-    dat1 <- trainingVectorsForArg {- ft -} (NumberedArgument 1) (ifeats,ifakefeats)
+    dat0 <- trainingVectorsForArg (NumberedArgument 0) (ifeats,ifakefeats)
+    dat1 <- trainingVectorsForArg (NumberedArgument 1) (ifeats,ifakefeats)
     return (TrainingData dat0 dat1)
   return (mconcat rs)
 
-prepareTraining :: {- FastText -> -} J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+prepareTraining :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
                 -> (FilePath,FilePath)
                 -> (FilePath,IsOmit)
                 -> EitherT String IO TrainingData
-prepareTraining {- ft -} pp (dirpenn,dirprop) (fp,omit) = do
+prepareTraining pp (dirpenn,dirprop) (fp,omit) = do
   let pennfile = dirpenn </> fp <.> "mrg"
       propfile = dirprop </> fp <.> "prop"
   (trs,props) <- propbank (pennfile,propfile,omit)
   rs <- getIdxSentProps pp (trs,props)
   liftIO $ mapM_ (showMatchedInstance <> showFeatures <> showFakeFeatures) rs
-  liftIO (trainingFarmPerFile {- ft -} rs)  
+  liftIO (trainingFarmPerFile rs)  
 
 
 
 
-classifyFile {- ft -} pp svm (dirpenn,dirprop) (fp,omit) = do
+classifyFile pp svm (dirpenn,dirprop) (fp,omit) = do
   runEitherT $ do
     liftIO $ print fp
     (trs,props) <- propbank (dirpenn </> fp <.> "mrg" ,dirprop </> fp <.> "prop", omit)
-    runsvm {- ft -} pp svm (trs,props) 
+    runsvm pp svm (trs,props) 
 
 
 
@@ -138,26 +138,26 @@ groupFeatures (i,roleset,voice,afeatss_t) (i',_,_,afeatss_f) =
   else (i,roleset,voice,afeatss_t ++ afeatss_f)
 
 
-findArgument arglabel {- ft -} svmfarm ifeat = do
+findArgument arglabel svmfarm ifeat = do
   let svm = if | arglabel == NumberedArgument 0 -> svmfarm^.svm_arg0
                | arglabel == NumberedArgument 1 -> svmfarm^.svm_arg1
                | otherwise                      -> error "only arg0 and arg1 are supported"
-  ts <- liftIO (inst2vec {- ft -} ifeat)
+  ts <- liftIO (inst2vec ifeat)
   let ts' = filter (\x -> x^._3 == arglabel) ts
       ts_v = map (V.map realToFrac . (^._5)) ts'
       ts_result = map (predict svm) (ts_v :: [Vector Double])
       ts'' = zipWith (\x r -> (_5 .~ r) x) ts' ts_result
   return ts'' 
 
-runsvm {- ft -} pp svm (trs,props) = do
+runsvm pp svm (trs,props) = do
   rs <- getIdxSentProps pp (trs,props)
   flip mapM_ rs $ \(i,sentinfo,propbanktree,pr) -> do
     let ifeats = features (sentinfo,propbanktree,pr)
         ifakefeats = fakeFeatures (sentinfo,propbanktree,pr)
         sortFun = sortBy (flip compare `on` (^._5))
         feats = zipWith groupFeatures ifeats ifakefeats
-    resultss0 <- mapM (fmap sortFun . findArgument (NumberedArgument 0) {- ft -} svm) feats
-    resultss1 <- mapM (fmap sortFun . findArgument (NumberedArgument 1) {- ft -} svm) feats
+    resultss0 <- mapM (fmap sortFun . findArgument (NumberedArgument 0) svm) feats
+    resultss1 <- mapM (fmap sortFun . findArgument (NumberedArgument 1) svm) feats
     let results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
     let pt = sentinfo^.corenlp_tree
         ipt = mkPennTreeIdx pt
@@ -176,11 +176,11 @@ formatResult (n,(lemma,sensenum),label,range,value) txt =
   printf "%d %15s.%2s %8s %8s %8.5f %s" n lemma sensenum (pbLabelText label) (show range) value txt
     
 
-train {- ft -} pp (dirpenn,dirprop) trainingFiles = do
+train pp (dirpenn,dirprop) trainingFiles = do
   lsts <- flip mapM trainingFiles $ \(fp,omit) -> do
     r <- try $ do 
       header fp
-      runEitherT $ prepareTraining {- ft -} pp (dirpenn,dirprop) (fp,omit)
+      runEitherT $ prepareTraining pp (dirpenn,dirprop) (fp,omit)
     case r of
       Left (e :: SomeException) -> error $ "In " ++ fp ++ " exception : " ++ show e 
       Right (Right lst) -> return lst
