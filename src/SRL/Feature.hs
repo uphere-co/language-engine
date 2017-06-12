@@ -250,9 +250,6 @@ showFeatures (_i,sentinfo,propbanktree,prs) = do
 
 showFakeFeatures :: (Int,SentenceInfo,PennTree,[Instance]) -> IO ()
 showFakeFeatures (_i,sentinfo,propbanktree,prs) = do
-  --let pt = sentinfo^.corenlp_tree
-  --    -- tr = sentinfo^.propbank_tree
-  --    insts = matchInstances (pt,tr) prs
   putStrLn "Falsity items"
   putStrLn "---------------"
   mapM_ (putStrLn . formatInstanceFeature) (fakeFeatures (sentinfo,propbanktree,prs))

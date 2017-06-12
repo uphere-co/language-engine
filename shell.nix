@@ -86,7 +86,7 @@ stdenv.mkDerivation {
   name = "SRL-dev";
   buildInputs = [ hsenv fasttext libsvm ];
   shellHook = ''
-    export OMP_NUM_THREADS=8
+    export OMP_NUM_THREADS=12
     export CLASSPATH="${corenlp_models}:${corenlp}/stanford-corenlp-3.7.0.jar:${corenlp}/protobuf.jar:${corenlp}/joda-time.jar:${corenlp}/jollyday.jar:${hsenv}/share/x86_64-linux-ghc-8.0.2/HCoreNLP-0.1.0.0/HCoreNLPProto.jar";
   '';
 }

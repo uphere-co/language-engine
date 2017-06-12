@@ -33,11 +33,13 @@ import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
 -- import           FastText.Binding
+import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
 --
 import           SRL.DataSet.PropBank
 import           SRL.Feature
+import           SRL.Format
 import           SRL.Train
 import           SRL.Type
 import           SVM
@@ -130,7 +132,6 @@ main = do
                        lemmamap = mkLemmaMap (sentinfo^.corenlp_sent)
                        lemmapt = lemmatize lemmamap ipt
                        verbs = filter (isVerb . (^._2._1)) (toList lemmapt)
-                       
                    let arg0 = NumberedArgument 0
                        arg1 = NumberedArgument 1
                    svm0 <- liftIO $ loadSVM svmfile0
@@ -144,6 +145,8 @@ main = do
                                           lma = verb^._2._2._2
                                       in InstanceInput n (lma,"01") (genArgInputs n)
                        feats = map (calcInstanceFeature sentinfo) instInputs
+                   liftIO $ TIO.putStrLn $ prettyPrint 0 (sentinfo^.corenlp_tree)                       
+                   liftIO $ mapM_ (putStrLn . formatInstanceFeature) feats
                    matchRole svmfarm sentinfo feats
 
 
