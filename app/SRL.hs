@@ -10,7 +10,7 @@
 module Main where
 
 
-import           AI.SVM.Base
+-- import           AI.SVM.Base
 import           Control.Applicative               (optional)
 import           Control.Lens               hiding (levels,(<.>))
 import           Control.Monad                     (void,when)

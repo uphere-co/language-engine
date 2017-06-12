@@ -6,8 +6,8 @@
 
 module SRL.Train where
 
-import           AI.SVM.Simple
-import           AI.SVM.Base
+-- import           AI.SVM.Simple
+-- import           AI.SVM.Base
 import           Control.Exception
 import           Control.Lens               hiding (levels,(<.>))
 import           Control.Monad.IO.Class            (MonadIO(liftIO))
@@ -45,14 +45,27 @@ import           SRL.Type
 import           SRL.Vectorize.Sparse
 
 
+predict = undefined 
+
+trainSVM = undefined
+
+saveSVM = undefined
+
+loadSVM = undefined
+
+data EPSILON_SVR = EPSILON_SVR Int Double
+data RBF = RBF Int
+
+type SVM = ()
+
 data SVMFarm = SVMFarm { _svm_arg0 :: SVM
                        , _svm_arg1 :: SVM
                        }
                
 makeLenses ''SVMFarm
 
-data TrainingData = TrainingData { _training_arg0 :: [(Double,Vector Double)]
-                                 , _training_arg1 :: [(Double,Vector Double)]
+data TrainingData = TrainingData { _training_arg0 :: [(Double,FeatureVector)] -- [(Double,Vector Double)]
+                                 , _training_arg1 :: [(Double,FeatureVector)] -- [(Double,Vector Double)]
                                  }
 
 makeLenses ''TrainingData                                              
@@ -104,7 +117,7 @@ formatResult (n,(lmma,sensenum),label,range,value) txt =
 
 trainingVectorsForArg :: PropBankLabel
                       -> ([InstanceFeature],[InstanceFeature])
-                      -> [(Double,Vector Double)]
+                      -> [(Double,FeatureVector)] -- [(Double,Vector Double)]
 trainingVectorsForArg arglabel (ifeats,ifakefeats) = 
   let ts = concatMap inst2vec ifeats
       ts' = filter ((== arglabel) . (^._3)) ts 
@@ -112,7 +125,7 @@ trainingVectorsForArg arglabel (ifeats,ifakefeats) =
       fs = concatMap inst2vec ifakefeats
       fs' = filter ((== arglabel) . (^._3)) fs
       fs'' = map (\x -> (-1 :: Double,x^._5)) fs'
-  in map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs'')
+  in ts''++fs'' -- map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs'')
 
 
 trainingDataPerFile :: [(Int,SentenceInfo,PennTree,[Instance])] -> TrainingData
@@ -156,8 +169,8 @@ rankArgument arglabel svmfarm ifeat =
                | otherwise                      -> error "only arg0 and arg1 are supported"
       ts = inst2vec ifeat
       ts' = filter (\x -> x^._3 == arglabel) ts
-      ts_v = map (V.map realToFrac . (^._5)) ts'
-      ts_result = map (predict svm) (ts_v :: [Vector Double])
+      ts_v = map (^._5) ts'
+      ts_result = map (predict svm) (ts_v :: [FeatureVector])
       ts'' = zipWith (\x r -> (_5 .~ r) x) ts' ts_result
   in ts'' 
 
