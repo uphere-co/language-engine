@@ -18,11 +18,11 @@ import           Foreign.Storable      (poke)
 --
 import           Bindings.SVM
 
-foreign import ccall "mymain0" c_mymain0 :: IO ()
-foreign import ccall "mymain1" c_mymain1 :: Ptr () -> Ptr () -> IO ()
+-- foreign import ccall "mymain0" c_mymain0 :: IO ()
+-- foreign import ccall "mymain1" c_mymain1 :: Ptr () -> Ptr () -> IO ()
 
-foreign import ccall "getParam" c_getParam :: IO (Ptr ())
-foreign import ccall "getProb" c_getProb :: IO (Ptr ())
+-- foreign import ccall "getParam" c_getParam :: IO (Ptr ())
+-- foreign import ccall "getProb" c_getProb :: IO (Ptr ())
 
 parseLine :: [Text] -> Either String (Int,[(Int,Double)])
 parseLine lst =
@@ -98,14 +98,41 @@ readInputFile = do
     Left err -> error err
     Right inputs -> return inputs
 
+
+
+param =
+  C'svm_parameter { c'svm_parameter'svm_type = c'C_SVC
+                  , c'svm_parameter'kernel_type = c'RBF
+                  , c'svm_parameter'degree = 3
+                  , c'svm_parameter'gamma = 0.5
+                  , c'svm_parameter'coef0 = 0 
+                  , c'svm_parameter'cache_size  = 1000
+                  , c'svm_parameter'eps = 1e-3
+                  , c'svm_parameter'C = 8.0
+                  , c'svm_parameter'nr_weight = 0
+                  , c'svm_parameter'weight_label = nullPtr
+                  , c'svm_parameter'weight = nullPtr
+                  , c'svm_parameter'nu = 0.5
+                  , c'svm_parameter'p = 0.1
+                  , c'svm_parameter'shrinking = 1
+                  , c'svm_parameter'probability = 0 
+                  }
+                          
+
+
+                    
+
+
   
 main :: IO ()
 main = do
   inputs <- readInputFile
-  alloca $ \p_prob -> do
-    withProblem inputs $ \prob -> do
-      poke p_prob prob
-      c_mymain0
-      ptr_parameters <- c_getParam
-      void $ c'svm_train p_prob (castPtr ptr_parameters)
+  alloca $ \p_param -> do 
+    alloca $ \p_prob -> do
+      withProblem inputs $ \prob -> do
+        poke p_param param
+        poke p_prob prob
+        -- c_mymain0
+        -- ptr_parameters <- c_getParam
+        void $ c'svm_train p_prob p_param
   
