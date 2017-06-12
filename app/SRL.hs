@@ -53,7 +53,7 @@ import           SRL.Format
 import           SRL.PropBankMatch
 import           SRL.Train
 import           SRL.Type
-import           SRL.Vectorize
+import           SRL.Vectorize.Dense
 
 
 data ProgOption = ProgOption { penndir :: Maybe FilePath

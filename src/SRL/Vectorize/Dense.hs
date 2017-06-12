@@ -1,4 +1,4 @@
-module SRL.Vectorize where
+module SRL.Vectorize.Dense where
 
 import           Control.Lens
 import           Data.List                 (foldl')

@@ -42,7 +42,7 @@ import           PropBank.Util
 import           SRL.Feature 
 import           SRL.PropBankMatch
 import           SRL.Type
-import           SRL.Vectorize
+import           SRL.Vectorize.Dense
 
 
 data SVMFarm = SVMFarm { _svm_arg0 :: SVM
