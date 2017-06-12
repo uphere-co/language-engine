@@ -13,7 +13,7 @@ import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
 import           PropBank.Type.Prop
 --
-import           SRL.CoNLL.CoNLL08.Type
+-- import           SRL.CoNLL.CoNLL08.Type
 
 
 data Position = Before | After | Embed
@@ -42,7 +42,6 @@ type Level = Int
 
 data SentenceInfo = SentInfo { _corenlp_sent :: CS.Sentence
                              , _corenlp_tree :: PennTree
-                             -- , _propbank_tree :: PennTree
                              , _corenlp_dep  :: S.Dependency
                              }
                   deriving Show
@@ -105,10 +104,14 @@ data InstanceInput = InstanceInput { _predicate_id :: Int
 
 makeLenses ''InstanceInput
 
+isPriorTo :: Range -> Range -> Bool
+(_b1,e1) `isPriorTo` (b2,_e2) = e1 < b2
 
-(b1,e1) `isPriorTo` (b2,e2) = e1 < b2
+
+isAfter :: Range -> Range -> Bool
 r1 `isAfter` r2 = r2 `isPriorTo` r1
 
+isNotOverlappedWith :: Range -> Range -> Bool
 r1 `isNotOverlappedWith` r2 = r1 `isPriorTo` r2 || r1 `isAfter` r2
 
 position :: Int -> Range -> Position

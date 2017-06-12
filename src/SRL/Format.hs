@@ -4,7 +4,6 @@ import           Control.Lens
 import qualified Data.Text               as T
 import           Text.Printf
 --
-import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
 --
 import           SRL.Type
@@ -32,7 +31,7 @@ formatArgNodeFeature predidx (label,(rng,ptp,mhead)) =
   where
     w = hstr mhead
     hstr Nothing = ("","")
-    hstr (Just (_,(_,(p,w)))) = (show p, T.unpack w)
+    hstr (Just (_,(_,(p,t)))) = (show p, T.unpack t)
 
 
 formatInstanceFeature :: InstanceFeature -> String

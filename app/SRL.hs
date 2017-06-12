@@ -9,7 +9,7 @@
 
 module Main where
 
-import           AI.SVM.Simple
+
 import           AI.SVM.Base
 import           Control.Applicative               (optional)
 import           Control.Lens               hiding (levels,(<.>))
@@ -17,25 +17,15 @@ import           Control.Monad                     (void,when)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.ByteString.Char8      as B
-import           Data.Default
-import           Data.Either                       (rights)
 import           Data.Foldable                     (toList)
-import           Data.Function                     (on)
-import           Data.List                         (sort,sortBy,zip4)
 import           Data.Monoid                       ((<>))
 import           Data.Maybe                        (fromMaybe,mapMaybe)
-import qualified Data.Sequence              as Seq
-import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
 import           Data.Time.Calendar                (fromGregorian)
-import           Data.Vector.Storable (MVector (..),create)
-import           Foreign.C.String
-import           Foreign.ForeignPtr
 import           Foreign.JNI                as J
 import           Language.Java              as J
 import           Options.Applicative
 import           System.Environment                (getEnv)
-import           System.FilePath                   ((</>),(<.>))
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
@@ -45,15 +35,11 @@ import           CoreNLP.Simple.Type
 -- import           FastText.Binding
 import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
-import           PropBank.Util
 --
 import           SRL.DataSet.PropBank
 import           SRL.Feature
-import           SRL.Format
-import           SRL.PropBankMatch
 import           SRL.Train
 import           SRL.Type
-import           SRL.Vectorize.Dense
 
 
 data ProgOption = ProgOption { penndir :: Maybe FilePath
@@ -65,6 +51,7 @@ data ProgOption = ProgOption { penndir :: Maybe FilePath
                              , textFile :: Maybe FilePath
                              } deriving Show
 
+
 pOptions :: Parser ProgOption
 pOptions = ProgOption <$> optional (strOption (long "penn" <> short 'n' <> help "Penn Treebank directory"))
                       <*> optional (strOption (long "prop" <> short 'p' <> help "PropBank directory"))
@@ -74,8 +61,10 @@ pOptions = ProgOption <$> optional (strOption (long "penn" <> short 'n' <> help 
                       <*> optional (strOption (long "arg1" <> help "SVM file for arg1"))
                       <*> optional (strOption (long "file" <> help "text file"))
 
+
 progOption :: ParserInfo ProgOption 
 progOption = info pOptions (fullDesc <> progDesc "Test features for PropBank corpus")
+
 
 initGHCi :: IO J.JVM
 initGHCi = do
@@ -115,7 +104,7 @@ main = do
                svm0 <- loadSVM svmfile0
                svm1 <- loadSVM svmfile1
                let svmfarm = SVMFarm svm0 svm1
-               mapM_ (classifyFile pp svmfarm dirs) testFiles
+               mapM_ (matchRoleForPBCorpusFile pp svmfarm dirs) testFiles
              _ -> error "penn/prop dir are not specified"
        | isTraining opt -> return ()
        | otherwise      -> do
@@ -137,7 +126,7 @@ main = do
                      rs = zipWith3 SentInfo sents pts deps
                  flip mapM_ rs $ \sentinfo -> do
                    let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
-                       terms = map (^._2) . toList $ sentinfo^.corenlp_tree
+                       -- terms = map (^._2) . toList $ sentinfo^.corenlp_tree
                        lemmamap = mkLemmaMap (sentinfo^.corenlp_sent)
                        lemmapt = lemmatize lemmamap ipt
                        verbs = filter (isVerb . (^._2._1)) (toList lemmapt)
@@ -156,7 +145,9 @@ main = do
                                       in InstanceInput n (lma,"01") (genArgInputs n)
                        feats = map (calcInstanceFeature sentinfo) instInputs
                    matchRole svmfarm sentinfo feats
-                                             
+
+
+isVerb :: POSTag -> Bool                     
 isVerb VB  = True
 isVerb VBZ = True
 isVerb VBP = True
