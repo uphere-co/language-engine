@@ -46,16 +46,12 @@ import           SRL.Vectorize.Sparse
 import           SVM
 
 
-predict = undefined 
+-- predict = undefined 
 
--- trainSVM = undefined
+--loadSVM = undefined
 
-saveSVM = undefined
-
-loadSVM = undefined
-
-data EPSILON_SVR = EPSILON_SVR Int Double
-data RBF = RBF Int
+-- data EPSILON_SVR = EPSILON_SVR Int Double
+-- data RBF = RBF Int
 
 
 data SVMFarm = SVMFarm { _svm_arg0 :: SVM
@@ -162,17 +158,16 @@ groupFeatures (i,roleset,vo,afeatss_t) (i',_,_,afeatss_f) =
 
 
 rankArgument :: PropBankLabel -> SVMFarm -> InstanceFeature
-             -> [(Int,RoleSet,PropBankLabel,Range,Double)]
-rankArgument arglabel svmfarm ifeat = 
+             -> IO [(Int,RoleSet,PropBankLabel,Range,Double)]
+rankArgument arglabel svmfarm ifeat = do
   let svm = if | arglabel == NumberedArgument 0 -> svmfarm^.svm_arg0
                | arglabel == NumberedArgument 1 -> svmfarm^.svm_arg1
                | otherwise                      -> error "only arg0 and arg1 are supported"
       ts = inst2vec ifeat
       ts' = filter (\x -> x^._3 == arglabel) ts
-      ts_v = map (^._5) ts'
-      ts_result = map (predict svm) (ts_v :: [FeatureVector])
-      ts'' = zipWith (\x r -> (_5 .~ r) x) ts' ts_result
-  in ts'' 
+      ts_v = map (^._5.fv_nodes) ts'
+  ts_result <- mapM (predict svm) ts_v -- (ts_v :: [FeatureVector])
+  return (zipWith (\x r -> (_5 .~ r) x) ts' ts_result)
 
 
 preparePP :: IO (J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
@@ -216,9 +211,9 @@ train pp (dirpenn,dirprop) trainingFiles = do
 matchRole :: SVMFarm -> SentenceInfo -> [InstanceFeature] -> EitherT String IO ()
 matchRole svm sentinfo feats = do
     let sortFun = sortBy (flip compare `on` (^._5))
-        resultss0 = map (sortFun . rankArgument (NumberedArgument 0) svm) feats
-        resultss1 = map (sortFun . rankArgument (NumberedArgument 1) svm) feats
-        results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
+    resultss0 <- mapM (fmap sortFun . liftIO . rankArgument (NumberedArgument 0) svm) feats
+    resultss1 <- mapM (fmap sortFun . liftIO . rankArgument (NumberedArgument 1) svm) feats
+    let results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
         pt = sentinfo^.corenlp_tree
         ipt = mkPennTreeIdx pt
         terms = map (^._2) . toList $ pt

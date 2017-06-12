@@ -40,7 +40,7 @@ import           SRL.DataSet.PropBank
 import           SRL.Feature
 import           SRL.Train
 import           SRL.Type
-
+import           SVM
 
 data ProgOption = ProgOption { penndir :: Maybe FilePath
                              , propdir :: Maybe FilePath

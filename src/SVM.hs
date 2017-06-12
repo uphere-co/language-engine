@@ -3,15 +3,15 @@
 
 module SVM where
 
-
 import           Control.Applicative
 import           Control.Monad        (void)
 import           Data.Text            (Text)
 import qualified Data.Text    as T
 import qualified Data.Text.IO as TIO
 import           Data.Text.Read
+import           Foreign.C.String      (withCString)
 import           Foreign.C.Types
-import           Foreign.Marshal.Alloc (alloca)
+import           Foreign.Marshal.Alloc (alloca,free)
 import           Foreign.Marshal.Array (allocaArray,mallocArray,pokeArray)
 import           Foreign.Ptr
 import           Foreign.Storable      (poke)
@@ -132,3 +132,18 @@ trainSVM inputs = do
         {- void $ -}
         SVM <$> c'svm_train p_prob p_param
 
+saveSVM :: FilePath -> SVM -> IO ()
+saveSVM fp (SVM p_model) =
+  withCString fp $ \cstr ->
+    c'svm_save_model cstr p_model
+
+loadSVM :: FilePath -> IO SVM
+loadSVM fp = SVM <$> withCString fp c'svm_load_model
+
+predict :: SVM -> [(Int,Double)] -> IO Double
+predict (SVM p_model) nodes = do
+  p_nodes <- convertX1 nodes
+  v <- c'svm_predict p_model p_nodes
+  v `seq` do
+    free p_nodes
+    return (realToFrac v)
