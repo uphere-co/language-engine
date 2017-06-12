@@ -99,7 +99,7 @@ To run, you need a test file `real-sim`
 which can be obtained from [here](http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/real-sim.bz2).
 
 ``` 
-$ ghc svm-train.hs stub.c -lsvm -lgomp
+$ ghc svm-train.hs -lsvm -lgomp
 $ ./svm-train
 ```
 
