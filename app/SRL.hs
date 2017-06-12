@@ -155,20 +155,7 @@ main = do
                                           lma = verb^._2._2._2
                                       in InstanceInput n (lma,"01") (genArgInputs n)
                        feats = map (calcInstanceFeature sentinfo) instInputs
-                       sortFun = sortBy (flip compare `on` (^._5))
-                   resultss0 <- mapM (fmap sortFun . findArgument arg0 svmfarm) feats
-                   resultss1 <- mapM (fmap sortFun . findArgument arg1 svmfarm) feats
-                   let results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
-                   liftIO $ putStrLn "======================================================================================="        
-                   liftIO $ TIO.putStrLn (T.intercalate " " terms)
-                   liftIO $ putStrLn "======================================================================================="
-                   liftIO $ flip mapM_ results $ \result -> do
-                     let mmatched = matchR (result^._4) ipt
-                     case mmatched of
-                       Nothing -> TIO.putStrLn "no matched?"
-                       Just matched -> let txt = T.intercalate " " (map (^._2._2) (toList matched))
-                                       in putStrLn $ formatResult result txt
-                   
+                   matchRole svmfarm sentinfo feats
                                              
 isVerb VB  = True
 isVerb VBZ = True
