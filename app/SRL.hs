@@ -42,7 +42,7 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
-import           FastText.Binding
+-- import           FastText.Binding
 import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
 import           PropBank.Util
@@ -82,8 +82,8 @@ initGHCi = do
   clspath <- getEnv "CLASSPATH"
   J.newJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] 
 
-init2 :: IO FastText
-init2 = initWVDB "/scratch/wavewave/wordvector/wiki.en.bin"
+-- init2 :: IO FastText
+-- init2 = initWVDB "/scratch/wavewave/wordvector/wiki.en.bin"
 
 main :: IO ()
 main = do
@@ -94,10 +94,10 @@ main = do
     when (isTraining opt) $ do
       case (penndir opt,propdir opt) of
         (Just dirpenn,Just dirprop) -> do
-          ft <- init2
+          -- ft <- init2
           pp <- preparePP 
           let dirs = (dirpenn,dirprop)
-          svmfarm <- train ft pp dirs trainingFiles   
+          svmfarm <- train {- ft -} pp dirs trainingFiles   
           saveSVM "arg0.svm" (svmfarm^.svm_arg0)
           saveSVM "arg1.svm" (svmfarm^.svm_arg1)
         _ -> error "penn/prop dir are not specified"
@@ -109,13 +109,13 @@ main = do
     if | isTesting opt -> do
            case (penndir opt,propdir opt) of
              (Just dirpenn,Just dirprop) -> do
-               ft <- init2
+               -- ft <- init2
                pp <- preparePP 
                let dirs = (dirpenn,dirprop)
                svm0 <- loadSVM svmfile0
                svm1 <- loadSVM svmfile1
                let svmfarm = SVMFarm svm0 svm1
-               mapM_ (classifyFile ft pp svmfarm dirs) testFiles
+               mapM_ (classifyFile {- ft -} pp svmfarm dirs) testFiles
              _ -> error "penn/prop dir are not specified"
        | isTraining opt -> return ()
        | otherwise      -> do
@@ -124,7 +124,7 @@ main = do
              Just fp -> do
                txt <- TIO.readFile fp
                -- TIO.putStrLn txt
-               ft <- init2
+               -- ft <- init2
                pp <- preparePP 
                ann <- annotate pp (Document txt (fromGregorian 2017 4 17))
                rdoc <- protobufDoc ann
@@ -156,8 +156,8 @@ main = do
                                       in InstanceInput n (lma,"01") (genArgInputs n)
                        feats = map (calcInstanceFeature sentinfo) instInputs
                        sortFun = sortBy (flip compare `on` (^._5))
-                   resultss0 <- mapM (fmap sortFun . findArgument arg0 ft svmfarm) feats
-                   resultss1 <- mapM (fmap sortFun . findArgument arg1 ft svmfarm) feats
+                   resultss0 <- mapM (fmap sortFun . findArgument arg0 {- ft -} svmfarm) feats
+                   resultss1 <- mapM (fmap sortFun . findArgument arg1 {- ft -} svmfarm) feats
                    let results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
                    liftIO $ putStrLn "======================================================================================="        
                    liftIO $ TIO.putStrLn (T.intercalate " " terms)
