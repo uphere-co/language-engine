@@ -46,14 +46,6 @@ import           SRL.Vectorize.Sparse
 import           SVM
 
 
--- predict = undefined 
-
---loadSVM = undefined
-
--- data EPSILON_SVR = EPSILON_SVR Int Double
--- data RBF = RBF Int
-
-
 data SVMFarm = SVMFarm { _svm_arg0 :: SVM
                        , _svm_arg1 :: SVM
                        }

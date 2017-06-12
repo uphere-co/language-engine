@@ -21,29 +21,6 @@ import           Bindings.SVM
 
 newtype SVM = SVM (Ptr C'svm_model)
 
-
-{- 
-parseLine :: [Text] -> Either String (Int,[(Int,Double)])
-parseLine lst =
-  let p (x:xs) = do (l,_) <- signed decimal x
-                    vs <- mapM parseEach xs 
-                    return (l, vs)
-                    
-  in case p lst of
-       Left err -> Left (err ++ (T.unpack (T.intercalate " " lst)))
-       Right r -> Right r 
-
--}
-
-{- 
-parseEach :: Text -> Either String (Int,Double)
-parseEach txt = do
-  let (x0:x1:_) = T.splitOn ":" txt
-  (n,_) <- decimal x0
-  (r,_) <- double x1
-  return (n,r)
--}
-
 convertNode :: (Int,Double) -> C'svm_node
 convertNode (i,v) = C'svm_node { c'svm_node'index = fromIntegral i
                                , c'svm_node'value = realToFrac v }
@@ -81,28 +58,20 @@ withProblem dat action = do
                                , c'svm_problem'x = p_x
                                }
       r <- prob `seq` action prob
-      deleteProblem prob
-      return r
-
-deleteProblem _ = return ()
+      r `seq` do 
+        -- deleteProblem prob p_xs
+        mapM_ free p_xs
+        return r
 
 {- 
-readInputFile :: IO [(Int,[(Int,Double)])]
-readInputFile = do
-  putStrLn "svm-train"
-
-  txt <- TIO.readFile "./real-sim"
-  let xs = T.lines txt
-      xss = map T.words xs 
-  print (length xs)
-
-  let einputs = mapM parseLine xss
-  case einputs of
-    Left err -> error err
-    Right inputs -> return inputs
-
+deleteProblem :: {- C'svm_problem -> -} [Ptr C'svm_node] -> IO () 
+deleteProblem prob p_xs = do
+  mapM_ free p_xs
+  -- free (c'svm_problem'y prob)
+  -- free (c'svm_problem'x prob)
 -}
 
+param :: C'svm_parameter
 param =
   C'svm_parameter { c'svm_parameter'svm_type = c'EPSILON_SVR -- c'C_SVC
                   , c'svm_parameter'kernel_type = c'RBF
@@ -123,22 +92,23 @@ param =
 
 trainSVM :: [(Double,[(Int,Double)])]-> IO SVM
 trainSVM inputs = do
-  -- inputs <- readInputFile
   alloca $ \p_param -> do 
     alloca $ \p_prob -> do
       withProblem inputs $ \prob -> do
         poke p_param param
         poke p_prob prob
-        {- void $ -}
         SVM <$> c'svm_train p_prob p_param
+
 
 saveSVM :: FilePath -> SVM -> IO ()
 saveSVM fp (SVM p_model) =
   withCString fp $ \cstr ->
     c'svm_save_model cstr p_model
 
+
 loadSVM :: FilePath -> IO SVM
 loadSVM fp = SVM <$> withCString fp c'svm_load_model
+
 
 predict :: SVM -> [(Int,Double)] -> IO Double
 predict (SVM p_model) nodes = do
