@@ -62,7 +62,7 @@ let
             monad-loops
             optparse-applicative
             split
-            svm-simple
+            #svm-simple
             text text-format
             yayaml
 

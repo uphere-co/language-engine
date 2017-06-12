@@ -60,7 +60,7 @@ withProblem dat action = do
       r <- prob `seq` action prob
       r `seq` do 
         -- deleteProblem prob p_xs
-        mapM_ free p_xs
+        -- mapM_ free p_xs
         return r
 
 {- 
