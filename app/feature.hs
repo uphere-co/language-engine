@@ -84,5 +84,5 @@ main = do
           rs = map (\(i,((pt,tr,dep,sent),pr)) -> (i,SentInfo sent pt dep,tr,pr))
              . merge (^.inst_tree_id) (zip4 pts trs deps sents)
              $ props
-      liftIO $ mapM_ (showMatchedInstance <> showFeatures) rs
+      liftIO $ mapM_ (showMatchedInstance <> showFeatures <> showFakeFeatures) rs
 
