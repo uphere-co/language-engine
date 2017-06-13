@@ -102,6 +102,8 @@ Executable SRL
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
+                       -threaded
+                       -- -optc=-fopenmp
   ghc-prof-options:    -caf-all -auto-all
   other-modules:       
   build-depends:       base,

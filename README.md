@@ -86,3 +86,20 @@ $ .cabal-sandbox/bin/training
 
 [1] D. Gildea and M. Palmer, The Necessity of Parsing for Predicate Argument Recognition, ACL 2002
 [2] D. Gildea and D. Jurafsky, Automatic Labeling of Semantic Roles, ACL 2002
+
+
+
+Some testing programs
+=======================
+
+svm-train
+---------
+
+To run, you need a test file `real-sim`
+which can be obtained from [here](http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/real-sim.bz2).
+
+``` 
+$ ghc svm-train.hs -lsvm -lgomp
+$ ./svm-train
+```
+
