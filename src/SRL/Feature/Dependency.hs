@@ -39,7 +39,8 @@ import           SRL.Util
 import Debug.Trace
 
 
-data DepInfo = DepInfo { _dinfo_mother :: Int
+data DepInfo = DepInfo { _dinfo_self :: Int
+                       , _dinfo_mother :: Int
                        , _dinfo_rel :: DependencyRelation
                        , _dinfo_level :: Maybe Int }
                deriving Show
@@ -114,8 +115,8 @@ annotateDepInfo (PN (r,x) xs) =
 depInfoTree :: Dependency -> PennTreeIdxG ChunkTag (POSTag,Text)
             -> PennTreeIdxG (ChunkTag,Maybe DepInfo) (Maybe DepInfo,(POSTag,Text))
 depInfoTree dep tr = let tr' = decorateLeaves (rightOuterIntMap (levelMap dep tr) (motherMap dep tr)) tr
-                         conv :: (Maybe (Maybe Level, (Int,DependencyRelation)),(POSTag,Text)) -> (Maybe DepInfo,(POSTag,Text))
-                         conv (Just (ml,(m,rel)),pt) = (Just (DepInfo m rel ml),pt)
-                         conv (Nothing,pt)           = (Nothing,pt)
-                         tr'' = fmap (second conv) tr'
+                         conv :: (Int,(Maybe (Maybe Level, (Int,DependencyRelation)),(POSTag,Text))) -> (Int,(Maybe DepInfo,(POSTag,Text)))
+                         conv (i,(Just (ml,(m,rel)),pt)) = (i,(Just (DepInfo i m rel ml),pt))
+                         conv (i,(Nothing,pt))           = (i,(Nothing,pt))
+                         tr'' = fmap conv tr'
                      in annotateDepInfo tr''
