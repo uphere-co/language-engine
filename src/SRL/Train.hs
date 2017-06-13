@@ -6,8 +6,8 @@
 
 module SRL.Train where
 
-import           AI.SVM.Simple
-import           AI.SVM.Base
+-- import           AI.SVM.Simple
+-- import           AI.SVM.Base
 import           Control.Exception
 import           Control.Lens               hiding (levels,(<.>))
 import           Control.Monad.IO.Class            (MonadIO(liftIO))
@@ -42,7 +42,8 @@ import           PropBank.Util
 import           SRL.Feature 
 import           SRL.PropBankMatch
 import           SRL.Type
-import           SRL.Vectorize.Dense
+import           SRL.Vectorize.Sparse
+import           SVM
 
 
 data SVMFarm = SVMFarm { _svm_arg0 :: SVM
@@ -51,8 +52,8 @@ data SVMFarm = SVMFarm { _svm_arg0 :: SVM
                
 makeLenses ''SVMFarm
 
-data TrainingData = TrainingData { _training_arg0 :: [(Double,Vector Double)]
-                                 , _training_arg1 :: [(Double,Vector Double)]
+data TrainingData = TrainingData { _training_arg0 :: [(Double,[(Int,Double)])] -- [(Double,Vector Double)]
+                                 , _training_arg1 :: [(Double,[(Int,Double)])] -- [(Double,Vector Double)]
                                  }
 
 makeLenses ''TrainingData                                              
@@ -96,27 +97,34 @@ header fp = do
   putStrLn "*****************************"
 
 
-trainingVectorsForArg :: PropBankLabel -> ([InstanceFeature],[InstanceFeature])
-                      -> IO [(Double,Vector Double)]
-trainingVectorsForArg arglabel (ifeats,ifakefeats) = do
-  ts <- concat <$> mapM inst2vec ifeats
-  let ts' = filter ((== arglabel) . (^._3)) ts 
-      ts'' = map (\x -> (1 :: Double,x^._5)) ts'
-  fs <- concat <$> mapM inst2vec ifakefeats
-  let fs' = filter ((== arglabel) . (^._3)) fs
-      fs'' = map (\x -> (-1 :: Double,x^._5)) fs'
-  return $ map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs'')
+formatResult :: (Int,RoleSet,PropBankLabel,Range,Double) -> Text -> String
+formatResult (n,(lmma,sensenum),label,range,value) txt =
+  printf "%d %15s.%2s %8s %8s %8.5f %s" n lmma sensenum (pbLabelText label) (show range) value txt
+    
 
 
-trainingFarmPerFile :: [(Int,SentenceInfo,PennTree,[Instance])] -> IO TrainingData
-trainingFarmPerFile rs = do
-  results <- flip mapM rs $ \(_,sentinfo,propbanktree,prs) -> do
-    let ifeats = features (sentinfo,propbanktree,prs)
-        ifakefeats = fakeFeatures (sentinfo,propbanktree,prs)
-    dat0 <- trainingVectorsForArg (NumberedArgument 0) (ifeats,ifakefeats)
-    dat1 <- trainingVectorsForArg (NumberedArgument 1) (ifeats,ifakefeats)
-    return (TrainingData dat0 dat1)
-  return (mconcat results)
+trainingVectorsForArg :: PropBankLabel
+                      -> ([InstanceFeature],[InstanceFeature])
+                      -> [(Double,[(Int,Double)])] -- [(Double,FeatureVector)] -- [(Double,Vector Double)]
+trainingVectorsForArg arglabel (ifeats,ifakefeats) = 
+  let ts = concatMap inst2vec ifeats
+      ts' = filter ((== arglabel) . (^._3)) ts 
+      ts'' = map (\x -> (1 :: Double,x^._5.fv_nodes)) ts'
+      fs = concatMap inst2vec ifakefeats
+      fs' = filter ((== arglabel) . (^._3)) fs
+      fs'' = map (\x -> (-1 :: Double,x^._5.fv_nodes)) fs'
+  in ts''++fs'' -- map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs'')
+
+
+trainingDataPerFile :: [(Int,SentenceInfo,PennTree,[Instance])] -> TrainingData
+trainingDataPerFile rs = 
+  let results = flip map rs $ \(_,sentinfo,propbanktree,prs) ->
+        let ifeats = features (sentinfo,propbanktree,prs)
+            ifakefeats = fakeFeatures (sentinfo,propbanktree,prs)
+            dat0 = trainingVectorsForArg (NumberedArgument 0) (ifeats,ifakefeats)
+            dat1 = trainingVectorsForArg (NumberedArgument 1) (ifeats,ifakefeats)
+        in TrainingData dat0 dat1
+  in mconcat results
 
 
 prepareTraining :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
@@ -129,19 +137,9 @@ prepareTraining pp (dirpenn,dirprop) (fp,omit) = do
   (trs,props) <- propbank (pennfile,propfile,omit)
   rs <- getIdxSentProps pp (trs,props)
   liftIO $ mapM_ (showMatchedInstance <> showFeatures <> showFakeFeatures) rs
-  liftIO (trainingFarmPerFile rs)  
+  return (trainingDataPerFile rs)  
 
 
-matchRoleForPBCorpusFile :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
-                         -> SVMFarm
-                         -> (FilePath,FilePath)
-                         -> (FilePath,IsOmit)
-                         -> IO (Either String ())
-matchRoleForPBCorpusFile pp svm (dirpenn,dirprop) (fp,omit) = do
-  runEitherT $ do
-    liftIO $ print fp
-    (trs,props) <- propbank (dirpenn </> fp <.> "mrg" ,dirprop </> fp <.> "prop", omit)
-    matchRoleForPBCorpus pp svm (trs,props) 
 
 
 groupFeatures :: InstanceFeature -> InstanceFeature -> InstanceFeature
@@ -151,58 +149,31 @@ groupFeatures (i,roleset,vo,afeatss_t) (i',_,_,afeatss_f) =
   else (i,roleset,vo,afeatss_t ++ afeatss_f)
 
 
-rankArgument :: (MonadIO m) =>
-                PropBankLabel -> SVMFarm -> InstanceFeature
-             -> m [(Int,RoleSet,PropBankLabel,Range,Double)]
+rankArgument :: PropBankLabel -> SVMFarm -> InstanceFeature
+             -> IO [(Int,RoleSet,PropBankLabel,Range,Double)]
 rankArgument arglabel svmfarm ifeat = do
   let svm = if | arglabel == NumberedArgument 0 -> svmfarm^.svm_arg0
                | arglabel == NumberedArgument 1 -> svmfarm^.svm_arg1
                | otherwise                      -> error "only arg0 and arg1 are supported"
-  ts <- liftIO (inst2vec ifeat)
-  let ts' = filter (\x -> x^._3 == arglabel) ts
-      ts_v = map (V.map realToFrac . (^._5)) ts'
-      ts_result = map (predict svm) (ts_v :: [Vector Double])
-      ts'' = zipWith (\x r -> (_5 .~ r) x) ts' ts_result
-  return ts'' 
+      ts = inst2vec ifeat
+      ts' = filter (\x -> x^._3 == arglabel) ts
+      ts_v = map (^._5.fv_nodes) ts'
+  ts_result <- mapM (predict svm) ts_v -- (ts_v :: [FeatureVector])
+  return (zipWith (\x r -> (_5 .~ r) x) ts' ts_result)
 
 
-matchRoleForPBCorpus :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
-                     -> SVMFarm
-                     -> ([PennTree],[Instance])
-                     -> EitherT String IO ()
-matchRoleForPBCorpus pp svm (trs,props) = do
-  rs <- getIdxSentProps pp (trs,props)
-  flip mapM_ rs $ \(_i,sentinfo,propbanktree,pr) -> do
-    let ifeats = features (sentinfo,propbanktree,pr)
-        ifakefeats = fakeFeatures (sentinfo,propbanktree,pr)
-        feats = zipWith groupFeatures ifeats ifakefeats
-    matchRole svm sentinfo feats
+preparePP :: IO (J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
+preparePP = do
+  let pcfg = def & ( tokenizer .~ True )
+                 . ( words2sentences .~ True )
+                 . ( postagger .~ True )
+                 . ( lemma .~ True )
+                 . ( sutime .~ False )
+                 . ( depparse .~ True )
+                 . ( constituency .~ True )
+                 . ( ner .~ False )
+  prepare pcfg
 
-
-matchRole :: SVMFarm -> SentenceInfo -> [InstanceFeature] -> EitherT String IO ()
-matchRole svm sentinfo feats = do
-    let sortFun = sortBy (flip compare `on` (^._5))
-    resultss0 <- mapM (fmap sortFun . rankArgument (NumberedArgument 0) svm) feats
-    resultss1 <- mapM (fmap sortFun . rankArgument (NumberedArgument 1) svm) feats
-    let results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
-    let pt = sentinfo^.corenlp_tree
-        ipt = mkPennTreeIdx pt
-        terms = map (^._2) . toList $ pt
-    liftIO $ putStrLn "======================================================================================="        
-    liftIO $ TIO.putStrLn (T.intercalate " " terms)
-    liftIO $ putStrLn "======================================================================================="
-    liftIO $ flip mapM_ results $ \result -> do
-      let mmatched = matchR (result^._4) ipt
-      case mmatched of
-        Nothing -> TIO.putStrLn "no matched?"
-        Just matched -> let txt = T.intercalate " " (map (^._2._2) (toList matched))
-                        in putStrLn $ formatResult result txt
-
-
-formatResult :: (Int,RoleSet,PropBankLabel,Range,Double) -> Text -> String
-formatResult (n,(lmma,sensenum),label,range,value) txt =
-  printf "%d %15s.%2s %8s %8s %8.5f %s" n lmma sensenum (pbLabelText label) (show range) value txt
-    
 
 train :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
       -> (FilePath,FilePath)
@@ -219,21 +190,58 @@ train pp (dirpenn,dirprop) trainingFiles = do
       Right (Left e) -> error ("in run: " ++ e)
   let trainingData = mconcat lsts
   
-  (_msg0,svm0) <- trainSVM (EPSILON_SVR 1 0.1) (RBF 1) [] (trainingData ^.training_arg0)
-  (_msg1,svm1) <- trainSVM (EPSILON_SVR 1 0.1) (RBF 1) [] (trainingData ^.training_arg1)
+  {- (_msg0,svm0) -}
+  svm0 <- trainSVM {- (EPSILON_SVR 1 0.1) (RBF 1) [] -} (trainingData ^.training_arg0)
+  {- (_msg1,svm1) -}
+  svm1 <- trainSVM {- (EPSILON_SVR 1 0.1) (RBF 1) [] -} (trainingData ^.training_arg1)
 
   return (SVMFarm svm0 svm1)
 
-preparePP :: IO (J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
-preparePP = do
-  let pcfg = def & ( tokenizer .~ True )
-                 . ( words2sentences .~ True )
-                 . ( postagger .~ True )
-                 . ( lemma .~ True )
-                 . ( sutime .~ False )
-                 . ( depparse .~ True )
-                 . ( constituency .~ True )
-                 . ( ner .~ False )
-  prepare pcfg
 
 
+
+matchRole :: SVMFarm -> SentenceInfo -> [InstanceFeature] -> EitherT String IO ()
+matchRole svm sentinfo feats = do
+    let sortFun = sortBy (flip compare `on` (^._5))
+    resultss0 <- mapM (fmap sortFun . liftIO . rankArgument (NumberedArgument 0) svm) feats
+    resultss1 <- mapM (fmap sortFun . liftIO . rankArgument (NumberedArgument 1) svm) feats
+    let results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
+        pt = sentinfo^.corenlp_tree
+        ipt = mkPennTreeIdx pt
+        terms = map (^._2) . toList $ pt
+    liftIO $ putStrLn "======================================================================================="        
+    liftIO $ TIO.putStrLn (T.intercalate " " terms)
+    liftIO $ putStrLn "======================================================================================="
+    liftIO $ flip mapM_ results $ \result -> do
+      let mmatched = matchR (result^._4) ipt
+      case mmatched of
+        Nothing -> TIO.putStrLn "no matched?"
+        Just matched -> let txt = T.intercalate " " (map (^._2._2) (toList matched))
+                        in putStrLn $ formatResult result txt
+
+
+
+matchRoleForPBCorpus :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+                     -> SVMFarm
+                     -> ([PennTree],[Instance])
+                     -> EitherT String IO ()
+matchRoleForPBCorpus pp svm (trs,props) = do
+  rs <- getIdxSentProps pp (trs,props)
+  flip mapM_ rs $ \(_i,sentinfo,propbanktree,pr) -> do
+    let ifeats = features (sentinfo,propbanktree,pr)
+        ifakefeats = fakeFeatures (sentinfo,propbanktree,pr)
+        feats = zipWith groupFeatures ifeats ifakefeats
+    matchRole svm sentinfo feats
+
+
+
+matchRoleForPBCorpusFile :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+                         -> SVMFarm
+                         -> (FilePath,FilePath)
+                         -> (FilePath,IsOmit)
+                         -> IO (Either String ())
+matchRoleForPBCorpusFile pp svm (dirpenn,dirprop) (fp,omit) = do
+  runEitherT $ do
+    liftIO $ print fp
+    (trs,props) <- propbank (dirpenn </> fp <.> "mrg" ,dirprop </> fp <.> "prop", omit)
+    matchRoleForPBCorpus pp svm (trs,props) 

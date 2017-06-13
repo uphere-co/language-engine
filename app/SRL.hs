@@ -10,7 +10,7 @@
 module Main where
 
 
-import           AI.SVM.Base
+-- import           AI.SVM.Base
 import           Control.Applicative               (optional)
 import           Control.Lens               hiding (levels,(<.>))
 import           Control.Monad                     (void,when)
@@ -40,7 +40,7 @@ import           SRL.DataSet.PropBank
 import           SRL.Feature
 import           SRL.Train
 import           SRL.Type
-
+import           SVM
 
 data ProgOption = ProgOption { penndir :: Maybe FilePath
                              , propdir :: Maybe FilePath
@@ -77,7 +77,7 @@ initGHCi = do
 main :: IO ()
 main = do
   opt <- execParser progOption
-  let (trainingFiles,testFiles) = splitAt 50 propbankFiles
+  let (trainingFiles,testFiles) = splitAt 70 propbankFiles
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
     when (isTraining opt) $ do
