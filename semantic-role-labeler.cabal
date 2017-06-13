@@ -45,6 +45,7 @@ library
                        bytestring,
                        containers,
                        data-default,
+                       discrimination,
                        either,
                        filepath,
                        jni,
