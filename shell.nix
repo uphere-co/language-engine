@@ -1,4 +1,4 @@
-{ opkgs ? import <nixpkgs> {}
+{ pkgs ? import <nixpkgs> {}
 , uphere-nix-overlay ? <uphere-nix-overlay>
 , HCoreNLP ? <HCoreNLP>
 , nlp-types ? <nlp-types>
@@ -7,16 +7,15 @@
 }:
 
 
-let pkgs = import opkgs.path { 
-             overlays = [ (self: super: {
-                             libsvm = import (uphere-nix-overlay + "/nix/cpp-modules/libsvm/default.nix") { inherit (self) stdenv fetchurl; };
-                           })
-                        ];
-             #overlays = [ (self: super: { libsvm = super.libsvm; }) ] ;
-           };
+let newpkgs = import pkgs.path { 
+                overlays = [ (self: super: {
+                               libsvm = import (uphere-nix-overlay + "/nix/cpp-modules/libsvm/default.nix") { inherit (self) stdenv fetchurl; };
+                             })
+                           ];
+              };
 in
 
-with pkgs;
+with newpkgs;
 
 let
   fasttext = import (uphere-nix-overlay + "/nix/cpp-modules/fasttext.nix") { inherit stdenv fetchgit; };
@@ -27,8 +26,7 @@ let
   corenlp = res_corenlp.corenlp;
   corenlp_models = res_corenlp.corenlp_models;
 
-  hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix")
-               { inherit pkgs; };
+  hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix") { pkgs = newpkgs; };
 
   haskellPackages1 = haskellPackages.override { overrides = hsconfig; };
 
