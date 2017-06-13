@@ -8,7 +8,7 @@
 module SRL.Feature where
 
 import           Control.Lens            hiding (levels,Level)
-import           Control.Monad                  ((<=<),guard,when)
+import           Control.Monad                  ((<=<),guard)
 import           Data.Bifunctor                 (bimap)
 import           Data.Bifoldable                (biList)
 import           Data.Foldable                  (toList)
@@ -16,13 +16,10 @@ import           Data.Function                  (on)
 import           Data.Graph                     (buildG,dfs)
 import           Data.IntMap                    (IntMap)
 import qualified Data.IntMap             as IM
-import           Data.List                      (foldl',group,sortBy,zip4)
+import           Data.List                      (foldl',group,sortBy)
 import           Data.Maybe                     (catMaybes,fromJust,mapMaybe)
 import           Data.Text                      (Text)
-import qualified Data.Text               as T   (intercalate,unpack)
-import qualified Data.Text.IO            as TIO
 import           Data.Tree                      (levels)
-import           Text.Printf
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
@@ -99,6 +96,7 @@ headWord  = safeHead . sortBy (compare `on` view (_2._1))
           . mapMaybe (\(i,(ml,postxt)) -> fmap (i,) (fmap (,postxt) ml)) . getLeaves 
 
 
+mkLemmaMap :: S.Sentence -> IntMap Text
 mkLemmaMap sent = foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
                     zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
 
@@ -165,16 +163,16 @@ calcArgNodeFeatureEach sentinfo predidx (Single rng) =
   let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
       dep = sentinfo^.corenlp_dep
       parsetree = parseTreePathFull (predidx,rng) ipt
-      opath = parseTreePath parsetree
+      -- opath = parseTreePath parsetree
       path = (simplifyPTP . parseTreePath) parsetree
       headwordtrees = headWordTree dep ipt
-      head = headWord =<< matchR rng headwordtrees
-  in  Just (rng, path, head)
+      hd = headWord =<< matchR rng headwordtrees
+  in  Just (rng, path, hd)
 calcArgNodeFeatureEach sentinfo predidx (Multi rngs) = 
   let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
       dep = sentinfo^.corenlp_dep
       parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
-      opaths = map parseTreePath parsetrees
+      -- opaths = map parseTreePath parsetrees
       paths = map (simplifyPTP . parseTreePath) parsetrees
       headwordtrees = headWordTree dep ipt
       heads = map (\rng -> headWord =<< matchR rng headwordtrees) rngs

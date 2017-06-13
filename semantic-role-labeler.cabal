@@ -27,7 +27,9 @@ library
                        SRL.Train
                        SRL.Type
                        SRL.Util
-                       SRL.Vectorize
+                       SRL.Vectorize.Dense
+                       SRL.Vectorize.Sparse
+                   
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base,
@@ -44,7 +46,6 @@ library
                        split,
                        svm-simple,
                        text,
-                       -- text-format,
                        time,
                        vector,
                        --
@@ -103,7 +104,6 @@ Executable SRL
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
                        -threaded
-                       -- -optc=-fopenmp
   ghc-prof-options:    -caf-all -auto-all
   other-modules:       
   build-depends:       base,

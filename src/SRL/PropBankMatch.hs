@@ -19,9 +19,7 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
 import           Data.Time.Calendar              (fromGregorian)
 --
-import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
 import qualified CoreNLP.Simple.Type                   as S
-import qualified CoreNLP.Simple.Type.Simplified        as S
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
@@ -135,9 +133,8 @@ mkDocFromPennTree = flip S.Document (fromGregorian 2017 4 17)
 
 
 showMatchedInstance :: (Int,SentenceInfo,PennTree,[Instance]) -> IO ()
-showMatchedInstance (_i,sentinfo,tr,prs) = do
+showMatchedInstance (_i,sentinfo,tr,_prs) = do
   let pt = sentinfo^.corenlp_tree
-      -- tr = sentinfo^.propbank_tree
       terms = map (^._2) . toList $ pt
   TIO.putStrLn "================="
   TIO.putStrLn "PropBank"

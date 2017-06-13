@@ -1,4 +1,4 @@
-module SRL.Vectorize where
+module SRL.Vectorize.Dense where
 
 import           Control.Lens
 import           Data.List                 (foldl')
@@ -18,7 +18,10 @@ import           PropBank.Type.Prop
 --
 import           SRL.Type
 
+ 
 foreign import ccall "get_vector" c_get_fasttextvector :: FastTextVector -> IO (Ptr CFloat)
+
+
 
 initWVDB :: FilePath -> IO FastText
 initWVDB binfile = do
@@ -28,6 +31,7 @@ initWVDB binfile = do
   fastTextloadModel t str_bin
   return t
 
+ 
 word2vec :: FastText -> Text -> IO (Vector CFloat)
 word2vec ft w =
   withCString (T.unpack w) $ \cstr_word -> do
@@ -38,8 +42,9 @@ word2vec ft w =
     cfloat <- c_get_fasttextvector v
     ptr <- newForeignPtr_ cfloat
     let mv = MVector (fromIntegral c_size) ptr
-    let v = V.create (return mv)
-    return $! v
+        v' = V.create (return mv)
+    return $! v'
+
 
 {- 
 data RolesetID = SenseID Int  -- ^ sense id
@@ -60,6 +65,7 @@ mk1HotVec :: Int -> Maybe Int -> Vector CFloat
 mk1HotVec dim Nothing = V.replicate dim 0
 mk1HotVec dim (Just n) = V.generate dim (\i -> if i == n then 1.0 else 0.0)
 
+pblabel2vec :: PropBankLabel -> Vector CFloat
 pblabel2vec = mk1HotVec dim . pblabel2idx
   where dim = fromEnum (maxBound :: LinkType) + fromEnum (maxBound :: ModifierType) + 6
 
@@ -87,25 +93,25 @@ ptp2vec xs = if n < maxn then v0 V.++ V.replicate (maxn-n) 0 else V.take maxn v0
         dimp = fromEnum (maxBound :: POSTag) + 1
         maxn  = 10*(dimc + 2) + dimp+2 
 
-argnode2vec :: FastText -> ArgNodeFeature -> IO (Maybe (Vector CFloat))
-argnode2vec ft (arglabel,(_,ptp,Just (_,(_,(pos,word))))) = do
+argnode2vec :: {- FastText -> -} ArgNodeFeature -> IO (Maybe (Vector CFloat))
+argnode2vec {- ft -} (_arglabel,(_,ptp,Just (_,(_,(pos,_word))))) = do
   let -- v1 = pblabel2vec arglabel 
       v2 = ptp2vec ptp
       v3 = enum2vec pos
-  v4 <- word2vec ft word
+  -- v4 <- word2vec ft word
   let v = {- v1 V.++ -} v2 V.++ v3 {- V.++ v4 -}
   v `seq` return (Just v)
-argnode2vec ft (arglabel,(_,ptp,Nothing)) = return Nothing
+argnode2vec {- ft -} (_arglabel,(_,_ptp,Nothing)) = return Nothing
 
  
-inst2vec :: FastText -> InstanceFeature -> IO [(Int,RoleSet,PropBankLabel,Range,Vector CFloat)]
-inst2vec ft ifeat = do
+inst2vec :: {- FastText -> -} InstanceFeature -> IO [(Int,RoleSet,PropBankLabel,Range,Vector CFloat)]
+inst2vec {- ft -} ifeat = do
   predv <- {- (V.++) <$> word2vec ft (ifeat^._2._1) <*> -} pure (enum2vec (ifeat^._3))
   rs <- flip traverse (concat (ifeat^._4)) $ \nfeat -> do
     let n = ifeat^._1
         roleset=  ifeat^._2
         label = nfeat^._1
         rng = nfeat^._2._1
-    mvec <- argnode2vec ft nfeat
+    mvec <- argnode2vec {- ft -} nfeat
     return $ fmap (\v -> (n,roleset,label,rng, predv V.++ v)) mvec
   return (catMaybes rs)

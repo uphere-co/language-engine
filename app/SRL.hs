@@ -9,7 +9,7 @@
 
 module Main where
 
-import           AI.SVM.Simple
+
 import           AI.SVM.Base
 import           Control.Applicative               (optional)
 import           Control.Lens               hiding (levels,(<.>))
@@ -17,43 +17,29 @@ import           Control.Monad                     (void,when)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.ByteString.Char8      as B
-import           Data.Default
-import           Data.Either                       (rights)
 import           Data.Foldable                     (toList)
-import           Data.Function                     (on)
-import           Data.List                         (sort,sortBy,zip4)
 import           Data.Monoid                       ((<>))
 import           Data.Maybe                        (fromMaybe,mapMaybe)
-import qualified Data.Sequence              as Seq
-import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
 import           Data.Time.Calendar                (fromGregorian)
-import           Data.Vector.Storable (MVector (..),create)
-import           Foreign.C.String
-import           Foreign.ForeignPtr
 import           Foreign.JNI                as J
 import           Language.Java              as J
 import           Options.Applicative
 import           System.Environment                (getEnv)
-import           System.FilePath                   ((</>),(<.>))
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
-import           FastText.Binding
+-- import           FastText.Binding
 import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
-import           PropBank.Util
 --
 import           SRL.DataSet.PropBank
 import           SRL.Feature
-import           SRL.Format
-import           SRL.PropBankMatch
 import           SRL.Train
 import           SRL.Type
-import           SRL.Vectorize
 
 
 data ProgOption = ProgOption { penndir :: Maybe FilePath
@@ -65,6 +51,7 @@ data ProgOption = ProgOption { penndir :: Maybe FilePath
                              , textFile :: Maybe FilePath
                              } deriving Show
 
+
 pOptions :: Parser ProgOption
 pOptions = ProgOption <$> optional (strOption (long "penn" <> short 'n' <> help "Penn Treebank directory"))
                       <*> optional (strOption (long "prop" <> short 'p' <> help "PropBank directory"))
@@ -74,16 +61,18 @@ pOptions = ProgOption <$> optional (strOption (long "penn" <> short 'n' <> help 
                       <*> optional (strOption (long "arg1" <> help "SVM file for arg1"))
                       <*> optional (strOption (long "file" <> help "text file"))
 
+
 progOption :: ParserInfo ProgOption 
 progOption = info pOptions (fullDesc <> progDesc "Test features for PropBank corpus")
+
 
 initGHCi :: IO J.JVM
 initGHCi = do
   clspath <- getEnv "CLASSPATH"
   J.newJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] 
 
-init2 :: IO FastText
-init2 = initWVDB "/scratch/wavewave/wordvector/wiki.en.bin"
+-- init2 :: IO FastText
+-- init2 = initWVDB "/scratch/wavewave/wordvector/wiki.en.bin"
 
 main :: IO ()
 main = do
@@ -94,10 +83,10 @@ main = do
     when (isTraining opt) $ do
       case (penndir opt,propdir opt) of
         (Just dirpenn,Just dirprop) -> do
-          ft <- init2
+          -- ft <- init2
           pp <- preparePP 
           let dirs = (dirpenn,dirprop)
-          svmfarm <- train ft pp dirs trainingFiles   
+          svmfarm <- train pp dirs trainingFiles   
           saveSVM "arg0.svm" (svmfarm^.svm_arg0)
           saveSVM "arg1.svm" (svmfarm^.svm_arg1)
         _ -> error "penn/prop dir are not specified"
@@ -109,13 +98,13 @@ main = do
     if | isTesting opt -> do
            case (penndir opt,propdir opt) of
              (Just dirpenn,Just dirprop) -> do
-               ft <- init2
+               -- ft <- init2
                pp <- preparePP 
                let dirs = (dirpenn,dirprop)
                svm0 <- loadSVM svmfile0
                svm1 <- loadSVM svmfile1
                let svmfarm = SVMFarm svm0 svm1
-               mapM_ (classifyFile ft pp svmfarm dirs) testFiles
+               mapM_ (matchRoleForPBCorpusFile pp svmfarm dirs) testFiles
              _ -> error "penn/prop dir are not specified"
        | isTraining opt -> return ()
        | otherwise      -> do
@@ -124,7 +113,7 @@ main = do
              Just fp -> do
                txt <- TIO.readFile fp
                -- TIO.putStrLn txt
-               ft <- init2
+               -- ft <- init2
                pp <- preparePP 
                ann <- annotate pp (Document txt (fromGregorian 2017 4 17))
                rdoc <- protobufDoc ann
@@ -137,7 +126,7 @@ main = do
                      rs = zipWith3 SentInfo sents pts deps
                  flip mapM_ rs $ \sentinfo -> do
                    let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
-                       terms = map (^._2) . toList $ sentinfo^.corenlp_tree
+                       -- terms = map (^._2) . toList $ sentinfo^.corenlp_tree
                        lemmamap = mkLemmaMap (sentinfo^.corenlp_sent)
                        lemmapt = lemmatize lemmamap ipt
                        verbs = filter (isVerb . (^._2._1)) (toList lemmapt)
@@ -155,21 +144,10 @@ main = do
                                           lma = verb^._2._2._2
                                       in InstanceInput n (lma,"01") (genArgInputs n)
                        feats = map (calcInstanceFeature sentinfo) instInputs
-                       sortFun = sortBy (flip compare `on` (^._5))
-                   resultss0 <- mapM (fmap sortFun . findArgument arg0 ft svmfarm) feats
-                   resultss1 <- mapM (fmap sortFun . findArgument arg1 ft svmfarm) feats
-                   let results = sortBy (compare `on` (^._1)) . map (\x -> head x) . filter (not.null) $ resultss0 ++ resultss1
-                   liftIO $ putStrLn "======================================================================================="        
-                   liftIO $ TIO.putStrLn (T.intercalate " " terms)
-                   liftIO $ putStrLn "======================================================================================="
-                   liftIO $ flip mapM_ results $ \result -> do
-                     let mmatched = matchR (result^._4) ipt
-                     case mmatched of
-                       Nothing -> TIO.putStrLn "no matched?"
-                       Just matched -> let txt = T.intercalate " " (map (^._2._2) (toList matched))
-                                       in putStrLn $ formatResult result txt
-                   
-                                             
+                   matchRole svmfarm sentinfo feats
+
+
+isVerb :: POSTag -> Bool                     
 isVerb VB  = True
 isVerb VBZ = True
 isVerb VBP = True
