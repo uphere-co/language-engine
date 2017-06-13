@@ -73,34 +73,19 @@ enum2vec x = mkFeatureVector dim (Just (fromEnum x))
   where dim = fromEnum (maxBound :: POSTag) + 1
 
 ptp2vec :: ParseTreePath -> FeatureVector
-ptp2vec xs = v1 `concatFV` v2 -- fitToDim maxn v0
+ptp2vec xs = let (us,ds) = span (\(_,d) -> d == Up) xs
+             in case us of
+                  (Right p,_):us' ->
+                    let v1 = fitToDim maxn1 (foldtag (enum2vec p) us')
+                        v2 = fitToDim maxn2 (foldtag emptyFV ds)
+                    in v1 `concatFV` v2
+                  _ -> fitToDim (maxn1+maxn2) emptyFV
   where dimc = fromEnum (maxBound :: ChunkTag) + 1
         dimp = fromEnum (maxBound :: POSTag) + 1
-        maxn1 = 9*dimc+dimp -- 10*(dimc+2)+dimp+2
+        maxn1 = 9*dimc+dimp
         maxn2 = 10*dimc
-        (us,ds) = span (\(_,d) -> d == Up) xs
-        (p,us') = case us of
-                    (Right p,_):us' -> (p,us')
-                    _ -> error (show xs)
-        --   (Left p,_) : us' = us
         -- there is a case with last one is POSTag. need to find that error case.
         foldtag = foldl' (\acc (x,_) -> case x of {Left t -> acc `concatFV` enum2vec t;Right p -> acc `concatFV` enum2vec p})
-        
-        v1 = fitToDim maxn1 (foldtag (enum2vec p) us')
-        v2 = fitToDim maxn2 (foldtag emptyFV ds)
-
-        {-
-
-          foldl' (\acc (Right t,_) -> acc `concatFV` enum2vec
-
-
-        ptp2idx1 (Left  p,d) = enum2vec p `concatFV` enum2vec d
-        ptp2idx1 (Right t,d) = enum2vec t `concatFV` enum2vec d
-        --
-        v0 = foldl' (\acc x -> acc `concatFV` ptp2idx1 x) emptyFV xs
-        n = v0 ^. fv_dim -}
-
-
         
 
 argnode2vec :: ArgNodeFeature -> Maybe FeatureVector

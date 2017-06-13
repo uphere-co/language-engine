@@ -22,6 +22,9 @@ library
                        SRL.CoNLL.CoNLL08.Type
                        SRL.DataSet.PropBank
                        SRL.Feature
+                       SRL.Feature.Dependency
+                       SRL.Feature.ParseTreePath
+                       SRL.Feature.Util
                        SRL.Format
                        SRL.PropBankMatch
                        SRL.Train
