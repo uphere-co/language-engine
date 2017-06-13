@@ -6,7 +6,16 @@
 , wiki-ner ? <wiki-ner>
 }:
 
-with pkgs;
+
+let newpkgs = import pkgs.path { 
+                overlays = [ (self: super: {
+                               libsvm = import (uphere-nix-overlay + "/nix/cpp-modules/libsvm/default.nix") { inherit (self) stdenv fetchurl; };
+                             })
+                           ];
+              };
+in
+
+with newpkgs;
 
 let
   fasttext = import (uphere-nix-overlay + "/nix/cpp-modules/fasttext.nix") { inherit stdenv fetchgit; };
@@ -17,8 +26,7 @@ let
   corenlp = res_corenlp.corenlp;
   corenlp_models = res_corenlp.corenlp_models;
 
-  hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix")
-               { inherit pkgs; };
+  hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix") { pkgs = newpkgs; };
 
   haskellPackages1 = haskellPackages.override { overrides = hsconfig; };
 
@@ -74,8 +82,9 @@ in
 
 stdenv.mkDerivation {
   name = "SRL-dev";
-  buildInputs = [ hsenv fasttext ];
+  buildInputs = [ hsenv fasttext libsvm ];
   shellHook = ''
+    export OMP_NUM_THREADS=8
     export CLASSPATH="${corenlp_models}:${corenlp}/stanford-corenlp-3.7.0.jar:${corenlp}/protobuf.jar:${corenlp}/joda-time.jar:${corenlp}/jollyday.jar:${hsenv}/share/x86_64-linux-ghc-8.0.2/HCoreNLP-0.1.0.0/HCoreNLPProto.jar";
   '';
 }
