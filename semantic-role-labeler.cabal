@@ -68,6 +68,31 @@ library
                        -fno-warn-orphans
   ghc-prof-options:    -caf-all -auto-all
 
+Executable dependency
+  Main-is:             dependency.hs
+  hs-source-dirs:      app
+  default-language:    Haskell2010
+  ghc-options:         -O2 -Wall
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+  ghc-prof-options:    -caf-all -auto-all
+  other-modules:       
+  build-depends:       base,
+                       --
+                       bytestring,
+                       data-default,
+                       jvm,
+                       lens,
+                       text,
+                       time,
+                       --
+                       HCoreNLP,
+                       --
+                       semantic-role-labeler                       
+
+
+
 Executable feature
   Main-is:             feature.hs
   hs-source-dirs:      app
@@ -100,6 +125,7 @@ Executable feature
                        semantic-role-labeler                       
 
 
+                       
 Executable SRL
   Main-is:             SRL.hs
   hs-source-dirs:      app

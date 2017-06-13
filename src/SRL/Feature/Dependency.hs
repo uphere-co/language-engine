@@ -1,3 +1,5 @@
+{-# LANGUAGE TupleSections #-}
+
 module SRL.Feature.Dependency where
 
 import           Control.Lens            hiding (levels,Level)
@@ -22,8 +24,6 @@ import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
 import           PropBank.Type.Prop
 --
-import           SRL.Feature.Dependency
-import           SRL.Feature.ParseTreePath
 import           SRL.Format
 import           SRL.PropBankMatch
 import           SRL.Type

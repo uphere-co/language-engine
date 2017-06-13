@@ -39,6 +39,7 @@ import           PropBank.Type.Prop
 --
 import           SRL.DataSet.PropBank
 import           SRL.Feature
+import           SRL.Feature.Util
 import           SRL.Format
 import           SRL.Train
 import           SRL.Type
@@ -150,11 +151,3 @@ main = do
                    matchRole svmfarm sentinfo feats
 
 
-isVerb :: POSTag -> Bool                     
-isVerb VB  = True
-isVerb VBZ = True
-isVerb VBP = True
-isVerb VBD = True
-isVerb VBN = True
-isVerb VBG = True
-isVerb _   = False
