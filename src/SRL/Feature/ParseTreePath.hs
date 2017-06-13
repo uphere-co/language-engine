@@ -31,25 +31,50 @@ import           SRL.Type
 import           SRL.Util
 --
 
+elimCommonHead :: [PennTreeIdxG c (p,a)]
+               -> [PennTreeIdxG c (p,a)]
+               -> ListZipper (PennTreeIdxG c (p,a))
+elimCommonHead lst1 lst2 = go lst1 lst2
+  where
+    range = fst . phraseType
+    go :: [PennTreeIdxG c (p,a)] -> [PennTreeIdxG c (p,a)] -> ListZipper (PennTreeIdxG c (p,a))
+    go (x0:x1:xs) (y0:y1:ys) 
+      | range x0 == range y0 && range x1 == range y1 = go (x1:xs) (y1:ys)
+      | range x0 == range y0 && range x1 /= range y1 = LZ (x1:xs) x0 (y1:ys)
+      | otherwise = error "elimCommonHead" -- (Nothing,x0:x1:xs,y0:y1:ys)  -- this should not happen in a single tree.
+    go (x0:[]) (y0:ys)
+      | range x0 == range y0 = LZ [] x0 ys
+      | otherwise = error "elimCommonHead" -- (Nothing,[x0],y0:ys)  -- this should not happen in a single tree
+    go (x0:xs) (y0:[])
+      | range x0 == range y0 = LZ xs x0 [] -- (Just x0,xs,[])
+      | otherwise = error "elimCommonHead" -- (Nothing,x0:xs,[y0]) -- this should not happen in a single tree
+    go []     ys     = error "elimCommonHead" -- (Nothing,[],ys)
+    go xs     []     = error "elimCommonHead" -- (Nothing,xs,[])
+
 
 parseTreePathFull :: (Int,Range)
                   -> PennTreeIdxG c (p,a)
-                  -> (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
+                  -> ListZipper (PennTreeIdxG c (p,a))
+                     -- (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
 parseTreePathFull (start,target) tr = elimCommonHead (contain start tr) (containR target tr)
 
 
 parseTreePathBy :: (PennTreeIdxG c (p,a) -> x)
-                -> (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
+                -> ListZipper (PennTreeIdxG c (p,a))
+                                      -- (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
                 -> [(x,Direction)]
-parseTreePathBy f (mh,tostart,totarget) =
+parseTreePathBy f (LZ tostart h totarget) =
+  let lst1 = (f h,Down):map ((,Down).f) totarget
+      lst2 = map ((,Up).f) . reverse $ tostart
+  in lst2 ++ lst1
+
+{-      
   case mh of
     Nothing -> []
-    Just h -> let lst1 = (f h,Down):map ((,Down).f) totarget
-                  lst2 = map ((,Up).f) . reverse $ tostart
-              in lst2 ++ lst1
+    Just h -> 
+-}
 
-
-parseTreePath :: (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
+parseTreePath :: ListZipper (PennTreeIdxG c (p,a))  -- (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
               -> [(Either c p,Direction)]
 parseTreePath = parseTreePathBy (snd.phraseType)
 
@@ -58,6 +83,6 @@ simplifyPTP :: (Eq c,Eq p) => [(Either c p, Direction)] -> [(Either c p, Directi
 simplifyPTP xs = map head (group xs)
 
 
-simplifyDep :: (DepInfo,[DepInfo],[DepInfo]) -> (DepInfo,[DepInfo],[DepInfo])
-simplifyDep (y,xs,zs) = (y,map head (tail (group (y:xs))),map head (tail (group (y:zs))))
+simplifyDep :: ListZipper DepInfo -> ListZipper DepInfo
+simplifyDep (LZ xs y zs) = LZ (map head (tail (group (y:xs)))) y (map head (tail (group (y:zs))))
 
