@@ -37,14 +37,27 @@ parseTreePathFull :: (Int,Range)
                   -> (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
 parseTreePathFull (start,target) tr = elimCommonHead (contain start tr) (containR target tr)
 
+
+parseTreePathBy :: (PennTreeIdxG c (p,a) -> x)
+                -> (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
+                -> [(x,Direction)]
+parseTreePathBy f (mh,tostart,totarget) =
+  case mh of
+    Nothing -> []
+    Just h -> let lst1 = (f h,Down):map ((,Down).f) totarget
+                  lst2 = map ((,Up).f) . reverse $ tostart
+              in lst2 ++ lst1
+
+
 parseTreePath :: (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
               -> [(Either c p,Direction)]
-parseTreePath (mh,tostart,totarget) =
-  case mh of
+parseTreePath = parseTreePathBy (snd.phraseType)
+{-   case mh of
     Nothing -> []
     Just h -> let lst1 = ((snd.phraseType) h,Down):map ((,Down).snd.phraseType) totarget
                   lst2 = map ((,Up).snd.phraseType) . reverse $ tostart
               in lst2 ++ lst1
+-}
 
 
 

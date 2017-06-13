@@ -27,6 +27,7 @@ import           CoreNLP.Simple.Type.Simplified
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
 import           NLP.Type.UniversalDependencies2.Syntax
+import qualified NLP.Type.UniversalDependencies2.Syntax as UD (DependencyRelation(ROOT))
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
@@ -35,6 +36,7 @@ import           SRL.PropBankMatch
 import           SRL.Type
 import           SRL.Util
 --
+import Debug.Trace
 
 
 data DepInfo = DepInfo { _dinfo_mother :: Int
@@ -50,15 +52,17 @@ annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))
 
 
 levelMap :: Dependency -> Tree c (Int,t) -> IntMap Int
-levelMap (Dependency root nods edgs') tr = 
+levelMap (Dependency root nods edgs0) tr = 
   let bnds = let xs = map fst nods in (minimum xs, maximum xs)
-      edgs = map fst edgs'
+      edgs = map fst edgs0
       searchtree = head (dfs (buildG bnds edgs) [root])
   in IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
 
 
 motherMap :: Dependency -> Tree c (Int,t) -> IntMap (Int,DependencyRelation)
-motherMap (Dependency root nods edgs') tr = IM.fromList (map (\((mother,daughter),rel) -> (daughter-1,(mother-1,rel))) edgs')
+motherMap (Dependency root nods edgs0) tr =
+  let edgs = ((0,root),UD.ROOT) : edgs0
+  in IM.fromList (map (\((mother,daughter),rel) -> (daughter-1,(mother-1,rel))) edgs)
 
 
 decorateLeaves :: IntMap v -> Tree c (Int,t) -> Tree c (Int,(Maybe v,t))
@@ -104,7 +108,7 @@ annotateDepInfo (PN (r,x) xs) =
       zs :: [Either (ChunkTag,Maybe DepInfo) (Maybe DepInfo)]
       zs = map getTag ys
       y = (x,minimumBy (cmpLevel `on` (fmap (view dinfo_level))) (map (either snd id) zs))
-  in PN (r,y) ys
+  in trace (show y) $ PN (r,y) ys
 
 
 depInfoTree :: Dependency -> PennTreeIdxG ChunkTag (POSTag,Text)

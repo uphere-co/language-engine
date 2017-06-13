@@ -5,6 +5,7 @@ import           Control.Monad                     (void)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.ByteString.Char8      as B
+import           Data.Foldable                     (toList)
 -- import           Data.IntMap.Merge.Lazy
 import           Data.Maybe                        (fromJust)
 import qualified Data.Sequence              as Seq
@@ -19,6 +20,7 @@ import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
 import           CoreNLP.Simple.Type.Simplified
+import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 --
 import           SRL.Feature.Dependency
@@ -54,14 +56,20 @@ mainProcess pp = do
         dtr' = depTree dep itr
         ditr = depInfoTree dep itr
         -- dtr'' = decorateLeaves (mergeMap (levelMap dep itr) (motherMap dep itr)) itr
+    liftIO $ print (motherMap dep itr)
     liftIO $ putStrLn "==============="
     liftIO $ print dep        
     liftIO $ putStrLn "==============="        
-    liftIO $ print dtr
-    --  liftIO $ putStrLn "==============="
-    -- liftIO $ print dtr''
+    liftIO $ print dtr'
     liftIO $ putStrLn "==============="
-    liftIO $ print ditr -- (depInfoTree dep itr)
+    liftIO $ print ditr 
+    liftIO $ TIO.putStrLn $ prettyPrint 0 tr
     liftIO $ putStrLn "==============="
+    let terms = map (^._2) . toList $ tr
+    liftIO $ print (zip [0..] terms)
 
-    liftIO $ print (parseTreePath (parseTreePathFull (8,(12,24)) ditr))
+    liftIO $ putStrLn "==============="
+    let dptp = parseTreePathFull (8,(9,10)) ditr
+        f (PL (n,(md,_))) = ((n,n),md) -- fmap (^.dinfo_rel) md)
+        f (PN (rng,(_,md)) _) = (rng,md) -- fmap (^.dinfo_rel) md)
+    liftIO $ mapM_ print (parseTreePathBy f dptp)
