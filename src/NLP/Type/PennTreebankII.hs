@@ -79,6 +79,30 @@ instance ToJSON POSTag where
   toJSON = genericToJSON defaultOptions
 
 
+isVerb :: POSTag -> Bool                     
+isVerb VB  = True
+isVerb VBZ = True
+isVerb VBP = True
+isVerb VBD = True
+isVerb VBN = True
+isVerb VBG = True
+isVerb _   = False
+
+data TernaryLogic = Yes | No | Unclear
+
+isNoun :: POSTag -> TernaryLogic
+isNoun CD   = Unclear
+isNoun FW   = Unclear
+isNoun NN   = Yes
+isNoun NNS  = Yes
+isNoun NNP  = Yes
+isNoun NNPS = Yes
+isNoun PRP  = Yes
+isNoun SYM  = Unclear
+isNoun WP   = Yes
+isNoun _    = No
+
+
 data ChunkTag = ROOT
               | NP        -- ^ noun phrase
               | PP        -- ^ prepositional phrase
