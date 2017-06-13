@@ -26,6 +26,7 @@ library
                        SRL.Feature.ParseTreePath
                        SRL.Feature.Util
                        SRL.Format
+                       SRL.Init
                        SRL.PropBankMatch
                        SRL.Train
                        SRL.Type
@@ -86,6 +87,7 @@ Executable dependency
                        either,
                        jvm,
                        lens,
+                       nlp-types,
                        text,
                        time,
                        transformers,
