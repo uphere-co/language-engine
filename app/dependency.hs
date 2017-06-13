@@ -6,7 +6,6 @@ import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.ByteString.Char8      as B
 import           Data.Foldable                     (toList)
--- import           Data.IntMap.Merge.Lazy
 import           Data.Maybe                        (fromJust,mapMaybe)
 import qualified Data.Sequence              as Seq
 import qualified Data.Text.IO               as TIO
@@ -45,7 +44,6 @@ mainProcess pp = do
   txt <- TIO.readFile fp
   ann <- annotate pp (Document txt (fromGregorian 2017 4 17))
   rdoc <- protobufDoc ann
-  -- print rdoc
   void . runEitherT $ do
     doc <- hoistEither rdoc
     let sent = Seq.index (doc ^. D.sentence) 4
@@ -55,7 +53,7 @@ mainProcess pp = do
         dtr = depLevelTree dep itr
         dtr' = depTree dep itr
         ditr = depInfoTree dep itr
-        -- dtr'' = decorateLeaves (mergeMap (levelMap dep itr) (motherMap dep itr)) itr
+
     liftIO $ print (motherMap dep itr)
     liftIO $ putStrLn "==============="
     liftIO $ print dep        
@@ -73,12 +71,3 @@ mainProcess pp = do
         (start,target) = (4,(17,18))
         drelp = depRelPath dep itr (start,target)
     liftIO $ print drelp
-        {- 
-          dptp = parseTreePathFull (start,target) ditr
-        f (PL (n,(md,_))) = md -- ((n,n),md) -- fmap (^.dinfo_rel) md)
-        f (PN (rng,(_,md)) _) = md -- (rng,md) -- fmap (^.dinfo_rel) md)
-        dptp' = let (x1,x2,x3) = dptp
-                    (x1',x2',x3') = (fmap f x1,mapMaybe f x2,mapMaybe f x3)
-                in (fromJust (join x1'),x2',x3') -}
-    -- liftIO $ print $ simplifyDep dptp' 
-    -- liftIO $ mapM_ print (parseTreePathBy f dptp)

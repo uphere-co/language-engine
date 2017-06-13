@@ -54,8 +54,6 @@ parseTreePath :: (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeI
 parseTreePath = parseTreePathBy (snd.phraseType)
 
 
-
-
 simplifyPTP :: (Eq c,Eq p) => [(Either c p, Direction)] -> [(Either c p, Direction)]
 simplifyPTP xs = map head (group xs)
 

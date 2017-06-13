@@ -114,12 +114,13 @@ depInfoTree dep tr = let tr' = decorateLeaves (rightOuterIntMap (levelMap dep tr
                          tr'' = fmap conv tr'
                      in annotateDepInfo tr''
 
+
 depRelPath :: Dependency -> PennTreeIdxG ChunkTag (POSTag,Text) -> (Int,Range) -> (DepInfo,[DepInfo],[DepInfo])
 depRelPath dep itr (start,target) =
   let ditr = depInfoTree dep itr
       dptp = parseTreePathFull (start,target) ditr
-      f (PL (n,(md,_))) = md -- ((n,n),md) -- fmap (^.dinfo_rel) md)
-      f (PN (rng,(_,md)) _) = md -- (rng,md) -- fmap (^.dinfo_rel) md)
+      f (PL (n,(md,_))) = md 
+      f (PN (rng,(_,md)) _) = md 
       dptp' = let (x1,x2,x3) = dptp
                   (x1',x2',x3') = (fmap f x1,mapMaybe f x2,mapMaybe f x3)
               in (fromJust (join x1'),x2',x3')
