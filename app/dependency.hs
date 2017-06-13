@@ -1,13 +1,13 @@
 module Main where
 
 import           Control.Lens
-import           Control.Monad                     (void)
+import           Control.Monad                     (join,void)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.ByteString.Char8      as B
 import           Data.Foldable                     (toList)
 -- import           Data.IntMap.Merge.Lazy
-import           Data.Maybe                        (fromJust)
+import           Data.Maybe                        (fromJust,mapMaybe)
 import qualified Data.Sequence              as Seq
 import qualified Data.Text.IO               as TIO
 import           Data.Time.Calendar
@@ -69,7 +69,16 @@ mainProcess pp = do
     liftIO $ print (zip [0..] terms)
 
     liftIO $ putStrLn "==============="
-    let dptp = parseTreePathFull (8,(9,10)) ditr
-        f (PL (n,(md,_))) = ((n,n),md) -- fmap (^.dinfo_rel) md)
-        f (PN (rng,(_,md)) _) = (rng,md) -- fmap (^.dinfo_rel) md)
-    liftIO $ mapM_ print (parseTreePathBy f dptp)
+    let -- (start,target) = (8,(9,10))
+        (start,target) = (4,(17,18))
+        drelp = depRelPath dep itr (start,target)
+    liftIO $ print drelp
+        {- 
+          dptp = parseTreePathFull (start,target) ditr
+        f (PL (n,(md,_))) = md -- ((n,n),md) -- fmap (^.dinfo_rel) md)
+        f (PN (rng,(_,md)) _) = md -- (rng,md) -- fmap (^.dinfo_rel) md)
+        dptp' = let (x1,x2,x3) = dptp
+                    (x1',x2',x3') = (fmap f x1,mapMaybe f x2,mapMaybe f x3)
+                in (fromJust (join x1'),x2',x3') -}
+    -- liftIO $ print $ simplifyDep dptp' 
+    -- liftIO $ mapM_ print (parseTreePathBy f dptp)

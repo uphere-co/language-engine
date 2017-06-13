@@ -52,12 +52,7 @@ parseTreePathBy f (mh,tostart,totarget) =
 parseTreePath :: (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
               -> [(Either c p,Direction)]
 parseTreePath = parseTreePathBy (snd.phraseType)
-{-   case mh of
-    Nothing -> []
-    Just h -> let lst1 = ((snd.phraseType) h,Down):map ((,Down).snd.phraseType) totarget
-                  lst2 = map ((,Up).snd.phraseType) . reverse $ tostart
-              in lst2 ++ lst1
--}
+
 
 
 
@@ -65,4 +60,6 @@ simplifyPTP :: (Eq c,Eq p) => [(Either c p, Direction)] -> [(Either c p, Directi
 simplifyPTP xs = map head (group xs)
 
 
+simplifyDep :: (DepInfo,[DepInfo],[DepInfo]) -> (DepInfo,[DepInfo],[DepInfo])
+simplifyDep (y,xs,zs) = (y,map head (tail (group (y:xs))),map head (tail (group (y:zs))))
 

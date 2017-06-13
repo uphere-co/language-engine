@@ -44,7 +44,7 @@ data DepInfo = DepInfo { _dinfo_self :: Int
                        , _dinfo_mother :: Int
                        , _dinfo_rel :: DependencyRelation
                        , _dinfo_level :: Maybe Level }
-               deriving Show
+               deriving (Show,Eq,Ord)
 
 
 makeLenses ''DepInfo
