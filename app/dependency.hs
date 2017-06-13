@@ -47,14 +47,17 @@ mainProcess pp = do
     doc <- hoistEither rdoc
     let sent = Seq.index (doc ^. D.sentence) 4
     dep <- hoistEither $ sentToDep sent
-    liftIO $ print dep
     let tr = decodeToPennTree (fromJust (sent^.S.parseTree))
         itr = mkPennTreeIdx tr
         dtr = depLevelTree dep itr
         dtr' = depTree dep itr
-        dtr'' = decorateLeaves (mergeMap (levelMap dep itr) (motherMap dep itr)) itr
-    liftIO $ print dtr
+        -- dtr'' = decorateLeaves (mergeMap (levelMap dep itr) (motherMap dep itr)) itr
     liftIO $ putStrLn "==============="
-    liftIO $ print dtr''
-    
+    liftIO $ print dep        
+    liftIO $ putStrLn "==============="        
+    liftIO $ print dtr
+    --  liftIO $ putStrLn "==============="
+    -- liftIO $ print dtr''
+    liftIO $ putStrLn "==============="
+    liftIO $ print (depInfoTree dep itr)
     
