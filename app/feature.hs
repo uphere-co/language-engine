@@ -24,11 +24,9 @@ import           System.FilePath                   ((</>),(<.>))
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
-
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
---
 import           PropBank.Type.Prop
 import           PropBank.Util
 --

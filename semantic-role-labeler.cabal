@@ -81,13 +81,17 @@ Executable dependency
   build-depends:       base,
                        --
                        bytestring,
+                       containers,
                        data-default,
+                       either,
                        jvm,
                        lens,
                        text,
                        time,
+                       transformers,
                        --
                        HCoreNLP,
+                       HCoreNLP-Proto,
                        --
                        semantic-role-labeler                       
 
