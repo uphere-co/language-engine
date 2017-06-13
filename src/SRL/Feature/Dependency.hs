@@ -39,14 +39,6 @@ import           SRL.Util
 import Debug.Trace
 
 
-data DepInfo = DepInfo { _dinfo_self :: Int
-                       , _dinfo_mother :: Int
-                       , _dinfo_rel :: DependencyRelation
-                       , _dinfo_level :: Maybe Int }
-               deriving Show
-
-
-makeLenses ''DepInfo
 
 annotateLevel :: IntMap Int -> (Int, t) -> (Int,(Maybe Level,t))
 annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))
@@ -109,7 +101,7 @@ annotateDepInfo (PN (r,x) xs) =
       zs :: [Either (ChunkTag,Maybe DepInfo) (Maybe DepInfo)]
       zs = map getTag ys
       y = (x,minimumBy (cmpLevel `on` (fmap (view dinfo_level))) (map (either snd id) zs))
-  in trace (show y) $ PN (r,y) ys
+  in PN (r,y) ys
 
 
 depInfoTree :: Dependency -> PennTreeIdxG ChunkTag (POSTag,Text)

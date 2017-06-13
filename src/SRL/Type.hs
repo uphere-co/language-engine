@@ -11,6 +11,7 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
 import qualified CoreNLP.Simple.Type.Simplified        as S
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
+import           NLP.Type.UniversalDependencies2.Syntax
 import           PropBank.Type.Prop
 --
 -- import           SRL.CoNLL.CoNLL08.Type
@@ -38,6 +39,15 @@ type RoleSet = (Text,Text)
 type InstanceFeature = (Int,RoleSet,Voice, [[ArgNodeFeature]])
 
 type Level = Int
+
+data DepInfo = DepInfo { _dinfo_self :: Int
+                       , _dinfo_mother :: Int
+                       , _dinfo_rel :: DependencyRelation
+                       , _dinfo_level :: Maybe Level }
+               deriving Show
+
+
+makeLenses ''DepInfo
 
 
 data SentenceInfo = SentInfo { _corenlp_sent :: CS.Sentence
