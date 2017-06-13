@@ -22,6 +22,7 @@ import           CoreNLP.Simple.Type.Simplified
 import           NLP.Type.PennTreebankII
 --
 import           SRL.Feature.Dependency
+import           SRL.Feature.ParseTreePath
 import           SRL.Init
 
 
@@ -51,6 +52,7 @@ mainProcess pp = do
         itr = mkPennTreeIdx tr
         dtr = depLevelTree dep itr
         dtr' = depTree dep itr
+        ditr = depInfoTree dep itr
         -- dtr'' = decorateLeaves (mergeMap (levelMap dep itr) (motherMap dep itr)) itr
     liftIO $ putStrLn "==============="
     liftIO $ print dep        
@@ -59,5 +61,7 @@ mainProcess pp = do
     --  liftIO $ putStrLn "==============="
     -- liftIO $ print dtr''
     liftIO $ putStrLn "==============="
-    liftIO $ print (depInfoTree dep itr)
-    
+    liftIO $ print ditr -- (depInfoTree dep itr)
+    liftIO $ putStrLn "==============="
+
+    liftIO $ print (parseTreePath (parseTreePathFull (8,(12,24)) ditr))
