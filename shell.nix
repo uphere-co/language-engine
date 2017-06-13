@@ -69,6 +69,8 @@ let
 
             fficxx
             fficxx-runtime
+
+            foreign-store
             
             p.nlp-types
             p.PropBank

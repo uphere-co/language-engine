@@ -47,16 +47,16 @@ calcArgNodeFeatureEach sentinfo predidx (Single rng) =
       dep = sentinfo^.corenlp_dep
       parsetree = parseTreePathFull (predidx,rng) ipt
       path = (simplifyPTP . parseTreePath) parsetree
-      headwordtrees = headWordTree dep ipt
-      hd = headWord =<< matchR rng headwordtrees
+      dltr = depLevelTree dep ipt
+      hd = headWord =<< matchR rng dltr
   in  Just (rng, path, hd)
 calcArgNodeFeatureEach sentinfo predidx (Multi rngs) = 
   let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
       dep = sentinfo^.corenlp_dep
       parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
       paths = map (simplifyPTP . parseTreePath) parsetrees
-      headwordtrees = headWordTree dep ipt
-      heads = map (\rng -> headWord =<< matchR rng headwordtrees) rngs
+      dltr = depLevelTree dep ipt
+      heads = map (\rng -> headWord =<< matchR rng dltr) rngs
       comparef Nothing  _        = GT
       comparef _        Nothing  = LT
       comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
