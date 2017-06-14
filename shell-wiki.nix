@@ -11,9 +11,12 @@ in stdenv.mkDerivation {
      name = "shell-wiki";
      buildInputs =  (with python35Packages;
                  [ ipython
+                   jupyter
+                   pandas numpy
                  ]) ++
                  [ hsenv jdk 
                    pigz lbzip2
+                   jq
                  ] ;
      shellHook = ''
          EDITOR=vim
