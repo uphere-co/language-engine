@@ -38,9 +38,10 @@ formatDRP (LZ tostart root totarget) = foldMap f lst
 
 
 formatArgNodeFeature :: Int -> ArgNodeFeature -> String
-formatArgNodeFeature predidx (AFeat label (SRLFeat rng ptp mhead)) =
-    printf "%10s %10s %6s %30s %5s %s" (T.unpack (pbLabelText label)) (show rng) (show (position predidx rng))
-                                       (formatPTP ptp) (w^._1) (w^._2)
+formatArgNodeFeature predidx (AFeat label (SRLFeat rng ptp drpath mhead)) =
+    printf "%10s %10s %6s %30s %30s %5s %s" (T.unpack (pbLabelText label)) (show rng) (show (position predidx rng))
+                                            (formatPTP ptp) (formatDRP drpath)
+                                            (w^._1) (w^._2)
   where
     w = hstr mhead
     hstr Nothing = ("","")
