@@ -10,6 +10,7 @@ let
   #}; 
 
   hsenv = haskellPackages.ghcWithPackages (p: with p; [
+            monad-loops
             optparse-applicative
             taggy-lens
             text

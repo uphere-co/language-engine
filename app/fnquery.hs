@@ -6,6 +6,8 @@ import           Control.Applicative
 import           Control.Lens              ((^?),(^.),(^..), only )
 import           Control.Monad             (join)
 -- import           Control.Monad.Identity
+import           Control.Monad.Loops       (whileJust_)
+import           Control.Monad.IO.Class    (liftIO)
 import qualified Data.HashMap.Strict as HM
 import           Data.List                 (sort)
 import           Data.Maybe                (fromJust,listToMaybe)
@@ -19,6 +21,7 @@ import           Data.Text.Read            (decimal)
 import           Data.Time.Clock
 import           Data.Time.Format          (parseTimeM,defaultTimeLocale)
 import           Options.Applicative
+import           System.Console.Haskeline
 import           System.FilePath
 import           System.Directory
 import           Text.Taggy.Lens
@@ -39,32 +42,40 @@ processLU fp = do
     Just x -> return () --print x
   
 
-data ProgOption = ProgOption { progCommand :: String
+data ProgOption = ProgOption { fnDataDir :: FilePath
+                             , progCommand :: String
                              } deriving Show
 
 pOptions :: Parser ProgOption
-pOptions = ProgOption <$> strArgument (help "command frame/lu")
+pOptions = ProgOption <$> strOption (long "dir" <> short 'd' <> help "Directory")
+                      <*> strArgument (help "command frame/lu")
 
   -- switch (long "frame" <> short 'f' <> help "process frame, default is lexical unit")
 
 progOption :: ParserInfo ProgOption 
-progOption = info pOptions (fullDesc <> progDesc "parse test for FrameNet")
+progOption = info pOptions (fullDesc <> progDesc "query program for FrameNet")
 
+
+
+queryFrame :: FilePath -> IO ()
+queryFrame dir = do
+  cnts <- getDirectoryContents dir
+  let lst = (map (\x -> dir </> x) . filter (\x -> takeExtensions x == ".xml")) cnts
+  framemap <- constructFrameDB lst
+  runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
+     let input = T.pack input'
+     print (HM.lookup input (framemap^.frameDB))
+     -- mapM_ processFrame $ map (\x -> dir </> x) lst
 
 
 main :: IO ()
 main = do
-  opt <- execParser progOption  
+  opt <- execParser progOption
+  -- let dir = fnDataDir opt
   case progCommand opt of
-    "frame" -> do
-      let dir = "/scratch/wavewave/fndata/fndata-1.7/frame"
-      cnts <- getDirectoryContents dir
-      let lst = (map (\x -> dir </> x) . filter (\x -> takeExtensions x == ".xml")) cnts
-      framemap <- constructFrameDB lst
-      print (HM.lookup "Abandonment" (framemap^.frameDB))
-      -- mapM_ processFrame $ map (\x -> dir </> x) lst
+    "frame" -> queryFrame (fnDataDir opt </> "frame")
     "lu" -> do
-      let dir = "/scratch/wavewave/fndata/fndata-1.7/lu"
+      let dir = fnDataDir opt </> "lu"
       cnts <- getDirectoryContents dir
       let lst = filter (\x -> takeExtensions x == ".xml") $ sort cnts
       mapM_ processLU $ map (\x -> dir </> x) lst
