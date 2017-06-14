@@ -80,7 +80,7 @@ initGHCi = do
 main :: IO ()
 main = do
   opt <- execParser progOption
-  let (trainingFiles,testFiles) = splitAt 70 propbankFiles
+  let (trainingFiles,testFiles) = splitAt 20 propbankFiles
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
     when (isTraining opt) $ do
