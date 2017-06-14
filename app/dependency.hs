@@ -24,6 +24,7 @@ import           NLP.Type.PennTreebankII
 --
 import           SRL.Feature.Dependency
 import           SRL.Feature.ParseTreePath
+import           SRL.Format
 import           SRL.Init
 
 
@@ -67,7 +68,11 @@ mainProcess pp = do
     liftIO $ print (zip [0..] terms)
 
     liftIO $ putStrLn "==============="
-    let -- (start,target) = (8,(9,10))
-        (start,target) = (4,(17,18))
+    let (start,target) = (8,(9,10))
         drelp = depRelPath dep itr (start,target)
-    liftIO $ print drelp
+    liftIO $ print (start,target)
+    liftIO $ putStrLn (formatDRP drelp)
+    let (start,target) = (4,(17,18))
+        drelp = depRelPath dep itr (start,target)
+    liftIO $ print (start,target)
+    liftIO $ putStrLn (formatDRP drelp)
