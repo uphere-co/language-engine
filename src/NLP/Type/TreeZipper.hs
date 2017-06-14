@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module NLP.Type.TreeZipper where
@@ -30,8 +31,9 @@ data ListZipper a = LZ { _lz_prevs :: [a]
                        , _lz_current :: a
                        , _lz_nexts :: [a]
                        }
-                  deriving (Show)
-                             
+                  deriving (Show,Functor)
+
+                           
 genListZippers :: [a] -> [ListZipper a]
 genListZippers [] = error "cannot make a zipper for empty list"
 genListZippers (k:ks) = l1 : unfoldr succ l1
