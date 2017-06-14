@@ -36,4 +36,25 @@ library
                        HFrameNet.Type.LexUnit
                        HFrameNet.Type.Sentence
                        HFrameNet.Util
-  
+
+
+Executable parse
+  Main-is:             parse.hs
+  hs-source-dirs:      app
+  default-language:    Haskell2010
+  ghc-options:         -O2 -Wall
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+  ghc-prof-options:    -caf-all -auto-all
+  other-modules:
+  build-depends:       base,
+                       directory,
+                       filepath,
+                       lens,
+                       taggy-lens,
+                       text,
+                       time,
+                       transformers,
+                       --
+                       HFrameNet
