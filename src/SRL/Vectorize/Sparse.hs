@@ -89,12 +89,12 @@ ptp2vec xs = let (us,ds) = span (\(_,d) -> d == Up) xs
         
 
 argnode2vec :: ArgNodeFeature -> Maybe FeatureVector
-argnode2vec (AFeat _arglabel (SRLFeat _ ptp (Just (_,(_,(pos,_word)))))) = 
+argnode2vec (AFeat _arglabel (SRLFeat _ ptp _drp (Just (_,(_,(pos,_word)))))) = 
   let v2 = ptp2vec ptp
       v3 = enum2vec pos
       v = v2 `concatFV` v3 
   in Just v
-argnode2vec (AFeat _arglabel (SRLFeat _ _ptp Nothing)) = Nothing
+argnode2vec (AFeat _arglabel (SRLFeat _ _ptp _drp Nothing)) = Nothing
 
  
 inst2vec :: InstanceFeature -> [(Int,RoleSet,PropBankLabel,Range,FeatureVector)]
