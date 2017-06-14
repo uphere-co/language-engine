@@ -25,7 +25,7 @@ constructFrameDB fps = do
   
 parseFrameFile :: FilePath -> IO Frame
 parseFrameFile fp = do
-  putStrLn fp
+  -- putStrLn fp
   txt <- TLIO.readFile fp
   let frame = head (txt ^.. (html . allNamed (only "frame")))
   case p_frame frame of

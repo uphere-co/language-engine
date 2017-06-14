@@ -59,6 +59,7 @@ Executable fnquery
                        lens,
                        monad-loops,
                        optparse-applicative,
+                       split,
                        taggy-lens,
                        text,
                        time,
