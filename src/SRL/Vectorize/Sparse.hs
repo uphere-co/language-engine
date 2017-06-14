@@ -99,13 +99,13 @@ argnode2vec (_arglabel,(_,_ptp,Nothing)) = Nothing
  
 inst2vec :: InstanceFeature -> [(Int,RoleSet,PropBankLabel,Range,FeatureVector)]
 inst2vec ifeat =
-  let predv = enum2vec (ifeat^._3)
-      rs = flip map (concat (ifeat^._4)) $ \nfeat -> 
-        let n = ifeat^._1
-            roleset=  ifeat^._2
-            label = nfeat^._1
-            rng = nfeat^._2._1
-            mvec = argnode2vec nfeat
+  let predv = enum2vec (ifeat^.ifeat_voice)
+      rs = flip map (concat (ifeat^.ifeat_afeatss)) $ \afeat -> 
+        let n = ifeat^.ifeat_predidx
+            roleset=  ifeat^.ifeat_rolesetid
+            label = afeat^._1
+            rng = afeat^._2._1
+            mvec = argnode2vec afeat
         in fmap (\v -> (n,roleset,label,rng, predv `concatFV` v)) mvec
   in catMaybes rs
 

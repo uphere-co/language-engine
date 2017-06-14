@@ -73,10 +73,10 @@ calcInstanceFeature :: SentenceInfo -> InstanceInput -> InstanceFeature
 calcInstanceFeature sentinfo input =
   let predidx = input^.predicate_id
       rolesetid = input^.lemma_roleset_id
-      argfeatures = map (calcArgNodeFeature sentinfo predidx) (input^.argument_inputs)
+      afeatss = map (calcArgNodeFeature sentinfo predidx) (input^.argument_inputs)
       voicemap = IM.fromList $ voice (sentinfo^.corenlp_tree,sentinfo^.corenlp_sent)      
       voicefeature = maybe Active snd (IM.lookup predidx voicemap)
-  in (predidx,rolesetid,voicefeature,argfeatures)
+  in IFeat predidx rolesetid voicefeature afeatss
 
      
 featuresForInstance :: SentenceInfo -> MatchedInstance -> InstanceFeature

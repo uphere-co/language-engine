@@ -48,7 +48,7 @@ formatArgNodeFeature predidx (label,(rng,ptp,mhead)) =
 
 
 formatInstanceFeature :: InstanceFeature -> String
-formatInstanceFeature (predidx,(lemma,sensenum),voicefeature,argfeatures) =
+formatInstanceFeature (IFeat predidx (lemma,sensenum) voicefeature argfeatures) =
   let fs = concat argfeatures
   in flip foldMap fs $ \x -> printf "%3s %17s.%2s %7s %s\n"
                               (show predidx)

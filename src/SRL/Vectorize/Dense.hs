@@ -106,10 +106,10 @@ argnode2vec {- ft -} (_arglabel,(_,_ptp,Nothing)) = return Nothing
  
 inst2vec :: {- FastText -> -} InstanceFeature -> IO [(Int,RoleSet,PropBankLabel,Range,Vector CFloat)]
 inst2vec {- ft -} ifeat = do
-  predv <- {- (V.++) <$> word2vec ft (ifeat^._2._1) <*> -} pure (enum2vec (ifeat^._3))
-  rs <- flip traverse (concat (ifeat^._4)) $ \nfeat -> do
-    let n = ifeat^._1
-        roleset=  ifeat^._2
+  predv <- {- (V.++) <$> word2vec ft (ifeat^._2._1) <*> -} pure (enum2vec (ifeat^.ifeat_voice))
+  rs <- flip traverse (concat (ifeat^.ifeat_afeatss)) $ \nfeat -> do
+    let n = ifeat^.ifeat_predidx
+        roleset=  ifeat^.ifeat_rolesetid
         label = nfeat^._1
         rng = nfeat^._2._1
     mvec <- argnode2vec {- ft -} nfeat

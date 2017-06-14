@@ -6,8 +6,6 @@
 
 module SRL.Train where
 
--- import           AI.SVM.Simple
--- import           AI.SVM.Base
 import           Control.Exception
 import           Control.Lens               hiding (levels,(<.>))
 import           Control.Monad.IO.Class            (MonadIO(liftIO))
@@ -24,7 +22,6 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
 import           Data.Vector.Storable              (Vector)
 import qualified Data.Vector.Storable       as V
--- import           Foreign.C.Types
 import           Language.Java              as J
 import           System.FilePath                   ((</>),(<.>))
 import           Text.Printf
@@ -34,7 +31,6 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
--- import           FastText.Binding
 import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
 import           PropBank.Util
@@ -52,8 +48,8 @@ data SVMFarm = SVMFarm { _svm_arg0 :: SVM
                
 makeLenses ''SVMFarm
 
-data TrainingData = TrainingData { _training_arg0 :: [(Double,[(Int,Double)])] -- [(Double,Vector Double)]
-                                 , _training_arg1 :: [(Double,[(Int,Double)])] -- [(Double,Vector Double)]
+data TrainingData = TrainingData { _training_arg0 :: [(Double,[(Int,Double)])]
+                                 , _training_arg1 :: [(Double,[(Int,Double)])]
                                  }
 
 makeLenses ''TrainingData                                              
@@ -105,7 +101,7 @@ formatResult (n,(lmma,sensenum),label,range,value) txt =
 
 trainingVectorsForArg :: PropBankLabel
                       -> ([InstanceFeature],[InstanceFeature])
-                      -> [(Double,[(Int,Double)])] -- [(Double,FeatureVector)] -- [(Double,Vector Double)]
+                      -> [(Double,[(Int,Double)])]
 trainingVectorsForArg arglabel (ifeats,ifakefeats) = 
   let ts = concatMap inst2vec ifeats
       ts' = filter ((== arglabel) . (^._3)) ts 
@@ -113,7 +109,7 @@ trainingVectorsForArg arglabel (ifeats,ifakefeats) =
       fs = concatMap inst2vec ifakefeats
       fs' = filter ((== arglabel) . (^._3)) fs
       fs'' = map (\x -> (-1 :: Double,x^._5.fv_nodes)) fs'
-  in ts''++fs'' -- map (\(t,v) -> (t,V.map realToFrac v)) (ts''++fs'')
+  in ts''++fs''
 
 
 trainingDataPerFile :: [(Int,SentenceInfo,PennTree,[Instance])] -> TrainingData
@@ -143,10 +139,10 @@ prepareTraining pp (dirpenn,dirprop) (fp,omit) = do
 
 
 groupFeatures :: InstanceFeature -> InstanceFeature -> InstanceFeature
-groupFeatures (i,roleset,vo,afeatss_t) (i',_,_,afeatss_f) = 
+groupFeatures (IFeat i roleset vo afeatss_t) (IFeat i' _ _ afeatss_f) = 
   if i /= i'
   then error "error in groupFeatues" 
-  else (i,roleset,vo,afeatss_t ++ afeatss_f)
+  else IFeat i roleset vo (afeatss_t ++ afeatss_f)
 
 
 rankArgument :: PropBankLabel -> SVMFarm -> InstanceFeature
@@ -158,7 +154,7 @@ rankArgument arglabel svmfarm ifeat = do
       ts = inst2vec ifeat
       ts' = filter (\x -> x^._3 == arglabel) ts
       ts_v = map (^._5.fv_nodes) ts'
-  ts_result <- mapM (predict svm) ts_v -- (ts_v :: [FeatureVector])
+  ts_result <- mapM (predict svm) ts_v
   return (zipWith (\x r -> (_5 .~ r) x) ts' ts_result)
 
 
