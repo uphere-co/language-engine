@@ -16,7 +16,7 @@ import           Data.Function                  (on)
 import           Data.Graph                     (buildG,dfs)
 import           Data.IntMap                    (IntMap)
 import qualified Data.IntMap             as IM
-import           Data.List                      (foldl',group,sortBy)
+import           Data.List                      (foldl',group,sortBy,zipWith4)
 import           Data.Maybe                     (catMaybes,fromJust,mapMaybe)
 import           Data.Text                      (Text)
 import           Data.Tree                      (levels)
@@ -46,21 +46,23 @@ calcSRLFeature sentinfo predidx (Single rng) =
   let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
       dep = sentinfo^.corenlp_dep
       parsetree = parseTreePathFull (predidx,rng) ipt
-      path = (simplifyPTP . parseTreePath) parsetree
+      path = maybe [] (simplifyPTP . parseTreePath) parsetree
       dltr = depLevelTree dep ipt
+      dprpath = depRelPath dep ipt (predidx,rng)
       hd = headWord =<< matchR rng dltr
-  in  Just (SRLFeat rng path hd)
+  in  Just (SRLFeat rng path dprpath hd)
 calcSRLFeature sentinfo predidx (Multi rngs) = 
   let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
       dep = sentinfo^.corenlp_dep
       parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
-      paths = map (simplifyPTP . parseTreePath) parsetrees
+      paths = map (maybe [] (simplifyPTP . parseTreePath)) parsetrees
       dltr = depLevelTree dep ipt
+      dprpaths = map (\rng -> depRelPath dep ipt (predidx,rng)) rngs
       heads = map (\rng -> headWord =<< matchR rng dltr) rngs
       comparef Nothing  _        = GT
       comparef _        Nothing  = LT
       comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
-  in  safeHead (sortBy (comparef `on` (view sfeat_headword)) $ zipWith3 SRLFeat rngs paths heads)
+  in  safeHead (sortBy (comparef `on` (view sfeat_headword)) $ zipWith4 SRLFeat rngs paths dprpaths heads)
 
 calcArgNodeFeature :: SentenceInfo -> Int -> ArgumentInput -> [ArgNodeFeature]
 calcArgNodeFeature sentinfo predidx arginput =

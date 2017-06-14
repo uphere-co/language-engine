@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module SRL.Vectorize.Sparse where
@@ -10,6 +11,8 @@ import qualified Data.Vector.Storable as V
 import           Foreign.C.Types
 --
 import           NLP.Type.PennTreebankII
+import           NLP.Type.TreeZipper
+import           NLP.Type.UniversalDependencies2.Syntax
 import           PropBank.Type.Prop
 --
 import           SRL.Type
@@ -85,16 +88,28 @@ ptp2vec xs = let (us,ds) = span (\(_,d) -> d == Up) xs
         maxn1 = 9*dimc+dimp
         maxn2 = 10*dimc
         -- there is a case with last one is POSTag. need to find that error case.
-        foldtag = foldl' (\acc (x,_) -> case x of {Left t -> acc `concatFV` enum2vec t;Right p -> acc `concatFV` enum2vec p})
+        foldtag = foldl' (\(!acc) (x,_) -> case x of {Left t -> acc `concatFV` enum2vec t;Right p -> acc `concatFV` enum2vec p})
+        
+
+drp2vec :: ListZipper DepInfo -> FeatureVector
+drp2vec drp = let v1 = fitToDim maxn1 (foldtag emptyFV (reverse (drp^..lz_prevs.traverse.dinfo_rel)))
+                  v2 = enum2vec (drp^.lz_current.dinfo_rel)
+                  v3 = fitToDim maxn2 (foldtag emptyFV (drp^..lz_nexts.traverse.dinfo_rel))
+              in v1 `concatFV` v2 `concatFV` v3
+  where dim = fromEnum (maxBound :: DependencyRelation) + 1
+        maxn1 = 10*dim
+        maxn2 = 10*dim
+        foldtag = foldl' (\(!acc) x -> acc `concatFV` enum2vec x)
         
 
 argnode2vec :: ArgNodeFeature -> Maybe FeatureVector
-argnode2vec (AFeat _arglabel (SRLFeat _ ptp (Just (_,(_,(pos,_word)))))) = 
-  let v2 = ptp2vec ptp
-      v3 = enum2vec pos
-      v = v2 `concatFV` v3 
-  in Just v
-argnode2vec (AFeat _arglabel (SRLFeat _ _ptp Nothing)) = Nothing
+argnode2vec (AFeat _arglabel (SRLFeat _ ptp mdrp (Just (_,(_,(pos,_word)))))) = 
+  let v1 = ptp2vec ptp
+      v2 = enum2vec pos
+  in case mdrp of
+       Nothing -> Nothing
+       Just drp -> let v3 = drp2vec drp in Just (v1 `concatFV` v2 `concatFV` v3)
+argnode2vec (AFeat _arglabel (SRLFeat _ _ptp _mdrp Nothing)) = Nothing
 
  
 inst2vec :: InstanceFeature -> [(Int,RoleSet,PropBankLabel,Range,FeatureVector)]

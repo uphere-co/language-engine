@@ -115,14 +115,16 @@ depInfoTree dep tr = let tr' = decorateLeaves (rightOuterIntMap (levelMap dep tr
                      in annotateDepInfo tr''
 
 
-depRelPath :: Dependency -> PennTreeIdxG ChunkTag (POSTag,Text) -> (Int,Range) -> ListZipper DepInfo
+depRelPath :: Dependency -> PennTreeIdxG ChunkTag (POSTag,Text) -> (Int,Range) -> Maybe (ListZipper DepInfo)
 depRelPath dep itr (start,target) =
   let ditr = depInfoTree dep itr
-      dptp = parseTreePathFull (start,target) ditr
+      mdptp = parseTreePathFull (start,target) ditr
       f (PL (n,(md,_))) = md 
       f (PN (rng,(_,md)) _) = md 
       {- dptp' = let LZ xp r xn = dptp
                   (x1',x2',x3') = (fmap f x1,mapMaybe f x2,mapMaybe f x3)
               in (fromJust (join x1'),x2',x3') -}
-      LZ xp x xn = fmap f dptp
-  in simplifyDep (LZ (catMaybes xp) (fromJust x) (catMaybes xn))
+  in case mdptp of
+       Nothing -> Nothing
+       Just dptp -> let LZ xp x xn = fmap f dptp
+                    in Just (simplifyDep (LZ (catMaybes xp) (fromJust x) (catMaybes xn)))

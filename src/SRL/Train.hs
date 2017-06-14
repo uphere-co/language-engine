@@ -157,7 +157,7 @@ rankArgument arglabel svmfarm ifeat = do
   ts_result <- mapM (predict svm) ts_v
   return (zipWith (\x r -> (_5 .~ r) x) ts' ts_result)
 
-
+{- 
 preparePP :: IO (J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
 preparePP = do
   let pcfg = def & ( tokenizer .~ True )
@@ -169,7 +169,7 @@ preparePP = do
                  . ( constituency .~ True )
                  . ( ner .~ False )
   prepare pcfg
-
+-}
 
 train :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
       -> (FilePath,FilePath)

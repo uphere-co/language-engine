@@ -34,11 +34,21 @@ type RoleSet = (Text,Text)
 
 type Level = Int
 
+data DepInfo = DepInfo { _dinfo_self :: Int
+                       , _dinfo_mother :: Int
+                       , _dinfo_rel :: DependencyRelation
+                       , _dinfo_level :: Maybe Level }
+               deriving (Show,Eq,Ord)
+
+
+makeLenses ''DepInfo
+
 data SRLFeature = SRLFeat { _sfeat_range :: Range
                           , _sfeat_ptp :: ParseTreePath
+                          , _sfeat_depRelPath :: Maybe (ListZipper DepInfo)
                           , _sfeat_headword :: Maybe (Int,(Level,(POSTag,Text)))
                           }
-                deriving (Show,Ord,Eq)
+                deriving (Show)
 
 makeLenses ''SRLFeature                         
 
@@ -61,15 +71,6 @@ data InstanceFeature = IFeat { _ifeat_predidx :: Int
 --   (Int,RoleSet,Voice, [[ArgNodeFeature]])
 makeLenses ''InstanceFeature
 
-
-data DepInfo = DepInfo { _dinfo_self :: Int
-                       , _dinfo_mother :: Int
-                       , _dinfo_rel :: DependencyRelation
-                       , _dinfo_level :: Maybe Level }
-               deriving (Show,Eq,Ord)
-
-
-makeLenses ''DepInfo
 
 
 data SentenceInfo = SentInfo { _corenlp_sent :: CS.Sentence
