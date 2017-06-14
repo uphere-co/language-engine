@@ -48,7 +48,7 @@ data DependencyRelation = ACL        -- ^ clausal modifier of noun (adjectival c
                         | ROOT       -- ^ root
                         | VOCATIVE   -- ^ vocative
                         | XCOMP      -- ^ open clausal complement
-                        deriving (Show,Eq,Ord)
+                        deriving (Show,Eq,Ord,Enum,Bounded)
 
 parseDepRel :: Text -> Either String DependencyRelation
 parseDepRel "acl"        = Right ACL
