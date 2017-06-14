@@ -33,6 +33,7 @@ library
                        aeson,
                        attoparsec,
                        bifunctors,
+                       lens,
                        text,
                        transformers
   hs-source-dirs:      src

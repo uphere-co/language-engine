@@ -3,11 +3,11 @@
 
 module NLP.Type.TreeZipper where
 
+import           Control.Lens
 import           Data.List               (unfoldr)
 --
 import           NLP.Type.PennTreebankII
 --
-import Debug.Trace
 
 type Tree = PennTreeGen 
 
@@ -18,6 +18,9 @@ data TreeContext c t = TC { _tc_node_content :: c
                           }
                      deriving (Show)
 
+makeLenses ''TreeContext
+
+
 -- | Zipper for tree                 
 data TreeZipper c t = TZ { _tz_current  :: Tree c t          -- ^ current item
                          , _tz_contexts :: [TreeContext c t] -- ^ recusively defined
@@ -25,6 +28,7 @@ data TreeZipper c t = TZ { _tz_current  :: Tree c t          -- ^ current item
                          }
                     deriving (Show)
 
+makeLenses ''TreeZipper
 
 
 data ListZipper a = LZ { _lz_prevs :: [a]
@@ -32,6 +36,8 @@ data ListZipper a = LZ { _lz_prevs :: [a]
                        , _lz_nexts :: [a]
                        }
                   deriving (Show,Functor)
+
+makeLenses ''ListZipper
 
                            
 genListZippers :: [a] -> [ListZipper a]

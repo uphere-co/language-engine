@@ -16,6 +16,8 @@ let
             aeson
             attoparsec
             bifunctors
+            lens
+            text
             cabal-install
           ]);
 
