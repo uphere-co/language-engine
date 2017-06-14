@@ -94,24 +94,24 @@ ptp2vec xs = if n < maxn then v0 V.++ V.replicate (maxn-n) 0 else V.take maxn v0
         maxn  = 10*(dimc + 2) + dimp+2 
 
 argnode2vec :: {- FastText -> -} ArgNodeFeature -> IO (Maybe (Vector CFloat))
-argnode2vec {- ft -} (_arglabel,(_,ptp,Just (_,(_,(pos,_word))))) = do
+argnode2vec {- ft -} (AFeat _arglabel (SRLFeat _ ptp (Just (_,(_,(pos,_word)))))) = do
   let -- v1 = pblabel2vec arglabel 
       v2 = ptp2vec ptp
       v3 = enum2vec pos
   -- v4 <- word2vec ft word
   let v = {- v1 V.++ -} v2 V.++ v3 {- V.++ v4 -}
   v `seq` return (Just v)
-argnode2vec {- ft -} (_arglabel,(_,_ptp,Nothing)) = return Nothing
+argnode2vec {- ft -} (AFeat _arglabel (SRLFeat _ _ptp Nothing)) = return Nothing
 
  
 inst2vec :: {- FastText -> -} InstanceFeature -> IO [(Int,RoleSet,PropBankLabel,Range,Vector CFloat)]
 inst2vec {- ft -} ifeat = do
   predv <- {- (V.++) <$> word2vec ft (ifeat^._2._1) <*> -} pure (enum2vec (ifeat^.ifeat_voice))
-  rs <- flip traverse (concat (ifeat^.ifeat_afeatss)) $ \nfeat -> do
+  rs <- flip traverse (concat (ifeat^.ifeat_afeatss)) $ \afeat -> do
     let n = ifeat^.ifeat_predidx
         roleset=  ifeat^.ifeat_rolesetid
-        label = nfeat^._1
-        rng = nfeat^._2._1
-    mvec <- argnode2vec {- ft -} nfeat
+        label = afeat^.afeat_label
+        rng = afeat^.afeat_srlfeature.sfeat_range
+    mvec <- argnode2vec {- ft -} afeat
     return $ fmap (\v -> (n,roleset,label,rng, predv V.++ v)) mvec
   return (catMaybes rs)

@@ -89,12 +89,12 @@ ptp2vec xs = let (us,ds) = span (\(_,d) -> d == Up) xs
         
 
 argnode2vec :: ArgNodeFeature -> Maybe FeatureVector
-argnode2vec (_arglabel,(_,ptp,Just (_,(_,(pos,_word))))) = 
+argnode2vec (AFeat _arglabel (SRLFeat _ ptp (Just (_,(_,(pos,_word)))))) = 
   let v2 = ptp2vec ptp
       v3 = enum2vec pos
       v = v2 `concatFV` v3 
   in Just v
-argnode2vec (_arglabel,(_,_ptp,Nothing)) = Nothing
+argnode2vec (AFeat _arglabel (SRLFeat _ _ptp Nothing)) = Nothing
 
  
 inst2vec :: InstanceFeature -> [(Int,RoleSet,PropBankLabel,Range,FeatureVector)]
@@ -103,8 +103,8 @@ inst2vec ifeat =
       rs = flip map (concat (ifeat^.ifeat_afeatss)) $ \afeat -> 
         let n = ifeat^.ifeat_predidx
             roleset=  ifeat^.ifeat_rolesetid
-            label = afeat^._1
-            rng = afeat^._2._1
+            label = afeat^.afeat_label
+            rng = afeat^.afeat_srlfeature.sfeat_range
             mvec = argnode2vec afeat
         in fmap (\v -> (n,roleset,label,rng, predv `concatFV` v)) mvec
   in catMaybes rs
