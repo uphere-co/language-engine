@@ -46,7 +46,7 @@ calcSRLFeature sentinfo predidx (Single rng) =
   let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
       dep = sentinfo^.corenlp_dep
       parsetree = parseTreePathFull (predidx,rng) ipt
-      path = (simplifyPTP . parseTreePath) parsetree
+      path = maybe [] (simplifyPTP . parseTreePath) parsetree
       dltr = depLevelTree dep ipt
       dprpath = depRelPath dep ipt (predidx,rng)
       hd = headWord =<< matchR rng dltr
@@ -55,7 +55,7 @@ calcSRLFeature sentinfo predidx (Multi rngs) =
   let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
       dep = sentinfo^.corenlp_dep
       parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
-      paths = map (simplifyPTP . parseTreePath) parsetrees
+      paths = map (maybe [] (simplifyPTP . parseTreePath)) parsetrees
       dltr = depLevelTree dep ipt
       dprpaths = map (\rng -> depRelPath dep ipt (predidx,rng)) rngs
       heads = map (\rng -> headWord =<< matchR rng dltr) rngs

@@ -103,13 +103,13 @@ drp2vec drp = let v1 = fitToDim maxn1 (foldtag emptyFV (reverse (drp^..lz_prevs.
         
 
 argnode2vec :: ArgNodeFeature -> Maybe FeatureVector
-argnode2vec (AFeat _arglabel (SRLFeat _ ptp drp (Just (_,(_,(pos,_word)))))) = 
+argnode2vec (AFeat _arglabel (SRLFeat _ ptp mdrp (Just (_,(_,(pos,_word)))))) = 
   let v1 = ptp2vec ptp
       v2 = enum2vec pos
-      v3 = drp2vec drp 
-      v = v1 `concatFV` v2 `concatFV` v3
-  in Just v
-argnode2vec (AFeat _arglabel (SRLFeat _ _ptp _drp Nothing)) = Nothing
+  in case mdrp of
+       Nothing -> Nothing
+       Just drp -> let v3 = drp2vec drp in Just (v1 `concatFV` v2 `concatFV` v3)
+argnode2vec (AFeat _arglabel (SRLFeat _ _ptp _mdrp Nothing)) = Nothing
 
  
 inst2vec :: InstanceFeature -> [(Int,RoleSet,PropBankLabel,Range,FeatureVector)]

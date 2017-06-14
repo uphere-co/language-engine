@@ -33,28 +33,28 @@ import           SRL.Util
 
 elimCommonHead :: [PennTreeIdxG c (p,a)]
                -> [PennTreeIdxG c (p,a)]
-               -> ListZipper (PennTreeIdxG c (p,a))
+               -> Maybe (ListZipper (PennTreeIdxG c (p,a)))
 elimCommonHead lst1 lst2 = go lst1 lst2
   where
     range = fst . phraseType
-    go :: [PennTreeIdxG c (p,a)] -> [PennTreeIdxG c (p,a)] -> ListZipper (PennTreeIdxG c (p,a))
+    go :: [PennTreeIdxG c (p,a)] -> [PennTreeIdxG c (p,a)] -> Maybe (ListZipper (PennTreeIdxG c (p,a)))
     go (x0:x1:xs) (y0:y1:ys) 
       | range x0 == range y0 && range x1 == range y1 = go (x1:xs) (y1:ys)
-      | range x0 == range y0 && range x1 /= range y1 = LZ (x1:xs) x0 (y1:ys)
-      | otherwise = error "elimCommonHead" -- (Nothing,x0:x1:xs,y0:y1:ys)  -- this should not happen in a single tree.
+      | range x0 == range y0 && range x1 /= range y1 = Just (LZ (x1:xs) x0 (y1:ys))
+      | otherwise = Nothing -- error "elimCommonHead" -- (Nothing,x0:x1:xs,y0:y1:ys)  -- this should not happen in a single tree.
     go (x0:[]) (y0:ys)
-      | range x0 == range y0 = LZ [] x0 ys
-      | otherwise = error "elimCommonHead" -- (Nothing,[x0],y0:ys)  -- this should not happen in a single tree
+      | range x0 == range y0 = Just (LZ [] x0 ys)
+      | otherwise = Nothing -- error "elimCommonHead" -- (Nothing,[x0],y0:ys)  -- this should not happen in a single tree
     go (x0:xs) (y0:[])
-      | range x0 == range y0 = LZ xs x0 [] -- (Just x0,xs,[])
-      | otherwise = error "elimCommonHead" -- (Nothing,x0:xs,[y0]) -- this should not happen in a single tree
-    go []     ys     = error "elimCommonHead" -- (Nothing,[],ys)
-    go xs     []     = error "elimCommonHead" -- (Nothing,xs,[])
+      | range x0 == range y0 = Just (LZ xs x0 []) -- (Just x0,xs,[])
+      | otherwise = Nothing -- error "elimCommonHead" -- (Nothing,x0:xs,[y0]) -- this should not happen in a single tree
+    go []     ys     = Nothing -- error "elimCommonHead" -- (Nothing,[],ys)
+    go xs     []     = Nothing -- error "elimCommonHead" -- (Nothing,xs,[])
 
 
 parseTreePathFull :: (Int,Range)
                   -> PennTreeIdxG c (p,a)
-                  -> ListZipper (PennTreeIdxG c (p,a))
+                  -> Maybe (ListZipper (PennTreeIdxG c (p,a)))
                      -- (Maybe (PennTreeIdxG c (p,a)),[PennTreeIdxG c (p,a)],[PennTreeIdxG c (p,a)])
 parseTreePathFull (start,target) tr = elimCommonHead (contain start tr) (containR target tr)
 

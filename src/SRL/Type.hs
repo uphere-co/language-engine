@@ -45,7 +45,7 @@ makeLenses ''DepInfo
 
 data SRLFeature = SRLFeat { _sfeat_range :: Range
                           , _sfeat_ptp :: ParseTreePath
-                          , _sfeat_depRelPath :: ListZipper DepInfo
+                          , _sfeat_depRelPath :: Maybe (ListZipper DepInfo)
                           , _sfeat_headword :: Maybe (Int,(Level,(POSTag,Text)))
                           }
                 deriving (Show)
