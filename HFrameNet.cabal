@@ -29,6 +29,7 @@ library
   exposed-modules:     HFrameNet
                        HFrameNet.Parse
                        HFrameNet.Parse.Common
+                       HFrameNet.Parse.Frame
                        HFrameNet.Parse.LexUnit
                        HFrameNet.Parse.Sentence
                        HFrameNet.Type.Common
@@ -52,6 +53,7 @@ Executable parse
                        directory,
                        filepath,
                        lens,
+                       optparse-applicative,
                        taggy-lens,
                        text,
                        time,

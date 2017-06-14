@@ -10,6 +10,7 @@ let
   #}; 
 
   hsenv = haskellPackages.ghcWithPackages (p: with p; [
+            optparse-applicative
             taggy-lens
             text
           ]);
