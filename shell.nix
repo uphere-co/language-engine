@@ -10,6 +10,9 @@ let
   #}; 
 
   hsenv = haskellPackages.ghcWithPackages (p: with p; [
+            monad-loops
+            optparse-applicative
+            split
             taggy-lens
             text
           ]);
