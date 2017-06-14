@@ -5,7 +5,7 @@ module SRL.Feature.Dependency where
 
 import           Control.Arrow                  (second)
 import           Control.Lens            hiding (levels,Level)
-import           Control.Monad                  ((<=<),guard)
+import           Control.Monad                  ((<=<),guard,join)
 import           Data.Bifunctor                 (bimap)
 import           Data.Bifoldable                (biList)
 import           Data.Discrimination
@@ -31,6 +31,7 @@ import qualified NLP.Type.UniversalDependencies2.Syntax as UD (DependencyRelatio
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
+import           SRL.Feature.ParseTreePath
 import           SRL.Format
 import           SRL.PropBankMatch
 import           SRL.Type
@@ -112,3 +113,16 @@ depInfoTree dep tr = let tr' = decorateLeaves (rightOuterIntMap (levelMap dep tr
                          conv (i,(Nothing,pt))           = (i,(Nothing,pt))
                          tr'' = fmap conv tr'
                      in annotateDepInfo tr''
+
+
+depRelPath :: Dependency -> PennTreeIdxG ChunkTag (POSTag,Text) -> (Int,Range) -> ListZipper DepInfo
+depRelPath dep itr (start,target) =
+  let ditr = depInfoTree dep itr
+      dptp = parseTreePathFull (start,target) ditr
+      f (PL (n,(md,_))) = md 
+      f (PN (rng,(_,md)) _) = md 
+      {- dptp' = let LZ xp r xn = dptp
+                  (x1',x2',x3') = (fmap f x1,mapMaybe f x2,mapMaybe f x3)
+              in (fromJust (join x1'),x2',x3') -}
+      LZ xp x xn = fmap f dptp
+  in simplifyDep (LZ (catMaybes xp) (fromJust x) (catMaybes xn))

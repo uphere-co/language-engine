@@ -1,13 +1,12 @@
 module Main where
 
 import           Control.Lens
-import           Control.Monad                     (void)
+import           Control.Monad                     (join,void)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.ByteString.Char8      as B
 import           Data.Foldable                     (toList)
--- import           Data.IntMap.Merge.Lazy
-import           Data.Maybe                        (fromJust)
+import           Data.Maybe                        (fromJust,mapMaybe)
 import qualified Data.Sequence              as Seq
 import qualified Data.Text.IO               as TIO
 import           Data.Time.Calendar
@@ -25,6 +24,7 @@ import           NLP.Type.PennTreebankII
 --
 import           SRL.Feature.Dependency
 import           SRL.Feature.ParseTreePath
+import           SRL.Format
 import           SRL.Init
 
 
@@ -45,7 +45,6 @@ mainProcess pp = do
   txt <- TIO.readFile fp
   ann <- annotate pp (Document txt (fromGregorian 2017 4 17))
   rdoc <- protobufDoc ann
-  -- print rdoc
   void . runEitherT $ do
     doc <- hoistEither rdoc
     let sent = Seq.index (doc ^. D.sentence) 4
@@ -55,7 +54,7 @@ mainProcess pp = do
         dtr = depLevelTree dep itr
         dtr' = depTree dep itr
         ditr = depInfoTree dep itr
-        -- dtr'' = decorateLeaves (mergeMap (levelMap dep itr) (motherMap dep itr)) itr
+
     liftIO $ print (motherMap dep itr)
     liftIO $ putStrLn "==============="
     liftIO $ print dep        
@@ -69,7 +68,11 @@ mainProcess pp = do
     liftIO $ print (zip [0..] terms)
 
     liftIO $ putStrLn "==============="
-    let dptp = parseTreePathFull (8,(9,10)) ditr
-        f (PL (n,(md,_))) = ((n,n),md) -- fmap (^.dinfo_rel) md)
-        f (PN (rng,(_,md)) _) = (rng,md) -- fmap (^.dinfo_rel) md)
-    liftIO $ mapM_ print (parseTreePathBy f dptp)
+    let (start,target) = (8,(9,10))
+        drelp = depRelPath dep itr (start,target)
+    liftIO $ print (start,target)
+    liftIO $ putStrLn (formatDRP drelp)
+    let (start,target) = (4,(17,18))
+        drelp = depRelPath dep itr (start,target)
+    liftIO $ print (start,target)
+    liftIO $ putStrLn (formatDRP drelp)

@@ -1,9 +1,12 @@
+{-# LANGUAGE TupleSections #-}
+
 module SRL.Format where
 
 import           Control.Lens
 import qualified Data.Text               as T
 import           Text.Printf
 --
+import           NLP.Type.TreeZipper
 import           PropBank.Type.Prop
 --
 import           SRL.Type
@@ -22,6 +25,16 @@ formatPTP = foldMap f
     f (Left  c,Down) = show c ++ "↓"
     f (Right p,Up  ) = show p ++ "↑"
     f (Right p,Down) = show p ++ "↓"
+
+
+formatDRP :: ListZipper DepInfo -> String
+formatDRP (LZ tostart root totarget) = foldMap f lst
+  where
+    lst1 = (view dinfo_rel root,Down):map ((,Down).view dinfo_rel) totarget
+    lst2 = map ((,Up). view dinfo_rel) . reverse $ tostart
+    lst = lst2 ++ lst1
+    f (r,Up  ) = show r ++ "↑"
+    f (r,Down) = show r ++ "↓"
 
 
 formatArgNodeFeature :: Int -> ArgNodeFeature -> String
