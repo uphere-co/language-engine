@@ -32,6 +32,6 @@ Current list of tables :
 ```
 nix-shell shell-wiki.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 20 --cores 20
 # Move to the data directory
-cd /scratch/groups/uphere/enwiki/sp
+cd /scratch/groups/uphere/enwiki/
 python ~/repo/uphere/wiki-ner/scripts/get_wikipedia_tables.py
 ```
