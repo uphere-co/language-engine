@@ -38,7 +38,7 @@ formatDRP (LZ tostart root totarget) = foldMap f lst
 
 
 formatArgNodeFeature :: Int -> ArgNodeFeature -> String
-formatArgNodeFeature predidx (label,(rng,ptp,mhead)) =
+formatArgNodeFeature predidx (AFeat label (SRLFeat rng ptp mhead)) =
     printf "%10s %10s %6s %30s %5s %s" (T.unpack (pbLabelText label)) (show rng) (show (position predidx rng))
                                        (formatPTP ptp) (w^._1) (w^._2)
   where
@@ -48,7 +48,7 @@ formatArgNodeFeature predidx (label,(rng,ptp,mhead)) =
 
 
 formatInstanceFeature :: InstanceFeature -> String
-formatInstanceFeature (predidx,(lemma,sensenum),voicefeature,argfeatures) =
+formatInstanceFeature (IFeat predidx (lemma,sensenum) voicefeature argfeatures) =
   let fs = concat argfeatures
   in flip foldMap fs $ \x -> printf "%3s %17s.%2s %7s %s\n"
                               (show predidx)

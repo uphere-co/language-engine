@@ -13,8 +13,6 @@ import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
 import           NLP.Type.UniversalDependencies2.Syntax
 import           PropBank.Type.Prop
---
--- import           SRL.CoNLL.CoNLL08.Type
 
 
 data Position = Before | After | Embed
@@ -32,13 +30,37 @@ type TreeICP a = Tree (Range,ChunkTag) (Int,(POSTag,a))
 
 type TreeZipperICP a = TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
 
-type ArgNodeFeature = (PropBankLabel,(Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text)))))
-
 type RoleSet = (Text,Text)
 
-type InstanceFeature = (Int,RoleSet,Voice, [[ArgNodeFeature]])
-
 type Level = Int
+
+data SRLFeature = SRLFeat { _sfeat_range :: Range
+                          , _sfeat_ptp :: ParseTreePath
+                          , _sfeat_headword :: Maybe (Int,(Level,(POSTag,Text)))
+                          }
+                deriving (Show,Ord,Eq)
+
+makeLenses ''SRLFeature                         
+
+
+data ArgNodeFeature = AFeat { _afeat_label :: PropBankLabel
+                            , _afeat_srlfeature :: SRLFeature --  (Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text)))))
+                            }
+                    deriving (Show)
+
+makeLenses ''ArgNodeFeature
+
+
+data InstanceFeature = IFeat { _ifeat_predidx :: Int
+                             , _ifeat_rolesetid :: RoleSet
+                             , _ifeat_voice :: Voice
+                             , _ifeat_afeatss :: [[ArgNodeFeature]]
+                             }
+                     deriving (Show)
+
+--   (Int,RoleSet,Voice, [[ArgNodeFeature]])
+makeLenses ''InstanceFeature
+
 
 data DepInfo = DepInfo { _dinfo_self :: Int
                        , _dinfo_mother :: Int

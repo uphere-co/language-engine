@@ -39,18 +39,18 @@ import           SRL.Util
 --
 
 
-calcArgNodeFeatureEach :: SentenceInfo -> Int
-                       -> NodeRange
-                       -> Maybe (Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))
-calcArgNodeFeatureEach sentinfo predidx (Single rng) = 
+calcSRLFeature :: SentenceInfo -> Int
+               -> NodeRange
+               -> Maybe SRLFeature -- Maybe (Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))
+calcSRLFeature sentinfo predidx (Single rng) = 
   let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
       dep = sentinfo^.corenlp_dep
       parsetree = parseTreePathFull (predidx,rng) ipt
       path = (simplifyPTP . parseTreePath) parsetree
       dltr = depLevelTree dep ipt
       hd = headWord =<< matchR rng dltr
-  in  Just (rng, path, hd)
-calcArgNodeFeatureEach sentinfo predidx (Multi rngs) = 
+  in  Just (SRLFeat rng path hd)
+calcSRLFeature sentinfo predidx (Multi rngs) = 
   let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
       dep = sentinfo^.corenlp_dep
       parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
@@ -60,12 +60,12 @@ calcArgNodeFeatureEach sentinfo predidx (Multi rngs) =
       comparef Nothing  _        = GT
       comparef _        Nothing  = LT
       comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
-  in  safeHead (sortBy (comparef `on` (view _3)) $ zip3 rngs paths heads)
+  in  safeHead (sortBy (comparef `on` (view sfeat_headword)) $ zipWith3 SRLFeat rngs paths heads)
 
 calcArgNodeFeature :: SentenceInfo -> Int -> ArgumentInput -> [ArgNodeFeature]
 calcArgNodeFeature sentinfo predidx arginput =
   flip mapMaybe (arginput^.nodes) $ \n -> 
-    (arginput^.pblabel,) <$> calcArgNodeFeatureEach sentinfo predidx n
+    AFeat (arginput^.pblabel) <$> calcSRLFeature sentinfo predidx n
 
   
 
@@ -73,10 +73,10 @@ calcInstanceFeature :: SentenceInfo -> InstanceInput -> InstanceFeature
 calcInstanceFeature sentinfo input =
   let predidx = input^.predicate_id
       rolesetid = input^.lemma_roleset_id
-      argfeatures = map (calcArgNodeFeature sentinfo predidx) (input^.argument_inputs)
+      afeatss = map (calcArgNodeFeature sentinfo predidx) (input^.argument_inputs)
       voicemap = IM.fromList $ voice (sentinfo^.corenlp_tree,sentinfo^.corenlp_sent)      
       voicefeature = maybe Active snd (IM.lookup predidx voicemap)
-  in (predidx,rolesetid,voicefeature,argfeatures)
+  in IFeat predidx rolesetid voicefeature afeatss
 
      
 featuresForInstance :: SentenceInfo -> MatchedInstance -> InstanceFeature
