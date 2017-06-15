@@ -13,10 +13,11 @@ in stdenv.mkDerivation {
                  [ ipython
                    jupyter
                    pandas numpy
+                   beautifulsoup4
                  ]) ++
                  [ hsenv jdk 
                    pigz lbzip2
-                   jq
+                   jq xidel
                  ] ;
      shellHook = ''
          EDITOR=vim
