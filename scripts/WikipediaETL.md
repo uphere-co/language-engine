@@ -99,3 +99,11 @@ join -t$'\t' -1 2 -2 1 <(sort -k2,2 -t$'\t' sp400companies.tsv) redirects.sorted
 join -1 2 -2 2 -t$'\t' <(sort -k2,2 -t$'\t' sp400.redirects) <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) > sp400.1
 cat sp?00.? > companies
 ```
+
+##### ETL to get JEL code for Wikipedia categories
+First of all, Export `Category:Categories_which_are_included_in_the_JEL_classification_codes` category via [Wikipedia Special:Export](https://en.wikipedia.org/wiki/Special:Export).
+Presently, it is stored as `mark:/scratch/groups/uphere/enwiki/Wikipedia-20170615063859.xml`.
+```
+cd /scratch/groups/uphere/enwiki/
+python ~/repo/uphere/wiki-ner/scripts/get_jel_codes.py
+```
