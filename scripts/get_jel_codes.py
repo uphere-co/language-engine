@@ -18,8 +18,8 @@ with open("jel.tsv", "w") as f:
         #Keep category pages only.
         if ns!=14:
             continue
-        #Drop "Category:"
-        title = page.title.text[9:]
+        #Drop "Category:" and replace white spaces
+        title = page.title.text[9:].replace(" ","_")
         page_id = page.id.text 
         codes = getJELcodes(page.revision.text)
         for code in [x.strip() for x in codes.split(",")]:
