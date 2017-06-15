@@ -30,10 +30,10 @@ $ time pigz -dc enwiki-latest-page_props.sql.gz | iconv -f ISO-8859-1 -t UTF-8 |
 real	1m43.029s
 $ time pigz -dc enwiki-latest-page.sql.gz | iconv -f ISO-8859-1 -t UTF-8 | python mysqldump_to_csv.py |tr -d '\r'  | lbzip2 --fast > enwiki-latest-page.tsv.bz2
 real	7m39.601s
-$ time pigz -dc enwiki-latest-redirect.sql.gz | iconv -f ISO-8859-1 -t UTF-8 | python mysqldump_to_csv.py |tr -d '\r'  | lbzip2 --fast > enwiki-latest-redirect.tsv.bz2
-
 $ time pigz -dc enwiki-latest-pagelinks.sql.gz | iconv -f ISO-8859-1 -t UTF-8 | python mysqldump_to_csv.py |tr -d '\r'  | lbzip2 --fast > enwiki-latest-pagelinks.tsv.bz2
-
+real	66m30.858s
+$ time pigz -dc enwiki-latest-redirect.sql.gz | iconv -f ISO-8859-1 -t UTF-8 | python mysqldump_to_csv.py |tr -d '\r'  | lbzip2 --fast > enwiki-latest-redirect.tsv.bz2
+real	0m42.250s
 ```
 
 ##### ETL to get category hierarchy
