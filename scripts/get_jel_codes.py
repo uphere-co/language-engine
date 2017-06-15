@@ -14,13 +14,17 @@ with open("jel.tsv", "w") as f:
     f.write('{0}\t{1}\t{2}\t{3}\t{4}\n'.format("title", "ns","page_id","JEL_code", "JEL_code_major"))
     for page in pages:
         aa=pages[0]
-        title = page.title.text
         ns = int(page.ns.text)
+        #Keep category pages only.
         if ns!=14:
             continue
+        #Drop "Category:"
+        title = page.title.text[9:]
         page_id = page.id.text 
         codes = getJELcodes(page.revision.text)
         for code in [x.strip() for x in codes.split(",")]:
+            #Drop code with exostic formats
             if(len(code)>4):
                 continue
             f.write('{0}\t{1}\t{2}\t{3}\t{4}\n'.format(title, ns,page_id,code,code[:1]))
+
