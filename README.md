@@ -22,16 +22,3 @@ cabal clean
 nix-build release.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 20 --cores 20 -A wiki-ner
 ```
 
-
-## ETL scripts
-### Get data from Wikipedia tables
-Current list of tables :
-1. S&P 500 companies 
-- S&P 400 companies
-
-```
-nix-shell shell-wiki.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 20 --cores 20
-# Move to the data directory
-cd /scratch/groups/uphere/enwiki/
-python ~/repo/uphere/wiki-ner/scripts/get_wikipedia_tables.py
-```
