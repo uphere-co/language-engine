@@ -14,6 +14,17 @@
 |------|------
 |3M_Company | 3M
 
+##### jel.category
+|cat_name | JEL code | JEL major code
+|------|------|------
+|Joint_ventures | L24 | L
+
+##### jel.wikidata
+| page_id | cat_name |  JEL code | JEL major code | page_name | page_wikidata
+|------|------|------|------|------|------
+|10000895 | IT_risk_management | M15 | M | Incident_response_team | Q349987
+
+
 #### ETL steps
 ##### Nix-shell setup
 Current ETL process depends on a python script, `mysqldump_to_csv.py`, in https://github.com/jamesmishra/mysqldump-to-csv
@@ -98,4 +109,27 @@ join -1 2 -2 2 -t$'\t' <(sort -k2,2 -t$'\t' sp400companies.tsv|awk -F '\t' '{pri
 join -t$'\t' -1 2 -2 1 <(sort -k2,2 -t$'\t' sp400companies.tsv) redirects.sorted  | awk -F '\t' '{print $2 "\t" $NF "\t" $3 "\t" $4}' > sp400.redirects
 join -1 2 -2 2 -t$'\t' <(sort -k2,2 -t$'\t' sp400.redirects) <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) > sp400.1
 cat sp?00.? > companies
+```
+
+##### ETL to get JEL code for Wikipedia categories
+First of all, Export `Category:Categories_which_are_included_in_the_JEL_classification_codes` category via [Wikipedia Special:Export](https://en.wikipedia.org/wiki/Special:Export).
+Presently, it is stored as `mark:/scratch/groups/uphere/enwiki/Wikipedia-20170615063859.xml`.
+```
+cd /scratch/groups/uphere/enwiki/
+python ~/repo/uphere/wiki-ner/scripts/get_jel_codes.py
+```
+
+##### ETL to get JEL code for Wikidata items
+```
+# Join by category name
+join -1 2 -2 1 -t$'\t' <(sort -t$'\t' -k2,2 category_hierarchy) <(sort -t$'\t' -k1,1 jel.tsv) | awk -F '\t' '{print $3 "\t" $6 "\t" $7}' > jel.category
+cat jel.tsv | awk -F '\t' '{print $1 "\t" $4 "\t" $5}' >> jel.category
+
+
+# Join by category name
+$ time join -1 2 -2 1 -t$'\t' <(sort -t$'\t' -k2,2 enwiki-latest-categorylinks.page.sorted) <(sort -t$'\t' -k1,1 jel.category) > jel.page
+real	2m17.101s
+
+# Join by page_id
+join -1 2 -2 1 -t$'\t' <(sort -t$'\t' -k2,2 jel.page) page_id.wiki_id.txt.sorted > jel.wikidata
 ```
