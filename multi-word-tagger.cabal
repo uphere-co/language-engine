@@ -22,7 +22,7 @@ library
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10,
                        -- attoparsec,
-                       -- containers,
+                       containers,
                        either,
                        -- haskeline,
                        -- monad-loops,
