@@ -6,7 +6,7 @@ import qualified Data.Text.IO             as TIO
 import           Data.Tree
 import           System.Console.Haskeline
 --
-import           Generic.SearchTree  hiding (makeF7745Forest)
+import           Generic.SearchTree
 --
 import           MWE.Company
 
