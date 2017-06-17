@@ -24,10 +24,4 @@ loadIdiom fp = do
   return forest
 
 
-main :: IO ()
-main = do
-  putStrLn "search"
-  forest <- loadIdiom "/data/groups/uphere/data/NLP/idiom.txt"
-  let s = runState (runEitherT (many $ pTreeAdvG forest)) ["as","long","as","possible","take","care","of","away","from","I"]
-  print s
-  return ()
+runIdiomTagger forest tokens = runState (runEitherT (many $ pTreeAdvG forest)) tokens
