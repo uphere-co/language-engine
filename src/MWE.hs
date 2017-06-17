@@ -1,20 +1,13 @@
 module MWE where
 
 import           Control.Applicative          (many)
-import           Control.Monad.IO.Class
-import           Control.Monad.Loops
-import           Data.Attoparsec.Text         (parseOnly)
-import           Data.Text                    (Text)
-import qualified Data.Text              as T
-import qualified Data.Text.IO           as TIO
-import           Data.Tree
-import           System.Console.Haskeline
 --
-import           Control.Monad.Trans.Either (EitherT(..),left,right,hoistEither)
-import           Control.Monad.State.Lazy
+import           Control.Monad.Trans.Either (EitherT(..))
+import           Control.Monad.Trans.State
+-- import           Control.Monad.State.Lazy
 --
 import           Generic.SearchTree
-import           SearchTree
+-- import           SearchTree
 import           ParserCustom
 
 main :: IO ()
