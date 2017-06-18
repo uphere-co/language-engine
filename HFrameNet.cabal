@@ -19,6 +19,7 @@ library
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base,
+                       async,
                        containers,
                        directory,
                        filepath,

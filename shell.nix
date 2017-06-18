@@ -10,6 +10,7 @@ let
   #}; 
 
   hsenv = haskellPackages.ghcWithPackages (p: with p; [
+            async
             monad-loops
             optparse-applicative
             split
