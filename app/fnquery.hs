@@ -6,8 +6,8 @@ import           Data.Monoid               ((<>))
 import           Options.Applicative
 import           System.FilePath
 --
-import           HFrameNet.Query.Frame
-import           HFrameNet.Query.LexUnit
+import           FrameNet.Query.Frame
+import           FrameNet.Query.LexUnit
 
   
 data ProgOption = ProgOption { fnDataDir :: FilePath

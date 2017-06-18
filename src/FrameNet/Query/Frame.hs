@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module HFrameNet.Query.Frame where
+module FrameNet.Query.Frame where
 
 import           Control.Lens
 import           Control.Monad                (when)
@@ -19,8 +19,8 @@ import           System.FilePath              ((</>),takeExtensions)
 import           System.Directory             (getDirectoryContents)
 import           Text.Taggy.Lens
 --
-import           HFrameNet.Parse.Frame
-import           HFrameNet.Type.Frame
+import           FrameNet.Parse.Frame
+import           FrameNet.Type.Frame
 
 newtype FrameDB = FrameDB { _frameDB :: HashMap Text Frame } 
 

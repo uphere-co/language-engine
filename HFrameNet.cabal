@@ -34,20 +34,20 @@ library
   
   hs-source-dirs:      src
   default-language:    Haskell2010
-  exposed-modules:     HFrameNet
-                       HFrameNet.Parse
-                       HFrameNet.Parse.Common
-                       HFrameNet.Parse.Frame
-                       HFrameNet.Parse.LexUnit
-                       HFrameNet.Parse.Sentence
-                       HFrameNet.Query
-                       HFrameNet.Query.Frame
-                       HFrameNet.Query.LexUnit
-                       HFrameNet.Type.Common
-                       HFrameNet.Type.Frame
-                       HFrameNet.Type.LexUnit
-                       HFrameNet.Type.Sentence
-                       HFrameNet.Util
+  exposed-modules:     FrameNet
+                       FrameNet.Parse
+                       FrameNet.Parse.Common
+                       FrameNet.Parse.Frame
+                       FrameNet.Parse.LexUnit
+                       FrameNet.Parse.Sentence
+                       FrameNet.Query
+                       FrameNet.Query.Frame
+                       FrameNet.Query.LexUnit
+                       FrameNet.Type.Common
+                       FrameNet.Type.Frame
+                       FrameNet.Type.LexUnit
+                       FrameNet.Type.Sentence
+                       FrameNet.Util
   ghc-options:         -O2 -Wall -threaded
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans

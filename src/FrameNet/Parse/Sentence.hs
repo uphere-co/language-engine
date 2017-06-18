@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module HFrameNet.Parse.Sentence where
+module FrameNet.Parse.Sentence where
 
 import           Control.Applicative
 import           Control.Lens            ((^?),(^.),_Just)
 import           Data.Text               (Text)
 import           Text.Taggy.Lens
 --
-import           HFrameNet.Type.Sentence
-import           HFrameNet.Util
+import           FrameNet.Type.Sentence
+import           FrameNet.Util
 
 p_sentence :: Element -> Maybe Sentence
 p_sentence x = Sentence <$> getOnly1 x "text" ^? _Just.element.contents

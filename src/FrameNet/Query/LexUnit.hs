@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module HFrameNet.Query.LexUnit where
+module FrameNet.Query.LexUnit where
 
 import           Control.Concurrent.Async     (async,wait)
 import           Control.Lens
@@ -14,9 +14,9 @@ import           System.Directory             (getDirectoryContents)
 import           System.FilePath              ((</>),takeExtensions)
 import           Text.Taggy.Lens
 --
-import           HFrameNet.Parse.LexUnit      (p_lexUnit)
-import           HFrameNet.Type.Common
-import           HFrameNet.Type.LexUnit
+import           FrameNet.Parse.LexUnit      (p_lexUnit)
+import           FrameNet.Type.Common
+import           FrameNet.Type.LexUnit
 
 
 newtype LexUnitDB = LexUnitDB { _lexunitDB :: IntMap LexUnit } 
