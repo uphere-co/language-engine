@@ -33,11 +33,9 @@ import           Text.Taggy.Lens
 import           HFrameNet.Parse.Frame         (p_frame)
 import qualified HFrameNet.Parse.LexUnit as LU (p_lexUnit)
 import           HFrameNet.Query.Frame
+import           HFrameNet.Query.LexUnit
 import           HFrameNet.Type.Frame
-
-import qualified HFrameNet.Type.LexUnit as LU (LexUnit)
   
-
 data ProgOption = ProgOption { fnDataDir :: FilePath
                              , progCommand :: String
                              } deriving Show
@@ -89,43 +87,11 @@ printRelation rel =
     TIO.putStrLn "============================"
 
 
-loadLUData :: FilePath -> IO ()
-loadLUData dir = do
-  cnts <- getDirectoryContents dir
-  let lst = filter (\x -> takeExtensions x == ".xml") $ sort cnts
-  ref <- newTVarIO (0,HM.empty)
-  forM_ (zip [1..] lst) $ \(i,fp) -> do
-    when (i `mod` 100 == 0) $
-      putStrLn (show i)
-    forkIO $ processEachLU ref dir fp
-  m <- atomically $ do
-    (n,m) <- readTVar ref
-    if n /= 0 then retry else return m
-  print $ HM.lookup "lu16412.xml" m 
-
-
-processEachLU :: TVar (Int,HM.HashMap FilePath LU.LexUnit) -> FilePath -> FilePath -> IO ()
-processEachLU ref dir fp = do
-  -- putStrLn fp
-  atomically $ do
-    (n,m) <- readTVar ref
-    writeTVar ref (n+1,m)
-  txt <- TLIO.readFile (dir </> fp)
-  let lu = head (txt ^.. (html . allNamed (only "lexUnit")))
-  case LU.p_lexUnit lu of
-    Nothing -> error fp
-    Just x -> do
-      atomically $ do
-        (n,m) <- readTVar ref
-        let m' = HM.insert fp x m
-        m' `seq` writeTVar ref (n-1,m')
-      return () 
-
-
 main :: IO ()
 main = do
   opt <- execParser progOption
   case progCommand opt of
     "frame" -> loadFrameData (fnDataDir opt </> "frame") >>= queryFrame
-    "lu" -> loadLUData (fnDataDir opt </> "lu") 
+    "lu"    -> loadLUData (fnDataDir opt </> "lu") >>= queryLU
+     
     o -> putStrLn ("cannot understand command " ++ o )
