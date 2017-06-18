@@ -62,7 +62,7 @@ loadLUData dir = do
   cnts <- getDirectoryContents dir
   let lst = map (\x -> dir </> x) . filter (\x -> takeExtensions x == ".xml") . sort $ cnts
   as <- flip mapM (zip ([1..] :: [Int]) lst) $ \(i,fp) -> do
-    when (i `mod` 100 == 0) $
+    when (i `mod` 1000 == 0) $
       putStrLn (show i)
     async (parseLUFile fp)
   xs <- mapM wait as
