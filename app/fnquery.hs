@@ -4,7 +4,7 @@ module Main where
 
 import           Control.Applicative
 import           Control.Concurrent        (forkIO)
-import           Control.Concurrent.STM
+-- import           Control.Concurrent.STM
 import           Control.Lens              ((^?),(^.),(^..), only )
 import           Control.Monad             (join,when)
 -- import           Control.Monad.Identity
