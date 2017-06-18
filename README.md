@@ -7,9 +7,11 @@ $ cabal sandbox int
 $ cabal install
 ```
 
-To test,
+Look up frames
+--------------
+
 ```
-$ .cabal-sandbox/bin/fnquery frame -d (directory for framenet data)
+$ .cabal-sandbox/bin/fnquery frame -d (base directory for FrameNet)
 ```
 For example,
 ```
@@ -40,10 +42,15 @@ Deciding        Remembering_to_do       Waiting Subjective_influence    Experien
 ============================
 ============================
 
-
 %
 ```
 
-
+Look up lexical units
+---------------------
 
 ```
+$ .cabal-sandbox/bin/fnquery lu -d (base directory for FrameNet) +RTS -N -I0
+```
+Here, `-N` is for parallel loading and `-I0` is for disabling idle-time garbage collection which renders
+the program significant slow for interactive use.
+
