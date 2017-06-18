@@ -36,6 +36,7 @@ library
   default-language:    Haskell2010
   exposed-modules:     FrameNet
                        FrameNet.Format.Frame
+                       FrameNet.Format.LexUnit
                        FrameNet.Parse
                        FrameNet.Parse.Common
                        FrameNet.Parse.Frame

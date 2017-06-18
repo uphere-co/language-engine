@@ -23,7 +23,8 @@ import           System.Directory             (getDirectoryContents)
 import           System.FilePath              ((</>),takeExtensions)
 import           Text.Taggy.Lens
 --
-import           FrameNet.Parse.LexUnit      (p_lexUnit)
+import           FrameNet.Format.LexUnit      (printLexUnit)
+import           FrameNet.Parse.LexUnit       (p_lexUnit)
 import           FrameNet.Type.Common
 import           FrameNet.Type.LexUnit
 
@@ -75,8 +76,20 @@ queryLU :: LexUnitDB -> IO ()
 queryLU db = do
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     let input = T.pack input'
-        mlu = HM.lookup input (db^.nameIDmap) >>= \i -> IM.lookup i (db^.lexunitDB)
-    case mlu of
-      Nothing -> putStrLn "no such lexical unit"
-      Just lu -> print lu
-        
+        ws = T.words input
+    case ws of
+      "id":idstr:_ -> 
+        case decimal idstr of
+          Left err -> putStrLn err
+          Right (i,_) ->
+            let mlu = IM.lookup i (db^.lexunitDB)
+            in case mlu of
+                 Nothing -> putStrLn "no such lexical unit"
+                 Just lu -> printLexUnit lu
+      "name":name:_ -> 
+        let mlu = HM.lookup name (db^.nameIDmap) >>= \i -> IM.lookup i (db^.lexunitDB)
+        in case mlu of
+             Nothing -> putStrLn "no such lexical unit"
+             Just lu -> printLexUnit lu
+      _ -> putStrLn "cannot understand" 
+               
