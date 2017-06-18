@@ -61,6 +61,8 @@ Executable fnquery
   ghc-options:         -O2 -Wall -threaded
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
+                       -rtsopts
+                       -with-rtsopts=-N
   ghc-prof-options:    -caf-all -auto-all
   other-modules:
   build-depends:       base,
