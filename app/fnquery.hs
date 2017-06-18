@@ -50,41 +50,6 @@ progOption :: ParserInfo ProgOption
 progOption = info pOptions (fullDesc <> progDesc "query program for FrameNet")
 
 
-loadFrameData :: FilePath -> IO FrameDB
-loadFrameData dir = do
-  cnts <- getDirectoryContents dir
-  let lst = (map (\x -> dir </> x) . filter (\x -> takeExtensions x == ".xml")) cnts
-  constructFrameDB lst
-  
-
-queryFrame :: FrameDB -> IO ()
-queryFrame framemap = do
-  runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
-     let input = T.pack input'
-         mfrm = HM.lookup input (framemap^.frameDB)
-     case mfrm of
-       Nothing -> putStrLn "no such frame"
-       Just frm -> do
-         TIO.putStrLn (frm^.frame_definition)
-         TIO.putStrLn "============================"
-         mapM_ printRelation (frm^.frame_frameRelation)
-         TIO.putStrLn "============================\n\n"
-
-
-printRelatedFrames :: [RelatedFrame] -> IO ()
-printRelatedFrames rfrms = 
-  let rfrmss = chunksOf 7 rfrms
-  in mapM_ (TIO.putStrLn . T.intercalate "\t" . map (^.relframe_content)) rfrmss
-    
-
-
-printRelation :: FrameRelation -> IO ()
-printRelation rel = 
-  when ((not.null) (rel^.frel_relatedFrame)) $ do
-    TIO.putStrLn (rel^.frel_type)
-    TIO.putStrLn "----------------------------"
-    printRelatedFrames (rel^.frel_relatedFrame)
-    TIO.putStrLn "============================"
 
 
 main :: IO ()

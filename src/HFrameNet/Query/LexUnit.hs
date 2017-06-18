@@ -31,9 +31,9 @@ makeLenses ''LexUnitDB
 emptyDB = LexUnitDB IM.empty
 
 
-processEachLU :: FilePath -> FilePath -> IO LexUnit
-processEachLU dir fp = do
-  txt <- TLIO.readFile (dir </> fp)
+parseLUFile :: FilePath -> IO LexUnit
+parseLUFile fp = do
+  txt <- TLIO.readFile fp
   let lu = head (txt ^.. (html . allNamed (only "lexUnit")))
   case p_lexUnit lu of
     Nothing -> error fp
@@ -43,11 +43,11 @@ processEachLU dir fp = do
 loadLUData :: FilePath -> IO LexUnitDB
 loadLUData dir = do
   cnts <- getDirectoryContents dir
-  let lst = filter (\x -> takeExtensions x == ".xml") $ sort cnts
+  let lst = map (\x -> dir </> x) . filter (\x -> takeExtensions x == ".xml") . sort $ cnts
   as <- flip mapM (zip [1..] lst) $ \(i,fp) -> do
     when (i `mod` 100 == 0) $
       putStrLn (show i)
-    async (processEachLU dir fp)
+    async (parseLUFile fp)
   xs <- mapM wait as
     
   let lumap = foldl' (\m x -> (lexunitDB %~ IM.insert (x^.lexunit_basicLUAttributes.bluattr_ID) x) m) emptyDB xs
