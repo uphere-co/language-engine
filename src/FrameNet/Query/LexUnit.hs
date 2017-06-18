@@ -73,7 +73,6 @@ loadLUData dir = do
 
 queryLU :: LexUnitDB -> IO ()
 queryLU db = do
-  -- print $ IM.lookup 16412 (db^.lexunitDB)
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     let input = T.pack input'
         mlu = HM.lookup input (db^.nameIDmap) >>= \i -> IM.lookup i (db^.lexunitDB)
@@ -81,10 +80,3 @@ queryLU db = do
       Nothing -> putStrLn "no such lexical unit"
       Just lu -> print lu
         
-    {- 
-     let einput = decimal (T.pack input')
-     case einput of
-       Left err -> print err
-       Right (input,_) -> do
-         let mlu = IM.lookup input (db^.lexunitDB)
-    -}

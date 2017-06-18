@@ -4,12 +4,10 @@
 module FrameNet.Query.Frame where
 
 import           Control.Lens
-import           Control.Monad                (when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict  as HM
-import           Data.List.Split              (chunksOf)
 import           Data.Text                    (Text)
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as TIO
@@ -19,6 +17,7 @@ import           System.FilePath              ((</>),takeExtensions)
 import           System.Directory             (getDirectoryContents)
 import           Text.Taggy.Lens
 --
+import           FrameNet.Format.Frame
 import           FrameNet.Parse.Frame
 import           FrameNet.Type.Frame
 
@@ -47,23 +46,6 @@ loadFrameData dir = do
   cnts <- getDirectoryContents dir
   let lst = (map (\x -> dir </> x) . filter (\x -> takeExtensions x == ".xml")) cnts
   constructFrameDB lst
-
-
-printRelatedFrames :: [RelatedFrame] -> IO ()
-printRelatedFrames rfrms = 
-  let rfrmss = chunksOf 7 rfrms
-  in mapM_ (TIO.putStrLn . T.intercalate "\t" . map (^.relframe_content)) rfrmss
-    
-
-
-printRelation :: FrameRelation -> IO ()
-printRelation rel = 
-  when ((not.null) (rel^.frel_relatedFrame)) $ do
-    TIO.putStrLn (rel^.frel_type)
-    TIO.putStrLn "----------------------------"
-    printRelatedFrames (rel^.frel_relatedFrame)
-    TIO.putStrLn "============================"
-
 
 
 queryFrame :: FrameDB -> IO ()
