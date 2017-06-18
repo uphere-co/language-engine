@@ -6,7 +6,7 @@ import           Control.Lens
 import           Data.Text
 import           Data.Time.Clock  (UTCTime)
 --
-import           HFrameNet.Type.Common
+
 
 data IType = APos | CNI | INI | DNI | INC
            deriving (Show)

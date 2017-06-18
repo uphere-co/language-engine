@@ -48,6 +48,10 @@ library
                        HFrameNet.Type.LexUnit
                        HFrameNet.Type.Sentence
                        HFrameNet.Util
+  ghc-options:         -O2 -Wall -threaded
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+  ghc-prof-options:    -caf-all -auto-all
 
 
 Executable fnquery
@@ -60,17 +64,7 @@ Executable fnquery
   ghc-prof-options:    -caf-all -auto-all
   other-modules:
   build-depends:       base,
-                       directory,
                        filepath,
-                       haskeline,
-                       lens,
-                       monad-loops,
                        optparse-applicative,
-                       split,
-                       taggy-lens,
-                       text,
-                       time,
-                       transformers,
-                       unordered-containers,
                        --
                        HFrameNet

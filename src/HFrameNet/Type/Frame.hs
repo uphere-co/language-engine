@@ -4,7 +4,6 @@ module HFrameNet.Type.Frame where
 
 import           Control.Lens
 import           Data.Text      (Text)
-import qualified Data.Text as T
 import           Data.Time.Clock
 --
 import           HFrameNet.Type.Common

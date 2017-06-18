@@ -15,7 +15,7 @@ import qualified Data.Text            as T
 import qualified Data.Text.IO         as TIO
 import qualified Data.Text.Lazy.IO    as TLIO
 import           System.Console.Haskeline
-import           System.FilePath              ((</>),(<.>),takeExtensions)
+import           System.FilePath              ((</>),takeExtensions)
 import           System.Directory             (getDirectoryContents)
 import           Text.Taggy.Lens
 --

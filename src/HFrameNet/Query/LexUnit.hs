@@ -3,18 +3,15 @@
 
 module HFrameNet.Query.LexUnit where
 
-import           Control.Concurrent           (forkIO)
 import           Control.Concurrent.Async     (async,wait)
 import           Control.Lens
 import           Control.Monad                (when)
-import           Data.Foldable                (forM_)
 import           Data.IntMap                  (IntMap)
 import qualified Data.IntMap          as IM
 import           Data.List                    (foldl',sort)
-import           Data.Text                    (Text)
 import qualified Data.Text.Lazy.IO    as TLIO
 import           System.Directory             (getDirectoryContents)
-import           System.FilePath              ((</>),(<.>),takeExtensions)
+import           System.FilePath              ((</>),takeExtensions)
 import           Text.Taggy.Lens
 --
 import           HFrameNet.Parse.LexUnit      (p_lexUnit)
@@ -28,6 +25,7 @@ newtype LexUnitDB = LexUnitDB { _lexunitDB :: IntMap LexUnit }
 makeLenses ''LexUnitDB
 
 
+emptyDB :: LexUnitDB
 emptyDB = LexUnitDB IM.empty
 
 
@@ -44,7 +42,7 @@ loadLUData :: FilePath -> IO LexUnitDB
 loadLUData dir = do
   cnts <- getDirectoryContents dir
   let lst = map (\x -> dir </> x) . filter (\x -> takeExtensions x == ".xml") . sort $ cnts
-  as <- flip mapM (zip [1..] lst) $ \(i,fp) -> do
+  as <- flip mapM (zip ([1..] :: [Int]) lst) $ \(i,fp) -> do
     when (i `mod` 100 == 0) $
       putStrLn (show i)
     async (parseLUFile fp)
@@ -54,5 +52,6 @@ loadLUData dir = do
   return lumap 
 
 
+queryLU :: LexUnitDB -> IO ()
 queryLU db = do
   print $ IM.lookup 16412 (db^.lexunitDB)

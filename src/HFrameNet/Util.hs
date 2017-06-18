@@ -2,7 +2,7 @@
 
 module HFrameNet.Util where
 
-import           Control.Lens           ((^?),(^.),(^..),_Just,only )
+import           Control.Lens           ((^..),only)
 import           Data.Maybe             (listToMaybe)
 import           Data.Text              (Text)
 import qualified Data.Text        as T
@@ -21,10 +21,14 @@ readBoolean "true" = Just True
 readBoolean "false" = Just False
 readBoolean _ = Nothing
 
+
 readTime :: Text -> Maybe UTCTime
 readTime txt = parseTimeM True defaultTimeLocale "%m/%d/%0Y %H:%M:%S %Z %a" (T.unpack txt)
 
 
+getOnly :: Element -> Text -> [Element]
 getOnly x k = x ^.. elements . named (only k)
 
+
+getOnly1 :: Element -> Text -> Maybe Element
 getOnly1 x k = listToMaybe (getOnly x k)
