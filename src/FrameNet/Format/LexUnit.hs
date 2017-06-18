@@ -31,6 +31,7 @@ formatLexeme lx = printf "%7s %18s %s" ("lexeme:" :: Text) (lx^.lexeme_name) (lx
 formatSentence :: Sentence -> String
 formatSentence sent = printf "- %s" (sent^.sent_text)
 
+
 printLexUnit :: LexUnit -> IO ()
 printLexUnit lu = do
   TIO.putStrLn "============================"

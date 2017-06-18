@@ -30,7 +30,7 @@ import           FrameNet.Type.LexUnit
 
 
 data LexUnitDB = LexUnitDB { _lexunitDB :: IntMap LexUnit
-                           , _nameIDmap :: HashMap Text Int
+                           , _nameIDmap :: HashMap Text [Int]
                            } 
 
 
@@ -54,7 +54,7 @@ insertLU :: LexUnitDB -> LexUnit -> LexUnitDB
 insertLU !db lu =
   let i = lu^.lexunit_basicLUAttributes.bluattr_ID
       n = lu^.lexunit_basicLUAttributes.bluattr_name
-  in  (lexunitDB %~ IM.insert i lu) . (nameIDmap %~ HM.insert n i) $ db 
+  in  (lexunitDB %~ IM.insert i lu) . (nameIDmap %~ HM.insertWith (++) n [i]) $ db 
 
 
 loadLUData :: FilePath -> IO LexUnitDB
@@ -87,9 +87,9 @@ queryLU db = do
                  Nothing -> putStrLn "no such lexical unit"
                  Just lu -> printLexUnit lu
       "name":name:_ -> 
-        let mlu = HM.lookup name (db^.nameIDmap) >>= \i -> IM.lookup i (db^.lexunitDB)
+        let mlu = HM.lookup name (db^.nameIDmap) >>= \is -> mapM (flip IM.lookup (db^.lexunitDB)) is
         in case mlu of
              Nothing -> putStrLn "no such lexical unit"
-             Just lu -> printLexUnit lu
+             Just lus -> mapM_ printLexUnit lus
       _ -> putStrLn "cannot understand" 
                
