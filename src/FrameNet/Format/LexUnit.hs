@@ -4,6 +4,7 @@ module FrameNet.Format.LexUnit where
 
 import           Control.Lens
 import           Data.Maybe             (fromMaybe)
+import           Data.Monoid            ((<>))
 import           Data.Text              (Text)
 import qualified Data.Text       as T
 import qualified Data.Text.IO    as TIO
@@ -38,8 +39,7 @@ printLexUnit lu = do
   putStrLn $ formatAttrib (lu^.lexunit_basicLUAttributes)
   putStrLn $ formatFrameReference (lu^.lexunit_frameReference)
   mapM_ (putStrLn . formatLexeme) (lu^.lexunit_lexeme)
-  TIO.putStrLn "----------------------------"
-  TIO.putStrLn (lu^.lexunit_definition)
-  TIO.putStrLn "----------------------------"  
+  TIO.putStrLn ("definition: " <> lu^.lexunit_definition)
+  TIO.putStrLn "---- example sentences -----"  
   mapM_ (putStrLn . formatSentence) . take 3 $ (lu^..lexunit_subCorpus.traverse.subcorp_sentence.traverse)
   TIO.putStrLn "============================"
