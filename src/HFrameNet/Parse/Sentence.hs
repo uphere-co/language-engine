@@ -3,11 +3,10 @@
 module HFrameNet.Parse.Sentence where
 
 import           Control.Applicative
-import           Control.Lens            ((^?),(^.),(^..),_Just,only)
+import           Control.Lens            ((^?),(^.),_Just)
 import           Data.Text               (Text)
 import           Text.Taggy.Lens
 --
-import           HFrameNet.Parse.Common
 import           HFrameNet.Type.Sentence
 import           HFrameNet.Util
 

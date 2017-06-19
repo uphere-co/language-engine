@@ -2,21 +2,13 @@
 
 module HFrameNet.Parse.Frame where
 
-import           Control.Applicative    ((<$>),(<*>),optional)
+import           Control.Applicative    ((<$>),(<*>))
 import           Control.Lens           ((^?),(^.),(^..),_Just,only)
-import           Data.Maybe             (fromJust,listToMaybe)
-import           Data.Text              (Text)
-import qualified Data.Text        as T
-import           Data.Text.Read
-import           Data.Time.Clock        (UTCTime)
-import           Data.Time.Format       (parseTimeM, defaultTimeLocale)
 import           Text.Taggy.Lens
 --
 import           HFrameNet.Parse.Common
-import           HFrameNet.Type.Common
 import           HFrameNet.Type.Frame
 import           HFrameNet.Util
-
 
 
 p_frame :: Element -> Maybe Frame

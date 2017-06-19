@@ -3,15 +3,14 @@
 module HFrameNet.Parse.LexUnit where
 
 import           Control.Applicative
-import           Control.Lens ((^?),(^.),(^..),_Just,only)
-import           Data.Text  (Text)
+import           Control.Lens             ((^?),(^.),_Just)
+import           Data.Text                (Text)
 import           Text.Taggy.Lens
 --
 import           HFrameNet.Parse.Common
 import           HFrameNet.Parse.Sentence
 import           HFrameNet.Type.Common
 import           HFrameNet.Type.LexUnit
-import           HFrameNet.Type.Sentence
 import           HFrameNet.Util
 
 
