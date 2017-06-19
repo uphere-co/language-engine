@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module HFrameNet.Parse.Common where
+module FrameNet.Parse.Common where
 
 import           Control.Lens           ((^.))
 import           Text.Taggy.Lens
 --
-import           HFrameNet.Type.Common
-import           HFrameNet.Util
+import           FrameNet.Type.Common
+import           FrameNet.Util
 
 
 p_lexeme :: Element -> Maybe Lexeme

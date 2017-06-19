@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module HFrameNet.Util where
+module FrameNet.Util where
 
 import           Control.Lens           ((^..),only)
 import           Data.Maybe             (listToMaybe)

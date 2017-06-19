@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module HFrameNet.Parse where
+module FrameNet.Parse where
 
 

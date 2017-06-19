@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module HFrameNet.Parse.Frame where
+module FrameNet.Parse.Frame where
 
 import           Control.Applicative    ((<$>),(<*>))
 import           Control.Lens           ((^?),(^.),(^..),_Just,only)
 import           Text.Taggy.Lens
 --
-import           HFrameNet.Parse.Common
-import           HFrameNet.Type.Frame
-import           HFrameNet.Util
+import           FrameNet.Parse.Common
+import           FrameNet.Type.Frame
+import           FrameNet.Util
 
 
 p_frame :: Element -> Maybe Frame

@@ -1,12 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module HFrameNet.Type.Frame where
+module FrameNet.Type.Frame where
 
 import           Control.Lens
 import           Data.Text      (Text)
 import           Data.Time.Clock
 --
-import           HFrameNet.Type.Common
+import           FrameNet.Type.Common
 
 
 type DateTime = UTCTime

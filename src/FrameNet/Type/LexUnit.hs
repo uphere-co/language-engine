@@ -1,12 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module HFrameNet.Type.LexUnit where
+module FrameNet.Type.LexUnit where
 
 import           Control.Lens
 import           Data.Text
 --
-import           HFrameNet.Type.Common
-import           HFrameNet.Type.Sentence
+import           FrameNet.Type.Common
+import           FrameNet.Type.Sentence
 
 
 data Document = Document { _doc_ID :: Int

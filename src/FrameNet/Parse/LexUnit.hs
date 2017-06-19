@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module HFrameNet.Parse.LexUnit where
+module FrameNet.Parse.LexUnit where
 
 import           Control.Applicative
 import           Control.Lens             ((^?),(^.),_Just)
 import           Data.Text                (Text)
 import           Text.Taggy.Lens
 --
-import           HFrameNet.Parse.Common
-import           HFrameNet.Parse.Sentence
-import           HFrameNet.Type.Common
-import           HFrameNet.Type.LexUnit
-import           HFrameNet.Util
+import           FrameNet.Parse.Common
+import           FrameNet.Parse.Sentence
+import           FrameNet.Type.Common
+import           FrameNet.Type.LexUnit
+import           FrameNet.Util
 
 
 p_lexUnit :: Element -> Maybe LexUnit

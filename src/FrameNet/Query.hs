@@ -1,0 +1,2 @@
+module FrameNet.Query where
+
