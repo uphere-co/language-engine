@@ -20,7 +20,7 @@ import           Data.Tree                      (levels)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
-import           CoreNLP.Simple.Convert                      (cutf8)
+import           CoreNLP.Simple.Convert                      (cutf8,mkLemmaMap,lemmatize)
 import           CoreNLP.Simple.Type.Simplified
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
