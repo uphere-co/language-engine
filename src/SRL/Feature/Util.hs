@@ -4,32 +4,18 @@
 
 module SRL.Feature.Util where
 
-import           Control.Lens            hiding (levels,Level)
-import           Control.Monad                  ((<=<),guard)
-import           Data.Bifunctor                 (bimap)
+import           Control.Monad                  ((<=<))
 import           Data.Bifoldable                (biList)
 import           Data.Foldable                  (toList)
-import           Data.Function                  (on)
-import           Data.Graph                     (buildG,dfs)
-import           Data.IntMap                    (IntMap)
-import qualified Data.IntMap             as IM
-import           Data.List                      (foldl',group,sortBy)
-import           Data.Maybe                     (catMaybes,fromJust,mapMaybe)
+import           Data.Maybe                     (mapMaybe)
 import           Data.Text                      (Text)
-import           Data.Tree                      (levels)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
-import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
-import           CoreNLP.Simple.Convert                      (cutf8)
-import           CoreNLP.Simple.Type.Simplified
+import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmatize)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
-import           PropBank.Type.Prop
 --
-import           SRL.Format
-import           SRL.PropBankMatch
 import           SRL.Type
-import           SRL.Util
 --
 
 
@@ -38,14 +24,6 @@ phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
 
 
-mkLemmaMap :: S.Sentence -> IntMap Text
-mkLemmaMap sent = foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
-                    zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
-
-lemmatize :: IntMap Text
-          -> PennTreeIdxG ChunkTag (POSTag,Text)
-          -> PennTreeIdxG ChunkTag (POSTag,(Text,Text))
-lemmatize m = bimap id (\(i,(p,x)) -> (i,(p,(x,fromJust (IM.lookup i m)))))
 
 findNotOverlappedNodes :: PennTreeIdx -> Range -> [Range]
 findNotOverlappedNodes ipt rng = filter (`isNotOverlappedWith` rng)

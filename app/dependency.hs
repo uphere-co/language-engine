@@ -1,12 +1,14 @@
+{-# LANGUAGE DataKinds #-}
+
 module Main where
 
 import           Control.Lens
-import           Control.Monad                     (join,void)
+import           Control.Monad                     (void)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Trans.Either
 import qualified Data.ByteString.Char8      as B
 import           Data.Foldable                     (toList)
-import           Data.Maybe                        (fromJust,mapMaybe)
+import           Data.Maybe                        (fromJust)
 import qualified Data.Sequence              as Seq
 import qualified Data.Text.IO               as TIO
 import           Data.Time.Calendar
@@ -18,30 +20,30 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
-import           CoreNLP.Simple.Type.Simplified
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 --
 import           SRL.Feature.Dependency
-import           SRL.Feature.ParseTreePath
 import           SRL.Format
 import           SRL.Init
 
 
-
+main :: IO ()
 main = do
   putStrLn "dependency"
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] mainInJVM
 
 
+mainInJVM :: IO ()
 mainInJVM = do
   pp <- preparePP
   mainProcess pp
 
+
+mainProcess :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline") -> IO ()
 mainProcess pp = do
   let fp = "example2.txt"
-
   txt <- TIO.readFile fp
   ann <- annotate pp (Document txt (fromGregorian 2017 4 17))
   rdoc <- protobufDoc ann
@@ -51,11 +53,11 @@ mainProcess pp = do
     dep <- hoistEither $ sentToDep sent
     let tr = decodeToPennTree (fromJust (sent^.S.parseTree))
         itr = mkPennTreeIdx tr
-        dtr = depLevelTree dep itr
+        -- dtr = depLevelTree dep itr
         dtr' = depTree dep itr
         ditr = depInfoTree dep itr
 
-    liftIO $ print (motherMap dep itr)
+    liftIO $ print (motherMap dep)
     liftIO $ putStrLn "==============="
     liftIO $ print dep        
     liftIO $ putStrLn "==============="        
@@ -65,7 +67,7 @@ mainProcess pp = do
     liftIO $ TIO.putStrLn $ prettyPrint 0 tr
     liftIO $ putStrLn "==============="
     let terms = map (^._2) . toList $ tr
-    liftIO $ print (zip [0..] terms)
+    liftIO $ print (zip ([0..] :: [Int]) terms)
 
     liftIO $ putStrLn "==============="
     let (start,target) = (8,(9,10))

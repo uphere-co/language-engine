@@ -3,12 +3,6 @@
 
 module SVM where
 
-import           Control.Applicative
-import           Control.Monad        (void)
-import           Data.Text            (Text)
-import qualified Data.Text    as T
-import qualified Data.Text.IO as TIO
-import           Data.Text.Read
 import           Foreign.C.String      (withCString)
 import           Foreign.C.Types
 import           Foreign.Marshal.Alloc (alloca,free)

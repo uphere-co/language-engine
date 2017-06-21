@@ -8,25 +8,13 @@
 module SRL.Feature where
 
 import           Control.Lens            hiding (levels,Level)
-import           Control.Monad                  ((<=<),guard)
-import           Data.Bifunctor                 (bimap)
-import           Data.Bifoldable                (biList)
-import           Data.Foldable                  (toList)
+import           Control.Monad                  (guard)
 import           Data.Function                  (on)
-import           Data.Graph                     (buildG,dfs)
-import           Data.IntMap                    (IntMap)
 import qualified Data.IntMap             as IM
-import           Data.List                      (foldl',group,sortBy,zipWith4)
-import           Data.Maybe                     (catMaybes,fromJust,mapMaybe)
-import           Data.Text                      (Text)
-import           Data.Tree                      (levels)
+import           Data.List                      (sortBy,zipWith4)
+import           Data.Maybe                     (mapMaybe)
 --
-import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
-import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
-import           CoreNLP.Simple.Convert                      (cutf8)
-import           CoreNLP.Simple.Type.Simplified
 import           NLP.Type.PennTreebankII
-import           NLP.Type.TreeZipper
 import           PropBank.Type.Prop
 --
 import           SRL.Feature.Dependency
@@ -39,9 +27,7 @@ import           SRL.Util
 --
 
 
-calcSRLFeature :: SentenceInfo -> Int
-               -> NodeRange
-               -> Maybe SRLFeature -- Maybe (Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text))))
+calcSRLFeature :: SentenceInfo -> Int -> NodeRange -> Maybe SRLFeature
 calcSRLFeature sentinfo predidx (Single rng) = 
   let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
       dep = sentinfo^.corenlp_dep
@@ -64,11 +50,11 @@ calcSRLFeature sentinfo predidx (Multi rngs) =
       comparef (Just x) (Just y) = (compare `on` view (_2._1)) x y
   in  safeHead (sortBy (comparef `on` (view sfeat_headword)) $ zipWith4 SRLFeat rngs paths dprpaths heads)
 
+
 calcArgNodeFeature :: SentenceInfo -> Int -> ArgumentInput -> [ArgNodeFeature]
 calcArgNodeFeature sentinfo predidx arginput =
   flip mapMaybe (arginput^.nodes) $ \n -> 
     AFeat (arginput^.pblabel) <$> calcSRLFeature sentinfo predidx n
-
   
 
 calcInstanceFeature :: SentenceInfo -> InstanceInput -> InstanceFeature

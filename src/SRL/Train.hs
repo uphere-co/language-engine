@@ -10,7 +10,6 @@ import           Control.Exception
 import           Control.Lens               hiding (levels,(<.>))
 import           Control.Monad.IO.Class            (MonadIO(liftIO))
 import           Control.Monad.Trans.Either
-import           Data.Default
 import           Data.Foldable                     (toList)
 import           Data.Function                     (on)
 import           Data.List                         (sortBy,zip4)
@@ -20,8 +19,6 @@ import qualified Data.Sequence              as Seq
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
-import           Data.Vector.Storable              (Vector)
-import qualified Data.Vector.Storable       as V
 import           Language.Java              as J
 import           System.FilePath                   ((</>),(<.>))
 import           Text.Printf
@@ -30,7 +27,6 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
-import           CoreNLP.Simple.Type
 import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
 import           PropBank.Util
