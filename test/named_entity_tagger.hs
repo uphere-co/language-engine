@@ -14,6 +14,8 @@ import qualified Data.Text.IO                  as T.IO
 import qualified Data.Vector                   as V
 import Data.Attoparsec.Text
 import WikiEL.Wikidata.Types
+import WikiEL.Wikipedia.Types
+
 import           WikiEL.CoreNLP                               (parseNEROutputStr)
 import           WikiEL.WikiEntity                            (parseEntityLine,nameWords)
 import           WikiEL.WikiEntityTagger                      (loadWETagger,wikiAnnotator)
@@ -185,25 +187,75 @@ testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \ste
   -}
 
 
-           
+newtype Symbol = Symbol { _symbol :: Text }
+               deriving (Eq, Ord, Show)
+newtype Exchange = Exchange { _exchange :: Text }
+                 deriving (Eq, Ord, Show)
+data EquityTicker = EquityTicker Exchange Symbol 
+                  deriving (Eq, Ord)
+
+instance Show EquityTicker where
+  show (EquityTicker e s) = show (_exchange e) ++ ":" ++ show (_symbol s)
+
+
+newtype GICS = GICS { _gics :: Text }
+             deriving (Eq, Ord)
+
+instance Show GICS where
+  show (GICS sector) = "GICS:" ++ show sector
+
+newtype GICSsub = GICSsub { _gicsSub :: Text }
+             deriving (Eq, Ord)
+
+instance Show GICSsub where
+  show (GICSsub sector) = "GICS_sub:" ++ show sector
+
 parseWikidataID :: Parser ItemID
 parseWikidataID = do
   string "Q"
   id <- decimal
   return (ItemID id)
 
+parseWikipediaPageID :: Parser PageID
+parseWikipediaPageID = do
+  id <- decimal
+  return (PageID id)
+
+
+column = takeTill (== '\t')
+sep = string "\t"
 parseSubclassRelation :: Parser (ItemID, ItemID)
 parseSubclassRelation = do
   super <- parseWikidataID
-  string "\t"
-  _ <- takeTill (== '\t') -- no use for super_title
-  string "\t"
+  sep
+  _   <- column -- no use for super_title
+  sep
   sub <- parseWikidataID
-  string "\t"
-  _ <- takeTill (== '\t') -- no use for sub_title
+  sep
+  _   <- column -- no use for sub_title
   return (super, sub)
-  
 
+
+data SubclassRelationFile = SubclassRelationFile FilePath
+data ListedCompanyFile = ListedCompanyFile FilePath
+
+parseListedCompanyLine :: Parser (Text, GICS, GICSsub, Symbol, PageID, ItemID)
+parseListedCompanyLine = do
+  name   <- column
+  sep
+  symbol <- column
+  sep
+  gics   <- column
+  sep
+  gicsSub <- column  
+  sep
+  pageID <- parseWikipediaPageID
+  sep
+  itemID <- parseWikidataID  
+  return (name, GICS gics, GICSsub gicsSub, Symbol symbol, pageID, itemID)
+
+
+--loadData :: ListedCompanyFile -> IO ([(T)])
 
 parseFail :: Either String a -> Bool 
 parseFail (Left  _) = True
@@ -213,27 +265,46 @@ getResult :: Either String a -> a
 getResult (Right r) = r
 getResult (Left msg ) = error ("Error : "++msg)
 
+
+
+
 testHelperUtils :: TestTree
 testHelperUtils = testCaseSteps "Test for helper functions on general algorithms" $ \step -> do
   assert $ isContain (fromList [1,2]) (fromList [1,2,3])
   assert $ not $ isContain (fromList [1,2]) (fromList [1])
   assert $ isContain (fromList [1,2]) (fromList [0,1,2,3])
-  
+
+
+testParsingSubclassRelation :: TestTree
+testParsingSubclassRelation = testCaseSteps "Test for parsing Wikidata P31 subclass_of data files" $ \step -> do
   eassertEqual (getResult (parseOnly parseWikidataID "Q131")) (ItemID 131)
   assert $ parseFail (parseOnly parseWikidataID "P31")
   assert $ parseFail (parseOnly parseWikidataID "QQ11")
   let testLine = "Q5119\tcapital\tQ515\tcity"
-  print testLine
+  T.IO.putStrLn testLine
   eassertEqual (getResult (parseOnly parseSubclassRelation testLine)) (ItemID 5119, ItemID 515)
   print $ parseOnly parseSubclassRelation testLine
     
-  
+testParsingListedCompanyInfo :: TestTree 
+testParsingListedCompanyInfo = testCaseSteps "Test for parsing listed company info" $ \step -> do
+  let
+    testLine = "Abiomed\tABMD\tHealth Care\tHealth Care Equipment\t6872689\tQ4667884"
+    expected = ("Abiomed", GICS "Health Care", GICSsub "Health Care Equipment", Symbol "ABMD", PageID 6872689, ItemID 4667884)
+    testDataPath = ListedCompanyFile "enwiki/companies"
+  eassertEqual (getResult (parseOnly parseListedCompanyLine testLine)) expected
+  print expected
+
+testParsingData :: TestTree  
+testParsingData =
+  testGroup
+    "Tests for loading data files"
+    [testParsingSubclassRelation, testParsingListedCompanyInfo]    
 
 unitTests :: TestTree
 unitTests =
   testGroup
     "All Unit tests"
-    [testHelperUtils, testIRangeOps, testWikiNER, testRunWikiNER]    
+    [testHelperUtils, testIRangeOps, testWikiNER, testRunWikiNER, testParsingData]    
 
 
 
