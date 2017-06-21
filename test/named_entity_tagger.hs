@@ -12,7 +12,8 @@ import           Test.Tasty                            (defaultMain, testGroup,T
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 import qualified Data.Vector                   as V
-
+import Data.Attoparsec.Text
+import WikiEL.Wikidata.Types
 import           WikiEL.CoreNLP                               (parseNEROutputStr)
 import           WikiEL.WikiEntity                            (parseEntityLine,nameWords)
 import           WikiEL.WikiEntityTagger                      (loadWETagger,wikiAnnotator)
@@ -183,16 +184,57 @@ testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \ste
   mapM_ print linked_mentions
   -}
 
+
+           
+parseWikidataID :: Parser ItemID
+parseWikidataID = do
+  string "Q"
+  id <- decimal
+  return (ItemID id)
+
+parseSubclassRelation :: Parser (ItemID, ItemID)
+parseSubclassRelation = do
+  super <- parseWikidataID
+  string "\t"
+  _ <- takeTill (== '\t') -- no use for super_title
+  string "\t"
+  sub <- parseWikidataID
+  string "\t"
+  _ <- takeTill (== '\t') -- no use for sub_title
+  return (super, sub)
+  
+
+
+parseFail :: Either String a -> Bool 
+parseFail (Left  _) = True
+parseFail (Right _) = False
+
+getResult :: Either String a -> a
+getResult (Right r) = r
+getResult (Left msg ) = error ("Error : "++msg)
+
 testHelperUtils :: TestTree
 testHelperUtils = testCaseSteps "Test for helper functions on general algorithms" $ \step -> do
   assert $ isContain (fromList [1,2]) (fromList [1,2,3])
   assert $ not $ isContain (fromList [1,2]) (fromList [1])
   assert $ isContain (fromList [1,2]) (fromList [0,1,2,3])
+  
+  eassertEqual (getResult (parseOnly parseWikidataID "Q131")) (ItemID 131)
+  assert $ parseFail (parseOnly parseWikidataID "P31")
+  assert $ parseFail (parseOnly parseWikidataID "QQ11")
+  let testLine = "Q5119\tcapital\tQ515\tcity"
+  print testLine
+  eassertEqual (getResult (parseOnly parseSubclassRelation testLine)) (ItemID 5119, ItemID 515)
+  print $ parseOnly parseSubclassRelation testLine
+    
+  
 
 unitTests :: TestTree
 unitTests =
   testGroup
     "All Unit tests"
     [testHelperUtils, testIRangeOps, testWikiNER, testRunWikiNER]    
+
+
 
 main = defaultMain unitTests

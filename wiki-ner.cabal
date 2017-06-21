@@ -19,6 +19,8 @@ library
   hs-source-dirs:      src
   exposed-modules:     Assert
                      , WikiEL
+                     , WikiEL.Wikidata.Types
+                     , WikiEL.Wikipedia.Types
                      , WikiEL.WikiEntity
                      , WikiEL.EntityLinking
                      , WikiEL.Misc
@@ -54,6 +56,7 @@ test-suite test
                      , tasty
                      , nlp-types
                      , wiki-ner
+                     , attoparsec
   default-language:    Haskell2010
   ghc-options: 
     -threaded
