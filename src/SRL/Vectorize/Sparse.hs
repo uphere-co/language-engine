@@ -6,9 +6,6 @@ module SRL.Vectorize.Sparse where
 import           Control.Lens
 import           Data.List                 (foldl')
 import           Data.Maybe                (catMaybes)
-import           Data.Vector.Storable      (Vector)
-import qualified Data.Vector.Storable as V
-import           Foreign.C.Types
 --
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
@@ -17,7 +14,7 @@ import           PropBank.Type.Prop
 --
 import           SRL.Type
 --
-import Debug.Trace
+
 
 data FeatureVector = FV { _fv_dim   :: Int
                         , _fv_nodes :: [(Int,Double)]
@@ -27,6 +24,7 @@ data FeatureVector = FV { _fv_dim   :: Int
 makeLenses ''FeatureVector
 
 
+emptyFV :: FeatureVector
 emptyFV = FV 0 []
 
   

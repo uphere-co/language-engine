@@ -4,32 +4,18 @@
 
 module SRL.Feature.Util where
 
-import           Control.Lens            hiding (levels,Level)
-import           Control.Monad                  ((<=<),guard)
-import           Data.Bifunctor                 (bimap)
+import           Control.Monad                  ((<=<))
 import           Data.Bifoldable                (biList)
 import           Data.Foldable                  (toList)
-import           Data.Function                  (on)
-import           Data.Graph                     (buildG,dfs)
-import           Data.IntMap                    (IntMap)
-import qualified Data.IntMap             as IM
-import           Data.List                      (foldl',group,sortBy)
-import           Data.Maybe                     (catMaybes,fromJust,mapMaybe)
+import           Data.Maybe                     (mapMaybe)
 import           Data.Text                      (Text)
-import           Data.Tree                      (levels)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
-import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
-import           CoreNLP.Simple.Convert                      (cutf8,mkLemmaMap,lemmatize)
-import           CoreNLP.Simple.Type.Simplified
+import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmatize)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TreeZipper
-import           PropBank.Type.Prop
 --
-import           SRL.Format
-import           SRL.PropBankMatch
 import           SRL.Type
-import           SRL.Util
 --
 
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module SRL.Init where
 
 import           Control.Lens
@@ -16,6 +18,8 @@ initGHCi = do
   clspath <- getEnv "CLASSPATH"
   J.newJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] 
 
+
+preparePP :: IO (J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
 preparePP = do
     let pcfg = def & ( tokenizer .~ True )
                    . ( words2sentences .~ True )
