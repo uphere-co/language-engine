@@ -38,14 +38,6 @@ phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
 
 
-mkLemmaMap :: S.Sentence -> IntMap Text
-mkLemmaMap sent = foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
-                    zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
-
-lemmatize :: IntMap Text
-          -> PennTreeIdxG ChunkTag (POSTag,Text)
-          -> PennTreeIdxG ChunkTag (POSTag,(Text,Text))
-lemmatize m = bimap id (\(i,(p,x)) -> (i,(p,(x,fromJust (IM.lookup i m)))))
 
 findNotOverlappedNodes :: PennTreeIdx -> Range -> [Range]
 findNotOverlappedNodes ipt rng = filter (`isNotOverlappedWith` rng)
