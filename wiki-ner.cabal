@@ -22,6 +22,7 @@ library
                      , WikiEL.Types.Wikidata
                      , WikiEL.Types.Wikipedia
                      , WikiEL.Types.Equity
+                     , WikiEL.ETL.Parser
                      , WikiEL.WikiEntity
                      , WikiEL.EntityLinking
                      , WikiEL.Misc
@@ -39,6 +40,7 @@ library
                      , vector
                      , vector-algorithms
                      , containers
+                     , attoparsec
                      , nlp-types
 
   default-language:    Haskell2010
@@ -57,7 +59,6 @@ test-suite test
                      , tasty
                      , nlp-types
                      , wiki-ner
-                     , attoparsec
   default-language:    Haskell2010
   ghc-options: 
     -threaded

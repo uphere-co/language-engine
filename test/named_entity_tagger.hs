@@ -28,7 +28,6 @@ import qualified WikiEL.WikiEntity                    as Wiki
 import qualified WikiEL.WikiEntityClass               as WC
 
 -- to be moved
-import Data.Attoparsec.Text
 
 import           Data.Map                              (Map)
 import           Data.Maybe                            (mapMaybe)
@@ -37,6 +36,7 @@ import qualified WikiEL.EntityLinking          as EL
 import           WikiEL.Types.Wikidata
 import           WikiEL.Types.Wikipedia
 import           WikiEL.Types.Equity
+import           WikiEL.ETL.Parser
 
 uid = Wiki.UID
 uids = fromList . map uid
@@ -196,49 +196,8 @@ testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \ste
 
 
 
-parseWikidataID :: Parser ItemID
-parseWikidataID = do
-  string "Q"
-  id <- decimal
-  return (ItemID id)
-
-parseWikipediaPageID :: Parser PageID
-parseWikipediaPageID = do
-  id <- decimal
-  return (PageID id)
-
-
-column = takeTill (== '\t')
-sep = string "\t"
-parseSubclassRelation :: Parser (ItemID, ItemID)
-parseSubclassRelation = do
-  super <- parseWikidataID
-  sep
-  _   <- column -- no use for super_title
-  sep
-  sub <- parseWikidataID
-  sep
-  _   <- column -- no use for sub_title
-  return (super, sub)
-
-
 data SubclassRelationFile = SubclassRelationFile FilePath
 data ListedCompanyFile = ListedCompanyFile FilePath
-
-parseListedCompanyLine :: Parser (Text, GICS, GICSsub, Symbol, PageID, ItemID)
-parseListedCompanyLine = do
-  name   <- column
-  sep
-  symbol <- column
-  sep
-  gics   <- column
-  sep
-  gicsSub <- column  
-  sep
-  pageID <- parseWikipediaPageID
-  sep
-  itemID <- parseWikidataID  
-  return (name, GICS gics, GICSsub gicsSub, Symbol symbol, pageID, itemID)
 
 
 --loadData :: ListedCompanyFile -> IO ([(T)])
@@ -246,11 +205,6 @@ parseListedCompanyLine = do
 parseFail :: Either String a -> Bool 
 parseFail (Left  _) = True
 parseFail (Right _) = False
-
-getResult :: Either String a -> a
-getResult (Right r) = r
-getResult (Left msg ) = error ("Error : "++msg)
-
 
 
 
@@ -263,13 +217,13 @@ testHelperUtils = testCaseSteps "Test for helper functions on general algorithms
 
 testParsingSubclassRelation :: TestTree
 testParsingSubclassRelation = testCaseSteps "Test for parsing Wikidata P31 subclass_of data files" $ \step -> do
-  eassertEqual (getResult (parseOnly parseWikidataID "Q131")) (ItemID 131)
-  assert $ parseFail (parseOnly parseWikidataID "P31")
-  assert $ parseFail (parseOnly parseWikidataID "QQ11")
+  eassertEqual (itemID "Q131") (ItemID 131)
+  assert $ parseFail (parseItemID "P31")
+  assert $ parseFail (parseItemID "QQ11")
   let testLine = "Q5119\tcapital\tQ515\tcity"
   T.IO.putStrLn testLine
-  eassertEqual (getResult (parseOnly parseSubclassRelation testLine)) (ItemID 5119, ItemID 515)
-  print $ parseOnly parseSubclassRelation testLine
+  eassertEqual (subclassRelation testLine) (ItemID 5119, ItemID 515)
+  print $ subclassRelation testLine
     
 testParsingListedCompanyInfo :: TestTree 
 testParsingListedCompanyInfo = testCaseSteps "Test for parsing listed company info" $ \step -> do
@@ -277,7 +231,7 @@ testParsingListedCompanyInfo = testCaseSteps "Test for parsing listed company in
     testLine = "Abiomed\tABMD\tHealth Care\tHealth Care Equipment\t6872689\tQ4667884"
     expected = ("Abiomed", GICS "Health Care", GICSsub "Health Care Equipment", Symbol "ABMD", PageID 6872689, ItemID 4667884)
     testDataPath = ListedCompanyFile "enwiki/companies"
-  eassertEqual (getResult (parseOnly parseListedCompanyLine testLine)) expected
+  eassertEqual (listedCompany testLine) expected
   print expected
 
 testParsingData :: TestTree  
@@ -305,10 +259,10 @@ getOrgs _ = Nothing
 
 getListedCompany tikcerMap (mentionUID, wikiUID) = result
   where
-    itemID = getResult (parseOnly  parseWikidataID wikiUID)
+    wuid = itemID wikiUID
     result = 
-      case (M.lookup itemID tikcerMap) of
-        Just symbol -> Just (mentionUID, wikiUID, symbol)
+      case (M.lookup wuid tikcerMap) of
+        Just symbol -> Just (mentionUID, wuid, symbol)
         Nothing     -> Nothing  
 
 main = do
@@ -321,7 +275,7 @@ main = do
 
   let 
     lines = T.lines file
-    companies = map (\x -> getResult (parseOnly parseListedCompanyLine x)) lines
+    companies = map listedCompany lines
     tickers  = map (\(_,_,_,symbol,_,itemID) -> (itemID, symbol)) companies
     tickerMap = M.fromList tickers
 
