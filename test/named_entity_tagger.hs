@@ -12,9 +12,6 @@ import           Test.Tasty                            (defaultMain, testGroup,T
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 import qualified Data.Vector                   as V
-import Data.Attoparsec.Text
-import WikiEL.Wikidata.Types
-import WikiEL.Wikipedia.Types
 
 import           WikiEL.CoreNLP                               (parseNEROutputStr)
 import           WikiEL.WikiEntity                            (parseEntityLine,nameWords)
@@ -31,10 +28,15 @@ import qualified WikiEL.WikiEntity                    as Wiki
 import qualified WikiEL.WikiEntityClass               as WC
 
 -- to be moved
+import Data.Attoparsec.Text
+
 import           Data.Map                              (Map)
 import           Data.Maybe                            (mapMaybe)
 import qualified Data.Map                      as M
 import qualified WikiEL.EntityLinking          as EL
+import           WikiEL.Types.Wikidata
+import           WikiEL.Types.Wikipedia
+import           WikiEL.Types.Equity
 
 uid = Wiki.UID
 uids = fromList . map uid
@@ -193,28 +195,6 @@ testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \ste
   -}
 
 
-newtype Symbol = Symbol { _symbol :: Text }
-               deriving (Eq, Ord, Show)
-newtype Exchange = Exchange { _exchange :: Text }
-                 deriving (Eq, Ord, Show)
-data EquityTicker = EquityTicker Exchange Symbol 
-                  deriving (Eq, Ord)
-
-instance Show EquityTicker where
-  show (EquityTicker e s) = show (_exchange e) ++ ":" ++ show (_symbol s)
-
-
-newtype GICS = GICS { _gics :: Text }
-             deriving (Eq, Ord)
-
-instance Show GICS where
-  show (GICS sector) = "GICS:" ++ show sector
-
-newtype GICSsub = GICSsub { _gicsSub :: Text }
-             deriving (Eq, Ord)
-
-instance Show GICSsub where
-  show (GICSsub sector) = "GICS_sub:" ++ show sector
 
 parseWikidataID :: Parser ItemID
 parseWikidataID = do
@@ -334,18 +314,17 @@ getListedCompany tikcerMap (mentionUID, wikiUID) = result
 main = do
   file <- T.IO.readFile "enwiki/companies"
 
+  input_raw <- T.IO.readFile "data/dao.ptb"
+  input <- T.IO.readFile "data/dao.ner"
+  uid2tag <- fromFiles [(N.Org, "data/ne.org"), (N.Person, "data/ne.person")]
+  wikiTable <- loadWETagger "data/uid"
+
   let 
     lines = T.lines file
     companies = map (\x -> getResult (parseOnly parseListedCompanyLine x)) lines
     tickers  = map (\(_,_,_,symbol,_,itemID) -> (itemID, symbol)) companies
     tickerMap = M.fromList tickers
 
-  input_raw <- T.IO.readFile "data/dao.ptb"
-  input <- T.IO.readFile "data/dao.ner"
-  uid2tag <- fromFiles [(N.Org, "data/ne.org"), (N.Person, "data/ne.person")]
-  wikiTable <- loadWETagger "data/uid"
-  
-  let
     stanford_nefs = map parseStanfordNE (parseNEROutputStr input)
     named_entities =  filter (\x -> snd x == N.Org || snd x == N.Person) (getStanfordNEs stanford_nefs)
     wiki_entities = namedEntityAnnotator wikiTable uid2tag stanford_nefs

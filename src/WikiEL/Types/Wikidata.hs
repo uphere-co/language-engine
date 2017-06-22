@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module WikiEL.Wikidata.Types where
+module WikiEL.Types.Wikidata where
 
 newtype ItemID = ItemID {_id :: Int }
                deriving (Eq, Ord)

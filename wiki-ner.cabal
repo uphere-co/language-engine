@@ -19,8 +19,9 @@ library
   hs-source-dirs:      src
   exposed-modules:     Assert
                      , WikiEL
-                     , WikiEL.Wikidata.Types
-                     , WikiEL.Wikipedia.Types
+                     , WikiEL.Types.Wikidata
+                     , WikiEL.Types.Wikipedia
+                     , WikiEL.Types.Equity
                      , WikiEL.WikiEntity
                      , WikiEL.EntityLinking
                      , WikiEL.Misc
