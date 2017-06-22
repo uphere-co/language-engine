@@ -30,6 +30,12 @@ import qualified NLP.Type.NamedEntity                 as N
 import qualified WikiEL.WikiEntity                    as Wiki
 import qualified WikiEL.WikiEntityClass               as WC
 
+-- to be moved
+import           Data.Map                              (Map)
+import           Data.Maybe                            (mapMaybe)
+import qualified Data.Map                      as M
+import qualified WikiEL.EntityLinking          as EL
+
 uid = Wiki.UID
 uids = fromList . map uid
 
@@ -308,4 +314,55 @@ unitTests =
 
 
 
-main = defaultMain unitTests
+main1 = defaultMain unitTests
+
+
+--getListedCompany :: EntityMention a -> (EMuid, Symbol)
+getOrgs (EL.Self muid (_,_, Resolved (Wiki.UID wuid, N.Org))) = Just (muid, wuid)
+getOrgs (EL.Cite muid _ (_,_, Resolved (Wiki.UID wuid, N.Org))) = Just (muid, wuid)
+getOrgs _ = Nothing
+
+
+getListedCompany tikcerMap (mentionUID, wikiUID) = result
+  where
+    itemID = getResult (parseOnly  parseWikidataID wikiUID)
+    result = 
+      case (M.lookup itemID tikcerMap) of
+        Just symbol -> Just (mentionUID, wikiUID, symbol)
+        Nothing     -> Nothing  
+
+main = do
+  file <- T.IO.readFile "enwiki/companies"
+
+  let 
+    lines = T.lines file
+    companies = map (\x -> getResult (parseOnly parseListedCompanyLine x)) lines
+    tickers  = map (\(_,_,_,symbol,_,itemID) -> (itemID, symbol)) companies
+    tickerMap = M.fromList tickers
+
+  input_raw <- T.IO.readFile "data/dao.ptb"
+  input <- T.IO.readFile "data/dao.ner"
+  uid2tag <- fromFiles [(N.Org, "data/ne.org"), (N.Person, "data/ne.person")]
+  wikiTable <- loadWETagger "data/uid"
+  
+  let
+    stanford_nefs = map parseStanfordNE (parseNEROutputStr input)
+    named_entities =  filter (\x -> snd x == N.Org || snd x == N.Person) (getStanfordNEs stanford_nefs)
+    wiki_entities = namedEntityAnnotator wikiTable uid2tag stanford_nefs
+    wiki_named_entities = resolveNEs named_entities wiki_entities
+
+    text = fromList (T.words input_raw)
+    mentions = buildEntityMentions text wiki_named_entities
+    linked_mentions = entityLinkings mentions
+
+    orgMentions = mapMaybe getOrgs linked_mentions
+    companyWithSymbols = mapMaybe (getListedCompany tickerMap) orgMentions
+
+  print "Entity-linked named entities"
+  mapM_ print linked_mentions
+  print "Entity-linked organization entities"
+  mapM_ print orgMentions
+  print "Entity-linked public company entities"
+  mapM_ print companyWithSymbols
+
+  --print tickerMap
