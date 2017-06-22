@@ -304,11 +304,33 @@ type PennTreeIdxG chunk token = PennTreeGen (Range,chunk) (Int,token)
 
 type PennTreeIdx = PennTreeIdxG ChunkTag (POSTag,Text)
 
-{-
-trimap :: (c->c') -> (p->p') -> (a->a') -> PennTreeGen c p a -> PennTreeGen c' p' a'
-trimap cf pf af (PN c xs) = PN (cf c) (map (trimap cf pf af) xs)
-trimap cf pf af (PL p x) = PL (pf p) (af x)
--}
+type Lemma = Text
+
+data ANode annot = ANode ChunkTag annot
+
+data ALeaf annot = ALeaf (POSTag,Text) annot
+
+class Annotation f where
+  getAnnot :: f a -> a
+
+instance Annotation ANode where
+  getAnnot (ANode _ a) = a
+
+instance Annotation ALeaf where
+  getAnnot (ALeaf _ a) = a
+  
+
+chunkTag :: ANode a -> ChunkTag
+chunkTag (ANode c _) = c
+
+posTag :: ALeaf a -> POSTag
+posTag (ALeaf (p,_) _) = p
+
+tokenWord :: ALeaf a -> Text
+tokenWord (ALeaf (_,t) _) = t
+
+type PennTreeIdxA = PennTreeIdxG (ANode ()) (ALeaf ())
+
 
 getTag :: PennTreeIdxG c (p,a) -> Either c p
 getTag (PN (_,c) _)   = Left c
@@ -365,3 +387,6 @@ pruneOutNone x = x
 
 mkPennTreeIdx :: PennTree -> PennTreeIdx
 mkPennTreeIdx = termRangeTree . mkIndexedTree . getADTPennTree 
+
+mkPennTreeIdxA :: PennTreeIdx -> PennTreeIdxA
+mkPennTreeIdxA = bimap (\(i,x) -> (i,ANode x ())) (\(j,y)-> (j,ALeaf y ()))
