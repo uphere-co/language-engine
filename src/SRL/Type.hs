@@ -26,9 +26,9 @@ type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
 data Voice = Active | Passive
            deriving (Show,Eq,Ord,Enum,Bounded)
 
-type TreeICP a = Tree (Range,ChunkTag) (Int,(POSTag,a))
+type TreeICP a = Tree (Range,(ANode ())) (Int,(ALeaf a)) -- Tree (Range,ChunkTag) (Int,(POSTag,a))
 
-type TreeZipperICP a = TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
+type TreeZipperICP a = TreeZipper (Range,(ANode ())) (Int,(ALeaf a)) -- TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
 
 type RoleSet = (Text,Text)
 

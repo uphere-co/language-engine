@@ -130,10 +130,11 @@ main = do
                      rs = zipWith3 SentInfo sents pts deps
                  flip mapM_ rs $ \sentinfo -> do
                    let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
+                       ipta = mkPennTreeIdxA ipt 
                        -- terms = map (^._2) . toList $ sentinfo^.corenlp_tree
                        lemmamap = mkLemmaMap (sentinfo^.corenlp_sent)
-                       lemmapt = lemmatize lemmamap ipt
-                       verbs = filter (isVerb . (^._2._1)) (toList lemmapt)
+                       lemmapt = lemmatize lemmamap ipta
+                       verbs = filter (isVerb . posTag . (^._2)) (toList lemmapt)
                    let arg0 = NumberedArgument 0
                        arg1 = NumberedArgument 1
                    svm0 <- liftIO $ loadSVM svmfile0
@@ -144,7 +145,7 @@ main = do
                                         in [ArgumentInput arg0 rngss, ArgumentInput arg1 rngss]
                        instInputs = flip map verbs $ \verb ->
                                       let n = verb^._1
-                                          lma = verb^._2._2._2
+                                          lma = getAnnot (verb^._2) ^. _2
                                       in InstanceInput n (lma,"01") (genArgInputs n)
                        feats = map (calcInstanceFeature sentinfo) instInputs
                    liftIO $ TIO.putStrLn $ prettyPrint 0 (sentinfo^.corenlp_tree)                       

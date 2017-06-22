@@ -24,7 +24,6 @@ phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
 
 
-
 findNotOverlappedNodes :: PennTreeIdx -> Range -> [Range]
 findNotOverlappedNodes ipt rng = filter (`isNotOverlappedWith` rng)
                                . map (\(PN (r,_) _) -> r)
@@ -36,26 +35,29 @@ findNotOverlappedNodes ipt rng = filter (`isNotOverlappedWith` rng)
 
 isVBN :: TreeZipperICP a -> Bool
 isVBN z = case current z of
-            PL (_,(p,_)) -> p == VBN
-            _            -> False 
+            PL (_,x) -> posTag x == VBN
+            _        -> False 
 
-withCopula :: TreeZipperICP (Text,Text) -> Bool
+
+withCopula :: TreeZipperICP (a,Lemma) -> Bool
 withCopula z = case current <$> (prev <=< parent) z of
-                 Just (PL (_,(_,(_,l)))) -> l == "be"
-                 _                       -> False
+                 Just (PL (_,x)) -> snd (getAnnot x) == "be"
+                 _               -> False
 
-isInNP :: TreeZipperICP (Text,Text) -> Bool
+
+isInNP :: TreeZipperICP (a,Lemma) -> Bool
 isInNP z = case current <$> (parent <=< parent) z of
-             Just (PN (_,c) _) -> c == NP
-             _             -> False
-
-
-isInPP :: TreeZipperICP (Text,Text) -> Bool
-isInPP z = case current <$> (parent z) of
-             Just (PN (_,c) _) -> c == PP
+             Just (PN (_,x) _) -> chunkTag x == NP
              _                 -> False
 
-isPassive :: TreeZipperICP (Text,Text) -> Bool
+
+isInPP :: TreeZipperICP (a,Lemma) -> Bool
+isInPP z = case current <$> (parent z) of
+             Just (PN (_,x) _) -> chunkTag x == PP
+             _               -> False
+
+
+isPassive :: TreeZipperICP (a,Lemma) -> Bool
 isPassive z = let b1 = isVBN z
                   b2 = withCopula z
                   b3 = isInNP z
@@ -63,15 +65,15 @@ isPassive z = let b1 = isVBN z
               in (b1 && b2) || (b1 && b3) || (b1 && b4)
 
 
-voice :: (PennTree,S.Sentence) -> [(Int,(Text,Voice))]
+voice :: (PennTree,S.Sentence) -> [(Int,(Lemma,Voice))]
 voice (pt,sent) = 
-  let ipt = mkPennTreeIdx pt
+  let ipt = mkPennTreeIdxA (mkPennTreeIdx pt)
       lemmamap = mkLemmaMap sent
       lemmapt = lemmatize lemmamap ipt
       getf (PL x) = Right x
       getf (PN x _) = Left x
       testf z = case getf (current z) of
-                  Right (n,(VBN,(txt,_))) -> Just (n,(txt,if isPassive z then Passive else Active))
-                  _ -> Nothing
+                  Right (n,ALeaf (VBN,_) ((),lma)) -> Just (n,(lma,if isPassive z then Passive else Active))
+                  _                                -> Nothing
   in mapMaybe testf $ toList (mkTreeZipper [] lemmapt)
 
