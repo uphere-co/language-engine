@@ -91,7 +91,8 @@ annotateDepInfo (PN (r,x) xs) =
   in PN (r,y) ys
 
 
-depInfoTree :: Dependency -> PennTreeIdxG ChunkTag (POSTag,Text)
+depInfoTree :: Dependency
+            -> PennTreeIdxG ChunkTag (POSTag,Text)
             -> PennTreeIdxG (ChunkTag,Maybe DepInfo) (Maybe DepInfo,(POSTag,Text))
 depInfoTree dep tr = let tr' = decorateLeaves (rightOuterIntMap (levelMap dep) (motherMap dep)) tr
                          conv :: (Int,(Maybe (Maybe Level, (Int,DependencyRelation)),(POSTag,Text))) -> (Int,(Maybe DepInfo,(POSTag,Text)))
