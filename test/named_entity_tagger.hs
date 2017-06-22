@@ -19,7 +19,7 @@ import           WikiEL.WikiEntityTagger                      (loadWETagger,wiki
 import           WikiEL.WikiEntityClass                       (fromFiles,getNEClass)
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,buildTagUIDTable,getStanfordNEs,parseStanfordNE,namedEntityAnnotator)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
-import           WikiEL.EntityLinking                         (EntityMention(..),entityLinking,entityLinkings,buildEntityMentions)
+import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),entityLinking,entityLinkings,buildEntityMentions)
 
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
@@ -42,9 +42,9 @@ uid = Wiki.UID
 uids = fromList . map uid
 
 
-other wikiUID = (Wiki.UID wikiUID, N.Other)
-org wikiUID = (Wiki.UID wikiUID, N.Org)
-person wikiUID = (Wiki.UID wikiUID, N.Person)
+other wikiUID = (uid wikiUID, N.Other)
+org wikiUID = (uid wikiUID, N.Org)
+person wikiUID = (uid wikiUID, N.Person)
 
 ai1 = other "Q42970"
 ai2 = other "Q11660"
@@ -197,10 +197,7 @@ testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \ste
 
 
 data SubclassRelationFile = SubclassRelationFile FilePath
-data ListedCompanyFile = ListedCompanyFile FilePath
-
-
---loadData :: ListedCompanyFile -> IO ([(T)])
+data PublicCompanyFile = PublicCompanyFile FilePath
 
 parseFail :: Either String a -> Bool 
 parseFail (Left  _) = True
@@ -225,20 +222,20 @@ testParsingSubclassRelation = testCaseSteps "Test for parsing Wikidata P31 subcl
   eassertEqual (subclassRelation testLine) (ItemID 5119, ItemID 515)
   print $ subclassRelation testLine
     
-testParsingListedCompanyInfo :: TestTree 
-testParsingListedCompanyInfo = testCaseSteps "Test for parsing listed company info" $ \step -> do
+testParsingPublicCompanyInfo :: TestTree 
+testParsingPublicCompanyInfo = testCaseSteps "Test for parsing listed company info" $ \step -> do
   let
     testLine = "Abiomed\tABMD\tHealth Care\tHealth Care Equipment\t6872689\tQ4667884"
     expected = ("Abiomed", GICS "Health Care", GICSsub "Health Care Equipment", Symbol "ABMD", PageID 6872689, ItemID 4667884)
-    testDataPath = ListedCompanyFile "enwiki/companies"
-  eassertEqual (listedCompany testLine) expected
+    testDataPath = PublicCompanyFile "enwiki/companies"
+  eassertEqual (publicCompany testLine) expected
   print expected
 
 testParsingData :: TestTree  
 testParsingData =
   testGroup
     "Tests for loading data files"
-    [testParsingSubclassRelation, testParsingListedCompanyInfo]    
+    [testParsingSubclassRelation, testParsingPublicCompanyInfo]    
 
 unitTests :: TestTree
 unitTests =
@@ -251,13 +248,14 @@ unitTests =
 main1 = defaultMain unitTests
 
 
---getListedCompany :: EntityMention a -> (EMuid, Symbol)
+getOrgs :: EntityMention a -> Maybe (EntityMentionUID, Text)
 getOrgs (EL.Self muid (_,_, Resolved (Wiki.UID wuid, N.Org))) = Just (muid, wuid)
 getOrgs (EL.Cite muid _ (_,_, Resolved (Wiki.UID wuid, N.Org))) = Just (muid, wuid)
 getOrgs _ = Nothing
 
 
-getListedCompany tikcerMap (mentionUID, wikiUID) = result
+getCompanySymbol :: Map ItemID Symbol -> (EntityMentionUID, Text) -> Maybe (EntityMentionUID , ItemID, Symbol)
+getCompanySymbol tikcerMap (mentionUID, wikiUID) = result
   where
     wuid = itemID wikiUID
     result = 
@@ -275,7 +273,7 @@ main = do
 
   let 
     lines = T.lines file
-    companies = map listedCompany lines
+    companies = map publicCompany lines
     tickers  = map (\(_,_,_,symbol,_,itemID) -> (itemID, symbol)) companies
     tickerMap = M.fromList tickers
 
@@ -289,7 +287,7 @@ main = do
     linked_mentions = entityLinkings mentions
 
     orgMentions = mapMaybe getOrgs linked_mentions
-    companyWithSymbols = mapMaybe (getListedCompany tickerMap) orgMentions
+    companyWithSymbols = mapMaybe (getCompanySymbol tickerMap) orgMentions
 
   print "Entity-linked named entities"
   mapM_ print linked_mentions

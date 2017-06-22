@@ -36,8 +36,8 @@ parserSubclassRelation = do
   _   <- column -- no use for sub_title
   return (super, sub)
 
-parserListedCompanyLine :: Parser (Text, GICS, GICSsub, Symbol, PageID, ItemID)
-parserListedCompanyLine = do
+parserPublicCompanyLine :: Parser (Text, GICS, GICSsub, Symbol, PageID, ItemID)
+parserPublicCompanyLine = do
   name   <- column
   sep
   symbol <- column
@@ -74,5 +74,5 @@ pageID itemID = getParseResult parserWikipediaPageID itemID
 subclassRelation :: Text -> (ItemID, ItemID)
 subclassRelation line = getParseResult parserSubclassRelation line
 
-listedCompany :: Text -> (Text, GICS, GICSsub, Symbol, PageID, ItemID)
-listedCompany line = getParseResult parserListedCompanyLine line
+publicCompany :: Text -> (Text, GICS, GICSsub, Symbol, PageID, ItemID)
+publicCompany line = getParseResult parserPublicCompanyLine line
