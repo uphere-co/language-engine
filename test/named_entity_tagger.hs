@@ -19,7 +19,7 @@ import           WikiEL.WikiEntityTagger                      (loadWETagger,wiki
 import           WikiEL.WikiEntityClass                       (fromFiles,getNEClass)
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,buildTagUIDTable,getStanfordNEs,parseStanfordNE,namedEntityAnnotator)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
-import           WikiEL.EntityLinking                         (EntityMention(..),entityLinking,entityLinkings,buildEntityMentions)
+import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),entityLinking,entityLinkings,buildEntityMentions)
 
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
@@ -27,13 +27,24 @@ import qualified NLP.Type.NamedEntity                 as N
 import qualified WikiEL.WikiEntity                    as Wiki
 import qualified WikiEL.WikiEntityClass               as WC
 
+-- to be moved
+
+import           Data.Map                              (Map)
+import           Data.Maybe                            (mapMaybe)
+import qualified Data.Map                      as M
+import qualified WikiEL.EntityLinking          as EL
+import           WikiEL.Types.Wikidata
+import           WikiEL.Types.Wikipedia
+import           WikiEL.Types.Equity
+import           WikiEL.ETL.Parser
+
 uid = Wiki.UID
 uids = fromList . map uid
 
 
-other wikiUID = (Wiki.UID wikiUID, N.Other)
-org wikiUID = (Wiki.UID wikiUID, N.Org)
-person wikiUID = (Wiki.UID wikiUID, N.Person)
+other wikiUID = (uid wikiUID, N.Other)
+org wikiUID = (uid wikiUID, N.Org)
+person wikiUID = (uid wikiUID, N.Person)
 
 ai1 = other "Q42970"
 ai2 = other "Q11660"
@@ -183,16 +194,106 @@ testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \ste
   mapM_ print linked_mentions
   -}
 
+
+
+data SubclassRelationFile = SubclassRelationFile FilePath
+data PublicCompanyFile = PublicCompanyFile FilePath
+
+parseFail :: Either String a -> Bool 
+parseFail (Left  _) = True
+parseFail (Right _) = False
+
+
+
 testHelperUtils :: TestTree
 testHelperUtils = testCaseSteps "Test for helper functions on general algorithms" $ \step -> do
   assert $ isContain (fromList [1,2]) (fromList [1,2,3])
   assert $ not $ isContain (fromList [1,2]) (fromList [1])
   assert $ isContain (fromList [1,2]) (fromList [0,1,2,3])
 
+
+testParsingSubclassRelation :: TestTree
+testParsingSubclassRelation = testCaseSteps "Test for parsing Wikidata P31 subclass_of data files" $ \step -> do
+  eassertEqual (itemID "Q131") (ItemID 131)
+  assert $ parseFail (parseItemID "P31")
+  assert $ parseFail (parseItemID "QQ11")
+  let testLine = "Q5119\tcapital\tQ515\tcity"
+  T.IO.putStrLn testLine
+  eassertEqual (subclassRelation testLine) (ItemID 5119, ItemID 515)
+  print $ subclassRelation testLine
+    
+testParsingPublicCompanyInfo :: TestTree 
+testParsingPublicCompanyInfo = testCaseSteps "Test for parsing listed company info" $ \step -> do
+  let
+    testLine = "Abiomed\tABMD\tHealth Care\tHealth Care Equipment\t6872689\tQ4667884"
+    expected = ("Abiomed", GICS "Health Care", GICSsub "Health Care Equipment", Symbol "ABMD", PageID 6872689, ItemID 4667884)
+    testDataPath = PublicCompanyFile "enwiki/companies"
+  eassertEqual (publicCompany testLine) expected
+  print expected
+
+testParsingData :: TestTree  
+testParsingData =
+  testGroup
+    "Tests for loading data files"
+    [testParsingSubclassRelation, testParsingPublicCompanyInfo]    
+
 unitTests :: TestTree
 unitTests =
   testGroup
     "All Unit tests"
-    [testHelperUtils, testIRangeOps, testWikiNER, testRunWikiNER]    
+    [testHelperUtils, testIRangeOps, testWikiNER, testRunWikiNER, testParsingData]    
 
-main = defaultMain unitTests
+
+
+main1 = defaultMain unitTests
+
+
+getOrgs :: EntityMention a -> Maybe (EntityMentionUID, Text)
+getOrgs (EL.Self muid (_,_, Resolved (Wiki.UID wuid, N.Org))) = Just (muid, wuid)
+getOrgs (EL.Cite muid _ (_,_, Resolved (Wiki.UID wuid, N.Org))) = Just (muid, wuid)
+getOrgs _ = Nothing
+
+
+getCompanySymbol :: Map ItemID Symbol -> (EntityMentionUID, Text) -> Maybe (EntityMentionUID , ItemID, Symbol)
+getCompanySymbol tikcerMap (mentionUID, wikiUID) = result
+  where
+    wuid = itemID wikiUID
+    result = 
+      case (M.lookup wuid tikcerMap) of
+        Just symbol -> Just (mentionUID, wuid, symbol)
+        Nothing     -> Nothing  
+
+main = do
+  file <- T.IO.readFile "enwiki/companies"
+
+  input_raw <- T.IO.readFile "data/dao.ptb"
+  input <- T.IO.readFile "data/dao.ner"
+  uid2tag <- fromFiles [(N.Org, "data/ne.org"), (N.Person, "data/ne.person")]
+  wikiTable <- loadWETagger "data/uid"
+
+  let 
+    lines = T.lines file
+    companies = map publicCompany lines
+    tickers  = map (\(_,_,_,symbol,_,itemID) -> (itemID, symbol)) companies
+    tickerMap = M.fromList tickers
+
+    stanford_nefs = map parseStanfordNE (parseNEROutputStr input)
+    named_entities =  filter (\x -> snd x == N.Org || snd x == N.Person) (getStanfordNEs stanford_nefs)
+    wiki_entities = namedEntityAnnotator wikiTable uid2tag stanford_nefs
+    wiki_named_entities = resolveNEs named_entities wiki_entities
+
+    text = fromList (T.words input_raw)
+    mentions = buildEntityMentions text wiki_named_entities
+    linked_mentions = entityLinkings mentions
+
+    orgMentions = mapMaybe getOrgs linked_mentions
+    companyWithSymbols = mapMaybe (getCompanySymbol tickerMap) orgMentions
+
+  print "Entity-linked named entities"
+  mapM_ print linked_mentions
+  print "Entity-linked organization entities"
+  mapM_ print orgMentions
+  print "Entity-linked public company entities"
+  mapM_ print companyWithSymbols
+
+  --print tickerMap

@@ -16,7 +16,6 @@ import           NLP.Type.NamedEntity                  (NamedEntityClass)
 import qualified WikiEL.WikiEntity             as Wiki
 
 
-
 type NEClass = NamedEntityClass
 
 loadTypedUIDs :: (NEClass , FilePath) -> IO [(Wiki.UID, NEClass)]

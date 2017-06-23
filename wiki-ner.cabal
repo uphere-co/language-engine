@@ -19,6 +19,10 @@ library
   hs-source-dirs:      src
   exposed-modules:     Assert
                      , WikiEL
+                     , WikiEL.Types.Wikidata
+                     , WikiEL.Types.Wikipedia
+                     , WikiEL.Types.Equity
+                     , WikiEL.ETL.Parser
                      , WikiEL.WikiEntity
                      , WikiEL.EntityLinking
                      , WikiEL.Misc
@@ -36,6 +40,7 @@ library
                      , vector
                      , vector-algorithms
                      , containers
+                     , attoparsec
                      , nlp-types
 
   default-language:    Haskell2010

@@ -1,37 +1,44 @@
-#### Output file schemes
-##### category_hierarchy 
+## Output file schemes
+#### category_hierarchy 
 |sub_cat_id | super_cat | sub_cat
 |------|------|------
 |1000014|Food_preservation|Curing_agents
 
-##### page_id.category.wikidata.sorted
+#### page_id.category.wikidata.sorted
 |page_id | category | page_title | page_wiki_uid
 |------|------|------|------
 |1000|Fictional_Belgian_people|Hercule_Poirot|Q170534
 
-##### redirects.sorted
+#### redirects.sorted
 |title_from | title_to
 |------|------
 |3M_Company | 3M
 
-##### jel.category
+#### jel.category
+Contains JEL code for Wikipedia categories
 |cat_name | JEL code | JEL major code
 |------|------|------
 |Joint_ventures | L24 | L
 
-##### jel.wikidata
+#### jel.wikidata 
+Contains JEL code for Wikipedia pages
 | page_id | cat_name |  JEL code | JEL major code | page_name | page_wikidata
 |------|------|------|------|------|------
 |10000895 | IT_risk_management | M15 | M | Incident_response_team | Q349987
 
+#### companies 
+Contains GICS and ticker symbol for companies (presently, S&P 500 and S&P 400)
+|page_title | ticker | GICSsector | GICSsubsector | page_id | page_wiki_uid
+|-------|-------|-------|-------|-------|-------
+| Abiomed | ABMD | Health Care | Health Care Equipment | 6872689 | Q4667884
 
-#### ETL steps
-##### Nix-shell setup
+## ETL steps
+#### Nix-shell setup
 Current ETL process depends on a python script, `mysqldump_to_csv.py`, in https://github.com/jamesmishra/mysqldump-to-csv
 ```
 nix-shell shell-wiki.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 20 --cores 20
 ```
-##### Convert SQL dump files to TSC files
+#### Convert SQL dump files to TSC files
 ```
 $ time pigz -dc enwiki-latest-categorylinks.sql.gz | iconv -f ISO-8859-1 -t UTF-8 | python mysqldump_to_csv.py |tr -d '\r' | lbzip2 --fast > enwiki-latest-categorylinks.tsv.bz2
 real	18m58.210s
@@ -47,7 +54,7 @@ $ time pigz -dc enwiki-latest-redirect.sql.gz | iconv -f ISO-8859-1 -t UTF-8 | p
 real	0m42.250s
 ```
 
-##### ETL to get category hierarchy
+#### ETL to get category hierarchy
 ```
 #Get links from category pages.
 time lbzcat enwiki-latest-categorylinks.tsv.bz2| awk -F"\t" '$NF=="subcat"{print $1 "\t" $2}' |sort -k1,1 -t$'\t' > enwiki-latest-categorylinks.category.sorted
@@ -60,7 +67,7 @@ $ time join -t$'\t' enwiki-latest-categorylinks.category.sorted enwiki-latest-pa
 real	0m7.733s
 ```
 
-##### ETL to get pages in a category
+#### ETL to get pages in a category
 ```
 #Get cat_id of category pages.
 $ time lbzcat enwiki-latest-category.tsv.bz2 | awk -F "\t" '{print $1 "\t" $2}'| sort -k1,1 -t$'\t'  > cat_id
@@ -83,7 +90,7 @@ $ time join -t$'\t' enwiki-latest-categorylinks.page.sorted page_id | join -t$'\
 real	0m53.164s
 ```
 
-##### Get data from Wikipedia tables
+#### Get data from Wikipedia tables
 Current list of tables :
 1. S&P 500 companies 
 - S&P 400 companies
@@ -95,7 +102,7 @@ cd /scratch/groups/uphere/enwiki/
 python ~/repo/uphere/wiki-ner/scripts/get_wikipedia_tables.py
 ```
 
-##### ETL to get companies with its ticker symbol, GICS Sector, and GICS Sub Industry.
+#### ETL to get companies with its ticker symbol, GICS Sector, and GICS Sub Industry.
 Run `get_wikipedia_tables.py` before doing this step.
 ```
 $ time join -t$'\t' <(lbzcat enwiki-latest-redirect.tsv.bz2 | awk '{print $1 "\t" $3}'|sort -k1,1) page_id | awk '{print $3 "\t" $2}' | sort -k1,1 > redirects.sorted
@@ -111,7 +118,7 @@ join -1 2 -2 2 -t$'\t' <(sort -k2,2 -t$'\t' sp400.redirects) <(sort -k2,2 -t$'\t
 cat sp?00.? > companies
 ```
 
-##### ETL to get JEL code for Wikipedia categories
+#### ETL to get JEL code for Wikipedia categories
 First of all, Export `Category:Categories_which_are_included_in_the_JEL_classification_codes` category via [Wikipedia Special:Export](https://en.wikipedia.org/wiki/Special:Export).
 Presently, it is stored as `mark:/scratch/groups/uphere/enwiki/Wikipedia-20170615063859.xml`.
 ```
@@ -119,7 +126,7 @@ cd /scratch/groups/uphere/enwiki/
 python ~/repo/uphere/wiki-ner/scripts/get_jel_codes.py
 ```
 
-##### ETL to get JEL code for Wikidata items
+#### ETL to get JEL code for Wikidata items
 ```
 # Join by category name
 join -1 2 -2 1 -t$'\t' <(sort -t$'\t' -k2,2 category_hierarchy) <(sort -t$'\t' -k1,1 jel.tsv) | awk -F '\t' '{print $3 "\t" $6 "\t" $7}' > jel.category
