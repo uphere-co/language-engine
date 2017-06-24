@@ -118,7 +118,10 @@ parseModifierType =
   (A.string "PRP" >> return PRP) <|>
   (A.string "PRR" >> return PRR) <|>
   (A.string "REC" >> return REC) <|>
-  (A.string "TMP" >> return TMP)
+  (A.string "TMP" >> return TMP) <|>
+  (A.string "LVB" >> return LVB) <|>
+  (A.string "PRX" >> return PRX) 
+
 
 parseLinkType :: A.Parser LinkType
 parseLinkType =

@@ -30,6 +30,9 @@ data ModifierType = ADJ  -- ^ Adjectivals (modifies nouns)
                   | PRR  -- ^ Nominal predicates in light verb constructions
                   | REC  -- ^ Reciprocals
                   | TMP  -- ^ Temporals
+                  -- added for OntoNotes
+                  | LVB  -- ^ (?) unidentified yet
+                  | PRX  -- ^ (?) unidentified yet
                   deriving (Show,Enum,Bounded,Eq,Ord)
 
 data LinkType     = PRO  -- ^ semantic link of the *PRO* argument if semantically recoverable in the sentence
