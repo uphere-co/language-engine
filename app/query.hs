@@ -28,5 +28,5 @@ main = do
     let input = T.pack input'
     in case T.split (== '.') input of
          (_x:_n:_) -> queryRoleSet rdb input
-         (_x:[])  -> queryPredicate pdb input
+         (_x:[])   -> queryPredicate pdb input
          [] -> putStrLn "query is not recognized."
