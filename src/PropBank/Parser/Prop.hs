@@ -55,6 +55,12 @@ parseInstOmit txt =
   in Instance {..}
 
 
+parsePropWithFileField :: IsOmit -> Text -> [Instance]
+parsePropWithFileField omit txt =
+  case omit of
+    NoOmit -> (map (parseInst . T.intercalate " " . tail . T.words) . T.lines) txt
+    Omit -> (map (parseInstOmit . T.intercalate " " . tail . T.words) . T.lines) txt
+
 
 parseNomInst :: Text -> NomInstance
 parseNomInst txt = 
