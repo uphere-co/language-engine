@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE MultiWayIf #-}
@@ -14,13 +15,15 @@ module NLP.Type.PennTreebankII
 , isNone, isVerb, isNoun, identifyPOS, identifyChunk
 , Bitree(..)
 , type PennTreeGen, type PennTree, type PennTreeIdxG, type PennTreeIdx, type PennTreeIdxA
-, type Range, type Lemma
+, type Range
+, Lemma(..)
 , ANode(..)
 , ALeaf(..)
 , Annotation(..)
 , chunkTag, posTag, tokenWord, getTag, getRange
 , termRange, termRangeTree, contain, containR
-, mkIndexedTree, getADTPennTree, mkPennTreeIdx, mkPennTreeIdxA
+, mkIndexedTree, getADTPennTree, mkPennTreeIdx
+, mkAnnotatable
 ) where
 
 import           Control.Monad.Trans.State      (evalState,get,put)
@@ -29,12 +32,15 @@ import           Data.Aeson.Types
 import           Data.Bifoldable
 import           Data.Bifunctor
 import           Data.Bitraversable
-import           Data.Bitree
 import           Data.Foldable                  (toList)
 import           Data.Monoid                    ((<>))
 import           Data.Text                      (Text)
 import qualified Data.Text                 as T  
 import           GHC.Generics
+--
+import           Data.Attribute
+import           Data.Bitree
+
 
 -- based on http://www.clips.ua.ac.be/pages/mbsp-tags
 -- also http://www.surdeanu.info/mihai/teaching/ista555-fall13/readings/PennTreebankConstituents.html
@@ -288,26 +294,6 @@ identifyChunk t =
 
 
 
-
-{- 
-data PennTreeGen chunk word = PN chunk [PennTreeGen chunk word]
-                            | PL word
-                   deriving (Show, Functor, Foldable, Traversable)
-
-
-instance Bifunctor PennTreeGen where
-  bimap f g (PN x xs) = PN (f x) (map (bimap f g) xs)
-  bimap f g (PL y)    = PL (g y) 
-
-instance Bifoldable PennTreeGen where
-  bifoldMap f g (PN x xs) = f x <> foldMap (bifoldMap f g) xs
-  bifoldMap f g (PL y)    = g y
-  
-instance Bitraversable PennTreeGen where
-  bitraverse f g (PN x xs) = PN <$> f x <*> traverse (bitraverse f g) xs
-  bitraverse f g (PL y)    = PL <$> g y
--}
-
 -- | chunk = chunktag, token = token in node. 
 --   typically token will be (pos = postag, a = content)
 type PennTreeGen chunk token = Bitree chunk token
@@ -316,7 +302,7 @@ type PennTree = Bitree Text (Text,Text)
 
 type Range = (Int,Int)
 
-type Lemma = Text
+newtype Lemma = Lemma Text
 
 type PennTreeIdxG chunk token = PennTreeGen (Range,chunk) (Int,token)
 
@@ -345,7 +331,7 @@ posTag (ALeaf (p,_) _) = p
 tokenWord :: ALeaf a -> Text
 tokenWord (ALeaf (_,t) _) = t
 
-type PennTreeIdxA = PennTreeIdxG (ANode ()) (ALeaf ())
+type PennTreeIdxA = PennTreeIdxG (ANode (AttribList '[])) (ALeaf (AttribList '[]))
 
 
 getTag :: PennTreeIdxG c (p,a) -> Either c p
@@ -402,5 +388,5 @@ pruneOutNone x = x
 mkPennTreeIdx :: PennTree -> PennTreeIdx
 mkPennTreeIdx = termRangeTree . mkIndexedTree . getADTPennTree 
 
-mkPennTreeIdxA :: PennTreeIdx -> PennTreeIdxA
-mkPennTreeIdxA = bimap (\(i,x) -> (i,ANode x ())) (\(j,y)-> (j,ALeaf y ()))
+mkAnnotatable :: PennTreeIdx -> PennTreeIdxA
+mkAnnotatable = bimap (\(i,x) -> (i,ANode x anil)) (\(j,y)-> (j,ALeaf y anil))
