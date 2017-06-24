@@ -1,13 +1,27 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module NLP.Type.PennTreebankII where
+module NLP.Type.PennTreebankII
+( POSTag(..)
+, ChunkTag(..)
+, IOBPrefix(..)
+, RelationTag(..)
+, AnchorTag(..)
+, TernaryLogic(..)
+, isNone, isVerb, isNoun, identifyPOS, identifyChunk
+, Bitree(..)
+, type PennTreeGen, type PennTree, type PennTreeIdxG, type PennTreeIdx, type PennTreeIdxA
+, type Range, type Lemma
+, ANode(..)
+, ALeaf(..)
+, Annotation(..)
+, chunkTag, posTag, tokenWord, getTag, getRange
+, termRange, termRangeTree, contain, containR
+, mkIndexedTree, getADTPennTree, mkPennTreeIdx, mkPennTreeIdxA
+) where
 
 import           Control.Monad.Trans.State      (evalState,get,put)
 import           Data.Aeson
@@ -79,6 +93,9 @@ instance FromJSON POSTag where
 instance ToJSON POSTag where
   toJSON = genericToJSON defaultOptions
 
+isNone :: POSTag -> Bool
+isNone D_NONE = True
+isNone _      = False
 
 isVerb :: POSTag -> Bool                     
 isVerb VB  = True
@@ -181,10 +198,8 @@ instance FromJSON AnchorTag where
 instance ToJSON AnchorTag where
   toJSON = genericToJSON defaultOptions
 
-{- 
-isNone (PL D_NONE _) = True
-isNone _             = False
--}
+ 
+
 
 identifyPOS :: Text -> POSTag
 identifyPOS t
