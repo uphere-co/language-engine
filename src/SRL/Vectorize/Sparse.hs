@@ -7,8 +7,8 @@ import           Control.Lens
 import           Data.List                 (foldl')
 import           Data.Maybe                (catMaybes)
 --
+import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
-import           NLP.Type.TreeZipper
 import           NLP.Type.UniversalDependencies2.Syntax
 import           PropBank.Type.Prop
 --

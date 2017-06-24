@@ -15,8 +15,8 @@ import           Data.Text                      (Text)
 import           Data.Tree                      (levels)
 --
 import           CoreNLP.Simple.Type.Simplified
+import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
-import           NLP.Type.TreeZipper
 import           NLP.Type.UniversalDependencies2.Syntax
 import qualified NLP.Type.UniversalDependencies2.Syntax as UD (DependencyRelation(ROOT))
 --
@@ -44,15 +44,15 @@ motherMap (Dependency root _nods edgs0) =
   in IM.fromList (map (\((mother,daughter),rel) -> (daughter-1,(mother-1,rel))) edgs)
 
 
-decorateLeaves :: IntMap v -> Tree c (Int,t) -> Tree c (Int,(Maybe v,t))
+decorateLeaves :: IntMap v -> Bitree c (Int,t) -> Bitree c (Int,(Maybe v,t))
 decorateLeaves m tr = let lkup (n,t) = (n,(IM.lookup n m,t)) in fmap lkup tr
  
 
-depTree :: Dependency -> Tree c (Int,t) -> Tree c (Int,(Maybe (Int,DependencyRelation),t))
+depTree :: Dependency -> Bitree c (Int,t) -> Bitree c (Int,(Maybe (Int,DependencyRelation),t))
 depTree dep tr = decorateLeaves (motherMap dep) tr
 
 
-depLevelTree :: Dependency -> Tree c (Int,t) -> Tree c (Int,(Maybe Level,t))
+depLevelTree :: Dependency -> Bitree c (Int,t) -> Bitree c (Int,(Maybe Level,t))
 depLevelTree dep tr = decorateLeaves (levelMap dep) tr
 
 

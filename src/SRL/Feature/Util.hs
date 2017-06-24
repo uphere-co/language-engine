@@ -8,12 +8,12 @@ import           Control.Monad                  ((<=<))
 import           Data.Bifoldable                (biList)
 import           Data.Foldable                  (toList)
 import           Data.Maybe                     (mapMaybe)
-import           Data.Text                      (Text)
 --
+import           Data.Bitree                    (duplicate)
+import           Data.BitreeZipper
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmatize)
 import           NLP.Type.PennTreebankII
-import           NLP.Type.TreeZipper
 --
 import           SRL.Type
 --
@@ -33,31 +33,31 @@ findNotOverlappedNodes ipt rng = filter (`isNotOverlappedWith` rng)
                                $ ipt 
   
 
-isVBN :: TreeZipperICP a -> Bool
+isVBN :: BitreeZipperICP a -> Bool
 isVBN z = case current z of
             PL (_,x) -> posTag x == VBN
             _        -> False 
 
 
-withCopula :: TreeZipperICP (a,Lemma) -> Bool
+withCopula :: BitreeZipperICP (a,Lemma) -> Bool
 withCopula z = case current <$> (prev <=< parent) z of
                  Just (PL (_,x)) -> snd (getAnnot x) == "be"
                  _               -> False
 
 
-isInNP :: TreeZipperICP (a,Lemma) -> Bool
+isInNP :: BitreeZipperICP (a,Lemma) -> Bool
 isInNP z = case current <$> (parent <=< parent) z of
              Just (PN (_,x) _) -> chunkTag x == NP
              _                 -> False
 
 
-isInPP :: TreeZipperICP (a,Lemma) -> Bool
+isInPP :: BitreeZipperICP (a,Lemma) -> Bool
 isInPP z = case current <$> (parent z) of
              Just (PN (_,x) _) -> chunkTag x == PP
              _               -> False
 
 
-isPassive :: TreeZipperICP (a,Lemma) -> Bool
+isPassive :: BitreeZipperICP (a,Lemma) -> Bool
 isPassive z = let b1 = isVBN z
                   b2 = withCopula z
                   b3 = isInNP z
@@ -75,5 +75,5 @@ voice (pt,sent) =
       testf z = case getf (current z) of
                   Right (n,ALeaf (VBN,_) ((),lma)) -> Just (n,(lma,if isPassive z then Passive else Active))
                   _                                -> Nothing
-  in mapMaybe testf $ toList (mkTreeZipper [] lemmapt)
+  in mapMaybe testf $ toList (mkBitreeZipper [] lemmapt)
 
