@@ -17,6 +17,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:
+                       Data.Attribute
                        Data.Bitree
                        Data.BitreeZipper
                        NLP.Parser.PennTreebankII
