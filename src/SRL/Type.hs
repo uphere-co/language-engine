@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -9,6 +10,7 @@ import           Data.Text               (Text)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
 import qualified CoreNLP.Simple.Type.Simplified        as S
+import           Data.Attribute
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
@@ -26,9 +28,9 @@ type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
 data Voice = Active | Passive
            deriving (Show,Eq,Ord,Enum,Bounded)
 
-type BitreeICP a = Bitree (Range,(ANode ())) (Int,(ALeaf a)) -- Bitree (Range,ChunkTag) (Int,(POSTag,a))
+type BitreeICP a = Bitree (Range,(ANode (AttribList '[]))) (Int,(ALeaf a)) 
 
-type BitreeZipperICP a = BitreeZipper (Range,(ANode ())) (Int,(ALeaf a)) -- BitreeZipper (Range,ChunkTag) (Int,(POSTag,a))
+type BitreeZipperICP a = BitreeZipper (Range,(ANode (AttribList '[]))) (Int,(ALeaf a)) 
 
 type RoleSet = (Text,Text)
 
