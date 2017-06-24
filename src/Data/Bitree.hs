@@ -31,3 +31,10 @@ instance Bitraversable Bitree where
   bitraverse f g (PN x xs) = PN <$> f x <*> traverse (bitraverse f g) xs
   bitraverse f g (PL y)    = PL <$> g y
 
+
+-- | duplicate of comonad is dual to join of monad, i.e. duplicate :: w a -> w (w a)
+--   In Bitree case, we can make a tree where each node is the subtree at the node point using duplicate 
+duplicate :: Bitree c a -> Bitree (Bitree c a) (Bitree c a)
+duplicate (PN x xs) = PN (PN x xs) (map duplicate xs)
+duplicate (PL x) = PL (PL x)
+
