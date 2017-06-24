@@ -15,6 +15,7 @@ import           Data.Aeson.Types
 import           Data.Bifoldable
 import           Data.Bifunctor
 import           Data.Bitraversable
+import           Data.Bitree
 import           Data.Foldable                  (toList)
 import           Data.Monoid                    ((<>))
 import           Data.Text                      (Text)
@@ -272,9 +273,8 @@ identifyChunk t =
 
 
 
--- | chunk = chunktag, token = token in node. 
---   typically token will be (pos = postag, a = content)
 
+{- 
 data PennTreeGen chunk word = PN chunk [PennTreeGen chunk word]
                             | PL word
                    deriving (Show, Functor, Foldable, Traversable)
@@ -291,20 +291,21 @@ instance Bifoldable PennTreeGen where
 instance Bitraversable PennTreeGen where
   bitraverse f g (PN x xs) = PN <$> f x <*> traverse (bitraverse f g) xs
   bitraverse f g (PL y)    = PL <$> g y
+-}
 
+-- | chunk = chunktag, token = token in node. 
+--   typically token will be (pos = postag, a = content)
+type PennTreeGen chunk token = Bitree chunk token
     
-type PennTree = PennTreeGen Text (Text,Text)
-
-deriving instance (Eq chunk, Eq word) => Eq (PennTreeGen chunk word)
-  
+type PennTree = Bitree Text (Text,Text)
 
 type Range = (Int,Int)
+
+type Lemma = Text
 
 type PennTreeIdxG chunk token = PennTreeGen (Range,chunk) (Int,token)
 
 type PennTreeIdx = PennTreeIdxG ChunkTag (POSTag,Text)
-
-type Lemma = Text
 
 data ANode annot = ANode ChunkTag annot
 
@@ -370,8 +371,6 @@ containR r0 y@(PN (r,_) xs) | r0 == r = [y]
                                             [] -> []
                                             ys:_ -> y:ys
 containR r0@(b,e) x@(PL (n,_)) = if b == n && e == n then [x] else []
-
-
 
 
 getADTPennTree :: PennTree -> PennTreeGen ChunkTag (POSTag, Text)
