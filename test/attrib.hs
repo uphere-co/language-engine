@@ -6,7 +6,7 @@ import Data.Attribute
 
 
 main = do
-  let x = "abc" <&> (3 :: Int) <&> anil
+  let x = "abc" `acons` (3 :: Int) `acons` anil
   print (ahead x)
   print (ahead (atail x))
 

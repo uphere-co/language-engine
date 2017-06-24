@@ -9,9 +9,9 @@
 
 module Data.Attribute
 ( anil
+, acons
 , ahead
 , atail
-, (<&>)
 , Elem(..)
 , getElem
 , AttribList(..)
@@ -53,9 +53,11 @@ atail :: AttribList (a ': as) -> AttribList as
 atail (AttribCons _ xs) = xs
 
 
-(<&>) = AttribCons
+-- (<&>) = AttribCons
 
-infixr 8 <&>
+acons = AttribCons
+
+-- infixr 8 <&>
 
 anil = AttribNull
 
