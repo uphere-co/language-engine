@@ -32,21 +32,22 @@ module WordNet.Type where
 ) where -}
 
 import           Control.Lens
-import           Data.Text             (Text)
+import           Data.Monoid
+import           Data.Text              (Text)
+import qualified Data.Text        as T
 import           Data.Text.Format 
-import qualified Data.Text.Lazy  as TL
+import qualified Data.Text.Lazy   as TL
 --
 import           NLP.Type.WordNet
 
-data IndexItem = IndexItem { _idx_lemma :: Text
-                           , _idx_pos :: POS
-                           -- , _idx_synset_cnt :: Int
-                           , _idx_ptr_symbol :: [Text]
-                           -- , _idx_sense_cnt :: Int   --  sense_cnt = synset_cnt
-                           , _idx_tagsense_cnt :: Int
-                           , _idx_synset_offset :: [Int] -- length = synset_cnt
-                           }
-               deriving (Show)
+data IndexItem
+  = IndexItem { _idx_lemma :: Text
+              , _idx_pos :: POS
+              , _idx_ptr_symbol :: [Text]
+              , _idx_tagsense_cnt :: Int
+              , _idx_synset_offset :: [Int] -- ^ length = sense_cnt = synset_cnt
+              }
+  deriving (Show)
 
 makeLenses ''IndexItem
 
@@ -127,12 +128,29 @@ data LexicographerFile = AdjAll            -- 00
                        | AdjPpl            -- 44
                        deriving (Show,Eq,Ord,Enum)
 
-data SenseItem = SenseItem { _sense_lemma :: Text
-                           , _sense_ss :: Int
-                           , _sense_lexfilenum :: Int
-                           , _sense_lexid :: Int
-                           , _sense_headword :: Text
-                           , _sense_headid :: Int
+data LexSense = LexSense { _lexsens_sstype      :: SSType
+                         , _lexsens_lex_filenum :: LexicographerFile
+                         , _lexsens_lex_id      :: Int
+                         , _lexsens_head_word   :: Text
+                         , _lexsens_head_id     :: Int }
+              deriving Show
+
+makeLenses ''LexSense                       
+
+
+data SenseKey = SenseKey { _skey_lemma :: Text
+                         , _skey_lex_sense :: LexSense }
+              deriving Show
+
+makeLenses ''SenseKey
+
+
+headWord :: LexSense -> Text
+headWord l | T.null (l^.lexsens_head_word) = ""
+           | otherwise = l^.lexsens_head_word <> "." <> T.pack (show (l^.lexsens_head_id))
+
+
+data SenseItem = SenseItem { _sense_sense_key :: SenseKey
                            , _sense_soffset :: Int
                            , _sense_snumber :: Int
                            , _sense_cnt :: Int

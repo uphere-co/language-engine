@@ -15,8 +15,8 @@ parseSense = worker . T.words
     worker (skey:soffset':snumber':cnt':[]) = do
       let lemmass:lexfilenum':lexid':headword:headid':[] = T.splitOn ":" skey
           lemma:ss':[] = T.splitOn "%" lemmass
-      ss <- readDecimal ss'
-      lexfilenum <- readDecimal lexfilenum'
+      ss <- toEnum <$> readDecimal ss'
+      lexfilenum <- toEnum <$> readDecimal lexfilenum'
       lexid <- readDecimal lexid'
       let headid = case (readDecimal headid') of
             Nothing -> -1
@@ -24,7 +24,11 @@ parseSense = worker . T.words
       soffset <- readDecimal soffset'
       snumber <- readDecimal snumber'
       cnt <- readDecimal cnt'
-      return (SenseItem lemma ss lexfilenum lexid headword headid soffset snumber cnt)
+      return $ SenseItem
+                 (SenseKey lemma (LexSense ss lexfilenum lexid headword headid))
+                 soffset
+                 snumber
+                 cnt
     worker _ = Nothing
 
 
