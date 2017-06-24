@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -34,6 +35,7 @@ import           Data.Bifunctor
 import           Data.Bitraversable
 import           Data.Foldable                  (toList)
 import           Data.Monoid                    ((<>))
+import           Data.String                    (IsString)
 import           Data.Text                      (Text)
 import qualified Data.Text                 as T  
 import           GHC.Generics
@@ -205,8 +207,6 @@ instance ToJSON AnchorTag where
   toJSON = genericToJSON defaultOptions
 
  
-
-
 identifyPOS :: Text -> POSTag
 identifyPOS t
   | t == "-LRB-"  = D_LRB
@@ -302,7 +302,8 @@ type PennTree = Bitree Text (Text,Text)
 
 type Range = (Int,Int)
 
-newtype Lemma = Lemma Text
+newtype Lemma = Lemma { unLemma :: Text }
+              deriving (Show,Eq,Ord,FromJSON,ToJSON,IsString)
 
 type PennTreeIdxG chunk token = PennTreeGen (Range,chunk) (Int,token)
 
