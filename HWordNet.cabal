@@ -32,11 +32,13 @@ Library
                      WordNet.Parser.Common
                      WordNet.Parser.Data
                      WordNet.Parser.Index
+                     WordNet.Parser.Lexicographer
                      WordNet.Parser.Sense
                      WordNet.Query
                   
   build-depends:       base,
                        --
+                       attoparsec,
                        containers,
                        filepath,
                        lens,

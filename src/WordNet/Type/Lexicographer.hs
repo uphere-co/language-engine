@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -14,6 +15,16 @@ import           Data.Text
 -- import qualified Data.Text as T
 --
 import           NLP.Type.WordNet
+
+
+-- | I made a singleton pattern here for observing value and reflecting it to the type.
+--   It has a kind of wierd name. It does not have AdjectiveSatellite case.
+data SSSType (n :: SSType) where
+  SNoun      :: SSSType 'Noun
+  SVerb      :: SSSType 'Verb
+  SAdjective :: SSSType 'Adjective
+  SAdverb    :: SSSType 'Adverb
+
 
 data PointerSymbol_Noun = PSN_Antonym                    --   "!"
                         | PSN_Hypernym                   --   "@"

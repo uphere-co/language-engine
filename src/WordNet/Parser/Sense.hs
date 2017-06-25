@@ -10,9 +10,9 @@ import           WordNet.Parser.Common
 --
   
 parseSense :: Text -> Maybe SenseItem
-parseSense = worker . T.words
+parseSense = go . T.words
   where
-    worker (skey:soffset':snumber':cnt':[]) = do
+    go (skey:soffset':snumber':cnt':[]) = do
       let lemmass:lexfilenum':lexid':headword:headid':[] = T.splitOn ":" skey
           lemma:ss':[] = T.splitOn "%" lemmass
       ss <- toEnum <$> readDecimal ss'
