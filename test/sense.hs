@@ -49,7 +49,7 @@ main = do
   case er of
     Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
     Partial _ -> print "partial"
-    Done i r -> print (length r) >> print (T.take 100 i)
+    Done i r -> mapM_ print r >>  print (length r) >> print (T.take 100 i)
 
 {- 
 main' = do
