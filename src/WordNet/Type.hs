@@ -39,6 +39,8 @@ import           Data.Text.Format
 import qualified Data.Text.Lazy   as TL
 --
 import           NLP.Type.WordNet
+--
+import           WordNet.Type.Lexicographer
 
 data IndexItem
   = IndexItem { _idx_lemma :: Text
@@ -81,53 +83,7 @@ data DataItem = DataItem { _data_syn_offset :: Int
 makeLenses ''DataItem                             
 
 
-data LexicographerFile = AdjAll            -- 00
-                       | AdjPert           -- 01
-                       | AdvAll            -- 02
-                       | NounTops          -- 03
-                       | NounAct           -- 04
-                       | NounAnimal        -- 05
-                       | NounArtifact      -- 06
-                       | NounAttribute     -- 07
-                       | NounBody          -- 08
-                       | NounCognition     -- 09
-                       | NounCommunication -- 10
-                       | NounEvent         -- 11
-                       | NounFeeling       -- 12
-                       | NounFood          -- 13
-                       | NounGroup         -- 14
-                       | NounLocation      -- 15
-                       | NounMotive        -- 16
-                       | NounObject        -- 17
-                       | NounPerson        -- 18
-                       | NounPhenomenon    -- 19
-                       | NounPlant         -- 20
-                       | NounPossession    -- 21
-                       | NounProcess       -- 22
-                       | NounQuantity      -- 23
-                       | NounRelation      -- 24
-                       | NounShape         -- 25
-                       | NounState         -- 26
-                       | NounSubstance     -- 27
-                       | NounTime          -- 28
-                       | VerbBody          -- 29
-                       | VerbChange        -- 30
-                       | VerbCognition     -- 31
-                       | VerbCommunication -- 32
-                       | VerbCompetition   -- 33
-                       | VerbConsumption   -- 34
-                       | VerbContact       -- 35
-                       | VerbCreation      -- 36
-                       | VerbEmotion       -- 37
-                       | VerbMotion        -- 38
-                       | VerbPerception    -- 39
-                       | VerbPossession    -- 40
-                       | VerbSocial        -- 41
-                       | VerbStative       -- 42
-                       | VerbWeather       -- 43
-                       | AdjPpl            -- 44
-                       deriving (Show,Eq,Ord,Enum)
-
+                           
 data LexSense = LexSense { _lexsens_sstype      :: SSType
                          , _lexsens_lex_filenum :: LexicographerFile
                          , _lexsens_lex_id      :: Int

@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -26,6 +27,104 @@ data SSSType (n :: SSType) where
   SAdverb    :: SSSType 'Adverb
 
 
+data LexicographerFile = AdjAll            -- 00
+                       | AdjPert           -- 01
+                       | AdvAll            -- 02
+                       | NounTops          -- 03
+                       | NounAct           -- 04
+                       | NounAnimal        -- 05
+                       | NounArtifact      -- 06
+                       | NounAttribute     -- 07
+                       | NounBody          -- 08
+                       | NounCognition     -- 09
+                       | NounCommunication -- 10
+                       | NounEvent         -- 11
+                       | NounFeeling       -- 12
+                       | NounFood          -- 13
+                       | NounGroup         -- 14
+                       | NounLocation      -- 15
+                       | NounMotive        -- 16
+                       | NounObject        -- 17
+                       | NounPerson        -- 18
+                       | NounPhenomenon    -- 19
+                       | NounPlant         -- 20
+                       | NounPossession    -- 21
+                       | NounProcess       -- 22
+                       | NounQuantity      -- 23
+                       | NounRelation      -- 24
+                       | NounShape         -- 25
+                       | NounState         -- 26
+                       | NounSubstance     -- 27
+                       | NounTime          -- 28
+                       | VerbBody          -- 29
+                       | VerbChange        -- 30
+                       | VerbCognition     -- 31
+                       | VerbCommunication -- 32
+                       | VerbCompetition   -- 33
+                       | VerbConsumption   -- 34
+                       | VerbContact       -- 35
+                       | VerbCreation      -- 36
+                       | VerbEmotion       -- 37
+                       | VerbMotion        -- 38
+                       | VerbPerception    -- 39
+                       | VerbPossession    -- 40
+                       | VerbSocial        -- 41
+                       | VerbStative       -- 42
+                       | VerbWeather       -- 43
+                       | AdjPpl            -- 44
+                       deriving (Show,Eq,Ord,Enum)
+
+lexicographerFileTable :: [(Text,Either Text LexicographerFile)]
+lexicographerFileTable = [ ("adj.all"           , Right AdjAll           )
+                         , ("adj.pert"          , Right AdjPert          )
+                         , ("adv.all"           , Right AdvAll           )
+                         , ("noun.act"          , Right NounAct          )
+                         , ("noun.animal"       , Right NounAnimal       )
+                         , ("noun.artifact"     , Right NounArtifact     )
+                         , ("noun.attribute"    , Right NounAttribute    )
+                         , ("noun.body"         , Right NounBody         )
+                         , ("noun.cognition"    , Right NounCognition    )
+                         , ("noun.communication", Right NounCommunication)
+                         , ("noun.event"        , Right NounEvent        )
+                         , ("noun.feeling"      , Right NounFeeling      )
+                         , ("noun.food"         , Right NounFood         )
+                         , ("noun.group"        , Right NounGroup        )
+                         , ("noun.location"     , Right NounLocation     )
+                         , ("noun.motive"       , Right NounMotive       )
+                         , ("noun.object"       , Right NounObject       )
+                         , ("noun.person"       , Right NounPerson       )
+                         , ("noun.phenomenon"   , Right NounPhenomenon   )
+                         , ("noun.plant"        , Right NounPlant        )
+                         , ("noun.possession"   , Right NounPossession   )
+                         , ("noun.process"      , Right NounProcess      )
+                         , ("noun.quantity"     , Right NounQuantity     )
+                         , ("noun.relation"     , Right NounRelation     )
+                         , ("noun.shape"        , Right NounShape        )
+                         , ("noun.state"        , Right NounState        )
+                         , ("noun.substance"    , Right NounSubstance    )
+                         , ("noun.time"         , Right NounTime         )
+                         , ("verb.body"         , Right VerbBody         )
+                         , ("verb.change"       , Right VerbChange       )
+                         , ("verb.cognition"    , Right VerbCognition    )
+                         , ("verb.communication", Right VerbCommunication)
+                         , ("verb.competition"  , Right VerbCompetition  )
+                         , ("verb.consumption"  , Right VerbConsumption  )
+                         , ("verb.contact"      , Right VerbContact      )
+                         , ("verb.creation"     , Right VerbCreation     )
+                         , ("verb.emotion"      , Right VerbEmotion      )
+                         , ("verb.motion"       , Right VerbMotion       )
+                         , ("verb.perception"   , Right VerbPerception   )
+                         , ("verb.possession"   , Right VerbPossession   )
+                         , ("verb.social"       , Right VerbSocial       )
+                         , ("verb.stative"      , Right VerbStative      )
+                         , ("verb.weather"      , Right VerbWeather      )
+                         , ("adj.ppl"           , Right AdjPpl           )
+                         -- meta files
+                         , ("noun.Tops"         , Left "noun.Tops")
+                         , ("verb.Framestext"   , Left "verb.Framestext")
+                         ]
+
+
 data PointerSymbol_Noun = PSN_Antonym                    --   "!"
                         | PSN_Hypernym                   --   "@"
                         | PSN_Instance_Hypernym          --   "@i"
@@ -46,7 +145,6 @@ data PointerSymbol_Noun = PSN_Antonym                    --   "!"
                         | PSN_DomainOfSynset_USAGE       --   ";u"
                         | PSN_MemberOfThisDomain_USAGE   --   "-u"
                         deriving (Show,Eq,Ord)
-
 
 data PointerSymbol_Verb = PSV_Antonym                    --   "!"
                         | PSV_Hypernym                   --   "@"
@@ -99,22 +197,34 @@ data SSWord = SSWord { _ssw_word   :: [Text]
                      , _ssw_marker :: Maybe Marker
                      , _ssw_lexid  :: Maybe Int }
             deriving Show
-                       
-type Gloss = Text
 
 
-data Synset a = Synset { _ssn_words    :: [SSWord]
-                       , _ssn_pointers :: [PointerSymbol a]
-                       , _ssn_frames   :: [Int]
-                       , _ssn_gloss    :: Maybe Gloss }
+data SSPointer (a :: SSType)
+  = SSPointer { _ssp_lex_filename   :: Maybe (Either Text LexicographerFile)
+              , _ssp_word           :: [Text]
+              , _ssp_lexid          :: Maybe Int
+              , _ssp_pointer_symbol :: PointerSymbol a
+              }
+
+
+data Synset (a :: SSType)
+  = Synset { _ssn_words    :: [SSWord]
+           , _ssn_pointers :: [SSPointer a]
+           , _ssn_frames   :: [Int]
+           , _ssn_gloss    :: Text }
 
 makeLenses ''Synset
 
 
 -- we need UndecidableInstances for this. 
-instance (Show (PointerSymbol typ)) => Show (Synset typ) where
-  show x = "Synset { _ssn_words=" ++ show (_ssn_words x)    ++
+deriving instance (Show (PointerSymbol typ)) => Show (SSPointer typ)
+  
+  
+deriving instance (Show (PointerSymbol typ)) => Show (Synset typ)
+
+
+{-  show x = "Synset { _ssn_words=" ++ show (_ssn_words x)    ++
            ", _ssn_pointers="     ++ show (_ssn_pointers x) ++
            ", _ssn_frames="       ++ show (_ssn_frames x)   ++
-           ", _ssn_gloss="        ++ show (_ssn_gloss x)    ++ "}"
+           ", _ssn_gloss="        ++ show (_ssn_gloss x)    ++ "}" -}
 
