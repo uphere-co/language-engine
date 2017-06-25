@@ -56,6 +56,34 @@ testdata = [ "{ lamivudine, 3TC, nucleoside_reverse_transcriptase_inhibitor,@ (a
            , "{ radiocarbon_dating, carbon_dating, carbon-14_dating, dating,@ (a chemical analysis used to determine the age of organic materials based on their content of the radioisotope carbon 14; believed to be reliable up to 40,000 years) }\n"
            ] 
 
+nounfiles = [ "noun.act"
+            , "noun.animal"
+            , "noun.artifact"
+            , "noun.attribute"
+            , "noun.body"
+            , "noun.cognition"
+            , "noun.communication"
+            , "noun.event"
+            , "noun.feeling"
+            , "noun.food"
+            , "noun.group"
+            , "noun.location"
+            , "noun.motive"
+            , "noun.object"
+            , "noun.person"
+            , "noun.phenomenon"
+            , "noun.plant"
+            , "noun.possession"
+            , "noun.process"
+            , "noun.quantity"
+            , "noun.relation"
+            , "noun.shape"
+            , "noun.state"
+            , "noun.substance"
+            , "noun.time"
+            , "noun.Tops"
+            ]
+
 main = do
   args <- getArgs
   let fp = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles" </> args !! 0

@@ -122,15 +122,6 @@ p_pointer defsstyp = do
   (ws,md) <- p_word_lexid
   msatellite <- optional (char '^' *> p_word_lexid)
   char ','
-  {- 
-  let sstyp = case msatellite of
-                Nothing -> defsstyp
-                Just _ -> case lexfile of
-                            Nothing                 -> defsstyp
-                            Just (Left "noun.Tops") -> Noun
-                            Just (Left x          ) -> error ("p_pointer: " ++ show x ++ " cannot be there")
-                            Just (Right lextyp) -> lexicographerFileToSSType lextyp
-  -}
   s <-p_pointer_symbol defsstyp
   return (SSPointer lexfile ws md msatellite s)
 
@@ -162,7 +153,7 @@ p_synset_noun = do
   char '{'
   wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Noun)))
   -- ws <- many (skipSpace *> p_word)
-  ps <- many1 (skipSpace *> (p_pointer Noun))
+  ps <- many (skipSpace *> (p_pointer Noun))
   skipSpace
   char '('
   gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
