@@ -27,6 +27,7 @@ Library
   exposed-modules:
                      WordNet
                      WordNet.Type
+                     WordNet.Type.Lexicographer
                      WordNet.API.Query
                      WordNet.Parser.Common
                      WordNet.Parser.Data

@@ -32,7 +32,7 @@ main = do
   -- print (toEnum 44  :: LexicoGrapherFile)
   let dir = "/scratch/wavewave/wordnet/WordNet-3.1/dict"
   ss <- (catMaybes <$> parseFile parseSense (dir </> "index.sense"))
-  mapM_ print (take 100 ss)
+  mapM_ print . drop 10000 . take 11000 $ ss
 
 {- 
 main' = do
