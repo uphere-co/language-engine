@@ -209,8 +209,7 @@ data SSPointer (a :: SSType)
 
 
 data Synset (a :: SSType)
-  = Synset { _ssn_wordpointers :: [(SSWord,[SSPointer a])]
-           , _ssn_words    :: [SSWord]
+  = Synset { _ssn_words_or_wordpointers    :: [Either SSWord (SSWord,[SSPointer a])]
            , _ssn_pointers :: [SSPointer a]
            , _ssn_frames   :: [Int]
            , _ssn_gloss    :: Text }

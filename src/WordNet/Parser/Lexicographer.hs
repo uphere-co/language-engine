@@ -42,6 +42,7 @@ p_word = do
   md <- optional (digitToInt <$> digit) -}
   (ws,md) <- p_word_lexid
   char ','
+  char ' '
   return (SSWord ws Nothing md)
 
 p_pointer :: Parser (SSPointer 'Noun)
@@ -63,14 +64,15 @@ p_wordpointer = do
   ps <- many1 (skipSpace *> p_pointer)
   skipSpace
   char ']'
+  char ' '
   return (w,ps)
 
 pointerSymbol_noun_table :: [ (PointerSymbol 'Noun, Text) ]
 pointerSymbol_noun_table = [ (PSN_Antonym                  , "!" )
+                           , (PSN_Instance_Hypernym        , "@i")  -- ordering is important
                            , (PSN_Hypernym                 , "@" )
-                           , (PSN_Instance_Hypernym        , "@i")
+                           , (PSN_Instance_Hyponym         , "~i")  -- ordering is important
                            , (PSN_Hyponym                  , "~" )
-                           , (PSN_Instance_Hyponym         , "~i")
                            , (PSN_Member_Holohym           , "#m")
                            , (PSN_Substance_Holonym        , "#s")
                            , (PSN_Part_Holonym             , "#p")
@@ -91,7 +93,8 @@ p_pointer_symbol_noun :: Parser (PointerSymbol 'Noun)
 p_pointer_symbol_noun
   = foldl1' (<|>) (map (\(x,y)-> string y *> return x) pointerSymbol_noun_table)
 
-p_synset_noun = do
+{- 
+p_synset_noun_orig = do
   char '{'
   wps <- many (skipSpace *> p_wordpointer)
   ws <- many (skipSpace *> p_word)
@@ -100,6 +103,18 @@ p_synset_noun = do
   char '('
   gloss' <- manyTill anyChar (string ") }")
   return (Synset wps ws ps [] (T.pack gloss'))
+-}
+
+p_synset_noun = do
+  char '{'
+  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right p_wordpointer))
+  -- ws <- many (skipSpace *> p_word)
+  ps <- many1 (skipSpace *> p_pointer)
+  skipSpace
+  char '('
+  gloss' <- manyTill anyChar (string ") }")
+  return (Synset wps ps [] (T.pack gloss'))
+
 
 p_skipEmptyLine = skipWhile (\c -> c == ' ' || c == '\n')
 
