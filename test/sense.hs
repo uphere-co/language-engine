@@ -19,6 +19,7 @@ import qualified Data.Text.IO        as TIO
 import           System.Environment
 import           System.FilePath
 --
+import           NLP.Type.WordNet
 -- import           WordNet.API.Query
 import           WordNet.Query
 import           WordNet.Parser.Sense
@@ -38,8 +39,8 @@ showResult doesshowresult er = do
     Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
     Partial f -> case (f "") of
                    Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
-                   Done i r -> when doesshowresult (mapM_ print r) >> print (length r) >> print (T.take 100 i)
-    Done i r -> when doesshowresult (mapM_ print r) >> print (length r) >> print (T.take 100 i)
+                   Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
+    Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
 
 
   
@@ -61,8 +62,8 @@ main = do
   txt <- TIO.readFile fp
 
 
-  let er = parse (many1 (p_synset SNoun)) txt
-  showResult False er
+  let er = parse (many1 (p_synset Noun)) txt
+  showResult True er
 
 {- 
 main = do

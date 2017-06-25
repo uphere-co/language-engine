@@ -7,7 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
+-- {-# LANGUAGE UndecidableInstances #-}
 
 module WordNet.Type.Lexicographer where
 
@@ -25,7 +25,6 @@ data SSSType (n :: SSType) where
   SVerb      :: SSSType 'Verb
   SAdjective :: SSSType 'Adjective
   SAdverb    :: SSSType 'Adverb
-
 
 data LexicographerFile = AdjAll            -- 00
                        | AdjPert           -- 01
@@ -74,6 +73,53 @@ data LexicographerFile = AdjAll            -- 00
                        | AdjPpl            -- 44
                        deriving (Show,Eq,Ord,Enum)
 
+lexicographerFileToSSType AdjAll            = Adjective
+lexicographerFileToSSType AdjPert           = Adjective
+lexicographerFileToSSType AdvAll            = Adverb
+lexicographerFileToSSType NounTops          = Noun
+lexicographerFileToSSType NounAct           = Noun
+lexicographerFileToSSType NounAnimal        = Noun
+lexicographerFileToSSType NounArtifact      = Noun
+lexicographerFileToSSType NounAttribute     = Noun
+lexicographerFileToSSType NounBody          = Noun
+lexicographerFileToSSType NounCognition     = Noun
+lexicographerFileToSSType NounCommunication = Noun
+lexicographerFileToSSType NounEvent         = Noun
+lexicographerFileToSSType NounFeeling       = Noun
+lexicographerFileToSSType NounFood          = Noun
+lexicographerFileToSSType NounGroup         = Noun
+lexicographerFileToSSType NounLocation      = Noun
+lexicographerFileToSSType NounMotive        = Noun
+lexicographerFileToSSType NounObject        = Noun
+lexicographerFileToSSType NounPerson        = Noun
+lexicographerFileToSSType NounPhenomenon    = Noun
+lexicographerFileToSSType NounPlant         = Noun
+lexicographerFileToSSType NounPossession    = Noun
+lexicographerFileToSSType NounProcess       = Noun
+lexicographerFileToSSType NounQuantity      = Noun
+lexicographerFileToSSType NounRelation      = Noun
+lexicographerFileToSSType NounShape         = Noun
+lexicographerFileToSSType NounState         = Noun
+lexicographerFileToSSType NounSubstance     = Noun
+lexicographerFileToSSType NounTime          = Noun
+lexicographerFileToSSType VerbBody          = Verb
+lexicographerFileToSSType VerbChange        = Verb
+lexicographerFileToSSType VerbCognition     = Verb
+lexicographerFileToSSType VerbCommunication = Verb
+lexicographerFileToSSType VerbCompetition   = Verb
+lexicographerFileToSSType VerbConsumption   = Verb
+lexicographerFileToSSType VerbContact       = Verb
+lexicographerFileToSSType VerbCreation      = Verb
+lexicographerFileToSSType VerbEmotion       = Verb
+lexicographerFileToSSType VerbMotion        = Verb
+lexicographerFileToSSType VerbPerception    = Verb
+lexicographerFileToSSType VerbPossession    = Verb
+lexicographerFileToSSType VerbSocial        = Verb
+lexicographerFileToSSType VerbStative       = Verb
+lexicographerFileToSSType VerbWeather       = Verb
+lexicographerFileToSSType AdjPpl            = Adjective
+
+
 lexicographerFileTable :: [(Text,Either Text LexicographerFile)]
 lexicographerFileTable = [ ("adj.all"           , Right AdjAll           )
                          , ("adj.pert"          , Right AdjPert          )
@@ -121,7 +167,7 @@ lexicographerFileTable = [ ("adj.all"           , Right AdjAll           )
                          , ("adj.ppl"           , Right AdjPpl           )
                          -- meta files
                          , ("noun.Tops"         , Left "noun.Tops")
-                         , ("verb.Framestext"   , Left "verb.Framestext")
+                         -- , ("verb.Framestext"   , Left "verb.Framestext")
                          ]
 
 
@@ -144,6 +190,8 @@ data PointerSymbol_Noun = PSN_Antonym                    --   "!"
                         | PSN_MemberOfThisDomain_REGION  --   "-r"
                         | PSN_DomainOfSynset_USAGE       --   ";u"
                         | PSN_MemberOfThisDomain_USAGE   --   "-u"
+                        -- exception
+                        | PSN_Pertainym                  --   "\"  only mellowness 
                         deriving (Show,Eq,Ord)
 
 data PointerSymbol_Verb = PSV_Antonym                    --   "!"
@@ -187,6 +235,14 @@ type instance PointerSymbol 'Verb      = PointerSymbol_Verb
 type instance PointerSymbol 'Adjective = PointerSymbol_Adjective
 type instance PointerSymbol 'Adverb    = PointerSymbol_Adverb
 
+data PointerSymbolAll where
+  PSNoun      :: PointerSymbol 'Noun      -> PointerSymbolAll
+  PSVerb      :: PointerSymbol 'Verb      -> PointerSymbolAll
+  PSAdjective :: PointerSymbol 'Adjective -> PointerSymbolAll
+  PSAdverb    :: PointerSymbol 'Adverb    -> PointerSymbolAll
+
+deriving instance Show PointerSymbolAll 
+
 
 data Marker = Marker_P  -- ^ predicate position
             | Marker_A  -- ^ prenominal (attributive) position
@@ -199,30 +255,31 @@ data SSWord = SSWord { _ssw_word   :: [Text]
             deriving Show
 
 
-data SSPointer (a :: SSType)
+data SSPointer
   = SSPointer { _ssp_lex_filename   :: Maybe (Either Text LexicographerFile)
               , _ssp_word           :: [Text]
               , _ssp_lexid          :: Maybe Int
               , _ssp_satellite      :: Maybe ([Text],Maybe Int)
-              , _ssp_pointer_symbol :: PointerSymbol a
+              , _ssp_pointer_symbol :: PointerSymbolAll
               }
+  deriving Show
 
-
-data Synset (a :: SSType)
-  = Synset { _ssn_words_or_wordpointers    :: [Either SSWord (SSWord,[SSPointer a])]
-           , _ssn_pointers :: [SSPointer a]
+data Synset
+  = Synset { _ssn_words_or_wordpointers    :: [Either SSWord (SSWord,[SSPointer])]
+           , _ssn_pointers :: [SSPointer]
            , _ssn_frames   :: [Int]
            , _ssn_gloss    :: Text }
+  deriving Show
 
 makeLenses ''Synset
 
-
+{- 
 -- we need UndecidableInstances for this. 
 deriving instance (Show (PointerSymbol typ)) => Show (SSPointer typ)
   
   
 deriving instance (Show (PointerSymbol typ)) => Show (Synset typ)
-
+-}
 
 {-  show x = "Synset { _ssn_words=" ++ show (_ssn_words x)    ++
            ", _ssn_pointers="     ++ show (_ssn_pointers x) ++
