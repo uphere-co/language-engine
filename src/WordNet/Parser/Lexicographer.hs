@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module WordNet.Parser.Lexicographer where
@@ -31,21 +32,28 @@ p_letters = takeWhile1 (\c -> inClass "a-zA-Z" c || c == '-')
 
 p_lexfile = foldl1' (<|>) (map (\(x,y) -> string x *> pure y) lexicographerFileTable)
 
+p_word_lexid = do
+  ws <- p_letters `sepBy1` char '_'
+  md :: Maybe Int <- optional (read <$> many1 digit)
+  return (ws,md)
 
 p_word = do
-  ws <- p_letters `sepBy1` char '_'
-  md <- optional (digitToInt <$> digit)
+  {- ws <- p_letters `sepBy1` char '_'
+  md <- optional (digitToInt <$> digit) -}
+  (ws,md) <- p_word_lexid
   char ','
   return (SSWord ws Nothing md)
 
 p_pointer :: Parser (SSPointer 'Noun)
 p_pointer = do
   lexfile <- optional (p_lexfile <* char ':')
-  ws <- p_letters `sepBy1` char '_'
-  md <- optional (digitToInt <$> digit)
+  {- ws <- p_letters `sepBy1` char '_'
+  md <- optional (digitToInt <$> digit) -}
+  (ws,md) <- p_word_lexid
+  msatellite <- optional (char '^' *> p_word_lexid)
   char ','
   s <-p_pointer_symbol_noun
-  return (SSPointer lexfile ws md s)
+  return (SSPointer lexfile ws md msatellite s)
 
 
 p_wordpointer = do

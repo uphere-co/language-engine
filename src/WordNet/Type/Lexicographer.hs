@@ -203,6 +203,7 @@ data SSPointer (a :: SSType)
   = SSPointer { _ssp_lex_filename   :: Maybe (Either Text LexicographerFile)
               , _ssp_word           :: [Text]
               , _ssp_lexid          :: Maybe Int
+              , _ssp_satellite      :: Maybe ([Text],Maybe Int)
               , _ssp_pointer_symbol :: PointerSymbol a
               }
 
