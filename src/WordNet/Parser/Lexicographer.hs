@@ -43,11 +43,15 @@ pointerSymbol_noun_table = [ (PSN_Antonym                  , "!" )
                            , (PSN_MemberOfThisDomain_USAGE , "-u")
                            ]
 
+p_comment = char '(' >> manyTill anyChar endOfLine
+
+p_empty = endOfLine -- skipSpace >> char '\n'
+
 p_skipEmptyLine = skipWhile (\c -> c == ' ' || c == '\n')
 
 p_escapednumber = takeWhile1 isDigit <* char '"'
 
-p_letters = takeWhile1 (\c -> inClass "a-zA-Z" c || c == '-')
+p_letters = takeWhile1 (\c -> inClass "a-zA-Z" c || c `elem` ['-','.','\''])
 
 p_token = T.concat <$> many1 (p_letters <|> p_escapednumber)
 
@@ -99,7 +103,10 @@ p_synset_noun = do
   ps <- many1 (skipSpace *> p_pointer)
   skipSpace
   char '('
-  gloss' <- manyTill anyChar (string ") }")
+  gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
+  -- skipWhile (== ' ')
+  -- optional p_comment
+  manyTill anyChar endOfLine
   return (Synset wps ps [] (T.pack gloss'))
 
 
@@ -113,8 +120,10 @@ p_synset_adverb = undefined
 
   
 
-p_synset :: SSSType typ -> Parser (Synset typ)
-p_synset SNoun      = p_synset_noun
+p_synset :: SSSType typ -> Parser (Maybe (Synset typ))
+p_synset SNoun      = (Just <$> p_synset_noun) <|>
+                      (p_comment *> return Nothing) <|>
+                      (p_empty *> return Nothing)
 p_synset SVerb      = p_synset_verb
 p_synset SAdjective = p_synset_adjective
 p_synset SAdverb    = p_synset_adverb

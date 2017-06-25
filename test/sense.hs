@@ -44,11 +44,15 @@ main0 = do
 main = do
   let fp = "/scratch/wavewave/wordnet/WordNet-3.1/dict/dbfiles/noun.animal"
   txt <- TIO.readFile fp
-  let testtxts = (drop 6 (T.lines txt))
-  let er = parse (many1 (p_skipEmptyLine *> p_synset SNoun)) $ T.unlines $ testtxts
+
+  -- let txt = "{ Theropoda, suborder_Theropoda, animal_order,@ suborder_Sauropodomorpha,#m (carnivorous saurischian dinosaurs with short forelimbs; Jurassic and Cretaceous) } (or parallel with Sauropodomorpha?)\n"
+
+  -- let testtxts = (drop 6 (T.lines txt))
+  let er = parse (many1 (p_synset SNoun)) txt
+      -- er = parse (many1 (skipSpace)) "\n\n\n" 
   case er of
     Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
-    Partial _ -> print "partial"
+    Partial f -> print (f "")
     Done i r -> mapM_ print r >>  print (length r) >> print (T.take 100 i)
 
 {- 
