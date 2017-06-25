@@ -5,7 +5,8 @@
 
 module WordNet.Parser.Lexicographer where
 
-import           Control.Applicative             (optional,pure,(<$>),(<*>),(<*),(*>),(<|>))
+import           Control.Applicative             (many,optional,pure
+                                                 ,(<$>),(<*>),(<*),(*>),(<|>))
 import           Control.Monad
 import           Data.Attoparsec.Text
 import           Data.Char                       (digitToInt)
@@ -26,17 +27,10 @@ p_synset SAdjective = p_synset_adjective
 p_synset SAdverb    = p_synset_adverb
 
 
-p_letters = takeWhile1 (inClass "a-zA-Z")
+p_letters = takeWhile1 (\c -> inClass "a-zA-Z" c || c == '-')
 
 p_lexfile = foldl1' (<|>) (map (\(x,y) -> string x *> pure y) lexicographerFileTable)
 
-{- 
-  (string "adj.all"    *> pure AdjAll) <|>
-            (string "adj.pert"   *> pure AdjPert) <|>
-            (string "noun.group" *> pure NounGroup)
--}
-
---                         "_:."
 
 p_word = do
   ws <- p_letters `sepBy1` char '_'
@@ -53,6 +47,15 @@ p_pointer = do
   s <-p_pointer_symbol_noun
   return (SSPointer lexfile ws md s)
 
+
+p_wordpointer = do
+  char '['
+  skipSpace
+  w <- p_word
+  ps <- many1 (skipSpace *> p_pointer)
+  skipSpace
+  char ']'
+  return (w,ps)
 
 pointerSymbol_noun_table :: [ (PointerSymbol 'Noun, Text) ]
 pointerSymbol_noun_table = [ (PSN_Antonym                  , "!" )
@@ -80,23 +83,17 @@ p_pointer_symbol_noun :: Parser (PointerSymbol 'Noun)
 p_pointer_symbol_noun
   = foldl1' (<|>) (map (\(x,y)-> string y *> return x) pointerSymbol_noun_table)
 
-  
 p_synset_noun = do
   char '{'
-  ws <- many1 (skipSpace *> p_word)
-  skipSpace
-  ps <- many1 p_pointer
+  wps <- many (skipSpace *> p_wordpointer)
+  ws <- many (skipSpace *> p_word)
+  ps <- many (skipSpace *> p_pointer)
   skipSpace
   char '('
-  gloss <- takeTill (== ')')
-  char ')'
-  skipSpace
-  char '}'
-  -- char ','
-  -- skipSpace *> char '@' -}
-  --  many1 (p <* char ',' <* skipSpace) <* char '@'
-  -- let xs = map (\ws ->SSWord ws Nothing Nothing) txts
-  return (Synset ws ps [] gloss) 
+  gloss' <- manyTill anyChar (string ") }")
+  return (Synset wps ws ps [] (T.pack gloss'))
+
+p_skipEmptyLine = skipWhile (\c -> c == ' ' || c == '\n')
 
 p_synset_verb = undefined
 
@@ -105,9 +102,4 @@ p_synset_adjective = undefined
 p_synset_adverb = undefined
 
 
-main = do
-  let fp = "/scratch/wavewave/wordnet/WordNet-3.1/dict/dbfiles/noun.animal"
-  txt <- TIO.readFile fp
-  let testtxt = head (drop 5 (T.lines txt))
-  print $ parse (p_synset SNoun) testtxt 
   

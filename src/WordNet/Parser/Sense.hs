@@ -29,6 +29,6 @@ parseSense = go . T.words
                  soffset
                  snumber
                  cnt
-    worker _ = Nothing
+    go _ = Nothing
 
 

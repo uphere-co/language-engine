@@ -3,7 +3,10 @@
 
 module Main where
 
+import           Control.Applicative
 import           Control.Lens
+import           Control.Monad
+import           Data.Attoparsec.Text
 import qualified Data.HashMap.Strict as HM
 import           Data.IntMap                (IntMap)
 import qualified Data.IntMap         as IM
@@ -15,10 +18,12 @@ import qualified Data.Text           as T
 import qualified Data.Text.IO        as TIO
 import           System.FilePath
 --
-import           WordNet.API.Query
+-- import           WordNet.API.Query
 import           WordNet.Query
 import           WordNet.Parser.Sense
+import           WordNet.Parser.Lexicographer
 import           WordNet.Type
+import           WordNet.Type.Lexicographer
 
                          
 
@@ -28,11 +33,23 @@ addSense !m s = IM.insertWith (++) (s^.sense_soffset) [s] m
 
  
              
-main = do
+main0 = do
   -- print (toEnum 44  :: LexicoGrapherFile)
   let dir = "/scratch/wavewave/wordnet/WordNet-3.1/dict"
   ss <- (catMaybes <$> parseFile parseSense (dir </> "index.sense"))
-  mapM_ print . drop 10000 . take 11000 $ ss
+  mapM_ print . drop 10000 . Prelude.take 11000 $ ss
+
+
+
+main = do
+  let fp = "/scratch/wavewave/wordnet/WordNet-3.1/dict/dbfiles/noun.animal"
+  txt <- TIO.readFile fp
+  let testtxts = (drop 13 (T.lines txt))
+  let er = parse (replicateM 10 (p_skipEmptyLine *> p_synset SNoun)) $ T.unlines $ Prelude.take 100 testtxts
+  case er of
+    Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
+    Partial _ -> print "partial"
+    Done i r -> mapM_ print r >> print (T.take 100 i)
 
 {- 
 main' = do
