@@ -16,6 +16,7 @@ import           Data.Monoid
 import           Data.Text                  (Text)
 import qualified Data.Text           as T
 import qualified Data.Text.IO        as TIO
+import           System.Environment
 import           System.FilePath
 --
 -- import           WordNet.API.Query
@@ -31,8 +32,17 @@ import           WordNet.Type.Lexicographer
 addSense :: IntMap [SenseItem] -> SenseItem -> IntMap [SenseItem]
 addSense !m s = IM.insertWith (++) (s^.sense_soffset) [s] m
 
- 
-             
+showResult :: (Show a) => Bool -> Result [a] -> IO ()
+showResult doesshowresult er = do 
+  case er of
+    Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
+    Partial f -> case (f "") of
+                   Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
+                   Done i r -> when doesshowresult (mapM_ print r) >> print (length r) >> print (T.take 100 i)
+    Done i r -> when doesshowresult (mapM_ print r) >> print (length r) >> print (T.take 100 i)
+
+
+  
 main0 = do
   -- print (toEnum 44  :: LexicoGrapherFile)
   let dir = "/scratch/wavewave/wordnet/WordNet-3.1/dict"
@@ -40,35 +50,26 @@ main0 = do
   mapM_ print . drop 10000 . Prelude.take 11000 $ ss
 
 
+testdata = [ "{ lamivudine, 3TC, nucleoside_reverse_transcriptase_inhibitor,@ (a nucleoside reverse transcriptase inhibitor that is very effective in combination with zidovudine in treating AIDS and HIV) }\n"
+           , "{ one-hitter, 1\"-hitter, baseball_game,@ (a game in which a pitcher allows the opposing team only one hit) }\n"
+           , "{ radiocarbon_dating, carbon_dating, carbon-14_dating, dating,@ (a chemical analysis used to determine the age of organic materials based on their content of the radioisotope carbon 14; believed to be reliable up to 40,000 years) }\n"
+           ] 
 
 main = do
-  let fp = "/scratch/wavewave/wordnet/WordNet-3.1/dict/dbfiles/noun.animal"
+  args <- getArgs
+  let fp = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles" </> args !! 0
   txt <- TIO.readFile fp
 
-  -- let txt = "{ Theropoda, suborder_Theropoda, animal_order,@ suborder_Sauropodomorpha,#m (carnivorous saurischian dinosaurs with short forelimbs; Jurassic and Cretaceous) } (or parallel with Sauropodomorpha?)\n"
 
-  -- let testtxts = (drop 6 (T.lines txt))
   let er = parse (many1 (p_synset SNoun)) txt
-      -- er = parse (many1 (skipSpace)) "\n\n\n" 
-  case er of
-    Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
-    Partial f -> print (f "")
-    Done i r -> mapM_ print r >>  print (length r) >> print (T.take 100 i)
-
-{- 
-main' = do
-  let dir = "/scratch/wavewave/wordnet/WordNet-3.0/dict"
-  ss <- (catMaybes <$> parseFile parseSense (dir </> "index.sense"))
-  let m = foldl' addSense IM.empty ss 
-  print (IM.size m)
-  mapM_ print . drop 50000 . take 51000 .  IM.toAscList $
-    (fmap (map (\s->(s^.sense_lemma,headWord s))) m)
-    -- (fmap (map (\s->(s^.sense_lemma, ))) m)
--}
-
+  showResult False er
 
 {- 
 main = do
-  db <- loadDB "/scratch/wavewave/wordnet/WordNet-3.0/dict"
-  mapM_ print $ take 100 $ HM.toList (db^.senseIdxDB)
+  let txt = "carbon-14_dating"
+  -- let txt = "carbon-14"
+
+  let er = parse (replicateM 1 p_word_lexid) txt
+
+  showResult True er
 -}

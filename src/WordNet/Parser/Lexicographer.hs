@@ -12,6 +12,7 @@ import           Control.Monad
 import           Data.Attoparsec.Text
 import           Data.Char                       (digitToInt,isDigit)
 import           Data.List                       (foldl1')
+import           Data.Monoid
 import           Data.Text                       (Text)
 import qualified Data.Text                  as T
 --
@@ -45,22 +46,41 @@ pointerSymbol_noun_table = [ (PSN_Antonym                  , "!" )
 
 p_comment = char '(' >> manyTill anyChar endOfLine
 
-p_empty = endOfLine -- skipSpace >> char '\n'
+p_empty = skipWhile (\c -> c == ' ' || c == '\t') >> endOfLine -- skipSpace >> char '\n'
 
 p_skipEmptyLine = skipWhile (\c -> c == ' ' || c == '\n')
 
 p_escapednumber = takeWhile1 isDigit <* char '"'
 
-p_letters = takeWhile1 (\c -> inClass "a-zA-Z" c || c `elem` ['-','.','\''])
+isLetter c = inClass "a-zA-Z" c || c `elem` ['-','.','\'','/']
 
-p_token = T.concat <$> many1 (p_letters <|> p_escapednumber)
+p_letters = takeWhile1 isLetter
 
+p_nonlasttoken = T.concat <$> many (p_letters <|> p_escapednumber <|> takeWhile1 isDigit)
 
+  -- takeWhile1 (\c -> isLetter c || isDigit c)
+
+p_token = do
+  xs <- many $ do txt <- p_escapednumber <|>
+                         (do num <- Data.Attoparsec.Text.takeWhile1 isDigit
+                             txt1 <- p_letters
+                             return (num <> txt1)) <|>
+                         p_letters
+                  -- txt1 <- p_letters <|> p_escapednumber
+                  return txt -- [num,txt1]
+  return $ T.concat xs
+{-   p_nonlasttoken
+  -- txt2 <- p_letters <|> p_escapednumber
+  let txt2 = ""
+  return (txt1 <> txt2)
+  -}
 
 p_lexfile = foldl1' (<|>) (map (\(x,y) -> string x *> pure y) lexicographerFileTable)
 
 p_word_lexid = do
-  ws <- p_token `sepBy1` char '_'
+  ws <- do ws' <- many (p_nonlasttoken <* char '_')
+           w <- p_token
+           return (ws'++[w]) 
   md :: Maybe Int <- optional (read <$> many1 digit)
   return (ws,md)
 
