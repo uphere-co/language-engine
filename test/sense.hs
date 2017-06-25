@@ -85,13 +85,12 @@ nounfiles = [ "noun.act"
             ]
 
 main = do
-  args <- getArgs
-  let fp = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles" </> args !! 0
-  txt <- TIO.readFile fp
-
-
-  let er = parse (many1 (p_synset Noun)) txt
-  showResult True er
+  flip mapM_ nounfiles $ \f -> do
+    let fp = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles" </> f
+    putStrLn fp
+    txt <- TIO.readFile fp
+    let er = parse (many1 (p_synset Noun)) txt
+    showResult False er
 
 {- 
 main = do
