@@ -202,8 +202,9 @@ data Marker = Marker_P  -- ^ predicate position
 
 
 data SSWord = SSWord { _ssw_word   :: [Text]
+                     , _ssw_lexid  :: Maybe Int
                      , _ssw_marker :: Maybe Marker
-                     , _ssw_lexid  :: Maybe Int }
+                     }
             deriving Show
 
 

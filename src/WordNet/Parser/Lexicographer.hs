@@ -104,37 +104,37 @@ p_word_lexid = do
   return (ws,md)
 -}
 
-p_word_marker_lexid :: Parser ([Text],Maybe Marker,Maybe Int)
-p_word_marker_lexid = do
+p_word_lexid_marker :: Parser ([Text],Maybe Int,Maybe Marker)
+p_word_lexid_marker = do
   ws <- do ws' <- many (p_nonlasttoken <* char '_')
            w <- p_token
            return (ws'++[w])
+  md :: Maybe Int <- optional (read <$> many1 digit)
   mk <- optional ( (string "(p)"  >> return Marker_P) <|>
                    (string "(a)"  >> return Marker_A) <|>
                    (string "(ip)" >> return Marker_IP)
                  )
-  md :: Maybe Int <- optional (read <$> many1 digit)
-  return (ws,mk,md)
+  return (ws,md,mk)
 
 
 p_word :: Parser SSWord
 p_word = do
-  (ws,mk,md) <- p_word_marker_lexid
+  (ws,md,mk) <- p_word_lexid_marker
   char ','
   c <- peekChar'
   guard (c == ' ' || isAlpha c ) -- this is due to verb.motion:body-surf
-  return (SSWord ws mk md)
+  return (SSWord ws md mk)
 
 
 p_pointer :: Parser SSPointer
 p_pointer = do
   lexfile <- optional (p_lexfile <* char ':')
   skipSpace
-  (ws,mk,md) <- p_word_marker_lexid
-  msatellite <- optional (char '^' *> fmap (\(x,y,z) -> SSWord x y z) p_word_marker_lexid)
+  (ws,md,mk) <- p_word_lexid_marker
+  msatellite <- optional (char '^' *> fmap (\(x,y,z) -> SSWord x y z) p_word_lexid_marker)
   char ','
   s <-p_pointer_symbol
-  return (SSPointer lexfile (SSWord ws mk md) msatellite s)
+  return (SSPointer lexfile (SSWord ws md mk) msatellite s)
 
 
 p_frames :: Parser [Int]
@@ -220,8 +220,16 @@ p_synset_adj_cluster = (Just <$> p) <|> (p_comment *> return Nothing) <|> (p_emp
 
 p_synset_adj_cluster_test = do
                char '['
+{-                skipSpace
+               char '{'
+               skipSpace
+               char '['
+               skipSpace
+               p_word_lexid_marker -}
+               
                skipSpace
                r <- SynsetCluster <$> (p_head_satellites `sepBy1` (skipSpace >> p_splitter >> skipSpace))
                skipSpace
                char ']'
                return r
+
