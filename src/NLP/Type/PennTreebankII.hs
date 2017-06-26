@@ -1,13 +1,27 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module NLP.Type.PennTreebankII where
+module NLP.Type.PennTreebankII
+( POSTag(..)
+, ChunkTag(..)
+, IOBPrefix(..)
+, RelationTag(..)
+, AnchorTag(..)
+, TernaryLogic(..)
+, isNone, isVerb, isNoun, identifyPOS, identifyChunk
+, Bitree(..)
+, type PennTreeGen, type PennTree, type PennTreeIdxG, type PennTreeIdx, type PennTreeIdxA
+, type Range, type Lemma
+, ANode(..)
+, ALeaf(..)
+, Annotation(..)
+, chunkTag, posTag, tokenWord, getTag, getRange
+, termRange, termRangeTree, contain, containR
+, mkIndexedTree, getADTPennTree, mkPennTreeIdx, mkPennTreeIdxA
+) where
 
 import           Control.Monad.Trans.State      (evalState,get,put)
 import           Data.Aeson
@@ -15,6 +29,7 @@ import           Data.Aeson.Types
 import           Data.Bifoldable
 import           Data.Bifunctor
 import           Data.Bitraversable
+import           Data.Bitree
 import           Data.Foldable                  (toList)
 import           Data.Monoid                    ((<>))
 import           Data.Text                      (Text)
@@ -78,6 +93,9 @@ instance FromJSON POSTag where
 instance ToJSON POSTag where
   toJSON = genericToJSON defaultOptions
 
+isNone :: POSTag -> Bool
+isNone D_NONE = True
+isNone _      = False
 
 isVerb :: POSTag -> Bool                     
 isVerb VB  = True
@@ -180,10 +198,8 @@ instance FromJSON AnchorTag where
 instance ToJSON AnchorTag where
   toJSON = genericToJSON defaultOptions
 
-{- 
-isNone (PL D_NONE _) = True
-isNone _             = False
--}
+ 
+
 
 identifyPOS :: Text -> POSTag
 identifyPOS t
@@ -272,9 +288,8 @@ identifyChunk t =
 
 
 
--- | chunk = chunktag, token = token in node. 
---   typically token will be (pos = postag, a = content)
 
+{- 
 data PennTreeGen chunk word = PN chunk [PennTreeGen chunk word]
                             | PL word
                    deriving (Show, Functor, Foldable, Traversable)
@@ -291,20 +306,21 @@ instance Bifoldable PennTreeGen where
 instance Bitraversable PennTreeGen where
   bitraverse f g (PN x xs) = PN <$> f x <*> traverse (bitraverse f g) xs
   bitraverse f g (PL y)    = PL <$> g y
+-}
 
+-- | chunk = chunktag, token = token in node. 
+--   typically token will be (pos = postag, a = content)
+type PennTreeGen chunk token = Bitree chunk token
     
-type PennTree = PennTreeGen Text (Text,Text)
-
-deriving instance (Eq chunk, Eq word) => Eq (PennTreeGen chunk word)
-  
+type PennTree = Bitree Text (Text,Text)
 
 type Range = (Int,Int)
+
+type Lemma = Text
 
 type PennTreeIdxG chunk token = PennTreeGen (Range,chunk) (Int,token)
 
 type PennTreeIdx = PennTreeIdxG ChunkTag (POSTag,Text)
-
-type Lemma = Text
 
 data ANode annot = ANode ChunkTag annot
 
@@ -370,8 +386,6 @@ containR r0 y@(PN (r,_) xs) | r0 == r = [y]
                                             [] -> []
                                             ys:_ -> y:ys
 containR r0@(b,e) x@(PL (n,_)) = if b == n && e == n then [x] else []
-
-
 
 
 getADTPennTree :: PennTree -> PennTreeGen ChunkTag (POSTag, Text)

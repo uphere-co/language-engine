@@ -6,6 +6,7 @@ import           Data.Monoid             ((<>))
 import           Data.Text               (Text)
 import qualified Data.Text as T  
 --
+import           Data.Bitree
 import           NLP.Type.PennTreebankII
 
 fmttag :: Text -> Text

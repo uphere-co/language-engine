@@ -4,6 +4,7 @@ import           Data.Text                   (Text)
 import           Control.Applicative
 import qualified Data.Attoparsec.Text as A
 --
+import           Data.Bitree
 import           NLP.Type.PennTreebankII
 --
 import Debug.Trace

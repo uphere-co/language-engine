@@ -17,11 +17,12 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:
+                       Data.Bitree
+                       Data.BitreeZipper
                        NLP.Parser.PennTreebankII
                        NLP.Printer.PennTreebankII
                        NLP.Type.NamedEntity
                        NLP.Type.PennTreebankII
-                       NLP.Type.TreeZipper
                        NLP.Type.UniversalDependencies2.Morphology
                        NLP.Type.UniversalDependencies2.Syntax
                        NLP.Type.WordNet
