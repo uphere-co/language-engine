@@ -171,64 +171,65 @@ lexicographerFileTable = [ ("adj.all"           , Right AdjAll           )
                          ]
 
 
-data PointerSymbol_Noun = PSN_Antonym                    --   "!"
-                        | PSN_Hypernym                   --   "@"
-                        | PSN_Instance_Hypernym          --   "@i"
-                        | PSN_Hyponym                    --   "~"
-                        | PSN_Instance_Hyponym           --   "~i"
-                        | PSN_Member_Holohym             --   "#m"
-                        | PSN_Substance_Holonym          --   "#s"
-                        | PSN_Part_Holonym               --   "#p"
-                        | PSN_Member_Meronym             --   "%m"
-                        | PSN_Substance_Meronym          --   "%s"
-                        | PSN_Part_Meronym               --   "%p"
-                        | PSN_Attribute                  --   "="
-                        | PSN_DerivationallyRelatedForm  --   "+"
-                        | PSN_DomainOfSynset_TOPIC       --   ";c"
-                        | PSN_MemberOfThisDomain_TOPIC   --   "-c"
-                        | PSN_DomainOfSynset_REGION      --   ";r"
-                        | PSN_MemberOfThisDomain_REGION  --   "-r"
-                        | PSN_DomainOfSynset_USAGE       --   ";u"
-                        | PSN_MemberOfThisDomain_USAGE   --   "-u"
-                        -- exception
-                        | PSN_Pertainym                  --   "\"  only mellowness 
+data PointerSymbol = Antonym                    --   "!"
+                   | Hypernym                   --   "@"
+                   | Instance_Hypernym          --   "@i"
+                   | Hyponym                    --   "~"
+                   | Instance_Hyponym           --   "~i"
+                   | Member_Holohym             --   "#m"
+                   | Substance_Holonym          --   "#s"
+                   | Part_Holonym               --   "#p"
+                   | Member_Meronym             --   "%m"
+                   | Substance_Meronym          --   "%s"
+                   | Part_Meronym               --   "%p"
+                   | Attribute                  --   "="
+                   | DerivationallyRelatedForm  --   "+"
+
+                   | Entailment                 --   "*"
+                   | Cause                      --   ">"
+                   | AlsoSee                    --   "^"
+                   | VerbGroup                  --   "$"
+                   | SimilarTo                  --   "&"
+                   | ParticipleOfVerb           --   "<"
+                   | BackSlash                  --   "\"  adj: (pertains to noun), adv: (derived from adjective)
+                   | DomainOfSynset_TOPIC       --   ";c"
+                   | MemberOfThisDomain_TOPIC   --   "-c"
+                   | DomainOfSynset_REGION      --   ";r"
+                   | MemberOfThisDomain_REGION  --   "-r"
+                   | DomainOfSynset_USAGE       --   ";u"
+                   | MemberOfThisDomain_USAGE   --   "-u"
+                   deriving (Show,Eq,Ord)
+
+{-
+data PointerSymbol_Verb = Antonym                    --   "!"
+                        | Hypernym                   --   "@"
+                        | Hyponym                    --   "~"
+                        | DerivationallyRelatedForm  --   "+"
+                        | DomainOfSynset_TOPIC       --   ";c"
+                        | DomainOfSynset_REGION      --   ";r"
+                        | DomainOfSynset_USAGE       --   ";u"
                         deriving (Show,Eq,Ord)
 
-data PointerSymbol_Verb = PSV_Antonym                    --   "!"
-                        | PSV_Hypernym                   --   "@"
-                        | PSV_Hyponym                    --   "~"
-                        | PSV_Entailment                 --   "*"
-                        | PSV_Cause                      --   ">"
-                        | PSV_AlsoSee                    --   "^"
-                        | PSV_VerbGroup                  --   "$"
-                        | PSV_DerivationallyRelatedForm  --   "+"
-                        | PSV_DomainOfSynset_TOPIC       --   ";c"
-                        | PSV_DomainOfSynset_REGION      --   ";r"
-                        | PSV_DomainOfSynset_USAGE       --   ";u"
-                        deriving (Show,Eq,Ord)
+
+data PointerSymbol_Adjective = Antonym               --   "!"
 
 
-data PointerSymbol_Adjective = PSJ_Antonym               --   "!"
-                             | PSJ_SimilarTo             --   "&"
-                             | PSJ_ParticipleOfVerb      --   "<"
-                             | PSJ_Pertainym             --   "\"  (pertains to noun)
-                             | PSJ_Attribute             --   "="
-                             | PSJ_AlsoSee               --   "^"
-                             | PSJ_DomainOfSynset_TOPIC  --   ";c"
-                             | PSJ_DomainOfSynset_REGION --   ";r"
-                             | PSJ_DomainOfSynset_USAGE  --   ";u"
+                             | Attribute             --   "="
+                             | AlsoSee               --   "^"
+                             | DomainOfSynset_TOPIC  --   ";c"
+                             | DomainOfSynset_REGION --   ";r"
+                             | DomainOfSynset_USAGE  --   ";u"
                              -- exception
-                             | PSJ_DerivationallyRelatedForm  -- "+"   carinate
+                             | DerivationallyRelatedForm  -- "+"   carinate
                              deriving (Show,Eq,Ord)
                                      
 
-data PointerSymbol_Adverb = PSR_Antonym                  --   "!"
-                          | PSR_DerivedFromAdjective     --   "\"
-                          | PSR_DomainOfSynset_TOPIC     --   ";c" 
-                          | PSR_DomainOfSynset_REGION    --   ";r"
-                          | PSR_DomainOfSynset_USAGE     --   ";u"
+data PointerSymbol_Adverb = Antonym                  --   "!"
+                          | DomainOfSynset_TOPIC     --   ";c" 
+                          | DomainOfSynset_REGION    --   ";r"
+                          | DomainOfSynset_USAGE     --   ";u"
                           -- exception
-                          | PSR_DerivationallyRelatedForm --  "+"  -- unbearable
+                          | DerivationallyRelatedForm --  "+"  -- unbearable
                           deriving (Show,Eq,Ord)
 
 
@@ -246,7 +247,7 @@ data PointerSymbolAll where
   PSAdverb    :: PointerSymbol 'Adverb    -> PointerSymbolAll
 
 deriving instance Show PointerSymbolAll 
-
+-}
 
 data Marker = Marker_P  -- ^ predicate position
             | Marker_A  -- ^ prenominal (attributive) position
@@ -264,7 +265,7 @@ data SSPointer
               , _ssp_word           :: [Text]
               , _ssp_lexid          :: Maybe Int
               , _ssp_satellite      :: Maybe ([Text],Maybe Int)
-              , _ssp_pointer_symbol :: PointerSymbolAll
+              , _ssp_pointer_symbol :: PointerSymbol
               }
   deriving Show
 
