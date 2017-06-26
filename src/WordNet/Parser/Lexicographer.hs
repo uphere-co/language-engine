@@ -130,7 +130,7 @@ p_pointer defsstyp = do
 p_frames = do
   string "frames:"
   skipSpace 
-  xs <- decimal `sepBy1` char ',' 
+  xs <- decimal `sepBy1` (char ',' >> skipSpace)
   -- TR.decimal
   return xs
 
