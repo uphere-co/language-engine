@@ -55,6 +55,12 @@ parseInstOmit txt =
   in Instance {..}
 
 
+parsePropWithFileField :: IsOmit -> Text -> [Instance]
+parsePropWithFileField omit txt =
+  case omit of
+    NoOmit -> (map (parseInst . T.intercalate " " . tail . T.words) . T.lines) txt
+    Omit -> (map (parseInstOmit . T.intercalate " " . tail . T.words) . T.lines) txt
+
 
 parseNomInst :: Text -> NomInstance
 parseNomInst txt = 
@@ -112,7 +118,10 @@ parseModifierType =
   (A.string "PRP" >> return PRP) <|>
   (A.string "PRR" >> return PRR) <|>
   (A.string "REC" >> return REC) <|>
-  (A.string "TMP" >> return TMP)
+  (A.string "TMP" >> return TMP) <|>
+  (A.string "LVB" >> return LVB) <|>
+  (A.string "PRX" >> return PRX) 
+
 
 parseLinkType :: A.Parser LinkType
 parseLinkType =
