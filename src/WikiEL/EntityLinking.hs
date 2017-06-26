@@ -1,11 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module WikiEL.EntityLinking where
 
 import           Data.List                             (inits,foldl')
-import           Data.Vector                           (Vector)
-import qualified Data.Text                  as T
+import           Data.Vector                           (Vector,toList)
 import           Data.Text                             (Text)
+import qualified Data.Text                  as T
 
 import           WikiEL.Misc                           (IRange(..),RelativePosition(..),relativePos,isContain,subVector) 
 import           NLP.Type.NamedEntity                  (NamedEntity, OrderedNamedEntity)
@@ -29,11 +32,17 @@ data UIDCite uid info = Cite { _uid  :: uid
                              , _info :: info} 
                       | Self { _uid  :: uid
                              , _info :: info}
-                      deriving(Show, Eq)
-
+                      deriving(Eq)
 -- w : type of word token
 type EMInfo w = (IRange, Vector w, PreNE)
 type EntityMention w = UIDCite EntityMentionUID (EMInfo w)
+
+toString :: EMInfo Text -> String
+toString (range, ws, tag) = show range ++ " \"" ++ T.unpack (T.intercalate " " (toList ws)) ++  "\", " ++show tag
+
+instance (Show a) => Show (UIDCite a (EMInfo Text))  where
+  show (Cite uid ref info) = "Cite {" ++ show uid ++ " cites " ++ show ref ++ ",\t" ++ toString info ++ "}"
+  show (Self uid info) = "Self {" ++ show uid  ++ ",\t" ++ toString info ++ "}"
 
 buildEntityMentions :: Vector w -> [(IRange, PreNE)] -> [EntityMention w]
 buildEntityMentions text wikiNEs = zipWith Self uids mentions
