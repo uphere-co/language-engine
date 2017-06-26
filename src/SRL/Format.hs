@@ -6,7 +6,7 @@ import           Control.Lens
 import qualified Data.Text               as T
 import           Text.Printf
 --
-import           NLP.Type.TreeZipper
+import           Data.BitreeZipper
 import           PropBank.Type.Prop
 --
 import           SRL.Type

@@ -9,8 +9,8 @@ import           Data.Text               (Text)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
 import qualified CoreNLP.Simple.Type.Simplified        as S
+import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
-import           NLP.Type.TreeZipper
 import           NLP.Type.UniversalDependencies2.Syntax
 import           PropBank.Type.Prop
 
@@ -26,9 +26,9 @@ type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
 data Voice = Active | Passive
            deriving (Show,Eq,Ord,Enum,Bounded)
 
-type TreeICP a = Tree (Range,(ANode ())) (Int,(ALeaf a)) -- Tree (Range,ChunkTag) (Int,(POSTag,a))
+type BitreeICP a = Bitree (Range,(ANode ())) (Int,(ALeaf a)) -- Bitree (Range,ChunkTag) (Int,(POSTag,a))
 
-type TreeZipperICP a = TreeZipper (Range,(ANode ())) (Int,(ALeaf a)) -- TreeZipper (Range,ChunkTag) (Int,(POSTag,a))
+type BitreeZipperICP a = BitreeZipper (Range,(ANode ())) (Int,(ALeaf a)) -- BitreeZipper (Range,ChunkTag) (Int,(POSTag,a))
 
 type RoleSet = (Text,Text)
 
@@ -151,11 +151,5 @@ position :: Int -> Range -> Position
 position n (b,e) = if | n < b     -> Before
                       | n > e     -> After
                       | otherwise -> Embed
-
--- | duplicate of comonad is dual to join of monad, i.e. duplicate :: w a -> w (w a)
---   In Tree case, we can make a tree where each node is the subtree at the node point using duplicate 
-duplicate :: Tree c a -> Tree (Tree c a) (Tree c a)
-duplicate (PN x xs) = PN (PN x xs) (map duplicate xs)
-duplicate (PL x) = PL (PL x)
 
 
