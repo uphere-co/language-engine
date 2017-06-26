@@ -141,6 +141,6 @@ main' = do
   let txt = testdata_verb !! 7
   -- let txt = "carbon-14"
 
-  let er = parse (many1 p_synset_test) txt
+  let er = parse (many1 (p_synset Verb)) txt
 
   showResult True er 

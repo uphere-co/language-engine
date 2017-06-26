@@ -194,29 +194,6 @@ p_synset_verb = do
   manyTill anyChar endOfLine
   return (Synset wps ps fs (T.pack gloss'))
 
- 
-p_synset_test = do
-  char '{'
-  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Verb)))
-  skipSpace
-  ps <- many (skipSpace *> (p_pointer Verb)) 
-  skipSpace
-  fs <- p_frames 
-  skipSpace
-  -- this is a workaround because of verb.emotion:attract
-  ps' <- many (skipSpace *> (p_pointer Verb)) 
-  skipSpace
-  fs' <- optional p_frames 
-  skipSpace
-  -- up to here
-  char '('
-  gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
-  manyTill anyChar endOfLine
-  return (Synset wps (ps++ps') (fs++ fromMaybe [] fs') (T.pack gloss'))  
-
-  -- return (wps,ps)
-
-
   
 p_synset_adjective = undefined
 
