@@ -30,25 +30,9 @@ import           WordNet.Type.Lexicographer
                          
 
 
-addSense :: IntMap [SenseItem] -> SenseItem -> IntMap [SenseItem]
-addSense !m s = IM.insertWith (++) (s^.sense_soffset) [s] m
-
-showResult :: (Show a) => Bool -> Result [a] -> IO ()
-showResult doesshowresult er = do 
-  case er of
-    Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
-    Partial f -> case (f "") of
-                   Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
-                   Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
-    Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
 
 
   
-main0 = do
-  -- print (toEnum 44  :: LexicoGrapherFile)
-  let dir = "/scratch/wavewave/wordnet/WordNet-3.1/dict"
-  ss <- (catMaybes <$> parseFile parseSense (dir </> "index.sense"))
-  mapM_ print . drop 10000 . Prelude.take 11000 $ ss
 
 
 testdata_noun
@@ -69,7 +53,7 @@ testdata_verb
     ]
 
 
-nounfiles = [ "noun.act"
+nounFiles = [ "noun.act"
             , "noun.animal"
             , "noun.artifact"
             , "noun.attribute"
@@ -97,7 +81,7 @@ nounfiles = [ "noun.act"
             , "noun.Tops"
             ]
 
-verbfiles = [ "verb.body"
+verbFiles = [ "verb.body"
             , "verb.change"
             , "verb.cognition"
             , "verb.communication"
@@ -114,26 +98,38 @@ verbfiles = [ "verb.body"
             , "verb.weather"
             ]
 
-processNouns = do
-  flip mapM_ nounfiles $ \f -> do
-    let fp = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles" </> f
+adverbFiles = [ "adv.all" ]
+
+showResult :: (Show a) => Bool -> Result [a] -> IO ()
+showResult doesshowresult er = do 
+  case er of
+    Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
+    Partial f -> case (f "") of
+                   Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
+                   Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
+    Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
+
+
+process dir typ files = do
+  flip mapM_ files $ \f -> do
+    let fp = dir </> f
     putStrLn fp
     txt <- TIO.readFile fp
-    let er = parse (many1 (p_synset Noun)) txt
+    let er = parse (many1 (p_synset typ)) txt
     showResult False er
 
-processVerbs = do
-  flip mapM_ verbfiles $ \f -> do
-    let fp = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles" </> f
-    putStrLn fp
-    txt <- TIO.readFile fp
-    let er = parse (many1 (p_synset Verb)) txt
-    showResult False er
 
+processNouns dir = process dir Noun nounFiles 
+
+processVerbs dir = process dir Verb verbFiles
+
+-- processAdverbs dir = process dir Adverb adverbFiles
 
 main = do
-  processVerbs  
-  processNouns
+  let dir = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles"
+  -- processAdverbs dir
+  processVerbs dir 
+  processNouns dir
   
   
 
