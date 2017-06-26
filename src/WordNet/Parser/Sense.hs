@@ -10,13 +10,13 @@ import           WordNet.Parser.Common
 --
   
 parseSense :: Text -> Maybe SenseItem
-parseSense = worker . T.words
+parseSense = go . T.words
   where
-    worker (skey:soffset':snumber':cnt':[]) = do
+    go (skey:soffset':snumber':cnt':[]) = do
       let lemmass:lexfilenum':lexid':headword:headid':[] = T.splitOn ":" skey
           lemma:ss':[] = T.splitOn "%" lemmass
-      ss <- readDecimal ss'
-      lexfilenum <- readDecimal lexfilenum'
+      ss <- toEnum <$> readDecimal ss'
+      lexfilenum <- toEnum <$> readDecimal lexfilenum'
       lexid <- readDecimal lexid'
       let headid = case (readDecimal headid') of
             Nothing -> -1
@@ -24,7 +24,11 @@ parseSense = worker . T.words
       soffset <- readDecimal soffset'
       snumber <- readDecimal snumber'
       cnt <- readDecimal cnt'
-      return (SenseItem lemma ss lexfilenum lexid headword headid soffset snumber cnt)
-    worker _ = Nothing
+      return $ SenseItem
+                 (SenseKey lemma (LexSense ss lexfilenum lexid headword headid))
+                 soffset
+                 snumber
+                 cnt
+    go _ = Nothing
 
 
