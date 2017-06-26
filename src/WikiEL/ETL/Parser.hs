@@ -8,6 +8,7 @@ import           Data.Attoparsec.Text
 import           WikiEL.Types.Wikidata
 import           WikiEL.Types.Wikipedia
 import           WikiEL.Types.Equity
+import           WikiEL.Types.FileFormat
 
 
 parserWikidataItemID :: Parser ItemID
@@ -15,6 +16,12 @@ parserWikidataItemID = do
   string "Q"
   id <- decimal
   return (ItemID id)
+
+parserWikidataPropertyID :: Parser PropertyID
+parserWikidataPropertyID = do
+  string "P"
+  id <- decimal
+  return (PropertyID id)
 
 parserWikipediaPageID :: Parser PageID
 parserWikipediaPageID = do
@@ -24,6 +31,14 @@ parserWikipediaPageID = do
 
 column = takeTill (== '\t')
 sep = string "\t"
+
+parserPropertyName :: Parser PropertyNameRow
+parserPropertyName = do
+  prop <- parserWikidataPropertyID
+  sep
+  name <- column
+  return (PropertyNameRow prop name)
+
 
 parserSubclassRelation :: Parser (ItemID, ItemID)
 parserSubclassRelation = do
@@ -66,13 +81,20 @@ parsePageID = parseOnly parserWikipediaPageID
 
 
 itemID :: Text -> ItemID
-itemID itemID = getParseResult parserWikidataItemID itemID
+itemID = getParseResult parserWikidataItemID
+
+propertyID :: Text -> PropertyID
+propertyID = getParseResult parserWikidataPropertyID
 
 pageID :: Text -> PageID
-pageID itemID = getParseResult parserWikipediaPageID itemID
+pageID = getParseResult parserWikipediaPageID
+
 
 subclassRelation :: Text -> (ItemID, ItemID)
-subclassRelation line = getParseResult parserSubclassRelation line
+subclassRelation = getParseResult parserSubclassRelation
 
 publicCompany :: Text -> (Text, GICS, GICSsub, Symbol, PageID, ItemID)
-publicCompany line = getParseResult parserPublicCompanyLine line
+publicCompany = getParseResult parserPublicCompanyLine
+
+propertyName :: Text -> PropertyNameRow
+propertyName = getParseResult parserPropertyName

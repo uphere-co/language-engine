@@ -20,6 +20,7 @@ import           WikiEL.WikiEntityClass                       (fromFiles,getNECl
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,buildTagUIDTable,getStanfordNEs,parseStanfordNE,namedEntityAnnotator)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
 import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),entityLinking,entityLinkings,buildEntityMentions)
+import           WikiEL.ETL.LoadData
 
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
@@ -36,7 +37,9 @@ import qualified WikiEL.EntityLinking          as EL
 import           WikiEL.Types.Wikidata
 import           WikiEL.Types.Wikipedia
 import           WikiEL.Types.Equity
+import           WikiEL.Types.FileFormat
 import           WikiEL.ETL.Parser
+
 
 uid = Wiki.UID
 uids = fromList . map uid
@@ -263,7 +266,7 @@ getCompanySymbol tikcerMap (mentionUID, wikiUID) = result
         Just symbol -> Just (mentionUID, wuid, symbol)
         Nothing     -> Nothing  
 
-main = do
+main2 = do
   file <- T.IO.readFile "enwiki/companies"
 
   input_raw <- T.IO.readFile "data/dao.ptb"
@@ -297,3 +300,11 @@ main = do
   mapM_ print companyWithSymbols
 
   --print tickerMap
+
+
+main = do
+    let 
+      propertyFile = PropertyNameFile "data_full/properties.tsv"
+    propertyNames <- loadPropertyNames propertyFile
+
+    mapM_ print propertyNames
