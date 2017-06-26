@@ -1,6 +1,6 @@
-{ pkgs ? import <nixpkgs> {}
+{ pkgs               ? import <nixpkgs> {}
 , uphere-nix-overlay ? <uphere-nix-overlay>
-, nlp-types
+, nlp-types          ? <nlp-types>
 }:
 
 with pkgs;

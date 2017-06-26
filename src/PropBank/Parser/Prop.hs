@@ -17,7 +17,7 @@ import qualified Data.Text            as T
 import qualified Data.Text.IO         as TIO
 import           Data.Text.Read              (decimal)
 --
-import           NLP.Type.PennTreebankII     (PennTreeGen(..),PennTree,mkIndexedTree,contain)
+import           NLP.Type.PennTreebankII     (PennTreeGen,Bitree(..),PennTree,mkIndexedTree,contain)
 --
 import           PropBank.Type.Prop
 

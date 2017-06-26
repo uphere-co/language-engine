@@ -51,24 +51,35 @@ constructFrameDB d = do
       Left err -> putStrLn err >> return m
       Right fr -> return $ HM.insert (T.pack (takeBaseName f)) (fr^.frameset_predicate) m
 
+
 constructPredicateDB :: FrameDB -> PredicateDB
 constructPredicateDB (FrameDB m) = PredicateDB (foldl' f HM.empty (concat (toList m)))
   where f !acc !x = HM.insert (x^.predicate_lemma) x acc
+
 
 constructRoleSetDB :: PredicateDB -> RoleSetDB 
 constructRoleSetDB (PredicateDB m) = RoleSetDB (foldl' f HM.empty (concatMap (^.predicate_roleset) (toList m)))
   where f !acc !x = HM.insert (x^.roleset_id) x acc
 
+
+lookupPredicate :: PredicateDB -> Text -> [(Text,Text)]
+lookupPredicate db input = do
+  p <- maybeToList (HM.lookup input (db^.predicateDB))
+  r<- p ^. predicate_roleset
+  let (i,n) = (r^.roleset_id,fromMaybe "" (r^.roleset_name))
+  return (i,n)
+
+
 queryPredicate :: PredicateDB -> Text -> IO ()
-queryPredicate db input = do
-  let result = do
-        p <- maybeToList (HM.lookup input (db^.predicateDB))
-        r <- p ^. predicate_roleset
-        let (i,n) = (r^.roleset_id,fromMaybe "" (r^.roleset_name))
-        return (i,n)
-  if null result
-    then putStrLn "No such predicate"
-    else mapM_ (\(i,n) -> TIO.putStrLn (i <> "\t" <> n)) (sortBy (compare `on` fst) result)
+queryPredicate db input =
+  let result = lookupPredicate db input
+  in if null result
+     then putStrLn "No such predicate"
+     else mapM_ (\(i,n) -> TIO.putStrLn (i <> "\t" <> n)) (sortBy (compare `on` fst) result)
+
+
+
+
 
 queryRoleSet :: RoleSetDB -> Text -> IO ()
 queryRoleSet db input = do
