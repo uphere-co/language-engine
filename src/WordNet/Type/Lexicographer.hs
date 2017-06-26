@@ -18,6 +18,7 @@ import           Data.Text
 import           NLP.Type.WordNet
 
 
+{-
 -- | I made a singleton pattern here for observing value and reflecting it to the type.
 --   It has a kind of wierd name. It does not have AdjectiveSatellite case.
 data SSSType (n :: SSType) where
@@ -25,6 +26,7 @@ data SSSType (n :: SSType) where
   SVerb      :: SSSType 'Verb
   SAdjective :: SSSType 'Adjective
   SAdverb    :: SSSType 'Adverb
+-}
 
 data LexicographerFile = AdjAll            -- 00
                        | AdjPert           -- 01
