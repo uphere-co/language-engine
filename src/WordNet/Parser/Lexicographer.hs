@@ -165,58 +165,36 @@ p_pointer_symbol :: Parser PointerSymbol
 p_pointer_symbol = foldl1' (<|>) (map (\(x,y)-> string y *> return x) pointerSymbol_table)
 
 
-p_synset_noun_adv :: Parser Synset
-p_synset_noun_adv = do
-  char '{'
-  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer False)))
-  skipSpace  
-  ps <- many (skipSpace *> p_pointer)
-  skipSpace
-  char '('
-  gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
-  manyTill anyChar endOfLine
-  return (Synset wps ps [] (T.pack gloss'))
-
-
-p_synset_verb :: Parser Synset
-p_synset_verb = do
+p_synset_gen :: Bool -> Parser Synset
+p_synset_gen isVerb = do
   char '{'
   wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer True)))
   skipSpace
   ps <- many (skipSpace *> p_pointer)
   skipSpace
-  fs <- p_frames
-  skipSpace
-  -- this is a workaround because of verb.emotion:attract
-  ps' <- many (skipSpace *> p_pointer) 
-  skipSpace
-  fs' <- optional p_frames 
-  skipSpace
-  -- up to here  
+  (fs,ps',fs') <- if isVerb
+    then do
+      fs <- p_frames
+      skipSpace
+      -- this is a workaround because of verb.emotion:attract
+      ps' <- many (skipSpace *> p_pointer) 
+      skipSpace
+      fs' <- optional p_frames 
+      skipSpace
+      -- up to here      
+      return (fs,ps',fs')
+    else return ([],[],Nothing)
   char '('
   gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
   manyTill anyChar endOfLine
   return (Synset wps (ps++ps') (fs++fromMaybe [] fs') (T.pack gloss'))
 
-  
-p_synset_adjective :: Parser Synset
-p_synset_adjective = do
-  char '{'
-  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer False)))
-  skipSpace  
-  ps <- many (skipSpace *> p_pointer)
-  skipSpace
-  char '('
-  gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
-  manyTill anyChar endOfLine
-  return (Synset wps ps [] (T.pack gloss'))
-
 
 p_synset :: SSType -> Parser (Maybe Synset)
 p_synset t = (Just <$> p) <|> (p_comment *> return Nothing) <|> (p_empty *> return Nothing)
   where p = case t of
-              Noun      -> p_synset_noun_adv
-              Verb      -> p_synset_verb
-              Adjective -> p_synset_adjective
-              Adverb    -> p_synset_noun_adv
+              Noun      -> p_synset_gen False -- p_synset_noun_adv
+              Verb      -> p_synset_gen True  -- p_synset_verb
+              Adjective -> p_synset_gen False -- p_synset_adjective
+              Adverb    -> p_synset_gen False -- p_synset_noun_adv
               x         -> error ("p_synset: I do not know how to deal with " ++ show x)
