@@ -32,6 +32,7 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
+import           Data.Attribute
 -- import           FastText.Binding
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
@@ -130,7 +131,7 @@ main = do
                      rs = zipWith3 SentInfo sents pts deps
                  flip mapM_ rs $ \sentinfo -> do
                    let ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
-                       ipta = mkPennTreeIdxA ipt 
+                       ipta = mkAnnotatable ipt 
                        -- terms = map (^._2) . toList $ sentinfo^.corenlp_tree
                        lemmamap = mkLemmaMap (sentinfo^.corenlp_sent)
                        lemmapt = lemmatize lemmamap ipta
@@ -145,10 +146,11 @@ main = do
                                         in [ArgumentInput arg0 rngss, ArgumentInput arg1 rngss]
                        instInputs = flip map verbs $ \verb ->
                                       let n = verb^._1
-                                          lma = getAnnot (verb^._2) ^. _2
-                                      in InstanceInput n (lma,"01") (genArgInputs n)
+                                          lma = ahead (getAnnot (verb^._2))
+                                      in InstanceInput n
+                                           (unLemma lma,"01") (genArgInputs n)
                        feats = map (calcInstanceFeature sentinfo) instInputs
-                   liftIO $ TIO.putStrLn $ prettyPrint 0 (sentinfo^.corenlp_tree)                       
+                   liftIO $ TIO.putStrLn $ prettyPrint 0 (sentinfo^.corenlp_tree)
                    liftIO $ mapM_ (putStrLn . formatInstanceFeature) feats
                    matchRole svmfarm sentinfo feats
 
