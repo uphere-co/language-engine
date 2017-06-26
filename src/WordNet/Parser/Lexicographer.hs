@@ -10,11 +10,13 @@ import           Control.Applicative             (many,optional,pure
                                                  ,(<$>),(<*>),(<*),(*>),(<|>))
 import           Control.Monad
 import           Data.Attoparsec.Text
-import           Data.Char                       (digitToInt,isDigit)
+import           Data.Char                       (digitToInt,isAlpha,isDigit)
 import           Data.List                       (foldl1')
+import           Data.Maybe                      (fromMaybe)
 import           Data.Monoid
 import           Data.Text                       (Text)
 import qualified Data.Text                  as T
+-- import qualified Data.Text.Read             as TR
 --
 import           NLP.Type.WordNet
 import           WordNet.Type
@@ -112,7 +114,8 @@ p_word_lexid = do
 p_word = do
   (ws,md) <- p_word_lexid
   char ','
-  char ' '
+  c <- peekChar'
+  guard (c == ' ' || isAlpha c ) -- this is due to verb.motion:body-surf
   return (SSWord ws Nothing md)
 
 p_pointer :: SSType -> Parser SSPointer
@@ -125,16 +128,27 @@ p_pointer defsstyp = do
   s <-p_pointer_symbol defsstyp
   return (SSPointer lexfile ws md msatellite s)
 
+p_frames = do
+  string "frames:"
+  skipSpace 
+  xs <- decimal `sepBy1` (char ',' >> skipSpace)
+  -- TR.decimal
+  return xs
 
 p_wordpointer defsstyp = do
   char '['
   skipSpace
   w <- p_word
-  ps <- many1 (skipSpace *> p_pointer defsstyp)
   skipSpace
+  ps <- many (skipSpace *> p_pointer defsstyp)
+  skipSpace
+  fs <- if defsstyp == Verb
+          then fromMaybe [] <$> optional (p_frames <* skipSpace)
+          else pure []
   char ']'
-  char ' '
-  return (w,ps)
+  -- skipSpace
+  -- char ' '
+  return (w,ps,fs)
 
 
 p_pointer_symbol :: SSType -> Parser PointerSymbolAll
@@ -149,23 +163,38 @@ p_pointer_symbol_gen = foldl1' (<|>)
                        . map (\(x,y)-> string y *> return x)
                        . pointerSymbol_table
 
+
 p_synset_noun = do
   char '{'
   wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Noun)))
-  -- ws <- many (skipSpace *> p_word)
+  skipSpace  
   ps <- many (skipSpace *> (p_pointer Noun))
   skipSpace
   char '('
   gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
-  -- skipWhile (== ' ')
-  -- optional p_comment
   manyTill anyChar endOfLine
   return (Synset wps ps [] (T.pack gloss'))
 
+p_synset_verb = do
+  char '{'
+  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Verb)))
+  skipSpace
+  ps <- many (skipSpace *> (p_pointer Verb))
+  skipSpace
+  fs <- p_frames
+  skipSpace
+  -- this is a workaround because of verb.emotion:attract
+  ps' <- many (skipSpace *> (p_pointer Verb)) 
+  skipSpace
+  fs' <- optional p_frames 
+  skipSpace
+  -- up to here  
+  char '('
+  gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
+  manyTill anyChar endOfLine
+  return (Synset wps ps fs (T.pack gloss'))
 
-
-p_synset_verb = undefined
-
+  
 p_synset_adjective = undefined
 
 p_synset_adverb = undefined
@@ -174,10 +203,10 @@ p_synset_adverb = undefined
   
 
 p_synset :: SSType -> Parser (Maybe Synset)
-p_synset Noun      = (Just <$> p_synset_noun) <|>
-                      (p_comment *> return Nothing) <|>
-                      (p_empty *> return Nothing)
-p_synset Verb      = p_synset_verb
-p_synset Adjective = p_synset_adjective
-p_synset Adverb    = p_synset_adverb
-
+p_synset t = (Just <$> p) <|> (p_comment *> return Nothing) <|> (p_empty *> return Nothing)
+  where p = case t of
+              Noun      -> p_synset_noun
+              Verb      -> p_synset_verb
+              Adjective -> p_synset_adjective
+              Adverb    -> p_synset_adverb
+  
