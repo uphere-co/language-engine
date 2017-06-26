@@ -2,14 +2,12 @@
 
 module WordNet.Parser.Sense where
 
-import           Data.Maybe          (fromMaybe)
 import           Data.Text           (Text)
 import qualified Data.Text    as T
 --
 import           WordNet.Type
 import           WordNet.Parser.Common
 --
-import           NLP.Type.WordNet
   
 parseSense :: Text -> Maybe SenseItem
 parseSense = worker . T.words

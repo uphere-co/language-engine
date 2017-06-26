@@ -5,6 +5,7 @@ module WordNet.Query where
 
 import           Control.Lens
 import           Control.Monad              (join)
+import           Data.HashMap.Strict        (HashMap)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.IntMap         as IM
 import           Data.Maybe                 (maybeToList)
@@ -55,7 +56,7 @@ createLemmaMap :: [IndexItem] -> HM.HashMap Text [Int]
 createLemmaMap = HM.fromList . map (\x->(x^.idx_lemma,x^.idx_synset_offset))
 
 createConceptMap :: Bool -> [DataItem] -> IM.IntMap ([LexItem],Text)
-createConceptMap isVerb
+createConceptMap _isVerb
   = IM.fromList . map (\x->(x^.data_syn_offset,(x^.data_word_lex_id,x^.data_gloss)))
 
 createSenseMap :: [SenseItem] -> HM.HashMap (Text,Int) Int
@@ -73,6 +74,7 @@ dataDB w POS_V = w^.dataVerbDB
 dataDB w POS_A = w^.dataAdjDB
 dataDB w POS_R = w^.dataAdvDB
 
+senseDB :: WordNetDB -> HashMap (Text,Int) Int
 senseDB w = w^.senseIdxDB
 
 lookupLemma :: WordNetDB -> POS -> Text -> [([LexItem],Text)]
