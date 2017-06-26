@@ -233,22 +233,6 @@ p_synset_adjective = do
   return (Synset wps ps [] (T.pack gloss'))
 
 
-
-{-  
-p_synset_test = do
-  char '{'
-  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Adjective)))
-  skipSpace  
-  ps <- many (skipSpace *> (p_pointer Adjective))
-  skipSpace
-  {- 
-  char '('
-  gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
-  manyTill anyChar endOfLine
-  return (Synset wps ps [] (T.pack gloss')) -}
-  return (wps,ps)
--}
-
 p_synset :: SSType -> Parser (Maybe Synset)
 p_synset t = (Just <$> p) <|> (p_comment *> return Nothing) <|> (p_empty *> return Nothing)
   where p = case t of

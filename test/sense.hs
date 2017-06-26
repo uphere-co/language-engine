@@ -103,7 +103,7 @@ adverbFiles = [ "adv.all" ]
 
 adjectiveFiles = [ -- "adj.all"
                  -- ,
-                "adj.pert"
+                   "adj.pert"
                  , "adj.ppl"
                  ]
 
@@ -129,14 +129,12 @@ process dir typ files = do
 main = do
   let dir = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles"
   process dir Adjective adjectiveFiles
-  -- process dir Adverb    adverbFiles
-  -- process dir Verb      verbFiles
-  -- process dir Noun      nounFiles
+  process dir Adverb    adverbFiles
+  process dir Verb      verbFiles
+  process dir Noun      nounFiles
   
 
 test = do
   let txt = testdata_adjective !! 0
-
-  let er = parse (many1 (p_synset Adjective {- p_synset_test -})) txt
-
+      er = parse (many1 (p_synset Adjective)) txt
   showResult True er 
