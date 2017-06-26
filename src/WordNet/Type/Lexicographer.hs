@@ -209,9 +209,8 @@ data SSWord = SSWord { _ssw_word   :: [Text]
 
 data SSPointer
   = SSPointer { _ssp_lex_filename   :: Maybe (Either Text LexicographerFile)
-              , _ssp_word           :: [Text]
-              , _ssp_lexid          :: Maybe Int
-              , _ssp_satellite      :: Maybe ([Text],Maybe Int)
+              , _ssp_word           :: SSWord
+              , _ssp_satellite      :: Maybe SSWord -- ([Text],Maybe Int)
               , _ssp_pointer_symbol :: PointerSymbol
               }
   deriving Show
@@ -227,3 +226,7 @@ data Synset
 makeLenses ''Synset
 
 
+newtype SynsetCluster = SynsetCluster { _cluster_head_satellites :: [(Synset,[Synset])] }
+                      deriving Show
+
+makeLenses ''SynsetCluster

@@ -94,7 +94,7 @@ p_token = do
 p_lexfile :: Parser (Either Text LexicographerFile)
 p_lexfile = foldl1' (<|>) (map (\(x,y) -> string x *> pure y) lexicographerFileTable)
 
-
+{- 
 p_word_lexid :: Parser ([Text],Maybe Int)
 p_word_lexid = do
   ws <- do ws' <- many (p_nonlasttoken <* char '_')
@@ -102,7 +102,7 @@ p_word_lexid = do
            return (ws'++[w])
   md :: Maybe Int <- optional (read <$> many1 digit)
   return (ws,md)
-
+-}
 
 p_word_marker_lexid :: Parser ([Text],Maybe Marker,Maybe Int)
 p_word_marker_lexid = do
@@ -130,11 +130,11 @@ p_pointer :: Parser SSPointer
 p_pointer = do
   lexfile <- optional (p_lexfile <* char ':')
   skipSpace
-  (ws,md) <- p_word_lexid
-  msatellite <- optional (char '^' *> p_word_lexid)
+  (ws,mk,md) <- p_word_marker_lexid
+  msatellite <- optional (char '^' *> fmap (\(x,y,z) -> SSWord x y z) p_word_marker_lexid)
   char ','
   s <-p_pointer_symbol
-  return (SSPointer lexfile ws md msatellite s)
+  return (SSPointer lexfile (SSWord ws mk md) msatellite s)
 
 
 p_frames :: Parser [Int]
@@ -186,15 +186,42 @@ p_synset_gen isVerb = do
     else return ([],[],Nothing)
   char '('
   gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
-  manyTill anyChar endOfLine
+  -- manyTill anyChar endOfLine
   return (Synset wps (ps++ps') (fs++fromMaybe [] fs') (T.pack gloss'))
 
 
 p_synset :: SSType -> Parser (Maybe Synset)
-p_synset t = (Just <$> p) <|> (p_comment *> return Nothing) <|> (p_empty *> return Nothing)
+p_synset t = (Just <$> (p <* manyTill anyChar endOfLine)) <|> (p_comment *> return Nothing) <|> (p_empty *> return Nothing)
   where p = case t of
               Noun      -> p_synset_gen False -- p_synset_noun_adv
               Verb      -> p_synset_gen True  -- p_synset_verb
               Adjective -> p_synset_gen False -- p_synset_adjective
               Adverb    -> p_synset_gen False -- p_synset_noun_adv
               x         -> error ("p_synset: I do not know how to deal with " ++ show x)
+
+
+p_splitter = string "----"
+
+
+p_head_satellites = 
+  (,) <$> (p_synset_gen False <* skipSpace)
+      <*> (p_synset_gen False `sepBy` skipSpace)
+
+  
+p_synset_adj_cluster :: Parser (Maybe SynsetCluster)
+p_synset_adj_cluster = (Just <$> p) <|> (p_comment *> return Nothing) <|> (p_empty *> return Nothing)
+  where p = do char '['
+               skipSpace
+               r <- SynsetCluster <$> (p_head_satellites `sepBy1` (skipSpace >> p_splitter >> skipSpace))
+               skipSpace
+               char ']'
+               return r
+
+
+p_synset_adj_cluster_test = do
+               char '['
+               skipSpace
+               r <- SynsetCluster <$> (p_head_satellites `sepBy1` (skipSpace >> p_splitter >> skipSpace))
+               skipSpace
+               char ']'
+               return r
