@@ -108,19 +108,31 @@ p_token = do
 
 p_lexfile = foldl1' (<|>) (map (\(x,y) -> string x *> pure y) lexicographerFileTable)
 
+
 p_word_lexid = do
   ws <- do ws' <- many (p_nonlasttoken <* char '_')
            w <- p_token
-           return (ws'++[w]) 
+           return (ws'++[w])
   md :: Maybe Int <- optional (read <$> many1 digit)
   return (ws,md)
 
+p_word_marker_lexid = do
+  ws <- do ws' <- many (p_nonlasttoken <* char '_')
+           w <- p_token
+           return (ws'++[w])
+  mk <- optional ( (string "(p)"  >> return Marker_P) <|>
+                   (string "(a)"  >> return Marker_A) <|>
+                   (string "(ip)" >> return Marker_IP)
+                 )
+  md :: Maybe Int <- optional (read <$> many1 digit)
+  return (ws,mk,md)
+
 p_word = do
-  (ws,md) <- p_word_lexid
+  (ws,mk,md) <- p_word_marker_lexid
   char ','
   c <- peekChar'
   guard (c == ' ' || isAlpha c ) -- this is due to verb.motion:body-surf
-  return (SSWord ws Nothing md)
+  return (SSWord ws mk md)
 
 p_pointer :: SSType -> Parser SSPointer
 p_pointer defsstyp = do
