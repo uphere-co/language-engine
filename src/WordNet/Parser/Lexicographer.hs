@@ -171,18 +171,6 @@ p_synset_verb = do
   return (Synset wps ps fs (T.pack gloss'))
 
   
-{-
-p_synset_adverb = do
-  char '{'
-  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Adverb)))
-  skipSpace  
-  ps <- many (skipSpace *> (p_pointer Adverb))
-  skipSpace
-  char '('
-  gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
-  manyTill anyChar endOfLine
-  return (Synset wps ps [] (T.pack gloss'))
--}
 
 p_synset_adjective = do
   char '{'

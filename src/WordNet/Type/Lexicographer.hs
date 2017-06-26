@@ -18,16 +18,6 @@ import           Data.Text
 import           NLP.Type.WordNet
 
 
-{-
--- | I made a singleton pattern here for observing value and reflecting it to the type.
---   It has a kind of wierd name. It does not have AdjectiveSatellite case.
-data SSSType (n :: SSType) where
-  SNoun      :: SSSType 'Noun
-  SVerb      :: SSSType 'Verb
-  SAdjective :: SSSType 'Adjective
-  SAdverb    :: SSSType 'Adverb
--}
-
 data LexicographerFile = AdjAll            -- 00
                        | AdjPert           -- 01
                        | AdvAll            -- 02
@@ -75,6 +65,8 @@ data LexicographerFile = AdjAll            -- 00
                        | AdjPpl            -- 44
                        deriving (Show,Eq,Ord,Enum)
 
+
+lexicographerFileToSSType :: LexicographerFile -> SSType
 lexicographerFileToSSType AdjAll            = Adjective
 lexicographerFileToSSType AdjPert           = Adjective
 lexicographerFileToSSType AdvAll            = Adverb
@@ -202,59 +194,12 @@ data PointerSymbol = Antonym                    --   "!"
                    | MemberOfThisDomain_USAGE   --   "-u"
                    deriving (Show,Eq,Ord)
 
-{-
-data PointerSymbol_Verb = Antonym                    --   "!"
-                        | Hypernym                   --   "@"
-                        | Hyponym                    --   "~"
-                        | DerivationallyRelatedForm  --   "+"
-                        | DomainOfSynset_TOPIC       --   ";c"
-                        | DomainOfSynset_REGION      --   ";r"
-                        | DomainOfSynset_USAGE       --   ";u"
-                        deriving (Show,Eq,Ord)
-
-
-data PointerSymbol_Adjective = Antonym               --   "!"
-
-
-                             | Attribute             --   "="
-                             | AlsoSee               --   "^"
-                             | DomainOfSynset_TOPIC  --   ";c"
-                             | DomainOfSynset_REGION --   ";r"
-                             | DomainOfSynset_USAGE  --   ";u"
-                             -- exception
-                             | DerivationallyRelatedForm  -- "+"   carinate
-                             deriving (Show,Eq,Ord)
-                                     
-
-data PointerSymbol_Adverb = Antonym                  --   "!"
-                          | DomainOfSynset_TOPIC     --   ";c" 
-                          | DomainOfSynset_REGION    --   ";r"
-                          | DomainOfSynset_USAGE     --   ";u"
-                          -- exception
-                          | DerivationallyRelatedForm --  "+"  -- unbearable
-                          deriving (Show,Eq,Ord)
-
-
-type family PointerSymbol (a :: SSType) :: *
-
-type instance PointerSymbol 'Noun      = PointerSymbol_Noun
-type instance PointerSymbol 'Verb      = PointerSymbol_Verb
-type instance PointerSymbol 'Adjective = PointerSymbol_Adjective
-type instance PointerSymbol 'Adverb    = PointerSymbol_Adverb
-
-data PointerSymbolAll where
-  PSNoun      :: PointerSymbol 'Noun      -> PointerSymbolAll
-  PSVerb      :: PointerSymbol 'Verb      -> PointerSymbolAll
-  PSAdjective :: PointerSymbol 'Adjective -> PointerSymbolAll
-  PSAdverb    :: PointerSymbol 'Adverb    -> PointerSymbolAll
-
-deriving instance Show PointerSymbolAll 
--}
 
 data Marker = Marker_P  -- ^ predicate position
             | Marker_A  -- ^ prenominal (attributive) position
             | Marker_IP -- ^ immediately postnominal position
             deriving Show
+
 
 data SSWord = SSWord { _ssw_word   :: [Text]
                      , _ssw_marker :: Maybe Marker
@@ -271,6 +216,7 @@ data SSPointer
               }
   deriving Show
 
+
 data Synset
   = Synset { _ssn_words_or_wordpointers    :: [Either SSWord (SSWord,[SSPointer],[Int])]
            , _ssn_pointers :: [SSPointer]
@@ -279,17 +225,4 @@ data Synset
   deriving Show
 
 makeLenses ''Synset
-
-{- 
--- we need UndecidableInstances for this. 
-deriving instance (Show (PointerSymbol typ)) => Show (SSPointer typ)
-  
-  
-deriving instance (Show (PointerSymbol typ)) => Show (Synset typ)
--}
-
-{-  show x = "Synset { _ssn_words=" ++ show (_ssn_words x)    ++
-           ", _ssn_pointers="     ++ show (_ssn_pointers x) ++
-           ", _ssn_frames="       ++ show (_ssn_frames x)   ++
-           ", _ssn_gloss="        ++ show (_ssn_gloss x)    ++ "}" -}
 
