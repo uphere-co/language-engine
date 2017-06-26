@@ -55,7 +55,7 @@ pointerSymbol_table SVerb
     , (PSV_Cause                    , ">" )
     , (PSV_AlsoSee                  , "^" )
     , (PSV_VerbGroup                , "$" )
-    , (PSV_DerivationallyRelatedFrom, "+" )
+    , (PSV_DerivationallyRelatedForm, "+" )
     , (PSV_DomainOfSynset_TOPIC     , ";c")
     , (PSV_DomainOfSynset_REGION    , ";r")
     , (PSV_DomainOfSynset_USAGE     , ";u")
@@ -70,6 +70,8 @@ pointerSymbol_table SAdjective
     , (PSJ_DomainOfSynset_TOPIC     , ";c")
     , (PSJ_DomainOfSynset_REGION    , ";r")
     , (PSJ_DomainOfSynset_USAGE     , ";u")
+    -- 
+    , (PSJ_DerivationallyRelatedForm, "+" ) -- carinate
     ]
 pointerSymbol_table SAdverb
   = [ (PSR_Antonym                  , "!" )
@@ -78,7 +80,7 @@ pointerSymbol_table SAdverb
     , (PSR_DomainOfSynset_REGION    , ";r")
     , (PSR_DomainOfSynset_USAGE     , ";u")
     -- exception
-    , (PSR_DerivationallyRelatedFrom, "+" ) -- unbearable
+    , (PSR_DerivationallyRelatedForm, "+" ) -- unbearable
     ]
 
 p_comment = char '(' >> manyTill anyChar endOfLine
@@ -195,7 +197,6 @@ p_synset_verb = do
   return (Synset wps ps fs (T.pack gloss'))
 
   
-p_synset_adjective = undefined
 
 p_synset_adverb = do
   char '{'
@@ -208,39 +209,33 @@ p_synset_adverb = do
   manyTill anyChar endOfLine
   return (Synset wps ps [] (T.pack gloss'))
   
-
-
-
-p_synset_test = do
+p_synset_adjective = do
   char '{'
-  skipSpace
-  char '['
-  skipSpace
-  w <- p_word
-  skipSpace
-  lexfile <- optional (p_lexfile <* char ':')
-  skipSpace
-  (ws,md) <- p_word_lexid
-  msatellite <- optional (char '^' *> p_word_lexid)
-  char ','
-  s <-p_pointer_symbol Adverb
-  
-  -- ps <- many (skipSpace *> p_pointer Adverb)
-  
-  -- wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Adverb)))
-  {- 
+  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Adjective)))
   skipSpace  
-  ps <- many (skipSpace *> (p_pointer Adverb))
-  skipSpace -}
-  {- 
+  ps <- many (skipSpace *> (p_pointer Adjective))
+  skipSpace
   char '('
   gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
   manyTill anyChar endOfLine
   return (Synset wps ps [] (T.pack gloss'))
-  -}
-  -- return (wps,ps)
-  return (w,lexfile)
 
+
+
+{-  
+p_synset_test = do
+  char '{'
+  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Adjective)))
+  skipSpace  
+  ps <- many (skipSpace *> (p_pointer Adjective))
+  skipSpace
+  {- 
+  char '('
+  gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
+  manyTill anyChar endOfLine
+  return (Synset wps ps [] (T.pack gloss')) -}
+  return (wps,ps)
+-}
 
 p_synset :: SSType -> Parser (Maybe Synset)
 p_synset t = (Just <$> p) <|> (p_comment *> return Nothing) <|> (p_empty *> return Nothing)

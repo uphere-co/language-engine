@@ -201,7 +201,7 @@ data PointerSymbol_Verb = PSV_Antonym                    --   "!"
                         | PSV_Cause                      --   ">"
                         | PSV_AlsoSee                    --   "^"
                         | PSV_VerbGroup                  --   "$"
-                        | PSV_DerivationallyRelatedFrom  --   "+"
+                        | PSV_DerivationallyRelatedForm  --   "+"
                         | PSV_DomainOfSynset_TOPIC       --   ";c"
                         | PSV_DomainOfSynset_REGION      --   ";r"
                         | PSV_DomainOfSynset_USAGE       --   ";u"
@@ -217,6 +217,8 @@ data PointerSymbol_Adjective = PSJ_Antonym               --   "!"
                              | PSJ_DomainOfSynset_TOPIC  --   ";c"
                              | PSJ_DomainOfSynset_REGION --   ";r"
                              | PSJ_DomainOfSynset_USAGE  --   ";u"
+                             -- exception
+                             | PSJ_DerivationallyRelatedForm  -- "+"   carinate
                              deriving (Show,Eq,Ord)
                                      
 
@@ -226,7 +228,7 @@ data PointerSymbol_Adverb = PSR_Antonym                  --   "!"
                           | PSR_DomainOfSynset_REGION    --   ";r"
                           | PSR_DomainOfSynset_USAGE     --   ";u"
                           -- exception
-                          | PSR_DerivationallyRelatedFrom --  "+"  -- unbearable
+                          | PSR_DerivationallyRelatedForm --  "+"  -- unbearable
                           deriving (Show,Eq,Ord)
 
 

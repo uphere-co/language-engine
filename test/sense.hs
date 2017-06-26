@@ -49,6 +49,10 @@ testdata_adverb
   = [ "{ [ unbearably, adj.all:unbearable,+ adj.all:unbearable,\\ ] (to an unbearable degree; \"it was unbearably hot in the room\") }\n"
     ]
 
+testdata_adjective
+  = [ "{ [ ridged, verb.change:ridge,< ] [ carinate, noun.animal:carinate,+ ] carinated, keeled, (having a ridge or shaped like a ridge or suggesting the keel of a ship; \"a carinate sepal\") }\n"
+    ]
+
 
 nounFiles = [ "noun.act"
             , "noun.animal"
@@ -97,6 +101,12 @@ verbFiles = [ "verb.body"
 
 adverbFiles = [ "adv.all" ]
 
+adjectiveFiles = [ -- "adj.all"
+                 -- ,
+                "adj.pert"
+                 , "adj.ppl"
+                 ]
+
 showResult :: (Show a) => Bool -> Result [a] -> IO ()
 showResult doesshowresult er = do 
   case er of
@@ -116,24 +126,17 @@ process dir typ files = do
     showResult False er
 
 
-processNouns dir = process dir Noun nounFiles 
-
-processVerbs dir = process dir Verb verbFiles
-
-processAdverbs dir = process dir Adverb adverbFiles
-
 main = do
   let dir = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles"
-  processAdverbs dir
-  -- processVerbs dir 
-  -- processNouns dir
-  
+  process dir Adjective adjectiveFiles
+  -- process dir Adverb    adverbFiles
+  -- process dir Verb      verbFiles
+  -- process dir Noun      nounFiles
   
 
-main' = do
-  let txt = testdata_adverb !! 0
-  -- let txt = "carbon-14"
+test = do
+  let txt = testdata_adjective !! 0
 
-  let er = parse (many1 (p_synset Adverb)) txt
+  let er = parse (many1 (p_synset Adjective {- p_synset_test -})) txt
 
   showResult True er 
