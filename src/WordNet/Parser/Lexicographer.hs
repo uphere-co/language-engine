@@ -10,7 +10,7 @@ import           Control.Applicative             (many,optional,pure
                                                  ,(<$>),(<*>),(<*),(*>),(<|>))
 import           Control.Monad
 import           Data.Attoparsec.Text
-import           Data.Char                       (digitToInt,isDigit)
+import           Data.Char                       (digitToInt,isAlpha,isDigit)
 import           Data.List                       (foldl1')
 import           Data.Maybe                      (fromMaybe)
 import           Data.Monoid
@@ -114,7 +114,8 @@ p_word_lexid = do
 p_word = do
   (ws,md) <- p_word_lexid
   char ','
-  char ' '
+  c <- peekChar'
+  guard (c == ' ' || isAlpha c ) -- this is due to verb.motion:body-surf
   return (SSWord ws Nothing md)
 
 p_pointer :: SSType -> Parser SSPointer
@@ -138,6 +139,7 @@ p_wordpointer defsstyp = do
   char '['
   skipSpace
   w <- p_word
+  skipSpace
   ps <- many (skipSpace *> p_pointer defsstyp)
   skipSpace
   fs <- if defsstyp == Verb
@@ -164,7 +166,8 @@ p_pointer_symbol_gen = foldl1' (<|>)
 
 p_synset_noun = do
   char '{'
-  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Noun <* skipSpace)))
+  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Noun)))
+  skipSpace  
   ps <- many (skipSpace *> (p_pointer Noun))
   skipSpace
   char '('
@@ -174,11 +177,18 @@ p_synset_noun = do
 
 p_synset_verb = do
   char '{'
-  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Verb <* skipSpace)))
+  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Verb)))
+  skipSpace
   ps <- many (skipSpace *> (p_pointer Verb))
   skipSpace
   fs <- p_frames
   skipSpace
+  -- this is a workaround because of verb.emotion:attract
+  ps' <- many (skipSpace *> (p_pointer Verb)) 
+  skipSpace
+  fs' <- optional p_frames 
+  skipSpace
+  -- up to here  
   char '('
   gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
   manyTill anyChar endOfLine
@@ -188,17 +198,24 @@ p_synset_verb = do
 p_synset_test = do
   char '{'
   wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Verb)))
+  skipSpace
   ps <- many (skipSpace *> (p_pointer Verb)) 
   skipSpace
   fs <- p_frames 
   skipSpace
+  -- this is a workaround because of verb.emotion:attract
+  ps' <- many (skipSpace *> (p_pointer Verb)) 
+  skipSpace
+  fs' <- optional p_frames 
+  skipSpace
+  -- up to here
   char '('
   gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
   manyTill anyChar endOfLine
-  return (Synset wps ps fs (T.pack gloss')) 
-{- 
-  return (wps,ps,fs)
--}
+  return (Synset wps (ps++ps') (fs++ fromMaybe [] fs') (T.pack gloss'))  
+
+  -- return (wps,ps)
+
 
   
 p_synset_adjective = undefined

@@ -63,6 +63,9 @@ testdata_verb
     , "{ [ stretch1, noun.act:stretch,+ noun.act:stretching,+ frames: 2 ] [ extend, noun.act:extension1,+ noun.body:extensor,+ ] tense,@ frames: 8 (extend one's limbs or muscles, or the entire body; \"Stretch your legs!\"; \"Extend your right arm above your head\") }\n"
     , "{ [ reduce, noun.process:reducing1,+ gain,! ] [melt_off, frames: 8 ] slim, slenderize, thin, slim_down, verb.change:change_state,@ frames: 2 (take off weight) }\n"
     , "{ get_down, [ begin, noun.person:beginner,+ noun.act:beginning,+ end1,! ] get12, start_out, [ start, noun.act:start,+ noun.time:start,+ noun.event:start,+ noun.person:starter1,+ ] set_about, set_out, [ commence, noun.act:commencement,+ ] frames: 1,2, 28,33,8 (take the first step or steps in carrying out an action; \"We began working at dawn\"; \"Who will start?\"; \"Get working as soon as the sun rises!\"; \"The first tourists began to arrive in Cambodia\"; \"He began early in the day\"; \"Let's get down to work now\") }\n"
+    , "{ [ induce, adj.all:causative^inducive,+ noun.motive:inducement,+ noun.act:induction3,+ noun.person:inducer,+ noun.act:inducing,+ frames: 24] [ stimulate1, noun.cognition:stimulation,+ noun.act:stimulation,+ noun.cognition:stimulus,+ frames: 24] [ cause, adj.all:causative,+ noun.act:causation,+ noun.event:cause,+ noun.communication:cause,+ noun.Tops:cause,+ frames: 24] have, [get,frames: 24] make, frames: 25 (cause to do; cause to act in a specified manner; \"The ads induced me to buy a VCR\"; \"My children finally got me to buy a computer\"; \"My wife made me buy a new sofa\") }\n"
+    , "{ [ attract, adj.all:attractive1,+ noun.communication:attraction,+ noun.cognition:attraction,+ noun.attribute:attraction,+ noun.cognition:attractor,+ repel,!] [ appeal, noun.attribute:appeal,+ ] frames: 4 please,* frames: 10,9 (be attractive to; \"The idea of a vacation appeals to me\"; \"The beautiful garden attracted many people\") }\n"
+    , "{ body-surf,glide,@ frames: 2 (ride the crest of a wave without a surfboard)}\n"
     ]
 
 
@@ -129,13 +132,13 @@ processVerbs = do
 
 
 main = do
-  -- processNouns
-  processVerbs
+  processVerbs  
+  processNouns
   
   
 
 main' = do
-  let txt = testdata_verb !! 4
+  let txt = testdata_verb !! 7
   -- let txt = "carbon-14"
 
   let er = parse (many1 p_synset_test) txt
