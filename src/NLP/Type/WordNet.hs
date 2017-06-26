@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module NLP.Type.WordNet where
 
 data POS = POS_N | POS_V | POS_A | POS_R deriving (Show,Eq,Ord)
