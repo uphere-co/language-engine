@@ -122,7 +122,7 @@ p_word = do
   (ws,md,mk) <- p_word_lexid_marker
   char ','
   c <- peekChar'
-  guard (c == ' ' || isAlpha c ) -- this is due to verb.motion:body-surf
+  guard (c == ' ' || c == '[' || isAlpha c ) -- this is due to verb.motion:body-surf
   return (SSWord ws md mk)
 
 
@@ -208,28 +208,13 @@ p_head_satellites =
       <*> (p_synset_gen False `sepBy` skipSpace)
 
   
-p_synset_adj_cluster :: Parser (Maybe SynsetCluster)
-p_synset_adj_cluster = (Just <$> p) <|> (p_comment *> return Nothing) <|> (p_empty *> return Nothing)
-  where p = do char '['
-               skipSpace
-               r <- SynsetCluster <$> (p_head_satellites `sepBy1` (skipSpace >> p_splitter >> skipSpace))
-               skipSpace
-               char ']'
-               return r
-
-
-p_synset_adj_cluster_test = do
-               char '['
-{-                skipSpace
-               char '{'
-               skipSpace
-               char '['
-               skipSpace
-               p_word_lexid_marker -}
-               
-               skipSpace
-               r <- SynsetCluster <$> (p_head_satellites `sepBy1` (skipSpace >> p_splitter >> skipSpace))
-               skipSpace
-               char ']'
-               return r
+p_synset_adj_cluster :: Parser (Maybe (Either Synset SynsetCluster))
+p_synset_adj_cluster = (Just . Right <$> p1) <|> (Just . Left <$> p2) <|> (p_comment *> return Nothing) <|> (p_empty *> return Nothing)
+  where p1 = do char '['
+                skipSpace
+                r <- SynsetCluster <$> (p_head_satellites `sepBy1` (skipSpace >> p_splitter >> skipSpace))
+                skipSpace
+                char ']'
+                return r
+        p2 = p_synset_gen False
 

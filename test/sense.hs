@@ -80,6 +80,15 @@ testdata_adj_cluster
       \{ slain1, (killed; `slain' is formal or literary as in \"slain warriors\"; \"a picture of St. George and the slain dragon\") }\n\
       \{ stillborn, ((of newborn infant) showing no signs of life at birth; not liveborn; \"a stillborn baby\") }\n\
       \{ stone-dead, (as lifeless as a stone) }]\n"
+    , "[{ [ ARMED2, UNARMED2,!] ((used of plants and animals) furnished with bristles and thorns ) }\n\
+      \{ barbed,[ barbellate, noun.animal:barbel,+] [ briary, noun.plant:briar2,+ ] briery, bristled, [ bristly, noun.attribute:bristliness,+ noun.artifact:bristle,+ ] burred, [ burry, noun.plant:burr,+ ] [ prickly, noun.plant:prickle,+ noun.attribute:prickliness,+ ] setose, [ setaceous, noun.animal:seta,+ ] [ spiny, noun.attribute:spininess,+ ] [ thorny, noun.attribute:thorniness,+ noun.plant:thorn,+ ] (having or covered with protective barbs or quills or spines or thorns or setae etc.; \"a horse with a short bristly mane\"; \"bristly shrubs\"; \"burred fruits\"; \"setaceous whiskers\") }\n\
+      \{ bristlelike, (resembling a bristle) }\n\
+      \{ brushlike, (resembling a brush; \"brushlike blue blooms\") }\n\
+      \{ thistlelike, (resembling a thistle) }\n\
+      \{ clawed, taloned, ((of predatory animals) armed with claws or talons) }\n\
+      \----\n\
+      \{ [ UNARMED2, ARMED2,!] ((used of plants or animals) lacking barbs or stings or thorns) }\n\
+      \{ thornless, spineless, (lacking thorns) }]\n"
     ]
 
 nounFiles = [ "noun.act"
@@ -152,8 +161,7 @@ process dir typ files = do
     showResult False er
 
 
-main' = do
-  let dir = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles"  
+processAdjAll dir = do
   let fp = dir </> "adj.all"
   putStrLn fp
   txt <- TIO.readFile fp
@@ -162,6 +170,7 @@ main' = do
 
 main = do
   let dir = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles"
+  processAdjAll dir
   process dir Adjective adjectiveFiles1
   process dir Adverb    adverbFiles
   process dir Verb      verbFiles
@@ -169,6 +178,6 @@ main = do
   
 
 test = do
-  let txt = testdata_adj_cluster !! 1
-      er = parse (many1 p_synset_adj_cluster_test) txt
+  let txt = testdata_adj_cluster !! 2
+      er = parse (many1 p_synset_adj_cluster) txt
   showResult True er 
