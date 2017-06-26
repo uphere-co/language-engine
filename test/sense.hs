@@ -27,13 +27,6 @@ import           WordNet.Parser.Lexicographer
 import           WordNet.Type
 import           WordNet.Type.Lexicographer
 
-                         
-
-
-
-
-  
-
 
 testdata_noun
   = [ "{ lamivudine, 3TC, nucleoside_reverse_transcriptase_inhibitor,@ (a nucleoside reverse transcriptase inhibitor that is very effective in combination with zidovudine in treating AIDS and HIV) }\n"
@@ -50,6 +43,10 @@ testdata_verb
     , "{ [ induce, adj.all:causative^inducive,+ noun.motive:inducement,+ noun.act:induction3,+ noun.person:inducer,+ noun.act:inducing,+ frames: 24] [ stimulate1, noun.cognition:stimulation,+ noun.act:stimulation,+ noun.cognition:stimulus,+ frames: 24] [ cause, adj.all:causative,+ noun.act:causation,+ noun.event:cause,+ noun.communication:cause,+ noun.Tops:cause,+ frames: 24] have, [get,frames: 24] make, frames: 25 (cause to do; cause to act in a specified manner; \"The ads induced me to buy a VCR\"; \"My children finally got me to buy a computer\"; \"My wife made me buy a new sofa\") }\n"
     , "{ [ attract, adj.all:attractive1,+ noun.communication:attraction,+ noun.cognition:attraction,+ noun.attribute:attraction,+ noun.cognition:attractor,+ repel,!] [ appeal, noun.attribute:appeal,+ ] frames: 4 please,* frames: 10,9 (be attractive to; \"The idea of a vacation appeals to me\"; \"The beautiful garden attracted many people\") }\n"
     , "{ body-surf,glide,@ frames: 2 (ride the crest of a wave without a surfboard)}\n"
+    ]
+
+testdata_adverb
+  = [ "{ [ unbearably, adj.all:unbearable,+ adj.all:unbearable,\\ ] (to an unbearable degree; \"it was unbearably hot in the room\") }\n"
     ]
 
 
@@ -123,20 +120,20 @@ processNouns dir = process dir Noun nounFiles
 
 processVerbs dir = process dir Verb verbFiles
 
--- processAdverbs dir = process dir Adverb adverbFiles
+processAdverbs dir = process dir Adverb adverbFiles
 
 main = do
   let dir = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles"
-  -- processAdverbs dir
-  processVerbs dir 
-  processNouns dir
+  processAdverbs dir
+  -- processVerbs dir 
+  -- processNouns dir
   
   
 
 main' = do
-  let txt = testdata_verb !! 7
+  let txt = testdata_adverb !! 0
   -- let txt = "carbon-14"
 
-  let er = parse (many1 (p_synset Verb)) txt
+  let er = parse (many1 (p_synset Adverb)) txt
 
   showResult True er 

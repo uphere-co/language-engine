@@ -45,7 +45,7 @@ pointerSymbol_table SNoun
     , (PSN_MemberOfThisDomain_REGION, "-r")
     , (PSN_DomainOfSynset_USAGE     , ";u")
     , (PSN_MemberOfThisDomain_USAGE , "-u")
-    , (PSN_Pertainym                , "\\")
+    , (PSN_Pertainym                , "\\")  -- only mellowness
     ]
 pointerSymbol_table SVerb
   = [ (PSV_Antonym                  , "!" )
@@ -73,10 +73,12 @@ pointerSymbol_table SAdjective
     ]
 pointerSymbol_table SAdverb
   = [ (PSR_Antonym                  , "!" )
-    , (PSR_DerviedFromAdjective     , "\\")
+    , (PSR_DerivedFromAdjective     , "\\")
     , (PSR_DomainOfSynset_TOPIC     , ";c")
     , (PSR_DomainOfSynset_REGION    , ";r")
     , (PSR_DomainOfSynset_USAGE     , ";u")
+    -- exception
+    , (PSR_DerivationallyRelatedFrom, "+" ) -- unbearable
     ]
 
 p_comment = char '(' >> manyTill anyChar endOfLine
@@ -139,15 +141,13 @@ p_wordpointer defsstyp = do
   char '['
   skipSpace
   w <- p_word
-  skipSpace
+  -- skipSpace
   ps <- many (skipSpace *> p_pointer defsstyp)
   skipSpace
   fs <- if defsstyp == Verb
           then fromMaybe [] <$> optional (p_frames <* skipSpace)
           else pure []
   char ']'
-  -- skipSpace
-  -- char ' '
   return (w,ps,fs)
 
 
@@ -197,10 +197,50 @@ p_synset_verb = do
   
 p_synset_adjective = undefined
 
-p_synset_adverb = undefined
-
-
+p_synset_adverb = do
+  char '{'
+  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Adverb)))
+  skipSpace  
+  ps <- many (skipSpace *> (p_pointer Adverb))
+  skipSpace
+  char '('
+  gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
+  manyTill anyChar endOfLine
+  return (Synset wps ps [] (T.pack gloss'))
   
+
+
+
+p_synset_test = do
+  char '{'
+  skipSpace
+  char '['
+  skipSpace
+  w <- p_word
+  skipSpace
+  lexfile <- optional (p_lexfile <* char ':')
+  skipSpace
+  (ws,md) <- p_word_lexid
+  msatellite <- optional (char '^' *> p_word_lexid)
+  char ','
+  s <-p_pointer_symbol Adverb
+  
+  -- ps <- many (skipSpace *> p_pointer Adverb)
+  
+  -- wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Adverb)))
+  {- 
+  skipSpace  
+  ps <- many (skipSpace *> (p_pointer Adverb))
+  skipSpace -}
+  {- 
+  char '('
+  gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
+  manyTill anyChar endOfLine
+  return (Synset wps ps [] (T.pack gloss'))
+  -}
+  -- return (wps,ps)
+  return (w,lexfile)
+
 
 p_synset :: SSType -> Parser (Maybe Synset)
 p_synset t = (Just <$> p) <|> (p_comment *> return Nothing) <|> (p_empty *> return Nothing)

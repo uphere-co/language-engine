@@ -221,10 +221,12 @@ data PointerSymbol_Adjective = PSJ_Antonym               --   "!"
                                      
 
 data PointerSymbol_Adverb = PSR_Antonym                  --   "!"
-                          | PSR_DerviedFromAdjective     --   "\"
+                          | PSR_DerivedFromAdjective     --   "\"
                           | PSR_DomainOfSynset_TOPIC     --   ";c" 
                           | PSR_DomainOfSynset_REGION    --   ";r"
                           | PSR_DomainOfSynset_USAGE     --   ";u"
+                          -- exception
+                          | PSR_DerivationallyRelatedFrom --  "+"  -- unbearable
                           deriving (Show,Eq,Ord)
 
 
