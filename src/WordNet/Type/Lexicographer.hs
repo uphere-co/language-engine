@@ -265,7 +265,7 @@ data SSPointer
   deriving Show
 
 data Synset
-  = Synset { _ssn_words_or_wordpointers    :: [Either SSWord (SSWord,[SSPointer])]
+  = Synset { _ssn_words_or_wordpointers    :: [Either SSWord (SSWord,[SSPointer],[Int])]
            , _ssn_pointers :: [SSPointer]
            , _ssn_frames   :: [Int]
            , _ssn_gloss    :: Text }

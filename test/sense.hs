@@ -51,10 +51,19 @@ main0 = do
   mapM_ print . drop 10000 . Prelude.take 11000 $ ss
 
 
-testdata = [ "{ lamivudine, 3TC, nucleoside_reverse_transcriptase_inhibitor,@ (a nucleoside reverse transcriptase inhibitor that is very effective in combination with zidovudine in treating AIDS and HIV) }\n"
-           , "{ one-hitter, 1\"-hitter, baseball_game,@ (a game in which a pitcher allows the opposing team only one hit) }\n"
-           , "{ radiocarbon_dating, carbon_dating, carbon-14_dating, dating,@ (a chemical analysis used to determine the age of organic materials based on their content of the radioisotope carbon 14; believed to be reliable up to 40,000 years) }\n"
-           ] 
+testdata_noun
+  = [ "{ lamivudine, 3TC, nucleoside_reverse_transcriptase_inhibitor,@ (a nucleoside reverse transcriptase inhibitor that is very effective in combination with zidovudine in treating AIDS and HIV) }\n"
+    , "{ one-hitter, 1\"-hitter, baseball_game,@ (a game in which a pitcher allows the opposing team only one hit) }\n"
+    , "{ radiocarbon_dating, carbon_dating, carbon-14_dating, dating,@ (a chemical analysis used to determine the age of organic materials based on their content of the radioisotope carbon 14; believed to be reliable up to 40,000 years) }\n"
+    ]
+
+testdata_verb
+  = [ "{ [ breathe, noun.artifact:breather,+ noun.act:breathing,+ breathe_out,^ breathe_in,^ ] take_a_breath, [ respire, adj.pert:respiratory,+ noun.act:respiration1,+ noun.artifact:respirator,+ ] suspire3, inhale,* exhale,* frames: 2,8 (draw air into, and expel out of, the lungs; \"I can breathe better when the air is clean\"; \"The patient is respiring\") }\n"
+    , "{ [ de-energize, energize,! ] [ de-energise, energise,! ]verb.change:weaken1,@ frames: 10 (deprive of energy) }\n"
+    , "{ [ stretch1, noun.act:stretch,+ noun.act:stretching,+ frames: 2 ] [ extend, noun.act:extension1,+ noun.body:extensor,+ ] tense,@ frames: 8 (extend one's limbs or muscles, or the entire body; \"Stretch your legs!\"; \"Extend your right arm above your head\") }\n"
+    , "{ [ reduce, noun.process:reducing1,+ gain,! ] [melt_off, frames: 8 ] slim, slenderize, thin, slim_down, verb.change:change_state,@ frames: 2 (take off weight) }\n"
+    ]
+
 
 nounfiles = [ "noun.act"
             , "noun.animal"
@@ -84,7 +93,24 @@ nounfiles = [ "noun.act"
             , "noun.Tops"
             ]
 
-main = do
+verbfiles = [ "verb.body"
+            , "verb.change"
+            , "verb.cognition"
+            , "verb.communication"
+            , "verb.competition"
+            , "verb.consumption"
+            , "verb.contact"
+            , "verb.creation"
+            , "verb.emotion"
+            , "verb.motion"
+            , "verb.perception"
+            , "verb.possession"
+            , "verb.social"
+            , "verb.stative"
+            , "verb.weather"
+            ]
+
+processNouns = do
   flip mapM_ nounfiles $ \f -> do
     let fp = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles" </> f
     putStrLn fp
@@ -92,12 +118,25 @@ main = do
     let er = parse (many1 (p_synset Noun)) txt
     showResult False er
 
-{- 
+processVerbs = do
+  flip mapM_ verbfiles $ \f -> do
+    let fp = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles" </> f
+    putStrLn fp
+    txt <- TIO.readFile fp
+    let er = parse (many1 (p_synset Verb)) txt
+    showResult False er
+
+
 main = do
-  let txt = "carbon-14_dating"
+  processNouns
+  -- processVerbs
+  
+  
+
+main' = do
+  let txt = testdata_verb !! 3
   -- let txt = "carbon-14"
 
-  let er = parse (replicateM 1 p_word_lexid) txt
+  let er = parse (many1 p_synset_test) txt
 
-  showResult True er
--}
+  showResult True er 
