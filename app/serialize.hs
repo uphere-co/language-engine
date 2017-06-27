@@ -20,6 +20,7 @@ data ProgOption = ProgOption { dir :: FilePath
                              , fileName :: FilePath
                              } deriving Show
 
+
 pOptions :: Parser ProgOption
 pOptions = ProgOption <$> strOption (long "dir" <> short 'd' <> help "Directory")
                       <*> switch (long "test" <> short 't' <> help "testing")
@@ -28,9 +29,6 @@ pOptions = ProgOption <$> strOption (long "dir" <> short 'd' <> help "Directory"
 
 progOption :: ParserInfo ProgOption 
 progOption = info pOptions (fullDesc <> progDesc "WordNet lexicographer encode/decode")
-
-
-
 
 
 main :: IO ()
@@ -52,7 +50,6 @@ main = do
       case lookup "adv.all" (db^.synsetdb_adverb) of
         Nothing -> error "Nothing"
         Just xs -> mapM_ print (take 10 (reverse xs))
-
     else do
       m <- processAll (dir opt)
       BL.writeFile (fileName opt) $ encode m      

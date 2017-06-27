@@ -104,7 +104,7 @@ showResult doesshowresult er = do
     Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
 
 
-process :: FilePath -> SSType -> [FilePath] -> IO [(Text,[Synset])] -- -> IO [Either String [Maybe Synset]]
+process :: FilePath -> SSType -> [FilePath] -> IO [(Text,[Synset])]
 process dir typ files = do
   (\func -> foldlM func [] files) $ \xs f -> do
     let fp = dir </> f
@@ -125,7 +125,7 @@ processAdjAll dir = do
   case er of
     Left err -> error err
     Right lst -> return ("adj.all",catMaybes lst)
-  -- showResult True er
+
 
 processAll :: FilePath -> IO SynsetDB
 processAll dir = do
@@ -136,16 +136,3 @@ processAll dir = do
   madj2 <- processAdjAll dir
   return (SynsetDB mnoun mverb madv (madj2:madj1))
 
-{-  
-processAll :: FilePath -> IO ()
-processAll dir = do
-  er <- processAdjAll dir
-  case er of
-    Left err -> print err
-    Right xs -> print (length xs)
- 
-  process dir Adjective adjectiveFiles1
-  process dir Adverb    adverbFiles
-  process dir Verb      verbFiles
-  process dir Noun      nounFiles
--}
