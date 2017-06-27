@@ -13,8 +13,8 @@ import qualified Data.Map                      as M
 import qualified Data.Set                      as S
 
 import           NLP.Type.NamedEntity                  (NamedEntityClass)
-import           WikiEL.Types.Wikidata                 (ItemID)
-import           WikiEL.Types.FileFormat               
+import           WikiEL.Type.Wikidata                 (ItemID)
+import           WikiEL.Type.FileFormat               
 import           WikiEL.ETL.LoadData                   
 
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module WikiEL.Types.Wikidata where
+module WikiEL.Type.Wikidata where
 
 import           Data.Text                             (Text)
 

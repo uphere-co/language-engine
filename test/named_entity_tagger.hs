@@ -32,10 +32,10 @@ import           Data.Map                              (Map)
 import           Data.Maybe                            (mapMaybe)
 import qualified Data.Map                      as M
 import qualified WikiEL.EntityLinking          as EL
-import           WikiEL.Types.Wikidata
-import           WikiEL.Types.Wikipedia
-import           WikiEL.Types.Equity
-import           WikiEL.Types.FileFormat
+import           WikiEL.Type.Wikidata
+import           WikiEL.Type.Wikipedia
+import           WikiEL.Type.Equity
+import           WikiEL.Type.FileFormat
 import           WikiEL.ETL.Parser
 
 

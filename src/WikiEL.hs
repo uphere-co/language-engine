@@ -11,7 +11,7 @@ import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getSta
 import           WikiEL.WikiEntityTagger                      (NameUIDTable,loadWETagger)
 import           WikiEL.WikiEntityClass                       (WikiUID2NETag,fromFiles)
 import           WikiEL.EntityLinking                         (EntityMention,entityLinkings,buildEntityMentions)
-import           WikiEL.Types.FileFormat               
+import           WikiEL.Type.FileFormat               
 
 extractEntityMentions :: NameUIDTable -> WikiUID2NETag -> [(Text, NamedEntityClass)] -> [EntityMention Text]
 extractEntityMentions wikiTable uid2tag neTokens = linked_mentions

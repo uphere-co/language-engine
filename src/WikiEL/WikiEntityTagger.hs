@@ -21,9 +21,9 @@ import qualified Data.Vector                   as V
 import qualified Data.Vector.Algorithms.Search as VS
 
 
-import qualified WikiEL.Types.Wikidata         as Wiki
-import           WikiEL.Types.Wikidata                 (ItemID)
-import           WikiEL.Types.FileFormat               (EntityReprFile,EntityReprRow(..))
+import qualified WikiEL.Type.Wikidata         as Wiki
+import           WikiEL.Type.Wikidata                 (ItemID)
+import           WikiEL.Type.FileFormat               (EntityReprFile,EntityReprRow(..))
 import           WikiEL.ETL.LoadData                   (loadEntityReprs)
 import           WikiEL.Misc                           (IRange(..))
 import           Assert                                (massertEqual,eassertEqual)

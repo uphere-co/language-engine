@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module WikiEL.Types.Equity where
+module WikiEL.Type.Equity where
 
 import           Data.Text                             (Text)
 

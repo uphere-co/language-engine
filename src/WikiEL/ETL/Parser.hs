@@ -5,10 +5,10 @@ module WikiEL.ETL.Parser where
 import           Data.Text                             (Text)
 import           Data.Attoparsec.Text
 
-import           WikiEL.Types.Wikidata
-import           WikiEL.Types.Wikipedia
-import           WikiEL.Types.Equity
-import           WikiEL.Types.FileFormat
+import           WikiEL.Type.Wikidata
+import           WikiEL.Type.Wikipedia
+import           WikiEL.Type.Equity
+import           WikiEL.Type.FileFormat
 
 
 parserWikidataItemID :: Parser ItemID

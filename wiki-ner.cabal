@@ -19,10 +19,10 @@ library
   hs-source-dirs:      src
   exposed-modules:     Assert
                      , WikiEL
-                     , WikiEL.Types.Equity
-                     , WikiEL.Types.FileFormat
-                     , WikiEL.Types.Wikidata
-                     , WikiEL.Types.Wikipedia
+                     , WikiEL.Type.Equity
+                     , WikiEL.Type.FileFormat
+                     , WikiEL.Type.Wikidata
+                     , WikiEL.Type.Wikipedia
                      , WikiEL.ETL.LoadData
                      , WikiEL.ETL.Parser
                      , WikiEL.EntityLinking

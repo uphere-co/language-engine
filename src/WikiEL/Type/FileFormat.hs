@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module WikiEL.Types.FileFormat where
+module WikiEL.Type.FileFormat where
 
 import           Data.Text                             (Text)
 
-import           WikiEL.Types.Wikidata
+import           WikiEL.Type.Wikidata
 
 
 -- 
