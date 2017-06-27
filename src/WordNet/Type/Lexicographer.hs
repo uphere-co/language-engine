@@ -14,8 +14,9 @@ module WordNet.Type.Lexicographer where
 
 import           Control.Lens
 import           Data.Binary
+import           Data.Monoid
 import           Data.Text
--- import qualified Data.Text as T
+import qualified Data.Text as T
 import           GHC.Generics
 --
 import           WordNet.Type.POS
@@ -244,6 +245,20 @@ data Synset
 instance Binary Synset
 
 makeLenses ''Synset
+
+
+getSSWords :: Synset -> [SSWord]
+getSSWords s = fmap (either id (^._1)) (s^.ssn_words_or_wordpointers)
+
+
+formatWord :: SSWord -> Text
+formatWord w = T.intercalate "_" (w^.ssw_word) <>
+               maybe "" (\i -> T.pack (show i)) (w^.ssw_lexid) <>
+               maybe "" (\m -> "(" <> formatMarker m <> ")") (w^.ssw_marker) 
+
+formatMarker Marker_P = "p"
+formatMarker Marker_A = "a"
+formatMarker Marker_IP = "ip"
 
 
 newtype SynsetCluster = SynsetCluster { _cluster_head_satellites :: [(Synset,[Synset])] }
