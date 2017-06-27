@@ -202,16 +202,16 @@ data Marker = Marker_P  -- ^ predicate position
 
 
 data SSWord = SSWord { _ssw_word   :: [Text]
+                     , _ssw_lexid  :: Maybe Int
                      , _ssw_marker :: Maybe Marker
-                     , _ssw_lexid  :: Maybe Int }
+                     }
             deriving Show
 
 
 data SSPointer
   = SSPointer { _ssp_lex_filename   :: Maybe (Either Text LexicographerFile)
-              , _ssp_word           :: [Text]
-              , _ssp_lexid          :: Maybe Int
-              , _ssp_satellite      :: Maybe ([Text],Maybe Int)
+              , _ssp_word           :: SSWord
+              , _ssp_satellite      :: Maybe SSWord -- ([Text],Maybe Int)
               , _ssp_pointer_symbol :: PointerSymbol
               }
   deriving Show
@@ -227,3 +227,7 @@ data Synset
 makeLenses ''Synset
 
 
+newtype SynsetCluster = SynsetCluster { _cluster_head_satellites :: [(Synset,[Synset])] }
+                      deriving Show
+
+makeLenses ''SynsetCluster
