@@ -305,4 +305,3 @@ main2 = do
     propertyNames <- loadPropertyNames propertyFile
 
     mapM_ print propertyNames
-    

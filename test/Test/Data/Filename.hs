@@ -9,13 +9,13 @@ import           WikiEL.Type.FileFormat
 
 
 -- test data
-rawNewsFile = "/home/jihuni/repo/uphere/wiki-ner/data/dao.ptb"
-nerNewsFile = "/home/jihuni/repo/uphere/wiki-ner/data/dao.ner"
+rawNewsFile = "data/dao.ptb"
+nerNewsFile = "data/dao.ner"
 
-reprFileTiny = EntityReprFile "/home/jihuni/repo/uphere/wiki-ner/data/wikidata.test.entities"
-orgItemFile = ItemIDFile "/home/jihuni/repo/uphere/wiki-ner/data/ne.org"
-personItemFile = ItemIDFile "/home/jihuni/repo/uphere/wiki-ner/data/ne.person"
-reprFile = EntityReprFile "/home/jihuni/repo/uphere/wiki-ner/data/uid"
+reprFileTiny = EntityReprFile "data/wikidata.test.entities"
+orgItemFile = ItemIDFile "data/ne.org"
+personItemFile = ItemIDFile "data/ne.person"
+reprFile = EntityReprFile "data/uid"
 -- Full data
-propertyNameFile = PropertyNameFile "/home/jihuni/repo/uphere/wiki-ner/data_full/properties.tsv"
-listedCompanyFile = "/home/jihuni/repo/uphere/wiki-ner/enwiki/companies"
+propertyNameFile = PropertyNameFile "data_full/properties.tsv"
+listedCompanyFile = "enwiki/companies"
