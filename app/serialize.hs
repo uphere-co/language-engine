@@ -5,14 +5,10 @@ module Main where
 import           Control.Lens
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Binary
-import           Data.Maybe
 import           Data.Monoid
-import           Data.Text                        (Text)
 import           Options.Applicative
 --
 import           WordNet.Query.SynsetDB
-import           WordNet.Type.Lexicographer
-import           WordNet.Type.POS
 
 
 data ProgOption = ProgOption { dir :: FilePath

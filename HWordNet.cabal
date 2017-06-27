@@ -48,9 +48,8 @@ Library
                        split,
                        text,
                        text-format,
-                       unordered-containers,
-                       --
-                       nlp-types
+                       unordered-containers
+
 
 Executable query
   Main-is:              query.hs
@@ -75,8 +74,6 @@ Executable query
                         optparse-applicative,
                         text,
                         --
-                        nlp-types,
-                        --
                         HWordNet
            
 
@@ -99,12 +96,8 @@ Executable serialize
                         binary,
                         bytestring,
                         filepath,
-                        haskeline,
                         lens,
-                        monad-loops,
                         optparse-applicative,
                         text,
-                        --
-                        nlp-types,
                         --
                         HWordNet
