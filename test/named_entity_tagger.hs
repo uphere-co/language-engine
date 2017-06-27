@@ -38,6 +38,7 @@ import           WikiEL.Type.Equity
 import           WikiEL.Type.FileFormat
 import           WikiEL.ETL.Parser
 
+import           Test.DataFile
 
 uid = itemID
 uids = fromList . map uid
@@ -54,17 +55,6 @@ google       = org "Q95"
 googleSearch = other "Q9366"
 facebook     = org "Q380"
 
--- test data
-rawNewsFile = "data/dao.ptb"
-nerNewsFile = "data/dao.ner"
-
-reprFileTiny = EntityReprFile "data/wikidata.test.entities"
-orgItemFile = ItemIDFile "data/ne.org"
-personItemFile = ItemIDFile "data/ne.person"
-reprFile = EntityReprFile "data/uid"
--- Full data
-propertyNameFile = PropertyNameFile "data_full/properties.tsv"
-listedCompanyFile = "enwiki/companies"
 
 testNamedEntityTagging :: TestTree
 testNamedEntityTagging = testCaseSteps "Named entity tagging on CoreNLP NER output" $ \step -> do

@@ -49,6 +49,7 @@ library
 test-suite test
   type: exitcode-stdio-1.0
   hs-source-dirs: test
+  other-modules:       Test.DataFile
   main-is: named_entity_tagger.hs
   build-depends:       base
                      , tasty-hunit
