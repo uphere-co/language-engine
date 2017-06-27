@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
@@ -16,6 +17,18 @@ import           WordNet.Parser.Lexicographer
 import           WordNet.Query.SynsetDB
 import           WordNet.Type.Lexicographer
 
+data SynsetDBFull
+  = SynsetDBFull { _synsetdbfull_noun      :: HashMap Text (HashMap Int [SSWord],HashMap SSWord Int)
+                                              
+
+{-
+                 , _synsetdbfull_verb      :: [(Text,[Synset])]
+                 , _synsetdbfull_adverb    :: [(Text,[Synset])]
+                 , _synsetdbfull_adjective :: [(Text,[Either Synset SynsetCluster])] -}
+                 }
+
+
+makeLenses ''SynsetDBFull
 
 -- mkidx =  (\x -> (map formatWord . getSSWords) x) 
 
@@ -35,18 +48,24 @@ mkSSWord txt =
     Left err -> Nothing
     Right w  -> Just w
 
+
+mkIndexDB :: SynsetDB -> Maybe SynsetDBFull
 mkIndexDB db =
-  let sidx2word = map (\(fname,xs) -> (fname,zip [1..] (map getSSWords xs))) (db^.synsetdb_noun)
+  let ks = map fst (db^.synsetdb_noun)
+      sidx2word = map (\(fname,xs) -> (fname,zip [1..] (map getSSWords xs))) (db^.synsetdb_noun)
       word2sidx = map (\(fname,xs) -> (fname,f xs)) sidx2word
         where f :: [(Int,[SSWord])] -> [(SSWord,Int)]
               f xs = [(w,i) | (i,ws) <-xs, w <- ws ]
       nounmap_s2w = fmap HM.fromList (HM.fromList sidx2word)
       nounmap_w2s = fmap HM.fromList (HM.fromList word2sidx)
-  in (nounmap_s2w,nounmap_w2s)
+  in fmap (SynsetDBFull . HM.fromList) . flip mapM ks $ \k -> do
+       s2w <- HM.lookup k nounmap_s2w
+       w2s <- HM.lookup k nounmap_w2s
+       return (k,(s2w,w2s))
 
-findSynonym (nounmap_s2w,nounmap_w2s) txt  = do
-  foodmap_w2s <- HM.lookup "noun.food" nounmap_w2s
-  foodmap_s2w <- HM.lookup "noun.food" nounmap_s2w
+
+findSynonym db txt  = do
+  (foodmap_s2w,foodmap_w2s) <- HM.lookup "noun.food" (db^.synsetdbfull_noun)
   w <- mkSSWord txt
   i <- HM.lookup w foodmap_w2s
   ws <- HM.lookup i foodmap_s2w
@@ -59,10 +78,10 @@ main = do
   let fp = "wordnet31hs.bin"
   lbstr <- BL.readFile fp
   let db = decode lbstr :: SynsetDB
-      ms@(nounmap_s2w,nounmap_w2s) = mkIndexDB db
-  mapM_ print (findSynonym ms "ruggelach")
-  mapM_ print (findSynonym ms "soul_food")
-  mapM_ print (findSynonym ms "coffee")
+      Just dbfull = mkIndexDB db
+  mapM_ print (findSynonym dbfull "ruggelach")
+  mapM_ print (findSynonym dbfull "soul_food")
+  mapM_ print (findSynonym dbfull "coffee")
 {-                   
   case HM.lookup "noun.food" nounmap_w2s of
     Nothing -> error "Nothing"
