@@ -47,3 +47,14 @@ wdb <- loadDB <filepath>
 (concept :: Maybe ([LexItem],Text)) <- getQueryConcept <ili> <pos> wdb
 (sense :: Maybe Int) <- getQuerySense <lex-word> <lex-id> wdb
 ```
+
+
+WordNet lexicographer file parsing and serialization to binary format
+---------------------------------------------------------------------
+
+We can parse WordNet lexicographer files and transform data into a binary format
+file so that we can load the data fast. To parse and encode
+```
+$ .cabal-sandbox/bin/serialize -d (wordnet lexicographer file dir) (serialized binary file)
+```
+You can test the file by adding `-t` option in the above command.
