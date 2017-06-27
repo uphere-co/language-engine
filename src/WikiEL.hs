@@ -11,6 +11,7 @@ import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getSta
 import           WikiEL.WikiEntityTagger                      (NameUIDTable,loadWETagger)
 import           WikiEL.WikiEntityClass                       (WikiUID2NETag,fromFiles)
 import           WikiEL.EntityLinking                         (EntityMention,entityLinkings,buildEntityMentions)
+import           WikiEL.Types.FileFormat               
 
 extractEntityMentions :: NameUIDTable -> WikiUID2NETag -> [(Text, NamedEntityClass)] -> [EntityMention Text]
 extractEntityMentions wikiTable uid2tag neTokens = linked_mentions
@@ -24,7 +25,7 @@ extractEntityMentions wikiTable uid2tag neTokens = linked_mentions
     mentions = buildEntityMentions words wiki_named_entities
     linked_mentions = entityLinkings mentions
 
-loadEMtagger :: FilePath -> [(NamedEntityClass, FilePath)] -> IO( [(Text, NamedEntityClass)] -> [EntityMention Text] )
+loadEMtagger :: EntityReprFile -> [(NamedEntityClass, ItemIDFile)] -> IO( [(Text, NamedEntityClass)] -> [EntityMention Text] )
 loadEMtagger wikiNameFile uid2tagFiles = do
   wikiTable <- loadWETagger  wikiNameFile
   uid2tag <- fromFiles uid2tagFiles

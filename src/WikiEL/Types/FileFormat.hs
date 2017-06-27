@@ -7,7 +7,8 @@ import           Data.Text                             (Text)
 import           WikiEL.Types.Wikidata
 
 
-newtype PropertyNameFile = PropertyNameFile { _path :: FilePath }
+-- 
+newtype PropertyNameFile = PropertyNameFile { unPropertyNameFile :: FilePath }
                          deriving (Show)
 
 data PropertyNameRow = PropertyNameRow { _prop     :: PropertyID                       
@@ -15,3 +16,26 @@ data PropertyNameRow = PropertyNameRow { _prop     :: PropertyID
                                        }
                      deriving (Show)
 
+--
+newtype EntityReprFile = EntityReprFile { unEntityReprFile :: FilePath }
+                        deriving (Show)
+
+data EntityReprRow = EntityReprRow { _uid  :: ItemID
+                                   , _repr :: ItemRepr
+                                   }
+                    deriving (Show)
+
+--
+newtype ItemIDFile = ItemIDFile { unItemIDFile :: FilePath }
+                   deriving (Show)
+
+type ItemIDRow = ItemID
+
+--
+newtype SubclassRelationFile = SubclassRelationFile { unSubclassRelationFile :: FilePath }
+                             deriving (Show)
+
+data SubclassRelationRow = SubclassRelationRow { _sub :: ItemID 
+                                               , _super :: ItemID 
+                                               }
+                          deriving (Show,Eq)

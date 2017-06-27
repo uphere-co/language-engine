@@ -25,7 +25,6 @@ library
                      , WikiEL.Types.Wikipedia
                      , WikiEL.ETL.LoadData
                      , WikiEL.ETL.Parser
-                     , WikiEL.WikiEntity
                      , WikiEL.EntityLinking
                      , WikiEL.Misc
                      , WikiEL.WikiEntityTagger

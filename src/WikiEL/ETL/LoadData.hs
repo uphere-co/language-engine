@@ -18,3 +18,23 @@ loadPropertyNames (PropertyNameFile path) = do
   return rows
 
 
+loadEntityReprs :: EntityReprFile -> IO [EntityReprRow]
+loadEntityReprs (EntityReprFile path) = do
+  file <- T.IO.readFile path
+  let
+    rows = map entityRepr (T.lines file)
+  return rows
+
+loadItemIDs :: ItemIDFile -> IO [ItemIDRow]
+loadItemIDs (ItemIDFile path) = do
+  file <- T.IO.readFile path
+  let
+    rows = map itemID (T.lines file)
+  return rows
+
+loadSubclassRelations :: SubclassRelationFile -> IO [SubclassRelationRow]
+loadSubclassRelations (SubclassRelationFile path) = do
+  file <- T.IO.readFile path
+  let
+    rows = map subclassRelation (T.lines file)
+  return rows

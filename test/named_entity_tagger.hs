@@ -14,7 +14,6 @@ import qualified Data.Text.IO                  as T.IO
 import qualified Data.Vector                   as V
 
 import           WikiEL.CoreNLP                               (parseNEROutputStr)
-import           WikiEL.WikiEntity                            (parseEntityLine,nameWords)
 import           WikiEL.WikiEntityTagger                      (loadWETagger,wikiAnnotator)
 import           WikiEL.WikiEntityClass                       (fromFiles,getNEClass)
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,buildTagUIDTable,getStanfordNEs,parseStanfordNE,namedEntityAnnotator)
@@ -25,7 +24,6 @@ import           WikiEL.ETL.LoadData
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
 import qualified NLP.Type.NamedEntity                 as N
-import qualified WikiEL.WikiEntity                    as Wiki
 import qualified WikiEL.WikiEntityClass               as WC
 
 -- to be moved
@@ -41,7 +39,7 @@ import           WikiEL.Types.FileFormat
 import           WikiEL.ETL.Parser
 
 
-uid = Wiki.UID
+uid = itemID
 uids = fromList . map uid
 
 
@@ -56,9 +54,21 @@ google       = org "Q95"
 googleSearch = other "Q9366"
 facebook     = org "Q380"
 
+-- test data
+rawNewsFile = "data/dao.ptb"
+nerNewsFile = "data/dao.ner"
+
+reprFileTiny = EntityReprFile "data/wikidata.test.entities"
+orgItemFile = ItemIDFile "data/ne.org"
+personItemFile = ItemIDFile "data/ne.person"
+reprFile = EntityReprFile "data/uid"
+-- Full data
+propertyNameFile = PropertyNameFile "data_full/properties.tsv"
+listedCompanyFile = "enwiki/companies"
+
 testNamedEntityTagging :: TestTree
 testNamedEntityTagging = testCaseSteps "Named entity tagging on CoreNLP NER output" $ \step -> do
-  entities <- loadWETagger "data/wikidata.test.entities"
+  entities <- loadWETagger reprFileTiny
   let
     ner_text = "Google/ORGANIZATION and/O Facebook/ORGANIZATION Inc./ORGANIZATION are/O famous/O AI/O companies/O ./O NLP/ORGANIZATION stands/O for/O natural/O language/O processing/O ./O"
     stanford_nefs =  map parseStanfordNE (parseNEROutputStr ner_text)
@@ -155,10 +165,10 @@ testWikiNER =
 
 testRunWikiNER :: TestTree
 testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \step -> do
-  input_raw <- T.IO.readFile "data/dao.ptb"
-  input <- T.IO.readFile "data/dao.ner"
-  uid2tag <- fromFiles [(N.Org, "data/ne.org"), (N.Person, "data/ne.person")]
-  wikiTable <- loadWETagger "data/uid"
+  input_raw <- T.IO.readFile rawNewsFile
+  input <- T.IO.readFile nerNewsFile
+  uid2tag <- fromFiles [(N.Org, orgItemFile), (N.Person, personItemFile)]
+  wikiTable <- loadWETagger reprFile
   
   let
     stanford_nefs = map parseStanfordNE (parseNEROutputStr input)
@@ -222,7 +232,7 @@ testParsingSubclassRelation = testCaseSteps "Test for parsing Wikidata P31 subcl
   assert $ parseFail (parseItemID "QQ11")
   let testLine = "Q5119\tcapital\tQ515\tcity"
   T.IO.putStrLn testLine
-  eassertEqual (subclassRelation testLine) (ItemID 5119, ItemID 515)
+  eassertEqual (subclassRelation testLine) (SubclassRelationRow (itemID "Q5119") (itemID "Q515"))
   print $ subclassRelation testLine
     
 testParsingPublicCompanyInfo :: TestTree 
@@ -251,28 +261,26 @@ unitTests =
 main1 = defaultMain unitTests
 
 
-getOrgs :: EntityMention a -> Maybe (EntityMentionUID, Text)
-getOrgs (EL.Self muid (_,_, Resolved (Wiki.UID wuid, N.Org))) = Just (muid, wuid)
-getOrgs (EL.Cite muid _ (_,_, Resolved (Wiki.UID wuid, N.Org))) = Just (muid, wuid)
+getOrgs :: EntityMention a -> Maybe (EntityMentionUID, ItemID)
+getOrgs (EL.Self muid (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
+getOrgs (EL.Cite muid _ (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
 getOrgs _ = Nothing
 
 
-getCompanySymbol :: Map ItemID Symbol -> (EntityMentionUID, Text) -> Maybe (EntityMentionUID , ItemID, Symbol)
-getCompanySymbol tikcerMap (mentionUID, wikiUID) = result
+getCompanySymbol :: Map ItemID Symbol -> (EntityMentionUID, ItemID) -> Maybe (EntityMentionUID , ItemID, Symbol)
+getCompanySymbol tikcerMap (mentionUID, itemID) = result
   where
-    wuid = itemID wikiUID
-    result = 
-      case (M.lookup wuid tikcerMap) of
-        Just symbol -> Just (mentionUID, wuid, symbol)
-        Nothing     -> Nothing  
+    result = case M.lookup itemID tikcerMap of
+      Just symbol -> Just (mentionUID, itemID, symbol)
+      Nothing     -> Nothing  
 
 main = do
-  file <- T.IO.readFile "enwiki/companies"
+  file <- T.IO.readFile listedCompanyFile
 
-  input_raw <- T.IO.readFile "data/dao.ptb"
-  input <- T.IO.readFile "data/dao.ner"
-  uid2tag <- fromFiles [(N.Org, "data/ne.org"), (N.Person, "data/ne.person")]
-  wikiTable <- loadWETagger "data/uid"
+  input_raw <- T.IO.readFile rawNewsFile
+  input <- T.IO.readFile nerNewsFile
+  uid2tag <- fromFiles [(N.Org, orgItemFile), (N.Person, personItemFile)]
+  wikiTable <- loadWETagger reprFile
 
   let 
     lines = T.lines file
@@ -304,7 +312,8 @@ main = do
 
 main3 = do
     let 
-      propertyFile = PropertyNameFile "data_full/properties.tsv"
+      propertyFile = propertyNameFile
     propertyNames <- loadPropertyNames propertyFile
 
     mapM_ print propertyNames
+    
