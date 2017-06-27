@@ -13,6 +13,7 @@ instance Enum SSType where
   toEnum 3 = Adjective
   toEnum 4 = Adverb
   toEnum 5 = AdjectiveSatellite
+  toEnum n = error ("toEnum: got " ++ show n)
 
   fromEnum Noun               = 1
   fromEnum Verb               = 2

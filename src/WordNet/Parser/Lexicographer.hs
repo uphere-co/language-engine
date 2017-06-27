@@ -199,9 +199,11 @@ p_synset t = (Just <$> (p <* manyTill anyChar endOfLine)) <|> (p_comment *> retu
               x         -> error ("p_synset: I do not know how to deal with " ++ show x)
 
 
-p_splitter = string "----"
+p_splitter :: Parser ()
+p_splitter = void (string "----")
 
 
+p_head_satellites :: Parser (Synset,[Synset])
 p_head_satellites = 
   (,) <$> (p_synset_gen False <* skipSpace)
       <*> (p_synset_gen False `sepBy` skipSpace)

@@ -2,27 +2,14 @@
 
 module WordNet.Query.SynsetDB where
 
-import           Control.Applicative
-import           Control.Lens
 import           Control.Monad
 import           Data.Attoparsec.Text
-import qualified Data.HashMap.Strict as HM
-import           Data.IntMap                (IntMap)
-import qualified Data.IntMap         as IM
 import           Data.List
-import           Data.Maybe
-import           Data.Monoid
-import           Data.Text                  (Text)
 import qualified Data.Text           as T
 import qualified Data.Text.IO        as TIO
-import           System.Environment
 import           System.FilePath
 --
-import           WordNet.Query
-import           WordNet.Parser.Sense
 import           WordNet.Parser.Lexicographer
-import           WordNet.Type
-import           WordNet.Type.Lexicographer
 import           WordNet.Type.POS
 
 
@@ -91,10 +78,11 @@ showResult doesshowresult er = do
     Partial f -> case (f "") of
                    Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
                    Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
+                   _ -> error "impossible"
     Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
 
 
-
+process :: FilePath -> SSType -> [FilePath] -> IO ()
 process dir typ files = do
   flip mapM_ files $ \f -> do
     let fp = dir </> f
@@ -104,6 +92,7 @@ process dir typ files = do
     showResult False er
 
 
+processAdjAll :: FilePath -> IO ()
 processAdjAll dir = do
   let fp = dir </> "adj.all"
   putStrLn fp
@@ -112,6 +101,7 @@ processAdjAll dir = do
   showResult True er
 
 
+processAll :: FilePath -> IO ()
 processAll dir = do
   -- let dir = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles"
   processAdjAll dir
