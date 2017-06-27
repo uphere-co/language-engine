@@ -3,6 +3,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
+module Test.NamedEntityTagger where
+
 import           Data.Text                             (Text)
 import           Data.Vector                           (Vector,fromList,toList)
 import           Control.Arrow                         (first,second)
@@ -38,7 +40,7 @@ import           WikiEL.Type.Equity
 import           WikiEL.Type.FileFormat
 import           WikiEL.ETL.Parser
 
-import           Test.DataFile
+import           Test.Data.Filename
 
 uid = itemID
 uids = fromList . map uid
@@ -82,7 +84,6 @@ testNamedEntityTagging = testCaseSteps "Named entity tagging on CoreNLP NER outp
   --print ner_text
   eassertEqual tt expected_tt
   eassertEqual matchedItems expected_matches
-
 
 testIRangeOps :: TestTree
 testIRangeOps = testCaseSteps "Test operations on IRange" $ \step -> do
@@ -240,15 +241,13 @@ testParsingData =
     "Tests for loading data files"
     [testParsingSubclassRelation, testParsingPublicCompanyInfo]    
 
-unitTests :: TestTree
-unitTests =
+allTest :: TestTree
+allTest =
   testGroup
-    "All Unit tests"
+    "All NamedEntityTagger unit tests"
     [testHelperUtils, testIRangeOps, testWikiNER, testRunWikiNER, testParsingData]    
 
 
-
-main1 = defaultMain unitTests
 
 
 getOrgs :: EntityMention a -> Maybe (EntityMentionUID, ItemID)
@@ -264,7 +263,7 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
       Just symbol -> Just (mentionUID, itemID, symbol)
       Nothing     -> Nothing  
 
-main = do
+main1 = do
   file <- T.IO.readFile listedCompanyFile
 
   input_raw <- T.IO.readFile rawNewsFile
@@ -300,7 +299,7 @@ main = do
   --print tickerMap
 
 
-main3 = do
+main2 = do
     let 
       propertyFile = propertyNameFile
     propertyNames <- loadPropertyNames propertyFile

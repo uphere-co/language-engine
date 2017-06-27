@@ -2,7 +2,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
-  
+
+module Test.WikiEntityTagger where
+
 import           Data.Maybe                            (fromMaybe)
 import           Data.Text                             (Text)
 import           Data.Vector                           (Vector,backpermute,findIndices
@@ -153,10 +155,8 @@ testWikiEntityTagging = testCaseSteps "Wiki entity tagger with greedy-matching s
   --mapM_ print matchedItems
 
 
-unitTests :: TestTree
-unitTests =
+allTest :: TestTree
+allTest =
   testGroup
     "All Unit tests"
     [unitTestsVector, unitTestsGreedyMatching, testWikiEntityTagging, testWikiEntityTypes]    
-
-main = defaultMain unitTests
