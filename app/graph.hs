@@ -10,6 +10,7 @@ import           Data.Binary
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import qualified Data.List                  as L
+import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                        (Text)
 --
@@ -58,22 +59,25 @@ mkSynsetDBFull db = SynsetDBFull (mkIndexDB (db^.synsetdb_noun))
                                  (mkIndexDB (db^.synsetdb_adverb))
 
 
+llookup k = maybeToList . HM.lookup k
+
+findSynonym :: SynsetDBFull -> Text -> [SSWord]
 findSynonym db txt  = do
-  smap <- HM.lookup "noun.food" (db^.synsetdbfull_noun)
-  w <- mkSSWord txt
-  i <- HM.lookup w (smap^.smap_w2s)
-  ws <- HM.lookup i (smap^.smap_s2w)
-  return ws
-  -- return (map formatWord ws)
+  smap <- llookup "noun.food" (db^.synsetdbfull_noun)
+  w <- maybeToList $ mkSSWord txt
+  i <- llookup w (smap^.smap_w2s)
+  ws <- llookup i (smap^.smap_s2w)
+  w' <- ws
+  return w'
 
 
+findHypernym :: SynsetDBFull -> Text -> [SSWord]
 findHypernym db txt  = do
-  smap <- HM.lookup "noun.food" (db^.synsetdbfull_noun)
-  w <- mkSSWord txt
-  ps <- HM.lookup w (smap^.smap_w2p)
-  let hs = map (^.ssp_word) . filter (\p -> p^.ssp_pointer_symbol == Hypernym) $ ps
-  return hs -- (map formatWord ws)
-
+  smap <- llookup "noun.food" (db^.synsetdbfull_noun)
+  w <- maybeToList $ mkSSWord txt
+  ps <- llookup w (smap^.smap_w2p)
+  h <- map (^.ssp_word) . filter (\p -> p^.ssp_pointer_symbol == Hypernym) $ ps
+  return h
 
 main :: IO ()
 main = do
@@ -81,8 +85,8 @@ main = do
   lbstr <- BL.readFile fp
   let db = decode lbstr :: SynsetDB
       dbfull = mkSynsetDBFull db
-  mapM_ (print . map formatWord) (findSynonym dbfull "ruggelach")
-  mapM_ (print . map formatWord) (findSynonym dbfull "soul_food")
-  mapM_ (print . map formatWord) (findSynonym dbfull "coffee")
+  (print . map formatWord) (findSynonym dbfull "ruggelach")
+  (print . map formatWord) (findSynonym dbfull "soul_food")
+  (print . map formatWord) (findSynonym dbfull "coffee")
   putStrLn "--------------"
-  mapM_ (print . map formatWord) (findHypernym dbfull "coffee")  
+  (print . map formatWord) (findHypernym dbfull "coffee")  
