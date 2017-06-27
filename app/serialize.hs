@@ -1,13 +1,19 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
+import           Control.Lens
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Binary
 import           Data.Maybe
 import           Data.Monoid
+import           Data.Text                        (Text)
 import           Options.Applicative
 --
 import           WordNet.Query.SynsetDB
 import           WordNet.Type.Lexicographer
+import           WordNet.Type.POS
+
 
 data ProgOption = ProgOption { dir :: FilePath
                              , isTesting :: Bool
@@ -24,17 +30,30 @@ progOption :: ParserInfo ProgOption
 progOption = info pOptions (fullDesc <> progDesc "WordNet lexicographer encode/decode")
 
 
+
+
+
 main :: IO ()
 main = do
   opt <- execParser progOption
   if isTesting opt
     then do
       lbstr <- BL.readFile (fileName opt)
-      let xs = decode lbstr :: [Either Synset SynsetCluster]
-      mapM_ print (take 10 (reverse xs))
+      let db = decode lbstr :: SynsetDB
+      case lookup "noun.food" (db^.synsetdb_noun)  of
+        Nothing -> error "Nothing"
+        Just xs -> mapM_ print (take 10 (reverse xs))
+      case lookup "verb.motion" (db^.synsetdb_verb) of
+        Nothing -> error "Nothing"
+        Just xs -> mapM_ print (take 10 (reverse xs))
+      case lookup "adj.all" (db^.synsetdb_adjective) of
+        Nothing -> error "Nothing"
+        Just xs -> mapM_ print (take 10 (reverse xs))
+      case lookup "adv.all" (db^.synsetdb_adverb) of
+        Nothing -> error "Nothing"
+        Just xs -> mapM_ print (take 10 (reverse xs))
+
     else do
-      er <- processAdjAll (dir opt)
-      case er of
-        Left err -> print err
-        Right xs -> BL.writeFile (fileName opt) $ encode $ catMaybes xs
+      m <- processAll (dir opt)
+      BL.writeFile (fileName opt) $ encode m      
 
