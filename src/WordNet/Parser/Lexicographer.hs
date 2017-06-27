@@ -45,7 +45,7 @@ pointerSymbol_table SNoun
     , (PSN_MemberOfThisDomain_REGION, "-r")
     , (PSN_DomainOfSynset_USAGE     , ";u")
     , (PSN_MemberOfThisDomain_USAGE , "-u")
-    , (PSN_Pertainym                , "\\")
+    , (PSN_Pertainym                , "\\")  -- only mellowness
     ]
 pointerSymbol_table SVerb
   = [ (PSV_Antonym                  , "!" )
@@ -55,7 +55,7 @@ pointerSymbol_table SVerb
     , (PSV_Cause                    , ">" )
     , (PSV_AlsoSee                  , "^" )
     , (PSV_VerbGroup                , "$" )
-    , (PSV_DerivationallyRelatedFrom, "+" )
+    , (PSV_DerivationallyRelatedForm, "+" )
     , (PSV_DomainOfSynset_TOPIC     , ";c")
     , (PSV_DomainOfSynset_REGION    , ";r")
     , (PSV_DomainOfSynset_USAGE     , ";u")
@@ -70,13 +70,17 @@ pointerSymbol_table SAdjective
     , (PSJ_DomainOfSynset_TOPIC     , ";c")
     , (PSJ_DomainOfSynset_REGION    , ";r")
     , (PSJ_DomainOfSynset_USAGE     , ";u")
+    -- 
+    , (PSJ_DerivationallyRelatedForm, "+" ) -- carinate
     ]
 pointerSymbol_table SAdverb
   = [ (PSR_Antonym                  , "!" )
-    , (PSR_DerviedFromAdjective     , "\\")
+    , (PSR_DerivedFromAdjective     , "\\")
     , (PSR_DomainOfSynset_TOPIC     , ";c")
     , (PSR_DomainOfSynset_REGION    , ";r")
     , (PSR_DomainOfSynset_USAGE     , ";u")
+    -- exception
+    , (PSR_DerivationallyRelatedForm, "+" ) -- unbearable
     ]
 
 p_comment = char '(' >> manyTill anyChar endOfLine
@@ -104,19 +108,31 @@ p_token = do
 
 p_lexfile = foldl1' (<|>) (map (\(x,y) -> string x *> pure y) lexicographerFileTable)
 
+
 p_word_lexid = do
   ws <- do ws' <- many (p_nonlasttoken <* char '_')
            w <- p_token
-           return (ws'++[w]) 
+           return (ws'++[w])
   md :: Maybe Int <- optional (read <$> many1 digit)
   return (ws,md)
 
+p_word_marker_lexid = do
+  ws <- do ws' <- many (p_nonlasttoken <* char '_')
+           w <- p_token
+           return (ws'++[w])
+  mk <- optional ( (string "(p)"  >> return Marker_P) <|>
+                   (string "(a)"  >> return Marker_A) <|>
+                   (string "(ip)" >> return Marker_IP)
+                 )
+  md :: Maybe Int <- optional (read <$> many1 digit)
+  return (ws,mk,md)
+
 p_word = do
-  (ws,md) <- p_word_lexid
+  (ws,mk,md) <- p_word_marker_lexid
   char ','
   c <- peekChar'
   guard (c == ' ' || isAlpha c ) -- this is due to verb.motion:body-surf
-  return (SSWord ws Nothing md)
+  return (SSWord ws mk md)
 
 p_pointer :: SSType -> Parser SSPointer
 p_pointer defsstyp = do
@@ -139,15 +155,13 @@ p_wordpointer defsstyp = do
   char '['
   skipSpace
   w <- p_word
-  skipSpace
+  -- skipSpace
   ps <- many (skipSpace *> p_pointer defsstyp)
   skipSpace
   fs <- if defsstyp == Verb
           then fromMaybe [] <$> optional (p_frames <* skipSpace)
           else pure []
   char ']'
-  -- skipSpace
-  -- char ' '
   return (w,ps,fs)
 
 
@@ -195,12 +209,29 @@ p_synset_verb = do
   return (Synset wps ps fs (T.pack gloss'))
 
   
-p_synset_adjective = undefined
 
-p_synset_adverb = undefined
-
-
+p_synset_adverb = do
+  char '{'
+  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Adverb)))
+  skipSpace  
+  ps <- many (skipSpace *> (p_pointer Adverb))
+  skipSpace
+  char '('
+  gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
+  manyTill anyChar endOfLine
+  return (Synset wps ps [] (T.pack gloss'))
   
+p_synset_adjective = do
+  char '{'
+  wps <- many1 (skipSpace *> (fmap Left p_word <|> fmap Right (p_wordpointer Adjective)))
+  skipSpace  
+  ps <- many (skipSpace *> (p_pointer Adjective))
+  skipSpace
+  char '('
+  gloss' <- manyTill anyChar (char ')' >> skipSpace >> char '}')
+  manyTill anyChar endOfLine
+  return (Synset wps ps [] (T.pack gloss'))
+
 
 p_synset :: SSType -> Parser (Maybe Synset)
 p_synset t = (Just <$> p) <|> (p_comment *> return Nothing) <|> (p_empty *> return Nothing)

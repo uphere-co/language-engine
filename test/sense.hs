@@ -27,29 +27,6 @@ import           WordNet.Parser.Lexicographer
 import           WordNet.Type
 import           WordNet.Type.Lexicographer
 
-                         
-
-
-addSense :: IntMap [SenseItem] -> SenseItem -> IntMap [SenseItem]
-addSense !m s = IM.insertWith (++) (s^.sense_soffset) [s] m
-
-showResult :: (Show a) => Bool -> Result [a] -> IO ()
-showResult doesshowresult er = do 
-  case er of
-    Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
-    Partial f -> case (f "") of
-                   Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
-                   Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
-    Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
-
-
-  
-main0 = do
-  -- print (toEnum 44  :: LexicoGrapherFile)
-  let dir = "/scratch/wavewave/wordnet/WordNet-3.1/dict"
-  ss <- (catMaybes <$> parseFile parseSense (dir </> "index.sense"))
-  mapM_ print . drop 10000 . Prelude.take 11000 $ ss
-
 
 testdata_noun
   = [ "{ lamivudine, 3TC, nucleoside_reverse_transcriptase_inhibitor,@ (a nucleoside reverse transcriptase inhibitor that is very effective in combination with zidovudine in treating AIDS and HIV) }\n"
@@ -68,8 +45,16 @@ testdata_verb
     , "{ body-surf,glide,@ frames: 2 (ride the crest of a wave without a surfboard)}\n"
     ]
 
+testdata_adverb
+  = [ "{ [ unbearably, adj.all:unbearable,+ adj.all:unbearable,\\ ] (to an unbearable degree; \"it was unbearably hot in the room\") }\n"
+    ]
 
-nounfiles = [ "noun.act"
+testdata_adjective
+  = [ "{ [ ridged, verb.change:ridge,< ] [ carinate, noun.animal:carinate,+ ] carinated, keeled, (having a ridge or shaped like a ridge or suggesting the keel of a ship; \"a carinate sepal\") }\n"
+    ]
+
+
+nounFiles = [ "noun.act"
             , "noun.animal"
             , "noun.artifact"
             , "noun.attribute"
@@ -97,7 +82,7 @@ nounfiles = [ "noun.act"
             , "noun.Tops"
             ]
 
-verbfiles = [ "verb.body"
+verbFiles = [ "verb.body"
             , "verb.change"
             , "verb.cognition"
             , "verb.communication"
@@ -114,33 +99,42 @@ verbfiles = [ "verb.body"
             , "verb.weather"
             ]
 
-processNouns = do
-  flip mapM_ nounfiles $ \f -> do
-    let fp = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles" </> f
-    putStrLn fp
-    txt <- TIO.readFile fp
-    let er = parse (many1 (p_synset Noun)) txt
-    showResult False er
+adverbFiles = [ "adv.all" ]
 
-processVerbs = do
-  flip mapM_ verbfiles $ \f -> do
-    let fp = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles" </> f
+adjectiveFiles = [ -- "adj.all"
+                 -- ,
+                   "adj.pert"
+                 , "adj.ppl"
+                 ]
+
+showResult :: (Show a) => Bool -> Result [a] -> IO ()
+showResult doesshowresult er = do 
+  case er of
+    Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
+    Partial f -> case (f "") of
+                   Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
+                   Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
+    Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
+
+
+process dir typ files = do
+  flip mapM_ files $ \f -> do
+    let fp = dir </> f
     putStrLn fp
     txt <- TIO.readFile fp
-    let er = parse (many1 (p_synset Verb)) txt
+    let er = parse (many1 (p_synset typ)) txt
     showResult False er
 
 
 main = do
-  processVerbs  
-  processNouns
+  let dir = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles"
+  process dir Adjective adjectiveFiles
+  process dir Adverb    adverbFiles
+  process dir Verb      verbFiles
+  process dir Noun      nounFiles
   
-  
 
-main' = do
-  let txt = testdata_verb !! 7
-  -- let txt = "carbon-14"
-
-  let er = parse (many1 (p_synset Verb)) txt
-
+test = do
+  let txt = testdata_adjective !! 0
+      er = parse (many1 (p_synset Adjective)) txt
   showResult True er 
