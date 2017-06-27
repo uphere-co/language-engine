@@ -10,6 +10,7 @@ import qualified Data.Text.IO        as TIO
 import           System.FilePath
 --
 import           WordNet.Parser.Lexicographer
+import           WordNet.Type.Lexicographer
 import           WordNet.Type.POS
 
 
@@ -82,30 +83,38 @@ showResult doesshowresult er = do
     Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
 
 
-process :: FilePath -> SSType -> [FilePath] -> IO ()
+process :: FilePath -> SSType -> [FilePath] -> IO [Either String [Maybe Synset]]
 process dir typ files = do
-  flip mapM_ files $ \f -> do
+  flip mapM files $ \f -> do
     let fp = dir </> f
     putStrLn fp
     txt <- TIO.readFile fp
-    let er = parse (many1 (p_synset typ)) txt
-    showResult False er
+    let er = parseOnly (many1 (p_synset typ)) txt
+    return er
+    -- showResult False er
+    
 
-
-processAdjAll :: FilePath -> IO ()
+processAdjAll :: FilePath -> IO (Either String [Maybe (Either Synset SynsetCluster)])
 processAdjAll dir = do
   let fp = dir </> "adj.all"
   putStrLn fp
   txt <- TIO.readFile fp
-  let er = parse (many1 p_synset_adj_cluster) txt
-  showResult True er
+  let er = parseOnly (many1 p_synset_adj_cluster) txt
+  return er
+  -- showResult True er
 
-
+{- 
 processAll :: FilePath -> IO ()
 processAll dir = do
-  -- let dir = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles"
-  processAdjAll dir
+  er <- processAdjAll dir
+  case er of
+    Left err -> print err
+    Right xs -> print (length xs)
+-}
+
+{- 
   process dir Adjective adjectiveFiles1
   process dir Adverb    adverbFiles
   process dir Verb      verbFiles
   process dir Noun      nounFiles
+-}

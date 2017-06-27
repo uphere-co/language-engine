@@ -1,11 +1,14 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module WordNet.Type.POS where
 
-data POS = POS_N | POS_V | POS_A | POS_R deriving (Show,Eq,Ord)
+import GHC.Generics
+
+data POS = POS_N | POS_V | POS_A | POS_R deriving (Show,Eq,Ord,Generic)
 
 data SSType = Noun | Verb | Adjective | Adverb | AdjectiveSatellite
-            deriving (Show,Eq,Ord)
+            deriving (Show,Eq,Ord,Generic)
 
 instance Enum SSType where
   toEnum 1 = Noun
