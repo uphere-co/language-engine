@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Test.CoreNLPEntity
+module Test.CoreNLPEntity where
+
 import           Data.Maybe                        (fromJust)
 import           Data.List                         (inits)
 import           Assert                            (assert,massertEqual,eassertEqual)
