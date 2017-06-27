@@ -9,7 +9,7 @@ SELECT DISTINCT ?person ?personLabel ?firstName ?firstNameLabel ?lastName ?lastN
     bd:serviceParam wikibase:language "en" .
    }
  }
-' > employees.csv
+'  | tr -d '\r' > employees.csv
 
 #List persons related to public companies (e.g. founder, CEO, board members, and so on)
 curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode query='
@@ -36,7 +36,7 @@ SELECT ?company ?companyLabel ?excahge ?excahgeLabel WHERE {
     bd:serviceParam wikibase:language "en" .
    }
  }
-' > public_companies.csv
+'  | tr -d '\r' > public_companies.csv
 
 
 # List of subclass
@@ -47,7 +47,7 @@ WHERE
 	?item wdt:P279/wdt:P279* wd:Q43229 .
 	SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
-' > orgs.csv
+'  | tr -d '\r' > orgs.csv
 
 curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode query='
 SELECT ?item ?itemLabel
@@ -56,7 +56,7 @@ WHERE
 	?item wdt:P279/wdt:P279* wd:Q215627 .
 	SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
-' > persons.csv
+'  | tr -d '\r' > persons.csv
 
 curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode query='
 SELECT ?item ?itemLabel
@@ -65,5 +65,15 @@ WHERE
 	?item wdt:P279/wdt:P279* wd:Q12737077 .
 	SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
-' > occupations.csv
+'  | tr -d '\r' > occupations.csv
 
+# List of Wikidata properteis
+curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode query='
+SELECT ?property ?propertyLabel WHERE {
+    ?property a wikibase:Property .
+    SERVICE wikibase:label {
+      bd:serviceParam wikibase:language "en" .
+   }
+ }
+
+'  | tr -d '\r' > properties.csv
