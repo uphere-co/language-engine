@@ -12,8 +12,8 @@ import           Data.Text.Read             (decimal)
 import           System.FilePath            ((</>))
 --
 import           WordNet
---
-import           NLP.Type.WordNet
+import           WordNet.Type.POS
+
 
 loadDB :: FilePath -> IO WordNetDB
 loadDB fp = do

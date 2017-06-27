@@ -28,6 +28,7 @@ Library
                      WordNet
                      WordNet.Type
                      WordNet.Type.Lexicographer
+                     WordNet.Type.POS
                      WordNet.API.Query
                      WordNet.Parser.Common
                      WordNet.Parser.Data
@@ -35,6 +36,7 @@ Library
                      WordNet.Parser.Lexicographer
                      WordNet.Parser.Sense
                      WordNet.Query
+                     WordNet.Query.SynsetDB
                   
   build-depends:       base,
                        --

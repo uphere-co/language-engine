@@ -38,9 +38,9 @@ import qualified Data.Text        as T
 import           Data.Text.Format 
 import qualified Data.Text.Lazy   as TL
 --
-import           NLP.Type.WordNet
---
 import           WordNet.Type.Lexicographer
+import           WordNet.Type.POS
+
 
 data IndexItem
   = IndexItem { _idx_lemma :: Text

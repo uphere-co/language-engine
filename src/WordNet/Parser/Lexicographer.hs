@@ -15,10 +15,9 @@ import           Data.Maybe                      (fromMaybe)
 import           Data.Monoid
 import           Data.Text                       (Text)
 import qualified Data.Text                  as T
--- import qualified Data.Text.Read             as TR
 --
-import           NLP.Type.WordNet
 import           WordNet.Type.Lexicographer
+import           WordNet.Type.POS
 
 
 pointerSymbol_table :: [ (PointerSymbol, Text) ]
