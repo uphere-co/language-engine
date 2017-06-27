@@ -61,23 +61,25 @@ mkSynsetDBFull db = SynsetDBFull (mkIndexDB (db^.synsetdb_noun))
 
 llookup k = maybeToList . HM.lookup k
 
-findSynonym :: SynsetDBFull -> Text -> [SSWord]
-findSynonym db txt  = do
-  smap <- llookup "noun.food" (db^.synsetdbfull_noun)
-  w <- maybeToList $ mkSSWord txt
+findSynonym :: SynsetDBFull -> (Text,SSWord) -> [(Text,SSWord)]
+findSynonym db (lexfile,w) = do
+  smap <- llookup lexfile (db^.synsetdbfull_noun)
+  -- w <- maybeToList $ mkSSWord txt
   i <- llookup w (smap^.smap_w2s)
   ws <- llookup i (smap^.smap_s2w)
   w' <- ws
-  return w'
+  return (lexfile,w')
 
 
-findHypernym :: SynsetDBFull -> Text -> [SSWord]
-findHypernym db txt  = do
-  smap <- llookup "noun.food" (db^.synsetdbfull_noun)
-  w <- maybeToList $ mkSSWord txt
+findHypernym :: SynsetDBFull -> (Text,SSWord) -> [(Text,SSWord)]
+findHypernym db (lexfile,w) = do
+  smap <- llookup lexfile (db^.synsetdbfull_noun)
+  --  w <- maybeToList $ mkSSWord txt
   ps <- llookup w (smap^.smap_w2p)
-  h <- map (^.ssp_word) . filter (\p -> p^.ssp_pointer_symbol == Hypernym) $ ps
+  let hps = filter (\p -> p^.ssp_pointer_symbol == Hypernym) ps
+  h <- map (\x->(fromMaybe lexfile (getLexFile x),x^.ssp_word)) hps
   return h
+
 
 main :: IO ()
 main = do
@@ -85,8 +87,10 @@ main = do
   lbstr <- BL.readFile fp
   let db = decode lbstr :: SynsetDB
       dbfull = mkSynsetDBFull db
-  (print . map formatWord) (findSynonym dbfull "ruggelach")
-  (print . map formatWord) (findSynonym dbfull "soul_food")
-  (print . map formatWord) (findSynonym dbfull "coffee")
+  (print . map (formatWord.snd)) (findSynonym dbfull ("noun.food",fromJust (mkSSWord "ruggelach")))
+  (print . map (formatWord.snd)) (findSynonym dbfull ("noun.food",fromJust (mkSSWord "soul_food")))
+  (print . map (formatWord.snd)) (findSynonym dbfull ("noun.food",fromJust (mkSSWord "coffee")))
   putStrLn "--------------"
-  (print . map formatWord) (findHypernym dbfull "coffee")  
+  (print . map (formatWord.snd)) $ 
+    let bs = findHypernym dbfull ("noun.food",fromJust (mkSSWord "coffee"))
+    in bs ++ concatMap (findHypernym dbfull) bs

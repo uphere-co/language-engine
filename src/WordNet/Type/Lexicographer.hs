@@ -18,6 +18,7 @@ import           Data.Hashable
 import           Data.Monoid
 import           Data.Text
 import qualified Data.Text as T
+import           Data.Tuple     (swap)
 import           GHC.Generics
 --
 import           WordNet.Type.POS
@@ -253,6 +254,14 @@ makeLenses ''Synset
 
 getSSWords :: Synset -> [SSWord]
 getSSWords s = fmap (either id (^._1)) (s^.ssn_words_or_wordpointers)
+
+
+getLexFile :: SSPointer -> Maybe Text
+getLexFile p = case p^.ssp_lex_filename of
+                 Nothing -> Nothing
+                 Just e -> f e
+  where f x = lookup x (fmap swap lexicographerFileTable) 
+
 
 getSSPairs :: Synset -> [(SSWord,[SSPointer])]
 getSSPairs s = let xs = s^.ssn_words_or_wordpointers
