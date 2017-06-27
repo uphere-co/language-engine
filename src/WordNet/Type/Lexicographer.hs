@@ -15,7 +15,7 @@ import           Control.Lens
 import           Data.Text
 -- import qualified Data.Text as T
 --
-import           NLP.Type.WordNet
+import           WordNet.Type.POS
 
 
 data LexicographerFile = AdjAll            -- 00

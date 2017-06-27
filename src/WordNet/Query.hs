@@ -13,10 +13,9 @@ import           Data.Text                  (Text)
 import qualified Data.Text           as T
 import qualified Data.Text.IO        as TIO
 --
-import           WordNet.Type
 import           WordNet.Parser.Common
---
-import           NLP.Type.WordNet
+import           WordNet.Type
+import           WordNet.Type.POS
 
 
 data WordNetDB = WNDB { _indexNounDB :: HM.HashMap Text [Int]

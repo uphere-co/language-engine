@@ -3,37 +3,25 @@
 
 module Main where
 
-import           Control.Applicative
-import           Control.Lens
-import           Control.Monad
 import           Data.Attoparsec.Text
-import qualified Data.HashMap.Strict as HM
-import           Data.IntMap                (IntMap)
-import qualified Data.IntMap         as IM
-import           Data.List
-import           Data.Maybe
-import           Data.Monoid
-import           Data.Text                  (Text)
-import qualified Data.Text           as T
-import qualified Data.Text.IO        as TIO
-import           System.Environment
-import           System.FilePath
+import           Data.Text                    (Text)
 --
-import           NLP.Type.WordNet
 -- import           WordNet.API.Query
-import           WordNet.Query
-import           WordNet.Parser.Sense
+import           WordNet.Query.SynsetDB
 import           WordNet.Parser.Lexicographer
-import           WordNet.Type
-import           WordNet.Type.Lexicographer
 
 
+
+
+testdata_noun :: [Text]
 testdata_noun
   = [ "{ lamivudine, 3TC, nucleoside_reverse_transcriptase_inhibitor,@ (a nucleoside reverse transcriptase inhibitor that is very effective in combination with zidovudine in treating AIDS and HIV) }\n"
     , "{ one-hitter, 1\"-hitter, baseball_game,@ (a game in which a pitcher allows the opposing team only one hit) }\n"
     , "{ radiocarbon_dating, carbon_dating, carbon-14_dating, dating,@ (a chemical analysis used to determine the age of organic materials based on their content of the radioisotope carbon 14; believed to be reliable up to 40,000 years) }\n"
     ]
 
+
+testdata_verb :: [Text]
 testdata_verb
   = [ "{ [ breathe, noun.artifact:breather,+ noun.act:breathing,+ breathe_out,^ breathe_in,^ ] take_a_breath, [ respire, adj.pert:respiratory,+ noun.act:respiration1,+ noun.artifact:respirator,+ ] suspire3, inhale,* exhale,* frames: 2,8 (draw air into, and expel out of, the lungs; \"I can breathe better when the air is clean\"; \"The patient is respiring\") }\n"
     , "{ [ de-energize, energize,! ] [ de-energise, energise,! ]verb.change:weaken1,@ frames: 10 (deprive of energy) }\n"
@@ -45,14 +33,20 @@ testdata_verb
     , "{ body-surf,glide,@ frames: 2 (ride the crest of a wave without a surfboard)}\n"
     ]
 
+
+testdata_adverb :: [Text]
 testdata_adverb
   = [ "{ [ unbearably, adj.all:unbearable,+ adj.all:unbearable,\\ ] (to an unbearable degree; \"it was unbearably hot in the room\") }\n"
     ]
 
+
+testdata_adjective :: [Text]
 testdata_adjective
   = [ "{ [ ridged, verb.change:ridge,< ] [ carinate, noun.animal:carinate,+ ] carinated, keeled, (having a ridge or shaped like a ridge or suggesting the keel of a ship; \"a carinate sepal\") }\n"
     ]
 
+
+testdata_adj_cluster :: [Text]
 testdata_adj_cluster
   = [ "[{ [ ACIDIC, ALKALINE,! AMPHOTERIC,!] noun.cognition:chemistry,;c (being or containing an acid; of a solution having an excess of hydrogen atoms (having a pH of less than 7)) }\n{ [ acid, noun.substance:acid,+ noun.attribute:acidity2,+ ] noun.cognition:chemistry,;c (having the characteristics of an acid; \"an acid reaction\") }\n{ acid-forming, (yielding an acid in aqueous solution) }\n----\n{ [ ALKALINE, noun.attribute:alkalinity,+ AMPHOTERIC,! ACIDIC,!] [ alkalic, noun.substance:alkali1,+ ] noun.cognition:chemistry,;c (relating to or containing an alkali; having a pH greater than 7; \"alkaline soils derived from chalk or limestone\") }\n{ alkalescent, alcalescent, (tending to become alkaline; slightly alkaline) }\n{ basic, noun.cognition:chemistry,;c (of or denoting or of the nature of or containing a base) }\n{ base-forming, (yielding a base in aqueous solution) }\n{ saltlike, (resembling a compound formed by replacing hydrogen in an acid by a metal) }\n----\n{ [ AMPHOTERIC, ACIDIC,! ALKALINE,!] amphiprotic, noun.cognition:chemistry,;c (having characteristics of both an acid and a base and capable of reacting as either) }]\n"
     , "[{ [ ALIVE1(p), noun.attribute:aliveness,+ DEAD1,!] [ live, noun.attribute:liveness,+ ] ANIMATE1,^ noun.state:life,= noun.attribute:vitality,= (possessing life; \"the happiest person alive\"; \"the nerve is alive\"; \"doctors are working hard to keep him alive\"; \"burned alive\"; \"a live canary\") }\n\
@@ -91,93 +85,9 @@ testdata_adj_cluster
       \{ thornless, spineless, (lacking thorns) }]\n"
     ]
 
-nounFiles = [ "noun.act"
-            , "noun.animal"
-            , "noun.artifact"
-            , "noun.attribute"
-            , "noun.body"
-            , "noun.cognition"
-            , "noun.communication"
-            , "noun.event"
-            , "noun.feeling"
-            , "noun.food"
-            , "noun.group"
-            , "noun.location"
-            , "noun.motive"
-            , "noun.object"
-            , "noun.person"
-            , "noun.phenomenon"
-            , "noun.plant"
-            , "noun.possession"
-            , "noun.process"
-            , "noun.quantity"
-            , "noun.relation"
-            , "noun.shape"
-            , "noun.state"
-            , "noun.substance"
-            , "noun.time"
-            , "noun.Tops"
-            ]
 
-verbFiles = [ "verb.body"
-            , "verb.change"
-            , "verb.cognition"
-            , "verb.communication"
-            , "verb.competition"
-            , "verb.consumption"
-            , "verb.contact"
-            , "verb.creation"
-            , "verb.emotion"
-            , "verb.motion"
-            , "verb.perception"
-            , "verb.possession"
-            , "verb.social"
-            , "verb.stative"
-            , "verb.weather"
-            ]
-
-adverbFiles = [ "adv.all" ]
-
-adjectiveFiles1 = [ "adj.pert"
-                  , "adj.ppl"
-                  ]
-
-showResult :: (Show a) => Bool -> Result [a] -> IO ()
-showResult doesshowresult er = do 
-  case er of
-    Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
-    Partial f -> case (f "") of
-                   Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
-                   Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
-    Done i r -> when doesshowresult (mapM_ print (Data.List.take 100 r)) >> print (length r) >> print (T.take 100 i)
-
-
-process dir typ files = do
-  flip mapM_ files $ \f -> do
-    let fp = dir </> f
-    putStrLn fp
-    txt <- TIO.readFile fp
-    let er = parse (many1 (p_synset typ)) txt
-    showResult False er
-
-
-processAdjAll dir = do
-  let fp = dir </> "adj.all"
-  putStrLn fp
-  txt <- TIO.readFile fp
-  let er = parse (many1 p_synset_adj_cluster) txt
-  showResult True er
-
+main :: IO ()
 main = do
-  let dir = "/scratch/wavewave/wordnet/WordNet-3.1/b/dbfiles"
-  processAdjAll dir
-  process dir Adjective adjectiveFiles1
-  process dir Adverb    adverbFiles
-  process dir Verb      verbFiles
-  process dir Noun      nounFiles
-  
-
-test = do
   let txt = testdata_adj_cluster !! 2
       er = parse (many1 p_synset_adj_cluster) txt
   showResult True er 

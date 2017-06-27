@@ -12,8 +12,7 @@ import           Options.Applicative
 import           System.Console.Haskeline
 --
 import           WordNet.API.Query
---
-import           NLP.Type.WordNet
+import           WordNet.Type.POS
 
 
 data ProgOption = ProgOption { dir :: FilePath } deriving Show

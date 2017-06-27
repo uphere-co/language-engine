@@ -5,10 +5,10 @@ module WordNet.Parser.Index where
 import           Data.Text           (Text)
 import qualified Data.Text    as T
 --
-import           WordNet.Type
 import           WordNet.Parser.Common
---
-import           NLP.Type.WordNet
+import           WordNet.Type
+import           WordNet.Type.POS
+
 
 readPOS :: Char -> Maybe POS
 readPOS 'n' = Just POS_N
