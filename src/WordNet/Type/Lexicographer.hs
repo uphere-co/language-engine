@@ -18,14 +18,6 @@ import           Data.Text
 import           NLP.Type.WordNet
 
 
--- | I made a singleton pattern here for observing value and reflecting it to the type.
---   It has a kind of wierd name. It does not have AdjectiveSatellite case.
-data SSSType (n :: SSType) where
-  SNoun      :: SSSType 'Noun
-  SVerb      :: SSSType 'Verb
-  SAdjective :: SSSType 'Adjective
-  SAdverb    :: SSSType 'Adverb
-
 data LexicographerFile = AdjAll            -- 00
                        | AdjPert           -- 01
                        | AdvAll            -- 02
@@ -73,6 +65,8 @@ data LexicographerFile = AdjAll            -- 00
                        | AdjPpl            -- 44
                        deriving (Show,Eq,Ord,Enum)
 
+
+lexicographerFileToSSType :: LexicographerFile -> SSType
 lexicographerFileToSSType AdjAll            = Adjective
 lexicographerFileToSSType AdjPert           = Adjective
 lexicographerFileToSSType AdvAll            = Adverb
@@ -171,87 +165,41 @@ lexicographerFileTable = [ ("adj.all"           , Right AdjAll           )
                          ]
 
 
-data PointerSymbol_Noun = PSN_Antonym                    --   "!"
-                        | PSN_Hypernym                   --   "@"
-                        | PSN_Instance_Hypernym          --   "@i"
-                        | PSN_Hyponym                    --   "~"
-                        | PSN_Instance_Hyponym           --   "~i"
-                        | PSN_Member_Holohym             --   "#m"
-                        | PSN_Substance_Holonym          --   "#s"
-                        | PSN_Part_Holonym               --   "#p"
-                        | PSN_Member_Meronym             --   "%m"
-                        | PSN_Substance_Meronym          --   "%s"
-                        | PSN_Part_Meronym               --   "%p"
-                        | PSN_Attribute                  --   "="
-                        | PSN_DerivationallyRelatedForm  --   "+"
-                        | PSN_DomainOfSynset_TOPIC       --   ";c"
-                        | PSN_MemberOfThisDomain_TOPIC   --   "-c"
-                        | PSN_DomainOfSynset_REGION      --   ";r"
-                        | PSN_MemberOfThisDomain_REGION  --   "-r"
-                        | PSN_DomainOfSynset_USAGE       --   ";u"
-                        | PSN_MemberOfThisDomain_USAGE   --   "-u"
-                        -- exception
-                        | PSN_Pertainym                  --   "\"  only mellowness 
-                        deriving (Show,Eq,Ord)
+data PointerSymbol = Antonym                    --   "!"
+                   | Hypernym                   --   "@"
+                   | Instance_Hypernym          --   "@i"
+                   | Hyponym                    --   "~"
+                   | Instance_Hyponym           --   "~i"
+                   | Member_Holohym             --   "#m"
+                   | Substance_Holonym          --   "#s"
+                   | Part_Holonym               --   "#p"
+                   | Member_Meronym             --   "%m"
+                   | Substance_Meronym          --   "%s"
+                   | Part_Meronym               --   "%p"
+                   | Attribute                  --   "="
+                   | DerivationallyRelatedForm  --   "+"
 
-data PointerSymbol_Verb = PSV_Antonym                    --   "!"
-                        | PSV_Hypernym                   --   "@"
-                        | PSV_Hyponym                    --   "~"
-                        | PSV_Entailment                 --   "*"
-                        | PSV_Cause                      --   ">"
-                        | PSV_AlsoSee                    --   "^"
-                        | PSV_VerbGroup                  --   "$"
-                        | PSV_DerivationallyRelatedForm  --   "+"
-                        | PSV_DomainOfSynset_TOPIC       --   ";c"
-                        | PSV_DomainOfSynset_REGION      --   ";r"
-                        | PSV_DomainOfSynset_USAGE       --   ";u"
-                        deriving (Show,Eq,Ord)
-
-
-data PointerSymbol_Adjective = PSJ_Antonym               --   "!"
-                             | PSJ_SimilarTo             --   "&"
-                             | PSJ_ParticipleOfVerb      --   "<"
-                             | PSJ_Pertainym             --   "\"  (pertains to noun)
-                             | PSJ_Attribute             --   "="
-                             | PSJ_AlsoSee               --   "^"
-                             | PSJ_DomainOfSynset_TOPIC  --   ";c"
-                             | PSJ_DomainOfSynset_REGION --   ";r"
-                             | PSJ_DomainOfSynset_USAGE  --   ";u"
-                             -- exception
-                             | PSJ_DerivationallyRelatedForm  -- "+"   carinate
-                             deriving (Show,Eq,Ord)
-                                     
-
-data PointerSymbol_Adverb = PSR_Antonym                  --   "!"
-                          | PSR_DerivedFromAdjective     --   "\"
-                          | PSR_DomainOfSynset_TOPIC     --   ";c" 
-                          | PSR_DomainOfSynset_REGION    --   ";r"
-                          | PSR_DomainOfSynset_USAGE     --   ";u"
-                          -- exception
-                          | PSR_DerivationallyRelatedForm --  "+"  -- unbearable
-                          deriving (Show,Eq,Ord)
-
-
-type family PointerSymbol (a :: SSType) :: *
-
-type instance PointerSymbol 'Noun      = PointerSymbol_Noun
-type instance PointerSymbol 'Verb      = PointerSymbol_Verb
-type instance PointerSymbol 'Adjective = PointerSymbol_Adjective
-type instance PointerSymbol 'Adverb    = PointerSymbol_Adverb
-
-data PointerSymbolAll where
-  PSNoun      :: PointerSymbol 'Noun      -> PointerSymbolAll
-  PSVerb      :: PointerSymbol 'Verb      -> PointerSymbolAll
-  PSAdjective :: PointerSymbol 'Adjective -> PointerSymbolAll
-  PSAdverb    :: PointerSymbol 'Adverb    -> PointerSymbolAll
-
-deriving instance Show PointerSymbolAll 
+                   | Entailment                 --   "*"
+                   | Cause                      --   ">"
+                   | AlsoSee                    --   "^"
+                   | VerbGroup                  --   "$"
+                   | SimilarTo                  --   "&"
+                   | ParticipleOfVerb           --   "<"
+                   | BackSlash                  --   "\"  adj: (pertains to noun), adv: (derived from adjective)
+                   | DomainOfSynset_TOPIC       --   ";c"
+                   | MemberOfThisDomain_TOPIC   --   "-c"
+                   | DomainOfSynset_REGION      --   ";r"
+                   | MemberOfThisDomain_REGION  --   "-r"
+                   | DomainOfSynset_USAGE       --   ";u"
+                   | MemberOfThisDomain_USAGE   --   "-u"
+                   deriving (Show,Eq,Ord)
 
 
 data Marker = Marker_P  -- ^ predicate position
             | Marker_A  -- ^ prenominal (attributive) position
             | Marker_IP -- ^ immediately postnominal position
             deriving Show
+
 
 data SSWord = SSWord { _ssw_word   :: [Text]
                      , _ssw_marker :: Maybe Marker
@@ -264,9 +212,10 @@ data SSPointer
               , _ssp_word           :: [Text]
               , _ssp_lexid          :: Maybe Int
               , _ssp_satellite      :: Maybe ([Text],Maybe Int)
-              , _ssp_pointer_symbol :: PointerSymbolAll
+              , _ssp_pointer_symbol :: PointerSymbol
               }
   deriving Show
+
 
 data Synset
   = Synset { _ssn_words_or_wordpointers    :: [Either SSWord (SSWord,[SSPointer],[Int])]
@@ -277,16 +226,4 @@ data Synset
 
 makeLenses ''Synset
 
-{- 
--- we need UndecidableInstances for this. 
-deriving instance (Show (PointerSymbol typ)) => Show (SSPointer typ)
-  
-  
-deriving instance (Show (PointerSymbol typ)) => Show (Synset typ)
--}
-
-{-  show x = "Synset { _ssn_words=" ++ show (_ssn_words x)    ++
-           ", _ssn_pointers="     ++ show (_ssn_pointers x) ++
-           ", _ssn_frames="       ++ show (_ssn_frames x)   ++
-           ", _ssn_gloss="        ++ show (_ssn_gloss x)    ++ "}" -}
 

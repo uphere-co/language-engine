@@ -25,8 +25,8 @@ loadDB fp = do
               <*> (catMaybes <$> parseFile (parseData True ) (fp </> "data.verb"))
               <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adj"))
               <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adv"))
-  ss <- (catMaybes <$> parseFile parseSense (fp </> "index.sense"))
-  return (createWordNetDB is ds ss)
+  -- ss <- (catMaybes <$> parseFile parseSense (fp </> "index.sense"))
+  return (createWordNetDB is ds {- ss -})
 
 
 runSingleQuery :: String -> POS -> WordNetDB -> IO ()

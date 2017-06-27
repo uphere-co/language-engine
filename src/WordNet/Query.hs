@@ -5,7 +5,7 @@ module WordNet.Query where
 
 import           Control.Lens
 import           Control.Monad              (join)
-import           Data.HashMap.Strict        (HashMap)
+-- import           Data.HashMap.Strict        (HashMap)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.IntMap         as IM
 import           Data.Maybe                 (maybeToList)
@@ -35,9 +35,9 @@ makeLenses ''WordNetDB
 
 createWordNetDB :: ([IndexItem],[IndexItem],[IndexItem],[IndexItem])
                 -> ([DataItem],[DataItem],[DataItem],[DataItem])
-                -> [SenseItem]
+                -- -> [SenseItem]
                 -> WordNetDB 
-createWordNetDB ilsts dlsts slists =
+createWordNetDB ilsts dlsts =
   WNDB (createLemmaMap (ilsts^._1))
        (createLemmaMap (ilsts^._2))
        (createLemmaMap (ilsts^._3))
