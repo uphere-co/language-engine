@@ -10,6 +10,8 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Binary
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
+import           Data.HashSet                     (HashSet)
+import qualified Data.HashSet               as HS
 import qualified Data.List                  as L
 import           Data.Maybe
 import           Data.Monoid
@@ -83,13 +85,14 @@ findHypernym db (lexfile,w) = do
   h <- map (\x->(fromMaybe lexfile (getLexFile x),x^.ssp_word)) hps
   return h
 
-findHypernymHierarchy :: SynsetDBFull -> (Text,SSWord) -> [((Text,SSWord),(Text,SSWord))]
+findHypernymHierarchy :: SynsetDBFull -> (Text,SSWord) -> HashSet ((Text,SSWord),(Text,SSWord))
 findHypernymHierarchy db lw =
   let xs = findHypernym db lw
       --  ys = map (findHypernymHierarchy db xs 
   in case xs of
-       [] -> []
-       _  -> map (lw,) xs ++ concatMap (findHypernymHierarchy db) xs
+       [] -> HS.empty
+       _  -> HS.unions (HS.fromList (map (lw,) xs) : map (findHypernymHierarchy db) xs)
+
 
 main :: IO ()
 main = do
@@ -104,17 +107,17 @@ main = do
   putStrLn "-----------------------------"  
   putStrLn "hypernym hierarchy for coffee"
   putStrLn "-----------------------------"
-  mapM_ (TIO.putStrLn . formatGraph) $ 
+  mapM_ (TIO.putStrLn . formatGraph) . HS.toList $ 
     findHypernymHierarchy dbfull ("noun.food",fromJust (mkSSWord "coffee"))
   putStrLn "-----------------------------"  
   putStrLn "hypernym hierarchy for lion  "
   putStrLn "-----------------------------"
-  mapM_ (TIO.putStrLn . formatGraph) $ 
+  mapM_ (TIO.putStrLn . formatGraph) . HS.toList $ 
     findHypernymHierarchy dbfull ("noun.animal",fromJust (mkSSWord "lion"))
   putStrLn "-----------------------------"  
   putStrLn "hypernym hierarchy for doctor"
   putStrLn "-----------------------------"
-  mapM_ (TIO.putStrLn . formatGraph) $ 
+  mapM_ (TIO.putStrLn . formatGraph) . HS.toList $ 
     findHypernymHierarchy dbfull ("noun.person",fromJust (mkSSWord "doctor"))
 
 
