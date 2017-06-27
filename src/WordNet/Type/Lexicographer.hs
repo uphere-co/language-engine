@@ -268,7 +268,7 @@ getSSPairs s = let xs = s^.ssn_words_or_wordpointers
                in flip Prelude.map xs $ \x ->
                     case x of
                       Left w         -> (w,s^.ssn_pointers)
-                      Right (w,ps,_) -> (w,ps)
+                      Right (w,ps,_) -> (w,ps++s^.ssn_pointers)
 
 
 formatWord :: SSWord -> Text

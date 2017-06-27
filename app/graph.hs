@@ -14,6 +14,7 @@ import qualified Data.List                  as L
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                        (Text)
+import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
 --
 import           WordNet.Parser.Lexicographer
@@ -110,6 +111,14 @@ main = do
   putStrLn "-----------------------------"
   mapM_ (TIO.putStrLn . formatGraph) $ 
     findHypernymHierarchy dbfull ("noun.animal",fromJust (mkSSWord "lion"))
+  putStrLn "-----------------------------"  
+  putStrLn "hypernym hierarchy for doctor"
+  putStrLn "-----------------------------"
+  mapM_ (TIO.putStrLn . formatGraph) $ 
+    findHypernymHierarchy dbfull ("noun.person",fromJust (mkSSWord "doctor"))
 
 
-formatGraph (x,y) = formatWord (snd x) <> " -> " <> formatWord (snd y)
+
+formatGraph (x,y) =
+  -- T.pack (show x ) <> " -> " <> T.pack (show y)
+  formatWord (snd x) <> " -> " <> formatWord (snd y)
