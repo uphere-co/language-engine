@@ -266,7 +266,7 @@ getCompanySymbol tikcerMap (mentionUID, wikiUID) = result
         Just symbol -> Just (mentionUID, wuid, symbol)
         Nothing     -> Nothing  
 
-main2 = do
+main = do
   file <- T.IO.readFile "enwiki/companies"
 
   input_raw <- T.IO.readFile "data/dao.ptb"
@@ -302,7 +302,7 @@ main2 = do
   --print tickerMap
 
 
-main = do
+main3 = do
     let 
       propertyFile = PropertyNameFile "data_full/properties.tsv"
     propertyNames <- loadPropertyNames propertyFile
