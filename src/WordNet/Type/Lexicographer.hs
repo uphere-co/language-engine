@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -12,8 +13,10 @@
 module WordNet.Type.Lexicographer where
 
 import           Control.Lens
+import           Data.Binary
 import           Data.Text
 -- import qualified Data.Text as T
+import           GHC.Generics
 --
 import           WordNet.Type.POS
 
@@ -63,7 +66,9 @@ data LexicographerFile = AdjAll            -- 00
                        | VerbStative       -- 42
                        | VerbWeather       -- 43
                        | AdjPpl            -- 44
-                       deriving (Show,Eq,Ord,Enum)
+                       deriving (Show,Eq,Ord,Enum,Generic)
+
+instance Binary LexicographerFile
 
 
 lexicographerFileToSSType :: LexicographerFile -> SSType
@@ -192,20 +197,28 @@ data PointerSymbol = Antonym                    --   "!"
                    | MemberOfThisDomain_REGION  --   "-r"
                    | DomainOfSynset_USAGE       --   ";u"
                    | MemberOfThisDomain_USAGE   --   "-u"
-                   deriving (Show,Eq,Ord)
+                   deriving (Show,Eq,Ord,Generic)
+
+instance Binary PointerSymbol
 
 
 data Marker = Marker_P  -- ^ predicate position
             | Marker_A  -- ^ prenominal (attributive) position
             | Marker_IP -- ^ immediately postnominal position
-            deriving Show
+            deriving (Show,Generic)
+
+instance Binary Marker
 
 
 data SSWord = SSWord { _ssw_word   :: [Text]
                      , _ssw_lexid  :: Maybe Int
                      , _ssw_marker :: Maybe Marker
                      }
-            deriving Show
+            deriving (Show,Generic)
+
+instance Binary SSWord
+
+makeLenses ''SSWord
 
 
 data SSPointer
@@ -214,7 +227,11 @@ data SSPointer
               , _ssp_satellite      :: Maybe SSWord -- ([Text],Maybe Int)
               , _ssp_pointer_symbol :: PointerSymbol
               }
-  deriving Show
+  deriving (Show,Generic)
+
+instance Binary SSPointer
+
+makeLenses ''SSPointer
 
 
 data Synset
@@ -222,12 +239,16 @@ data Synset
            , _ssn_pointers :: [SSPointer]
            , _ssn_frames   :: [Int]
            , _ssn_gloss    :: Text }
-  deriving Show
+  deriving (Show,Generic)
+
+instance Binary Synset
 
 makeLenses ''Synset
 
 
 newtype SynsetCluster = SynsetCluster { _cluster_head_satellites :: [(Synset,[Synset])] }
-                      deriving Show
+                      deriving (Show,Generic)
+
+instance Binary SynsetCluster
 
 makeLenses ''SynsetCluster
