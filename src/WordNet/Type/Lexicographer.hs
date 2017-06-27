@@ -254,6 +254,12 @@ makeLenses ''Synset
 getSSWords :: Synset -> [SSWord]
 getSSWords s = fmap (either id (^._1)) (s^.ssn_words_or_wordpointers)
 
+getSSPairs :: Synset -> [(SSWord,[SSPointer])]
+getSSPairs s = let xs = s^.ssn_words_or_wordpointers
+               in flip Prelude.map xs $ \x ->
+                    case x of
+                      Left w         -> (w,s^.ssn_pointers)
+                      Right (w,ps,_) -> (w,ps)
 
 
 formatWord :: SSWord -> Text

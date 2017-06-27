@@ -20,7 +20,7 @@ import           WordNet.Type.Lexicographer
 
 data SynsetMap = SynsetMap { _smap_s2w :: HashMap Int [SSWord]
                            , _smap_w2s :: HashMap SSWord Int
-                           -- , _smap_pointers :: HashMap SSWord [SSPointer]
+                           , _smap_w2p :: HashMap SSWord [SSPointer]
                            }
 
 makeLenses ''SynsetMap
@@ -43,23 +43,14 @@ mkSSWord txt =
     Right w  -> Just w
 
 
-  -- let ks = map fst lst
-
 mkIndexDB :: [(Text,[Synset])] -> HashMap Text SynsetMap
 mkIndexDB lst =
   HM.fromList . flip map lst $ \(fname,xs) ->
     let sidx2word = zip [1..] (map getSSWords xs)
         word2sidx = [(w,i) | (i,ws) <- sidx2word, w <- ws]
-    in (fname,SynsetMap (HM.fromList sidx2word) (HM.fromList word2sidx))
+        word2pointers = [(w,ps) | xs <- map getSSPairs xs, (w,ps) <- xs ]
+    in (fname,SynsetMap (HM.fromList sidx2word) (HM.fromList word2sidx) (HM.fromList word2pointers))
 
-{-
-      nounmap_s2w = fmap HM.fromList (HM.fromList sidx2word)
-      nounmap_w2s = fmap HM.fromList (HM.fromList word2sidx)
-  in fmap HM.fromList . flip mapM ks $ \k -> do
-       s2w <- HM.lookup k nounmap_s2w
-       w2s <- HM.lookup k nounmap_w2s
-       return (k,SynsetMap s2w w2s)
--}
 
 mkSynsetDBFull :: SynsetDB -> SynsetDBFull
 mkSynsetDBFull db = SynsetDBFull (mkIndexDB (db^.synsetdb_noun))
@@ -72,7 +63,16 @@ findSynonym db txt  = do
   w <- mkSSWord txt
   i <- HM.lookup w (smap^.smap_w2s)
   ws <- HM.lookup i (smap^.smap_s2w)
-  return (map formatWord ws)
+  return ws
+  -- return (map formatWord ws)
+
+
+findHypernym db txt  = do
+  smap <- HM.lookup "noun.food" (db^.synsetdbfull_noun)
+  w <- mkSSWord txt
+  ps <- HM.lookup w (smap^.smap_w2p)
+  let hs = map (^.ssp_word) . filter (\p -> p^.ssp_pointer_symbol == Hypernym) $ ps
+  return hs -- (map formatWord ws)
 
 
 main :: IO ()
@@ -81,6 +81,8 @@ main = do
   lbstr <- BL.readFile fp
   let db = decode lbstr :: SynsetDB
       dbfull = mkSynsetDBFull db
-  mapM_ print (findSynonym dbfull "ruggelach")
-  mapM_ print (findSynonym dbfull "soul_food")
-  mapM_ print (findSynonym dbfull "coffee")
+  mapM_ (print . map formatWord) (findSynonym dbfull "ruggelach")
+  mapM_ (print . map formatWord) (findSynonym dbfull "soul_food")
+  mapM_ (print . map formatWord) (findSynonym dbfull "coffee")
+  putStrLn "--------------"
+  mapM_ (print . map formatWord) (findHypernym dbfull "coffee")  
