@@ -44,6 +44,7 @@ Library
                        binary,
                        containers,
                        filepath,
+                       hashable,
                        lens,
                        split,
                        text,
@@ -118,6 +119,7 @@ Executable graph
   
   build-depends:        base,
                         --
+                        attoparsec,
                         binary,
                         bytestring,
                         filepath,

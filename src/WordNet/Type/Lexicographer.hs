@@ -14,6 +14,7 @@ module WordNet.Type.Lexicographer where
 
 import           Control.Lens
 import           Data.Binary
+import           Data.Hashable
 import           Data.Monoid
 import           Data.Text
 import qualified Data.Text as T
@@ -206,18 +207,21 @@ instance Binary PointerSymbol
 data Marker = Marker_P  -- ^ predicate position
             | Marker_A  -- ^ prenominal (attributive) position
             | Marker_IP -- ^ immediately postnominal position
-            deriving (Show,Generic)
+            deriving (Show,Eq,Ord,Generic)
 
 instance Binary Marker
 
+instance Hashable Marker
 
 data SSWord = SSWord { _ssw_word   :: [Text]
                      , _ssw_lexid  :: Maybe Int
                      , _ssw_marker :: Maybe Marker
                      }
-            deriving (Show,Generic)
+            deriving (Show,Eq,Ord,Generic)
 
 instance Binary SSWord
+
+instance Hashable SSWord
 
 makeLenses ''SSWord
 
@@ -249,6 +253,7 @@ makeLenses ''Synset
 
 getSSWords :: Synset -> [SSWord]
 getSSWords s = fmap (either id (^._1)) (s^.ssn_words_or_wordpointers)
+
 
 
 formatWord :: SSWord -> Text
