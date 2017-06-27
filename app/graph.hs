@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main where
 
@@ -13,6 +14,7 @@ import qualified Data.List                  as L
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                        (Text)
+import qualified Data.Text.IO               as TIO
 --
 import           WordNet.Parser.Lexicographer
 import           WordNet.Query.SynsetDB
@@ -80,6 +82,13 @@ findHypernym db (lexfile,w) = do
   h <- map (\x->(fromMaybe lexfile (getLexFile x),x^.ssp_word)) hps
   return h
 
+findHypernymHierarchy :: SynsetDBFull -> (Text,SSWord) -> [((Text,SSWord),(Text,SSWord))]
+findHypernymHierarchy db lw =
+  let xs = findHypernym db lw
+      --  ys = map (findHypernymHierarchy db xs 
+  in case xs of
+       [] -> []
+       _  -> map (lw,) xs ++ concatMap (findHypernymHierarchy db) xs
 
 main :: IO ()
 main = do
@@ -87,10 +96,20 @@ main = do
   lbstr <- BL.readFile fp
   let db = decode lbstr :: SynsetDB
       dbfull = mkSynsetDBFull db
-  (print . map (formatWord.snd)) (findSynonym dbfull ("noun.food",fromJust (mkSSWord "ruggelach")))
+  {- (print . map (formatWord.snd)) (findSynonym dbfull ("noun.food",fromJust (mkSSWord "ruggelach")))
   (print . map (formatWord.snd)) (findSynonym dbfull ("noun.food",fromJust (mkSSWord "soul_food")))
-  (print . map (formatWord.snd)) (findSynonym dbfull ("noun.food",fromJust (mkSSWord "coffee")))
-  putStrLn "--------------"
-  (print . map (formatWord.snd)) $ 
-    let bs = findHypernym dbfull ("noun.food",fromJust (mkSSWord "coffee"))
-    in bs ++ concatMap (findHypernym dbfull) bs
+  (print . map (formatWord.snd)) (findSynonym dbfull ("noun.food",fromJust (mkSSWord "coffee"))) 
+  putStrLn "--------------" -}
+  putStrLn "-----------------------------"  
+  putStrLn "hypernym hierarchy for coffee"
+  putStrLn "-----------------------------"
+  mapM_ (TIO.putStrLn . formatGraph) $ 
+    findHypernymHierarchy dbfull ("noun.food",fromJust (mkSSWord "coffee"))
+  putStrLn "-----------------------------"  
+  putStrLn "hypernym hierarchy for lion  "
+  putStrLn "-----------------------------"
+  mapM_ (TIO.putStrLn . formatGraph) $ 
+    findHypernymHierarchy dbfull ("noun.animal",fromJust (mkSSWord "lion"))
+
+
+formatGraph (x,y) = formatWord (snd x) <> " -> " <> formatWord (snd y)
