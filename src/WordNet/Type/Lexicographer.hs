@@ -14,8 +14,11 @@ module WordNet.Type.Lexicographer where
 
 import           Control.Lens
 import           Data.Binary
+import           Data.Hashable
+import           Data.Monoid
 import           Data.Text
--- import qualified Data.Text as T
+import qualified Data.Text as T
+import           Data.Tuple     (swap)
 import           GHC.Generics
 --
 import           WordNet.Type.POS
@@ -205,18 +208,21 @@ instance Binary PointerSymbol
 data Marker = Marker_P  -- ^ predicate position
             | Marker_A  -- ^ prenominal (attributive) position
             | Marker_IP -- ^ immediately postnominal position
-            deriving (Show,Generic)
+            deriving (Show,Eq,Ord,Generic)
 
 instance Binary Marker
 
+instance Hashable Marker
 
 data SSWord = SSWord { _ssw_word   :: [Text]
                      , _ssw_lexid  :: Maybe Int
                      , _ssw_marker :: Maybe Marker
                      }
-            deriving (Show,Generic)
+            deriving (Show,Eq,Ord,Generic)
 
 instance Binary SSWord
+
+instance Hashable SSWord
 
 makeLenses ''SSWord
 
@@ -244,6 +250,35 @@ data Synset
 instance Binary Synset
 
 makeLenses ''Synset
+
+
+getSSWords :: Synset -> [SSWord]
+getSSWords s = fmap (either id (^._1)) (s^.ssn_words_or_wordpointers)
+
+
+getLexFile :: SSPointer -> Maybe Text
+getLexFile p = case p^.ssp_lex_filename of
+                 Nothing -> Nothing
+                 Just e -> f e
+  where f x = lookup x (fmap swap lexicographerFileTable) 
+
+
+getSSPairs :: Synset -> [(SSWord,[SSPointer])]
+getSSPairs s = let xs = s^.ssn_words_or_wordpointers
+               in flip Prelude.map xs $ \x ->
+                    case x of
+                      Left w         -> (w,s^.ssn_pointers)
+                      Right (w,ps,_) -> (w,ps++s^.ssn_pointers)
+
+
+formatWord :: SSWord -> Text
+formatWord w = T.intercalate "_" (w^.ssw_word) <>
+               maybe "" (\i -> T.pack (show i)) (w^.ssw_lexid) <>
+               maybe "" (\m -> "(" <> formatMarker m <> ")") (w^.ssw_marker) 
+
+formatMarker Marker_P = "p"
+formatMarker Marker_A = "a"
+formatMarker Marker_IP = "ip"
 
 
 newtype SynsetCluster = SynsetCluster { _cluster_head_satellites :: [(Synset,[Synset])] }
