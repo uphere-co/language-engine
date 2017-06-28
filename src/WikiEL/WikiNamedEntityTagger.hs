@@ -15,7 +15,7 @@ import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityF
 import           WikiEL.Type.Wikidata                 (ItemID)
 import           WikiEL.Misc                           (IRange(..),RelativePosition(..), relativePos, untilNoOverlap)
 import           WikiEL.WikiEntityTagger               (NameUIDTable,buildEntityTable,wikiAnnotator)
-import           WikiEL.WikiEntityClass                (WikiUID2NETag,getNEClass)
+import           WikiEL.WikiEntityClass                (WikiUID2NETag,ItemClass,neClassMatch,getNEClass,toNEClass)
 import qualified WikiEL.NamedEntity            as N
 import qualified WikiEL.CoreNLP                as C
 
@@ -26,7 +26,7 @@ parseStanfordNE :: C.EntityToken -> NamedEntityFrag
 parseStanfordNE (C.EntityToken (C.WordToken word) (C.NETag tag)) =  parseStr word tag
 
 
-namedEntityAnnotator:: NameUIDTable -> WikiUID2NETag -> [NamedEntityFrag] -> [(IRange, Vector (ItemID, NEClass))]
+namedEntityAnnotator:: NameUIDTable -> WikiUID2NETag -> [NamedEntityFrag] -> [(IRange, Vector (ItemID, ItemClass))]
 namedEntityAnnotator entities uidTypes frags = reverse (map (second (V.map f)) matchedItems)
   where
     f uid= (uid, getNEClass uidTypes uid)
@@ -44,32 +44,28 @@ partitonFrags frags = ifoldr f [] (fromList frags)
     f idx frag accum@((range, tag):ss) | tagType frag == tag = (decL range, tag):ss
                                        | otherwise            = g idx frag : accum
 
-dropNonNE:: [(IRange, NEClass)] -> [(IRange, NEClass)]
-dropNonNE = filter (\x-> snd x /= Other)
-
 getStanfordNEs :: [NamedEntityFrag] -> [(IRange, NEClass)]
 getStanfordNEs = dropNonNE . partitonFrags
-
-buildTagUIDTable :: NEClass -> Vector ItemID -> Vector (ItemID, NEClass)
-buildTagUIDTable tag = V.map (\uid -> (uid,tag)) 
+  where
+    dropNonNE = filter (\x-> snd x /= Other)
 
 
 data PreNE = UnresolvedUID NEClass
            | AmbiguousUID [ItemID]
            | Resolved (ItemID, NEClass)
-           | UnresolvedClass [(ItemID, NEClass)]
+           | UnresolvedClass [(ItemID, ItemClass)]
            deriving(Show, Eq)
                 
-resolveNEClass :: NEClass -> Vector (ItemID, NEClass) -> PreNE
+resolveNEClass :: NEClass -> Vector (ItemID, ItemClass) -> PreNE
 resolveNEClass stag xs = g matchedUIDs
   where
-    f accum (uid,tag) | tag==stag = uid:accum
-                      | otherwise = accum
+    f accum (uid,tag) | neClassMatch stag tag = uid:accum
+                      | otherwise             = accum
     matchedUIDs = foldl' f [] xs
     g [uid] = Resolved (uid, stag)
     g uids  = AmbiguousUID uids
 
-resolveNEsImpl :: [(IRange,PreNE)] -> [(IRange, NEClass)] -> [(IRange, Vector (ItemID, NEClass))] -> [(IRange,PreNE)]
+resolveNEsImpl :: [(IRange,PreNE)] -> [(IRange, NEClass)] -> [(IRange, Vector (ItemID, ItemClass))] -> [(IRange,PreNE)]
 resolveNEsImpl accum [] [] = accum
 resolveNEsImpl accum lhss@((lrange,ltag):ls) []  =
   resolveNEsImpl ((lrange, UnresolvedUID ltag) : accum) ls []
@@ -91,6 +87,14 @@ resolveNEsImpl accum lhss@((lrange,ltag):ls) rhss@((rrange,rtags):rs) =
     lsIter = untilNoOverlap (relativePos rrange . fst) ls
     rsIter = untilNoOverlap (relativePos lrange . fst) rs
 
-resolveNEs :: [(IRange, NEClass)] -> [(IRange, Vector (ItemID, NEClass))] -> [(IRange,PreNE)]
-resolveNEs lhss rhss = reverse (resolveNEsImpl [] lhss rhss)
+
+
+resolveNEs :: [(IRange, NEClass)] -> [(IRange, Vector (ItemID, ItemClass))] -> [(IRange,PreNE)]
+resolveNEs lhss rhss = map (second assumeCorrectAnnotation) xs
+  where
+    xs = reverse (resolveNEsImpl [] lhss rhss)
+    assumeCorrectAnnotation (UnresolvedClass [(itemID, itemClass)]) = Resolved (itemID, toNEClass itemClass)
+    assumeCorrectAnnotation x = x
+
+    
 
