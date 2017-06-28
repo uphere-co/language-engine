@@ -7,7 +7,6 @@ QEDIR=/opt/develset.rss/
 grep -Fwf ne.business_person /opt/develset.rss/wikidata.all_entities > uid.business_person
 grep -Fwf ne.company /opt/develset.rss/wikidata.all_entities    > uid.company
 grep -Fwf <(cat ne.*) /opt/develset.rss/wikidata.properties > property
-cat uid.* > uid
 
 tail -n +2 orgs.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > org_types
 tail -n +2 persons.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > person_types
@@ -17,9 +16,10 @@ grep -Fwf org_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > items.org
 grep -Fwf person_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > items.person
 grep -Fwf occupation_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > items.occupation
 
-grep -Fwf items.org $DIR/wikidata.all_entities > ne.org
-grep -Fwf items.person $DIR/wikidata.all_entities > ne.person
-grep -Fwf items.occupation $DIR/wikidata.all_entities > ne.occupation
+#To be updated.
+#grep -Fwf items.org $DIR/wikidata.all_entities > ne.org
+#grep -Fwf items.person $DIR/wikidata.all_entities > ne.person
+#grep -Fwf items.occupation $DIR/wikidata.all_entities > ne.occupation
 
 #Note : it takes ~ 3 mins
 grep -Fwf ne.person $DIR/wikidata.all_entities > uid.person
@@ -27,13 +27,9 @@ grep -Fwf ne.person $DIR/wikidata.all_entities > uid.person
 grep -Fwf ne.org $DIR/wikidata.all_entities    > uid.org
 
 
-
 # Get type hierarchy for organization types
 tail -n +2 orgs.csv | awk -F ',' '{n=split($1,a,"/"); print a[n] "\t" $2}' > org_types
 tail -n +2 orgs.csv | awk -F ',' '{n=split($1,a,"/"); print a[n]}' > org_types.uid
-# Get type hierarchy for brand types
-tail -n +2 brands.csv | awk -F ',' '{n=split($1,a,"/"); print a[n] "\t" $2}' > brand_types
-tail -n +2 brands.csv | awk -F ',' '{n=split($1,a,"/"); print a[n]}' > brand_types.uid
 
 # Get a list of Wikidata properties
 tail -n +2 properties.csv | awk -F ',' '{n=split($1,a,"/"); print a[n] "\t" $2}' > properties.tsv
@@ -42,12 +38,23 @@ tail -n +2 properties.csv | awk -F ',' '{n=split($1,a,"/"); print a[n] "\t" $2}'
 #awk -F"\t" 'NR == FNR { a[$1]; next } NF==5 && $1 in a {print}' org_types.uid wikidata.items > items.org
 #awk -F"\t" 'NR == FNR { a[$1]=$2; next } NF==5 {split($4, p279s, " "); for(i in p279s) {p=p279s[i];if(p in a) print $1 "\t" $NF "\t" p "\t" a[p]}}' org_types items.org > types.org
 
+# For Brand class
+## Get type hierarchy for brand types
+tail -n +2 brands.csv | awk -F ',' '{n=split($1,a,"/"); print a[n] "\t" $2}' > brand_types
+tail -n +2 brands.csv | awk -F ',' '{n=split($1,a,"/"); print a[n]}' > brand_types.uid
 # Get instance of brand class
 ## real	0m34.983s
 awk -F"\t" 'NR == FNR { a[$1]=$2; next } NF==5 {split($3, p31s, " "); for(i in p31s) {p=p31s[i];if(p in a) print $1 "\t" $NF "\t" p "\t" a[p]}}' brand_types wikidata.items > items.brand
 # Get subclass of brand class
 ## real	0m32.243s
 awk -F"\t" 'NR == FNR { a[$1]=$2; next } NF==5 {split($4, p279s, " "); for(i in p279s) {p=p279s[i];if(p in a) print $1 "\t" $NF "\t" p "\t" a[p]}}' brand_types wikidata.items > types.brand
+## Get UID list
+awk '{print $1}' items.brand > ne.brand
+## Get representations
+grep -Fwf ne.brand ../wikidata/wikidata.all_entities > uid.brand
+
+#Aggregate uid reprs.
+cat uid.* | sort | uniq > uid
 
 
 # Public companies with their P31 and P279 property values
