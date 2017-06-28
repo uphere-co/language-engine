@@ -18,6 +18,7 @@ import           Data.Monoid
 import           Data.Text                        (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
+import           System.Environment
 --
 import           WordNet.Parser.Lexicographer
 import           WordNet.Query.SynsetDB
@@ -96,14 +97,15 @@ findHypernymHierarchy db lw =
 
 main :: IO ()
 main = do
+  args <- getArgs
   let fp = "wordnet31hs.bin"
   lbstr <- BL.readFile fp
   let db = decode lbstr :: SynsetDB
       dbfull = mkSynsetDBFull db
-  {- (print . map (formatWord.snd)) (findSynonym dbfull ("noun.food",fromJust (mkSSWord "ruggelach")))
-  (print . map (formatWord.snd)) (findSynonym dbfull ("noun.food",fromJust (mkSSWord "soul_food")))
-  (print . map (formatWord.snd)) (findSynonym dbfull ("noun.food",fromJust (mkSSWord "coffee"))) 
-  putStrLn "--------------" -}
+  createDotFromWord dbfull (T.pack (args !! 0)) (T.pack (args !! 1))
+  -- createDot $ HS.toList (findHypernymHierarchy dbfull ("noun.food",fromJust (mkSSWord "coffee")))
+
+  {- 
   putStrLn "-----------------------------"  
   putStrLn "hypernym hierarchy for coffee"
   putStrLn "-----------------------------"
@@ -119,9 +121,20 @@ main = do
   putStrLn "-----------------------------"
   mapM_ (TIO.putStrLn . formatGraph) . HS.toList $ 
     findHypernymHierarchy dbfull ("noun.person",fromJust (mkSSWord "doctor"))
-
+  -}
 
 
 formatGraph (x,y) =
   -- T.pack (show x ) <> " -> " <> T.pack (show y)
   formatWord (snd x) <> " -> " <> formatWord (snd y)
+
+createDot :: [((Text,SSWord),(Text,SSWord))] -> IO ()
+createDot xs = do
+  putStrLn "digraph G {"
+  putStrLn "rankdir=LR;"
+  mapM_ ((\t -> TIO.putStrLn (t <> ";")) . formatGraph) xs
+  putStrLn "}"
+  
+createDotFromWord :: SynsetDBFull -> Text -> Text -> IO ()
+createDotFromWord dbfull file word = 
+  createDot $ HS.toList (findHypernymHierarchy dbfull (file,fromJust (mkSSWord word)))
