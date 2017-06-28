@@ -266,9 +266,9 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
 main1 = do
   file <- T.IO.readFile listedCompanyFile
 
-  input_raw <- T.IO.readFile rawNewsFile
-  input <- T.IO.readFile nerNewsFile
-  uid2tag <- fromFiles [(N.Org, orgItemFile), (N.Person, personItemFile)]
+  input_raw <- T.IO.readFile rawNewsFile2
+  input <- T.IO.readFile nerNewsFile2
+  uid2tag <- fromFiles [(N.Org, orgItemFile), (N.Person, personItemFile), (N.Loc, brandItemFile)]
   wikiTable <- loadWETagger reprFile
 
   let 
