@@ -77,3 +77,13 @@ SELECT ?property ?propertyLabel WHERE {
  }
 
 '  | tr -d '\r' > properties.csv
+
+
+
+#subclass of brand (Q431289)
+curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode query='
+SELECT ?item ?itemLabel WHERE {
+  ?item wdt:P279/wdt:P279* wd:Q431289. 
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+}
+'  | tr -d '\r' > brands.csv

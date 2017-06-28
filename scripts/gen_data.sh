@@ -31,13 +31,24 @@ grep -Fwf ne.org $DIR/wikidata.all_entities    > uid.org
 # Get type hierarchy for organization types
 tail -n +2 orgs.csv | awk -F ',' '{n=split($1,a,"/"); print a[n] "\t" $2}' > org_types
 tail -n +2 orgs.csv | awk -F ',' '{n=split($1,a,"/"); print a[n]}' > org_types.uid
+# Get type hierarchy for brand types
+tail -n +2 brands.csv | awk -F ',' '{n=split($1,a,"/"); print a[n] "\t" $2}' > brand_types
+tail -n +2 brands.csv | awk -F ',' '{n=split($1,a,"/"); print a[n]}' > brand_types.uid
 
 # Get a list of Wikidata properties
 tail -n +2 properties.csv | awk -F ',' '{n=split($1,a,"/"); print a[n] "\t" $2}' > properties.tsv
 
-#takes ~22s
-awk -F"\t" 'NR == FNR { a[$1]; next } NF==5 && $1 in a {print}' org_types.uid wikidata.items > items.org
-awk -F"\t" 'NR == FNR { a[$1]=$2; next } NF==5 {split($4, p279s, " "); for(i in p279s) {p=p279s[i];if(p in a) print $1 "\t" $NF "\t" p "\t" a[p]}}' org_types items.org > types.org
+##takes ~22s
+#awk -F"\t" 'NR == FNR { a[$1]; next } NF==5 && $1 in a {print}' org_types.uid wikidata.items > items.org
+#awk -F"\t" 'NR == FNR { a[$1]=$2; next } NF==5 {split($4, p279s, " "); for(i in p279s) {p=p279s[i];if(p in a) print $1 "\t" $NF "\t" p "\t" a[p]}}' org_types items.org > types.org
+
+# Get instance of brand class
+## real	0m34.983s
+awk -F"\t" 'NR == FNR { a[$1]=$2; next } NF==5 {split($3, p31s, " "); for(i in p31s) {p=p31s[i];if(p in a) print $1 "\t" $NF "\t" p "\t" a[p]}}' brand_types wikidata.items > items.brand
+# Get subclass of brand class
+## real	0m32.243s
+awk -F"\t" 'NR == FNR { a[$1]=$2; next } NF==5 {split($4, p279s, " "); for(i in p279s) {p=p279s[i];if(p in a) print $1 "\t" $NF "\t" p "\t" a[p]}}' brand_types wikidata.items > types.brand
+
 
 # Public companies with their P31 and P279 property values
 grep -Fwf ne.company wikidata.items | awk -F"\t" 'NF==5{print}' > items.company
