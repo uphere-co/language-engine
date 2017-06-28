@@ -14,11 +14,30 @@ import qualified Data.Set                      as S
 
 import           NLP.Type.NamedEntity                  (NamedEntityClass)
 import           WikiEL.Type.Wikidata                 (ItemID)
-import           WikiEL.Type.FileFormat               
-import           WikiEL.ETL.LoadData                   
-
+import           WikiEL.Type.FileFormat
+import           WikiEL.ETL.LoadData
+import           WikiEL.ETL.Parser
 
 type NEClass = NamedEntityClass
+
+newtype ItemClass = ItemClass { _itemID :: ItemID }
+                  deriving (Show,Eq,Ord)
+
+buildItemClass :: Text -> ItemClass
+buildItemClass x = ItemClass (itemID x)
+
+orgClass    = buildItemClass "Q43229"
+personClass = buildItemClass "Q215627"
+brandClass  = buildItemClass "Q431289"
+locationClass = buildItemClass "Q17334923"
+
+typeMatch :: NEClass -> ItemID -> Bool
+typeMatch Org    org    = True
+typeMatch Person person = True
+typeMatch Loc    location = True
+typeMatch Other  brand  = True
+typeMatch _ _ = False
+
 
 loadTypedUIDs :: (NEClass , ItemIDFile) -> IO [(ItemID, NEClass)]
 loadTypedUIDs (tag, fileName) = do
@@ -39,6 +58,8 @@ fromFiles pairs = do
   let
     table = fromList (mconcat lists)
   return table
+
+
 
 
 
@@ -84,3 +105,4 @@ allRelationPairs relTuples = pairs
 
 isSubclass :: S.Set (SubclassUID, SuperclassUID) -> SuperclassUID -> SubclassUID -> Bool
 isSubclass pairs super sub = S.member (sub, super) pairs
+
