@@ -5,10 +5,10 @@ module WikiEL.ETL.Parser where
 import           Data.Text                             (Text)
 import           Data.Attoparsec.Text
 
-import           WikiEL.Types.Wikidata
-import           WikiEL.Types.Wikipedia
-import           WikiEL.Types.Equity
-import           WikiEL.Types.FileFormat
+import           WikiEL.Type.Wikidata
+import           WikiEL.Type.Wikipedia
+import           WikiEL.Type.Equity
+import           WikiEL.Type.FileFormat
 
 
 parserWikidataItemID :: Parser ItemID
@@ -39,17 +39,26 @@ parserPropertyName = do
   name <- column
   return (PropertyNameRow prop name)
 
+parserEntityRepr :: Parser EntityReprRow
+parserEntityRepr = do
+  item <- parserWikidataItemID
+  sep
+  repr <- column
+  return (EntityReprRow item (ItemRepr repr))
 
-parserSubclassRelation :: Parser (ItemID, ItemID)
+
+
+
+parserSubclassRelation :: Parser SubclassRelationRow
 parserSubclassRelation = do
-  super <- parserWikidataItemID
-  sep
-  _   <- column -- no use for super_title
-  sep
   sub <- parserWikidataItemID
   sep
   _   <- column -- no use for sub_title
-  return (super, sub)
+  sep
+  super <- parserWikidataItemID
+  sep
+  _   <- column -- no use for super_title
+  return (SubclassRelationRow sub super)
 
 parserPublicCompanyLine :: Parser (Text, GICS, GICSsub, Symbol, PageID, ItemID)
 parserPublicCompanyLine = do
@@ -90,7 +99,7 @@ pageID :: Text -> PageID
 pageID = getParseResult parserWikipediaPageID
 
 
-subclassRelation :: Text -> (ItemID, ItemID)
+subclassRelation :: Text -> SubclassRelationRow
 subclassRelation = getParseResult parserSubclassRelation
 
 publicCompany :: Text -> (Text, GICS, GICSsub, Symbol, PageID, ItemID)
@@ -98,3 +107,6 @@ publicCompany = getParseResult parserPublicCompanyLine
 
 propertyName :: Text -> PropertyNameRow
 propertyName = getParseResult parserPropertyName
+
+entityRepr :: Text -> EntityReprRow
+entityRepr = getParseResult parserEntityRepr

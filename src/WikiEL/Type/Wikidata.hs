@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module WikiEL.Types.Wikidata where
+module WikiEL.Type.Wikidata where
+
+import           Data.Text                             (Text)
+
 
 newtype ItemID = ItemID { _itemID :: Int }
                deriving (Eq, Ord)
@@ -13,3 +16,8 @@ newtype PropertyID = PropertyID { _propID :: Int }
                deriving (Eq, Ord)
 instance Show PropertyID where
   show (PropertyID uid) = "P" ++ show uid
+
+
+newtype ItemRepr = ItemRepr { _repr :: Text}
+                 deriving (Show, Eq, Ord)
+

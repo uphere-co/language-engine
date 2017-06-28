@@ -20,9 +20,12 @@ import qualified Data.Text.IO                  as T.IO
 import qualified Data.Vector                   as V
 import qualified Data.Vector.Algorithms.Search as VS
 
-import qualified WikiEL.WikiEntity                    as Wiki
-import           WikiEL.WikiEntity                            (parseEntityLine,loadEntityReprs,nameWords)
-import           WikiEL.Misc                                  (IRange(..))
+
+import qualified WikiEL.Type.Wikidata         as Wiki
+import           WikiEL.Type.Wikidata                 (ItemID)
+import           WikiEL.Type.FileFormat               (EntityReprFile,EntityReprRow(..))
+import           WikiEL.ETL.LoadData                   (loadEntityReprs)
+import           WikiEL.Misc                           (IRange(..))
 import           Assert                                (massertEqual,eassertEqual)
 {-
 import qualified Data.Vector.Unboxed.Mutable   as MV
@@ -90,14 +93,17 @@ greedyAnnotation :: (Ord e) => Vector [e] -> [e] -> [(IRange, Vector Int)]
 greedyAnnotation entities text = greedyAnnotationImpl entities text 0 []
 
 
-itemTuple :: (Wiki.UID, Wiki.Name) -> (Wiki.UID, [Text])
-itemTuple (uid, name) = (uid, nameWords name)
+nameWords :: Wiki.ItemRepr -> [Text]
+nameWords (Wiki.ItemRepr name) = T.words name
 
-data NameUIDTable = NameUIDTable { _uids :: Vector Wiki.UID
+itemTuple :: EntityReprRow -> (ItemID, [Text])
+itemTuple (EntityReprRow uid name) = (uid, nameWords name)
+
+data NameUIDTable = NameUIDTable { _uids :: Vector ItemID
                                  , _names :: Vector [Text]}
                   deriving (Show)
 
-buildEntityTable :: [(Wiki.UID, Wiki.Name)] -> NameUIDTable
+buildEntityTable :: [EntityReprRow] -> NameUIDTable
 buildEntityTable entities = NameUIDTable uids names
   where
     nameOrdering (lhsUID, lhsName) (rhsUID, rhsName) = compare lhsName rhsName
@@ -105,7 +111,7 @@ buildEntityTable entities = NameUIDTable uids names
     uids  = V.map fst entitiesByName
     names = V.map snd entitiesByName
 
-loadWETagger :: FilePath -> IO NameUIDTable
+loadWETagger :: EntityReprFile -> IO NameUIDTable
 loadWETagger file = do
      reprs <- loadEntityReprs file
      let 
@@ -113,7 +119,7 @@ loadWETagger file = do
      return table 
 
 
-wikiAnnotator:: NameUIDTable -> [Text] -> [(IRange, Vector Wiki.UID)]
+wikiAnnotator:: NameUIDTable -> [Text] -> [(IRange, Vector ItemID)]
 wikiAnnotator entities words = matchedItems
   where
     matchedIdxs  = greedyAnnotation (_names entities) words

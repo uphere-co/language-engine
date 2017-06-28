@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
+module Test.CoreNLPEntity where
+
 import           Data.Maybe                        (fromJust)
 import           Data.List                         (inits)
 import           Assert                            (assert,massertEqual,eassertEqual)
@@ -48,9 +50,7 @@ testContextedEntityLinking = testCaseSteps "Contexted entity linking " $ \step -
     tokens   = map parseStanfordNE (C.parseNEROutputStr corenlp_output)
   eassertEqual (mergeTokens tokens) [NamedEntity "Oscar Munoz" Person, NamedEntity "United Airlines" Org, NamedEntity "Munoz" Person, NamedEntity "Dao" Person]
 
-unitTestsAll =
+allTest =
   testGroup
     "Entity linking with CoreNLP named entities"
     [testNEParsing, testContextedEntityLinkingImple, testContextedEntityLinking]
-
-main = defaultMain unitTestsAll

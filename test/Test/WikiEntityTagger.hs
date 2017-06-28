@@ -2,7 +2,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
-  
+
+module Test.WikiEntityTagger where
+
 import           Data.Maybe                            (fromMaybe)
 import           Data.Text                             (Text)
 import           Data.Vector                           (Vector,backpermute,findIndices
@@ -14,12 +16,20 @@ import qualified Data.Vector                   as V
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 
-import           WikiEL.WikiEntity                     (parseEntityLine,loadEntityReprs,nameWords)
-import           WikiEL.WikiEntityClass                (SuperclassUID(..),SubclassUID(..),parseRelationLine,buildRelations,allRelationPairs,getAncestors,isSubclass)
+import           WikiEL.WikiEntityClass                (SuperclassUID(..),SubclassUID(..),fromRows,buildRelations,allRelationPairs,getAncestors,isSubclass)
 import           WikiEL.Misc                           (IRange(..))
 import           Assert                                (assert,massertEqual,eassertEqual)
 import           WikiEL.WikiEntityTagger
-import qualified WikiEL.WikiEntity             as Wiki
+
+
+import           WikiEL.Type.Wikidata
+import           WikiEL.Type.FileFormat
+import           WikiEL.ETL.Parser
+import           WikiEL.ETL.LoadData
+
+import           Test.Data.Filename
+
+uid = itemID
 
 testVectorSlicing :: TestTree
 testVectorSlicing = testCaseSteps "API usages for vector slicing" $ \step -> do
@@ -117,13 +127,12 @@ testWikiEntityTypes = testCaseSteps "Test on hierarchy of Wiki entity types" $ \
             , "Q1\t1\tQ11\t11"
             , "Q1\t1\tQ12\t12"
             ]
-    relTuples = map parseRelationLine lines
+    relTuples = fromRows (map subclassRelation lines)
     relations = buildRelations relTuples
     pairs = allRelationPairs relTuples
 
-    uid = Wiki.UID
-    super uid = SuperclassUID (Wiki.UID uid)
-    sub   uid = SubclassUID (Wiki.UID uid)
+    super id = SuperclassUID (uid id)
+    sub   id = SubclassUID   (uid id)
   eassertEqual (getAncestors relations (uid "Q1")) [uid "Q1",uid "Q12",uid "Q122",uid "Q121",uid "Q11",uid "Q112",uid "Q111"]
   assert (isSubclass pairs (super "Q122") (sub "Q1"))
   assert (not (isSubclass pairs (super "Q122") (sub "Q11")))
@@ -135,28 +144,25 @@ testWikiEntityTypes = testCaseSteps "Test on hierarchy of Wiki entity types" $ \
 testWikiEntityTagging :: TestTree
 testWikiEntityTagging = testCaseSteps "Wiki entity tagger with greedy-matching strategy" $ \step -> do
   entities <- do
-     reprs <- loadEntityReprs "data/wikidata.test.entities"
+     reprs <- loadEntityReprs reprFileTiny
      return (buildEntityTable reprs)
   let
     text = "Google and Facebook Inc. are famous AI companies . NLP stands for natural language processing ."
     words = T.words text    
     matchedItems  = wikiAnnotator entities words
-    wuid = Wiki.UID
-    expected = [(IRange 12 15, fromList [wuid "Q30642"])
-               ,(IRange 9 10,  fromList [wuid "Q30642"])
-               ,(IRange 6 7,   fromList [wuid "Q42970", wuid"Q11660"])
-               ,(IRange 2 4,   fromList [wuid "Q380"])
-               ,(IRange 0 1,   fromList [wuid "Q95", wuid "Q9366"])
+    expected = [(IRange 12 15, fromList [uid "Q30642"])
+               ,(IRange 9 10,  fromList [uid "Q30642"])
+               ,(IRange 6 7,   fromList [uid "Q42970", uid"Q11660"])
+               ,(IRange 2 4,   fromList [uid "Q380"])
+               ,(IRange 0 1,   fromList [uid "Q95", uid "Q9366"])
                ]
   eassertEqual matchedItems expected
   --print ""
   --mapM_ print matchedItems
 
 
-unitTests :: TestTree
-unitTests =
+allTest :: TestTree
+allTest =
   testGroup
     "All Unit tests"
     [unitTestsVector, unitTestsGreedyMatching, testWikiEntityTagging, testWikiEntityTypes]    
-
-main = defaultMain unitTests

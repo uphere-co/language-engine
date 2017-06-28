@@ -13,50 +13,56 @@ import qualified Data.Map                      as M
 import qualified Data.Set                      as S
 
 import           NLP.Type.NamedEntity                  (NamedEntityClass)
-import qualified WikiEL.WikiEntity             as Wiki
+import           WikiEL.Type.Wikidata                 (ItemID)
+import           WikiEL.Type.FileFormat               
+import           WikiEL.ETL.LoadData                   
 
 
 type NEClass = NamedEntityClass
 
-loadTypedUIDs :: (NEClass , FilePath) -> IO [(Wiki.UID, NEClass)]
+loadTypedUIDs :: (NEClass , ItemIDFile) -> IO [(ItemID, NEClass)]
 loadTypedUIDs (tag, fileName) = do
-  content <- T.IO.readFile fileName
+  items <- loadItemIDs fileName
   let 
-    uids = map (\x -> (Wiki.UID x, tag)) (T.lines content)
+    uids = map (\x -> (x, tag)) items
   return uids
 
-data WikiUID2NETag = WikiUID2NETag { _map :: Map Wiki.UID NEClass}
+data WikiUID2NETag = WikiUID2NETag { _map :: Map ItemID NEClass}
                    deriving (Show)
 
-fromFiles :: [(NEClass, FilePath)] -> IO WikiUID2NETag
+fromList :: [(ItemID, NEClass)] -> WikiUID2NETag
+fromList pairs = WikiUID2NETag (M.fromList pairs)
+
+fromFiles :: [(NEClass, ItemIDFile)] -> IO WikiUID2NETag
 fromFiles pairs = do
   lists <- mapM loadTypedUIDs pairs
   let
-    table = WikiUID2NETag (M.fromList (mconcat lists))
+    table = fromList (mconcat lists)
   return table
 
-fromList :: [(Wiki.UID, NEClass)] -> WikiUID2NETag
-fromList pairs = WikiUID2NETag (M.fromList pairs)
 
 
-getNEClass :: WikiUID2NETag -> Wiki.UID -> NEClass
+getNEClass :: WikiUID2NETag -> ItemID -> NEClass
 getNEClass table uid = f (M.lookup uid (_map table))
   where 
     f (Just x) = x
-    f _ = error ("Unknown UID: " ++ T.unpack (Wiki._uid uid))
+    f _ = error ("Unknown UID: " ++ show uid)
 
 
-newtype SubclassUID   = SubclassUID { _sub :: Wiki.UID}
+newtype SubclassUID   = SubclassUID { _sub :: ItemID}
                       deriving (Show, Ord, Eq)
-newtype SuperclassUID   = SuperclassUID { _super :: Wiki.UID}
+newtype SuperclassUID   = SuperclassUID { _super :: ItemID}
                       deriving (Show, Ord, Eq)
 
-type SuperClasses = M.Map SubclassUID [Wiki.UID]
+type SuperClasses = M.Map SubclassUID [ItemID]
+
+fromRows :: [SubclassRelationRow] -> [(SubclassUID, SuperclassUID)]
+fromRows = map (\(SubclassRelationRow sub super) -> (SubclassUID sub, SuperclassUID super))
 
 buildRelations :: [(SubclassUID, SuperclassUID)] -> SuperClasses
 buildRelations relations = M.fromListWith (++) (map (second (\(SuperclassUID x) -> [x])) relations)
 
-getAncestors :: SuperClasses -> Wiki.UID -> [Wiki.UID]
+getAncestors :: SuperClasses -> ItemID -> [ItemID]
 getAncestors map key = g key (lookups map key)
   where
     lookups map key = fromMaybe [] (M.lookup (SubclassUID key) map)
@@ -64,12 +70,7 @@ getAncestors map key = g key (lookups map key)
     g key vals = key : concatMap (\v -> g v (lookups map v)) vals
         
 
-parseRelationLine :: Text -> (SubclassUID, SuperclassUID)
-parseRelationLine line = (SubclassUID (Wiki.UID sub), SuperclassUID (Wiki.UID super))
-  where
-    [sub, subStr, super, superStr] = T.splitOn "\t" line
-
-getKeys :: SuperClasses -> [Wiki.UID]
+getKeys :: SuperClasses -> [ItemID]
 getKeys = M.foldlWithKey' (\ks (SubclassUID k) x -> k:ks) []
 
 allRelationPairs :: [(SubclassUID, SuperclassUID)] -> S.Set (SubclassUID, SuperclassUID)

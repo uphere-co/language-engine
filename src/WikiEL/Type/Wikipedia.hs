@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module WikiEL.Types.Wikipedia where
+module WikiEL.Type.Wikipedia where
 
 newtype PageID = PageID {_id :: Int }
                deriving (Eq, Ord)

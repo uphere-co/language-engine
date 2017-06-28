@@ -12,11 +12,10 @@ import qualified Data.Text                     as T
 
 
 import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
+import           WikiEL.Type.Wikidata                 (ItemID)
 import           WikiEL.Misc                           (IRange(..),RelativePosition(..), relativePos, untilNoOverlap)
-import           WikiEL.WikiEntity                     (parseEntityLine,loadEntityReprs,nameWords)
 import           WikiEL.WikiEntityTagger               (NameUIDTable,buildEntityTable,wikiAnnotator)
 import           WikiEL.WikiEntityClass                (WikiUID2NETag,getNEClass)
-import qualified WikiEL.WikiEntity             as Wiki
 import qualified WikiEL.NamedEntity            as N
 import qualified WikiEL.CoreNLP                as C
 
@@ -27,7 +26,7 @@ parseStanfordNE :: C.EntityToken -> NamedEntityFrag
 parseStanfordNE (C.EntityToken (C.WordToken word) (C.NETag tag)) =  parseStr word tag
 
 
-namedEntityAnnotator:: NameUIDTable -> WikiUID2NETag -> [NamedEntityFrag] -> [(IRange, Vector (Wiki.UID, NEClass))]
+namedEntityAnnotator:: NameUIDTable -> WikiUID2NETag -> [NamedEntityFrag] -> [(IRange, Vector (ItemID, NEClass))]
 namedEntityAnnotator entities uidTypes frags = reverse (map (second (V.map f)) matchedItems)
   where
     f uid= (uid, getNEClass uidTypes uid)
@@ -51,17 +50,17 @@ dropNonNE = filter (\x-> snd x /= Other)
 getStanfordNEs :: [NamedEntityFrag] -> [(IRange, NEClass)]
 getStanfordNEs = dropNonNE . partitonFrags
 
-buildTagUIDTable :: NEClass -> Vector Wiki.UID -> Vector (Wiki.UID, NEClass)
+buildTagUIDTable :: NEClass -> Vector ItemID -> Vector (ItemID, NEClass)
 buildTagUIDTable tag = V.map (\uid -> (uid,tag)) 
 
 
 data PreNE = UnresolvedUID NEClass
-           | AmbiguousUID [Wiki.UID]
-           | Resolved (Wiki.UID, NEClass)
-           | UnresolvedClass [(Wiki.UID, NEClass)]
+           | AmbiguousUID [ItemID]
+           | Resolved (ItemID, NEClass)
+           | UnresolvedClass [(ItemID, NEClass)]
            deriving(Show, Eq)
                 
-resolveNEClass :: NEClass -> Vector (Wiki.UID, NEClass) -> PreNE
+resolveNEClass :: NEClass -> Vector (ItemID, NEClass) -> PreNE
 resolveNEClass stag xs = g matchedUIDs
   where
     f accum (uid,tag) | tag==stag = uid:accum
@@ -70,7 +69,7 @@ resolveNEClass stag xs = g matchedUIDs
     g [uid] = Resolved (uid, stag)
     g uids  = AmbiguousUID uids
 
-resolveNEsImpl :: [(IRange,PreNE)] -> [(IRange, NEClass)] -> [(IRange, Vector (Wiki.UID, NEClass))] -> [(IRange,PreNE)]
+resolveNEsImpl :: [(IRange,PreNE)] -> [(IRange, NEClass)] -> [(IRange, Vector (ItemID, NEClass))] -> [(IRange,PreNE)]
 resolveNEsImpl accum [] [] = accum
 resolveNEsImpl accum lhss@((lrange,ltag):ls) []  =
   resolveNEsImpl ((lrange, UnresolvedUID ltag) : accum) ls []
@@ -92,6 +91,6 @@ resolveNEsImpl accum lhss@((lrange,ltag):ls) rhss@((rrange,rtags):rs) =
     lsIter = untilNoOverlap (relativePos rrange . fst) ls
     rsIter = untilNoOverlap (relativePos lrange . fst) rs
 
-resolveNEs :: [(IRange, NEClass)] -> [(IRange, Vector (Wiki.UID, NEClass))] -> [(IRange,PreNE)]
+resolveNEs :: [(IRange, NEClass)] -> [(IRange, Vector (ItemID, NEClass))] -> [(IRange,PreNE)]
 resolveNEs lhss rhss = reverse (resolveNEsImpl [] lhss rhss)
 
