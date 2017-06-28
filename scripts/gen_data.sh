@@ -1,3 +1,7 @@
+#Run CoreNLP
+java edu.stanford.nlp.process.PTBTokenizer -preserveLines iphone.txt > iphone.ptb
+java -mx48g edu.stanford.nlp.ie.NERClassifierCombiner -ner.model $CORENLP/classifiers/english.all.3class.distsim.crf.ser.gz,$CORENLP/classifiers/english.conll.4class.distsim.crf.ser.gz,$CORENLP/classifiers/english.muc.7class.distsim.crf.ser.gz -textFile iphone.ptb > iphone.ner
+
 DIR=/scratch/groups/uphere/wikidata
 tail -n +2 $DIR/public_companies.csv| awk -F ',' '{print $1}' | awk -F "/" '{print $NF}' > ne.company
 tail -n +2 $DIR/businesspersons.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}' > ne.business_person   
