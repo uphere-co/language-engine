@@ -21,5 +21,6 @@ brandItemFile  = ItemIDFile "data/ne.brand"
 reprFile       = EntityReprFile "data/uid"
 
 -- Full data
-propertyNameFile = PropertyNameFile "data_full/properties.tsv"
-listedCompanyFile = "enwiki/companies"
+wordnetMappingFile   = WordNetMappingFile "data/page_id.wiki_id.wordnet.tsv"
+propertyNameFile = PropertyNameFile   "data_full/properties.tsv"
+listedCompanyFile= "enwiki/companies"

@@ -36,11 +36,15 @@ import qualified Data.Map                      as M
 import qualified WikiEL.EntityLinking          as EL
 import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Wikipedia
+import           WikiEL.Type.WordNet
 import           WikiEL.Type.Equity
 import           WikiEL.Type.FileFormat
 import           WikiEL.ETL.Parser
 
 import           Test.Data.Filename
+
+import           Data.Attoparsec.Text
+
 
 uid = itemID
 uids = fromList . map uid
@@ -238,11 +242,23 @@ testParsingData =
     "Tests for loading data files"
     [testParsingSubclassRelation, testParsingPublicCompanyInfo]    
 
+
+testParsingWordNetSynsetFile :: TestTree
+testParsingWordNetSynsetFile = testCaseSteps "Test for mapping between Wikidata and WordNet" $ \step -> do
+  let
+    testcase1 = "synset-incumbent-noun-1"
+    testcase2 = "synset-dirty-case_like-this-one-noun-2"
+    r1 = parseOnly parserWordNetSynset testcase1
+    r2 = parseOnly parserWordNetSynset testcase2
+  eassertEqual r1 (Right (Synset "incumbent" "noun" 1))
+  eassertEqual r2 (Right (Synset "dirty-case_like-this-one" "noun" 2))
+
+
 allTest :: TestTree
 allTest =
   testGroup
     "All NamedEntityTagger unit tests"
-    [testHelperUtils, testIRangeOps, testWikiNER, testRunWikiNER, testParsingData]    
+    [testHelperUtils, testIRangeOps, testWikiNER, testRunWikiNER, testParsingData, testParsingWordNetSynsetFile]    
 
 
 
@@ -300,5 +316,8 @@ main2 = do
     let 
       propertyFile = propertyNameFile
     propertyNames <- loadPropertyNames propertyFile
+    wordNetMapping <- loadWordNetMapping wordnetMappingFile
 
     mapM_ print propertyNames
+    mapM_ print (Prelude.take 100 wordNetMapping)
+
