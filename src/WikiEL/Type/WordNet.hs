@@ -9,3 +9,4 @@ data Synset = Synset { _repr :: Text
                      , _idx  :: Int
                      }
             deriving (Eq,Show)
+

@@ -53,4 +53,3 @@ data WordNetMappingRow = WordNetMappingRow { _pageTitle :: Text
                                            }
                        deriving (Show)
 
-                                          
