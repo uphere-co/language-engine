@@ -1,4 +1,6 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module VerbNet where
@@ -95,9 +97,32 @@ data Syntax = NP   { _np_restrs :: Either SynRestrs SelRestrs
             | LEX  { _lex_value :: Text }
             deriving Show
 
+
+data ArgType = Arg_Event
+             | Arg_ThemRole
+             | Arg_VerbSpecific
+             | Arg_Constant
+             deriving (Show)
+                      
+
+data Arg = Arg { _arg_type :: ArgType
+               , _arg_value :: Text
+               }
+         deriving Show
+
+makeLenses ''Arg                  
+
+data Pred = Pred { _pred_args :: [Arg]
+                 , _pred_value :: Text
+                 }
+          deriving Show
+
+makeLenses ''Pred                   
+
 data Frame = Frame { _frame_description :: Description
                    , _frame_examples    :: [Text]
                    , _frame_syntax      :: [Syntax]
+                   , _frame_semantics   :: [Pred]
                    }
            deriving (Show)
 
@@ -186,11 +211,24 @@ p_syntax x = let ys = x^..elements
                      "PREP" -> PREP <$> y .: "value"
                      "LEX"  -> LEX <$> y .: "value"
                      x      -> fail ("p_syntax: p_each: " ++ show x)
+
+p_arg :: Element -> Parser Arg
+p_arg x = Arg <$> (x .: "type"  >>= \case ("Event" :: Text) -> pure Arg_Event
+                                          "ThemRole"        -> pure Arg_ThemRole
+                                          "VerbSpecific"    -> pure Arg_VerbSpecific
+                                          "Constant"        -> pure Arg_Constant
+                  )
+              <*> x .: "value"
+
+p_pred :: Element -> Parser Pred
+p_pred x = Pred <$> p_list p_arg "ARG" "ARGS" x
+                <*> x .: "value"
           
 p_frame :: Element -> Parser Frame
 p_frame x = Frame <$> (p_description =<< getOnly1 x "DESCRIPTION")
                   <*> p_list (pure . (^.contents)) "EXAMPLE" "EXAMPLES" x
                   <*> (p_syntax =<< getOnly1 x "SYNTAX")
+                  <*> p_list p_pred "PRED" "SEMANTICS" x
 
                   
 
