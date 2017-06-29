@@ -9,7 +9,7 @@ import           Data.Vector                                  (fromList)
 import           NLP.Type.NamedEntity                         (NamedEntityClass,NamedEntityFrag(..))
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,namedEntityAnnotator)
 import           WikiEL.WikiEntityTagger                      (NameUIDTable,loadWETagger)
-import           WikiEL.WikiEntityClass                       (WikiUID2NETag,fromFiles)
+import           WikiEL.WikiEntityClass                       (WikiUID2NETag,ItemClass,fromFiles)
 import           WikiEL.EntityLinking                         (EntityMention,entityLinkings,buildEntityMentions)
 import           WikiEL.Type.FileFormat               
 
@@ -25,7 +25,7 @@ extractEntityMentions wikiTable uid2tag neTokens = linked_mentions
     mentions = buildEntityMentions words wiki_named_entities
     linked_mentions = entityLinkings mentions
 
-loadEMtagger :: EntityReprFile -> [(NamedEntityClass, ItemIDFile)] -> IO( [(Text, NamedEntityClass)] -> [EntityMention Text] )
+loadEMtagger :: EntityReprFile -> [(ItemClass, ItemIDFile)] -> IO( [(Text, NamedEntityClass)] -> [EntityMention Text] )
 loadEMtagger wikiNameFile uid2tagFiles = do
   wikiTable <- loadWETagger  wikiNameFile
   uid2tag <- fromFiles uid2tagFiles

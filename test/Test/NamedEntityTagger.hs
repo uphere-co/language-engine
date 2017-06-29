@@ -18,7 +18,7 @@ import qualified Data.Vector                   as V
 import           WikiEL.CoreNLP                               (parseNEROutputStr)
 import           WikiEL.WikiEntityTagger                      (loadWETagger,wikiAnnotator)
 import           WikiEL.WikiEntityClass                       (fromFiles,getNEClass)
-import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,buildTagUIDTable,getStanfordNEs,parseStanfordNE,namedEntityAnnotator)
+import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,parseStanfordNE,namedEntityAnnotator)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
 import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),entityLinking,entityLinkings,buildEntityMentions)
 import           WikiEL.ETL.LoadData
@@ -46,9 +46,9 @@ uid = itemID
 uids = fromList . map uid
 
 
-other wikiUID = (uid wikiUID, N.Other)
-org wikiUID = (uid wikiUID, N.Org)
-person wikiUID = (uid wikiUID, N.Person)
+other wikiUID  = (uid wikiUID, WC.otherClass)
+org   wikiUID  = (uid wikiUID, WC.orgClass)
+person wikiUID = (uid wikiUID, WC.personClass)
 
 ai1 = other "Q42970"
 ai2 = other "Q11660"
@@ -75,12 +75,9 @@ testNamedEntityTagging = testCaseSteps "Named entity tagging on CoreNLP NER outp
     tt = getStanfordNEs stanford_nefs
     expected_tt = [(IRange 0 1, N.Org),(IRange 2 4,N.Org),(IRange 9 10, N.Org)]
 
-    others = buildTagUIDTable N.Other (uids ["Q11660","Q9366","Q30642"])
-    orgs   = buildTagUIDTable N.Org   (uids ["Q42970","Q380","Q95"])    
-    --TODO: sort UID
-    uidTags = mconcat [others, orgs]
+    -- Other : (uids ["Q11660","Q9366","Q30642"])
+    -- Org  :  (uids ["Q42970","Q380","Q95"])    
     
-  --print uidTags
   --print ner_text
   eassertEqual tt expected_tt
   eassertEqual matchedItems expected_matches
@@ -101,10 +98,11 @@ testIRangeOps = testCaseSteps "Test operations on IRange" $ \step -> do
 testNEResolution :: TestTree
 testNEResolution = testCaseSteps "Resolving Wiki UID with Stanford NE tag" $ \step -> do
   let
-    ambiguousUID = fromList [org"Q1", org "Q2", person "Q3"]
+    ambiguousUID = fromList [org "Q1", org "Q2", person "Q3"]
     entities = [(IRange 1 4, ambiguousUID)]
+  
   eassertEqual (resolveNEClass N.Org ambiguousUID) (AmbiguousUID [uid "Q2", uid "Q1"])
-  eassertEqual (resolveNEClass N.Person ambiguousUID) (Resolved (person "Q3"))
+  eassertEqual (resolveNEClass N.Person ambiguousUID) (Resolved (uid "Q3", N.Person))
 
   step "Single entity cases"
   eassertEqual (resolveNEs [(IRange 1 4, N.Person)] entities) [(IRange 1 4, resolveNEClass N.Person ambiguousUID)]
@@ -123,17 +121,17 @@ testNEResolution = testCaseSteps "Resolving Wiki UID with Stanford NE tag" $ \st
     entities1 = [(IRange 0 2, ambiguousUID1),(IRange 5 8, ambiguousUID2)]
     
     r1 = resolveNEs stanford_nes entities1
-    expected_r1 = [(IRange 0 2, Resolved (person "Q13")),
+    expected_r1 = [(IRange 0 2, Resolved (uid "Q13", N.Person)),
                    (IRange 5 8, AmbiguousUID [uid "Q22", uid "Q21"])]
 
     entities2 = [(IRange 0 2, ambiguousUID1),(IRange 5 7, ambiguousUID2)]
     r2 = resolveNEs stanford_nes entities2
-    expected_r2 = [(IRange 0 2, Resolved (person "Q13")),
+    expected_r2 = [(IRange 0 2, Resolved (uid "Q13", N.Person)),
                    (IRange 5 8, UnresolvedUID N.Org)]
 
     entities3 = [(IRange 0 2, ambiguousUID1),(IRange 4 6, ambiguousUID2)]
     r3 = resolveNEs stanford_nes entities3
-    expected_r3 = [(IRange 0 2, Resolved (person "Q13")),
+    expected_r3 = [(IRange 0 2, Resolved (uid "Q13", N.Person)),
                    (IRange 4 6, UnresolvedClass (toList ambiguousUID2))]
 
     entities4 = [(IRange 0 2, ambiguousUID1),(IRange 7 9, ambiguousUID2)]
@@ -145,7 +143,6 @@ testNEResolution = testCaseSteps "Resolving Wiki UID with Stanford NE tag" $ \st
   --eassertEqual r2 expected_r2
   --eassertEqual r3 expected_r3
   --eassertEqual r4 expected_r4  
-  
 
 testWikiNER :: TestTree
 testWikiNER = 
@@ -158,7 +155,7 @@ testRunWikiNER :: TestTree
 testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \step -> do
   input_raw <- T.IO.readFile rawNewsFile
   input <- T.IO.readFile nerNewsFile
-  uid2tag <- fromFiles [(N.Org, orgItemFile), (N.Person, personItemFile)]
+  uid2tag <- fromFiles [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile)]
   wikiTable <- loadWETagger reprFile
   
   let
@@ -176,10 +173,10 @@ testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \ste
     flag2 = getNEClass uid2tag (uid "Q3503829")
     united_airlines = fromList ["United","Airlines"]
     oscar_munoz     = fromList ["Oscar","Munoz"]
-    t1  = (IRange 0 2,   united_airlines, Resolved (org "Q174769"))
-    t1' = (IRange 90 92, united_airlines, Resolved (org "Q174769"))
-    t2  = (IRange 5 7,   oscar_munoz, Resolved (person "Q21066734"))
-    t2' = (IRange 95 97, oscar_munoz, Resolved (person "Q21066734"))
+    t1  = (IRange 0 2,   united_airlines, Resolved (uid "Q174769", N.Org))
+    t1' = (IRange 90 92, united_airlines, Resolved (uid "Q174769", N.Org))
+    t2  = (IRange 5 7,   oscar_munoz, Resolved (uid "Q21066734", N.Person))
+    t2' = (IRange 95 97, oscar_munoz, Resolved (uid "Q21066734", N.Person))
     t3  = (IRange 10 11, fromList ["Munoz"], UnresolvedUID N.Person)
     t4  = (IRange 13 14, fromList ["United"], UnresolvedUID N.Org)
 
@@ -266,9 +263,9 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
 main1 = do
   file <- T.IO.readFile listedCompanyFile
 
-  input_raw <- T.IO.readFile rawNewsFile
-  input <- T.IO.readFile nerNewsFile
-  uid2tag <- fromFiles [(N.Org, orgItemFile), (N.Person, personItemFile)]
+  input_raw <- T.IO.readFile rawNewsFile2
+  input <- T.IO.readFile nerNewsFile2
+  uid2tag <- fromFiles [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
   wikiTable <- loadWETagger reprFile
 
   let 

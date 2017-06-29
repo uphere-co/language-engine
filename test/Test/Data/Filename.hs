@@ -11,11 +11,15 @@ import           WikiEL.Type.FileFormat
 -- test data
 rawNewsFile = "data/dao.ptb"
 nerNewsFile = "data/dao.ner"
+rawNewsFile2 = "data/iphone.ptb"
+nerNewsFile2 = "data/iphone.ner"
 
-reprFileTiny = EntityReprFile "data/wikidata.test.entities"
-orgItemFile = ItemIDFile "data/ne.org"
+reprFileTiny   = EntityReprFile "data/wikidata.test.entities"
+orgItemFile    = ItemIDFile "data/ne.org"
 personItemFile = ItemIDFile "data/ne.person"
-reprFile = EntityReprFile "data/uid"
+brandItemFile  = ItemIDFile "data/ne.brand"
+reprFile       = EntityReprFile "data/uid"
+
 -- Full data
 propertyNameFile = PropertyNameFile "data_full/properties.tsv"
 listedCompanyFile = "enwiki/companies"

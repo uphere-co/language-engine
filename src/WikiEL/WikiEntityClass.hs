@@ -13,27 +13,54 @@ import qualified Data.Map                      as M
 import qualified Data.Set                      as S
 
 import           NLP.Type.NamedEntity                  (NamedEntityClass)
+import qualified NLP.Type.NamedEntity          as N
 import           WikiEL.Type.Wikidata                 (ItemID)
-import           WikiEL.Type.FileFormat               
-import           WikiEL.ETL.LoadData                   
-
+import           WikiEL.Type.FileFormat
+import           WikiEL.ETL.LoadData
+import           WikiEL.ETL.Parser
 
 type NEClass = NamedEntityClass
 
-loadTypedUIDs :: (NEClass , ItemIDFile) -> IO [(ItemID, NEClass)]
+newtype ItemClass = ItemClass { _itemID :: ItemID }
+                  deriving (Show,Eq,Ord)
+
+buildItemClass :: Text -> ItemClass
+buildItemClass x = ItemClass (itemID x)
+
+otherClass  = buildItemClass "Q35120" -- maps to entity (Q35120), which means "anything"
+orgClass    = buildItemClass "Q43229"
+personClass = buildItemClass "Q215627"
+brandClass  = buildItemClass "Q431289"
+locationClass = buildItemClass "Q17334923"
+
+toNEClass :: ItemClass -> NEClass
+toNEClass c | c==orgClass      = N.Org
+toNEClass c | c==personClass   = N.Person
+toNEClass c | c==locationClass = N.Loc
+toNEClass _ = N.Other
+
+neClassMatch :: NEClass -> ItemClass -> Bool
+neClassMatch N.Org    ic | ic==orgClass      = True
+neClassMatch N.Person ic | ic==personClass   = True
+neClassMatch N.Loc    ic | ic==locationClass = True
+neClassMatch N.Other  ic | ic==brandClass    = True
+neClassMatch _ _ = False
+
+
+loadTypedUIDs :: (ItemClass , ItemIDFile) -> IO [(ItemID, ItemClass)]
 loadTypedUIDs (tag, fileName) = do
   items <- loadItemIDs fileName
   let 
     uids = map (\x -> (x, tag)) items
   return uids
 
-data WikiUID2NETag = WikiUID2NETag { _map :: Map ItemID NEClass}
+data WikiUID2NETag = WikiUID2NETag { _map :: Map ItemID ItemClass}
                    deriving (Show)
 
-fromList :: [(ItemID, NEClass)] -> WikiUID2NETag
+fromList :: [(ItemID, ItemClass)] -> WikiUID2NETag
 fromList pairs = WikiUID2NETag (M.fromList pairs)
 
-fromFiles :: [(NEClass, ItemIDFile)] -> IO WikiUID2NETag
+fromFiles :: [(ItemClass, ItemIDFile)] -> IO WikiUID2NETag
 fromFiles pairs = do
   lists <- mapM loadTypedUIDs pairs
   let
@@ -42,7 +69,7 @@ fromFiles pairs = do
 
 
 
-getNEClass :: WikiUID2NETag -> ItemID -> NEClass
+getNEClass :: WikiUID2NETag -> ItemID -> ItemClass
 getNEClass table uid = f (M.lookup uid (_map table))
   where 
     f (Just x) = x
@@ -84,3 +111,4 @@ allRelationPairs relTuples = pairs
 
 isSubclass :: S.Set (SubclassUID, SuperclassUID) -> SuperclassUID -> SubclassUID -> Bool
 isSubclass pairs super sub = S.member (sub, super) pairs
+

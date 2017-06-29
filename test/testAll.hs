@@ -1,8 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ExistentialQuantification #-}
-
 import           Test.Tasty.HUnit                      (testCase,testCaseSteps)
 import           Test.Tasty                            (defaultMain, testGroup,TestTree)
 
@@ -20,5 +15,5 @@ unitTests =
     , CNE.allTest
     ]    
 
-main = defaultMain unitTests
---main = NET.main1
+--main = defaultMain unitTests
+main = NET.main1
