@@ -7,11 +7,13 @@ module VerbNet where
 
 import           Control.Applicative
 import           Control.Lens       hiding (element,elements)
+import           Data.List                 (sort)
 import           Data.Text                 (Text)
 import qualified Data.Text         as T
 import qualified Data.Text.Lazy.IO as TLIO
 import           Data.Traversable          (traverse)
 import           Text.Taggy.Lens
+import           System.Directory
 import           System.FilePath
 
 
@@ -30,20 +32,6 @@ instance FromAttr a => FromAttr (Maybe a) where
 
 (.:) :: FromAttr a => Element -> Text -> Either String a
 (.:) = fromAttr 
-
-data Member = Member { _member_name     :: Text
-                     , _member_wn       :: Text
-                     , _member_grouping :: Maybe Text
-                     }
-            deriving Show
-
-makeLenses ''Member                     
-
-data ThemRole = ThemRole { _themrole_type :: Text
-                         }
-            deriving Show
-
-makeLenses ''ThemRole                     
 
 
 data Description = Description { _desc_primary           :: Text
@@ -79,7 +67,7 @@ data AndOr = And | Or
            deriving Show
 
 data SynRestrs = SynRestrs { _synrestrs_elements :: [SynRestr]
-                           -- , _synrestrs_logic :: Maybe AndOr
+                           , _synrestrs_logic :: Maybe AndOr
                            }
                deriving Show
 
@@ -119,6 +107,8 @@ data Pred = Pred { _pred_args :: [Arg]
 
 makeLenses ''Pred                   
 
+
+
 data Frame = Frame { _frame_description :: Description
                    , _frame_examples    :: [Text]
                    , _frame_syntax      :: [Syntax]
@@ -129,11 +119,26 @@ data Frame = Frame { _frame_description :: Description
 
 makeLenses ''Frame                    
 
+data Member = Member { _member_name     :: Text
+                     , _member_wn       :: Text
+                     , _member_grouping :: Maybe Text
+                     }
+            deriving Show
+
+makeLenses ''Member                     
+
+data ThemRole = ThemRole { _themrole_selrestrs :: SelRestrs
+                         , _themrole_type :: Text
+                         }
+            deriving Show
+
+makeLenses ''ThemRole                     
 
 
 data VNSubclass = VNSubclass { _vnsubclass_members   :: [Member]
                              , _vnsubclass_themroles :: [ThemRole]
                              , _vnsubclass_frames    :: [Frame]
+                             , _vnsubclass_subclasses :: [VNSubclass]
                              , _vnsubclass_id        :: Text
                              }
                 deriving Show
@@ -173,7 +178,8 @@ p_member x = Member <$> x .: "name"
 
 
 p_themrole :: Element -> Parser ThemRole
-p_themrole x = ThemRole <$> x .: "type"
+p_themrole x = ThemRole <$> (p_selrestrs =<< getOnly1 x "SELRESTRS")
+                        <*> x .: "type"
 
 p_description :: Element -> Parser Description
 p_description x = Description <$> x .: "primary"
@@ -186,8 +192,8 @@ p_selrestrs :: Element -> Parser SelRestrs
 p_selrestrs x = SelRestrs <$> traverse p_selrestr_each (x^..elements)
   where
     p_selrestr_each y = case y^.name of
-                          "SYNRESTR" -> Left <$> (SelRestr <$> y .: "Value" <*> y .: "type")
-                          "SYNRESTRS" -> Right <$> p_selrestrs y
+                          "SELRESTR" -> Left <$> (SelRestr <$> y .: "Value" <*> y .: "type")
+                          "SELRESTRS" -> Right <$> p_selrestrs y
   
 p_synrestr x = SynRestr <$> x .: "Value"
                         <*> x .: "type"
@@ -196,7 +202,12 @@ p_restrs :: Element -> Parser (Either SynRestrs SelRestrs)
 p_restrs x = case x ^.. elements of
                []    -> fail "p_restrs: no element"
                (y:_) -> case y^.name of
-                          "SYNRESTRS" -> Left . SynRestrs <$> traverse p_synrestr (y^..elements)
+                          "SYNRESTRS" -> Left <$> (SynRestrs <$> traverse p_synrestr (y^..elements)
+                                                             <*> optional (x .: "logic" >>= \case
+                                                                             ("and" :: Text) -> pure And
+                                                                             "or"            -> pure Or
+                                                                          )
+                                                  )
                           "SELRESTRS" -> Right <$> p_selrestrs y 
                           z           -> fail ("p_restrs: " ++ show z)
 
@@ -237,6 +248,7 @@ p_vnsubclass :: Element -> Parser VNSubclass
 p_vnsubclass x = VNSubclass <$> p_list p_member   "MEMBER"   "MEMBERS"   x
                             <*> p_list p_themrole "THEMROLE" "THEMROLES" x
                             <*> p_list p_frame    "FRAME"    "FRAMES"    x
+                            <*> (p_list p_vnsubclass "VNSUBCLASS" "SUBCLASSES" x <|> pure [])
                             <*> x .: "ID"
 
 
@@ -250,8 +262,15 @@ p_vnclass x = VNClass <$> p_list p_member     "MEMBER"     "MEMBERS"    x
 
 main :: IO ()
 main = do
-  let fp = "/scratch/wavewave/VerbNet/verbnet" </> "get-13.5.1.xml"
-  txt <- TLIO.readFile fp
-  case txt ^? html . allNamed (only "VNCLASS") of
-    Nothing -> print "no "
-    Just f -> print (p_vnclass f)
+  let dir= "/scratch/wavewave/VerbNet/verbnet"
+  {- cnts <- getDirectoryContents dir
+  let fs = sort (filter (\x -> takeExtensions x == ".xml") cnts) -}
+  let fs = [ "get-13.5.1.xml" ]
+  flip mapM_ fs $ \f -> do
+    let fp = dir  </> f
+    txt <- TLIO.readFile fp
+    case txt ^? html . allNamed (only "VNCLASS") of
+      Nothing -> error "nothing"
+      Just f -> case p_vnclass f of
+                  Left err -> error err
+                  Right c  -> print c
