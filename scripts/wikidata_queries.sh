@@ -44,7 +44,7 @@ curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode
 SELECT ?item ?itemLabel
 WHERE
 {
-	?item wdt:P279/wdt:P279* wd:Q43229 .
+	?item wdt:P279* wd:Q43229 .
 	SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
 '  | tr -d '\r' > orgs.csv
@@ -53,7 +53,7 @@ curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode
 SELECT ?item ?itemLabel
 WHERE
 {
-	?item wdt:P279/wdt:P279* wd:Q215627 .
+	?item wdt:P279* wd:Q215627 .
 	SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
 '  | tr -d '\r' > persons.csv
@@ -62,7 +62,7 @@ curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode
 SELECT ?item ?itemLabel
 WHERE
 {
-	?item wdt:P279/wdt:P279* wd:Q12737077 .
+	?item wdt:P279* wd:Q12737077 .
 	SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
 '  | tr -d '\r' > occupations.csv
@@ -77,3 +77,12 @@ SELECT ?property ?propertyLabel WHERE {
  }
 
 '  | tr -d '\r' > properties.csv
+
+
+#subclass of brand (Q431289)
+curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode query='
+SELECT ?item ?itemLabel WHERE {
+  ?item wdt:P279* wd:Q431289. 
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+}
+'  | tr -d '\r' > brands.csv
