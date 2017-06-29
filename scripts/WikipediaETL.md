@@ -32,6 +32,11 @@ Contains GICS and ticker symbol for companies (presently, S&P 500 and S&P 400)
 |-------|-------|-------|-------|-------|-------
 | Abiomed | ABMD | Health Care | Health Care Equipment | 6872689 | Q4667884
 
+#### WordNet mapping
+|page_title| page_id | page_wiki_uid | wordnet
+|-------|-------|-------|-------
+|Google | 1092923 | Q95 | synset-company-noun-1
+
 ## ETL steps
 #### Nix-shell setup
 Current ETL process depends on a python script, `mysqldump_to_csv.py`, in https://github.com/jamesmishra/mysqldump-to-csv
@@ -139,4 +144,11 @@ real	2m17.101s
 
 # Join by page_id
 join -1 2 -2 1 -t$'\t' <(sort -t$'\t' -k2,2 jel.page) page_id.wiki_id.txt.sorted > jel.wikidata
+```
+
+#### ETL to get Wikidata - WordNet mapping 
+Download `wordnet_links.ttl.gz` from [here](wiki.dbpedia.org/services-resources/datasets/dbpedia-datasets).
+```
+tail +2 dbpedia/wordnet_links.ttl | sed 's/> / /g' | awk '/^#/ {next} {print $1 "\t" $3}' | sed 's/<http:\/\/dbpedia.org\/resource\///g' | sed 's/<http:\/\/www.w3.org\/2006\/03\/wn\/wn20\/instances\///g'  > wordnet_links.tsv
+join -1 2 -2 1 -t$'\t' <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) <(sort -k1,1 -t$'\t' wordnet_links.tsv) > page_id.wiki_id.wordnet.tsv
 ```
