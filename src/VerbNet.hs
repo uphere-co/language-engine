@@ -53,14 +53,40 @@ data Description = Description { _desc_primary           :: Text
 
 makeLenses ''Description
 
-{- 
-data Restrs = Restrs_SynRestrs { _restrs_synrestrs :: [SynRestr] }
-            | Restrs_SelRestrs { _restrs_ ::
--}
 
-data Syntax = NP   { -- _np_restrs :: Restrs
-                   -- ,
-                     _np_value :: Text
+data SelRestr = SelRestr { _selrestr_value :: Text
+                         , _selrestr_type :: Text }
+              deriving Show
+
+makeLenses ''SelRestr
+
+data SelRestrs = SelRestrs { _selrestrs_elements :: [Either SelRestr SelRestrs] }
+               deriving Show
+
+makeLenses ''SelRestrs
+
+
+data SynRestr = SynRestr { _synrestr_value :: Text
+                         , _synrestr_type :: Text
+                         }
+              deriving Show
+
+makeLenses ''SynRestr
+
+data AndOr = And | Or
+           deriving Show
+
+data SynRestrs = SynRestrs { _synrestrs_elements :: [SynRestr]
+                           -- , _synrestrs_logic :: Maybe AndOr
+                           }
+               deriving Show
+
+makeLenses ''SynRestrs
+
+
+
+data Syntax = NP   { _np_restrs :: Either SynRestrs SelRestrs
+                   , _np_value :: Text
                    }
             | VERB
             | ADJ
@@ -129,19 +155,37 @@ p_description x = Description <$> x .: "primary"
                               <*> optional (x .: "secondary")
                               <*> x .: "descriptionNumber"
                               <*> x .: "xtag"
-                              
+
+
+p_selrestrs :: Element -> Parser SelRestrs
+p_selrestrs x = SelRestrs <$> traverse p_selrestr_each (x^..elements)
+  where
+    p_selrestr_each y = case y^.name of
+                          "SYNRESTR" -> Left <$> (SelRestr <$> y .: "Value" <*> y .: "type")
+                          "SYNRESTRS" -> Right <$> p_selrestrs y
+  
+p_synrestr x = SynRestr <$> x .: "Value"
+                        <*> x .: "type"
+                        
+p_restrs :: Element -> Parser (Either SynRestrs SelRestrs)
+p_restrs x = case x ^.. elements of
+               []    -> fail "p_restrs: no element"
+               (y:_) -> case y^.name of
+                          "SYNRESTRS" -> Left . SynRestrs <$> traverse p_synrestr (y^..elements)
+                          "SELRESTRS" -> Right <$> p_selrestrs y 
+                          z           -> fail ("p_restrs: " ++ show z)
 
 p_syntax :: Element -> Parser [Syntax]
 p_syntax x = let ys = x^..elements
              in traverse p_each ys
   where p_each y = case y^.name of
-                     "NP"   -> NP <$> y .: "value"
+                     "NP"   -> NP <$> p_restrs y <*> y .: "value"
                      "VERB" -> pure VERB
                      "ADJ"  -> pure ADJ
                      "ADV"  -> pure ADV
                      "PREP" -> PREP <$> y .: "value"
                      "LEX"  -> LEX <$> y .: "value"
-
+                     x      -> fail ("p_syntax: p_each: " ++ show x)
           
 p_frame :: Element -> Parser Frame
 p_frame x = Frame <$> (p_description =<< getOnly1 x "DESCRIPTION")
