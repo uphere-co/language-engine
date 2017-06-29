@@ -44,10 +44,38 @@ data ThemRole = ThemRole { _themrole_type :: Text
 makeLenses ''ThemRole                     
 
 
+data Description = Description { _desc_primary           :: Text
+                               , _desc_secondary         :: Maybe Text
+                               , _desc_descriptionNumber :: Text
+                               , _desc_xtag              :: Text
+                               }
+                 deriving Show
 
-data VNSubclass = VNSubclass { _vnsubclass_members :: [Member]
+makeLenses ''Description
+
+{-
+data Syntax = NP
+            | VERB
+            | ADJ
+-}            
+
+
+data Frame = Frame { _frame_description :: Description
+                   , _frame_examples    :: [Text]
+                   -- , _frame_syntax      :: [Syntax]
+                   }
+           deriving (Show)
+
+
+makeLenses ''Frame                    
+
+
+
+data VNSubclass = VNSubclass { _vnsubclass_members   :: [Member]
                              , _vnsubclass_themroles :: [ThemRole]
-                             , _vnsubclass_id :: Text }
+                             , _vnsubclass_frames    :: [Frame]
+                             , _vnsubclass_id        :: Text
+                             }
                 deriving Show
 
 makeLenses ''VNSubclass                         
@@ -55,7 +83,7 @@ makeLenses ''VNSubclass
 
 data VNClass = VNClass { _vnclass_members    :: [Member]
                        , _vnclass_themroles  :: [ThemRole]
-                       -- , _vnclass_frames     :: Frames
+                       , _vnclass_frames     :: [Frame]
                        , _vnclass_subclasses :: [VNSubclass]
                        , _vnclass_id         :: Text
                        }
@@ -83,30 +111,33 @@ p_member x = Member <$> x .: "name"
                     <*> x .: "wn"
                     <*> optional (x .: "grouping")
 
-p_members :: Element -> Parser [Member]
-p_members x = traverse p_member (getOnly x "MEMBER") 
-
 
 p_themrole :: Element -> Parser ThemRole
 p_themrole x = ThemRole <$> x .: "type"
 
+p_description :: Element -> Parser Description
+p_description x = Description <$> x .: "primary"
+                              <*> optional (x .: "secondary")
+                              <*> x .: "descriptionNumber"
+                              <*> x .: "xtag"
+                              
+
+p_frame :: Element -> Parser Frame
+p_frame x = Frame <$> (p_description =<< getOnly1 x "DESCRIPTION")
+                  <*> p_list (pure . (^.contents)) "EXAMPLE" "EXAMPLES" x
+
+
 p_vnsubclass :: Element -> Parser VNSubclass
-p_vnsubclass x = VNSubclass <$> p_list p_member "MEMBER" "MEMBERS" x
+p_vnsubclass x = VNSubclass <$> p_list p_member   "MEMBER"   "MEMBERS"   x
                             <*> p_list p_themrole "THEMROLE" "THEMROLES" x
+                            <*> p_list p_frame    "FRAME"    "FRAMES"    x
                             <*> x .: "ID"
 
 
-p_vnsubclasses :: Element -> Parser [VNSubclass]
-p_vnsubclasses x = 
-  let xs = getOnly x "VNSUBCLASS"
-      
-  in traverse p_vnsubclass xs
-
-
-
 p_vnclass :: Element -> Parser VNClass
-p_vnclass x = VNClass <$> p_list p_member "MEMBER" "MEMBERS" x
-                      <*> p_list p_themrole "THEMROLE" "THEMROLES" x
+p_vnclass x = VNClass <$> p_list p_member     "MEMBER"     "MEMBERS"    x
+                      <*> p_list p_themrole   "THEMROLE"   "THEMROLES"  x
+                      <*> p_list p_frame      "FRAME"      "FRAMES"     x
                       <*> p_list p_vnsubclass "VNSUBCLASS" "SUBCLASSES" x
                       <*> x .: "ID"
 
