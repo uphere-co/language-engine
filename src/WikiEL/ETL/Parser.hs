@@ -3,8 +3,10 @@
 module WikiEL.ETL.Parser where
 
 import           Data.Text                             (Text)
+import           Control.Applicative                   ((<|>))
 import           Data.Attoparsec.Text
 import qualified Data.Text                     as T
+
 
 import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Wikipedia
@@ -16,6 +18,12 @@ import           WikiEL.Type.FileFormat
 parserWikidataItemID :: Parser ItemID
 parserWikidataItemID = do
   string "Q"
+  id <- decimal
+  return (ItemID id)
+
+parserBrokenItemID :: Parser ItemID
+parserBrokenItemID = do
+  string "Q" <|> string "q"
   id <- decimal
   return (ItemID id)
 
@@ -107,7 +115,7 @@ parserWordNetSynsetRow = do
   sep
   pageID <- parserWikipediaPageID
   sep
-  itemID <- parserWikidataItemID  
+  itemID <- parserBrokenItemID  
   sep
   synset <- parserWordNetSynset
   return (WordNetMappingRow title pageID itemID synset)
@@ -123,6 +131,8 @@ propertyID = getParseResult parserWikidataPropertyID
 pageID :: Text -> PageID
 pageID = getParseResult parserWikipediaPageID
 
+wordnetSynset :: Text -> Synset
+wordnetSynset = getParseResult parserWordNetSynset
 
 subclassRelation :: Text -> SubclassRelationRow
 subclassRelation = getParseResult parserSubclassRelation
