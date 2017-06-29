@@ -53,16 +53,25 @@ data Description = Description { _desc_primary           :: Text
 
 makeLenses ''Description
 
-{-
-data Syntax = NP
+{- 
+data Restrs = Restrs_SynRestrs { _restrs_synrestrs :: [SynRestr] }
+            | Restrs_SelRestrs { _restrs_ ::
+-}
+
+data Syntax = NP   { -- _np_restrs :: Restrs
+                   -- ,
+                     _np_value :: Text
+                   }
             | VERB
             | ADJ
--}            
-
+            | ADV
+            | PREP { _prep_value :: Text }
+            | LEX  { _lex_value :: Text }
+            deriving Show
 
 data Frame = Frame { _frame_description :: Description
                    , _frame_examples    :: [Text]
-                   -- , _frame_syntax      :: [Syntax]
+                   , _frame_syntax      :: [Syntax]
                    }
            deriving (Show)
 
@@ -122,9 +131,24 @@ p_description x = Description <$> x .: "primary"
                               <*> x .: "xtag"
                               
 
+p_syntax :: Element -> Parser [Syntax]
+p_syntax x = let ys = x^..elements
+             in traverse p_each ys
+  where p_each y = case y^.name of
+                     "NP"   -> NP <$> y .: "value"
+                     "VERB" -> pure VERB
+                     "ADJ"  -> pure ADJ
+                     "ADV"  -> pure ADV
+                     "PREP" -> PREP <$> y .: "value"
+                     "LEX"  -> LEX <$> y .: "value"
+
+          
 p_frame :: Element -> Parser Frame
 p_frame x = Frame <$> (p_description =<< getOnly1 x "DESCRIPTION")
                   <*> p_list (pure . (^.contents)) "EXAMPLE" "EXAMPLES" x
+                  <*> (p_syntax =<< getOnly1 x "SYNTAX")
+
+                  
 
 
 p_vnsubclass :: Element -> Parser VNSubclass
