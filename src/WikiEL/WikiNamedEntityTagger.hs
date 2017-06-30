@@ -12,7 +12,7 @@ import qualified Data.Text                     as T
 
 
 import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
-import           WikiEL.Type.Wikidata                 (ItemID)
+import           WikiEL.Type.Wikidata                  (ItemID)
 import           WikiEL.Misc                           (IRange(..),RelativePosition(..), relativePos, untilNoOverlap)
 import           WikiEL.WikiEntityTagger               (NameUIDTable,buildEntityTable,wikiAnnotator)
 import           WikiEL.WikiEntityClass                (WikiUID2NETag,ItemClass,neClassMatch,getNEClass,toNEClass)

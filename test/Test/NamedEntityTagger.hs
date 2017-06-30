@@ -32,13 +32,16 @@ import qualified WikiEL.WikiEntityClass               as WC
 
 import           Data.Map                              (Map)
 import           Data.Maybe                            (mapMaybe)
-import qualified Data.Map                      as M
-import qualified WikiEL.EntityLinking          as EL
 import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Wikipedia
+import           WikiEL.Type.WordNet
 import           WikiEL.Type.Equity
 import           WikiEL.Type.FileFormat
 import           WikiEL.ETL.Parser
+
+import qualified Data.Map                      as M
+import qualified WikiEL.EntityLinking          as EL
+import qualified WikiEL.Type.FileFormat        as F
 
 import           Test.Data.Filename
 
@@ -238,11 +241,23 @@ testParsingData =
     "Tests for loading data files"
     [testParsingSubclassRelation, testParsingPublicCompanyInfo]    
 
+
+testParsingWordNetSynsetFile :: TestTree
+testParsingWordNetSynsetFile = testCaseSteps "Test for mapping between Wikidata and WordNet" $ \step -> do
+  let
+    testcase1 = "synset-incumbent-noun-1"
+    testcase2 = "synset-dirty-case_like-this-one-noun-2"
+    r1 = wordnetSynset testcase1
+    r2 = wordnetSynset testcase2
+  eassertEqual r1 (Synset "incumbent" "noun" 1)
+  eassertEqual r2 (Synset "dirty-case_like-this-one" "noun" 2)
+
+
 allTest :: TestTree
 allTest =
   testGroup
     "All NamedEntityTagger unit tests"
-    [testHelperUtils, testIRangeOps, testWikiNER, testRunWikiNER, testParsingData]    
+    [testHelperUtils, testIRangeOps, testWikiNER, testRunWikiNER, testParsingData, testParsingWordNetSynsetFile]    
 
 
 
@@ -296,9 +311,18 @@ main1 = do
   --print tickerMap
 
 
+buildWordNetSynsetLookup :: [WordNetMappingRow] -> M.Map ItemID [Synset]
+buildWordNetSynsetLookup mapping = M.fromListWith (++) (map (\x -> (F._itemID x,  [F._synset x])) mapping)
+
 main2 = do
     let 
       propertyFile = propertyNameFile
     propertyNames <- loadPropertyNames propertyFile
+    wordNetMapping <- loadWordNetMapping wordnetMappingFile
+    let
+      lookupWordNet key = M.lookup key (buildWordNetSynsetLookup wordNetMapping)
+      
+    mapM_ print (Prelude.take 50 propertyNames)
+    mapM_ print (Prelude.take 50 wordNetMapping)
+    eassertEqual (lookupWordNet (itemID "Q218217")) (Just [Synset "incumbent" "noun" 1, Synset "congressman" "noun" 1])
 
-    mapM_ print propertyNames

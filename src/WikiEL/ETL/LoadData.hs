@@ -29,3 +29,6 @@ loadItemIDs = loadFile unItemIDFile itemID
 
 loadSubclassRelations :: SubclassRelationFile -> IO [SubclassRelationRow]
 loadSubclassRelations = loadFile unSubclassRelationFile subclassRelation
+
+loadWordNetMapping :: WordNetMappingFile -> IO [WordNetMappingRow]
+loadWordNetMapping = loadFile unWordNetMappingFile wordNetMapping

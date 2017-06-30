@@ -5,6 +5,8 @@ module WikiEL.Type.FileFormat where
 import           Data.Text                             (Text)
 
 import           WikiEL.Type.Wikidata
+import           WikiEL.Type.Wikipedia
+import           WikiEL.Type.WordNet
 
 
 -- 
@@ -39,3 +41,15 @@ data SubclassRelationRow = SubclassRelationRow { _sub :: ItemID
                                                , _super :: ItemID 
                                                }
                           deriving (Show,Eq)
+
+
+newtype WordNetMappingFile = WordNetMappingFile { unWordNetMappingFile :: FilePath }
+                           deriving (Show)
+
+data WordNetMappingRow = WordNetMappingRow { _pageTitle :: Text
+                                           , _pageID    :: PageID
+                                           , _itemID    :: ItemID
+                                           , _synset    :: Synset
+                                           }
+                       deriving (Show)
+

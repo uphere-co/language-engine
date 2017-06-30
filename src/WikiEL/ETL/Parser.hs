@@ -3,10 +3,14 @@
 module WikiEL.ETL.Parser where
 
 import           Data.Text                             (Text)
+import           Control.Applicative                   ((<|>))
 import           Data.Attoparsec.Text
+import qualified Data.Text                     as T
+
 
 import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Wikipedia
+import           WikiEL.Type.WordNet
 import           WikiEL.Type.Equity
 import           WikiEL.Type.FileFormat
 
@@ -14,6 +18,12 @@ import           WikiEL.Type.FileFormat
 parserWikidataItemID :: Parser ItemID
 parserWikidataItemID = do
   string "Q"
+  id <- decimal
+  return (ItemID id)
+
+parserBrokenItemID :: Parser ItemID
+parserBrokenItemID = do
+  string "Q" <|> string "q"
   id <- decimal
   return (ItemID id)
 
@@ -88,6 +98,29 @@ parseItemID = parseOnly parserWikidataItemID
 parsePageID :: Text -> Either String PageID
 parsePageID = parseOnly parserWikipediaPageID 
 
+parserWordNetSynset :: Parser Synset
+parserWordNetSynset = do
+  string "synset-"
+  tokens  <-  takeWhile1 (/= '-') `sepBy` string "-"
+  let
+    f acc (x:[a,b]) = (reverse (x:acc), a, b)
+    f acc (x:xs)    = f (x:acc) xs
+    (words, pos, idxStr) = f [] tokens
+    Right idx = parseOnly decimal idxStr
+  return (Synset (T.intercalate "-" words) pos idx)
+
+parserWordNetSynsetRow :: Parser WordNetMappingRow
+parserWordNetSynsetRow = do
+  title   <- column
+  sep
+  pageID <- parserWikipediaPageID
+  sep
+  itemID <- parserBrokenItemID  
+  sep
+  synset <- parserWordNetSynset
+  return (WordNetMappingRow title pageID itemID synset)
+
+
 
 itemID :: Text -> ItemID
 itemID = getParseResult parserWikidataItemID
@@ -98,6 +131,8 @@ propertyID = getParseResult parserWikidataPropertyID
 pageID :: Text -> PageID
 pageID = getParseResult parserWikipediaPageID
 
+wordnetSynset :: Text -> Synset
+wordnetSynset = getParseResult parserWordNetSynset
 
 subclassRelation :: Text -> SubclassRelationRow
 subclassRelation = getParseResult parserSubclassRelation
@@ -110,3 +145,6 @@ propertyName = getParseResult parserPropertyName
 
 entityRepr :: Text -> EntityReprRow
 entityRepr = getParseResult parserEntityRepr
+
+wordNetMapping :: Text -> WordNetMappingRow
+wordNetMapping = getParseResult parserWordNetSynsetRow

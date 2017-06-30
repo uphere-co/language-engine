@@ -16,4 +16,4 @@ unitTests =
     ]    
 
 --main = defaultMain unitTests
-main = NET.main1
+main = NET.main2

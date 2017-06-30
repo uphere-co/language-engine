@@ -23,6 +23,7 @@ library
                      , WikiEL.Type.FileFormat
                      , WikiEL.Type.Wikidata
                      , WikiEL.Type.Wikipedia
+                     , WikiEL.Type.WordNet
                      , WikiEL.ETL.LoadData
                      , WikiEL.ETL.Parser
                      , WikiEL.EntityLinking
@@ -64,6 +65,7 @@ test-suite test
                      , tasty
                      , nlp-types
                      , wiki-ner
+                     , attoparsec
   default-language:    Haskell2010
   ghc-options: 
     -threaded
