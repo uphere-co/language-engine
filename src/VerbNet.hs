@@ -81,7 +81,7 @@ data Syntax = NP   { _np_restrs :: Either SynRestrs SelRestrs
             | VERB
             | ADJ
             | ADV
-            | PREP { _prep_value :: Text }
+            | PREP { _prep_value :: Maybe Text }
             | LEX  { _lex_value :: Text }
             deriving Show
 
@@ -101,6 +101,7 @@ data Arg = Arg { _arg_type :: ArgType
 makeLenses ''Arg                  
 
 data Pred = Pred { _pred_args :: [Arg]
+                 , _pred_bool :: Maybe Text
                  , _pred_value :: Text
                  }
           deriving Show
@@ -219,7 +220,7 @@ p_syntax x = let ys = x^..elements
                      "VERB" -> pure VERB
                      "ADJ"  -> pure ADJ
                      "ADV"  -> pure ADV
-                     "PREP" -> PREP <$> y .: "value"
+                     "PREP" -> PREP <$> optional (y .: "value")
                      "LEX"  -> LEX <$> y .: "value"
                      x      -> fail ("p_syntax: p_each: " ++ show x)
 
@@ -233,6 +234,7 @@ p_arg x = Arg <$> (x .: "type"  >>= \case ("Event" :: Text) -> pure Arg_Event
 
 p_pred :: Element -> Parser Pred
 p_pred x = Pred <$> p_list p_arg "ARG" "ARGS" x
+                <*> optional (x .: "bool")
                 <*> x .: "value"
           
 p_frame :: Element -> Parser Frame
@@ -263,14 +265,15 @@ p_vnclass x = VNClass <$> p_list p_member     "MEMBER"     "MEMBERS"    x
 main :: IO ()
 main = do
   let dir= "/scratch/wavewave/VerbNet/verbnet"
-  {- cnts <- getDirectoryContents dir
-  let fs = sort (filter (\x -> takeExtensions x == ".xml") cnts) -}
-  let fs = [ "get-13.5.1.xml" ]
+  cnts <- getDirectoryContents dir
+  let fs = sort (filter (\x -> takeExtensions x == ".xml") cnts) 
+  -- let fs = [ "admit-65.xml" ] -- [ "get-13.5.1.xml" ]
   flip mapM_ fs $ \f -> do
     let fp = dir  </> f
+    print fp
     txt <- TLIO.readFile fp
     case txt ^? html . allNamed (only "VNCLASS") of
       Nothing -> error "nothing"
       Just f -> case p_vnclass f of
                   Left err -> error err
-                  Right c  -> print c
+                  Right c  -> return () -- print c
