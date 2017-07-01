@@ -38,6 +38,8 @@ let
             attoparsec
             discrimination
             directory-tree
+            either
+            # extra
             haskeline
             lens
             monad-loops
