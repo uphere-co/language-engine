@@ -142,10 +142,10 @@ p_inventory x = Inventory <$> optional ((^.contents) <$> getOnly1 x "commentary"
 
 main :: IO ()
 main = do
-  let dir= "/scratch/wavewave/LDC/ontonotes-release-5.0/data/files/data/english/metadata/sense-inventories"
-  -- cnts <- getDirectoryContents dir
-  --let fs = sort (filter (\x -> takeExtensions x == ".xml") cnts) 
-  let fs = [ "get-v.xml" ] -- [ "admit-65.xml" ] -- [ "get-13.5.1.xml" ]
+  let dir= "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
+  cnts <- getDirectoryContents dir
+  let fs = sort (filter (\x -> takeExtensions x == ".xml") cnts) 
+  -- let fs = ["stock-v.xml"] -- [ "fracture-v.xml" ] -- [ "get-v.xml" ]
   flip mapM_ fs $ \f -> do
     let fp = dir  </> f
     print fp
@@ -154,6 +154,6 @@ main = do
       Nothing -> error "nothing"
       Just f -> case p_inventory f of
                   Left err -> error err
-                  Right c  -> print c
+                  Right c  -> return () -- print c
 
 
