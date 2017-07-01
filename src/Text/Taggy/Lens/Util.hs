@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Text.Taggy.Lens.Util where
 
 import           Control.Applicative
@@ -20,10 +22,9 @@ instance FromAttr Text where
                    Nothing -> Left (T.unpack n)
                    Just r  -> Right r
 
-{- 
 instance FromAttr a => FromAttr (Maybe a) where
   fromAttr x n = either (\_ -> Right Nothing) (Right . Just) (fromAttr x n :: Either String a)
--}
+  
 
 (.:) :: FromAttr a => Element -> Text -> Either String a
 (.:) = fromAttr 
