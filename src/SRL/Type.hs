@@ -57,7 +57,7 @@ makeLenses ''SRLFeature
 
 
 data ArgNodeFeature = AFeat { _afeat_label :: PropBankLabel
-                            , _afeat_srlfeature :: SRLFeature --  (Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text)))))
+                            , _afeat_srlfeature :: SRLFeature
                             }
                     deriving (Show)
 
@@ -71,7 +71,6 @@ data InstanceFeature = IFeat { _ifeat_predidx :: Int
                              }
                      deriving (Show)
 
---   (Int,RoleSet,Voice, [[ArgNodeFeature]])
 makeLenses ''InstanceFeature
 
 
