@@ -6,9 +6,7 @@ module OntoNotes.Parser.Sense where
 import           Control.Lens
 import           Data.Text            (Text)
 import qualified Data.Text    as T
-import qualified Data.Text.IO as T.IO
 import           Data.Text.Read
-import           System.FilePath
 
 
 data SenseInstance = SenseInstance { _sinst_file :: Text
@@ -36,14 +34,3 @@ parseSenseInst ws = do
 
 
 
-main :: IO ()
-main = do
-  let dir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj/00"
-      filename = "wsj_0036.sense"
-
-      fp = dir </> filename
-
-  txt <- T.IO.readFile fp
-  let lst = T.lines txt
-      wss = map T.words lst
-  mapM_ (print . parseSenseInst) wss
