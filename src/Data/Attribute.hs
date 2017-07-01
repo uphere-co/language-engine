@@ -20,6 +20,8 @@ module Data.Attribute
 , getElem
 , AttribList(..)
 , joinAttrib
+, ToTuple (..)
+, FromTuple (..)  
 ) where
 
 
@@ -28,12 +30,12 @@ import           Data.Discrimination.Grouping
 
   
 data AttribList (list :: [*]) where
-  AttribNull :: AttribList '[]
+  AttribNil :: AttribList '[]
   AttribCons :: a -> AttribList as -> AttribList (a ': as)
 
 
 instance Show (AttribList '[]) where
-  show AttribNull = "AttribNull"
+  show AttribNil = "AttribNil"
 
 instance (Show a, Show (AttribList as)) => Show (AttribList (a ': as)) where
   show (AttribCons x xs) = "AttribCons (" ++ show x ++ ") (" ++ show xs ++ ")" 
@@ -68,6 +70,47 @@ atail :: AttribList (a ': as) -> AttribList as
 atail (AttribCons _ xs) = xs
 
 
+-- | this is for convenience
+class ToTuple a t where
+  toTuple :: a -> t 
+
+instance ToTuple (AttribList '[]) () where
+  toTuple _ = ()
+
+instance ToTuple (AttribList '[a]) a where
+  toTuple (AttribCons x AttribNil) = x
+
+instance ToTuple (AttribList '[a,b]) (a,b) where
+  toTuple (AttribCons x (AttribCons y AttribNil)) = (x,y)
+
+instance ToTuple (AttribList '[a,b,c]) (a,b,c) where
+  toTuple (AttribCons x (AttribCons y (AttribCons z AttribNil))) = (x,y,z)
+
+instance ToTuple (AttribList '[a,b,c,d]) (a,b,c,d) where
+  toTuple (AttribCons x (AttribCons y (AttribCons z (AttribCons w AttribNil))))
+    = (x,y,z,w)
+
+
+class FromTuple t a where  
+  fromTuple :: t -> a
+
+instance FromTuple () (AttribList '[]) where
+  fromTuple _ = anil
+
+instance FromTuple a (AttribList '[a]) where
+  fromTuple x = x `acons` anil
+
+instance FromTuple (a,b) (AttribList '[a,b]) where
+  fromTuple (x,y) = x `acons` (y `acons` anil)
+
+instance FromTuple (a,b,c) (AttribList '[a,b,c]) where
+  fromTuple (x,y,z) = x `acons` (y `acons` (z `acons` anil))
+
+instance FromTuple (a,b,c,d) (AttribList '[a,b,c,d]) where
+  fromTuple (x,y,z,w) = x `acons` (y `acons` (z `acons` (w `acons` anil)))
+
+  
+
 -- (<&>) = AttribCons
 
 acons = AttribCons
@@ -76,9 +119,7 @@ infixr 8 `acons`
 
 -- infixr 8 <&>
 
-anil = AttribNull
-
-
+anil = AttribNil
 joinAttrib :: forall b k xs. (Grouping k) =>
               (b -> k)
            -> [b]              

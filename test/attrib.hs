@@ -38,4 +38,8 @@ main = do
 
   print $ joinAttrib fst ys xs'
 
-  print $ joinAttrib fst zs (joinAttrib fst ys xs') 
+  let lst = joinAttrib fst zs (joinAttrib fst ys xs') 
+
+  print lst
+
+  print (map toTuple lst :: [(Int,Maybe (Int,Char), Maybe (Int,(Int,Int)), String)])
