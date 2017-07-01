@@ -1,5 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
+import           Control.Applicative
+import qualified Data.Attoparsec.Text         as A
 import           Data.Discrimination                  (joining)
 import           Data.Discrimination.Grouping
 import           Data.Foldable                        (toList,traverse_)
@@ -11,6 +15,10 @@ import           System.Directory.Tree
 import           System.FilePath
 import           System.IO
 --
+import           NLP.Parser.PennTreebankII
+import           NLP.Printer.PennTreebankII
+import           NLP.Type.PennTreebankII
+--
 import           OntoNotes.Parser.Sense
 
 parseSenseFile :: FilePath -> IO (Either String [SenseInstance])
@@ -20,6 +28,7 @@ parseSenseFile fp = do
       wss = map T.words lst
   return (traverse parseSenseInst wss)
   --   mapM_ (print . parseSenseInst) wss
+
 
 
 main :: IO ()
@@ -37,13 +46,18 @@ main = do
       joined = joining grouping headMatch takeBaseName takeBaseName sensefiles parsefiles
         where headMatch (x:_) (y:_) = Just (x,y)
               headMatch _     _     = Nothing
-  -- traverse_ print joined
- 
+
+  
   flip traverse_ (catMaybes joined) $ \(fp_sense,fp_parse) -> do
     putStrLn (fp_sense)
-    T.IO.putStrLn =<< T.IO.readFile fp_parse
-    einsts <- parseSenseFile fp_sense
-    case einsts of
+    txt_parse <- T.IO.readFile fp_parse
+    case A.parseOnly (A.many1 (A.skipSpace *> pnode)) txt_parse of
       Left err -> error err
-      Right insts -> traverse_ print insts
-  
+      Right trs -> do
+        let sentterms = zip [0..] (map (map (\(i,(_,t)) -> (i,t)) . toList . mkIndexedTree) trs)
+        -- traverse_ (T.IO.putStrLn . prettyPrint 0) trs
+        traverse_ print sentterms
+        einsts <- parseSenseFile fp_sense
+        case einsts of
+          Left err -> error err
+          Right insts -> traverse_ print insts
