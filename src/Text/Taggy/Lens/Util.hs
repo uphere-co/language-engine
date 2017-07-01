@@ -1,4 +1,4 @@
-module Text.XML.TaggyLensUtil where
+module Text.Taggy.Lens.Util where
 
 import           Control.Applicative
 import           Control.Lens       hiding (element,elements)
