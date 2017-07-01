@@ -15,7 +15,10 @@ import           Data.List                      (sortBy,zipWith4)
 import           Data.Maybe                     (mapMaybe)
 --
 import           NLP.Type.PennTreebankII
+import           PropBank.Match
+import           PropBank.Type.Match
 import           PropBank.Type.Prop
+import           PropBank.Util
 --
 import           SRL.Feature.Dependency
 import           SRL.Feature.ParseTreePath
