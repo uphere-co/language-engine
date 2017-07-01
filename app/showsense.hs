@@ -19,6 +19,7 @@ import           System.Directory.Tree
 import           System.FilePath
 import           System.IO
 --
+import           Data.Attribute
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
@@ -54,28 +55,34 @@ main = do
 
   dtr <- build basedir
   let fps = sort (toList (dirTree dtr))
-      sensefiles = filter (\x -> takeExtensions x == ".sense") fps
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
-
-      joined = joining grouping headMatch takeBaseName takeBaseName sensefiles parsefiles
+      sensefiles = filter (\x -> takeExtensions x == ".sense") fps
+      propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps 
+      joinf = joinAttrib takeBaseName
+      lst :: [(String,Maybe FilePath,Maybe FilePath,FilePath)]
+      lst = map toTuple (propfiles `joinf` (sensefiles `joinf` map (\x -> takeBaseName x `acons` x `acons` anil) parsefiles))
+  -- mapM_ print lst
+  {-     joined = joining grouping headMatch takeBaseName takeBaseName sensefiles parsefiles
         where headMatch (x:_) (y:_) = Just (x,y)
               headMatch _     _     = Nothing
+  -}
 
   
-  flip traverse_ (catMaybes joined) $ \(fp_sense,fp_parse) -> do
-    r <- runEitherT $ do
-      liftIO $ putStrLn (fp_sense)
-      txt_parse <- liftIO (T.IO.readFile fp_parse)
-      trs <- hoistEither (A.parseOnly (A.many1 (A.skipSpace *> pnode)) txt_parse)
-      let sentterms = zip [0..] $
-                        map (zip [0..] . map snd . filter (\(t,_) -> t /= "-NONE-") . toList) trs
-      -- traverse_ (T.IO.putStrLn . prettyPrint 0) trs
-      traverse_ (liftIO . print) sentterms
-      insts <- EitherT $ parseSenseFile fp_sense
-      traverse_ (formatSense sentterms) insts
+  flip traverse_ lst $ \(_,mfp_prop,mfp_sense,fp_parse) -> do
+    case (mfp_prop,mfp_sense) of
+      (Just fp_prop,Just fp_sense) -> do
+        r <- runEitherT $ do
+          liftIO $ putStrLn (fp_sense)
+          txt_parse <- liftIO (T.IO.readFile fp_parse)
+          trs <- hoistEither (A.parseOnly (A.many1 (A.skipSpace *> pnode)) txt_parse)
+          let sentterms = zip [0..] $
+                            map (zip [0..] . map snd . filter (\(t,_) -> t /= "-NONE-") . toList) trs
+          -- traverse_ (T.IO.putStrLn . prettyPrint 0) trs
+          traverse_ (liftIO . print) sentterms
+          insts <- EitherT $ parseSenseFile fp_sense
+          traverse_ (formatSense sentterms) insts
 
-
-
-    case r of
-      Left err -> error err
-      Right () -> return ()
+        case r of
+          Left err -> error err
+          Right () -> return ()
+      _ -> return ()  
