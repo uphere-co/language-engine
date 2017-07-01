@@ -17,6 +17,7 @@ let
             attoparsec
             bifunctors
             lens
+            taggy-lens
             text
             cabal-install
           ]);
