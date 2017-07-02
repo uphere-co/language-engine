@@ -27,6 +27,7 @@ module Data.Attribute
 
 import           Data.Discrimination
 import           Data.Discrimination.Grouping
+import           Data.Maybe
 
   
 data AttribList (list :: [*]) where
@@ -112,8 +113,8 @@ joinAttrib :: forall b k xs. (Grouping k) =>
            -> [b]              
            -> [AttribList (k ': xs)]
            -> [AttribList (k ': Maybe b ': xs)]
-joinAttrib f bs lst = joining grouping headMatch f ahead bs lst
-  where headMatch :: [b] -> [AttribList (k ': xs)] -> AttribList (k ': Maybe b ': xs)
-        headMatch (y:_) (AttribCons k xs : _) = acons k (acons (Just y) xs)
-        headMatch _     (AttribCons k xs : _) = acons k (acons Nothing  xs)
-
+joinAttrib f bs lst = catMaybes (joining grouping headMatch f ahead bs lst)
+  where headMatch :: [b] -> [AttribList (k ': xs)] -> Maybe (AttribList (k ': Maybe b ': xs))
+        headMatch (y:_) (AttribCons k xs : _) = Just (acons k (acons (Just y) xs))
+        headMatch _     (AttribCons k xs : _) = Just (acons k (acons Nothing  xs))
+        headMatch _     _                     = Nothing
