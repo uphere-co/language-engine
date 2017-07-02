@@ -34,13 +34,6 @@ import           PropBank.Type.Prop
 import           OntoNotes.Parser.Sense
 
 
-parseSenseFile :: FilePath -> IO (Either String [SenseInstance])
-parseSenseFile fp = do
-  txt <- T.IO.readFile fp
-  let lst = T.lines txt
-      wss = map T.words lst
-  return (traverse parseSenseInst wss)
-
 
 elookup str k = hoistEither.maybeToEither str.lookup k
 
@@ -93,6 +86,14 @@ readPropBank propfile = liftIO $ parsePropWithFileField NoOmit <$> T.IO.readFile
 
 
 readPennTree pennfile = hoistEither . A.parseOnly (A.many1 (A.skipSpace *> pnode)) =<< liftIO (T.IO.readFile pennfile)
+
+
+parseSenseFile :: FilePath -> IO (Either String [SenseInstance])
+parseSenseFile fp = do
+  txt <- T.IO.readFile fp
+  let lst = T.lines txt
+      wss = map T.words lst
+  return (traverse parseSenseInst wss)
 
 
 readSense :: FilePath -> EitherT String IO [SenseInstance]
