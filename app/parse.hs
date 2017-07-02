@@ -44,7 +44,7 @@ process pp = do
   let fps = sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
 
-  let parsefiles = [basedir </> "00" </> "wsj_0044.parse"]
+  -- let parsefiles = [basedir </> "00" </> "wsj_0044.parse"]
 
   withFile "error.log" WriteMode $ \h_err -> do
   
