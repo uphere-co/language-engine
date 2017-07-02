@@ -35,6 +35,7 @@ library
                        aeson,
                        attoparsec,
                        bifunctors,
+                       binary,
                        discrimination,
                        lens,
                        taggy-lens,
