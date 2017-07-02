@@ -1,15 +1,16 @@
-{-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE KindSignatures        #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PolyKinds             #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE StandaloneDeriving    #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE ConstraintKinds        #-}
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE KindSignatures         #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE PolyKinds              #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE StandaloneDeriving     #-}
+{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TypeOperators          #-}
 
 module Data.Attribute
 ( anil
@@ -45,20 +46,14 @@ data Elem x xs where
   Here :: Elem x (x ': xs)
   There :: Elem x xs -> Elem x (y ': xs)
 
-getElem :: Elem x xs -> AttribList xs -> x
-getElem Here      (AttribCons x _)  = x
-getElem (There e) (AttribCons _ xs) = getElem e xs 
-
-{- 
-data (:~:) a b where
-  Refl ::  a :~: a
-
-type family Position x xs :: Elem x xs where
--}
-
 instance Show (Elem x xs) where
   show Here = "Here"
   show (There x) = "There (" ++ show x ++ ")"
+
+
+getElem :: Elem x xs -> AttribList xs -> x
+getElem Here      (AttribCons x _)  = x
+getElem (There e) (AttribCons _ xs) = getElem e xs 
 
 
 ahead :: AttribList (a ': as) -> a
@@ -71,19 +66,19 @@ atail (AttribCons _ xs) = xs
 
 -- | this is for convenience
 class ToTuple lst where
-  type Tuple lst :: *
+  type Tuple lst = r | r -> lst 
   toTuple :: AttribList lst -> Tuple lst
   fromTuple :: Tuple lst -> AttribList lst
 
-instance ToTuple '[] where
-  type Tuple '[] = ()
-  toTuple _ = ()
-  fromTuple _ = anil
+-- instance ToTuple '[] where
+--   type Tuple '[] = ()
+--   toTuple _ = ()
+--   fromTuple _ = anil
 
-instance ToTuple '[a] where
-  type Tuple '[a] = a
-  toTuple (AttribCons x AttribNil) = x
-  fromTuple x = x `acons` anil
+-- instance ToTuple '[a] where
+--  type Tuple '[a] = a
+--  toTuple (AttribCons x AttribNil) = x
+--  fromTuple x = x `acons` anil
 
 instance ToTuple '[a,b] where
   type Tuple '[a,b] = (a,b)
@@ -101,32 +96,17 @@ instance ToTuple '[a,b,c,d] where
     = (x,y,z,w)
   fromTuple (x,y,z,w) = x `acons` (y `acons` (z `acons` (w `acons` anil)))
 
-{- 
-class FromTuple a where
-  type Tuple (
-  fromTuple :: t -> a
-
-instance FromTuple () (AttribList '[]) where
-
-instance FromTuple a (AttribList '[a]) where
-
-instance FromTuple (a,b) (AttribList '[a,b]) where
-
-instance FromTuple (a,b,c) (AttribList '[a,b,c]) where
-
-instance FromTuple (a,b,c,d) (AttribList '[a,b,c,d]) where
--}
-  
-
--- (<&>) = AttribCons
 
 acons = AttribCons
 
 infixr 8 `acons`
 
+-- (<&>) = AttribCons
+
 -- infixr 8 <&>
 
 anil = AttribNil
+
 joinAttrib :: forall b k xs. (Grouping k) =>
               (b -> k)
            -> [b]              
