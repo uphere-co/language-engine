@@ -18,6 +18,7 @@ let
             bifunctors
             discrimination
             lens
+            pretty-hex
             taggy-lens
             text
             cabal-install
