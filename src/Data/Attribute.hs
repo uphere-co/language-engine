@@ -21,7 +21,6 @@ module Data.Attribute
 , AttribList(..)
 , joinAttrib
 , ToTuple (..)
-, FromTuple (..)  
 ) where
 
 
@@ -71,44 +70,52 @@ atail (AttribCons _ xs) = xs
 
 
 -- | this is for convenience
-class ToTuple a t where
-  toTuple :: a -> t 
+class ToTuple lst where
+  type Tuple lst :: *
+  toTuple :: AttribList lst -> Tuple lst
+  fromTuple :: Tuple lst -> AttribList lst
 
-instance ToTuple (AttribList '[]) () where
+instance ToTuple '[] where
+  type Tuple '[] = ()
   toTuple _ = ()
+  fromTuple _ = anil
 
-instance ToTuple (AttribList '[a]) a where
+instance ToTuple '[a] where
+  type Tuple '[a] = a
   toTuple (AttribCons x AttribNil) = x
+  fromTuple x = x `acons` anil
 
-instance ToTuple (AttribList '[a,b]) (a,b) where
+instance ToTuple '[a,b] where
+  type Tuple '[a,b] = (a,b)
   toTuple (AttribCons x (AttribCons y AttribNil)) = (x,y)
+  fromTuple (x,y) = x `acons` (y `acons` anil)
 
-instance ToTuple (AttribList '[a,b,c]) (a,b,c) where
+instance ToTuple '[a,b,c] where
+  type Tuple '[a,b,c] = (a,b,c)
   toTuple (AttribCons x (AttribCons y (AttribCons z AttribNil))) = (x,y,z)
+  fromTuple (x,y,z) = x `acons` (y `acons` (z `acons` anil))
 
-instance ToTuple (AttribList '[a,b,c,d]) (a,b,c,d) where
+instance ToTuple '[a,b,c,d] where
+  type Tuple '[a,b,c,d] = (a,b,c,d)
   toTuple (AttribCons x (AttribCons y (AttribCons z (AttribCons w AttribNil))))
     = (x,y,z,w)
+  fromTuple (x,y,z,w) = x `acons` (y `acons` (z `acons` (w `acons` anil)))
 
-
-class FromTuple t a where  
+{- 
+class FromTuple a where
+  type Tuple (
   fromTuple :: t -> a
 
 instance FromTuple () (AttribList '[]) where
-  fromTuple _ = anil
 
 instance FromTuple a (AttribList '[a]) where
-  fromTuple x = x `acons` anil
 
 instance FromTuple (a,b) (AttribList '[a,b]) where
-  fromTuple (x,y) = x `acons` (y `acons` anil)
 
 instance FromTuple (a,b,c) (AttribList '[a,b,c]) where
-  fromTuple (x,y,z) = x `acons` (y `acons` (z `acons` anil))
 
 instance FromTuple (a,b,c,d) (AttribList '[a,b,c,d]) where
-  fromTuple (x,y,z,w) = x `acons` (y `acons` (z `acons` (w `acons` anil)))
-
+-}
   
 
 -- (<&>) = AttribCons
