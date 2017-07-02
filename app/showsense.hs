@@ -33,13 +33,13 @@ import           PropBank.Type.Prop
 --
 import           OntoNotes.Parser.Sense
 
+
 parseSenseFile :: FilePath -> IO (Either String [SenseInstance])
 parseSenseFile fp = do
   txt <- T.IO.readFile fp
   let lst = T.lines txt
       wss = map T.words lst
   return (traverse parseSenseInst wss)
-  --   mapM_ (print . parseSenseInst) wss
 
 
 elookup str k = hoistEither.maybeToEither str.lookup k
@@ -67,27 +67,17 @@ format2 (n,mlst,tokens) = printf "sentence %2d: %s\n" n (T.intercalate " " (map 
                           fromMaybe "" (fmap (format' tokens) mlst) ++
                           "\n--------------------------------------------------------"
   
+
 format' :: [(Int,Text)] -> [((Int,Int),Maybe SenseInstance,Instance)] -> String
 format' tokens lst = intercalate "\n" (map f lst)
   where f ((i,j),msinst,pinst) = printf "token %2d %15s %15s %15s" j (fromMaybe "" (lookup j tokens)) fProp fSense
           where fSense = maybe "" (\sinst->sinst^.sinst_sense <> ":" <> T.pack (show (sinst^.sinst_sense_num))) msinst
                 fProp = let (lemma,num) = pinst^.inst_lemma_roleset_id
                         in lemma <> "." <> num
-        
--- show (length lst)
+       
 
-{- 
-                          ++
-                         (flip concatMap lst  $ \((i,j),_,pinst) ->
-                            printf "token %2d: %15s\n" j (fromMaybe "" (lookup j tokens))
-                         )
--}
-
-
-getFileTriples :: IO [(FilePath,FilePath,FilePath)]
-getFileTriples = do
-  let basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj/00"
-
+getFileTriples :: FilePath -> IO [(FilePath,FilePath,FilePath)]
+getFileTriples basedir = do
   dtr <- build basedir
   let fps = sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
@@ -101,14 +91,18 @@ getFileTriples = do
 
 readPropBank propfile = liftIO $ parsePropWithFileField NoOmit <$> T.IO.readFile propfile
 
+
 readPennTree pennfile = hoistEither . A.parseOnly (A.many1 (A.skipSpace *> pnode)) =<< liftIO (T.IO.readFile pennfile)
+
 
 readSense :: FilePath -> EitherT String IO [SenseInstance]
 readSense sensefile =  EitherT $ parseSenseFile sensefile
 
+
 makeTermListNoNone :: [PennTree] -> [(Int,[(Int,Text)])]
 makeTermListNoNone
   = zip [0..] . map (zip [0..] . map snd . filter (\(t,_) -> t /= "-NONE-") . toList)
+
 
 indexProp :: [PennTree] -> Instance -> Maybe ((Int,Int),Instance)
 indexProp trs inst = do
@@ -120,15 +114,11 @@ indexProp trs inst = do
     Right j -> Just ((i,j),inst)
 
 
-
-
 main :: IO ()
 main = do
-  -- putStrLn "OntoNotes: section Wall Street Journal"
-  -- putStrLn "======================================"
-  lst <- getFileTriples
-  
-  flip traverse_ (take 2 lst) $ \(fp_prop,fp_sense,fp_parse) -> do
+  let basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj/23"
+  lst <- getFileTriples basedir 
+  flip traverse_ lst $ \(fp_prop,fp_sense,fp_parse) -> do
     r <- runEitherT $ do
       liftIO $ putStrLn "\n\n\n=============================================================================================="
       liftIO $ putStrLn (fp_sense)
@@ -145,10 +135,6 @@ main = do
 
       let a_propinsts = map fromTuple (mapMaybe (indexProp trs) propinsts)
           a_sentterms = map fromTuple sentterms
-      
-      {- 
-      (fromTuple . (\x -> (x^.inst_tree_id,x)))
-                      propinsts -}
           getidx sinst = (sinst^.sinst_sentence_id,sinst^.sinst_token_id)
           matched1 = groupBy ((==) `on` (^._1._1))
                    . sortBy (compare `on` (^._1))
@@ -156,9 +142,6 @@ main = do
                    $ joinAttrib getidx senseinsts a_propinsts
           matched2 = map toTuple (joinAttrib ((^._1._1).head) matched1 a_sentterms)
       liftIO $ mapM_ (putStrLn . format2) matched2
-      -- liftIO $ mapM_ print a_propinsts
-
-
     case r of
       Left err -> error err
       Right () -> return ()
