@@ -79,7 +79,7 @@ cmpLevel (Just x) (Just y) = compare x y
 
 annotateDepInfo :: PennTreeIdxG (ANode (AttribList ns)) (ALeaf (AttribList (Maybe DepInfo ': ls)))
                 -> PennTreeIdxG (ANode (AttribList (Maybe DepInfo ': ns))) (ALeaf (AttribList (Maybe DepInfo ': ls)))
--- annotateDepInfo (PL t)        = PL t
+annotateDepInfo (PL t)        = PL t
 annotateDepInfo (PN (r,ANode c x) xs) =
   let ys = map annotateDepInfo xs
       -- zs :: [Either (ChunkTag,Maybe DepInfo) (Maybe DepInfo)]
