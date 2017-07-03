@@ -28,27 +28,28 @@ import           CoreNLP.Simple.Type
 --
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
-import           NLP.Type.TreeZipper
+import           Data.BitreeZipper
 --
 import           SRL.Feature
+import           SRL.Feature.Voice
 
 
 showVoice :: (PennTree,S.Sentence) -> IO ()
 showVoice (pt,sent) = do
   let lst = catMaybes (sent ^.. S.token . traverse . TK.originalText . to (fmap cutf8))
   TIO.putStrLn "---------- VOICE -----------------"
-  TIO.putStrLn $ T.intercalate " " lst                       
-  let ipt = mkPennTreeIdx pt
-  TIO.putStrLn (prettyPrint 0 pt)     
-  let lemmamap =  foldl' (\(!acc) (k,v) -> IM.insert k v acc) IM.empty $
-                    zip [0..] (catMaybes (sent ^.. S.token . traverse . TK.lemma . to (fmap cutf8)))
+  TIO.putStrLn $ T.intercalate " " lst
+  TIO.putStrLn (prettyPrint 0 pt)       
+  let ipt = mkAnnotatable (mkPennTreeIdx pt)
+      lemmamap = mkLemmaMap sent
       lemmapt = lemmatize lemmamap ipt
   let getf (PL x) = Right x
       getf (PN x _) = Left x
       testf z = case getf (current z) of
-                  Right (n,(VBN,(txt,_))) -> putStrLn (show n ++ ": " ++  T.unpack txt ++ ": " ++ show (isPassive z))
+                  Right (n,ALeaf (VBN,txt) annot)
+                    -> putStrLn (show n ++ ": " ++  T.unpack txt ++ ": " ++ show (isPassive z))
                   _ -> return ()
-  mapM_ testf (mkTreeZipper [] lemmapt)
+  mapM_ testf (mkBitreeZipper [] lemmapt)
 
 
 main :: IO ()
