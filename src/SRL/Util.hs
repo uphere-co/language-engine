@@ -1,5 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators #-}
 
 module SRL.Util where
 
@@ -11,6 +13,7 @@ import qualified Data.IntMap as IM
 import           Data.Text         (Text)
 import qualified Data.Text   as T  (intercalate, unpack)
 --
+import           Data.Attribute
 import           Data.Bitree
 import           NLP.Type.PennTreebankII
 --
@@ -44,8 +47,10 @@ findNotOverlappedNodes ipt rng = filter (`isNotOverlappedWith` rng)
                                $ ipt 
 
 
-decorateLeaves :: IntMap v -> Bitree c (Int,t) -> Bitree c (Int,(Maybe v,t))
-decorateLeaves m tr = let lkup (n,t) = (n,(IM.lookup n m,t)) in fmap lkup tr
+
+-- Bitree c (Int,t) -> Bitree c (Int,(Maybe v,t))
+decorateLeaves :: IntMap v -> PennTreeIdxG n (ALeaf (AttribList ls)) -> PennTreeIdxG n (ALeaf (AttribList (Maybe v ': ls)))
+decorateLeaves m tr = let lkup (n,ALeaf t ts) = (n, ALeaf t (IM.lookup n m `acons` ts)) in fmap lkup tr
 
 
 joiningIntMap :: IntMap v -> IntMap v' -> IntMap (v,v')

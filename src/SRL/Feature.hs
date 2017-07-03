@@ -14,6 +14,7 @@ import qualified Data.IntMap             as IM
 import           Data.List                      (sortBy,zipWith4)
 import           Data.Maybe                     (mapMaybe)
 --
+import           Data.Attribute
 import           NLP.Type.PennTreebankII
 import           PropBank.Match
 import           PropBank.Type.Match
@@ -36,8 +37,10 @@ calcSRLFeature sentinfo predidx (Single rng) =
       dep = sentinfo^.corenlp_dep
       parsetree = parseTreePathFull (predidx,rng) ipt
       path = maybe [] (simplifyPTP . parseTreePath) parsetree
-      dltr = depLevelTree dep ipt
-      dprpath = depRelPath dep ipt (predidx,rng)
+      dltr = bimap convn convl (depLevelTree dep (mkAnnotatable ipt))
+        where convn (rng,ANode c  _) = (rng,c)
+              convl (i  ,ALeaf pt x) = (i  ,(ahead x,pt))
+      dprpath = depRelPath dep ipt (predidx,rng) 
       hd = headWord =<< matchR rng dltr
   in  Just (SRLFeat rng path dprpath hd)
 calcSRLFeature sentinfo predidx (Multi rngs) = 
@@ -45,7 +48,9 @@ calcSRLFeature sentinfo predidx (Multi rngs) =
       dep = sentinfo^.corenlp_dep
       parsetrees = map (\rng -> parseTreePathFull (predidx,rng) ipt) rngs
       paths = map (maybe [] (simplifyPTP . parseTreePath)) parsetrees
-      dltr = depLevelTree dep ipt
+      dltr = bimap convn convl (depLevelTree dep (mkAnnotatable ipt))
+        where convn (rng,ANode c  _) = (rng,c)
+              convl (i  ,ALeaf pt x) = (i  ,(ahead x,pt))
       dprpaths = map (\rng -> depRelPath dep ipt (predidx,rng)) rngs
       heads = map (\rng -> headWord =<< matchR rng dltr) rngs
       comparef Nothing  _        = GT
