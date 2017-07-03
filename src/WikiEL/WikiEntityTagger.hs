@@ -13,12 +13,16 @@ import           Control.Arrow                         (second)
 import           Data.Vector.Generic.Mutable           (MVector)
 import           Data.Vector                           (Vector,backpermute,findIndices
                                                        ,slice,fromList,toList,unsafeThaw,modify)
+import           Data.Vector.Unboxed                   ((!))
 import           Data.Ord                              (Ord)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
+import           Data.Text.Encoding                    (encodeUtf8)
+import           Data.Digest.XXHash                    (XXHash,xxHash')
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 import qualified Data.Vector                   as V
 import qualified Data.Vector.Algorithms.Search as VS
+import qualified Data.Vector.Unboxed           as UV
 
 
 import qualified WikiEL.Type.Wikidata         as Wiki
@@ -27,17 +31,14 @@ import           WikiEL.Type.FileFormat               (EntityReprFile,EntityRepr
 import           WikiEL.ETL.LoadData                   (loadEntityReprs)
 import           WikiEL.Misc                           (IRange(..))
 import           Assert                                (massertEqual,eassertEqual)
-{-
-import qualified Data.Vector.Unboxed.Mutable   as MV
-import qualified Data.Vector.Unboxed           as V
--}
 
+type WordHash = XXHash
+type WordsHash = UV.Vector WordHash
 
- 
-ithElementOrdering :: (Ord e) => Int -> [e] -> [e] -> Ordering
-ithElementOrdering i lhs rhs | length lhs <= i = LT
-                             | length rhs <= i = GT
-                             | otherwise = compare (lhs!!i) (rhs!!i)
+ithElementOrdering :: Int -> WordsHash -> WordsHash -> Ordering
+ithElementOrdering i lhs rhs | UV.length lhs <= i = LT
+                             | UV.length rhs <= i = GT
+                             | otherwise = compare (lhs!i) (rhs!i)
 
 binarySearchLR :: (PrimMonad m, MVector v e, Ord e) => v (PrimState m) e -> e -> m (Int,Int)
 binarySearchLR vec elm = do
@@ -57,7 +58,7 @@ binarySearchLRByBounds comp vec elm l u = do
   idxR <- VS.binarySearchRByBounds comp vec elm l u
   return (idxL, idxR)  
 
-greedyMatchImpl :: (Ord e) => Vector [e] -> [e] -> (Int, IRange) -> (Int, IRange)
+greedyMatchImpl :: Vector WordsHash -> WordsHash -> (Int, IRange) -> (Int, IRange)
 greedyMatchImpl entities words (i, IRange beg end) = runST $ do
   mvec <- unsafeThaw entities
   (idxL, idxR) <- binarySearchLRByBounds (ithElementOrdering i) mvec words beg end
@@ -66,41 +67,43 @@ greedyMatchImpl entities words (i, IRange beg end) = runST $ do
     then return (i, IRange beg end)
     else return (greedyMatchImpl entities words (i+1, IRange idxL idxR))
 
-greedyMatch :: (Ord e) => Vector [e] -> [e] -> (Int, IRange)
+greedyMatch :: Vector WordsHash -> WordsHash -> (Int, IRange)
 greedyMatch entities words = greedyMatchImpl entities words (0, IRange 0 (length entities))
 
-getMatchedIndexes :: Vector [e] -> (Int, IRange) -> (Int, Vector Int)
+getMatchedIndexes :: Vector WordsHash -> (Int, IRange) -> (Int, Vector Int)
 getMatchedIndexes vec (len, IRange beg end) = (len, matchedItems)
   where 
-    tmp          = findIndices (\x-> length x == len) vec
+    tmp          = findIndices (\x-> UV.length x == len) vec
     matchedItems = V.filter (\x-> x>=beg && x<end) tmp
 
-greedyMatchedItems :: (Ord e) => Vector [e] -> [e] -> (Int, Vector Int)
+greedyMatchedItems :: Vector WordsHash-> WordsHash-> (Int, Vector Int)
 greedyMatchedItems entities words = getMatchedIndexes entities (greedyMatch entities words)
 
-greedyAnnotationImpl :: (Ord e) => Vector [e] -> [e] -> Int -> [(IRange, Vector Int)] -> [(IRange, Vector Int)]
-greedyAnnotationImpl entities []   offset results = results
+greedyAnnotationImpl :: Vector WordsHash -> WordsHash -> Int -> [(IRange, Vector Int)] -> [(IRange, Vector Int)]
+greedyAnnotationImpl entities text offset results | text == (UV.empty :: WordsHash) = results
 greedyAnnotationImpl entities text offset results = 
   let
     (len, matched) = greedyMatchedItems entities text
     r = (IRange offset (offset+len), matched)
   in
     if len==0 || null matched
-      then greedyAnnotationImpl entities (tail text) (offset+1) results
-      else greedyAnnotationImpl entities (drop len text) (offset+len) (r:results)
+      then greedyAnnotationImpl entities (UV.tail text) (offset+1) results
+      else greedyAnnotationImpl entities (UV.drop len text) (offset+len) (r:results)
   
-greedyAnnotation :: (Ord e) => Vector [e] -> [e] -> [(IRange, Vector Int)]
+greedyAnnotation :: Vector WordsHash -> WordsHash -> [(IRange, Vector Int)]
 greedyAnnotation entities text = greedyAnnotationImpl entities text 0 []
 
+wordsHash :: [Text] -> WordsHash
+wordsHash words = UV.fromList (map (xxHash' . encodeUtf8) words)
 
-nameWords :: Wiki.ItemRepr -> [Text]
-nameWords (Wiki.ItemRepr name) = T.words name
+nameWordsHash :: Wiki.ItemRepr -> WordsHash
+nameWordsHash (Wiki.ItemRepr name) = wordsHash (T.words name)
 
-itemTuple :: EntityReprRow -> (ItemID, [Text])
-itemTuple (EntityReprRow uid name) = (uid, nameWords name)
+itemTuple :: EntityReprRow -> (ItemID, WordsHash)
+itemTuple (EntityReprRow uid name) = (uid, nameWordsHash name)
 
 data NameUIDTable = NameUIDTable { _uids :: Vector ItemID
-                                 , _names :: Vector [Text]}
+                                 , _names :: Vector WordsHash}
                   deriving (Show)
 
 buildEntityTable :: [EntityReprRow] -> NameUIDTable
@@ -122,5 +125,6 @@ loadWETagger file = do
 wikiAnnotator:: NameUIDTable -> [Text] -> [(IRange, Vector ItemID)]
 wikiAnnotator entities words = matchedItems
   where
-    matchedIdxs  = greedyAnnotation (_names entities) words
+    tokens    = wordsHash words  
+    matchedIdxs  = greedyAnnotation (_names entities) tokens
     matchedItems = map (second (V.map (V.unsafeIndex (_uids entities)))) matchedIdxs

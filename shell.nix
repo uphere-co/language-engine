@@ -22,6 +22,7 @@ let
               tasty-hunit
               containers
               attoparsec
+              xxhash
               p.nlp-types
             ]);
 in stdenv.mkDerivation {

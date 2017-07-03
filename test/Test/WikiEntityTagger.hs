@@ -13,6 +13,7 @@ import           Test.Tasty.HUnit                      (testCase,testCaseSteps)
 import           Test.Tasty                            (defaultMain, testGroup,TestTree)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
 import qualified Data.Vector                   as V
+import qualified Data.Vector.Unboxed           as UV
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 
@@ -41,31 +42,37 @@ testVectorSlicing = testCaseSteps "API usages for vector slicing" $ \step -> do
   eassertEqual (toList sub) [[2],[3,4],[5,6]]
   eassertEqual (filter (\x -> length x == 2) (toList sub)) [[3,4],[5,6]]
 
+
+[a,b,c,d,e,f,g,  x,y,z] = [10,11,12,13,14,15,16,  100,101,102] :: [WordHash]
+
 testBinarySearch :: TestTree
 testBinarySearch = testCaseSteps "API usages for binary searches" $ \step -> do
   let
-    wordss = fromList ([["B"], ["B", "C"], ["B", "B"], ["B","C","B"],  ["A","B"], ["A"], ["B"], ["B"], ["A", "C"], ["C"],["C"], ["C", "B"], ["E","A"], ["E"], ["G"]] :: [[Text]])
-    wordssSorted = [["A"],["A","B"],["A","C"],["B"],["B"],["B"],["B","B"],["B","C"],["B","C","B"],["C"],["C"],["C","B"], ["E"], ["E","A"], ["G"]] :: [[Text]]
+    wordss = fromList (map UV.fromList ([[b], [b, c], [b, b], [b,c,b],  [a,b], [a], [b], [b], [a, c], [c],[c], [c, b], [e,a], [e], [g]] :: [[WordHash]]))
+    wordssSorted = map UV.fromList ([[a],[a,b],[a,c],[b],[b],[b],[b,b],[b,c],[b,c,b],[c],[c],[c,b], [e], [e,a], [g]] :: [[WordHash]])
   
   tt <- V.thaw wordss
   sort tt  
   massertEqual (V.freeze tt) (fromList wordssSorted)
   
   step "binarySearchLR"
-  massertEqual (binarySearchLR tt ["B"]) (3,6)
-  massertEqual (binarySearchLR tt ["C"]) (9,11)  
-  massertEqual (binarySearchLR tt ["D"]) (12,12)
-  massertEqual (binarySearchLRBy (ithElementOrdering 0) tt ["D"]) (12,12)
+  massertEqual (binarySearchLR tt (UV.fromList [b])) (3,6)
+  massertEqual (binarySearchLR tt (UV.fromList [c])) (9,11)  
+  massertEqual (binarySearchLR tt (UV.fromList [d])) (12,12)
+  massertEqual (binarySearchLRBy (ithElementOrdering 0) tt (UV.fromList [d])) (12,12)
   
   step "binarySearchLRBy"
-  (bidxBL0, bidxBR0) <- binarySearchLRBy (ithElementOrdering 0) tt ["B", "C"]
+  let
+     bc = UV.fromList [b, c]
+     eb = UV.fromList [e, b]
+  (bidxBL0, bidxBR0) <- binarySearchLRBy (ithElementOrdering 0) tt bc
   eassertEqual (bidxBL0, bidxBR0) (3,9)
-  massertEqual (binarySearchLRByBounds (ithElementOrdering 1) tt ["B", "C"] bidxBL0 bidxBR0) (7,9)
-  (_, _) <- binarySearchLRByBounds (ithElementOrdering 1) tt ["B", "C"] 3 6  
+  massertEqual (binarySearchLRByBounds (ithElementOrdering 1) tt bc bidxBL0 bidxBR0) (7,9)
+  (_, _) <- binarySearchLRByBounds (ithElementOrdering 1) tt bc 3 6  
 
-  (tl0, tr0) <- binarySearchLRBy (ithElementOrdering 0) tt ["E", "B"]
+  (tl0, tr0) <- binarySearchLRBy (ithElementOrdering 0) tt eb
   eassertEqual (tl0, tr0) (12,14)
-  massertEqual (binarySearchLRByBounds (ithElementOrdering 1) tt ["E", "B"] tl0 tr0) (14,14)
+  massertEqual (binarySearchLRByBounds (ithElementOrdering 1) tt eb tl0 tr0) (14,14)
 
 unitTestsVector :: TestTree
 unitTestsVector =
@@ -76,33 +83,33 @@ unitTestsVector =
 
 testNameOrdering :: TestTree
 testNameOrdering = testCaseSteps "Ordering of entity names(list of words)" $ \step -> do
-  eassertEqual LT (ithElementOrdering 0 ["A", "B"] ["B", "A"])
-  eassertEqual GT (ithElementOrdering 1 ["A", "B"] ["B", "A"])
-  eassertEqual EQ (ithElementOrdering 1 ["A", "A"] ["A", "A", "A"])
+  eassertEqual LT (ithElementOrdering 0 (UV.fromList [a, b]) (UV.fromList [b, a]))
+  eassertEqual GT (ithElementOrdering 1 (UV.fromList [a, b]) (UV.fromList [b, a]))
+  eassertEqual EQ (ithElementOrdering 1 (UV.fromList [a, a]) (UV.fromList [a, a, a]))
 
 testGreedyMatching :: TestTree
 testGreedyMatching = testCaseSteps "Greedy matching of two lists of words" $ \step -> do
   let 
-    entities = fromList ([["A"], ["B"], ["B","C"], ["B","D","E"],["B","D","F"],["C"],["C","D","E","F"],["C","D","E","F"]] :: [[Text]])
-    words    = ["X", "A","B", "Z"] :: [Text]
+    entities = fromList (map UV.fromList ([[a], [b], [b,c], [b,d,e],[b,d,f],[c],[c,d,e,f],[c,d,e,f]] :: [[WordHash]]))
+    words    = [x, a,b, z] :: [WordHash]
   step "Null cases"
-  eassertEqual (greedyMatch entities [])    (0, IRange 0 8)
+  eassertEqual (greedyMatch entities (UV.fromList ([]::[WordHash])))    (0, IRange 0 8)
   step "Single word cases"
-  eassertEqual (greedyMatch entities ["X"]) (0, IRange 0 8)
-  eassertEqual (greedyMatch entities ["B"]) (1, IRange 1 5)
+  eassertEqual (greedyMatch entities (UV.fromList [x])) (0, IRange 0 8)
+  eassertEqual (greedyMatch entities (UV.fromList [b])) (1, IRange 1 5)
   step "Multi words cases"
-  eassertEqual (greedyMatch entities ["B","C","X","Y"]) (2, IRange 2 3)
-  eassertEqual (greedyMatch entities ["B","D","X","Y"]) (2, IRange 3 5)
-  eassertEqual (greedyMatch entities ["B","D","E","F"]) (3, IRange 3 4)
-  eassertEqual (greedyMatch entities ["C","D","E","F"]) (4, IRange 6 8)
+  eassertEqual (greedyMatch entities (UV.fromList [b,c,x,y])) (2, IRange 2 3)
+  eassertEqual (greedyMatch entities (UV.fromList [b,d,x,y])) (2, IRange 3 5)
+  eassertEqual (greedyMatch entities (UV.fromList [b,d,e,f])) (3, IRange 3 4)
+  eassertEqual (greedyMatch entities (UV.fromList [c,d,e,f])) (4, IRange 6 8)
 
   step "Single run for entity tagging"
-  eassertEqual (greedyMatchedItems entities ["B","C","X","Y","Z"]) (2, fromList [2])
-  eassertEqual (greedyMatchedItems entities ["X", "B","C","X","Y","Z"]) (0, fromList [])
+  eassertEqual (greedyMatchedItems entities (UV.fromList [b,c,x,y,z]))    (2, fromList [2])
+  eassertEqual (greedyMatchedItems entities (UV.fromList [x, b,c,x,y,z])) (0, fromList [])
   
   step "Recursive tagging"
   let
-    text = ["X", "B","C","X","Y","Z", "A", "B","D","F", "X","C","D","C","D","E","F","B"]
+    text = UV.fromList [x, b,c,x,y,z, a, b,d,f, x,c,d,c,d,e,f,b]
     expected = [(IRange 17 18, fromList [1])
                ,(IRange 13 17, fromList [6,7])
                ,(IRange 7 10,  fromList [4])
@@ -152,7 +159,7 @@ testWikiEntityTagging = testCaseSteps "Wiki entity tagger with greedy-matching s
     matchedItems  = wikiAnnotator entities words
     expected = [(IRange 12 15, fromList [uid "Q30642"])
                ,(IRange 9 10,  fromList [uid "Q30642"])
-               ,(IRange 6 7,   fromList [uid "Q42970", uid"Q11660"])
+               ,(IRange 6 7,   fromList [uid "Q11660", uid "Q42970"])
                ,(IRange 2 4,   fromList [uid "Q380"])
                ,(IRange 0 1,   fromList [uid "Q95", uid "Q9366"])
                ]
