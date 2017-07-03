@@ -26,7 +26,7 @@ library
                        NLP.Type.PennTreebankII
                        NLP.Type.UniversalDependencies2.Morphology
                        NLP.Type.UniversalDependencies2.Syntax
-                       -- NLP.Type.WordNet
+                       Text.Taggy.Lens.Util
                                      
   -- other-modules:       
   -- other-extensions:    
@@ -36,6 +36,7 @@ library
                        attoparsec,
                        bifunctors,
                        lens,
+                       taggy-lens,
                        text,
                        transformers
   hs-source-dirs:      src
