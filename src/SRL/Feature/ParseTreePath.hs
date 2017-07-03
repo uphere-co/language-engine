@@ -7,7 +7,7 @@ import           Data.List                      (group)
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 --
-import           SRL.Feature.Util
+import           SRL.Feature.Voice
 import           SRL.Type
 --
 

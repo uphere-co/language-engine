@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 
-module SRL.Feature.Util where
+module SRL.Feature.Voice where
 
 import           Control.Monad                               ((<=<))
 import           Data.Foldable                               (toList)
