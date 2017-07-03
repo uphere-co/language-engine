@@ -49,7 +49,7 @@ findNotOverlappedNodes ipt rng = filter (`isNotOverlappedWith` rng)
 
 
 -- Bitree c (Int,t) -> Bitree c (Int,(Maybe v,t))
-decorateLeaves :: IntMap v -> PennTreeIdxG n (ALeaf (AttribList ls)) -> PennTreeIdxG n (ALeaf (AttribList (Maybe v ': ls)))
+decorateLeaves :: IntMap v -> PennTreeIdxG n (ALAtt ls) -> PennTreeIdxG n (ALAtt (Maybe v ': ls))
 decorateLeaves m tr = let lkup (n,ALeaf t ts) = (n, ALeaf t (IM.lookup n m `acons` ts)) in fmap lkup tr
 
 

@@ -29,9 +29,9 @@ type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
 data Voice = Active | Passive
            deriving (Show,Eq,Ord,Enum,Bounded)
 
-type BitreeICP a = Bitree (Range,(ANode (AttribList '[]))) (Int,(ALeaf a)) 
+type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
 
-type BitreeZipperICP a = BitreeZipper (Range,(ANode (AttribList '[]))) (Int,(ALeaf a)) 
+type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
 
 type RoleSet = (Text,Text)
 

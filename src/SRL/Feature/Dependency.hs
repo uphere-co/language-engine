@@ -53,14 +53,14 @@ motherMap (Dependency root _nods edgs0) =
 
 
 depTree :: Dependency
-        -> PennTreeIdxG n (ALeaf (AttribList ls))
-        -> PennTreeIdxG n (ALeaf (AttribList (Maybe (Int,DependencyRelation) ': ls)))
+        -> PennTreeIdxG n (ALAtt ls)
+        -> PennTreeIdxG n (ALAtt (Maybe (Int,DependencyRelation) ': ls))
 depTree dep tr = decorateLeaves (motherMap dep) tr
 
 
 depLevelTree :: Dependency
-             -> PennTreeIdxG n (ALeaf (AttribList ls))
-             -> PennTreeIdxG n (ALeaf (AttribList (Maybe Level ': ls)))
+             -> PennTreeIdxG n (ALAtt ls)
+             -> PennTreeIdxG n (ALAtt (Maybe Level ': ls))
 depLevelTree dep tr = decorateLeaves (levelMap dep) tr
 
 
@@ -77,31 +77,27 @@ cmpLevel _        Nothing  = LT
 cmpLevel (Just x) (Just y) = compare x y
 
 
-annotateDepInfo :: PennTreeIdxG (ANode (AttribList ns)) (ALeaf (AttribList (Maybe DepInfo ': ls)))
-                -> PennTreeIdxG (ANode (AttribList (Maybe DepInfo ': ns))) (ALeaf (AttribList (Maybe DepInfo ': ls)))
+annotateDepInfo :: PennTreeIdxG (ANAtt ns) (ALAtt (Maybe DepInfo ': ls))
+                -> PennTreeIdxG (ANAtt (Maybe DepInfo ': ns)) (ALAtt (Maybe DepInfo ': ls))
 annotateDepInfo (PL t)        = PL t
 annotateDepInfo (PN (r,ANode c x) xs) =
   let ys = map annotateDepInfo xs
-      -- zs :: [Either (ChunkTag,Maybe DepInfo) (Maybe DepInfo)]
       zs = map (\case PN (_,z) _ -> ahead (getAnnot z); PL (_,z) -> ahead (getAnnot z)) ys
-      y = ANode c (minimumBy (cmpLevel `on` (fmap (view dinfo_level))) zs `acons` x) -- (map (either snd id) zs))
+      y = ANode c (minimumBy (cmpLevel `on` (fmap (view dinfo_level))) zs `acons` x)
   in PN (r,y) ys
 
 
 depInfoTree :: forall ns ls .
                Dependency
-            -> PennTreeIdxG (ANode (AttribList ns)) (ALeaf (AttribList ls))
-            -> PennTreeIdxG (ANode (AttribList (Maybe DepInfo ': ns))) (ALeaf (AttribList (Maybe DepInfo ': ls)))
+            -> PennTreeIdxG (ANAtt ns) (ALAtt ls)
+            -> PennTreeIdxG (ANAtt (Maybe DepInfo ': ns)) (ALAtt (Maybe DepInfo ': ls))
 depInfoTree dep tr = let tr' = decorateLeaves (rightOuterIntMap (levelMap dep) (motherMap dep)) tr
-                         conv :: (Int,ALeaf (AttribList ((Maybe (Maybe Level, (Int,DependencyRelation))) ': ls)))
-                              -> (Int,ALeaf (AttribList (Maybe DepInfo ': ls)))
+                         conv :: (Int,ALAtt ((Maybe (Maybe Level, (Int,DependencyRelation))) ': ls))
+                              -> (Int,ALAtt (Maybe DepInfo ': ls))
                          conv (i,ALeaf pt x) = (i,ALeaf pt (f x))
                            where
                                  f (AttribCons (Just (ml,(m,rel))) xs) = AttribCons (Just (DepInfo i m rel ml)) xs
                                  f (AttribCons Nothing             xs) = AttribCons Nothing                     xs 
-
-                         -- (i,ALeaf pt (Just (ml,(m,rel)))) = (i,ALeaf pt (Just (DepInfo i m rel ml),pt))
-                         -- conv (i,(Nothing,pt))           = (i,(Nothing,pt))
                          tr'' = fmap conv tr'
                      in annotateDepInfo tr''
 
