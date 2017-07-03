@@ -1,10 +1,15 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeOperators #-}
 
 module SRL.Feature.Dependency where
 
 import           Control.Lens            hiding (levels,Level)
-import           Data.Discrimination
 import           Data.Function                  (on)
 import           Data.Graph                     (buildG,dfs)
 import           Data.IntMap                    (IntMap)
@@ -15,6 +20,7 @@ import           Data.Text                      (Text)
 import           Data.Tree                      (levels)
 --
 import           CoreNLP.Simple.Type.Simplified
+import           Data.Attribute
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
@@ -45,29 +51,19 @@ motherMap (Dependency root _nods edgs0) =
   in IM.fromList (map (\((mother,daughter),rel) -> (daughter-1,(mother-1,rel))) edgs)
 
 
-decorateLeaves :: IntMap v -> Bitree c (Int,t) -> Bitree c (Int,(Maybe v,t))
-decorateLeaves m tr = let lkup (n,t) = (n,(IM.lookup n m,t)) in fmap lkup tr
- 
 
-depTree :: Dependency -> Bitree c (Int,t) -> Bitree c (Int,(Maybe (Int,DependencyRelation),t))
+depTree :: Dependency
+        -> PennTreeIdxG n (ALeaf (AttribList ls))
+        -> PennTreeIdxG n (ALeaf (AttribList (Maybe (Int,DependencyRelation) ': ls)))
 depTree dep tr = decorateLeaves (motherMap dep) tr
 
 
-depLevelTree :: Dependency -> Bitree c (Int,t) -> Bitree c (Int,(Maybe Level,t))
+depLevelTree :: Dependency
+             -> PennTreeIdxG n (ALeaf (AttribList ls))
+             -> PennTreeIdxG n (ALeaf (AttribList (Maybe Level ': ls)))
 depLevelTree dep tr = decorateLeaves (levelMap dep) tr
 
 
-joiningIntMap :: IntMap v -> IntMap v' -> IntMap (v,v')
-joiningIntMap m1 m2 =
-  IM.fromList (joining grouping (\as bs -> (fst (head as), (snd (head as),snd (head bs)))) fst fst (IM.toAscList m1) (IM.toAscList m2))
-
-
-rightOuterIntMap :: IntMap v -> IntMap v' -> IntMap (Maybe v,v')
-rightOuterIntMap m1 m2 =
-  let l1 = IM.toAscList m1
-      l2 = IM.toAscList m2
-      rss = rightOuter grouping (\a b->(a^._1, (Just (a^._2), b^._2))) (\b->(b^._1,(Nothing,b^._2))) fst fst l1 l2
-  in IM.fromList (concat rss)
 
 
 headWord :: PennTreeIdxG ChunkTag (Maybe Level,(POSTag,Text)) -> Maybe (Int,(Level,(POSTag,Text)))
@@ -81,33 +77,45 @@ cmpLevel _        Nothing  = LT
 cmpLevel (Just x) (Just y) = compare x y
 
 
-annotateDepInfo :: PennTreeIdxG ChunkTag (Maybe DepInfo,(POSTag,Text))
-                     -> PennTreeIdxG (ChunkTag,Maybe DepInfo) (Maybe DepInfo,(POSTag,Text))
+annotateDepInfo :: PennTreeIdxG (ANode (AttribList ns)) (ALeaf (AttribList (Maybe DepInfo ': ls)))
+                -> PennTreeIdxG (ANode (AttribList (Maybe DepInfo ': ns))) (ALeaf (AttribList (Maybe DepInfo ': ls)))
 annotateDepInfo (PL t)        = PL t
-annotateDepInfo (PN (r,x) xs) =
+annotateDepInfo (PN (r,ANode c x) xs) =
   let ys = map annotateDepInfo xs
-      zs :: [Either (ChunkTag,Maybe DepInfo) (Maybe DepInfo)]
-      zs = map getTag ys
-      y = (x,minimumBy (cmpLevel `on` (fmap (view dinfo_level))) (map (either snd id) zs))
+      -- zs :: [Either (ChunkTag,Maybe DepInfo) (Maybe DepInfo)]
+      zs = map (\case PN (_,z) _ -> ahead (getAnnot z); PL (_,z) -> ahead (getAnnot z)) ys
+      y = ANode c (minimumBy (cmpLevel `on` (fmap (view dinfo_level))) zs `acons` x) -- (map (either snd id) zs))
   in PN (r,y) ys
 
 
-depInfoTree :: Dependency
-            -> PennTreeIdxG ChunkTag (POSTag,Text)
-            -> PennTreeIdxG (ChunkTag,Maybe DepInfo) (Maybe DepInfo,(POSTag,Text))
+depInfoTree :: forall ns ls .
+               Dependency
+            -> PennTreeIdxG (ANode (AttribList ns)) (ALeaf (AttribList ls))
+            -> PennTreeIdxG (ANode (AttribList (Maybe DepInfo ': ns))) (ALeaf (AttribList (Maybe DepInfo ': ls)))
 depInfoTree dep tr = let tr' = decorateLeaves (rightOuterIntMap (levelMap dep) (motherMap dep)) tr
-                         conv :: (Int,(Maybe (Maybe Level, (Int,DependencyRelation)),(POSTag,Text))) -> (Int,(Maybe DepInfo,(POSTag,Text)))
-                         conv (i,(Just (ml,(m,rel)),pt)) = (i,(Just (DepInfo i m rel ml),pt))
-                         conv (i,(Nothing,pt))           = (i,(Nothing,pt))
+                         conv :: (Int,ALeaf (AttribList ((Maybe (Maybe Level, (Int,DependencyRelation))) ': ls)))
+                              -> (Int,ALeaf (AttribList (Maybe DepInfo ': ls)))
+                         conv (i,ALeaf pt x) = (i,ALeaf pt (f x))
+                           where
+                                 f (AttribCons (Just (ml,(m,rel))) xs) = AttribCons (Just (DepInfo i m rel ml)) xs
+                                 f (AttribCons Nothing             xs) = AttribCons Nothing                     xs 
+
+                         -- (i,ALeaf pt (Just (ml,(m,rel)))) = (i,ALeaf pt (Just (DepInfo i m rel ml),pt))
+                         -- conv (i,(Nothing,pt))           = (i,(Nothing,pt))
                          tr'' = fmap conv tr'
                      in annotateDepInfo tr''
 
 
-depRelPath :: Dependency -> PennTreeIdxG ChunkTag (POSTag,Text) -> (Int,Range) -> Maybe (ListZipper DepInfo)
+depRelPath :: Dependency
+           -> PennTreeIdxG ChunkTag (POSTag,Text)
+           -> (Int,Range)
+           -> Maybe (ListZipper DepInfo)
 depRelPath dep itr (start,target) =
-  let ditr = depInfoTree dep itr
-      mdptp = parseTreePathFull (start,target) ditr
-      f (PL (_n,(md,_)))     = md 
+  let ditr = depInfoTree dep (mkAnnotatable itr)
+      mdptp = parseTreePathFull (start,target) (bimap convn convl ditr)
+      convn (rng,ANode c  x) = (rng,(c,ahead x))
+      convl (i  ,ALeaf pt x) = (i  ,(ahead x,pt))
+      f (PL (_n  ,(md,_)))   = md 
       f (PN (_rng,(_,md)) _) = md 
   in case mdptp of
        Nothing -> Nothing

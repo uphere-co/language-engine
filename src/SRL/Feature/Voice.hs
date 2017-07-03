@@ -4,10 +4,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 
-module SRL.Feature.Util where
+module SRL.Feature.Voice where
 
 import           Control.Monad                               ((<=<))
-import           Data.Bifoldable                             (biList)
 import           Data.Foldable                               (toList)
 import           Data.Maybe                                  (mapMaybe)
 --
@@ -27,13 +26,6 @@ phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
 
 
-findNotOverlappedNodes :: PennTreeIdx -> Range -> [Range]
-findNotOverlappedNodes ipt rng = filter (`isNotOverlappedWith` rng)
-                               . map (\(PN (r,_) _) -> r)
-                               . filter (\case PN _ _ -> True ; _ -> False)
-                               . biList
-                               . duplicate 
-                               $ ipt 
   
 
 isVBN :: BitreeZipperICP a -> Bool
