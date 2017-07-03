@@ -1,11 +1,20 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module SRL.Util where
 
-import           Data.Text      (Text)
-import qualified Data.Text as T (intercalate, unpack)
+import           Control.Lens
+import           Data.Bifoldable                             (biList)
+import           Data.Discrimination
+import           Data.IntMap       (IntMap)
+import qualified Data.IntMap as IM 
+import           Data.Text         (Text)
+import qualified Data.Text   as T  (intercalate, unpack)
 --
+import           Data.Bitree
 import           NLP.Type.PennTreebankII
+--
+import           SRL.Type
 
 
 clippedText :: (Int,Int) -> [Text] -> Text
@@ -25,3 +34,28 @@ extractIndexOut :: PennTreeGen (i,c) (j,t) -> PennTreeGen c t
 extractIndexOut (PN (_,c) xs) = PN c (map extractIndexOut xs)
 extractIndexOut (PL (_,x)) = PL x 
 
+
+findNotOverlappedNodes :: PennTreeIdx -> Range -> [Range]
+findNotOverlappedNodes ipt rng = filter (`isNotOverlappedWith` rng)
+                               . map (\(PN (r,_) _) -> r)
+                               . filter (\case PN _ _ -> True ; _ -> False)
+                               . biList
+                               . duplicate 
+                               $ ipt 
+
+
+decorateLeaves :: IntMap v -> Bitree c (Int,t) -> Bitree c (Int,(Maybe v,t))
+decorateLeaves m tr = let lkup (n,t) = (n,(IM.lookup n m,t)) in fmap lkup tr
+
+
+joiningIntMap :: IntMap v -> IntMap v' -> IntMap (v,v')
+joiningIntMap m1 m2 =
+  IM.fromList (joining grouping (\as bs -> (fst (head as), (snd (head as),snd (head bs)))) fst fst (IM.toAscList m1) (IM.toAscList m2))
+
+
+rightOuterIntMap :: IntMap v -> IntMap v' -> IntMap (Maybe v,v')
+rightOuterIntMap m1 m2 =
+  let l1 = IM.toAscList m1
+      l2 = IM.toAscList m2
+      rss = rightOuter grouping (\a b->(a^._1, (Just (a^._2), b^._2))) (\b->(b^._1,(Nothing,b^._2))) fst fst l1 l2
+  in IM.fromList (concat rss)

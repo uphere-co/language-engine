@@ -4,7 +4,6 @@
 module SRL.Feature.Dependency where
 
 import           Control.Lens            hiding (levels,Level)
-import           Data.Discrimination
 import           Data.Function                  (on)
 import           Data.Graph                     (buildG,dfs)
 import           Data.IntMap                    (IntMap)
@@ -45,9 +44,6 @@ motherMap (Dependency root _nods edgs0) =
   in IM.fromList (map (\((mother,daughter),rel) -> (daughter-1,(mother-1,rel))) edgs)
 
 
-decorateLeaves :: IntMap v -> Bitree c (Int,t) -> Bitree c (Int,(Maybe v,t))
-decorateLeaves m tr = let lkup (n,t) = (n,(IM.lookup n m,t)) in fmap lkup tr
- 
 
 depTree :: Dependency -> Bitree c (Int,t) -> Bitree c (Int,(Maybe (Int,DependencyRelation),t))
 depTree dep tr = decorateLeaves (motherMap dep) tr
@@ -57,17 +53,6 @@ depLevelTree :: Dependency -> Bitree c (Int,t) -> Bitree c (Int,(Maybe Level,t))
 depLevelTree dep tr = decorateLeaves (levelMap dep) tr
 
 
-joiningIntMap :: IntMap v -> IntMap v' -> IntMap (v,v')
-joiningIntMap m1 m2 =
-  IM.fromList (joining grouping (\as bs -> (fst (head as), (snd (head as),snd (head bs)))) fst fst (IM.toAscList m1) (IM.toAscList m2))
-
-
-rightOuterIntMap :: IntMap v -> IntMap v' -> IntMap (Maybe v,v')
-rightOuterIntMap m1 m2 =
-  let l1 = IM.toAscList m1
-      l2 = IM.toAscList m2
-      rss = rightOuter grouping (\a b->(a^._1, (Just (a^._2), b^._2))) (\b->(b^._1,(Nothing,b^._2))) fst fst l1 l2
-  in IM.fromList (concat rss)
 
 
 headWord :: PennTreeIdxG ChunkTag (Maybe Level,(POSTag,Text)) -> Maybe (Int,(Level,(POSTag,Text)))
