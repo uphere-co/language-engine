@@ -14,6 +14,7 @@ import           Data.Attribute
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
+import           PropBank.Type.Match
 import           PropBank.Type.Prop
 
 
@@ -56,7 +57,7 @@ makeLenses ''SRLFeature
 
 
 data ArgNodeFeature = AFeat { _afeat_label :: PropBankLabel
-                            , _afeat_srlfeature :: SRLFeature --  (Range,ParseTreePath,Maybe (Int,(Level,(POSTag,Text)))))
+                            , _afeat_srlfeature :: SRLFeature
                             }
                     deriving (Show)
 
@@ -70,7 +71,6 @@ data InstanceFeature = IFeat { _ifeat_predidx :: Int
                              }
                      deriving (Show)
 
---   (Int,RoleSet,Voice, [[ArgNodeFeature]])
 makeLenses ''InstanceFeature
 
 
@@ -83,30 +83,6 @@ data SentenceInfo = SentInfo { _corenlp_sent :: CS.Sentence
 
 makeLenses ''SentenceInfo
 
-
-data MatchedArgNode
-  = MatchedArgNode { _mn_node :: (Range,Node)
-                   , _mn_trees :: [(Range,PennTreeIdx)]
-                   }
-  deriving Show
-
-makeLenses ''MatchedArgNode
-
-data MatchedArgument
-  = MatchedArgument { _ma_argument :: Argument
-                    , _ma_nodes :: [MatchedArgNode]
-                    }
-  deriving Show
-
-makeLenses ''MatchedArgument
-
-data MatchedInstance
-  = MatchedInstance { _mi_instance :: Instance
-                    , _mi_arguments :: [MatchedArgument]
-                    }
-  deriving Show
-
-makeLenses ''MatchedInstance
 
 data NodeRange = Single Range
                | Multi [Range]

@@ -28,6 +28,7 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           NLP.Type.PennTreebankII
+import           PropBank.Match
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
