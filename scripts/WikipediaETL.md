@@ -152,3 +152,33 @@ Download `wordnet_links.ttl.gz` from [here](wiki.dbpedia.org/services-resources/
 tail +2 dbpedia/wordnet_links.ttl | sed 's/> / /g' | awk '/^#/ {next} {print $1 "\t" $3}' | sed 's/<http:\/\/dbpedia.org\/resource\///g' | sed 's/<http:\/\/www.w3.org\/2006\/03\/wn\/wn20\/instances\///g'  > wordnet_links.tsv
 join -1 2 -2 1 -t$'\t' <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) <(sort -k1,1 -t$'\t' wordnet_links.tsv) > page_id.wiki_id.wordnet.tsv
 ```
+
+### ETL to get name alias for named entities
+```
+$ time lbzcat wikidata-20170627-truthy-BETA.nt.bz2 | grep "@en " | grep "<http://www.w3.org/2004/02/skos/core" | lbzip2 --fast > wikidata-20170627-truthy-BETA.nt.names.bz2
+real	5m18.808s
+
+$ time lbzcat wikidata-20170627-truthy-BETA.nt.bz2 | grep "@en " | grep "<http://www.w3.org/2004/02/skos/core" > wikidata-20170627-truthy-BETA.nt.names
+real	5m3.000s
+
+
+$ time pigz -dc enwiki-20170620-redirect.sql.gz  | iconv -f ISO-8859-1 -t UTF-8 | python mysqldump_to_csv.py  | lbzip2 --fast > enwiki-20170620-redirect.tsv.bz2
+real	0m42.186s
+
+$ time join -j 1 -t$'\t' <(lbzcat enwiki-20170620-redirect.tsv.bz2 | awk -F "\t" '{print $1 "\t" $3}'| sort -k1,1 -t$'\t') <(sort -k1,1 -t$'\t' page_id) > redirects
+real	0m24.686s
+
+$ time join -j 2 -t$'\t' <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) <(sort -k2,2 -t$'\t' redirects) > page_title.page_id.wiki_id.redirect
+real	0m13.916s
+
+
+$ time cat page_title.page_id.wiki_id.redirect |tr "_" " " | awk -F "\t" '{print "<http://www.wikidata.org/entity/" $3 "> <http://uphere.ai/v0/altLabel#Wikipedia_redirect> \"" $5"\"@en"}' > item_names.wikipedia_redirect.nt
+real	0m13.941s
+
+
+$ time cat page_id.wiki_id.txt.sorted |tr "_" " " | awk -F "\t" '{print "<http://www.wikidata.org/entity/" $3 "> <http://uphere.ai/v0/altLabel#Wikipedia_title> \"" $2"\"@en"}' > item_names.wikipedia_title.nt
+real	0m7.837s
+
+cp ../wikidata/wikidata-20170627-truthy-BETA.nt.names.bz2 item_names.nt.bz2
+cat item_names.wikipedia_*.nt | lbzip2 >> item_names.nt.bz2
+```
