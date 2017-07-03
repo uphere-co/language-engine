@@ -313,14 +313,6 @@ main1 = do
   mapM_ print orgMentions
   print "Entity-linked public company entities"
   mapM_ print companyWithSymbols
-  let 
-    hs = UV.fromList (map (xxHash' . encodeUtf8) (T.words input_raw))
-    v1 = UV.fromList ([1,2,3] :: [Int]) :: UV.Vector Int
-    v2 = UV.fromList ([1,2] :: [Int])
-  print "aa"
-  print (v1==v2)
-  print (v1 UV.! 1)
-
   --print tickerMap
 
 
