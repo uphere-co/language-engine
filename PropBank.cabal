@@ -15,11 +15,13 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                    PropBank
+                   PropBank.Match
                    PropBank.Parser.Frame
                    PropBank.Parser.Prop
                    PropBank.Query
                    PropBank.Type
                    PropBank.Type.Frame
+                   PropBank.Type.Match
                    PropBank.Type.Prop
                    PropBank.Util
   -- other-modules:       
