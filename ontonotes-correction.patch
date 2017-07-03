@@ -1,0 +1,89 @@
+diff -rupN a/data/files/data/english/metadata/sense-inventories/fracture-v.xml b/data/files/data/english/metadata/sense-inventories/fracture-v.xml
+--- a/data/files/data/english/metadata/sense-inventories/fracture-v.xml	2012-02-17 18:26:50.000000000 +0000
++++ b/data/files/data/english/metadata/sense-inventories/fracture-v.xml	2017-07-01 00:13:15.246381980 +0000
+@@ -36,19 +36,18 @@
+         </mappings>
+         <SENSE_META clarity=""/>
+     </sense>
+-</sense>
+-<sense group="1" n="3" name="none of the above" type="">
+-  <commentary>
+-Automatically generated NOTA sense (bbn)
+-  </commentary>
+-  <examples>
+-  </examples>
+-  <mappings>
+-    <wn version="2.1"></wn>
+-    <omega></omega><pb></pb>
+-    <fn></fn>
+-  </mappings><SENSE_META clarity=""/>
+-</sense>
+-<WORD_META authors="ballasc" sample_score="-"/>
+- 
++    <sense group="1" n="3" name="none of the above" type="">
++      <commentary>
++        Automatically generated NOTA sense (bbn)
++      </commentary>
++      <examples>
++      </examples>
++      <mappings>
++        <wn version="2.1"></wn>
++        <omega></omega><pb></pb>
++        <fn></fn>
++        </mappings><SENSE_META clarity=""/>
++    </sense>
++    <WORD_META authors="ballasc" sample_score="-"/>
++    
+ </inventory>
+diff -rupN a/data/files/data/english/metadata/sense-inventories/stock-v.xml b/data/files/data/english/metadata/sense-inventories/stock-v.xml
+--- a/data/files/data/english/metadata/sense-inventories/stock-v.xml	2012-02-17 18:25:11.000000000 +0000
++++ b/data/files/data/english/metadata/sense-inventories/stock-v.xml	2017-07-01 00:18:56.199772859 +0000
+@@ -34,7 +34,7 @@
+         </mappings>
+         <SENSE_META clarity=""/>
+     </sense>
+-    <sense group = "1" n="3" name="put forth and grow sprouts or shoots" type="">
++    <sense group="1" n="3" name="put forth and grow sprouts or shoots" type="">
+         <commentary>
+             Syntax is: NP1 STOCK (Intransitive)
+         </commentary>
+@@ -48,7 +48,7 @@
+         </mappings>
+         <SENSE_META clarity=""/>
+     </sense>
+-    <sense group = "1" n="4" name="STOCK UP: Add to or fill a stock or quantity"
++    <sense group="1" n="4" name="STOCK UP: Add to or fill a stock or quantity"
+          type="">
+         <commentary>
+             IS: STOCK UP 
+@@ -65,18 +65,18 @@
+         </mappings>
+         <SENSE_META clarity=""/>
+     </sense>
+-<sense group="1" n="5" name="none of the above" type="">
+-  <commentary>
+-Automatically generated NOTA sense (bbn)
+-  </commentary>
+-  <examples>
+-  </examples>
+-  <mappings>
+-    <wn version="2.1"></wn>
+-    <omega></omega><pb></pb>
+-    <fn></fn>
+-  </mappings><SENSE_META clarity=""/>
+-</sense>
++    <sense group="1" n="5" name="none of the above" type="">
++      <commentary>
++        Automatically generated NOTA sense (bbn)
++      </commentary>
++      <examples>
++      </examples>
++      <mappings>
++        <wn version="2.1"></wn>
++        <omega></omega><pb></pb>
++        <fn></fn>
++        </mappings><SENSE_META clarity=""/>
++    </sense>
+     <WORD_META authors="trevorjb,corvey" sample_score="-"/>
+      
+ 
