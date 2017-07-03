@@ -80,6 +80,12 @@ infixr 8 `acons`
 anil = AttribNull
 
 
+
+-- | join operation between two AttriLists.
+--   This is an asymmetric-outer join since it first extracts keys from the right-most element
+--   of the list by construction and then join it with another list by checking the key and
+--   the key extracted from the new list. If duplication happens, it only matches head item
+--   (that's why it's called headMatch).
 joinAttrib :: forall b k xs. (Grouping k) =>
               (b -> k)
            -> [b]              
