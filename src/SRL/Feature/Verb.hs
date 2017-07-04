@@ -26,39 +26,65 @@ phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
 
 
+isLemmaAs lma (PL (_,x)) = ahead (getAnnot x) == lma
+isLemmaAs _   _          = False
+
+
+isPOSAs pos (PL (_,x)) = posTag x == pos
+isPOSAs _   _          = False
+
+
+isChunkAs chk (PN (_,x) _) = chunkTag x == chk
+isChunkAs _   _            = False
+
+
+
 isVBN :: BitreeZipperICP a -> Bool
-isVBN z = case current z of
+isVBN z = isPOSAs VBN (current z)
+
+{-
+  case current z of
             PL (_,x) -> posTag x == VBN
             _        -> False 
-
+-}
 
 isVBG :: BitreeZipperICP a -> Bool
-isVBG z = case current z of
+isVBG z = isPOSAs VBG (current z)
+
+{-
+  case current z of
             PL (_,x) -> posTag x == VBG
             _        -> False 
+-}
 
 
 withCopula :: BitreeZipperICP (Lemma ': as) -> Bool
 withCopula z = check1 z || check2 z
-  where becheck (Just (PL (_,x))) = ahead (getAnnot x) == "be"
-        becheck _                 = False
+  where check1 z = maybe False (isLemmaAs "be" . current) ((prev <=< parent) z)
+        check2 z = maybe False (isLemmaAs "be" . current) ((child1 <=< parent <=< parent) z)   -- case for "it's not done" 
 
-        check1 z = becheck (current <$> (prev <=< parent) z)
-        check2 z = becheck (current <$> (child1 <=< parent <=< parent) z)   -- case for "it's not done" 
-         
 
+{-
+withHave :: BitreeZipperICP (Lemma ': as) -> Bool
+withHave z = check1 z
+  where check1 z = isLemmaAs "have" (current <$> (prev <=< parent) z)
+-}
 
 isInNP :: BitreeZipperICP as -> Bool
-isInNP z = case current <$> (parent <=< parent) z of
+isInNP z = maybe False (isChunkAs NP . current) ((parent <=< parent) z)
+{-
+  case current <$> (parent <=< parent) z of
              Just (PN (_,x) _) -> chunkTag x == NP
              _                 -> False
-
+-}
 
 isInPP :: BitreeZipperICP as -> Bool
-isInPP z = case current <$> (parent z) of
+isInPP z = maybe False (isChunkAs PP . current) (parent z)
+{-
+  case current <$> (parent z) of
              Just (PN (_,x) _) -> chunkTag x == PP
              _               -> False
-
+-}
 
 isPassive :: BitreeZipperICP (Lemma ': as) -> Bool
 isPassive z
@@ -69,8 +95,8 @@ isPassive z
     in (b1 && b2) || (b1 && b3) || (b1 && b4)
 
 
-determineAspect :: BitreeZipperICP (Lemma ': as) -> Aspect
-determineAspect z
+verbProperty :: BitreeZipperICP (Lemma ': as) -> Aspect
+verbProperty z
   = let b1 = isVBG z
         b2 = withCopula z
     in if (b1 && b2) then Progressive else Simple
@@ -101,7 +127,7 @@ aspect (pt,sent) =
       getf (PN x _) = Left x
       testf z = case getf (current z) of
                   Right (n,ALeaf (VBG,_) annot)
-                    -> Just (n,(ahead annot,determineAspect z))
+                    -> Just (n,(ahead annot,verbProperty z))
                   _
                     -> Nothing
   in mapMaybe testf $ toList (mkBitreeZipper [] lemmapt)

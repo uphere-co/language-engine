@@ -48,6 +48,7 @@ testtxt2 = [ "I am floating."
            , "We are not having lunch right now."
            , "It's not done yet."
            , "It's done."
+           , "It's rarely noted."
            ]
 
 -- showVoice :: (PennTree,S.Sentence) -> IO ()
