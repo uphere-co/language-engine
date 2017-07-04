@@ -21,6 +21,7 @@ module NLP.Type.PennTreebankII
 , ANode(..)
 , ALeaf(..)
 , Annotation(..)
+, type ANAtt, type ALAtt
 , chunkTag, posTag, tokenWord, getTag, getRange
 , termRange, termRangeTree, contain, containR
 , mkIndexedTree, getADTPennTree, mkPennTreeIdx
@@ -318,6 +319,10 @@ type PennTreeIdx = PennTreeIdxG ChunkTag (POSTag,Text)
 data ANode annot = ANode ChunkTag annot
 
 data ALeaf annot = ALeaf (POSTag,Text) annot
+
+type ANAtt lst = ANode (AttribList lst)
+
+type ALAtt lst = ALeaf (AttribList lst)
 
 class Annotation f where
   getAnnot :: f a -> a
