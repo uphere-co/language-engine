@@ -1,9 +1,13 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds             #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 
@@ -15,13 +19,25 @@ module Data.Attribute
 , Elem(..)
 , getElem
 , AttribList(..)
+, joinAttrib
 ) where
 
 
+import           Data.Discrimination
+import           Data.Discrimination.Grouping
+import           Data.Maybe
+
+  
 data AttribList (list :: [*]) where
   AttribNull :: AttribList '[]
   AttribCons :: a -> AttribList as -> AttribList (a ': as)
 
+
+instance Show (AttribList '[]) where
+  show AttribNull = "AttribNull"
+
+instance (Show a, Show (AttribList as)) => Show (AttribList (a ': as)) where
+  show (AttribCons x xs) = "AttribCons (" ++ show x ++ ") (" ++ show xs ++ ")" 
 
 -- | following https://stackoverflow.com/questions/37283403/type-level-environment-in-haskell
 --   but the original post had a fault. 
@@ -57,15 +73,26 @@ atail (AttribCons _ xs) = xs
 
 acons = AttribCons
 
+infixr 8 `acons`
+
 -- infixr 8 <&>
 
 anil = AttribNull
 
 
 
-
-
-
-  
-  
-
+-- | join operation between two AttriLists.
+--   This is an asymmetric-outer join since it first extracts keys from the right-most element
+--   of the list by construction and then join it with another list by checking the key and
+--   the key extracted from the new list. If duplication happens, it only matches head item
+--   (that's why it's called headMatch).
+joinAttrib :: forall b k xs. (Grouping k) =>
+              (b -> k)
+           -> [b]              
+           -> [AttribList (k ': xs)]
+           -> [AttribList (k ': Maybe b ': xs)]
+joinAttrib f bs lst = catMaybes (joining grouping headMatch f ahead bs lst)
+  where headMatch :: [b] -> [AttribList (k ': xs)] -> Maybe (AttribList (k ': Maybe b ': xs))
+        headMatch (y:_) (AttribCons k xs : _) = Just (acons k (acons (Just y) xs))
+        headMatch _     (AttribCons k xs : _) = Just (acons k (acons Nothing  xs))
+        headMatch _     _                     = Nothing

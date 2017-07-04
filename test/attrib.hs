@@ -5,7 +5,7 @@ module Main where
 import Data.Attribute
 
 
-main = do
+main1 = do
   let x = "abc" `acons` (3 :: Int) `acons` anil
   print (ahead x)
   print (ahead (atail x))
@@ -19,3 +19,23 @@ main = do
   print y
   let y' = getElem Here x
   print y'
+
+
+main = do
+  let xs :: [(Int,String)]
+      xs = [(1,"a"),(2,"b"),(3,"c")]
+
+      ys :: [(Int,(Int,Int))]
+      ys = [(1,(2,3)),(3,(4,5)),(5,(7,8)),(3,(9,10))]
+
+      zs :: [(Int,Char)]
+      zs = [(1,':'),(2,'*'),(5,'=')]
+      
+
+  let xs' = map (\(i,x) -> i `acons` (x `acons` anil)) xs
+
+  print xs'
+
+  print $ joinAttrib fst ys xs'
+
+  print $ joinAttrib fst zs (joinAttrib fst ys xs') 

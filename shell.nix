@@ -16,6 +16,7 @@ let
             aeson
             attoparsec
             bifunctors
+            discrimination
             lens
             taggy-lens
             text
