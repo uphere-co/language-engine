@@ -29,6 +29,10 @@ type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
 data Voice = Active | Passive
            deriving (Show,Eq,Ord,Enum,Bounded)
 
+data Aspect = Simple | Progressive
+           deriving (Show,Eq,Ord,Enum,Bounded)
+
+
 type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
 
 type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
