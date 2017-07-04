@@ -34,18 +34,20 @@ import           SRL.Feature
 import           SRL.Feature.Verb
 
 
-testtxt = [ "He was fined $25,000."                -- past    simple      passive
-          , "He will be fined $25,000."            -- present simple      passive
-          , "He has been fined $25,000."           -- present perfect     passive
-          , "The move had been widely expected."   -- past    perfect     passive
-          , "I am floating."                       -- present progressive active  
-          , "I am studying with Maria."            -- present progressive active
-          , "We eat lunch."                        -- present simple      active
-          , "We are eating lunch."                 -- present progressive active
-          , "We are not eating lunch right now."   -- present progressive active
-          , "It's not done yet."                   -- present simple      passive
-          , "It's done."                           -- present simple      passive
-          , "It's rarely noted."                   -- present simple      passive
+testtxt = [ "He was fined $25,000."                -- past    simple             passive
+          , "He will be fined $25,000."            -- present simple             passive
+          , "He has been fined $25,000."           -- present perfect            passive
+          , "The move had been widely expected."   -- past    perfect            passive
+          , "I am floating."                       -- present progressive        active  
+          , "I am studying with Maria."            -- present progressive        active
+          , "We eat lunch."                        -- present simple             active
+          , "We are eating lunch."                 -- present progressive        active
+          , "We are not eating lunch right now."   -- present progressive        active
+          , "It's not done yet."                   -- present simple             passive
+          , "It's done."                           -- present simple             passive
+          , "It's rarely noted."                   -- present simple             passive
+          , "I have been watching TV."             -- present perfectprogressive active
+          , "The book had not been noticed."       -- past    perfect            passive
           ]
 
 

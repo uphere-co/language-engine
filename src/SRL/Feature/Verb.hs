@@ -6,9 +6,10 @@
 
 module SRL.Feature.Verb where
 
-import           Control.Monad                               ((<=<))
+import           Control.Applicative
+import           Control.Monad
 import           Data.Foldable                               (toList)
-import           Data.Maybe                                  (mapMaybe)
+import           Data.Maybe
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmatize)
@@ -25,6 +26,9 @@ phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
 phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
 
+
+getLeaf (PL (_,x)) = Just x
+getLeaf _          = Nothing
 
 isLemmaAs lma (PL (_,x)) = ahead (getAnnot x) == lma
 isLemmaAs _   _          = False
@@ -47,17 +51,25 @@ isVBG :: BitreeZipperICP a -> Bool
 isVBG z = isPOSAs VBG (current z)
 
 
-withCopula :: BitreeZipperICP (Lemma ': as) -> Bool
-withCopula z = check1 z || check2 z
-  where check1 z = maybe False (isLemmaAs "be" . current) ((prev <=< parent) z)
-        check2 z = maybe False (isLemmaAs "be" . current) ((child1 <=< parent <=< parent) z)   -- case for "it's not done" 
+withCopula :: BitreeZipperICP (Lemma ': as) -> Maybe POSTag
+withCopula z = check1 z <|> check2 z
+  where check1 z = do w <- current <$> (prev <=< parent) z
+                      guard (isLemmaAs "be" w)
+                      posTag <$> getLeaf w
+        check2 z = do w <- current <$> (child1 <=< parent <=< parent) z
+                      guard (isLemmaAs "be" w)
+                      posTag <$> getLeaf w
 
 
 
-withHave :: BitreeZipperICP (Lemma ': as) -> Bool
-withHave z = check1 z
-  where check1 z = maybe False (isLemmaAs "have" . current) ((prev <=< parent) z)
-        check2 z = maybe False (isLemmaAs "have" . current) ((child1 <=< parent <=< parent) z)   -- case for "it's not done"     
+withHave :: BitreeZipperICP (Lemma ': as) -> Maybe POSTag
+withHave z = check1 z <|> check2 z
+  where check1 z = do w <- current <$> (prev <=< parent) z
+                      guard (isLemmaAs "have" w)
+                      posTag <$> getLeaf w
+        check2 z = do w <- current <$> (child1 <=< parent <=< parent) z
+                      guard (isLemmaAs "have" w)
+                      posTag <$> getLeaf w
 
 
 isInNP :: BitreeZipperICP as -> Bool
@@ -71,18 +83,21 @@ isInPP z = maybe False (isChunkAs PP . current) (parent z)
 isPassive :: BitreeZipperICP (Lemma ': as) -> Bool
 isPassive z
   = let b1 = isVBN z
-        b2 = withCopula z
+        b2 = isJust (withCopula z)
         b3 = isInNP z
         b4 = isInPP z
     in (b1 && b2) || (b1 && b3) || (b1 && b4)
 
 
-verbProperty :: BitreeZipperICP (Lemma ': as) -> (Aspect,Voice)
+
+verbProperty :: BitreeZipperICP (Lemma ': as) -> (Tense,Aspect,Voice)
 verbProperty z
   = let b0 = isVBN z
         b1 = isVBG z
-        b2 = withCopula z
-        b3 = withHave z
+        m2 = withCopula z
+        b2 = isJust m2
+        m3 = withHave z
+        b3 = isJust m3
         asp = if b0 && b3
               then Perfect
               else if (b1 && b2)
@@ -91,8 +106,13 @@ verbProperty z
                         else Progressive
                    else Simple
         vo  = if isPassive z then Passive else Active
-    in (asp,vo)
-
+        tns = case (asp,vo,m2,m3) of
+                (Perfect,           _      ,_     ,Just p) -> if p == VBD then Past else Present
+                (PerfectProgressive,_      ,_     ,Just p) -> if p == VBD then Past else Present
+                (_                 ,Passive,Just p,_     ) -> if p == VBD then Past else Present
+                _                                          -> Present
+                
+    in (tns,asp,vo)
 
 
 voice :: (PennTree,S.Sentence) -> [(Int,(Lemma,Voice))]
@@ -110,7 +130,7 @@ voice (pt,sent) =
   in mapMaybe testf $ toList (mkBitreeZipper [] lemmapt)
 
 
-getVerbProperty :: (PennTree,S.Sentence) -> [(Int,(Lemma,(Aspect,Voice)))]
+getVerbProperty :: (PennTree,S.Sentence) -> [(Int,(Lemma,(Tense,Aspect,Voice)))]
 getVerbProperty (pt,sent) = 
   let ipt = mkAnnotatable (mkPennTreeIdx pt)
       lemmamap = mkLemmaMap sent
