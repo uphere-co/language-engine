@@ -39,9 +39,13 @@ isVBG z = case current z of
 
 
 withCopula :: BitreeZipperICP (Lemma ': as) -> Bool
-withCopula z = case current <$> (prev <=< parent) z of
-                 Just (PL (_,x)) -> ahead (getAnnot x) == "be"
-                 _               -> False
+withCopula z = check1 z || check2 z
+  where becheck (Just (PL (_,x))) = ahead (getAnnot x) == "be"
+        becheck _                 = False
+
+        check1 z = becheck (current <$> (prev <=< parent) z)
+        check2 z = becheck (current <$> (child1 <=< parent <=< parent) z)   -- case for "it's not done" 
+         
 
 
 isInNP :: BitreeZipperICP as -> Bool
@@ -65,11 +69,11 @@ isPassive z
     in (b1 && b2) || (b1 && b3) || (b1 && b4)
 
 
-isProgressive :: BitreeZipperICP (Lemma ': as) -> Bool
-isProgressive z
+determineAspect :: BitreeZipperICP (Lemma ': as) -> Aspect
+determineAspect z
   = let b1 = isVBG z
         b2 = withCopula z
-    in (b1 && b2)
+    in if (b1 && b2) then Progressive else Simple
 
 
 
@@ -97,7 +101,7 @@ aspect (pt,sent) =
       getf (PN x _) = Left x
       testf z = case getf (current z) of
                   Right (n,ALeaf (VBG,_) annot)
-                    -> Just (n,(ahead annot,if isProgressive z then Progressive else Simple))
+                    -> Just (n,(ahead annot,determineAspect z))
                   _
                     -> Nothing
   in mapMaybe testf $ toList (mkBitreeZipper [] lemmapt)

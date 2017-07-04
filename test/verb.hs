@@ -65,8 +65,11 @@ process pp txt = do
           cpts = mapMaybe (^.S.parseTree) sents
           pts = map decodeToPennTree cpts
       let lst = zip pts sents
-      flip mapM_ lst $ \x -> do
+      flip mapM_ lst $ \x@(_,sent) -> do
+        print (mkLemmaMap sent)
+        
         print (voice x)
+        
         print (aspect x)
 
 
