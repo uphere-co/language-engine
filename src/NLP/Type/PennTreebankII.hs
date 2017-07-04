@@ -32,6 +32,7 @@ import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.Bifoldable
 import           Data.Bifunctor
+import           Data.Binary                    (Binary)
 import           Data.Bitraversable
 import           Data.Foldable                  (toList)
 import           Data.Monoid                    ((<>))
@@ -101,6 +102,8 @@ instance FromJSON POSTag where
 instance ToJSON POSTag where
   toJSON = genericToJSON defaultOptions
 
+instance Binary POSTag
+
 isNone :: POSTag -> Bool
 isNone D_NONE = True
 isNone _      = False
@@ -165,6 +168,7 @@ instance FromJSON ChunkTag where
 instance ToJSON ChunkTag where
   toJSON = genericToJSON defaultOptions
 
+instance Binary ChunkTag
 
 data IOBPrefix = I_       -- ^ inside the chunk 
                | B_       -- ^ inside the chunk, preceding word is part of a different chunk
@@ -194,6 +198,8 @@ instance FromJSON RelationTag where
 
 instance ToJSON RelationTag where
   toJSON = genericToJSON defaultOptions
+
+instance Binary RelationTag
 
 
 data AnchorTag = A1       -- ^ anchor chunks that corresponds to P1
