@@ -42,20 +42,9 @@ isChunkAs _   _            = False
 isVBN :: BitreeZipperICP a -> Bool
 isVBN z = isPOSAs VBN (current z)
 
-{-
-  case current z of
-            PL (_,x) -> posTag x == VBN
-            _        -> False 
--}
 
 isVBG :: BitreeZipperICP a -> Bool
 isVBG z = isPOSAs VBG (current z)
-
-{-
-  case current z of
-            PL (_,x) -> posTag x == VBG
-            _        -> False 
--}
 
 
 withCopula :: BitreeZipperICP (Lemma ': as) -> Bool
@@ -64,27 +53,20 @@ withCopula z = check1 z || check2 z
         check2 z = maybe False (isLemmaAs "be" . current) ((child1 <=< parent <=< parent) z)   -- case for "it's not done" 
 
 
-{-
+
 withHave :: BitreeZipperICP (Lemma ': as) -> Bool
 withHave z = check1 z
-  where check1 z = isLemmaAs "have" (current <$> (prev <=< parent) z)
--}
+  where check1 z = maybe False (isLemmaAs "have" . current) ((prev <=< parent) z)
+        check2 z = maybe False (isLemmaAs "have" . current) ((child1 <=< parent <=< parent) z)   -- case for "it's not done"     
+
 
 isInNP :: BitreeZipperICP as -> Bool
 isInNP z = maybe False (isChunkAs NP . current) ((parent <=< parent) z)
-{-
-  case current <$> (parent <=< parent) z of
-             Just (PN (_,x) _) -> chunkTag x == NP
-             _                 -> False
--}
+
 
 isInPP :: BitreeZipperICP as -> Bool
 isInPP z = maybe False (isChunkAs PP . current) (parent z)
-{-
-  case current <$> (parent z) of
-             Just (PN (_,x) _) -> chunkTag x == PP
-             _               -> False
--}
+
 
 isPassive :: BitreeZipperICP (Lemma ': as) -> Bool
 isPassive z
@@ -95,11 +77,21 @@ isPassive z
     in (b1 && b2) || (b1 && b3) || (b1 && b4)
 
 
-verbProperty :: BitreeZipperICP (Lemma ': as) -> Aspect
+verbProperty :: BitreeZipperICP (Lemma ': as) -> (Aspect,Voice)
 verbProperty z
-  = let b1 = isVBG z
+  = let b0 = isVBN z
+        b1 = isVBG z
         b2 = withCopula z
-    in if (b1 && b2) then Progressive else Simple
+        b3 = withHave z
+        asp = if b0 && b3
+              then Perfect
+              else if (b1 && b2)
+                   then if b3
+                        then PerfectProgressive
+                        else Progressive
+                   else Simple
+        vo  = if isPassive z then Passive else Active
+    in (asp,vo)
 
 
 
@@ -118,17 +110,19 @@ voice (pt,sent) =
   in mapMaybe testf $ toList (mkBitreeZipper [] lemmapt)
 
 
-aspect :: (PennTree,S.Sentence) -> [(Int,(Lemma,Aspect))]
-aspect (pt,sent) = 
+getVerbProperty :: (PennTree,S.Sentence) -> [(Int,(Lemma,(Aspect,Voice)))]
+getVerbProperty (pt,sent) = 
   let ipt = mkAnnotatable (mkPennTreeIdx pt)
       lemmamap = mkLemmaMap sent
       lemmapt = lemmatize lemmamap ipt
       getf (PL x) = Right x
       getf (PN x _) = Left x
       testf z = case getf (current z) of
-                  Right (n,ALeaf (VBG,_) annot)
-                    -> Just (n,(ahead annot,verbProperty z))
+                  Right (n,ALeaf (pos,_) annot)
+                    -> if isVerb pos && ahead annot /= "be" && ahead annot /= "have"
+                       then Just (n,(ahead annot,verbProperty z))
+                       else Nothing
                   _
-                    -> Nothing
+                    -> Nothing 
   in mapMaybe testf $ toList (mkBitreeZipper [] lemmapt)
 

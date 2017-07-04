@@ -21,25 +21,37 @@ import           PropBank.Type.Prop
 data Position = Before | After | Embed
               deriving (Show,Eq,Ord,Enum,Bounded)
 
+
 data Direction = Up | Down
                deriving (Show,Eq,Ord,Enum,Bounded)
 
+
 type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
 
+
+data Tense = Present | Past
+           deriving (Show,Eq,Ord,Enum,Bounded)
+
+                    
 data Voice = Active | Passive
            deriving (Show,Eq,Ord,Enum,Bounded)
 
-data Aspect = Simple | Progressive
+
+data Aspect = Simple | Progressive | Perfect | PerfectProgressive
            deriving (Show,Eq,Ord,Enum,Bounded)
 
 
 type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
 
+
 type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
+
 
 type RoleSet = (Text,Text)
 
+
 type Level = Int
+
 
 data DepInfo = DepInfo { _dinfo_self :: Int
                        , _dinfo_mother :: Int
@@ -49,6 +61,7 @@ data DepInfo = DepInfo { _dinfo_self :: Int
 
 
 makeLenses ''DepInfo
+
 
 data SRLFeature = SRLFeat { _sfeat_range :: Range
                           , _sfeat_ptp :: ParseTreePath
