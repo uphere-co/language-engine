@@ -45,9 +45,12 @@ testtxt = [ "He was fined $25,000."                -- past    simple            
           , "We are not eating lunch right now."   -- present progressive        active
           , "It's not done yet."                   -- present simple             passive
           , "It's done."                           -- present simple             passive
-          , "It's rarely noted."                   -- present simple             passive
+          , "It's rarely noted."                   -- present simple             passive 
           , "I have been watching TV."             -- present perfectprogressive active
           , "The book had not been noticed."       -- past    perfect            passive
+          , "I have done the job."                 -- present perfect            active
+          , "I haven't done the job."              -- present perfect            active
+          , "I had done the job at that time."     -- past    perfect            active
           ]
 
 
@@ -58,7 +61,6 @@ testtxt = [ "He was fined $25,000."                -- past    simple            
 -- showVoice (pt,sent) = mapM_ print (voice (pt,sent) )
 
 process pp txt = do
-  T.IO.putStrLn txt
   let doc = Document txt (fromGregorian 2017 4 17)
   ann <- annotate pp doc
   rdoc <- protobufDoc ann
@@ -69,10 +71,13 @@ process pp txt = do
           cpts = mapMaybe (^.S.parseTree) sents
           pts = map decodeToPennTree cpts
       let lst = zip pts sents
-      flip mapM_ lst $ \x@(_,sent) -> do
-        print (mkLemmaMap sent)
+      flip mapM_ lst $ \x@(pt,sent) -> do
+        -- print (mkLemmaMap sent)
         -- print (voice x)
-        
+        putStrLn "\n\n======================================="
+        T.IO.putStrLn txt
+        putStrLn "---------------------------------------"
+        T.IO.putStrLn (prettyPrint 0 pt)
         print (getVerbProperty x)
 
 

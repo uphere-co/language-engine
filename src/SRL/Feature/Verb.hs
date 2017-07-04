@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
@@ -20,6 +21,7 @@ import           NLP.Type.PennTreebankII
 --
 import           SRL.Type
 --
+import           Debug.Trace
 
 
 phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
@@ -63,13 +65,17 @@ withCopula z = check1 z <|> check2 z
 
 
 withHave :: BitreeZipperICP (Lemma ': as) -> Maybe POSTag
-withHave z = check1 z <|> check2 z
+withHave z = check1 z <|> check2 z <|> check3 z
   where check1 z = do w <- current <$> (prev <=< parent) z
                       guard (isLemmaAs "have" w)
                       posTag <$> getLeaf w
         check2 z = do w <- current <$> (child1 <=< parent <=< parent) z
                       guard (isLemmaAs "have" w)
                       posTag <$> getLeaf w
+        check3 z = do w <- current <$> (child1 <=< parent <=< parent <=< parent) z
+                      guard (isLemmaAs "have" w)
+                      posTag <$> getLeaf w
+
 
 
 isInNP :: BitreeZipperICP as -> Bool
