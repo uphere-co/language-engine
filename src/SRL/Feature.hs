@@ -23,7 +23,7 @@ import           PropBank.Util
 --
 import           SRL.Feature.Dependency
 import           SRL.Feature.ParseTreePath
-import           SRL.Feature.Voice
+import           SRL.Feature.Verb
 import           SRL.Format
 import           SRL.PropBankMatch
 import           SRL.Type

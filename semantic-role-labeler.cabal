@@ -24,7 +24,7 @@ library
                        SRL.Feature
                        SRL.Feature.Dependency
                        SRL.Feature.ParseTreePath
-                       SRL.Feature.Voice
+                       SRL.Feature.Verb
                        SRL.Format
                        SRL.Init
                        SRL.PropBankMatch
