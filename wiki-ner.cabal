@@ -33,6 +33,7 @@ library
                      , WikiEL.CoreNLP
                      , WikiEL.WikiNamedEntityTagger
                      , WikiEL.WikiEntityClass
+                     , WikiEL.Convert
   -- other-modules:       
   other-extensions:    OverloadedStrings, GeneralizedNewtypeDeriving, FlexibleContexts, ExistentialQuantification, DeriveFunctor, FlexibleInstances, StandaloneDeriving
   build-depends:       base
