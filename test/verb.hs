@@ -29,9 +29,13 @@ import           CoreNLP.Simple.Type
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import           Data.BitreeZipper
+import           Text.Format.Tree
 --
 import           SRL.Feature
+import           SRL.Feature.Dependency
 import           SRL.Feature.Verb
+import           SRL.Format
+import           SRL.Type
 
 
 testtxt = [ "He was fined $25,000."                -- past    simple             passive
@@ -53,12 +57,19 @@ testtxt = [ "He was fined $25,000."                -- past    simple            
           , "I had done the job at that time."     -- past    perfect            active
           ]
 
+testtxt2 = [ "President Donald Trump said he’s actively considering a breakup of giant Wall Street banks, giving a push to efforts to revive a Depression-era law separating consumer and investment banking. "
+           , "Carmakers, rideshare services and tech companies are teaming up in an increasingly complex series of alliances."
+           , "But that tenet was undone in 1999, a move that’s been blamed by some for the 2008 market crash. Bringing that system back has won the support of politicians as diverse as President Donald Trump and Senator Elizabeth Warren, the Massachusetts Democrat who’s been one of Wall Street’s toughes."
+           , "President Donald Trump on Monday dismissed widespread reports that his administration is riven by discord, saying he is sticking by his polarizing chief strategist, Steve Bannon, calling him a \"very decent guy\" who is getting a \"bad rap.\""            
+           ]
+
 
 
           -- , "The man, it seems, has a Lichtenstein corporation, licensed in Libya and sheltered in the Bahamas. Coke introduced a caffeine-free sugared cola based on its original formula in 1983. But there were fewer price swings than expected. Two big stocks involved in takeover activity saw this."
 
 -- showVoice :: (PennTree,S.Sentence) -> IO ()
 -- showVoice (pt,sent) = mapM_ print (voice (pt,sent) )
+
 
 process pp txt = do
   let doc = Document txt (fromGregorian 2017 4 17)
@@ -70,15 +81,28 @@ process pp txt = do
       let sents = d ^.. D.sentence . traverse
           cpts = mapMaybe (^.S.parseTree) sents
           pts = map decodeToPennTree cpts
-      let lst = zip pts sents
-      flip mapM_ lst $ \x@(pt,sent) -> do
+          Right deps = mapM sentToDep sents
+      let lst = zip (zip pts sents) deps
+      flip mapM_ lst $ \(x@(pt,sent),dep) -> do
         -- print (mkLemmaMap sent)
         -- print (voice x)
         putStrLn "\n\n======================================="
         T.IO.putStrLn txt
         putStrLn "---------------------------------------"
         T.IO.putStrLn (prettyPrint 0 pt)
-        print (getVerbProperty x)
+        putStrLn "---------------------------------------"
+        let vps = getVerbProperty x
+            identifiedverbs = concatMap (\vp -> vp^.vp_words) vps
+        mapM_ (putStrLn . formatVerbProperty) vps 
+        putStrLn "---------------------------------------"
+        -- sentStructure 
+        let lmap= mkLemmaMap sent
+            vtree = verbTree identifiedverbs . depLevelTree dep . lemmatize lmap . mkAnnotatable . mkPennTreeIdx $ pt
+        mapM_ (T.IO.putStrLn . formatTree) vtree
+        putStrLn "---------------------------------------------------------------"
+        -- (T.IO.putStrLn . prettyPrint 0) ptr
+
+
 
 
 main :: IO ()
@@ -90,8 +114,8 @@ main = do
                    . ( postagger .~ True )
                    . ( lemma .~ True )
                    . ( sutime .~ False )
-                   . ( depparse .~ False ) -- True )
+                   . ( depparse .~ True )
                    . ( constituency .~ True )
                    . ( ner .~ False )
     pp <- prepare pcfg
-    mapM_ (process pp) testtxt
+    mapM_ (process pp) testtxt2
