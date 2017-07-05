@@ -4,12 +4,19 @@ module SRL.Format where
 
 import           Control.Lens
 import qualified Data.Text               as T
+import           Data.Text                    (Text)
+import           Data.Tree               as Tr
 import           Text.Printf
 --
+import           Data.Attribute
+import           Data.Bitree
 import           Data.BitreeZipper
+import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
+import           Text.Format.Tree
 --
 import           SRL.Type
+import           SRL.Util
 
 {- 
 formatVoice :: Voice -> String
@@ -17,6 +24,17 @@ formatVoice Nothing = " "
 formatVoice (Just Active) = "active"
 formatVoice (Just Passive) = "passive"
 -}
+
+formatRngText :: [Text] -> (Int,Int) -> String
+formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
+
+
+formatTree :: Bitree (Int,Lemma,a) (Int,Lemma,a) -> Text
+formatTree tr = linePrint unLemma (toTree (bimap (^._2) (^._2) tr))
+  where f (_,l,_) =  l
+        toTree (PN x xs) = Tr.Node x (map toTree xs)
+        toTree (PL x)    = Tr.Node x []
+        
 
 formatPTP :: ParseTreePath -> String
 formatPTP = foldMap f 
