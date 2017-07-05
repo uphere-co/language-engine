@@ -37,6 +37,7 @@ library
   -- other-modules:       
   other-extensions:    OverloadedStrings, GeneralizedNewtypeDeriving, FlexibleContexts, ExistentialQuantification, DeriveFunctor, FlexibleInstances, StandaloneDeriving
   build-depends:       base
+                     , binary
                      , tasty-hunit
                      , text
                      , primitive
