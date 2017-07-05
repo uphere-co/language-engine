@@ -34,25 +34,25 @@ isVBN z = case current z of
             _        -> False 
 
 
-withCopula :: BitreeZipperICP (AttribList (Lemma ': as)) -> Bool
+withCopula :: BitreeZipperICP (Lemma ': as) -> Bool
 withCopula z = case current <$> (prev <=< parent) z of
                  Just (PL (_,x)) -> ahead (getAnnot x) == "be"
                  _               -> False
 
 
-isInNP :: BitreeZipperICP (AttribList as) -> Bool
+isInNP :: BitreeZipperICP as -> Bool
 isInNP z = case current <$> (parent <=< parent) z of
              Just (PN (_,x) _) -> chunkTag x == NP
              _                 -> False
 
 
-isInPP :: BitreeZipperICP (AttribList as) -> Bool
+isInPP :: BitreeZipperICP as -> Bool
 isInPP z = case current <$> (parent z) of
              Just (PN (_,x) _) -> chunkTag x == PP
              _               -> False
 
 
-isPassive :: BitreeZipperICP (AttribList (Lemma ': as)) -> Bool
+isPassive :: BitreeZipperICP (Lemma ': as) -> Bool
 isPassive z = let b1 = isVBN z
                   b2 = withCopula z
                   b3 = isInNP z
