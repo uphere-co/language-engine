@@ -29,9 +29,9 @@ formatRngText :: [Text] -> (Int,Int) -> String
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
 
-formatTree :: Bitree (Int,Lemma,a) (Int,Lemma,a) -> Text
-formatTree tr = linePrint unLemma (toTree (bimap (^._2) (^._2) tr))
-  where f (_,l,_) =  l
+formatBitree :: (a -> Text) ->  Bitree a a -> Text --  Bitree (Int,Lemma,a) (Int,Lemma,a) -> Text
+formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
+  where -- f (_,l,_) =  l
         toTree (PN x xs) = Tr.Node x (map toTree xs)
         toTree (PL x)    = Tr.Node x []
         
