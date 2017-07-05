@@ -36,6 +36,13 @@ formatTree tr = linePrint unLemma (toTree (bimap (^._2) (^._2) tr))
         toTree (PL x)    = Tr.Node x []
         
 
+formatVerbProperty :: VerbProperty -> String
+formatVerbProperty vp = printf "%3d %15s %8s %20s %8s %s"
+                          (vp^.vp_index) (vp^.vp_lemma.to unLemma)
+                          (show (vp^.vp_tense)) (show (vp^.vp_aspect)) (show (vp^.vp_voice))
+                          (show (vp^.vp_words))
+
+
 formatPTP :: ParseTreePath -> String
 formatPTP = foldMap f 
   where
