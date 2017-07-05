@@ -12,10 +12,12 @@ import           Data.IntMap       (IntMap)
 import qualified Data.IntMap as IM 
 import           Data.Text         (Text)
 import qualified Data.Text   as T  (intercalate, unpack)
+import           Data.Tree
 --
 import           Data.Attribute
 import           Data.Bitree
 import           NLP.Type.PennTreebankII
+import           Text.Format.Tree
 --
 import           SRL.Type
 
@@ -26,6 +28,15 @@ clippedText (b,e) = T.intercalate " " . drop b . take (e+1)
 
 formatRngText :: [Text] -> (Int,Int) -> String
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
+
+
+formatTree :: Bitree (Int,Lemma,a) (Int,Lemma,a) -> Text
+formatTree tr = linePrint unLemma (toTree (bimap (^._2) (^._2) tr))
+  where f (_,l,_) =  l
+        toTree (PN x xs) = Node x (map toTree xs)
+        toTree (PL x)    = Node x []
+        
+
 
 
 safeHead :: [a] -> Maybe a

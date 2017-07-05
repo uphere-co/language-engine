@@ -4,6 +4,7 @@
 , nlp-types ? <nlp-types>
 , PropBank ? <PropBank>
 , wiki-ner ? <wiki-ner>
+, textview ? <textview>
 }:
 
 
@@ -43,6 +44,7 @@ let
       "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
       "wiki-ner" = self.callPackage (import wiki-ner) {};
       "fastText" = self.callPackage fastTextNix { inherit fasttext; };
+      "textview" = self.callPackage (import textview) {};
     };  
   newHaskellPackages = haskellPackages.override {
     overrides = self: super: hsconfig self super // hsconfig2 self super;
@@ -77,6 +79,7 @@ let
             p.HCoreNLP
             p.HCoreNLP-Proto
             p.wiki-ner
+            p.textview
             fastText
           ]);
 
