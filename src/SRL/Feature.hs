@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
@@ -29,6 +30,33 @@ import           SRL.PropBankMatch
 import           SRL.Type
 import           SRL.Util
 --
+
+
+verbTree :: PennTreeIdxG (ANAtt '[]) (ALAtt '[Maybe Level,Lemma])
+              -> Maybe (Bitree (Int,Lemma,Maybe Level) (Int,Lemma,Maybe Level))
+verbTree = fmap squash . worker
+  where
+    worker (PL (i,l)) = if isVerb (posTag l)
+                          then let mlvl = ahead (getAnnot l)
+                                   lma = ahead (atail (getAnnot l))
+                               in Just (PL (i,lma,mlvl))
+                          else Nothing
+    worker (PN _ xs) = let xs' = mapMaybe worker xs
+                         in case xs' of
+                              []  -> Nothing
+                              lst -> let y:ys = sortBy (cmpLevel `on` getLevel) lst
+                                     in case y of
+                                          PN v _ -> Just (PN v (y:ys))
+                                          PL v   -> case ys of
+                                                      [] -> Just (PL v)
+                                                      _ -> Just (PN v ys)
+    getLevel (PL (_i,_,ml))   = ml
+    getLevel (PN (_i,_,ml) _) = ml
+
+    squash (PN y [z@(PN w ws)]) = if y == w then squash z else PN y [squash z]
+    squash (PN y [z@(PL w)   ]) = if y == w then PL w     else PN y [squash z]
+    squash (PN y ys)            = PN y (map squash ys)
+    squash x                    = x
 
 
 calcSRLFeature :: SentenceInfo -> Int -> NodeRange -> Maybe SRLFeature

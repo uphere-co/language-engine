@@ -18,11 +18,10 @@ import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmati
 import           Data.Attribute
 import           Data.Bitree                                 (duplicate)
 import           Data.BitreeZipper
+import           Data.List                                   (sortBy)
 import           NLP.Type.PennTreebankII
 --
 import           SRL.Type
---
-import           Debug.Trace
 
 
 phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
@@ -165,4 +164,5 @@ getVerbProperty (pt,sent) =
                   _
                     -> Nothing 
   in mapMaybe testf $ toList (mkBitreeZipper [] lemmapt)
+
 
