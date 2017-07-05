@@ -12,8 +12,9 @@ import qualified Data.ByteString.Char8      as B
 import           Data.Default
 import           Data.List                         (foldl')
 import qualified Data.IntMap                as IM
-import           Data.Maybe                        (catMaybes,mapMaybe)
-import qualified Data.Text                  as T   (intercalate,unpack)
+import           Data.Maybe
+import           Data.Monoid
+import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import           Data.Time.Calendar                (fromGregorian)
 import           Language.Java              as J
@@ -25,6 +26,7 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
+import           CoreNLP.Simple.Util
 --
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
@@ -71,6 +73,10 @@ testtxt2 = [ "President Donald Trump said he’s actively considering a breakup 
 -- showVoice (pt,sent) = mapM_ print (voice (pt,sent) )
 
 
+showVerb tkmap (Left lma) = unLemma lma
+showVerb tkmap (Right (lma,is)) = unLemma lma <> " : " <> fullwords
+  where fullwords = T.intercalate " " $ map (\i -> fromMaybe "" (IM.lookup i tkmap)) is
+    
 process pp txt = do
   let doc = Document txt (fromGregorian 2017 4 17)
   ann <- annotate pp doc
@@ -84,21 +90,20 @@ process pp txt = do
           Right deps = mapM sentToDep sents
       let lst = zip (zip pts sents) deps
       flip mapM_ lst $ \(x@(pt,sent),dep) -> do
-        -- print (mkLemmaMap sent)
-        -- print (voice x)
+        let tkns = zip [0..] (getTKTokens sent)
+            tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
+            lmap= mkLemmaMap sent
         putStrLn "\n\n======================================="
         T.IO.putStrLn txt
         putStrLn "---------------------------------------"
         T.IO.putStrLn (prettyPrint 0 pt)
         putStrLn "---------------------------------------"
         let vps = getVerbProperty x
-            identifiedverbs = concatMap (\vp -> vp^.vp_words) vps
         mapM_ (putStrLn . formatVerbProperty) vps 
         putStrLn "---------------------------------------"
         -- sentStructure 
-        let lmap= mkLemmaMap sent
-            vtree = verbTree identifiedverbs . depLevelTree dep . lemmatize lmap . mkAnnotatable . mkPennTreeIdx $ pt
-        mapM_ (T.IO.putStrLn . formatTree) vtree
+        let vtree = verbTree vps . depLevelTree dep . lemmatize lmap . mkAnnotatable . mkPennTreeIdx $ pt
+        mapM_ (T.IO.putStrLn . formatBitree (^._2.to (showVerb tkmap))) vtree
         putStrLn "---------------------------------------------------------------"
         -- (T.IO.putStrLn . prettyPrint 0) ptr
 
