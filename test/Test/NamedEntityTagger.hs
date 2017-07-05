@@ -25,11 +25,13 @@ import           WikiEL.ETL.LoadData
 
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
-import qualified NLP.Type.NamedEntity                 as N
-import qualified WikiEL.WikiEntityClass               as WC
+import qualified NLP.Type.NamedEntity          as N
+import qualified WikiEL.WikiEntityClass        as WC
 
 -- to be moved
-
+import           Data.Text.Encoding                    (encodeUtf8)
+import           Data.Digest.XXHash                    (XXHash,xxHash')
+import qualified Data.Vector.Unboxed           as UV
 import           Data.Map                              (Map)
 import           Data.Maybe                            (mapMaybe)
 import           WikiEL.Type.Wikidata
@@ -71,7 +73,7 @@ testNamedEntityTagging = testCaseSteps "Named entity tagging on CoreNLP NER outp
     matchedItems  = namedEntityAnnotator entities uid2tag stanford_nefs
     expected_matches = [(IRange 0 1,   fromList [google, googleSearch])
                        ,(IRange 2 4,   fromList [facebook])
-                       ,(IRange 6 7,   fromList [ai1, ai2])
+                       ,(IRange 6 7,   fromList [ai2, ai1])
                        ,(IRange 9 10,  fromList [nlp])
                        ,(IRange 12 15, fromList [nlp])
                        ]
@@ -275,11 +277,15 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
       Just symbol -> Just (mentionUID, itemID, symbol)
       Nothing     -> Nothing  
 
+newtype WordHash = WordHash { _hash :: XXHash}
+                 deriving (Show, Eq, Ord)
+wordHash = WordHash
+
 main1 = do
   file <- T.IO.readFile listedCompanyFile
 
-  input_raw <- T.IO.readFile rawNewsFile2
-  input <- T.IO.readFile nerNewsFile2
+  input_raw <- T.IO.readFile rawNewsFile3
+  input <- T.IO.readFile nerNewsFile3
   uid2tag <- fromFiles [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
   wikiTable <- loadWETagger reprFile
 
@@ -307,7 +313,6 @@ main1 = do
   mapM_ print orgMentions
   print "Entity-linked public company entities"
   mapM_ print companyWithSymbols
-
   --print tickerMap
 
 

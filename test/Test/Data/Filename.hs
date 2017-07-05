@@ -13,6 +13,8 @@ rawNewsFile = "data/dao.ptb"
 nerNewsFile = "data/dao.ner"
 rawNewsFile2 = "data/iphone.ptb"
 nerNewsFile2 = "data/iphone.ner"
+rawNewsFile3 = "data/article.amazon_nike.ptb"
+nerNewsFile3 = "data/article.amazon_nike.ner"
 
 reprFileTiny   = EntityReprFile "data/wikidata.test.entities"
 orgItemFile    = ItemIDFile "data/ne.org"
