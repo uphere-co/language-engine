@@ -101,6 +101,18 @@ withHave z = check1 z <|> check2 z <|> check3 z
                       getIdxPOS w
 
 
+findAux :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,Lemma)
+findAux z = do
+  p <- parent z
+  guard (isChunkAs VP (current p))
+  c <- child1 p
+  if isPOSAs MD (current c)
+    then do i <- getLeafIndex (current c)
+            l <- ahead . getAnnot <$> getLeaf (current c)
+            return (i,l)
+    else findAux p
+          
+          
 
 isInNP :: BitreeZipperICP as -> Bool
 isInNP z = maybe False (isChunkAs NP . current) ((parent <=< parent) z)
@@ -144,12 +156,17 @@ verbProperty z = do
               (PerfectProgressive,_      ,_     ,Just p) -> if snd p == VBD then Past else Present
               (_                 ,Passive,Just p,_     ) -> if snd p == VBD then Past else Present
               _                                          -> if pos == VBD then Past else Present
-                
+      aux = findAux z
       is = catMaybes $
-             (if asp == Perfect || asp == PerfectProgressive then [fmap fst m3] else []) <>
-             (if asp == Progressive || asp == PerfectProgressive || vo == Passive then [fmap fst m2] else []) <>
+             [fmap fst aux] <>
+             (if asp == Perfect || asp == PerfectProgressive
+              then [fmap fst m3]
+              else []) <>
+             (if asp == Progressive || asp == PerfectProgressive || vo == Passive
+              then [fmap fst m2]
+              else []) <>
              [Just i]
-  return (VerbProperty i lma tns asp vo is)
+  return (VerbProperty i lma tns asp vo aux is)
 
 
 voice :: (PennTree,S.Sentence) -> [(Int,(Lemma,Voice))]
