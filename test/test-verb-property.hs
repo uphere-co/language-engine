@@ -8,45 +8,24 @@
 module Main where
 
 import           Control.Lens               hiding (levels)
-import qualified Data.ByteString.Char8      as B
-import           Data.Default
-import           Data.Foldable
-import           Data.List                         (foldl')
 import qualified Data.IntMap                as IM
-import           Data.Maybe
-import           Data.Monoid
+import           Data.Text                         (Text)
 import qualified Data.Text                  as T
-import qualified Data.Text.IO               as T.IO
-import           Data.Time.Calendar                (fromGregorian)
-import           Language.Java              as J
-import           System.Environment                (getEnv)
 --
-import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
-import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
-import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
-import           CoreNLP.Simple
-import           CoreNLP.Simple.Convert
-import           CoreNLP.Simple.Type
 import           CoreNLP.Simple.Type.Simplified
-import           CoreNLP.Simple.Util
 --
-import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
-import           Data.BitreeZipper
-import           Text.Format.Tree
 --
-import           SRL.Feature
-import           SRL.Feature.Dependency
 import           SRL.Feature.Verb
-import           SRL.Format
 import           SRL.Type
 --
 import           Test.Tasty.HUnit
 import           Test.Tasty
 
 
-
+ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17
+  :: (Text,(Tense,Aspect,Voice),[(Int,(Lemma,Text))],PennTree,Dependency)
 ex1 = ( "He was fined $25,000.", (Past,Simple,Passive)
       , [(0,("he","He")),(1,("be","was")),(2,("fine","fined")),(3,("$","$")),(4,("25,000","25,000")),(5,(".","."))]
       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","He")],PN "VP" [PL ("VBD","was"),PN "VP" [PL ("VBN","fined"),PN "NP" [PL ("$","$"),PL ("CD","25,000")]]],PL (".",".")]]
@@ -171,36 +150,20 @@ ex17 = ( "I had done the job at that time.", (Past,Perfect,Active)
        )
 
 
+testcases :: [(Text,(Tense,Aspect,Voice),[(Int,(Lemma,Text))],PennTree,Dependency)]
 testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17 ]
 
 
 
 
-    
+checkVP :: (Text,(Tense,Aspect,Voice),[(Int,(Lemma,Text))],PennTree,Dependency) -> Bool
 checkVP (txt,expresult,lmatknlst,pt,dep) = -- do
   let lmap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
       tkmap= IM.fromList (map (\(i,(_,t)) -> (i,t)) lmatknlst)
-  -- putStrLn "--------------"
-  -- T.IO.putStrLn txt
-  -- print expresult
       vps = verbPropertyFromPennTree lmap pt
   in case vps of
        vp:[] -> expresult == (vp^.vp_tense,vp^.vp_aspect,vp^.vp_voice)
        _ -> False 
-  {- 
-  putStrLn "\n\n======================================="
-  T.IO.putStrLn txt
-  putStrLn "---------------------------------------"
-  T.IO.putStrLn (prettyPrint 0 pt)
-  putStrLn "---------------------------------------"
-  let vps = verbPropertyFromPennTree lmap pt 
-  mapM_ (putStrLn . formatVerbProperty) vps 
-  putStrLn "---------------------------------------"
-  -- sentStructure 
-  let vtree = verbTree vps . depLevelTree dep . lemmatize lmap . mkAnnotatable . mkPennTreeIdx $ pt
-  mapM_ (T.IO.putStrLn . formatBitree (^._2.to (showVerb tkmap))) vtree
-  putStrLn "---------------------------------------------------------------"
-  -}
 
 
 unitTestsVerbProperty :: TestTree
