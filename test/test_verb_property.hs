@@ -173,58 +173,26 @@ testtxt = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex
 
 
     
-process {- pp  -} (txt,lmatknlst,pt,dep) = do
-  {- let doc = Document txt (fromGregorian 2017 4 17)
-  ann <- annotate pp doc
-  rdoc <- protobufDoc ann
-  case rdoc of
-    Left e -> print e
-    Right d -> do
-      let sents = d ^.. D.sentence . traverse
-          cpts = mapMaybe (^.S.parseTree) sents
-          pts = map decodeToPennTree cpts
-          Right deps = mapM sentToDep sents
-      let lst = zip (zip pts sents) deps -}
+process (txt,lmatknlst,pt,dep) = do
+  let lmap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst) -- mkLemmaMap sent
+      tkmap= IM.fromList (map (\(i,(_,t)) -> (i,t)) lmatknlst) -- mkLemmaMap sent
+  putStrLn "\n\n======================================="
+  T.IO.putStrLn txt
+  putStrLn "---------------------------------------"
+  T.IO.putStrLn (prettyPrint 0 pt)
+  putStrLn "---------------------------------------"
+  let vps = verbPropertyFromPennTree lmap pt 
+  mapM_ (putStrLn . formatVerbProperty) vps 
+  putStrLn "---------------------------------------"
+  -- sentStructure 
+  let vtree = verbTree vps . depLevelTree dep . lemmatize lmap . mkAnnotatable . mkPennTreeIdx $ pt
+  mapM_ (T.IO.putStrLn . formatBitree (^._2.to (showVerb tkmap))) vtree
+  putStrLn "---------------------------------------------------------------"
 
-        -- let tkns = zip [0..] (getTKTokens sent)
-        --     tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
-        let lmap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst) -- mkLemmaMap sent
-            tkmap= IM.fromList (map (\(i,(_,t)) -> (i,t)) lmatknlst) -- mkLemmaMap sent
 
-        -- print dep
-        -- let llst = IM.toAscList lmap
-        --     tklst = IM.toAscList tkmap
-        --print . map (\((i,l),(_,t))->(i,(unLemma l,t))) $ zip llst tklst 
-        -- print pt
-        
-        putStrLn "\n\n======================================="
-        T.IO.putStrLn txt
-        putStrLn "---------------------------------------"
-        T.IO.putStrLn (prettyPrint 0 pt)
-        putStrLn "---------------------------------------"
-        let vps = verbPropertyFromPennTree lmap pt 
-        mapM_ (putStrLn . formatVerbProperty) vps 
-        putStrLn "---------------------------------------"
-        -- sentStructure 
-        let vtree = verbTree vps . depLevelTree dep . lemmatize lmap . mkAnnotatable . mkPennTreeIdx $ pt
-        mapM_ (T.IO.putStrLn . formatBitree (^._2.to (showVerb tkmap))) vtree
-        putStrLn "---------------------------------------------------------------"
-        -- (T.IO.putStrLn . prettyPrint 0) ptr
-             
 
 
 
 main :: IO ()
 main = do
-  {- clspath <- getEnv "CLASSPATH"
-  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do 
-    let pcfg = def & ( tokenizer .~ True )
-                   . ( words2sentences .~ True )
-                   . ( postagger .~ True )
-                   . ( lemma .~ True )
-                   . ( sutime .~ False )
-                   . ( depparse .~ True )
-                   . ( constituency .~ True )
-                   . ( ner .~ False ) -}
-    -- pp <- prepare pcfg
-    mapM_ process testtxt
+  mapM_ process testtxt
