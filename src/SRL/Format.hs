@@ -1,8 +1,12 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
 module SRL.Format where
 
 import           Control.Lens
+import qualified Data.IntMap             as IM
+import           Data.Maybe
+import           Data.Monoid
 import qualified Data.Text               as T
 import           Data.Text                    (Text)
 import           Data.Tree               as Tr
@@ -41,6 +45,10 @@ formatVerbProperty vp = printf "%3d %15s %8s %20s %8s %s"
                           (vp^.vp_index) (vp^.vp_lemma.to unLemma)
                           (show (vp^.vp_tense)) (show (vp^.vp_aspect)) (show (vp^.vp_voice))
                           (show (vp^.vp_words))
+
+
+showVerb tkmap (lma,is) = unLemma lma <> " : " <> fullwords
+  where fullwords = T.intercalate " " $ map (\i -> fromMaybe "" (IM.lookup i tkmap)) is
 
 
 formatPTP :: ParseTreePath -> String

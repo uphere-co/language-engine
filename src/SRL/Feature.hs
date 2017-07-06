@@ -34,13 +34,13 @@ import           SRL.Util
 
 verbTree :: [VerbProperty] -- [Int]
          -> PennTreeIdxG (ANAtt '[]) (ALAtt '[Maybe Level,Lemma])
-         -> Maybe (Bitree (Int,Either Lemma (Lemma,[Int]), Maybe Level)
-                          (Int,Either Lemma (Lemma,[Int]), Maybe Level))
+         -> Maybe (Bitree (Int,(Lemma,[Int]), Maybe Level)
+                          (Int,(Lemma,[Int]), Maybe Level))
 verbTree vps = fmap squash . worker 
   where
     -- identified = vps
     vps_map = IM.fromList (map (\vp -> (vp^.vp_index,(vp^.vp_lemma,vp^.vp_words))) vps)
-    identified_verbs = concatMap (\vp -> vp^.vp_words) vps
+    identified_verbs = concatMap (\vp -> init (vp^.vp_words)) vps
     
     
     worker (PL (i,l)) = let lma = ahead (atail (getAnnot l))
@@ -48,10 +48,12 @@ verbTree vps = fmap squash . worker
                            then Nothing
                            else registerVerb (i,lma)
       where registerVerb (i,lma) = if isVerb (posTag l)
-                                   then let mv = IM.lookup i vps_map
+                                   then {- let mv = IM.lookup i vps_map
                                             ev = maybe (Left lma) (Right . id) mv
-                                            mlvl = ahead (getAnnot l)
-                                        in Just (PL (i,ev,mlvl))
+                                            mlvl = ahead (getAnnot l) -}
+                                        do v <- IM.lookup i vps_map
+                                           let mlvl = ahead (getAnnot l)
+                                           return (PL (i,v,mlvl))
                                    else Nothing
     worker (PN _ xs) = let xs' = mapMaybe worker xs
                          in case xs' of
