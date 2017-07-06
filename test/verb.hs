@@ -79,7 +79,7 @@ process pp txt = do
           pts = map decodeToPennTree cpts
           Right deps = mapM sentToDep sents
       let lst = zip (zip pts sents) deps
-      flip mapM_ lst $ \(x@(pt,sent),dep) -> do
+      flip mapM_ lst $ \((pt,sent),dep) -> do
         let tkns = zip [0..] (getTKTokens sent)
             tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
             lmap= mkLemmaMap sent
@@ -88,7 +88,7 @@ process pp txt = do
         putStrLn "---------------------------------------"
         T.IO.putStrLn (prettyPrint 0 pt)
         putStrLn "---------------------------------------"
-        let vps = getVerbProperty x
+        let vps = verbPropertyFromPennTree lmap pt
         mapM_ (putStrLn . formatVerbProperty) vps 
         putStrLn "---------------------------------------"
         -- sentStructure 
