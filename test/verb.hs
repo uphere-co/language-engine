@@ -34,6 +34,7 @@ import           Data.BitreeZipper
 import           Text.Format.Tree
 --
 import           SRL.Feature
+import           SRL.Feature.Clause
 import           SRL.Feature.Dependency
 import           SRL.Feature.Verb
 import           SRL.Format
@@ -72,7 +73,14 @@ testtxt3 = [ "I will go to school."
            , "Can I ask you a favor?"
            ]
 
-    
+
+testpt1 :: PennTree
+testpt1 = PN "ROOT" [PN "S" [PN "NP" [PL ("DT","The"),PL ("NN","man")],PN "PRN" [PL (",",","),PN "S" [PN "NP" [PL ("PRP","it")],PN "VP" [PL ("VBZ","seems")]],PL (",",",")],PN "VP" [PL ("VBZ","has"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("NN","Lichtenstein"),PL ("NN","corporation")],PL (",",","),PN "VP" [PL ("VBN","licensed"),PN "PP" [PL ("IN","in"),PN "NP" [PN "NP" [PL ("NNP","Libya")],PL ("CC","and"),PN "NP" [PL ("JJ","sheltered")]]],PN "PP" [PL ("IN","in"),PN "NP" [PL ("DT","the"),PL ("NNPS","Bahamas")]]]]],PL (".",".")]]
+
+testpt2 :: PennTree
+testpt2 = PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","President"),PL ("NNP","Donald"),PL ("NNP","Trump")],PN "VP" [PL ("VBD","said"),PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","he")],PN "VP" [PL ("VBZ","'s"),PN "VP" [PN "ADVP" [PL ("RB","actively")],PN "VP" [PL ("VBG","considering"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("NN","breakup")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("JJ","giant"),PL ("NNP","Wall"),PL ("NNP","Street"),PL ("NNS","banks")]]]],PL (",",","),PN "VP" [PL ("VBG","giving"),PN "NP" [PL ("DT","a"),PL ("NN","push")],PN "PP" [PL ("TO","to"),PN "NP" [PL ("NNS","efforts")]],PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","revive"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("JJ","Depression-era"),PL ("NN","law")],PN "VP" [PL ("VBG","separating"),PN "NP" [PL ("NN","consumer"),PL ("CC","and"),PL ("NN","investment"),PL ("NN","banking")]]]]]]]]]]]],PL (".",".")]]
+
+  
 process pp txt = do
   let doc = Document txt (fromGregorian 2017 4 17)
   ann <- annotate pp doc
@@ -89,8 +97,6 @@ process pp txt = do
         let tkns = zip [0..] (getTKTokens sent)
             tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
             lmap= mkLemmaMap sent
-        print pt
-        {- 
         putStrLn "\n\n======================================="
         T.IO.putStrLn txt
         putStrLn "---------------------------------------"
@@ -103,8 +109,8 @@ process pp txt = do
         let vtree = verbTree vps . depLevelTree dep . lemmatize lmap . mkAnnotatable . mkPennTreeIdx $ pt
         mapM_ (T.IO.putStrLn . formatBitree (^._2.to (showVerb tkmap))) vtree
         putStrLn "---------------------------------------------------------------"
+        showClauseLevel pt
         -- (T.IO.putStrLn . prettyPrint 0) ptr
-        -}
 
 
 
