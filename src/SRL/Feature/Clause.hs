@@ -32,7 +32,7 @@ clauseLevel (PL pt)     = PL (T.pack (show pt))
 
 
 
-showClauseLeve :: PennTree -> IO ()
+showClauseLevel :: PennTree -> IO ()
 showClauseLevel ptree  = do
   let tr = clauseLevel (bimap N.convert id (getADTPennTree ptree))
       tr' = bimap f id tr
