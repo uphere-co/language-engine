@@ -33,12 +33,12 @@ currentlevel (PN (_,l) _) = l
 currentlevel (PL _ )      = 0
 
 
-verbCheck x@(PL (Right (p,t)))  = if isVerb p || p == TO
+promoteToVP x@(PL (Right (p,t)))  = if isVerb p || p == TO
                                   then Left (p,t)
                                   else Right x
-verbCheck x@(PL (Left _))       = Right x
-verbCheck (PN (S_OTHER N.PRT,_) (PL (Right (p,t)):_)) = Left (p,t)  -- for verb particle
-verbCheck x@(PN _ _)            = Right x
+promoteToVP x@(PL (Left _))       = Right x
+promoteToVP (PN (S_OTHER N.PRT,_) (PL (Right (p,t)):_)) = Left (p,t)  -- for verb particle
+promoteToVP x@(PN _ _)            = Right x
 
 
 
@@ -52,7 +52,7 @@ clauseLevel :: [VerbProperty]
             -> Bitree (STag,Int) (Either N.PhraseTag (POSTag,Text))
 clauseLevel vps (PN (rng,tag) xs)
   = let ys = map (clauseLevel vps) xs
-        (verbs,nonverbs)= partitionEithers (map verbCheck ys)
+        (verbs,nonverbs)= partitionEithers (map promoteToVP ys)
         lvl = maximum (map currentlevel ys)
     in case tag of
          N.CL c -> PN (S_CL c,lvl+1) ys
