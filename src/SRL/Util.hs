@@ -12,6 +12,7 @@ import           Data.IntMap       (IntMap)
 import qualified Data.IntMap as IM 
 import           Data.Text         (Text)
 import qualified Data.Text   as T  (intercalate, unpack)
+import           Data.Tree
 --
 import           Data.Attribute
 import           Data.Bitree
@@ -22,10 +23,6 @@ import           SRL.Type
 
 clippedText :: (Int,Int) -> [Text] -> Text
 clippedText (b,e) = T.intercalate " " . drop b . take (e+1) 
-
-
-formatRngText :: [Text] -> (Int,Int) -> String
-formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
 
 safeHead :: [a] -> Maybe a

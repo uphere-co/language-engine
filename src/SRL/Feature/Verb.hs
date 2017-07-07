@@ -18,11 +18,10 @@ import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmati
 import           Data.Attribute
 import           Data.Bitree                                 (duplicate)
 import           Data.BitreeZipper
+import           Data.List                                   (sortBy)
 import           NLP.Type.PennTreebankII
 --
 import           SRL.Type
---
-import           Debug.Trace
 
 
 phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
@@ -62,13 +61,28 @@ isVBG z = isPOSAs VBG (current z)
 getIdxPOS w = (,) <$> getLeafIndex w <*> fmap posTag (getLeaf w)
 
 withCopula :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,POSTag)
-withCopula z = check1 z <|> check2 z
-  where check1 z = do w <- current <$> (prev <=< parent) z
-                      guard (isLemmaAs "be" w)
-                      getIdxPOS w
-        check2 z = do w <- current <$> (child1 <=< parent <=< parent) z
-                      guard (isLemmaAs "be" w)
-                      getIdxPOS w
+withCopula z = do p1 <- parent z
+                  p2 <- (parent <=< parent) z
+                  p3 <- (parent <=< parent <=< parent) z
+                  check1 p1 z <|> check2 p1 p2 z <|> check3 p1 p2 p3 z
+  where check1 p1 z = do
+          w <- current <$> (prev <=< parent) z
+          guard (isChunkAs VP (current p1))
+          guard (isLemmaAs "be" w)
+          getIdxPOS w
+        check2 p1 p2 z = do
+          w <- current <$> (child1 <=< parent <=< parent) z
+          guard (isChunkAs VP (current p1))
+          guard (isChunkAs VP (current p2))
+          guard (isLemmaAs "be" w)
+          getIdxPOS w
+        check3 p1 p2 p3 z = do
+          w <- current <$> (child1 <=< parent <=< parent <=< parent) z
+          guard (isChunkAs VP (current p1))
+          guard (isChunkAs VP (current p2))
+          guard (isChunkAs VP (current p3))
+          guard (isLemmaAs "be" w)
+          getIdxPOS w
 
 
 
@@ -108,6 +122,7 @@ verbProperty :: BitreeZipperICP (Lemma ': as) -> Maybe VerbProperty -- (Tense,As
 verbProperty z = do
   i <- getLeafIndex (current z)
   lma <- ahead . getAnnot <$> getLeaf (current z)
+  pos <- posTag <$> getLeaf (current z)
   let b0 = isVBN z
       b1 = isVBG z
       m2 = withCopula z
@@ -126,7 +141,7 @@ verbProperty z = do
               (Perfect,           _      ,_     ,Just p) -> if snd p == VBD then Past else Present
               (PerfectProgressive,_      ,_     ,Just p) -> if snd p == VBD then Past else Present
               (_                 ,Passive,Just p,_     ) -> if snd p == VBD then Past else Present
-              _                                          -> Present
+              _                                          -> if pos == VBD then Past else Present
                 
       is = catMaybes $
              (if asp == Perfect || asp == PerfectProgressive then [fmap fst m3] else []) <>
@@ -165,4 +180,5 @@ getVerbProperty (pt,sent) =
                   _
                     -> Nothing 
   in mapMaybe testf $ toList (mkBitreeZipper [] lemmapt)
+
 

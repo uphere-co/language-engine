@@ -62,6 +62,7 @@ library
                        HCoreNLP,
                        HCoreNLP-Proto,
                        PropBank,
+                       textview,
                        --
                        foreign-store
                        
