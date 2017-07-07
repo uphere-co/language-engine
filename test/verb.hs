@@ -89,6 +89,8 @@ process pp txt = do
         let tkns = zip [0..] (getTKTokens sent)
             tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
             lmap= mkLemmaMap sent
+        print pt
+        {- 
         putStrLn "\n\n======================================="
         T.IO.putStrLn txt
         putStrLn "---------------------------------------"
@@ -102,7 +104,7 @@ process pp txt = do
         mapM_ (T.IO.putStrLn . formatBitree (^._2.to (showVerb tkmap))) vtree
         putStrLn "---------------------------------------------------------------"
         -- (T.IO.putStrLn . prettyPrint 0) ptr
-
+        -}
 
 
 
@@ -119,4 +121,4 @@ main = do
                    . ( constituency .~ True )
                    . ( ner .~ False )
     pp <- prepare pcfg
-    mapM_ (process pp) testtxt3
+    mapM_ (process pp) testtxt2
