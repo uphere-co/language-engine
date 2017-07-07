@@ -11,6 +11,7 @@ import           Control.Applicative
 import           Control.Monad
 import           Data.Foldable                               (toList)
 import           Data.Maybe
+import           Data.Monoid
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmatize)
@@ -31,6 +32,11 @@ phraseType (PL (n,(p,_))) = ((n,n),Right p)
 
 getLeaf (PL (_,x)) = Just x
 getLeaf _          = Nothing
+
+
+getLeafIndex (PL (i,_)) = Just i
+getLeafIndex _          = Nothing
+
 
 isLemmaAs lma (PL (_,x)) = ahead (getAnnot x) == lma
 isLemmaAs _   _          = False
@@ -53,28 +59,30 @@ isVBG :: BitreeZipperICP a -> Bool
 isVBG z = isPOSAs VBG (current z)
 
 
-withCopula :: BitreeZipperICP (Lemma ': as) -> Maybe POSTag
+getIdxPOS w = (,) <$> getLeafIndex w <*> fmap posTag (getLeaf w)
+
+withCopula :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,POSTag)
 withCopula z = check1 z <|> check2 z
   where check1 z = do w <- current <$> (prev <=< parent) z
                       guard (isLemmaAs "be" w)
-                      posTag <$> getLeaf w
+                      getIdxPOS w
         check2 z = do w <- current <$> (child1 <=< parent <=< parent) z
                       guard (isLemmaAs "be" w)
-                      posTag <$> getLeaf w
+                      getIdxPOS w
 
 
 
-withHave :: BitreeZipperICP (Lemma ': as) -> Maybe POSTag
+withHave :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,POSTag)
 withHave z = check1 z <|> check2 z <|> check3 z
   where check1 z = do w <- current <$> (prev <=< parent) z
                       guard (isLemmaAs "have" w)
-                      posTag <$> getLeaf w
+                      getIdxPOS w
         check2 z = do w <- current <$> (child1 <=< parent <=< parent) z
                       guard (isLemmaAs "have" w)
-                      posTag <$> getLeaf w
+                      getIdxPOS w
         check3 z = do w <- current <$> (child1 <=< parent <=< parent <=< parent) z
                       guard (isLemmaAs "have" w)
-                      posTag <$> getLeaf w
+                      getIdxPOS w
 
 
 
@@ -96,29 +104,35 @@ isPassive z
 
 
 
-verbProperty :: BitreeZipperICP (Lemma ': as) -> (Tense,Aspect,Voice)
-verbProperty z
-  = let b0 = isVBN z
-        b1 = isVBG z
-        m2 = withCopula z
-        b2 = isJust m2
-        m3 = withHave z
-        b3 = isJust m3
-        asp = if b0 && b3
-              then Perfect
-              else if (b1 && b2)
-                   then if b3
-                        then PerfectProgressive
-                        else Progressive
-                   else Simple
-        vo  = if isPassive z then Passive else Active
-        tns = case (asp,vo,m2,m3) of
-                (Perfect,           _      ,_     ,Just p) -> if p == VBD then Past else Present
-                (PerfectProgressive,_      ,_     ,Just p) -> if p == VBD then Past else Present
-                (_                 ,Passive,Just p,_     ) -> if p == VBD then Past else Present
-                _                                          -> Present
+verbProperty :: BitreeZipperICP (Lemma ': as) -> Maybe VerbProperty -- (Tense,Aspect,Voice,[Int])
+verbProperty z = do
+  i <- getLeafIndex (current z)
+  lma <- ahead . getAnnot <$> getLeaf (current z)
+  let b0 = isVBN z
+      b1 = isVBG z
+      m2 = withCopula z
+      b2 = isJust m2
+      m3 = withHave z
+      b3 = isJust m3
+      asp = if b0 && b3
+            then Perfect
+            else if (b1 && b2)
+                 then if b3
+                      then PerfectProgressive
+                      else Progressive
+                 else Simple
+      vo  = if isPassive z then Passive else Active
+      tns = case (asp,vo,m2,m3) of
+              (Perfect,           _      ,_     ,Just p) -> if snd p == VBD then Past else Present
+              (PerfectProgressive,_      ,_     ,Just p) -> if snd p == VBD then Past else Present
+              (_                 ,Passive,Just p,_     ) -> if snd p == VBD then Past else Present
+              _                                          -> Present
                 
-    in (tns,asp,vo)
+      is = catMaybes $
+             (if asp == Perfect || asp == PerfectProgressive then [fmap fst m3] else []) <>
+             (if asp == Progressive || asp == PerfectProgressive || vo == Passive then [fmap fst m2] else []) <>
+             [Just i]
+  return (VerbProperty i lma tns asp vo is)
 
 
 voice :: (PennTree,S.Sentence) -> [(Int,(Lemma,Voice))]
@@ -136,7 +150,7 @@ voice (pt,sent) =
   in mapMaybe testf $ toList (mkBitreeZipper [] lemmapt)
 
 
-getVerbProperty :: (PennTree,S.Sentence) -> [(Int,(Lemma,(Tense,Aspect,Voice)))]
+getVerbProperty :: (PennTree,S.Sentence) -> [VerbProperty]
 getVerbProperty (pt,sent) = 
   let ipt = mkAnnotatable (mkPennTreeIdx pt)
       lemmamap = mkLemmaMap sent
@@ -146,7 +160,7 @@ getVerbProperty (pt,sent) =
       testf z = case getf (current z) of
                   Right (n,ALeaf (pos,_) annot)
                     -> if isVerb pos && ahead annot /= "be" && ahead annot /= "have"
-                       then Just (n,(ahead annot,verbProperty z))
+                       then verbProperty z
                        else Nothing
                   _
                     -> Nothing 

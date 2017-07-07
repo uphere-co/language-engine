@@ -40,6 +40,18 @@ data Voice = Active | Passive
 data Aspect = Simple | Progressive | Perfect | PerfectProgressive
            deriving (Show,Eq,Ord,Enum,Bounded)
 
+data VerbProperty = VerbProperty { _vp_index  :: Int
+                                 , _vp_lemma  :: Lemma
+                                 , _vp_tense  :: Tense
+                                 , _vp_aspect :: Aspect
+                                 , _vp_voice  :: Voice
+                                 , _vp_words  :: [Int]
+                                 }
+                  deriving (Show)
+
+makeLenses ''VerbProperty                           
+                                   
+
 
 type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
 
