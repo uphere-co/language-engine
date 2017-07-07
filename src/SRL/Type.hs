@@ -45,6 +45,7 @@ data VerbProperty = VerbProperty { _vp_index  :: Int
                                  , _vp_tense  :: Tense
                                  , _vp_aspect :: Aspect
                                  , _vp_voice  :: Voice
+                                 , _vp_auxiliary :: Maybe (Int,Lemma)
                                  , _vp_words  :: [Int]
                                  }
                   deriving (Show)

@@ -66,6 +66,12 @@ testtxt2 = [ "President Donald Trump said he’s actively considering a breakup 
            , "The man, it seems, has a Lichtenstein corporation, licensed in Libya and sheltered in the Bahamas. Coke introduced a caffeine-free sugared cola based on its original formula in 1983. But there were fewer price swings than expected. Two big stocks involved in takeover activity saw this."             
            ]
 
+testtxt3 = [ "I will go to school."
+           , "I could have done it."
+           , "Can I ask you something?"
+           , "Can I ask you a favor?"
+           ]
+
     
 process pp txt = do
   let doc = Document txt (fromGregorian 2017 4 17)
@@ -113,4 +119,4 @@ main = do
                    . ( constituency .~ True )
                    . ( ner .~ False )
     pp <- prepare pcfg
-    mapM_ (process pp) testtxt2
+    mapM_ (process pp) testtxt3
