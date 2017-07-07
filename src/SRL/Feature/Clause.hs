@@ -20,9 +20,12 @@ import           SRL.Format
 import           SRL.Type
 
 
+
+
 data STag = S_RT
+          | S_SBAR [(POSTag,Text)]
           | S_CL N.ClauseTag
-          | S_VPBranch
+          --   | S_VPBranch
           | S_VP [(POSTag,Text)]
           | S_PP Text
           | S_OTHER N.PhraseTag
@@ -42,6 +45,8 @@ promoteToVP x@(PN _ _)            = Right x
 
 
 
+--promoteToSBAR (PL (
+
 
 
 
@@ -55,25 +60,32 @@ clauseLevel vps (PN (rng,tag) xs)
         (verbs,nonverbs)= partitionEithers (map promoteToVP ys)
         lvl = maximum (map currentlevel ys)
     in case tag of
-         N.CL c -> PN (S_CL c,lvl+1) ys
+         N.CL c -> case c of
+                     N.S    -> PN (S_CL c,lvl+1) ys
+                     N.SBAR ->
+                       case xs of
+                         PL (_,(IN,t)):_ -> PN (S_SBAR [(IN,t)],lvl) (tail ys)
+                         -- PL (_,(IN,t)):_ -> PN (S_SBAR [(IN,t)],lvl) (tail ys) 
+                         _               -> PN (S_SBAR [],lvl)       ys
+                     _   -> PN (S_CL c,lvl  ) ys
          N.PH p -> case p of
                      N.VP -> PN (S_VP verbs,lvl) nonverbs
                      N.PP ->
                        case xs of
-                         PL (_,(IN,t)):xs -> PN (S_PP t,lvl) (tail ys)
-                         PL (_,(TO,t)):xs -> PN (S_PP t,lvl) (tail ys)
-                         _                -> PL (Left p)
+                         PL (_,(IN,t)):_ -> PN (S_PP t,lvl) (tail ys)
+                         PL (_,(TO,t)):_ -> PN (S_PP t,lvl) (tail ys)
+                         _               -> PL (Left p)
                      N.PRT ->
                        case xs of
                          PL (_,(p,t)):_  -> PN (S_OTHER N.PRT,lvl) [PL (Right (p,t))]
-                         _                -> PL (Left p)                       
+                         _                -> PL (Left p)
                      _    -> if lvl == 0
-                             then PL (Left p) -- (T.pack (show p))
+                             then PL (Left p)
                              else PN (S_OTHER p,lvl  ) ys
          N.RT   -> PN (S_RT,lvl) ys
 clauseLevel vps (PL (i,pt))
   = let verbs = filter (\is -> i `elem` is) . map (^.vp_words) $ vps 
-    in PL (Right pt) -- (T.pack (show pt) <> T.pack (show verbs))
+    in PL (Right pt)
 
 
 
@@ -83,6 +95,7 @@ showClauseLevel lemmamap ptree  = do
       tr = clauseLevel vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
       tr' = bimap f g tr
         where f (S_CL c,l) = T.pack (show c) <> ":" <> T.pack (show l)
+              f (S_SBAR zs,l) = "SBAR:" <> T.pack (show zs) <> "," <> T.pack (show l)
               f (S_VP zs,l)   = "VP:" <> T.pack (show zs) <> "," <> T.pack (show l)
               f (S_PP p,l) = "PP:" <> T.pack (show p)
               f (S_OTHER p,l) = T.pack (show p) <> ":" <> T.pack (show l)

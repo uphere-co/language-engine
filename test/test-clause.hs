@@ -66,8 +66,9 @@ testlemma4 = [(0,"but"),(1,"that"),(2,"tenet"),(3,"be"),(4,"undo"),(5,"in"),(6,"
 
 
 process (testpt,testlemma) = do
+  putStrLn "--------------------------------------------------"
   T.IO.putStrLn (T.intercalate " " (map snd (toList testpt)))
-  T.IO.putStrLn $ prettyPrint 0 testpt
+  -- T.IO.putStrLn $ prettyPrint 0 testpt
   let lmap1 = IM.fromList (map (_2 %~ Lemma) testlemma)
   showClauseLevel lmap1 testpt
 
