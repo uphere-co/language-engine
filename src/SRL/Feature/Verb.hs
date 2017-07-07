@@ -11,6 +11,7 @@ import           Control.Applicative
 import           Control.Lens                                ((^.))
 import           Control.Monad
 import           Data.Foldable                               (toList)
+import           Data.IntMap                                 (IntMap)
 import           Data.Maybe
 import           Data.Monoid
 --
@@ -166,11 +167,9 @@ voice (pt,sent) =
   in mapMaybe testf $ toList (mkBitreeZipper [] lemmapt)
 
 
-getVerbProperty :: (PennTree,S.Sentence) -> [VerbProperty]
-getVerbProperty (pt,sent) = 
-  let ipt = mkAnnotatable (mkPennTreeIdx pt)
-      lemmamap = mkLemmaMap sent
-      lemmapt = lemmatize lemmamap ipt
+verbPropertyFromPennTree :: IntMap Lemma -> PennTree -> [VerbProperty]
+verbPropertyFromPennTree lemmamap pt = 
+  let lemmapt = lemmatize lemmamap (mkAnnotatable (mkPennTreeIdx pt))
       getf (PL x) = Right x
       getf (PN x _) = Left x
       phase1 z = case getf (current z) of
