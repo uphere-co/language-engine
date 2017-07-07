@@ -32,15 +32,29 @@ import           SRL.Util
 --
 
 
-verbTree :: PennTreeIdxG (ANAtt '[]) (ALAtt '[Maybe Level,Lemma])
-              -> Maybe (Bitree (Int,Lemma,Maybe Level) (Int,Lemma,Maybe Level))
-verbTree = fmap squash . worker
+verbTree :: [VerbProperty] -- [Int]
+         -> PennTreeIdxG (ANAtt '[]) (ALAtt '[Maybe Level,Lemma])
+         -> Maybe (Bitree (Int,(Lemma,[Int]), Maybe Level)
+                          (Int,(Lemma,[Int]), Maybe Level))
+verbTree vps = fmap squash . worker 
   where
-    worker (PL (i,l)) = if isVerb (posTag l)
-                          then let mlvl = ahead (getAnnot l)
-                                   lma = ahead (atail (getAnnot l))
-                               in Just (PL (i,lma,mlvl))
-                          else Nothing
+    -- identified = vps
+    vps_map = IM.fromList (map (\vp -> (vp^.vp_index,(vp^.vp_lemma,vp^.vp_words))) vps)
+    identified_verbs = concatMap (\vp -> init (vp^.vp_words)) vps
+    
+    
+    worker (PL (i,l)) = let lma = ahead (atail (getAnnot l))
+                        in if (lma == "be" || lma == "have") && (i `elem` identified_verbs)
+                           then Nothing
+                           else registerVerb (i,lma)
+      where registerVerb (i,lma) = if isVerb (posTag l)
+                                   then {- let mv = IM.lookup i vps_map
+                                            ev = maybe (Left lma) (Right . id) mv
+                                            mlvl = ahead (getAnnot l) -}
+                                        do v <- IM.lookup i vps_map
+                                           let mlvl = ahead (getAnnot l)
+                                           return (PL (i,v,mlvl))
+                                   else Nothing
     worker (PN _ xs) = let xs' = mapMaybe worker xs
                          in case xs' of
                               []  -> Nothing

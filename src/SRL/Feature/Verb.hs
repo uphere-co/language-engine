@@ -8,6 +8,7 @@
 module SRL.Feature.Verb where
 
 import           Control.Applicative
+import           Control.Lens                                ((^.))
 import           Control.Monad
 import           Data.Foldable                               (toList)
 import           Data.Maybe
@@ -172,13 +173,22 @@ getVerbProperty (pt,sent) =
       lemmapt = lemmatize lemmamap ipt
       getf (PL x) = Right x
       getf (PN x _) = Left x
-      testf z = case getf (current z) of
-                  Right (n,ALeaf (pos,_) annot)
+      phase1 z = case getf (current z) of
+                  Right (i,ALeaf (pos,_) annot)
                     -> if isVerb pos && ahead annot /= "be" && ahead annot /= "have"
                        then verbProperty z
                        else Nothing
-                  _
-                    -> Nothing 
-  in mapMaybe testf $ toList (mkBitreeZipper [] lemmapt)
+                  _ -> Nothing 
+      vps1 = mapMaybe phase1 (toList (mkBitreeZipper [] lemmapt))
+      identified_verbs = concatMap (\vp -> vp^.vp_words) vps1
+      
+      phase2 z = case getf (current z) of
+                  Right (i,ALeaf (pos,_) annot)
+                    -> if isVerb pos && (not (i `elem` identified_verbs))
+                       then verbProperty z
+                       else Nothing
+                  _ -> Nothing
+      vps2 = mapMaybe phase2 (toList (mkBitreeZipper [] lemmapt))
+  in vps1 <> vps2
 
 
