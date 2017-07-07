@@ -37,7 +37,7 @@ verbCheck x@(PL (Right (p,t)))  = if isVerb p || p == TO
                                   then Left (p,t)
                                   else Right x
 verbCheck x@(PL (Left _))       = Right x
--- verbCheck (PN (S_VP pts,_) _) = pts
+verbCheck (PN (S_OTHER N.PRT,_) (PL (Right (p,t)):_)) = Left (p,t)  -- for verb particle
 verbCheck x@(PN _ _)            = Right x
 
 
@@ -63,6 +63,10 @@ clauseLevel vps (PN (rng,tag) xs)
                          PL (_,(IN,t)):xs -> PN (S_PP t,lvl) (tail ys)
                          PL (_,(TO,t)):xs -> PN (S_PP t,lvl) (tail ys)
                          _                -> PL (Left p)
+                     N.PRT ->
+                       case xs of
+                         PL (_,(p,t)):_  -> PN (S_OTHER N.PRT,lvl) [PL (Right (p,t))]
+                         _                -> PL (Left p)                       
                      _    -> if lvl == 0
                              then PL (Left p) -- (T.pack (show p))
                              else PN (S_OTHER p,lvl  ) ys
