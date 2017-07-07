@@ -16,7 +16,7 @@ in stdenv.mkDerivation {
                    beautifulsoup4
                  ]) ++
                  [ hsenv jdk 
-                   pigz lbzip2
+                   pigz lbzip2 p7zip
                    jq xidel
                  ] ;
      shellHook = ''
