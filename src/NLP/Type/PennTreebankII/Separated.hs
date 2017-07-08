@@ -30,6 +30,15 @@ data PhraseTag = NP        -- ^ noun phrase
                deriving (Generic,Show,Eq,Ord,Enum,Bounded)
 
 
+isWHphrase :: PhraseTag -> Bool
+isWHphrase WHADJP = True
+isWHphrase WHADVP = True
+isWHphrase WHNP   = True
+isWHphrase WHPP   = True
+isWHphrase _      = False
+
+
+
 data ClauseTag = S         -- ^ sentence
                | SBAR      -- ^ subordinating conjunction
                | SBARQ     -- ^ direct question introduced by a wh-word or wh-phrase
