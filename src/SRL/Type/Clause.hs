@@ -7,11 +7,11 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 --
 import           SRL.Type.Verb
 
+
 data SBARType = SB_Word (POSTag,Text)
               | SB_WH   N.PhraseTag
               | SB_None
               deriving Show
-
 
 
 data STag = S_RT
@@ -22,7 +22,3 @@ data STag = S_RT
           | S_OTHER N.PhraseTag
           deriving Show
 
-
-
-
---   (Either STag POSTag)

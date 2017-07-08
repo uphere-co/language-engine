@@ -5,10 +5,11 @@ module SRL.Format where
 
 import           Control.Lens
 import qualified Data.IntMap             as IM
+import           Data.List                     (intercalate)
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Text               as T
-import           Data.Text                    (Text)
+import           Data.Text                     (Text)
 import           Data.Tree               as Tr
 import           Text.Printf
 --
@@ -45,12 +46,12 @@ formatVerbProperty vp = printf "%3d %15s %8s %20s %8s %s"
 
 
 formatVerbArgs :: (Show b) => VerbArgs (Either STag b) -> String
-formatVerbArgs va = printf "%10s %-25s"
-                      (formatArg (va^.va_arg0))
+formatVerbArgs va = printf "%7s %-15s %s"
+                      (maybe "" formatArg (va^.va_arg0))
                       (T.intercalate " " (map (^._2) (va^.va_string)))
+                      ((intercalate " " . map (printf "%7s" . formatArg)) (va^.va_args))
   where
-    formatArg = maybe "" $ \a ->
-                  case a of
+    formatArg a = case a of
                     Right p -> show p
                     Left (S_RT)      -> "ROOT"
                     Left (S_SBAR _)  -> "SBAR"
@@ -58,8 +59,7 @@ formatVerbArgs va = printf "%10s %-25s"
                     Left (S_VP _)    -> "VP"
                     Left (S_PP t)    -> "(PP " ++ show t ++ ")"
                     Left (S_OTHER t) -> show t
-                    -- show -- id --  \a -> printf "%s" (show a)
-    
+
 
 showVerb tkmap (lma,is) = unLemma lma <> " : " <> fullwords
   where fullwords = T.intercalate " " $ map (\i -> fromMaybe "" (IM.lookup i tkmap)) is

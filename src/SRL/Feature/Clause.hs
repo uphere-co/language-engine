@@ -2,6 +2,7 @@
 
 module SRL.Feature.Clause where
 
+import           Control.Applicative
 import           Control.Lens
 import           Data.Bifunctor
 import           Data.Bifoldable
@@ -112,11 +113,23 @@ verbArgs :: BitreeZipper (Range,(STag,Int))
          -> VerbArgs (Either STag POSTag)
 verbArgs z = let (zfirst,str) = go (z,[]) z
              in VerbArgs { _va_string = str
-                         , _va_arg0 = extractArg <$> prev zfirst }
+                         , _va_arg0 = extractArg <$> prev zfirst
+                         , _va_args = case child1 z of
+                                        Nothing -> []
+                                        Just z' ->
+                                          map extractArg (z':iterateMaybe next z')
+                         }
   where extractArg z = case getRoot (current z) of
                          Left (_,(tag,_)) -> Left tag
                          Right (Left (_,(tag,_))) -> Left tag
                          Right (Right (_,(tag,_))) -> Right tag
+
+        
+        iterateMaybe :: (a -> Maybe a) -> a -> [a]
+        iterateMaybe f x =
+          case f x of
+            Nothing -> []
+            Just x' -> x': iterateMaybe f x'
 
         go (z0,acc) z = case getRoot (current z) of
                           Left x@(_,(S_VP xs,_)) ->
@@ -137,14 +150,14 @@ showClauseStructure lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       tr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
       tr' = bimap (\(rng,x)->f x) g tr
-        where f (S_CL c,l) = T.pack (show c) <> ":" <> T.pack (show l)
+        where f (S_CL c,l)    = T.pack (show c) <> ":" <> T.pack (show l)
               f (S_SBAR zs,l) = "SBAR:" <> T.pack (show zs) <> "," <> T.pack (show l)
               f (S_VP zs,l)   = "VP:" <> T.pack (show zs) <> "," <> T.pack (show l)
-              f (S_PP p,l) = "PP:" <> T.pack (show p)
+              f (S_PP p,l)    = "PP:" <> T.pack (show p)
               f (S_OTHER p,l) = T.pack (show p) <> ":" <> T.pack (show l)
-              f (S_RT  ,l) = "ROOT" <> ":" <> T.pack (show l)
-              g (Left x) = T.pack (show x)
-              g (Right x) = T.pack (show x)
+              f (S_RT  ,l)    = "ROOT" <> ":" <> T.pack (show l)
+              g (Left x)      = T.pack (show x)
+              g (Right x)     = T.pack (show x)
 
   T.IO.putStrLn (formatBitree id tr')
    

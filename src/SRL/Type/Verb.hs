@@ -32,6 +32,7 @@ makeLenses ''VerbProperty
 
 data VerbArgs a = VerbArgs { _va_string :: [(POSTag,Text)]
                            , _va_arg0 :: Maybe a
+                           , _va_args :: [a]
                            }
               deriving Show
 
