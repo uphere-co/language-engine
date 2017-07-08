@@ -24,20 +24,6 @@ import           SRL.Type
 
 
 
-data SBARType = SB_Word (POSTag,Text)
-              | SB_WH   N.PhraseTag
-              | SB_None
-              deriving Show
-
-
-
-data STag = S_RT
-          | S_SBAR SBARType
-          | S_CL N.ClauseTag
-          | S_VP [(Int,(POSTag,Text))]
-          | S_PP Text
-          | S_OTHER N.PhraseTag
-          deriving Show
 
 
 currentlevel (PN (_,(_,l)) _) = l
@@ -108,9 +94,15 @@ findVerb i tr = getFirst (bifoldMap f g (mkBitreeZipper [] tr))
 
 verbArgs :: BitreeZipper (Range,(STag,Int))
                          (Either (Range,N.PhraseTag) (Int,(POSTag,Text)))
-         -> VerbArgs -- [(Range,(STag,Int))]
-verbArgs z = VerbArgs (snd (go (z,[]) z))
-  where go (z0,acc) z = case getRoot (current z) of
+         -> VerbArgs
+verbArgs z = let (zfirst,str) = go (z,[]) z
+             in VerbArgs { _va_string = str
+                         , _va_arg0 = extractArg <$> prev zfirst }
+  where extractArg z = case getRoot (current z) of
+                         Left x -> T.pack (show x)
+                         Right x -> T.pack (show x)
+
+        go (z0,acc) z = case getRoot (current z) of
                           Left x@(_,(S_VP xs,_)) ->
                             let acc' = map snd xs ++ acc 
                             in case parent z of
@@ -136,5 +128,16 @@ showClauseStructure lemmamap ptree  = do
   T.IO.putStrLn (formatBitree id tr')
   let test = do z <- findVerb 4 tr
                 return (verbArgs z)
+  print test
+  
+  {- 
+  let showArgs vp = do z <- findVerb (vp^.vp_index)  tr
+                       return (verbArgs z)
 
-  print test                
+  
+  print tr
+  
+  flip mapM_ vps $ \vp -> do
+    print vp
+    (print . showArgs) vp
+  -}

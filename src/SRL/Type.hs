@@ -13,6 +13,7 @@ import qualified CoreNLP.Simple.Type.Simplified        as S
 import           Data.Attribute
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
+import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.UniversalDependencies2.Syntax
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
@@ -53,7 +54,24 @@ data VerbProperty = VerbProperty { _vp_index  :: Int
 makeLenses ''VerbProperty                           
                                    
 
+data SBARType = SB_Word (POSTag,Text)
+              | SB_WH   N.PhraseTag
+              | SB_None
+              deriving Show
+
+
+
+data STag = S_RT
+          | S_SBAR SBARType
+          | S_CL N.ClauseTag
+          | S_VP [(Int,(POSTag,Text))]
+          | S_PP Text
+          | S_OTHER N.PhraseTag
+          deriving Show
+
+
 data VerbArgs = VerbArgs { _va_string :: [(POSTag,Text)]
+                         , _va_arg0 :: Maybe Text
                          }
               deriving Show
 
