@@ -30,10 +30,10 @@ data VerbProperty = VerbProperty { _vp_index  :: Int
 
 makeLenses ''VerbProperty                           
 
-
-data VerbArgs = VerbArgs { _va_string :: [(POSTag,Text)]
-                         , _va_arg0 :: Maybe Text
-                         }
+data VerbArgs a = VerbArgs { _va_string :: [(POSTag,Text)]
+                           , _va_arg0 :: Maybe a
+                           }
               deriving Show
 
 makeLenses ''VerbArgs                       
+

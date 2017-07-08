@@ -20,21 +20,17 @@ import           PropBank.Type.Prop
 import           Text.Format.Tree
 --
 import           SRL.Type
+import           SRL.Type.Clause
 import           SRL.Type.Verb
 import           SRL.Util
 
-{- 
-formatVoice :: Voice -> String
-formatVoice Nothing = " "
-formatVoice (Just Active) = "active"
-formatVoice (Just Passive) = "passive"
--}
+
 
 formatRngText :: [Text] -> (Int,Int) -> String
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
 
-formatBitree :: (a -> Text) ->  Bitree a a -> Text --  Bitree (Int,Lemma,a) (Int,Lemma,a) -> Text
+formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
   where -- f (_,l,_) =  l
         toTree (PN x xs) = Tr.Node x (map toTree xs)
@@ -47,6 +43,23 @@ formatVerbProperty vp = printf "%3d %15s %8s %20s %8s %s"
                           (show (vp^.vp_tense)) (show (vp^.vp_aspect)) (show (vp^.vp_voice))
                           (show (vp^.vp_words))
 
+
+formatVerbArgs :: (Show b) => VerbArgs (Either STag b) -> String
+formatVerbArgs va = printf "%10s %-25s"
+                      (formatArg (va^.va_arg0))
+                      (T.intercalate " " (map (^._2) (va^.va_string)))
+  where
+    formatArg = maybe "" $ \a ->
+                  case a of
+                    Right p -> show p
+                    Left (S_RT)      -> "ROOT"
+                    Left (S_SBAR _)  -> "SBAR"
+                    Left (S_CL c)    -> show c
+                    Left (S_VP _)    -> "VP"
+                    Left (S_PP t)    -> "(PP " ++ show t ++ ")"
+                    Left (S_OTHER t) -> show t
+                    -- show -- id --  \a -> printf "%s" (show a)
+    
 
 showVerb tkmap (lma,is) = unLemma lma <> " : " <> fullwords
   where fullwords = T.intercalate " " $ map (\i -> fromMaybe "" (IM.lookup i tkmap)) is

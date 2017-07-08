@@ -25,9 +25,6 @@ import           SRL.Type.Clause
 import           SRL.Type.Verb
 
 
-
-
-
 currentlevel (PN (_,(_,l)) _) = l
 currentlevel (PL _ )          = 0
 
@@ -112,13 +109,14 @@ findVerb i tr = getFirst (bifoldMap f g (mkBitreeZipper [] tr))
 
 verbArgs :: BitreeZipper (Range,(STag,Int))
                          (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-         -> VerbArgs
+         -> VerbArgs (Either STag POSTag)
 verbArgs z = let (zfirst,str) = go (z,[]) z
              in VerbArgs { _va_string = str
                          , _va_arg0 = extractArg <$> prev zfirst }
   where extractArg z = case getRoot (current z) of
-                         Left x -> T.pack (show x)
-                         Right x -> T.pack (show x)
+                         Left (_,(tag,_)) -> Left tag
+                         Right (Left (_,(tag,_))) -> Left tag
+                         Right (Right (_,(tag,_))) -> Right tag
 
         go (z0,acc) z = case getRoot (current z) of
                           Left x@(_,(S_VP xs,_)) ->
@@ -150,12 +148,9 @@ showClauseStructure lemmamap ptree  = do
 
   T.IO.putStrLn (formatBitree id tr')
    
-  let showArgs vp = do z <- findVerb (vp^.vp_index)  tr
-                       return (verbArgs z)
-  
-  -- print tr
+  let getVerbArgs vp = do z <- findVerb (vp^.vp_index)  tr
+                          return (verbArgs z)
   
   flip mapM_ vps $ \vp -> do
-    -- print vp
-    (print . showArgs) vp
+    traverse_ (putStrLn . formatVerbArgs) (getVerbArgs vp)
 

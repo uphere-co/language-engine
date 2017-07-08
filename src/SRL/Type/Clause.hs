@@ -24,3 +24,5 @@ data STag = S_RT
 
 
 
+
+--   (Either STag POSTag)
