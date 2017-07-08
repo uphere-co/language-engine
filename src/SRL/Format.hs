@@ -33,13 +33,12 @@ formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
 formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
-  where -- f (_,l,_) =  l
-        toTree (PN x xs) = Tr.Node x (map toTree xs)
+  where toTree (PN x xs) = Tr.Node x (map toTree xs)
         toTree (PL x)    = Tr.Node x []
         
 
 formatVerbProperty :: VerbProperty -> String
-formatVerbProperty vp = printf "%3d %15s %8s %20s %8s %s"
+formatVerbProperty vp = printf "%3d %15s %8s %15s %8s %s"
                           (vp^.vp_index) (vp^.vp_lemma.to unLemma)
                           (show (vp^.vp_tense)) (show (vp^.vp_aspect)) (show (vp^.vp_voice))
                           (show (vp^.vp_words))

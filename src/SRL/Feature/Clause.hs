@@ -13,6 +13,7 @@ import           Data.Monoid
 import           Data.Text                       (Text)
 import qualified Data.Text               as T
 import qualified Data.Text.IO            as T.IO
+import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
@@ -123,14 +124,11 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
                          Left (_,(tag,_)) -> Left tag
                          Right (Left (_,(tag,_))) -> Left tag
                          Right (Right (_,(tag,_))) -> Right tag
-
-        
         iterateMaybe :: (a -> Maybe a) -> a -> [a]
         iterateMaybe f x =
           case f x of
             Nothing -> []
             Just x' -> x': iterateMaybe f x'
-
         go (z0,acc) z = case getRoot (current z) of
                           Left x@(_,(S_VP xs,_)) ->
                             let acc' = map snd xs ++ acc 
@@ -165,5 +163,6 @@ showClauseStructure lemmamap ptree  = do
                           return (verbArgs z)
   
   flip mapM_ vps $ \vp -> do
-    traverse_ (putStrLn . formatVerbArgs) (getVerbArgs vp)
+    putStrLn $ 
+      printf "%-62s | %s" (formatVerbProperty vp) (maybe "" formatVerbArgs (getVerbArgs vp))
 
