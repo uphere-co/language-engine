@@ -13,6 +13,7 @@ import           Data.Text                       (Text)
 import qualified Data.Text               as T
 import qualified Data.Text.IO            as T.IO
 --
+import           Data.Bitree
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -33,7 +34,6 @@ data SBARType = SB_Word (POSTag,Text)
 data STag = S_RT
           | S_SBAR SBARType
           | S_CL N.ClauseTag
-          --   | S_VPBranch
           | S_VP [(Int,(POSTag,Text))]
           | S_PP Text
           | S_OTHER N.PhraseTag
@@ -91,6 +91,34 @@ clauseStructure vps (PN (rng,tag) xs)
 
 
 
+
+
+findVerb :: Int
+         -> Bitree (Range,(STag,Int)) (Either (Range,N.PhraseTag) (Int,(POSTag,Text)))
+         -> Maybe (BitreeZipper (Range,(STag,Int)) (Either (Range,N.PhraseTag) (Int,(POSTag,Text))))
+findVerb i tr = getFirst (bifoldMap f g (mkBitreeZipper [] tr))
+  where f x = First $ case getRoot (current x) of
+                        Left (_,(S_VP lst,_)) -> if i `elem` (map (^._1) lst)
+                                                 then Just x
+                                                 else Nothing
+                        _                     -> Nothing 
+        g _ = First Nothing
+
+
+
+verbArgs :: BitreeZipper (Range,(STag,Int))
+                         (Either (Range,N.PhraseTag) (Int,(POSTag,Text)))
+         -> VerbArgs -- [(Range,(STag,Int))]
+verbArgs z = VerbArgs (snd (go (z,[]) z))
+  where go (z0,acc) z = case getRoot (current z) of
+                          Left x@(_,(S_VP xs,_)) ->
+                            let acc' = map snd xs ++ acc 
+                            in case parent z of
+                                 Nothing -> (z,acc')
+                                 Just z' -> go (z,acc') z'
+                          _ -> (z0,acc)
+
+
 showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
 showClauseStructure lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
@@ -106,16 +134,7 @@ showClauseStructure lemmamap ptree  = do
               g (Right x) = T.pack (show x)
 
   T.IO.putStrLn (formatBitree id tr')
-  print (findVerb 4 tr)
+  let test = do z <- findVerb 4 tr
+                return (verbArgs z)
 
-
-findVerb :: Int
-         -> Bitree (Range,(STag,Int)) (Either (Range,N.PhraseTag) (Int,(POSTag,Text)))
-         -> Maybe (BitreeZipper (Range,(STag,Int)) (Either (Range,N.PhraseTag) (Int,(POSTag,Text))))
-findVerb i tr = getFirst (bifoldMap f g (mkBitreeZipper [] tr))
-  where f x = First $ case current x of
-                        PN (_,(S_VP lst,_)) _ -> if i `elem` (map (^._1) lst)
-                                                 then Just x
-                                                 else Nothing
-                        _                   -> Nothing 
-        g _ = First Nothing
+  print test                

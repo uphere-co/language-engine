@@ -53,6 +53,13 @@ data VerbProperty = VerbProperty { _vp_index  :: Int
 makeLenses ''VerbProperty                           
                                    
 
+data VerbArgs = VerbArgs { _va_string :: [(POSTag,Text)]
+                         }
+              deriving Show
+
+makeLenses ''VerbArgs                       
+
+
 
 type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
 

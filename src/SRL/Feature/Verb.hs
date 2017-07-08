@@ -18,7 +18,7 @@ import           Data.Monoid
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmatize)
 import           Data.Attribute
-import           Data.Bitree                                 (duplicate)
+import           Data.Bitree                                 (duplicate,getRoot)
 import           Data.BitreeZipper
 import           Data.List                                   (sortBy)
 import           NLP.Type.PennTreebankII
