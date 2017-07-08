@@ -20,6 +20,7 @@ import           PropBank.Type.Prop
 import           Text.Format.Tree
 --
 import           SRL.Type
+import           SRL.Type.Verb
 import           SRL.Util
 
 {- 

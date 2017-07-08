@@ -31,6 +31,8 @@ library
                        SRL.PropBankMatch
                        SRL.Train
                        SRL.Type
+                       SRL.Type.Clause
+                       SRL.Type.Verb
                        SRL.Util
                        SRL.Vectorize.Dense
                        SRL.Vectorize.Sparse

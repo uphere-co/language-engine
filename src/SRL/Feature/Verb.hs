@@ -24,6 +24,7 @@ import           Data.List                                   (sortBy)
 import           NLP.Type.PennTreebankII
 --
 import           SRL.Type
+import           SRL.Type.Verb
 
 
 phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)

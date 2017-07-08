@@ -21,6 +21,8 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 import           SRL.Feature.Verb
 import           SRL.Format
 import           SRL.Type
+import           SRL.Type.Clause
+import           SRL.Type.Verb
 
 
 
@@ -147,18 +149,13 @@ showClauseStructure lemmamap ptree  = do
               g (Right x) = T.pack (show x)
 
   T.IO.putStrLn (formatBitree id tr')
-  -- let test = do z <- findVerb 4 tr
-   --             return (verbArgs z)
-  --print test
-  
    
   let showArgs vp = do z <- findVerb (vp^.vp_index)  tr
                        return (verbArgs z)
-
   
-  print tr
+  -- print tr
   
   flip mapM_ vps $ \vp -> do
-    print vp
+    -- print vp
     (print . showArgs) vp
 

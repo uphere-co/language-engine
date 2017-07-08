@@ -28,6 +28,7 @@ import           SRL.Feature.Verb
 import           SRL.Format
 import           SRL.PropBankMatch
 import           SRL.Type
+import           SRL.Type.Verb
 import           SRL.Util
 --
 
