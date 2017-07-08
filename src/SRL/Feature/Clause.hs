@@ -21,9 +21,15 @@ import           SRL.Type
 
 
 
+data SBARType = SB_Word (POSTag,Text)
+              | SB_WH   N.PhraseTag
+              | SB_None
+              deriving Show
+
+
 
 data STag = S_RT
-          | S_SBAR [(POSTag,Text)]
+          | S_SBAR SBARType
           | S_CL N.ClauseTag
           --   | S_VPBranch
           | S_VP [(POSTag,Text)]
@@ -45,12 +51,6 @@ promoteToVP x@(PN _ _)            = Right x
 
 
 
---promoteToSBAR (PL (
-
-
-
-
-
 
 clauseLevel :: [VerbProperty]
             -> PennTreeIdxG N.CombinedTag (POSTag,Text)
@@ -64,9 +64,11 @@ clauseLevel vps (PN (rng,tag) xs)
                      N.S    -> PN (S_CL c,lvl+1) ys
                      N.SBAR ->
                        case xs of
-                         PL (_,(IN,t)):_ -> PN (S_SBAR [(IN,t)],lvl) (tail ys)
-                         -- PL (_,(IN,t)):_ -> PN (S_SBAR [(IN,t)],lvl) (tail ys) 
-                         _               -> PN (S_SBAR [],lvl)       ys
+                         PL (_,(IN,t))     : _ -> PN (S_SBAR (SB_Word (IN,t)),lvl) (tail ys)
+                         PN (_,(N.PH p)) _ : _ -> if N.isWHphrase p
+                                                  then PN (S_SBAR (SB_WH p),lvl) (tail ys)
+                                                  else PN (S_SBAR SB_None,lvl) ys
+                         _                     -> PN (S_SBAR SB_None,lvl) ys
                      _   -> PN (S_CL c,lvl  ) ys
          N.PH p -> case p of
                      N.VP -> PN (S_VP verbs,lvl) nonverbs
