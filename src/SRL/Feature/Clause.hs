@@ -42,7 +42,7 @@ promoteToVP x@(PN _ _)            = Right x
 
 clauseStructure :: [VerbProperty]
                 -> PennTreeIdxG N.CombinedTag (POSTag,Text)
-                -> Bitree (Range,(STag,Int)) (Either (Range,N.PhraseTag) (Int,(POSTag,Text)))
+                -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
 clauseStructure vps (PL (i,pt)) = PL (Right (i,pt))
 clauseStructure vps (PN (rng,tag) xs)
   = let ys = map (clauseStructure vps) xs
@@ -53,25 +53,41 @@ clauseStructure vps (PN (rng,tag) xs)
                      N.S    -> PN (rng,(S_CL c,lvl+1)) ys
                      N.SBAR ->
                        case xs of
-                         PL (_,(IN,t))     : _ -> PN (rng,(S_SBAR (SB_Word (IN,t)),lvl)) (tail ys)
-                         PN (_,(N.PH p)) _ : _ -> if N.isWHphrase p
-                                                  then PN (rng,(S_SBAR (SB_WH p),lvl)) (tail ys)
-                                                  else PN (rng,(S_SBAR SB_None,lvl)) ys
-                         _other                -> PN (rng,(S_SBAR SB_None,lvl)) ys
+                         PL (_,(IN,t))     : _ ->
+                           case tail ys of
+                             [] -> PL (Left (rng,(S_SBAR (SB_Word (IN,t)),lvl)))
+                             _  -> PN (rng,(S_SBAR (SB_Word (IN,t)),lvl)) (tail ys)
+                         PN (_,(N.PH p)) _ : _ ->
+                           if N.isWHphrase p
+                           then case tail ys of
+                                  [] -> PL (Left (rng,(S_SBAR (SB_WH p),lvl)))
+                                  _  -> PN (rng,(S_SBAR (SB_WH p),lvl)) (tail ys)
+                           else PN (rng,(S_SBAR SB_None,lvl)) ys
+                         _other                ->
+                           PN (rng,(S_SBAR SB_None,lvl)) ys
                      _other -> PN (rng,(S_CL c,lvl)) ys
          N.PH p -> case p of
-                     N.VP -> PN (rng,(S_VP verbs,lvl)) nonverbs
+                     N.VP ->
+                       case nonverbs of
+                         [] -> PL (Left (rng,(S_VP verbs,lvl)))
+                         _  -> PN (rng,(S_VP verbs,lvl)) nonverbs
                      N.PP ->
                        case xs of
-                         PL (_,(IN,t)):_ -> PN (rng,(S_PP t,lvl)) (tail ys)
-                         PL (_,(TO,t)):_ -> PN (rng,(S_PP t,lvl)) (tail ys)
-                         _               -> PL (Left (rng,p))
+                         PL (_,(IN,t)):_ ->
+                           case tail ys of
+                             [] -> PL (Left (rng,(S_PP t,lvl)))
+                             _  -> PN (rng,(S_PP t,lvl)) (tail ys)
+                         PL (_,(TO,t)):_ ->
+                           case tail ys of
+                             [] -> PL (Left (rng,(S_PP t,lvl)))
+                             _  -> PN (rng,(S_PP t,lvl)) (tail ys)
+                         _               -> PL (Left (rng,(S_PP "",lvl)))
                      N.PRT ->
                        case xs of
                          PL (i,(p,t)):_  -> PN (rng,(S_OTHER N.PRT,lvl)) [PL (Right (i,(p,t)))]
-                         _                -> PL (Left (rng,p))
+                         _                -> PL (Left (rng,(S_OTHER p,lvl)))
                      _    -> if lvl == 0
-                             then PL (Left (rng,p))
+                             then PL (Left (rng,(S_OTHER p,0)))
                              else PN (rng,(S_OTHER p,lvl)) ys
          N.RT   -> PN (rng,(S_RT,lvl)) ys 
 
@@ -80,8 +96,8 @@ clauseStructure vps (PN (rng,tag) xs)
 
 
 findVerb :: Int
-         -> Bitree (Range,(STag,Int)) (Either (Range,N.PhraseTag) (Int,(POSTag,Text)))
-         -> Maybe (BitreeZipper (Range,(STag,Int)) (Either (Range,N.PhraseTag) (Int,(POSTag,Text))))
+         -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+         -> Maybe (BitreeZipper (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))))
 findVerb i tr = getFirst (bifoldMap f g (mkBitreeZipper [] tr))
   where f x = First $ case getRoot (current x) of
                         Left (_,(S_VP lst,_)) -> if i `elem` (map (^._1) lst)
@@ -93,7 +109,7 @@ findVerb i tr = getFirst (bifoldMap f g (mkBitreeZipper [] tr))
 
 
 verbArgs :: BitreeZipper (Range,(STag,Int))
-                         (Either (Range,N.PhraseTag) (Int,(POSTag,Text)))
+                         (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
          -> VerbArgs
 verbArgs z = let (zfirst,str) = go (z,[]) z
              in VerbArgs { _va_string = str
@@ -104,6 +120,11 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
 
         go (z0,acc) z = case getRoot (current z) of
                           Left x@(_,(S_VP xs,_)) ->
+                            let acc' = map snd xs ++ acc 
+                            in case parent z of
+                                 Nothing -> (z,acc')
+                                 Just z' -> go (z,acc') z'
+                          Right (Left x@(_,(S_VP xs,_))) ->
                             let acc' = map snd xs ++ acc 
                             in case parent z of
                                  Nothing -> (z,acc')
@@ -126,11 +147,11 @@ showClauseStructure lemmamap ptree  = do
               g (Right x) = T.pack (show x)
 
   T.IO.putStrLn (formatBitree id tr')
-  let test = do z <- findVerb 4 tr
-                return (verbArgs z)
-  print test
+  -- let test = do z <- findVerb 4 tr
+   --             return (verbArgs z)
+  --print test
   
-  {- 
+   
   let showArgs vp = do z <- findVerb (vp^.vp_index)  tr
                        return (verbArgs z)
 
@@ -140,4 +161,4 @@ showClauseStructure lemmamap ptree  = do
   flip mapM_ vps $ \vp -> do
     print vp
     (print . showArgs) vp
-  -}
+
