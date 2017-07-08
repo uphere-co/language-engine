@@ -52,11 +52,12 @@ promoteToVP x@(PN _ _)            = Right x
 
 
 
-clauseLevel :: [VerbProperty]
-            -> PennTreeIdxG N.CombinedTag (POSTag,Text)
-            -> Bitree (STag,Int) (Either N.PhraseTag (POSTag,Text))
-clauseLevel vps (PN (rng,tag) xs)
-  = let ys = map (clauseLevel vps) xs
+clauseStructure :: [VerbProperty]
+                -> PennTreeIdxG N.CombinedTag (POSTag,Text)
+                -> Bitree (STag,Int) (Either N.PhraseTag (POSTag,Text))
+clauseStructure vps (PL (i,pt)) = PL (Right pt)
+clauseStructure vps (PN (rng,tag) xs)
+  = let ys = map (clauseStructure vps) xs
         (verbs,nonverbs)= partitionEithers (map promoteToVP ys)
         lvl = maximum (map currentlevel ys)
     in case tag of
@@ -85,16 +86,14 @@ clauseLevel vps (PN (rng,tag) xs)
                              then PL (Left p)
                              else PN (S_OTHER p,lvl  ) ys
          N.RT   -> PN (S_RT,lvl) ys
-clauseLevel vps (PL (i,pt))
-  = let verbs = filter (\is -> i `elem` is) . map (^.vp_words) $ vps 
-    in PL (Right pt)
+
+-- let verbs = filter (\is -> i `elem` is) . map (^.vp_words) $ vps
 
 
-
-showClauseLevel :: IntMap Lemma -> PennTree -> IO ()
-showClauseLevel lemmamap ptree  = do
+showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
+showClauseStructure lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
-      tr = clauseLevel vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
+      tr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
       tr' = bimap f g tr
         where f (S_CL c,l) = T.pack (show c) <> ":" <> T.pack (show l)
               f (S_SBAR zs,l) = "SBAR:" <> T.pack (show zs) <> "," <> T.pack (show l)

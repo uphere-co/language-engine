@@ -70,7 +70,7 @@ process (testpt,testlemma) = do
   T.IO.putStrLn (T.intercalate " " (map snd (toList testpt)))
   -- T.IO.putStrLn $ prettyPrint 0 testpt
   let lmap1 = IM.fromList (map (_2 %~ Lemma) testlemma)
-  showClauseLevel lmap1 testpt
+  showClauseStructure lmap1 testpt
 
 
 main =
