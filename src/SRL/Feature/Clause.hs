@@ -38,6 +38,11 @@ promoteToVP x@(PL (Left _))       = Right x
 promoteToVP (PN (_,(S_OTHER N.PRT,_)) (PL (Right (i,(p,t))):_)) = Left (i,(p,t))  -- for verb particle
 promoteToVP x@(PN _ _)            = Right x
 
+promoteNPPP x@(PN (rng,(S_OTHER N.NP,lvl)) [x1,x2]) =
+  case (getRoot x1, getRoot x2) of
+    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_PP _,_))) ->  [x1,x2]
+    _ -> [x]
+promoteNPPP x = [x]
 
 
 
@@ -47,7 +52,8 @@ clauseStructure :: [VerbProperty]
 clauseStructure vps (PL (i,pt)) = PL (Right (i,pt))
 clauseStructure vps (PN (rng,tag) xs)
   = let ys = map (clauseStructure vps) xs
-        (verbs,nonverbs)= partitionEithers (map promoteToVP ys)
+        (verbs,nonverbs0)= partitionEithers (map promoteToVP ys)
+        nonverbs = concatMap promoteNPPP nonverbs0
         lvl = maximum (map currentlevel ys) :: Int
     in case tag of
          N.CL c -> case c of
@@ -87,9 +93,7 @@ clauseStructure vps (PN (rng,tag) xs)
                        case xs of
                          PL (i,(p,t)):_  -> PN (rng,(S_OTHER N.PRT,lvl)) [PL (Right (i,(p,t)))]
                          _                -> PL (Left (rng,(S_OTHER p,lvl)))
-                     _    -> --                              then PL (Left (rng,(S_OTHER p,0)))
-                             -- else
-                             PN (rng,(S_OTHER p,lvl)) ys
+                     _    -> PN (rng,(S_OTHER p,lvl)) ys
          N.RT   -> PN (rng,(S_RT,lvl)) ys 
 
 
