@@ -64,7 +64,8 @@ testtxt2 = [ "President Donald Trump said he’s actively considering a breakup 
            , "Carmakers, rideshare services and tech companies are teaming up in an increasingly complex series of alliances."
            , "But that tenet was undone in 1999, a move that’s been blamed by some for the 2008 market crash. Bringing that system back has won the support of politicians as diverse as President Donald Trump and Senator Elizabeth Warren, the Massachusetts Democrat who’s been one of Wall Street’s toughes."
            , "President Donald Trump on Monday dismissed widespread reports that his administration is riven by discord, saying he is sticking by his polarizing chief strategist, Steve Bannon, calling him a \"very decent guy\" who is getting a \"bad rap.\""
-           , "The man, it seems, has a Lichtenstein corporation, licensed in Libya and sheltered in the Bahamas. Coke introduced a caffeine-free sugared cola based on its original formula in 1983. But there were fewer price swings than expected. Two big stocks involved in takeover activity saw this."             
+           , "The man, it seems, has a Lichtenstein corporation, licensed in Libya and sheltered in the Bahamas. Coke introduced a caffeine-free sugared cola based on its original formula in 1983. But there were fewer price swings than expected. Two big stocks involved in takeover activity saw this."
+
            ]
 
 testtxt3 = [ "I will go to school."
@@ -73,6 +74,8 @@ testtxt3 = [ "I will go to school."
            , "Can I ask you a favor?"
            ]
 
+
+testtxt4 = [ "Russia is hoping that the \"breakthrough\" Syrian ceasefire deal it brokered this week will align the U.S. with President Vladimir Putin's plans for the war-torn count." ]
 
 process pp txt = do
   let doc = Document txt (fromGregorian 2017 4 17)
@@ -90,7 +93,7 @@ process pp txt = do
         let tkns = zip [0..] (getTKTokens sent)
             tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
             lmap= mkLemmaMap sent
-        -- print pt
+        print pt
         print (map (_2 %~ unLemma) (IM.toList lmap))
 {-         putStrLn "\n\n======================================="
         T.IO.putStrLn txt
@@ -122,4 +125,4 @@ main = do
                    . ( constituency .~ True )
                    . ( ner .~ False )
     pp <- prepare pcfg
-    mapM_ (process pp) [testtxt2 !! 1, testtxt2 !! 2]
+    mapM_ (process pp) testtxt4 -- [testtxt2 !! 1, testtxt2 !! 2]

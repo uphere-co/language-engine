@@ -87,9 +87,9 @@ clauseStructure vps (PN (rng,tag) xs)
                        case xs of
                          PL (i,(p,t)):_  -> PN (rng,(S_OTHER N.PRT,lvl)) [PL (Right (i,(p,t)))]
                          _                -> PL (Left (rng,(S_OTHER p,lvl)))
-                     _    -> if lvl == 0
-                             then PL (Left (rng,(S_OTHER p,0)))
-                             else PN (rng,(S_OTHER p,lvl)) ys
+                     _    -> --                              then PL (Left (rng,(S_OTHER p,0)))
+                             -- else
+                             PN (rng,(S_OTHER p,lvl)) ys
          N.RT   -> PN (rng,(S_RT,lvl)) ys 
 
 
@@ -143,11 +143,23 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
                           _ -> (z0,acc)
 
 
+cutOutLevel0 :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+             -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+cutOutLevel0 x@(PN (rng,(p,lvl)) xs) = if lvl == 0
+                                       then case p of
+                                              S_PP    _ -> PL (Left (rng,(p,lvl)))
+                                              S_OTHER _ -> PL (Left (rng,(p,lvl)))
+                                              _         -> PN (rng,(p,lvl)) (map cutOutLevel0 xs)
+                                       else PN (rng,(p,lvl)) (map cutOutLevel0 xs)
+cutOutLevel0 x@(PL _               ) = x
+
+  
+
 showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
 showClauseStructure lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       tr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      tr' = bimap (\(rng,x)->f x) g tr
+      tr' = bimap (\(rng,x)->f x) g (cutOutLevel0 tr)
         where f (S_CL c,l)    = T.pack (show c) <> ":" <> T.pack (show l)
               f (S_SBAR zs,l) = "SBAR:" <> T.pack (show zs) <> "," <> T.pack (show l)
               f (S_VP zs,l)   = "VP:" <> T.pack (show zs) <> "," <> T.pack (show l)
