@@ -174,9 +174,9 @@ voice (pt,sent) =
   let ipt = mkAnnotatable (mkPennTreeIdx pt)
       lemmamap = mkLemmaMap sent
       lemmapt = lemmatize lemmamap ipt
-      getf (PL x) = Right x
-      getf (PN x _) = Left x
-      testf z = case getf (current z) of
+      -- getf (PL x) = Right x
+      -- getf (PN x _) = Left x
+      testf z = case getRoot (current z) of
                   Right (n,ALeaf (VBN,_) annot)
                     -> Just (n,(ahead annot,if isPassive z then Passive else Active))
                   _
@@ -187,9 +187,9 @@ voice (pt,sent) =
 verbPropertyFromPennTree :: IntMap Lemma -> PennTree -> [VerbProperty]
 verbPropertyFromPennTree lemmamap pt = 
   let lemmapt = lemmatize lemmamap (mkAnnotatable (mkPennTreeIdx pt))
-      getf (PL x) = Right x
-      getf (PN x _) = Left x
-      phase1 z = case getf (current z) of
+      -- getf (PL x) = Right x
+      -- getf (PN x _) = Left x
+      phase1 z = case getRoot (current z) of
                   Right (i,ALeaf (pos,_) annot)
                     -> if isVerb pos && ahead annot /= "be" && ahead annot /= "have"
                        then verbProperty z
@@ -198,7 +198,7 @@ verbPropertyFromPennTree lemmamap pt =
       vps1 = mapMaybe phase1 (toList (mkBitreeZipper [] lemmapt))
       identified_verbs = concatMap (\vp -> vp^.vp_words) vps1
       
-      phase2 z = case getf (current z) of
+      phase2 z = case getRoot (current z) of
                   Right (i,ALeaf (pos,_) annot)
                     -> if isVerb pos && (not (i `elem` identified_verbs))
                        then verbProperty z
