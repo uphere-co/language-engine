@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,14 +21,17 @@ import           Data.List
 import           Data.Maybe                         (fromMaybe)
 import           Data.Monoid
 import           Data.Text                          (Text)
+import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import           Data.Traversable
+import qualified Data.Tree                  as Tree
 import           System.Directory
 import           System.Directory.Tree
 import           System.FilePath
 import           System.IO
 import           Text.Printf
 --
+import           CoreNLP.Simple.Type.Simplified
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
@@ -38,6 +42,7 @@ import           PropBank.Type.Frame
 import           PropBank.Type.Prop
 import           PropBank.Util                     (merge)
 import           SRL.Feature.Clause
+import           Text.Format.Tree
 
 
 prepare framedir basedir = do
@@ -62,20 +67,6 @@ readJSONList :: (FromJSON a) => FilePath -> EitherT String IO [a]
 readJSONList file = EitherT $ eitherDecode <$> liftIO (BL.readFile file)
 
 
-{- 
-readCoreNLPLemma :: FilePath -> EitherT String IO [[(Int,Text)]]
-readCoreNLPLemma lemmafile = EitherT $ eitherDecode <$> liftIO (BL.readFile lemmafile)
-
-readCoreNLPDep :: FilePath -> EitherT String IO [[(Int,Text)]]
-readCoreNLPDep lemmafile = EitherT $ eitherDecode <$> liftIO (BL.readFile lemmafile)
-
-
-readCoreNLPPennTree :: FilePath -> EitherT String IO [PennTree]
-readCoreNLPPennTree pennfile = EitherT $ eitherDecode <$> liftIO (BL.readFile pennfile)
-
--}
-
-
 convertTop (PN _ xs) = PN "ROOT" xs
 
 
@@ -89,11 +80,12 @@ loadAndMatchDataForArticle ptreedir framedir basedir article = do
         ptreefile = article <.> "corenlp_ptree"
         depfile = article <.> "corenlp_udep"
         plemmafile = article <.> "corenlp_lemma"
-    coretrs :: [PennTree]  <- readJSONList  (ptreedir </> ptreefile)  -- readCoreNLPPennTree
-    -- coredeps <- readCoreNLPDep (ptreedir </> depfile)    
-    corelmas :: [[(Int,Text)]] <- readJSONList (ptreedir </> plemmafile) -- readCoreNLPLemma 
-    let trs = zip3 coretrs corelmas proptrs
-    return (merge (^.inst_tree_id) trs insts)
+    coretrs :: [PennTree]  <- readJSONList  (ptreedir </> ptreefile)
+    coredeps :: [Dependency] <- readJSONList (ptreedir </> depfile)    
+    corelmas :: [[(Int,Text)]] <- readJSONList (ptreedir </> plemmafile)
+    let cores = zip3 coretrs coredeps corelmas
+        pairs = zip cores proptrs
+    return (merge (^.inst_tree_id) pairs insts)
 {-     
     -- let mcoretrs = decode lbstr :: Maybe [PennTree]
     case mcoretrs of
@@ -111,8 +103,15 @@ main = do
     Nothing -> error "nothing"
     Just lst' -> do
       let lst = concat lst'
-      flip mapM_ lst $ \(i,((coretr,corelma,proptr),insts)) -> do
+      flip mapM_ lst $ \(i,(((coretr,coredep,corelma),proptr),insts)) -> do
         mapM_ printMatchedInst (matchInstances (coretr,proptr) insts)
         let lmap = IM.fromList (map (_2 %~ Lemma) corelma)
         showClauseStructure lmap coretr
+        let tkmap = IM.fromList . zip [0..] .map (^._2) . toList $ coretr
+
+            -- deptree0 = normalizeOrder (dependencyLabeledTree coredep)
+            deptree = fmap (\(i,r) -> let t = fromMaybe "" (IM.lookup (i-1) tkmap) in (i-1,t,r))
+                        (dependencyLabeledTree coredep)
+
+        T.IO.putStrLn (linePrint (T.pack.show) deptree)
 
