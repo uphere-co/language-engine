@@ -37,7 +37,7 @@ main = do
   let preddb = constructPredicateDB propdb
   
   
-  let basedir = "/scratch/wavewave/LDC/ontonotes-release-5.0/data/files/data/english/annotations/nw/wsj"
+  let basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
 
   dtr <- build basedir
 
@@ -75,12 +75,3 @@ formatStat db ((lma,sens),num) =
   in printf "%20s.%s : %5d : %s" lma sens num (fromMaybe "" mdefn)
   
 
-
-    
-{-     case (e :: Either SomeException ()) of
-      Left err -> do
-        -- putStrLn fp
-        error (fp ++ show err)
-      Right () -> return ()
-    putStrLn "==========="
-   -} 
