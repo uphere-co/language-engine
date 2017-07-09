@@ -8,7 +8,9 @@ import           Data.Bifunctor
 import           Data.Bifoldable
 import           Data.Either                     (partitionEithers)
 import           Data.Foldable
+import           Data.Function                   (on)
 import           Data.IntMap                     (IntMap)
+import           Data.List                       (minimumBy)
 import           Data.Monoid
 import           Data.Text                       (Text)
 import qualified Data.Text               as T
@@ -116,9 +118,17 @@ clauseRanges tr = bifoldMap f (const []) tr
         f _                = []
 
 
+clauseForVerb :: [Range] -> VerbProperty -> Maybe Range
+clauseForVerb allrngs vp = case rngs of
+                             [] -> Nothing
+                             _  -> Just (minimumBy (compare `on` (\(b,e) -> e-b)) rngs)
+  where i `isIn` (b,e) = b <= i && i <= e  
+        rngs = filter (\rng -> getAll (mconcat (map (\i -> All (i `isIn` rng)) (vp^.vp_words)))) allrngs
+
+
 verbArgs :: BitreeZipper (Range,(STag,Int))
                          (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-         -> VerbArgs (Either STag POSTag)
+         -> VerbArgs (Either (Range,STag) (Int,POSTag))
 verbArgs z = let (zfirst,str) = go (z,[]) z
              in VerbArgs { _va_string = str
                          , _va_arg0 = extractArg <$> prev zfirst
@@ -128,9 +138,9 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
                                           map extractArg (z':iterateMaybe next z')
                          }
   where extractArg z = case getRoot (current z) of
-                         Left (_,(tag,_)) -> Left tag
-                         Right (Left (_,(tag,_))) -> Left tag
-                         Right (Right (_,(tag,_))) -> Right tag
+                         Left (rng,(stag,_))         -> Left  (rng,stag)
+                         Right (Left (rng,(stag,_))) -> Left  (rng,stag)
+                         Right (Right (i,(ptag,_)))  -> Right (i,ptag)
         iterateMaybe :: (a -> Maybe a) -> a -> [a]
         iterateMaybe f x =
           case f x of
@@ -178,7 +188,7 @@ showClauseStructure lemmamap ptree  = do
 
   T.IO.putStrLn (formatBitree id tr')
 
-  print (clauseRanges tr)
+  let rngs = clauseRanges tr
   
   let getVerbArgs vp = do z <- findVerb (vp^.vp_index)  tr
                           return (verbArgs z)
@@ -186,5 +196,9 @@ showClauseStructure lemmamap ptree  = do
   
   flip mapM_ vps $ \vp -> do
     -- print (findVerb (vp^.vp_index) tr)
-    putStrLn $ printf "%-62s | %s" (formatVerbProperty vp) (maybe "" formatVerbArgs (getVerbArgs vp))
+    print (clauseForVerb rngs vp)
+    putStrLn $ printf "%-62s | Clause %7s:  %s"
+                 (formatVerbProperty vp)
+                 (maybe "" show (clauseForVerb rngs vp))
+                 (maybe "" formatVerbArgs (getVerbArgs vp))
 
