@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
@@ -57,17 +58,28 @@ readOrigPennTree pennfile
     =<< liftIO (T.IO.readFile pennfile)
 
 
+readJSONList :: (FromJSON a) => FilePath -> EitherT String IO [a]
+readJSONList file = EitherT $ eitherDecode <$> liftIO (BL.readFile file)
+
+
+{- 
 readCoreNLPLemma :: FilePath -> EitherT String IO [[(Int,Text)]]
 readCoreNLPLemma lemmafile = EitherT $ eitherDecode <$> liftIO (BL.readFile lemmafile)
 
+readCoreNLPDep :: FilePath -> EitherT String IO [[(Int,Text)]]
+readCoreNLPDep lemmafile = EitherT $ eitherDecode <$> liftIO (BL.readFile lemmafile)
+
+
 readCoreNLPPennTree :: FilePath -> EitherT String IO [PennTree]
 readCoreNLPPennTree pennfile = EitherT $ eitherDecode <$> liftIO (BL.readFile pennfile)
+
+-}
 
 
 convertTop (PN _ xs) = PN "ROOT" xs
 
 
-matchPropWithSerializedPennTree ptreedir framedir basedir article = do
+loadAndMatchDataForArticle ptreedir framedir basedir article = do
   (preddb,props,trees) <- prepare framedir basedir
   let findf = find (\f -> takeBaseName f == article)
   flip traverse ((,) <$> findf props <*> findf trees) $ \(fprop,ftree) -> runEitherT $ do
@@ -75,9 +87,11 @@ matchPropWithSerializedPennTree ptreedir framedir basedir article = do
     proptrs' <- readOrigPennTree ftree
     let proptrs = map convertTop proptrs'
         ptreefile = article <.> "corenlp_ptree"
+        depfile = article <.> "corenlp_udep"
         plemmafile = article <.> "corenlp_lemma"
-    coretrs <- readCoreNLPPennTree (ptreedir </> ptreefile)
-    corelmas <- readCoreNLPLemma (ptreedir </> plemmafile)
+    coretrs :: [PennTree]  <- readJSONList  (ptreedir </> ptreefile)  -- readCoreNLPPennTree
+    -- coredeps <- readCoreNLPDep (ptreedir </> depfile)    
+    corelmas :: [[(Int,Text)]] <- readJSONList (ptreedir </> plemmafile) -- readCoreNLPLemma 
     let trs = zip3 coretrs corelmas proptrs
     return (merge (^.inst_tree_id) trs insts)
 {-     
@@ -92,7 +106,7 @@ main = do
       ptreedir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170709"
       framedir = "/scratch/wavewave/MASC/Propbank/Propbank-orig/framefiles"
       basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-  mlst <- matchPropWithSerializedPennTree ptreedir framedir basedir article
+  mlst <- loadAndMatchDataForArticle ptreedir framedir basedir article
   case mlst of
     Nothing -> error "nothing"
     Just lst' -> do
