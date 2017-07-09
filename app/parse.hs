@@ -11,6 +11,7 @@ import qualified Data.ByteString.Char8        as B
 import qualified Data.ByteString.Lazy.Char8   as BL
 import           Data.Default
 import           Data.Foldable                        (toList,traverse_)
+import qualified Data.IntMap                  as IM
 import           Data.List                            (sort)
 import           Data.Maybe
 import qualified Data.Sequence                as Seq
@@ -44,12 +45,41 @@ process pp = do
   let fps = sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
 
-  -- let parsefiles = [basedir </> "00" </> "wsj_0044.parse"]
-
   withFile "error.log" WriteMode $ \h_err -> do
   
     flip traverse_ parsefiles $ \f -> do
       let bname = takeBaseName f
+
+
+      withFile (bname <.> "corenlp_lemma") WriteMode $ \h_lemma -> do
+          putStrLn "\n\n\n=============================================================================================="
+          print f
+          putStrLn "=============================================================================================="
+          etr <- fmap (A.parseOnly (A.many1 (A.skipSpace *> pnode))) (T.IO.readFile f)
+          
+          case etr of
+            Left err -> print err
+            Right trs -> do
+              let tss = map getTerms trs
+                  ts = map (T.intercalate " ") tss
+                  -- ntxt = T.intercalate "\n\n" ts
+                  docs = map (flip Document (fromGregorian 1990 1 1)) ts -- ntxt
+              r <- try $ do 
+                anns <- traverse (annotate pp) docs
+                rdocs' <- traverse protobufDoc anns
+                let rdocs = sequenceA rdocs'
+                case rdocs of
+                  Left err -> print err
+                  Right ds -> do
+                    let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
+                        lmap= map (map (_2 %~ unLemma) . IM.toList . mkLemmaMap) sents
+                    BL.hPutStrLn h_lemma (encode lmap)
+              case r of
+                Left (e :: SomeException) -> hPutStrLn h_err f
+                _ -> return ()
+      
+
+      {-
       withFile (bname <.> "corenlp_udep") WriteMode $ \h_ud -> do
         withFile (bname <.> "corenlp_ptree") WriteMode $ \h_tr -> do
           putStrLn "\n\n\n=============================================================================================="
@@ -82,7 +112,7 @@ process pp = do
               case r of
                 Left (e :: SomeException) -> hPutStrLn h_err f
                 _ -> return ()
-
+      -}
 main :: IO ()
 main = do
   clspath <- getEnv "CLASSPATH"
@@ -92,8 +122,8 @@ main = do
                      . ( postagger .~ True )
                      . ( lemma .~ True )
                      . ( sutime .~ False )
-                     . ( depparse .~ True )
-                     . ( constituency .~ True )
+                     . ( depparse .~ False ) -- . ( depparse .~ True )
+                     . ( constituency .~ False ) -- . ( constituency .~ True )
                      . ( ner .~ False )
     pp <- prepare pcfg
     process pp 

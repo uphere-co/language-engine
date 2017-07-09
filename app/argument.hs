@@ -50,7 +50,17 @@ prepare framedir basedir = do
 readPropBank propfile = liftIO $ parsePropWithFileField NoOmit <$> T.IO.readFile propfile
 
 
-readPennTree pennfile = hoistEither . A.parseOnly (A.many1 (A.skipSpace *> pnode)) =<< liftIO (T.IO.readFile pennfile)
+readOrigPennTree pennfile
+  = hoistEither . A.parseOnly (A.many1 (A.skipSpace *> pnode))
+    =<< liftIO (T.IO.readFile pennfile)
+
+
+readCoreNLPLemma :: FilePath -> EitherT String IO [[(Int,Text)]]
+readCoreNLPLemma lemmafile = EitherT $ eitherDecode <$> liftIO (BL.readFile lemmafile)
+
+readCoreNLPPennTree :: FilePath -> EitherT String IO [PennTree]
+readCoreNLPPennTree pennfile = EitherT $ eitherDecode <$> liftIO (BL.readFile pennfile)
+
 
 convertTop (PN _ xs) = PN "ROOT" xs
 
@@ -60,17 +70,18 @@ matchPropWithSerializedPennTree ptreedir framedir basedir article = do
   let findf = find (\f -> takeBaseName f == article)
   flip traverse ((,) <$> findf props <*> findf trees) $ \(fprop,ftree) -> runEitherT $ do
     insts <- readPropBank fprop 
-    proptrs' <- readPennTree ftree
+    proptrs' <- readOrigPennTree ftree
     let proptrs = map convertTop proptrs'
         ptreefile = article <.> "corenlp_ptree"
-    lbstr <- liftIO $ BL.readFile (ptreedir </> ptreefile)
-    let mcoretrs = decode lbstr :: Maybe [PennTree]
+    coretrs <- readCoreNLPPennTree (ptreedir </> ptreefile)
+    let trs = zip coretrs proptrs
+    return (merge (^.inst_tree_id) trs insts)
+{-     
+    -- let mcoretrs = decode lbstr :: Maybe [PennTree]
     case mcoretrs of
       Nothing -> left "parse error corenlp tree"
       Just coretrs -> do
-        let trs = zip coretrs proptrs
-        return (merge (^.inst_tree_id) trs insts)
-
+-}
 
 main = do
   let article = "wsj_2445"
