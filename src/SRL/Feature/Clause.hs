@@ -97,20 +97,22 @@ clauseStructure vps (PN (rng,tag) xs)
          N.RT   -> PN (rng,(S_RT,lvl)) ys 
 
 
-
-
-
 findVerb :: Int
          -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
          -> Maybe (BitreeZipper (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))))
-findVerb i tr = getFirst (bifoldMap f g (mkBitreeZipper [] tr))
+findVerb i tr = getFirst (bifoldMap f (\_ -> First Nothing) (mkBitreeZipper [] tr))
   where f x = First $ case getRoot (current x) of
                         Left (_,(S_VP lst,_)) -> if i `elem` (map (^._1) lst)
                                                  then Just x
                                                  else Nothing
                         _                     -> Nothing 
-        g _ = First Nothing
 
+
+
+clauseRangeList :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))) -> [Range]
+clauseRangeList tr = bifoldMap f (const []) tr
+  where f (rng,(S_CL _,_)) = [rng]
+        f _                = []
 
 
 verbArgs :: BitreeZipper (Range,(STag,Int))
@@ -149,13 +151,13 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
 
 cutOutLevel0 :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
              -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+cutOutLevel0 x@(PL _               ) = x
 cutOutLevel0 x@(PN (rng,(p,lvl)) xs) = if lvl == 0
                                        then case p of
                                               S_PP    _ -> PL (Left (rng,(p,lvl)))
                                               S_OTHER _ -> PL (Left (rng,(p,lvl)))
                                               _         -> PN (rng,(p,lvl)) (map cutOutLevel0 xs)
                                        else PN (rng,(p,lvl)) (map cutOutLevel0 xs)
-cutOutLevel0 x@(PL _               ) = x
 
   
 
@@ -174,7 +176,9 @@ showClauseStructure lemmamap ptree  = do
               g (Right x)     = T.pack (show x)
 
   T.IO.putStrLn (formatBitree id tr')
-   
+
+  print (clauseRangeList tr)
+  
   let getVerbArgs vp = do z <- findVerb (vp^.vp_index)  tr
                           return (verbArgs z)
   
