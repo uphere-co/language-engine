@@ -5,7 +5,10 @@ module Main where
 
 import           Control.Exception
 import           Control.Lens                hiding ((<.>))
+import           Control.Monad.IO.Class             (liftIO)
+import           Control.Monad.Trans.Either
 import           Data.Aeson
+import qualified Data.Attoparsec.Text       as A
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Foldable
 import           Data.Function                      (on)
@@ -23,52 +26,15 @@ import           System.FilePath
 import           System.IO
 import           Text.Printf
 --
+import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import           PropBank.Parser.Prop
+import           PropBank.Match                    (matchInstances, printMatchedInst)
 import           PropBank.Query
 import           PropBank.Type.Frame
 import           PropBank.Type.Prop
 import           PropBank.Util                     (merge)
-
-
-{- 
-lookupRoleset :: PredicateDB -> (Text,Text) -> Maybe Text
-lookupRoleset db (lma,sens) = do
-  p <- HM.lookup lma (db^.predicateDB)
-  let rs = p ^.predicate_roleset
-  defn <- Data.List.lookup (lma <> "." <> sens) $ map (\r -> (r^.roleset_id,fromMaybe "" (r^.roleset_name))) rs
-  return defn
-
-
-
-  
-formatStat :: PredicateDB -> ((Text,Text),Int) -> String
-formatStat db ((lma,sens),num) =
-  let mdefn = lookupRoleset db (lma,sens)
-  in printf "%20s.%s : %5d : %s" lma sens num (fromMaybe "" mdefn)
-  -}
-
-
-{-  
-main' = do
-  let framedir = "/scratch/wavewave/MASC/Propbank/Propbank-orig/framefiles"
-      basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-  
-  (preddb,props) <- prepare framedir basedir
-  
-  lst <- flip traverse props $ \fp -> do
-    hPutStrLn stderr fp
-    txt <- T.IO.readFile fp
-    return (parsePropWithFileField NoOmit txt)
-
-  let rolesets = map (^.inst_lemma_roleset_id) $ concat lst
-      acc = foldl' (flip (HM.alter (\case { Nothing -> Just 1; Just n -> Just (n+1)}))) HM.empty rolesets
-  
-
-  mapM_ (putStrLn . formatStat preddb) . sortBy (flip compare `on` snd) . HM.toList $ acc -- rolesets
--}
-
 
 
 prepare framedir basedir = do
@@ -77,28 +43,33 @@ prepare framedir basedir = do
   dtr <- build basedir
   let fps = sort (toList (dirTree dtr))
       props = filter (\x -> takeExtensions x == ".prop") fps
-  return (preddb,props)
+      trees = filter (\x -> takeExtensions x == ".parse") fps
+  return (preddb,props,trees)
 
 
-process ptreedir framedir basedir article = do
-  (preddb,props) <- prepare framedir basedir
-  -- mapM_ print (take 10 props)
-  flip traverse_ (find (\f -> takeBaseName f == article) props) $ \fp -> do
-    hPutStrLn stderr fp
-    txt <- T.IO.readFile fp
-    let props = parsePropWithFileField NoOmit txt
-    mapM_ print props
+readPropBank propfile = liftIO $ parsePropWithFileField NoOmit <$> T.IO.readFile propfile
 
-    let ptreefile = article <.> "corenlp_ptree"
-    lbstr <- BL.readFile (ptreedir </> ptreefile)
-    let mptrs = decode lbstr :: Maybe [PennTree]
 
-    case mptrs of
-      Nothing -> print "nothing"
-      Just ptrs -> do
-        print $ merge (^.inst_tree_id) ptrs props
-                       
-  --    traverse_ (mapM_ (T.IO.putStrLn . prettyPrint 0)) mptr
+readPennTree pennfile = hoistEither . A.parseOnly (A.many1 (A.skipSpace *> pnode)) =<< liftIO (T.IO.readFile pennfile)
+
+convertTop (PN _ xs) = PN "ROOT" xs
+
+
+matchPropWithSerializedPennTree ptreedir framedir basedir article = do
+  (preddb,props,trees) <- prepare framedir basedir
+  let findf = find (\f -> takeBaseName f == article)
+  flip traverse ((,) <$> findf props <*> findf trees) $ \(fprop,ftree) -> runEitherT $ do
+    insts <- readPropBank fprop 
+    proptrs' <- readPennTree ftree
+    let proptrs = map convertTop proptrs'
+        ptreefile = article <.> "corenlp_ptree"
+    lbstr <- liftIO $ BL.readFile (ptreedir </> ptreefile)
+    let mcoretrs = decode lbstr :: Maybe [PennTree]
+    case mcoretrs of
+      Nothing -> left "parse error corenlp tree"
+      Just coretrs -> do
+        let trs = zip coretrs proptrs
+        return (merge (^.inst_tree_id) trs insts)
 
 
 main = do
@@ -106,4 +77,10 @@ main = do
       ptreedir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_20170702"
       framedir = "/scratch/wavewave/MASC/Propbank/Propbank-orig/framefiles"
       basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-  process ptreedir framedir basedir article 
+  mlst <- matchPropWithSerializedPennTree ptreedir framedir basedir article
+  case mlst of
+    Nothing -> error "nothing"
+    Just lst' -> do
+      let lst = concat lst'
+      flip mapM_ lst $ \(i,((coretr,proptr),insts)) -> do
+        mapM_ printMatchedInst (matchInstances (coretr,proptr) insts)
