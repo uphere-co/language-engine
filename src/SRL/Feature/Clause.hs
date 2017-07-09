@@ -196,7 +196,7 @@ showClauseStructure lemmamap ptree  = do
   
   flip mapM_ vps $ \vp -> do
     -- print (findVerb (vp^.vp_index) tr)
-    print (clauseForVerb rngs vp)
+    -- print (clauseForVerb rngs vp)
     putStrLn $ printf "%-62s | Clause %7s:  %s"
                  (formatVerbProperty vp)
                  (maybe "" show (clauseForVerb rngs vp))
