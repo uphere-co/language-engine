@@ -14,6 +14,7 @@ import           Data.Foldable
 import           Data.Function                      (on)
 import           Data.HashMap.Strict                (HashMap)
 import qualified Data.HashMap.Strict        as HM
+import qualified Data.IntMap                as IM
 import           Data.List
 import           Data.Maybe                         (fromMaybe)
 import           Data.Monoid
@@ -35,6 +36,7 @@ import           PropBank.Query
 import           PropBank.Type.Frame
 import           PropBank.Type.Prop
 import           PropBank.Util                     (merge)
+import           SRL.Feature.Clause
 
 
 prepare framedir basedir = do
@@ -73,8 +75,10 @@ matchPropWithSerializedPennTree ptreedir framedir basedir article = do
     proptrs' <- readOrigPennTree ftree
     let proptrs = map convertTop proptrs'
         ptreefile = article <.> "corenlp_ptree"
+        plemmafile = article <.> "corenlp_lemma"
     coretrs <- readCoreNLPPennTree (ptreedir </> ptreefile)
-    let trs = zip coretrs proptrs
+    corelmas <- readCoreNLPLemma (ptreedir </> plemmafile)
+    let trs = zip3 coretrs corelmas proptrs
     return (merge (^.inst_tree_id) trs insts)
 {-     
     -- let mcoretrs = decode lbstr :: Maybe [PennTree]
@@ -85,7 +89,7 @@ matchPropWithSerializedPennTree ptreedir framedir basedir article = do
 
 main = do
   let article = "wsj_2445"
-      ptreedir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_20170702"
+      ptreedir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170709"
       framedir = "/scratch/wavewave/MASC/Propbank/Propbank-orig/framefiles"
       basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
   mlst <- matchPropWithSerializedPennTree ptreedir framedir basedir article
@@ -93,5 +97,8 @@ main = do
     Nothing -> error "nothing"
     Just lst' -> do
       let lst = concat lst'
-      flip mapM_ lst $ \(i,((coretr,proptr),insts)) -> do
+      flip mapM_ lst $ \(i,((coretr,corelma,proptr),insts)) -> do
         mapM_ printMatchedInst (matchInstances (coretr,proptr) insts)
+        let lmap = IM.fromList (map (_2 %~ Lemma) corelma)
+        showClauseStructure lmap coretr
+
