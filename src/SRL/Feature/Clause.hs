@@ -31,7 +31,7 @@ currentlevel (PN (_,(_,l)) _) = l
 currentlevel (PL _ )          = 0
 
 
-promoteToVP x@(PL (Right (i,(p,t))))  = if isVerb p || p == TO
+promoteToVP x@(PL (Right (i,(p,t))))  = if isVerb p || p == TO || p == MD
                                   then Left (i,(p,t))
                                   else Right x
 promoteToVP x@(PL (Left _))       = Right x
@@ -109,8 +109,8 @@ findVerb i tr = getFirst (bifoldMap f (\_ -> First Nothing) (mkBitreeZipper [] t
 
 
 
-clauseRangeList :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))) -> [Range]
-clauseRangeList tr = bifoldMap f (const []) tr
+clauseRanges :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))) -> [Range]
+clauseRanges tr = bifoldMap f (const []) tr
   where f (rng,(S_CL _,_)) = [rng]
         f _                = []
 
@@ -177,7 +177,7 @@ showClauseStructure lemmamap ptree  = do
 
   T.IO.putStrLn (formatBitree id tr')
 
-  print (clauseRangeList tr)
+  print (clauseRanges tr)
   
   let getVerbArgs vp = do z <- findVerb (vp^.vp_index)  tr
                           return (verbArgs z)
