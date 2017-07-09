@@ -100,12 +100,13 @@ clauseStructure vps (PN (rng,tag) xs)
 findVerb :: Int
          -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
          -> Maybe (BitreeZipper (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))))
-findVerb i tr = getFirst (bifoldMap f (\_ -> First Nothing) (mkBitreeZipper [] tr))
+findVerb i tr = getFirst (bifoldMap f f (mkBitreeZipper [] tr))
   where f x = First $ case getRoot (current x) of
-                        Left (_,(S_VP lst,_)) -> if i `elem` (map (^._1) lst)
-                                                 then Just x
-                                                 else Nothing
-                        _                     -> Nothing 
+                        Left (_,(S_VP lst,_))
+                          -> if i `elem` (map (^._1) lst) then Just x else Nothing 
+                        Right (Left (_,(S_VP lst,_)))
+                          -> if i `elem` (map (^._1) lst) then Just x else Nothing
+                        _ -> Nothing 
 
 
 
@@ -181,8 +182,9 @@ showClauseStructure lemmamap ptree  = do
   
   let getVerbArgs vp = do z <- findVerb (vp^.vp_index)  tr
                           return (verbArgs z)
+
   
   flip mapM_ vps $ \vp -> do
-    putStrLn $ 
-      printf "%-62s | %s" (formatVerbProperty vp) (maybe "" formatVerbArgs (getVerbArgs vp))
+    -- print (findVerb (vp^.vp_index) tr)
+    putStrLn $ printf "%-62s | %s" (formatVerbProperty vp) (maybe "" formatVerbArgs (getVerbArgs vp))
 
