@@ -7,6 +7,7 @@ module Main where
 
 import           Control.Exception
 import           Control.Lens                hiding ((<.>))
+import           Control.Monad
 import           Control.Monad.IO.Class             (liftIO)
 import           Control.Monad.Trans.Either
 import           Data.Aeson
@@ -36,23 +37,27 @@ import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import           PropBank.Parser.Prop
-import           PropBank.Match                    (matchInstances, printMatchedInst)
+import           PropBank.Match                    (findRelNode,matchInstances
+                                                   ,printMatchedInst)
 import           PropBank.Query
 import           PropBank.Type.Frame
+import           PropBank.Type.Match
 import           PropBank.Type.Prop
 import           PropBank.Util                     (merge)
 import           SRL.Feature.Clause
+import           SRL.Feature.Verb
+import           SRL.Type.Verb
 import           Text.Format.Tree
 
 
 prepare framedir basedir = do
-  propdb <- constructFrameDB framedir
-  let preddb = constructPredicateDB propdb
+  -- propdb <- constructFrameDB framedir
+  -- let preddb = constructPredicateDB propdb
   dtr <- build basedir
   let fps = sort (toList (dirTree dtr))
       props = filter (\x -> takeExtensions x == ".prop") fps
       trees = filter (\x -> takeExtensions x == ".parse") fps
-  return (preddb,props,trees)
+  return ((),props,trees) -- (preddb,props,trees)
 
 
 readPropBank propfile = liftIO $ parsePropWithFileField NoOmit <$> T.IO.readFile propfile
@@ -70,10 +75,10 @@ readJSONList file = EitherT $ eitherDecode <$> liftIO (BL.readFile file)
 convertTop (PN _ xs) = PN "ROOT" xs
 
 
-loadAndMatchDataForArticle ptreedir framedir basedir article = do
-  (preddb,props,trees) <- prepare framedir basedir
+loadMatchArticle ptreedir framedir basedir article = do
+  (preddb,props,trees) <- liftIO $ prepare framedir basedir
   let findf = find (\f -> takeBaseName f == article)
-  flip traverse ((,) <$> findf props <*> findf trees) $ \(fprop,ftree) -> runEitherT $ do
+  flip traverse ((,) <$> findf props <*> findf trees) $ \(fprop,ftree) -> do
     insts <- readPropBank fprop 
     proptrs' <- readOrigPennTree ftree
     let proptrs = map convertTop proptrs'
@@ -86,32 +91,46 @@ loadAndMatchDataForArticle ptreedir framedir basedir article = do
     let cores = zip3 coretrs coredeps corelmas
         pairs = zip cores proptrs
     return (merge (^.inst_tree_id) pairs insts)
-{-     
-    -- let mcoretrs = decode lbstr :: Maybe [PennTree]
-    case mcoretrs of
-      Nothing -> left "parse error corenlp tree"
-      Just coretrs -> do
--}
 
 main = do
   let article = "wsj_2445"
       ptreedir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170709"
       framedir = "/scratch/wavewave/MASC/Propbank/Propbank-orig/framefiles"
       basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-  mlst <- loadAndMatchDataForArticle ptreedir framedir basedir article
-  case mlst of
-    Nothing -> error "nothing"
-    Just lst' -> do
-      let lst = concat lst'
-      flip mapM_ lst $ \(i,(((coretr,coredep,corelma),proptr),insts)) -> do
-        mapM_ printMatchedInst (matchInstances (coretr,proptr) insts)
-        let lmap = IM.fromList (map (_2 %~ Lemma) corelma)
-        showClauseStructure lmap coretr
-        let tkmap = IM.fromList . zip [0..] .map (^._2) . toList $ coretr
+  void . runEitherT $ do
+    lst' <- loadMatchArticle ptreedir framedir basedir article
+    let lst = concat lst'
+    liftIO . flip mapM_ lst $ \(i,(((coretr,coredep,corelma),proptr),insts)) -> do
+      putStrLn "-------------"
+      putStrLn $ "sentence " ++ show i
+      let tokens = map (^._2) . toList $ coretr
+      T.IO.putStrLn (T.intercalate " " tokens)
+      putStrLn "--"
+      putStrLn $ "propbank"
+      let minsts = matchInstances (coretr,proptr) insts
+      flip mapM_ minsts $ \minst-> do
+        let inst = minst^.mi_instance
+            args = minst^.mi_arguments
+        print (findRelNode (minst^.mi_arguments),inst^.inst_lemma_roleset_id)
+        mapM_ (print . (\a->(a^.ma_argument.arg_label.to pbLabelText,a^..ma_nodes.traverse.mn_node._1))) args
+     
+           
+      putStrLn "--"
+      putStrLn $ "verb property"
+      let lmap = IM.fromList (map (_2 %~ Lemma) corelma)
+      print $ map (\vp->(vp^.vp_index,vp^.vp_lemma.to unLemma)) (verbPropertyFromPennTree lmap coretr)
+      showClauseStructure lmap coretr
+      
+      {-
+      mapM_ printMatchedInst (matchInstances (coretr,proptr) insts)
+       
+      showClauseStructure lmap coretr
+      let tokens = map (^._2) . toList $ coretr
+      T.IO.putStrLn (T.intercalate " " tokens)
+      let tkmap = IM.fromList (zip [0..] tokens)
 
-            -- deptree0 = normalizeOrder (dependencyLabeledTree coredep)
-            deptree = fmap (\(i,r) -> let t = fromMaybe "" (IM.lookup (i-1) tkmap) in (i-1,t,r))
-                        (dependencyLabeledTree coredep)
+          deptree = fmap (\(i,r) -> let t = fromMaybe "" (IM.lookup (i-1) tkmap) in (i-1,t,r))
+                      (dependencyLabeledTree coredep)
 
-        T.IO.putStrLn (linePrint (T.pack.show) deptree)
-
+      T.IO.putStrLn (linePrint (T.pack.show) deptree)
+      -}
