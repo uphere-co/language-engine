@@ -177,6 +177,9 @@ data ChunkTag = ROOT
               | SBARQ     -- ^ direct question introduced by a wh-word or wh-phrase
               | SINV      -- ^ inverted declarative sentence
               | SQ        -- ^ inverted yes/no question
+              -- from OntoNotes
+              | NML       -- ^ mark nominal modifier
+               
               deriving (Generic, Show,Eq,Ord,Enum,Bounded)
 
 instance FromJSON ChunkTag where
@@ -245,7 +248,7 @@ identifyPOS t
   | t == "-RRB-"  = D_RRB
   | t == "-NONE-" = D_NONE
   | otherwise =
-    let p = T.takeWhile (/= '-') t
+    let p = T.takeWhile (\x -> x /= '-' && x /= '=') t
     in if | p == "CC"   -> CC
           | p == "CD"   -> CD
           | p == "DT"   -> DT
@@ -299,7 +302,7 @@ identifyPOS t
 
 identifyChunk :: Text -> ChunkTag
 identifyChunk t =
-    let p = T.takeWhile (/= '-') t
+    let p = T.takeWhile (\x -> x /= '-' && x /= '=') t
     in if | p == "ROOT" -> ROOT
           | p == "NP"   -> NP
           | p == "PP"   -> PP
@@ -328,6 +331,8 @@ identifyChunk t =
           | p == "SBARQ" -> SBARQ
           | p == "SINV" -> SINV
           | p == "SQ"   -> SQ
+          -- OntoNotes
+          | p == "NML"  -> NML
           | otherwise   -> error ("no such chunk tag : " ++ T.unpack t)
 
 
