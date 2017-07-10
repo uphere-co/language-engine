@@ -48,7 +48,6 @@ parseOntoNotesPennTree :: FilePath -> IO (Either String [PennTree])
 parseOntoNotesPennTree f = fmap (A.parseOnly (A.many1 (A.skipSpace *> pnode))) (T.IO.readFile f)
 
 
-
 errorHandler h_err msg action = do
   r <- try action 
   case r of
@@ -58,9 +57,11 @@ errorHandler h_err msg action = do
 
 convertTop (PN _ xs) = PN "ROOT" xs
 
+
 filterNML x@(PN NML xs) = [x]
 filterNML (PN c xs) = concatMap filterNML xs
 filterNML (PL _) = []
+
 
 mergeHyphen :: State [(POSTag,Text)] (Maybe [(POSTag,Text)])
 mergeHyphen = fmap (fmap reverse) (go Nothing)
@@ -75,15 +76,8 @@ mergeHyphen = fmap (fmap reverse) (go Nothing)
                                       (M_HYPH,_) -> put xs >> go (Just (x:ys))
                                       _          -> return acc 
 
--- formatPrint :: PennTreeGen ChunkTag (POSTag,Text) -> IO ()
--- formatPrint x = putStrLn $ printf "%30s : %s " ((T.intercalate " " . map (^._2) . toList) x) (show x)
-
-
       
 serializeLemma pp txts h_lemma = do
-  {- let tss = map getTerms trs
-      ts = map (T.intercalate " ") tss -}
-      -- ntxt = T.intercalate "\n\n" ts
   let docs = map (flip Document (fromGregorian 1990 1 1)) txts 
   anns <- traverse (annotate pp) docs
   rdocs' <- traverse protobufDoc anns
@@ -97,8 +91,6 @@ serializeLemma pp txts h_lemma = do
 
 
 serializePennTreeDep pp txts (h_ud,h_tr)= do
-  {- let tss = map getTerms trs
-         ts = map (T.intercalate " ") tss -}
   let docs = map (flip Document (fromGregorian 1990 1 1)) txts
   anns <- traverse (annotate pp) docs
   rdocs' <- traverse protobufDoc anns
@@ -129,12 +121,6 @@ process basedir pp = do
       case etr of
         Left err -> hPutStrLn h_err f
         Right trs -> do
-          {- flip mapM_ trs $ \tr -> do
-            let atr = (getADTPennTree . convertTop) tr
-                nmls = filterNML atr
-            when ((not.null) nmls) $ do
-              mapM_ formatPrint nmls
--}
           let txts = flip map trs $ \tr -> 
                 let atr = (getADTPennTree . convertTop) tr
                     terms0 = (filter (\(t,_) -> t /= D_NONE) . toList) atr
