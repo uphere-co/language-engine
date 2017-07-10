@@ -1,3 +1,10 @@
+## Run CoreNLP NER
+```
+# for word tokenization
+java edu.stanford.nlp.process.PTBTokenizer -preserveLines iphone.txt > iphone.ptb
+# for NER
+java -mx48g edu.stanford.nlp.ie.NERClassifierCombiner -ner.model $CORENLP/classifiers/english.all.3class.distsim.crf.ser.gz,$CORENLP/classifiers/english.conll.4class.distsim.crf.ser.gz,$CORENLP/classifiers/english.muc.7class.distsim.crf.ser.gz -textFile iphone.ptb > iphone.ner
+```
 ## Output file schemes
 #### category_hierarchy 
 |sub_cat_id | super_cat | sub_cat
@@ -181,4 +188,18 @@ real	0m7.837s
 
 cp ../wikidata/wikidata-20170627-truthy-BETA.nt.names.bz2 item_names.nt.bz2
 cat item_names.wikipedia_*.nt | lbzip2 >> item_names.nt.bz2
+```
+
+
+## YAGO
+
+```
+# no multi-threaded 7z (de)compressor in linux; replace it with bz2.
+$ time 7za e -so yago3_entire_tsv.7z | lbzip2 --fast > yago3_entire_tsv.bz2
+real	17m40.827s
+# drop triples for non-english Wikipedia entities
+$ time lbzcat yago3_entire_tsv.bz2 | grep -v '<[a-z][a-z]/' | lbzip2 --fast > yago3_entire.en.tsv.bz2
+real	15m55.255s
+-rw-r--r-- 1 jihuni uphere 11445536941 Jul  5 07:10 yago3_entire.en.tsv.bz2
+-rw-r--r-- 1 jihuni uphere 13613624731 Jul  5 01:51 yago3_entire_tsv.bz2
 ```

@@ -27,7 +27,9 @@ let
             ]);
 in stdenv.mkDerivation {
   name = "corenlp-aeson-dev";
-  buildInputs = [ hsenv 
+  buildInputs = [ 
+                  hsenv 
+                  p7zip
                 ];
   shellHook = ''
      PS1="\n\[\033[0;35m\][\u@\h.devel:\w]\$\[\033[0m\] "
