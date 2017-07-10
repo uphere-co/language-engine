@@ -48,43 +48,6 @@ parseOntoNotesPennTree :: FilePath -> IO (Either String [PennTree])
 parseOntoNotesPennTree f = fmap (A.parseOnly (A.many1 (A.skipSpace *> pnode))) (T.IO.readFile f)
 
 
-      
-serializeLemma pp trs h_lemma = do
-  let tss = map getTerms trs
-      ts = map (T.intercalate " ") tss
-      -- ntxt = T.intercalate "\n\n" ts
-      docs = map (flip Document (fromGregorian 1990 1 1)) ts -- ntxt
-  anns <- traverse (annotate pp) docs
-  rdocs' <- traverse protobufDoc anns
-  let rdocs = sequenceA rdocs'
-  case rdocs of
-    Left err -> print err
-    Right ds -> do
-      let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
-          lmap= map (map (_2 %~ unLemma) . IM.toList . mkLemmaMap) sents
-      BL.hPutStrLn h_lemma (encode lmap)
-
-
-serializePennTreeDep pp trs (h_ud,h_tr)= do
-  let tss = map getTerms trs
-      ts = map (T.intercalate " ") tss
-      -- ntxt = T.intercalate "\n\n" ts
-      docs = map (flip Document (fromGregorian 1990 1 1)) ts -- ntxt
-  anns <- traverse (annotate pp) docs
-  rdocs' <- traverse protobufDoc anns
-  let rdocs = sequenceA rdocs'
-  case rdocs of
-    Left err -> print err
-    Right ds -> do
-      let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
-          ntrs = map decodeToPennTree (mapMaybe (^.S.parseTree) sents)
-          edeps = mapM sentToDep sents
-      case edeps of
-        Left err -> print err
-        Right deps -> do
-          BL.hPutStrLn h_ud (encode deps)
-          BL.hPutStrLn h_tr (encode ntrs)
-
 
 errorHandler h_err msg action = do
   r <- try action 
@@ -112,44 +75,79 @@ mergeHyphen = fmap (fmap reverse) (go Nothing)
                                       (M_HYPH,_) -> put xs >> go (Just (x:ys))
                                       _          -> return acc 
 
-formatPrint :: PennTreeGen ChunkTag (POSTag,Text) -> IO ()
-formatPrint x = putStrLn $ printf "%30s : %s " ((T.intercalate " " . map (^._2) . toList) x) (show x)
+-- formatPrint :: PennTreeGen ChunkTag (POSTag,Text) -> IO ()
+-- formatPrint x = putStrLn $ printf "%30s : %s " ((T.intercalate " " . map (^._2) . toList) x) (show x)
+
+
+      
+serializeLemma pp txts h_lemma = do
+  {- let tss = map getTerms trs
+      ts = map (T.intercalate " ") tss -}
+      -- ntxt = T.intercalate "\n\n" ts
+  let docs = map (flip Document (fromGregorian 1990 1 1)) txts 
+  anns <- traverse (annotate pp) docs
+  rdocs' <- traverse protobufDoc anns
+  let rdocs = sequenceA rdocs'
+  case rdocs of
+    Left err -> print err
+    Right ds -> do
+      let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
+          lmap= map (map (_2 %~ unLemma) . IM.toList . mkLemmaMap) sents
+      BL.hPutStrLn h_lemma (encode lmap)
+
+
+serializePennTreeDep pp txts (h_ud,h_tr)= do
+  {- let tss = map getTerms trs
+         ts = map (T.intercalate " ") tss -}
+  let docs = map (flip Document (fromGregorian 1990 1 1)) txts
+  anns <- traverse (annotate pp) docs
+  rdocs' <- traverse protobufDoc anns
+  let rdocs = sequenceA rdocs'
+  case rdocs of
+    Left err -> print err
+    Right ds -> do
+      let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
+          ntrs = map decodeToPennTree (mapMaybe (^.S.parseTree) sents)
+          edeps = mapM sentToDep sents
+      case edeps of
+        Left err -> print err
+        Right deps -> do
+          BL.hPutStrLn h_ud (encode deps)
+          BL.hPutStrLn h_tr (encode ntrs)
 
 
 process basedir pp = do
   dtr <- build basedir
-  let fps = take 20$  sort (toList (dirTree dtr))
+  let fps = sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
   withFile "error.log" WriteMode $ \h_err -> do
     flip traverse_ parsefiles $ \f -> do
-      {- 
       putStrLn "\n\n\n=============================================================================================="
       print f
-      putStrLn "==============================================================================================" -}
+      putStrLn "==============================================================================================" 
       etr <- parseOntoNotesPennTree f
       case etr of
         Left err -> hPutStrLn h_err f
-        Right trs -> 
-          flip mapM_ trs $ \tr -> do
+        Right trs -> do
+          {- flip mapM_ trs $ \tr -> do
             let atr = (getADTPennTree . convertTop) tr
                 nmls = filterNML atr
             when ((not.null) nmls) $ do
               mapM_ formatPrint nmls
-              let terms = (filter (\(t,_) -> t /= D_NONE) . toList) atr
-                  merged = evalState (unfoldM mergeHyphen) terms
-              print $ map (T.concat . map snd) merged
-
-
-          --  ((\xs -> when ((not.null) xs) (mapM_ formatPrint xs)) .  .  trs
-                    
-          {- 
+-}
+          let txts = flip map trs $ \tr -> 
+                let atr = (getADTPennTree . convertTop) tr
+                    terms0 = (filter (\(t,_) -> t /= D_NONE) . toList) atr
+                    merged = evalState (unfoldM mergeHyphen) terms0
+                in T.intercalate " " (map (T.concat . map snd) merged)
+              
           let bname = takeBaseName f
           withFile (bname <.> "corenlp_lemma") WriteMode $ \h_lemma -> do
-            errorHandler h_err f (serializeLemma pp trs h_lemma)
+            errorHandler h_err f (serializeLemma pp txts h_lemma)
           withFile (bname <.> "corenlp_udep") WriteMode $ \h_ud -> 
             withFile (bname <.> "corenlp_ptree") WriteMode $ \h_tr -> 
-              errorHandler h_err f (serializePennTreeDep pp trs (h_ud,h_tr))
-          -}
+              errorHandler h_err f (serializePennTreeDep pp txts (h_ud,h_tr))
+
 
 main :: IO ()
 main = do
@@ -162,8 +160,8 @@ main = do
                      . ( postagger .~ True )
                      . ( lemma .~ True )
                      . ( sutime .~ False )
-                     . ( depparse .~ False ) -- . ( depparse .~ True )
-                     . ( constituency .~ False ) -- . ( constituency .~ True )
+                     . ( depparse .~ True )
+                     . ( constituency .~ True )
                      . ( ner .~ False )
     pp <- prepare pcfg
     process basedir pp 
