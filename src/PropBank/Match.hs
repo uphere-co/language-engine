@@ -4,6 +4,8 @@ module PropBank.Match where
 
 import           Control.Applicative             (many)
 import           Control.Lens
+import           Control.Monad.Loops             (unfoldM)
+import           Control.Monad.Trans.State
 import qualified Data.Attoparsec.Text       as A
 import           Data.Foldable                   (toList)
 import           Data.List (intercalate)
@@ -21,6 +23,20 @@ import           PropBank.Type.Match
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
+
+
+mergeHyphen :: State [(POSTag,Text)] (Maybe [(POSTag,Text)])
+mergeHyphen = fmap (fmap reverse) (go Nothing)
+  where go acc = do s <- get
+                    case s of
+                      [] -> return acc
+                      (x:xs) -> case acc of
+                                  Nothing                -> put xs >> go (Just [x])
+                                  Just ys@((M_HYPH,_):_) -> put xs >> go (Just (x:ys))
+                                  Just ys                ->
+                                    case x of
+                                      (M_HYPH,_) -> put xs >> go (Just (x:ys))
+                                      _          -> return acc 
 
 
 termRangeForAllNode :: PennTreeGen c (Int,t) -> [Range]

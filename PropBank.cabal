@@ -41,6 +41,7 @@ library
                        discrimination,
                        filepath,
                        lens,
+                       monad-loops,
                        taggy-lens,
                        text,
                        transformers,
