@@ -32,6 +32,7 @@ let
 
             lens
             taggy-lens
+            tasty-hunit
             p.nlp-types
           ]);
 

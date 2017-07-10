@@ -40,6 +40,7 @@ adjustIndex :: [Int] -> Int -> Either Int Int
 adjustIndex xs n = let m = length (filter (<n) xs)
                    in if n `elem` xs then Left (n-m) else Right (n-m)
 
+
 adjustIndexFromTree :: PennTree -> Int -> Either Int Int
 adjustIndexFromTree tr =
   let itr = mkIndexedTree tr
@@ -60,6 +61,7 @@ matchR r0 y@(PN (r,_) xs)
 matchR (b,e) x@(PL (n,_))
   | b == n && e == n = Just x
   | otherwise = Nothing
+
 
 matchArgNodes :: (PennTree,PennTree) -> Argument -> [MatchedArgNode]
 matchArgNodes (pt,tr) arg = do
@@ -106,6 +108,7 @@ printMatchedInst x = do
   putStrLn "---"  
   mapM_ printMatchedArg (x^.mi_arguments)
   putStrLn "---"  
+
 
 findRelNode :: [MatchedArgument] -> Int
 findRelNode args =
