@@ -22,12 +22,19 @@ testex1 = [(5,Right 5),(6,Left 6),(7,Left 6),(8,Right 6),(15,Right 13)]
 ex2 :: PennTree
 ex2 = PN "ROOT" [PN "SINV" [PL ("``","``"),PN "S-TPC-1" [PN "NP-SBJ" [PL ("EX","There")],PN "VP" [PL ("VBZ","'s"),PN "NP-PRD" [PN "NP" [PL ("DT","no"),PL ("NN","question")],PN "SBAR" [PL ("IN","that"),PN "S" [PN "NP-SBJ" [PN "NP" [PL ("DT","some")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("DT","those"),PL ("NNS","workers"),PL ("CC","and"),PL ("NNS","managers")]]],PN "VP" [PL ("VBD","contracted"),PN "NP" [PN "ADJP" [PL ("NN","asbestos"),PL ("HYPH","-"),PL ("VBN","related")],PL ("NNS","diseases")]]]]]]],PL (",",","),PL ("''","''"),PN "VP" [PL ("VBD","said"),PN "S" [PL ("-NONE-","*T*-1")]],PN "NP-SBJ" [PN "NP" [PL ("NNP","Darrell"),PL ("NNP","Phillips")],PL (",",","),PN "NP" [PN "NP" [PL ("NN","vice"),PL ("NN","president")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("JJ","human"),PL ("NNS","resources")]],PN "PP" [PL ("IN","for"),PN "NP" [PL ("NNP","Hollingsworth"),PL ("CC","&"),PL ("NNP","Vose")]]]],PL (".",".")]]
 
-testex2 = [(11,Right 11),(13,Right 13),(14,Right 13),(15,Right 13),(19,Right 17),(20,Left 18),(21,Right 18)]
+testex2 = [(11,Right 11),(13,Right 13),(14,Left 14),(15,Left 14),(19,Right 17),(20,Left 18),(21,Right 18)]
 
-main :: IO ()
+main' :: IO ()
+main' = do
+ mapM_ print (zip [0..] (toList ex1 ))  
+ print (exclusionList ex1)
+ putStrLn "==============================="
+ mapM_ print (zip [0..] (toList ex2 ))
+ print (getMerged ex2)
+ print (exclusionList ex2)
+
 main = defaultMain unitTests
- -- mapM_ print (zip [0..] (toList ex2 ))
-  
+   
 check ex testex =  getAll (foldMap (\(i,ei') -> All (adjustIndexFromTree ex i == ei')) testex)
 
 

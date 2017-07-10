@@ -25,18 +25,29 @@ import           PropBank.Util
 --
 
 
-mergeHyphen :: State [(POSTag,Text)] (Maybe [(POSTag,Text)])
+mergeHyphen :: State [(Int,(POSTag,Text))] (Maybe [(Int,(POSTag,Text))])
 mergeHyphen = fmap (fmap reverse) (go Nothing)
   where go acc = do s <- get
                     case s of
                       [] -> return acc
                       (x:xs) -> case acc of
-                                  Nothing                -> put xs >> go (Just [x])
-                                  Just ys@((M_HYPH,_):_) -> put xs >> go (Just (x:ys))
-                                  Just ys                ->
+                                  Nothing                    -> put xs >> go (Just [x])
+                                  Just ys@((_,(M_HYPH,_)):_) -> put xs >> go (Just (x:ys))
+                                  Just ys                    ->
                                     case x of
-                                      (M_HYPH,_) -> put xs >> go (Just (x:ys))
-                                      _          -> return acc 
+                                      (_,(M_HYPH,_)) -> put xs >> go (Just (x:ys))
+                                      _              -> return acc 
+
+getMerged tr = let atr = (getADTPennTree . convertTop) tr
+                   -- terms0 = (filter (\(_,(t,_)) -> t /= D_NONE) . zip [0..] . toList) atr
+               in evalState (unfoldM mergeHyphen) (zip [0..] (toList atr))
+
+exclusionList tr = let f []     = []
+                       f ys@((i,(t,_)):xs) = (if t == D_NONE then [i] else []) ++ map (^._1) xs 
+                   in concatMap f (getMerged tr)
+
+
+convertTop (PN _ xs) = PN "ROOT" xs
 
 
 termRangeForAllNode :: PennTreeGen c (Int,t) -> [Range]
@@ -50,11 +61,11 @@ adjustIndex xs n = let m = length (filter (<n) xs)
 
 
 adjustIndexFromTree :: PennTree -> Int -> Either Int Int
-adjustIndexFromTree tr =
-  let itr = mkIndexedTree tr
-      excl = map (^._1) (findNoneLeaf itr)
+adjustIndexFromTree = adjustIndex . exclusionList
+{-   let itr = mkIndexedTree tr
+      excl = exclusionList tr  map (^._1) (findNoneLeaf itr)
   in adjustIndex excl 
-
+-}
 
 maximalEmbeddedRange :: PennTreeGen c (Int,t) -> Range -> [(Range,PennTreeIdxG c t)]
 maximalEmbeddedRange tr r = go (termRangeTree tr)
