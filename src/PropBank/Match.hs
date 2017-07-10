@@ -4,7 +4,6 @@ module PropBank.Match where
 
 import           Control.Applicative             (many)
 import           Control.Lens
--- import           Control.Monad.IO.Class          (liftIO)
 import qualified Data.Attoparsec.Text       as A
 import           Data.Foldable                   (toList)
 import           Data.List (intercalate)
@@ -12,10 +11,7 @@ import           Data.Maybe                      (fromJust,mapMaybe,listToMaybe)
 import           Data.Monoid                     ((<>))
 import           Data.Text                       (Text)
 import qualified Data.Text                  as T
-import qualified Data.Text.IO               as TIO
--- import           Data.Time.Calendar              (fromGregorian)
 --
--- import qualified CoreNLP.Simple.Type                   as S
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
@@ -25,10 +21,6 @@ import           PropBank.Type.Match
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
--- import           SRL.Type
--- import           SRL.Util
---
-
 
 
 termRangeForAllNode :: PennTreeGen c (Int,t) -> [Range]
@@ -88,26 +80,6 @@ matchInstances :: (PennTree,PennTree) -> [Instance] -> [MatchedInstance]
 matchInstances (pt,tr) insts
   = [ MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (pt,tr) inst }
       | inst <- insts ]
-
-
-printMatchedNode :: MatchedArgNode -> IO ()
-printMatchedNode x = do
-  TIO.putStrLn $ T.pack (show (x^.mn_node._1)) <> ":"
-  print (x^.mn_trees)
-
-
-printMatchedArg :: MatchedArgument -> IO ()
-printMatchedArg x = do
-  putStrLn $ show (x^.ma_argument.arg_label)
-  mapM_ printMatchedNode (x^.ma_nodes)
-
-
-printMatchedInst :: MatchedInstance -> IO ()
-printMatchedInst x = do
-  TIO.putStrLn (x^.mi_instance.inst_lemma_type)
-  putStrLn "---"  
-  mapM_ printMatchedArg (x^.mi_arguments)
-  putStrLn "---"  
 
 
 findRelNode :: [MatchedArgument] -> Int
