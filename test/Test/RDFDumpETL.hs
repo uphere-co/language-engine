@@ -32,35 +32,9 @@ import           Data.Attoparsec.Text
 import           Control.Applicative                   ((<|>))
 
 {-
-de/Carl_Albrecht_Bernoulli>    <hasWikipediaAnchorText>    "نيتشه"@ara .
-<Hezbollah>    <hasWikipediaAnchorText>    "الحدود اللبنانية الإسرائيلية"@ara   
-
-
-# yagoLabels
-<Bitter_&_Sweet_Release_Tour_Final>    rdfs:label    "Bitter & Sweet Release Tour Final"@eng .
-<Fred_Severud>    <redirectedFrom>    "Fred N. Severud"@eng .
-<de/Hermann_Krahforst>    <hasFamilyName>    "Krahforst"@de .
-<nl/Tibirke_(parochie)>    skos:prefLabel    "Tibirke (parochie)"@eng .
-
-
 yagoDateFacts
 <Guus_Kouwenhoven>    <wasBornOnDate>    "1942-02-15"^^xsd:date .
 <Watsonalla_uncinula>    <wasCreatedOnDate>    "1790-##-##"^^xsd:date .
-
-<Saccobolus_glaber>    rdf:type    <wordnet_fungus_112992868> .
-<Salmonella_Dub>    rdf:type    <yagoPermanentlyLocatedEntity> .
-<Salmonella_Dub>    rdf:type    <wordnet_social_group_107950920> .
-<Jean-Baptiste-Joseph_Gobel>    rdf:type    <wikicat_French_politicians> .
-<Jean-Baptiste-Joseph_Gobel>    rdf:type    <wordnet_alumnus_109786338> .
-<Saccobolus_glaber>    rdf:type    owl:Thing .
-
-<de/Preußische_ES_51_bis_ES_57>
-
-# yagoTypes.tsv : types of entities
-<id_1kmo9y9_88c_1e08w1o>    <PowerVR>    rdf:type    <wikicat_Companies_based_in_Hertfordshire>   
-<id_1kmo9y9_88c_1g5nyun>    <PowerVR>    rdf:type    <wikicat_Computer_hardware_companies>   
-<id_1kmo9y9_88c_1eoxwov>    <PowerVR>    rdf:type    <wikicat_Graphics_hardware_companies>   
-<id_13tyf46_88c_4gx1l8>    <de/NEC_PowerVR_PCX>    rdf:type    <wikicat_Graphics_chips>
 
 newtype YagoID = YagoID Text
                deriving (Eq, Ord)
@@ -73,13 +47,18 @@ data YagoObject = YagoID        Text
                 | YagoRDFverb   Text
                 | YagoOWLclass  Text
                 | YagoRDFSprop  Text
+                | YagoSKOSverb  Text
+                | YagoVerb      Text
                 | YagoWordnet   Text
                 | YagoWikicat   Text
                 | YagoClass     Text
                 | YagoWikiTitle Text
-                | YagoNonEnWiki Text
+                | YagoWikiAlias Text
+                | YagoNonEnWikiTitle Text
+                | YagoNonEnWikiAlias Text
                 deriving (Eq, Show)
 
+type YagoRdfTriple = (YagoObject, YagoObject, YagoObject, YagoObject)
 
 
 object = takeTill (\x -> x=='>' || C.isSpace x)
@@ -93,17 +72,28 @@ parserYAGOtoken prefix postfix f = do
   return (f t)
 
 
-parserYAGOuid, parserRDFverb, parserOWLclass, parserRDFSprop:: Parser YagoObject
+parserYAGOuid, parserRDFverb, parserRDFSprop,parserSKOSverb,parserYAGOverb:: Parser YagoObject
 parserYAGOuid  = parserYAGOtoken "<id_" ">" YagoID
 parserRDFverb  = parserYAGOtoken "rdf:" ""  YagoRDFverb
-parserOWLclass = parserYAGOtoken "owl:" ""  YagoOWLclass
 parserRDFSprop = parserYAGOtoken "rdfs:" "" YagoRDFSprop
+parserSKOSverb = parserYAGOtoken "skos:" "" YagoSKOSverb
+parserYAGOverb = parserYAGOtoken "<" ">"    YagoVerb
 
 
-parserYAGOwordnet, parserYAGOwikicat, parserYAGOclass :: Parser YagoObject
+parserYAGOwordnet, parserYAGOwikicat, parserOWLclass, parserYAGOclass :: Parser YagoObject
 parserYAGOwordnet = parserYAGOtoken "<wordnet_" ">" YagoWordnet
 parserYAGOwikicat = parserYAGOtoken "<wikicat_" ">" YagoWikicat
+parserOWLclass    = parserYAGOtoken "owl:" ""       YagoOWLclass
 parserYAGOclass   = parserYAGOtoken "<yago" ">"     YagoClass
+
+parserYAGOwikiAlias :: Parser YagoObject
+parserYAGOwikiAlias = do
+  let alias = takeTill (=='"')
+  string "\""
+  t <- alias
+  string "\"@eng"
+  return (YagoWikiAlias t)
+
 
 parserYAGOwikiTitle :: Parser YagoObject
 parserYAGOwikiTitle = do
@@ -123,25 +113,25 @@ parserYAGOnonEnwikiTitle = do
   string "/"
   t <- object
   string ">"
-  return (YagoNonEnWiki t)
+  return (YagoNonEnWikiTitle t)
 
 
 
 parserNounToken, parserVerbToken, parserUIDToken :: Parser YagoObject
 parserNounToken = choice [ parserYAGOwordnet
                          , parserYAGOwikicat
-                         , parserYAGOwikiTitle
-                         , parserYAGOnonEnwikiTitle
-                         , parserYAGOclass]
-
-parserVerbToken = choice [ parserRDFverb
                          , parserOWLclass
-                         , parserRDFSprop
+                         , parserYAGOclass
+                         , parserYAGOwikiAlias
+                         , parserYAGOwikiTitle
                          , parserYAGOnonEnwikiTitle]
-
+parserVerbToken = choice [ parserRDFverb
+                         , parserRDFSprop
+                         , parserSKOSverb
+                         , parserYAGOverb]
 parserUIDToken  = parserYAGOuid
 
-
+parserRDFrowInTSV :: Parser YagoRdfTriple
 parserRDFrowInTSV = do
   uid  <- parserUIDToken
   ssep
@@ -156,37 +146,58 @@ parserRDFrowInTSV = do
 testYagoRdfObjects :: TestTree
 testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
   eassertEqual (parseOnly parserVerbToken "rdf:type")  (Right (YagoRDFverb "type"))
-  eassertEqual (parseOnly parserVerbToken "owl:Thing") (Right (YagoOWLclass "Thing"))
   eassertEqual (parseOnly parserVerbToken "rdfs:subClassOf")        (Right (YagoRDFSprop "subClassOf"))
+  eassertEqual (parseOnly parserVerbToken "skos:prefLabel")         (Right (YagoSKOSverb "prefLabel"))
+  eassertEqual (parseOnly parserVerbToken "<hasWikipediaAnchorText>") (Right (YagoVerb "hasWikipediaAnchorText"))
+  eassertEqual (parseOnly parserVerbToken "<redirectedFrom>")         (Right (YagoVerb "redirectedFrom"))
   eassertEqual (parseOnly parserUIDToken  "<id_5kujp2_1m6_a52wvp>") (Right (YagoID "5kujp2_1m6_a52wvp"))
+  eassertEqual (parseOnly parserNounToken "owl:Thing") (Right (YagoOWLclass "Thing"))
   eassertEqual (parseOnly parserNounToken "<wordnet_organization_108008335>")      (Right (YagoWordnet "organization_108008335"))
   eassertEqual (parseOnly parserNounToken "<wikicat_Graphics_hardware_companies>") (Right (YagoWikicat "Graphics_hardware_companies"))
   eassertEqual (parseOnly parserNounToken "<PowerVR>")            (Right (YagoWikiTitle "PowerVR"))
-  eassertEqual (parseOnly parserNounToken "<de/NEC_PowerVR_PCX>") (Right (YagoNonEnWiki "NEC_PowerVR_PCX"))
+  eassertEqual (parseOnly parserNounToken "<de/NEC_PowerVR_PCX>") (Right (YagoNonEnWikiTitle "NEC_PowerVR_PCX"))
   eassertEqual (parseOnly parserNounToken "<yagoPermanentlyLocatedEntity>") (Right (YagoClass "PermanentlyLocatedEntity"))
+  eassertEqual (parseOnly parserNounToken "\"Demography of Afghanistan\"@eng") (Right (YagoWikiAlias "Demography of Afghanistan"))
 
 testYagoTaxonomyTSVrows :: TestTree
 testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
  
   let 
-    lines = ["<id_4gx1l8_1m6_1snupo6> <wikicat_Graphics_chips> rdfs:subClassOf <wordnet_bit_109222051>"
+    lines = [-- samples from : yagoTaxonomy.tsv
+             "<id_4gx1l8_1m6_1snupo6>\t<wikicat_Graphics_chips> rdfs:subClassOf <wordnet_bit_109222051>"
             ,"<id_k664kn_1m6_130ah1o>    <wordnet_company_108058098>    rdfs:subClassOf    <wordnet_institution_108053576>"
-            ,"<id_130ah1o_1m6_5kujp2>    <wordnet_institution_108053576>    rdfs:subClassOf    <wordnet_organization_108008335>"
-            ,"<id_5kujp2_1m6_1qdi4lo>    <wordnet_organization_108008335>    rdfs:subClassOf    <yagoLegalActor>"
-            ,"<id_5kujp2_1m6_a52wvp>    <wordnet_organization_108008335>    rdfs:subClassOf    <wordnet_social_group_107950920> "
+            ,"<id_130ah1o_1m6_5kujp2>\t<wordnet_institution_108053576>    rdfs:subClassOf    <wordnet_organization_108008335>"
+            ,"<id_5kujp2_1m6_1qdi4lo>\t<wordnet_organization_108008335>    rdfs:subClassOf    <yagoLegalActor>"
+            ,"<id_5kujp2_1m6_a52wvp> <wordnet_organization_108008335>    rdfs:subClassOf    <wordnet_social_group_107950920>"
+            ,"<id_klokc9_1m6_1koas7s>\t<wikicat_Syntactic_entities>\trdfs:subClassOf\towl:Thing  "
+            -- samples from : yagoTypes.tsv
             ,"<id_1kmo9y9_88c_1eoxwov>    <PowerVR>    rdf:type    <wikicat_Graphics_hardware_companies>   "
-            ,"<id_13tyf46_88c_4gx1l8>\t\t<de/NEC_PowerVR_PCX>    rdf:type    <wikicat_Graphics_chips>    "
+            ,"<id_13tyf46_88c_4gx1l8>\t<de/NEC_PowerVR_PCX>    rdf:type    <wikicat_Graphics_chips>    "
+            -- samples from yagoLabels.tsv
+            ,"<id_we31u1_1sz_vfg0ga>\t<Burnside,_Iowa>\tskos:prefLabel\t\"Burnside, Iowa\"@eng"
+            ,"<id_1qt4wt3_1ia_1k16t4w>\t<pl/Olli_Tyrväinen>\trdfs:label \"Olli Tyrvainen\"@eng    "
+            ,"<id_1j3k64j_qkd_4hgw54> <Fred_M._Hechinger>\t<redirectedFrom> \"Fred Hechinger\"@eng "
+            -- samples from yagoConteXtFacts_en.tsv : No ID for RDF triples
+            --"	<Afghani_man>	<hasWikipediaAnchorText>	\"Demography of Afghanistan\"@eng	"
+            --"	<AssistiveTechnology>	<hasWikipediaAnchorText>	\"Assistive_technology\"@eng"
             ]
     expected=[Right (YagoID "4gx1l8_1m6_1snupo6", YagoWikicat "Graphics_chips",   YagoRDFSprop "subClassOf", YagoWordnet "bit_109222051")
              ,Right (YagoID "k664kn_1m6_130ah1o", YagoWordnet "company_108058098",YagoRDFSprop "subClassOf", YagoWordnet "institution_108053576")
              ,Right (YagoID "130ah1o_1m6_5kujp2", YagoWordnet "institution_108053576", YagoRDFSprop "subClassOf", YagoWordnet "organization_108008335")
              ,Right (YagoID "5kujp2_1m6_1qdi4lo", YagoWordnet "organization_108008335",YagoRDFSprop "subClassOf", YagoClass"LegalActor")
              ,Right (YagoID "5kujp2_1m6_a52wvp",  YagoWordnet "organization_108008335",YagoRDFSprop "subClassOf", YagoWordnet "social_group_107950920")
+             ,Right (YagoID "klokc9_1m6_1koas7s", YagoWikicat "Syntactic_entities", YagoRDFSprop "subClassOf", YagoOWLclass "Thing")
+             
              ,Right (YagoID "1kmo9y9_88c_1eoxwov",YagoWikiTitle "PowerVR", YagoRDFverb "type", YagoWikicat "Graphics_hardware_companies")
-             ,Right (YagoID "13tyf46_88c_4gx1l8", YagoNonEnWiki "NEC_PowerVR_PCX", YagoRDFverb "type", YagoWikicat "Graphics_chips")
+             ,Right (YagoID "13tyf46_88c_4gx1l8", YagoNonEnWikiTitle "NEC_PowerVR_PCX", YagoRDFverb "type", YagoWikicat "Graphics_chips")
+             
+             ,Right (YagoID "we31u1_1sz_vfg0ga", YagoWikiTitle "Burnside,_Iowa", YagoSKOSverb "prefLabel", YagoWikiAlias "Burnside, Iowa")
+             ,Right (YagoID "1qt4wt3_1ia_1k16t4w",YagoNonEnWikiTitle "Olli_Tyrväinen", YagoRDFSprop "label", YagoWikiAlias "Olli Tyrvainen")
+             ,Right (YagoID "1j3k64j_qkd_4hgw54", YagoWikiTitle "Fred_M._Hechinger", YagoVerb "redirectedFrom", YagoWikiAlias "Fred Hechinger")
              ]
     rows = map (parseOnly parserRDFrowInTSV) lines 
   mapM_ (uncurry eassertEqual) (zip rows expected)
+  print "\"Demography of\tAfghanistan\"@eng"
 
 allTest :: TestTree
 allTest =
