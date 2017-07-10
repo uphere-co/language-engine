@@ -24,6 +24,7 @@ library
                        NLP.Printer.PennTreebankII
                        NLP.Type.NamedEntity
                        NLP.Type.PennTreebankII
+                       NLP.Type.PennTreebankII.Separated
                        NLP.Type.UniversalDependencies2.Morphology
                        NLP.Type.UniversalDependencies2.Syntax
                        Text.Taggy.Lens.Util
