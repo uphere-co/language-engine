@@ -38,10 +38,11 @@ annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))
 
 
 levelMap :: Dependency -> IntMap Int
-levelMap (Dependency root nods edgs0) = 
-  let bnds = let xs = map fst nods in (minimum xs, maximum xs)
+levelMap dep@(Dependency root nods edgs0) = 
+{-   let bnds = let xs = map fst nods in (minimum xs, maximum xs)
       edgs = map fst edgs0
-      searchtree = head (dfs (buildG bnds edgs) [root])
+      searchtree = head (dfs (buildG bnds edgs) [root]) -}
+  let searchtree = dependencyIndexTree dep 
   in IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
 
 
