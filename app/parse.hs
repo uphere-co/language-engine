@@ -6,6 +6,8 @@ module Main where
 import           Control.Exception
 import           Control.Lens                  hiding ((<.>))
 import           Control.Monad
+import           Control.Monad.Loops                  (unfoldM)
+import           Control.Monad.Trans.State
 import           Data.Aeson
 import qualified Data.Attoparsec.Text         as A
 import           Data.Bifoldable
@@ -97,12 +99,26 @@ filterNML x@(PN NML xs) = [x]
 filterNML (PN c xs) = concatMap filterNML xs
 filterNML (PL _) = []
 
+mergeHyphen :: State [(POSTag,Text)] (Maybe [(POSTag,Text)])
+mergeHyphen = fmap (fmap reverse) (go Nothing)
+  where go acc = do s <- get
+                    case s of
+                      [] -> return acc
+                      (x:xs) -> case acc of
+                                  Nothing                -> put xs >> go (Just [x])
+                                  Just ys@((M_HYPH,_):_) -> put xs >> go (Just (x:ys))
+                                  Just ys                ->
+                                    case x of
+                                      (M_HYPH,_) -> put xs >> go (Just (x:ys))
+                                      _          -> return acc 
 
+formatPrint :: PennTreeGen ChunkTag (POSTag,Text) -> IO ()
+formatPrint x = putStrLn $ printf "%30s : %s " ((T.intercalate " " . map (^._2) . toList) x) (show x)
 
 
 process basedir pp = do
   dtr <- build basedir
-  let fps = sort (toList (dirTree dtr))
+  let fps = take 20$  sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
   withFile "error.log" WriteMode $ \h_err -> do
     flip traverse_ parsefiles $ \f -> do
@@ -113,17 +129,19 @@ process basedir pp = do
       etr <- parseOntoNotesPennTree f
       case etr of
         Left err -> hPutStrLn h_err f
-        Right trs -> do
-          mapM_ ((\xs -> when ((not.null) xs) (mapM_ formatPrint xs)) . filterNML . getADTPennTree . convertTop) trs
-            where formatPrint :: PennTreeGen ChunkTag (POSTag,Text) -> IO ()
-                  formatPrint x =putStrLn $
-                    printf "%30s : %s "
-                      ((T.intercalate " " . map (^._2) . toList) x)
-                      (show x)
-           {-  where f :: ChunkTag -> [ChunkTag]
-                  f x = [x]
-                  g :: (POSTag,Text) -> [ChunkTag]
-                  g x = [] -}
+        Right trs -> 
+          flip mapM_ trs $ \tr -> do
+            let atr = (getADTPennTree . convertTop) tr
+                nmls = filterNML atr
+            when ((not.null) nmls) $ do
+              mapM_ formatPrint nmls
+              let terms = (filter (\(t,_) -> t /= D_NONE) . toList) atr
+                  merged = evalState (unfoldM mergeHyphen) terms
+              print $ map (T.concat . map snd) merged
+
+
+          --  ((\xs -> when ((not.null) xs) (mapM_ formatPrint xs)) .  .  trs
+                    
           {- 
           let bname = takeBaseName f
           withFile (bname <.> "corenlp_lemma") WriteMode $ \h_lemma -> do
