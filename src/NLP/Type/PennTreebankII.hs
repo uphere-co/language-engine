@@ -95,6 +95,13 @@ data POSTag = CC          -- ^ conjunction, coordinating
             | D_LRB       -- ^ left parenthesis                  (original -LRB-)
             | D_RRB       -- ^ right parentheis                  (original -RRB-)
             | D_NONE      -- ^ none                              (original -NONE-)
+              ----- new OntoNotes addendum
+            | M_HYPH      -- ^ unbound hyphen                    (original HYPH)
+            | AFX         -- ^ unbound affix
+            | GW          -- ^ mistranscription (goes with)
+            | XX          -- ^ uninterpretable material
+              ---- not sure ye where it is from
+            | NFP         -- ^ non-final punctuation
             deriving (Generic, Show, Eq, Ord, Enum, Bounded)
 
 instance FromJSON POSTag where
@@ -282,6 +289,12 @@ identifyPOS t
           | p == "``"   -> M_DBACKQUOTE
           | p == "$"    -> M_DOLLAR
           | p == "#"    -> M_HASH
+          -- new OntoNotes addendum
+          | p == "HYPH" -> M_HYPH
+          | p == "AFX"  -> AFX
+          | p == "GW"   -> GW
+          | p == "XX"   -> XX
+          | p == "NFP"  -> NFP
           | otherwise   -> error ("invalid tag: " ++ T.unpack t)
 
 identifyChunk :: Text -> ChunkTag
