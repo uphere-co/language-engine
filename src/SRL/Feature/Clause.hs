@@ -38,6 +38,11 @@ promoteToVP x@(PL (Left _))       = Right x
 promoteToVP (PN (_,(S_OTHER N.PRT,_)) (PL (Right (i,(p,t))):_)) = Left (i,(p,t))  -- for verb particle
 promoteToVP x@(PN _ _)            = Right x
 
+promoteNPPP x@(PN (rng,(S_OTHER N.NP,lvl)) [x1,x2]) =
+  case (getRoot x1, getRoot x2) of
+    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_PP _,_))) ->  [x1,x2]
+    _ -> [x]
+promoteNPPP x = [x]
 
 
 
@@ -47,7 +52,8 @@ clauseStructure :: [VerbProperty]
 clauseStructure vps (PL (i,pt)) = PL (Right (i,pt))
 clauseStructure vps (PN (rng,tag) xs)
   = let ys = map (clauseStructure vps) xs
-        (verbs,nonverbs)= partitionEithers (map promoteToVP ys)
+        (verbs,nonverbs0)= partitionEithers (map promoteToVP ys)
+        nonverbs = concatMap promoteNPPP nonverbs0
         lvl = maximum (map currentlevel ys) :: Int
     in case tag of
          N.CL c -> case c of
@@ -87,9 +93,7 @@ clauseStructure vps (PN (rng,tag) xs)
                        case xs of
                          PL (i,(p,t)):_  -> PN (rng,(S_OTHER N.PRT,lvl)) [PL (Right (i,(p,t)))]
                          _                -> PL (Left (rng,(S_OTHER p,lvl)))
-                     _    -> if lvl == 0
-                             then PL (Left (rng,(S_OTHER p,0)))
-                             else PN (rng,(S_OTHER p,lvl)) ys
+                     _    -> PN (rng,(S_OTHER p,lvl)) ys
          N.RT   -> PN (rng,(S_RT,lvl)) ys 
 
 
@@ -143,11 +147,23 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
                           _ -> (z0,acc)
 
 
+cutOutLevel0 :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+             -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+cutOutLevel0 x@(PN (rng,(p,lvl)) xs) = if lvl == 0
+                                       then case p of
+                                              S_PP    _ -> PL (Left (rng,(p,lvl)))
+                                              S_OTHER _ -> PL (Left (rng,(p,lvl)))
+                                              _         -> PN (rng,(p,lvl)) (map cutOutLevel0 xs)
+                                       else PN (rng,(p,lvl)) (map cutOutLevel0 xs)
+cutOutLevel0 x@(PL _               ) = x
+
+  
+
 showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
 showClauseStructure lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       tr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      tr' = bimap (\(rng,x)->f x) g tr
+      tr' = bimap (\(rng,x)->f x) g (cutOutLevel0 tr)
         where f (S_CL c,l)    = T.pack (show c) <> ":" <> T.pack (show l)
               f (S_SBAR zs,l) = "SBAR:" <> T.pack (show zs) <> "," <> T.pack (show l)
               f (S_VP zs,l)   = "VP:" <> T.pack (show zs) <> "," <> T.pack (show l)
