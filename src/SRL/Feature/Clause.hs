@@ -8,7 +8,9 @@ import           Data.Bifunctor
 import           Data.Bifoldable
 import           Data.Either                     (partitionEithers)
 import           Data.Foldable
+import           Data.Function                   (on)
 import           Data.IntMap                     (IntMap)
+import           Data.List                       (minimumBy)
 import           Data.Monoid
 import           Data.Text                       (Text)
 import qualified Data.Text               as T
@@ -31,7 +33,7 @@ currentlevel (PN (_,(_,l)) _) = l
 currentlevel (PL _ )          = 0
 
 
-promoteToVP x@(PL (Right (i,(p,t))))  = if isVerb p || p == TO
+promoteToVP x@(PL (Right (i,(p,t))))  = if isVerb p || p == TO || p == MD
                                   then Left (i,(p,t))
                                   else Right x
 promoteToVP x@(PL (Left _))       = Right x
@@ -97,25 +99,36 @@ clauseStructure vps (PN (rng,tag) xs)
          N.RT   -> PN (rng,(S_RT,lvl)) ys 
 
 
-
-
-
 findVerb :: Int
          -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
          -> Maybe (BitreeZipper (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))))
-findVerb i tr = getFirst (bifoldMap f g (mkBitreeZipper [] tr))
+findVerb i tr = getFirst (bifoldMap f f (mkBitreeZipper [] tr))
   where f x = First $ case getRoot (current x) of
-                        Left (_,(S_VP lst,_)) -> if i `elem` (map (^._1) lst)
-                                                 then Just x
-                                                 else Nothing
-                        _                     -> Nothing 
-        g _ = First Nothing
+                        Left (_,(S_VP lst,_))
+                          -> if i `elem` (map (^._1) lst) then Just x else Nothing 
+                        Right (Left (_,(S_VP lst,_)))
+                          -> if i `elem` (map (^._1) lst) then Just x else Nothing
+                        _ -> Nothing 
 
+
+
+clauseRanges :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))) -> [Range]
+clauseRanges tr = bifoldMap f (const []) tr
+  where f (rng,(S_CL _,_)) = [rng]
+        f _                = []
+
+
+clauseForVerb :: [Range] -> VerbProperty -> Maybe Range
+clauseForVerb allrngs vp = case rngs of
+                             [] -> Nothing
+                             _  -> Just (minimumBy (compare `on` (\(b,e) -> e-b)) rngs)
+  where i `isIn` (b,e) = b <= i && i <= e  
+        rngs = filter (\rng -> getAll (mconcat (map (\i -> All (i `isIn` rng)) (vp^.vp_words)))) allrngs
 
 
 verbArgs :: BitreeZipper (Range,(STag,Int))
                          (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-         -> VerbArgs (Either STag POSTag)
+         -> VerbArgs (Either (Range,STag) (Int,POSTag))
 verbArgs z = let (zfirst,str) = go (z,[]) z
              in VerbArgs { _va_string = str
                          , _va_arg0 = extractArg <$> prev zfirst
@@ -125,9 +138,9 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
                                           map extractArg (z':iterateMaybe next z')
                          }
   where extractArg z = case getRoot (current z) of
-                         Left (_,(tag,_)) -> Left tag
-                         Right (Left (_,(tag,_))) -> Left tag
-                         Right (Right (_,(tag,_))) -> Right tag
+                         Left (rng,(stag,_))         -> Left  (rng,stag)
+                         Right (Left (rng,(stag,_))) -> Left  (rng,stag)
+                         Right (Right (i,(ptag,_)))  -> Right (i,ptag)
         iterateMaybe :: (a -> Maybe a) -> a -> [a]
         iterateMaybe f x =
           case f x of
@@ -149,13 +162,13 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
 
 cutOutLevel0 :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
              -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+cutOutLevel0 x@(PL _               ) = x
 cutOutLevel0 x@(PN (rng,(p,lvl)) xs) = if lvl == 0
                                        then case p of
                                               S_PP    _ -> PL (Left (rng,(p,lvl)))
                                               S_OTHER _ -> PL (Left (rng,(p,lvl)))
                                               _         -> PN (rng,(p,lvl)) (map cutOutLevel0 xs)
                                        else PN (rng,(p,lvl)) (map cutOutLevel0 xs)
-cutOutLevel0 x@(PL _               ) = x
 
   
 
@@ -174,11 +187,18 @@ showClauseStructure lemmamap ptree  = do
               g (Right x)     = T.pack (show x)
 
   T.IO.putStrLn (formatBitree id tr')
-   
+
+  let rngs = clauseRanges tr
+  
   let getVerbArgs vp = do z <- findVerb (vp^.vp_index)  tr
                           return (verbArgs z)
+
   
   flip mapM_ vps $ \vp -> do
-    putStrLn $ 
-      printf "%-62s | %s" (formatVerbProperty vp) (maybe "" formatVerbArgs (getVerbArgs vp))
+    -- print (findVerb (vp^.vp_index) tr)
+    -- print (clauseForVerb rngs vp)
+    putStrLn $ printf "%-62s | Clause %7s:  %s"
+                 (formatVerbProperty vp)
+                 (maybe "" show (clauseForVerb rngs vp))
+                 (maybe "" formatVerbArgs (getVerbArgs vp))
 

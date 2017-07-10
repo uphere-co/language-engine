@@ -6,7 +6,7 @@ import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 --
 import           SRL.Type.Verb
-
+                            
 
 data SBARType = SB_Word (POSTag,Text)
               | SB_WH   N.PhraseTag

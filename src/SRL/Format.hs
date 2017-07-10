@@ -44,20 +44,20 @@ formatVerbProperty vp = printf "%3d %15s %8s %15s %8s %s"
                           (show (vp^.vp_words))
 
 
-formatVerbArgs :: (Show b) => VerbArgs (Either STag b) -> String
+formatVerbArgs :: VerbArgs (Either (Range,STag) (Int,POSTag)) -> String
 formatVerbArgs va = printf "%7s %-15s %s"
                       (maybe "" formatArg (va^.va_arg0))
                       (T.intercalate " " (map (^._2) (va^.va_string)))
                       ((intercalate " " . map (printf "%7s" . formatArg)) (va^.va_args))
   where
     formatArg a = case a of
-                    Right p -> show p
-                    Left (S_RT)      -> "ROOT"
-                    Left (S_SBAR _)  -> "SBAR"
-                    Left (S_CL c)    -> show c
-                    Left (S_VP _)    -> "VP"
-                    Left (S_PP t)    -> "(PP " ++ show t ++ ")"
-                    Left (S_OTHER t) -> show t
+                    Right (_,p) -> show p
+                    Left  (_,(S_RT))        -> "ROOT"
+                    Left  (rng,(S_SBAR _))  -> "SBAR" ++ show rng
+                    Left  (rng,(S_CL c))    -> show c ++ show rng
+                    Left  (rng,(S_VP _))    -> "VP"
+                    Left  (rng,(S_PP t))    -> "(PP " ++ show t ++ ")"
+                    Left  (rng,(S_OTHER t)) -> show t
 
 
 showVerb tkmap (lma,is) = unLemma lma <> " : " <> fullwords
