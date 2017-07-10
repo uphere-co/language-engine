@@ -2,6 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Test.RDFDumpETL where
 
@@ -28,6 +29,8 @@ import           WikiEL.ETL.Parser
 import           WikiEL.ETL.LoadData
 
 --For testing
+import           Text.RawString.QQ
+
 import           Data.Attoparsec.Text
 import           Control.Applicative                   ((<|>))
 
@@ -161,7 +164,6 @@ testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
 
 testYagoTaxonomyTSVrows :: TestTree
 testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
- 
   let 
     lines = [-- samples from : yagoTaxonomy.tsv
              "<id_4gx1l8_1m6_1snupo6>\t<wikicat_Graphics_chips> rdfs:subClassOf <wordnet_bit_109222051>"
@@ -197,11 +199,106 @@ testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, 
              ]
     rows = map (parseOnly parserRDFrowInTSV) lines 
   mapM_ (uncurry eassertEqual) (zip rows expected)
-  print "\"Demography of\tAfghanistan\"@eng"
+
+allYagoTest :: TestTree
+allYagoTest =
+  testGroup
+    "All YAGO Unit tests"
+    [testYagoRdfObjects, testYagoTaxonomyTSVrows]    
+
+
+
+data TurtleState = Comma 
+                 | Semicolon
+                 | End
+                 deriving (Show, Eq)
+
+data TurtleRelation = RelationSVO Text Text Text 
+                    | RelationVO  Text Text
+                    | RelationO   Text
+                    deriving (Show)
+--parserWikidataRdfEndOfLine 
+
+wikidataObject = takeWhile1 (not . C.isSpace)
+wikidataSep    = skipWhile C.isSpace 
+--wikidataSep =  skipMany1 (skip C.isSpace)
+parserWikidataRdfRelation3 :: Parser TurtleRelation
+parserWikidataRdfRelation3 = do
+  s <- wikidataObject
+  wikidataSep
+  v <- wikidataObject
+  wikidataSep
+  o <- wikidataObject
+  return (RelationSVO s v o)
+
+parserWikidataRdfRelation2 :: Parser TurtleRelation
+parserWikidataRdfRelation2 = do
+  v <- wikidataObject
+  wikidataSep
+  o <- wikidataObject
+  return (RelationVO v o)
+
+parserWikidataRdfRelation1 :: Parser TurtleRelation
+parserWikidataRdfRelation1 = do
+  o <- wikidataObject
+  return (RelationO o)
+
+parserWikidataRdfRelation = choice [ parserWikidataRdfRelation3
+                                   , parserWikidataRdfRelation2
+                                   , parserWikidataRdfRelation1]
+                          
+splitTripleWithState :: Text -> (Text, TurtleState)
+splitTripleWithState line = (row, nextState)
+  where
+    input = T.strip line
+    f ',' = Comma
+    f ';' = Semicolon
+    f '.' = End
+    f _   = error "Unknown line end."
+    row = T.init input
+    nextState = f (T.last input)
+
+testWikidataRDFdumpTTL :: TestTree
+testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Turtle format(.ttl)" $ \step -> do
+  let
+    case1 = T.pack ([r|
+  wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement,
+		wikibase:BestRank ;
+	wikibase:rank wikibase:NormalRank ;
+	ps:P414 wd:Q2632892 ;
+	pq:P249 "AVAZ" ;
+	prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95 .
+  |])
+    lines1 = T.lines case1
+    
+
+  print case1  
+  mapM_ print lines1
+  --print $ parseOnly parserWikidataRdfRow ",a"
+  print $ splitTripleWithState "a b c.\n"
+  print $ splitTripleWithState "a b c,\n"
+  print $ splitTripleWithState "  d ;\n"
+  print $ splitTripleWithState "  b d,\n"
+  print $ splitTripleWithState "    c,\n"
+  print $ splitTripleWithState "    c.\n"
+  let 
+    (row, nextState) = splitTripleWithState "    c.\n"
+  print row
+  print $ parseOnly parserWikidataRdfRelation row
+  print $ parseOnly parserWikidataRdfRelation "a b c"
+  print $ parseOnly parserWikidataRdfRelation "b c"
+
+allWikidataTest :: TestTree
+allWikidataTest =
+  testGroup
+    "All Wikidata Unit tests"
+    [testWikidataRDFdumpTTL]    
+
+
 
 allTest :: TestTree
 allTest =
   testGroup
     "All Unit tests"
-    [testYagoRdfObjects, testYagoTaxonomyTSVrows]    
+    [allYagoTest, allWikidataTest]    
 

@@ -23,6 +23,7 @@ let
               containers
               attoparsec
               xxhash
+              raw-strings-qq
               p.nlp-types
             ]);
 in stdenv.mkDerivation {
