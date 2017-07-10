@@ -219,9 +219,27 @@ data TurtleRelation = RelationSVO Text Text Text
                     deriving (Show)
 --parserWikidataRdfEndOfLine 
 
-wikidataObject = takeWhile1 (not . C.isSpace)
+parserWikiAlias :: Parser Text
+parserWikiAlias = do
+  let alias = takeTill (=='"')
+  string "\""
+  t <- alias
+  string "\"@eng"
+  return t
+
+parserNonEnWikiAlias :: Parser Text
+parserNonEnWikiAlias = do
+  let alias = takeTill (=='"')
+  string "\""
+  t <- alias
+  string "\"@"
+  lan <- takeWhile1 C.isLower
+  return (T.concat [t, "@",lan])
+
+wikidataObject = parserWikiAlias <|> parserNonEnWikiAlias <|> takeWhile1 (not . C.isSpace)
 wikidataSep    = skipWhile C.isSpace 
 --wikidataSep =  skipMany1 (skip C.isSpace)
+
 parserWikidataRdfRelation3 :: Parser TurtleRelation
 parserWikidataRdfRelation3 = do
   s <- wikidataObject
@@ -248,7 +266,7 @@ parserWikidataRdfRelation = choice [ parserWikidataRdfRelation3
                                    , parserWikidataRdfRelation1]
                           
 splitTripleWithState :: Text -> (Text, TurtleState)
-splitTripleWithState line = (row, nextState)
+splitTripleWithState line = (T.strip row, nextState)
   where
     input = T.strip line
     f ',' = Comma
@@ -261,31 +279,29 @@ splitTripleWithState line = (row, nextState)
 testWikidataRDFdumpTTL :: TestTree
 testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Turtle format(.ttl)" $ \step -> do
   let
-    case1 = T.pack ([r|
-  wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement,
+    case1 = T.pack ([r|wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement,
 		wikibase:BestRank ;
 	wikibase:rank wikibase:NormalRank ;
 	ps:P414 wd:Q2632892 ;
 	pq:P249 "AVAZ" ;
-	prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95 .
-  |])
-    lines1 = T.lines case1
-    
+	prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95 .|])
+    lines1 = map splitTripleWithState (T.lines case1)
+    rs1    =  map (\(x,y) -> parseOnly parserWikidataRdfRelation x) lines1
 
-  print case1  
+  mapM_ print rs1
   mapM_ print lines1
-  --print $ parseOnly parserWikidataRdfRow ",a"
-  print $ splitTripleWithState "a b c.\n"
+  print $ splitTripleWithState "a b c .\n"
   print $ splitTripleWithState "a b c,\n"
   print $ splitTripleWithState "  d ;\n"
   print $ splitTripleWithState "  b d,\n"
   print $ splitTripleWithState "    c,\n"
-  print $ splitTripleWithState "    c.\n"
+  print $ splitTripleWithState "    c .\n"
   let 
     (row, nextState) = splitTripleWithState "    c.\n"
   print row
   print $ parseOnly parserWikidataRdfRelation row
-  print $ parseOnly parserWikidataRdfRelation "a b c"
+  print $ parseOnly parserWikidataRdfRelation "a b \"c d e\"@eng"
+  print $ parseOnly parserWikidataRdfRelation "a b \"c d e\"@ru"
   print $ parseOnly parserWikidataRdfRelation "b c"
 
 allWikidataTest :: TestTree
