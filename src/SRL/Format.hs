@@ -5,10 +5,11 @@ module SRL.Format where
 
 import           Control.Lens
 import qualified Data.IntMap             as IM
+import           Data.List                     (intercalate)
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Text               as T
-import           Data.Text                    (Text)
+import           Data.Text                     (Text)
 import           Data.Tree               as Tr
 import           Text.Printf
 --
@@ -20,31 +21,43 @@ import           PropBank.Type.Prop
 import           Text.Format.Tree
 --
 import           SRL.Type
+import           SRL.Type.Clause
+import           SRL.Type.Verb
 import           SRL.Util
 
-{- 
-formatVoice :: Voice -> String
-formatVoice Nothing = " "
-formatVoice (Just Active) = "active"
-formatVoice (Just Passive) = "passive"
--}
+
 
 formatRngText :: [Text] -> (Int,Int) -> String
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
 
-formatBitree :: (a -> Text) ->  Bitree a a -> Text --  Bitree (Int,Lemma,a) (Int,Lemma,a) -> Text
+formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
-  where -- f (_,l,_) =  l
-        toTree (PN x xs) = Tr.Node x (map toTree xs)
+  where toTree (PN x xs) = Tr.Node x (map toTree xs)
         toTree (PL x)    = Tr.Node x []
         
 
 formatVerbProperty :: VerbProperty -> String
-formatVerbProperty vp = printf "%3d %15s %8s %20s %8s %s"
+formatVerbProperty vp = printf "%3d %15s %8s %15s %8s %s"
                           (vp^.vp_index) (vp^.vp_lemma.to unLemma)
                           (show (vp^.vp_tense)) (show (vp^.vp_aspect)) (show (vp^.vp_voice))
                           (show (vp^.vp_words))
+
+
+formatVerbArgs :: (Show b) => VerbArgs (Either STag b) -> String
+formatVerbArgs va = printf "%7s %-15s %s"
+                      (maybe "" formatArg (va^.va_arg0))
+                      (T.intercalate " " (map (^._2) (va^.va_string)))
+                      ((intercalate " " . map (printf "%7s" . formatArg)) (va^.va_args))
+  where
+    formatArg a = case a of
+                    Right p -> show p
+                    Left (S_RT)      -> "ROOT"
+                    Left (S_SBAR _)  -> "SBAR"
+                    Left (S_CL c)    -> show c
+                    Left (S_VP _)    -> "VP"
+                    Left (S_PP t)    -> "(PP " ++ show t ++ ")"
+                    Left (S_OTHER t) -> show t
 
 
 showVerb tkmap (lma,is) = unLemma lma <> " : " <> fullwords

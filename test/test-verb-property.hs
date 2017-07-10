@@ -19,6 +19,7 @@ import           NLP.Type.UniversalDependencies2.Syntax
 --
 import           SRL.Feature.Verb
 import           SRL.Type
+import           SRL.Type.Verb
 --
 import           Test.Tasty.HUnit
 import           Test.Tasty

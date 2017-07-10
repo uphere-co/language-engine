@@ -16,6 +16,8 @@ import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
+--
+import           SRL.Type.Verb
 
 
 data Position = Before | After | Embed
@@ -27,31 +29,6 @@ data Direction = Up | Down
 
 
 type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
-
-
-data Tense = Present | Past
-           deriving (Show,Eq,Ord,Enum,Bounded)
-
-                    
-data Voice = Active | Passive
-           deriving (Show,Eq,Ord,Enum,Bounded)
-
-
-data Aspect = Simple | Progressive | Perfect | PerfectProgressive
-           deriving (Show,Eq,Ord,Enum,Bounded)
-
-data VerbProperty = VerbProperty { _vp_index  :: Int
-                                 , _vp_lemma  :: Lemma
-                                 , _vp_tense  :: Tense
-                                 , _vp_aspect :: Aspect
-                                 , _vp_voice  :: Voice
-                                 , _vp_auxiliary :: Maybe (Int,Lemma)
-                                 , _vp_words  :: [Int]
-                                 }
-                  deriving (Show)
-
-makeLenses ''VerbProperty                           
-                                   
 
 
 type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
