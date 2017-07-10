@@ -133,6 +133,15 @@ isNoun WP   = Yes
 isNoun _    = No
 
 
+isWHword :: POSTag -> Bool
+isWHword WDT      = True
+isWHword WP       = True
+isWHword WPDollar = True  
+isWHword WRB      = True
+isWHword _        = False
+
+
+
 data ChunkTag = ROOT
               | NP        -- ^ noun phrase
               | PP        -- ^ prepositional phrase
@@ -170,6 +179,15 @@ instance ToJSON ChunkTag where
   toJSON = genericToJSON defaultOptions
 
 instance Binary ChunkTag
+
+
+isWHphrase :: ChunkTag -> Bool
+isWHphrase WHADJP = True
+isWHphrase WHADVP = True
+isWHphrase WHNP   = True
+isWHphrase WHPP   = True
+isWHphrase _      = False
+
 
 data IOBPrefix = I_       -- ^ inside the chunk 
                | B_       -- ^ inside the chunk, preceding word is part of a different chunk
