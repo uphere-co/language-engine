@@ -34,10 +34,11 @@ import           Text.Printf
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
-import          CoreNLP.Simple.Convert
+import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type          
 import           NLP.Type.PennTreebankII
 import           NLP.Parser.PennTreebankII
+import           PropBank.Match
 
 
 getTerms :: PennTree -> [Text]
@@ -48,7 +49,6 @@ parseOntoNotesPennTree :: FilePath -> IO (Either String [PennTree])
 parseOntoNotesPennTree f = fmap (A.parseOnly (A.many1 (A.skipSpace *> pnode))) (T.IO.readFile f)
 
 
-
 errorHandler h_err msg action = do
   r <- try action 
   case r of
@@ -56,34 +56,16 @@ errorHandler h_err msg action = do
     _ -> return ()
 
 
-convertTop (PN _ xs) = PN "ROOT" xs
+
 
 filterNML x@(PN NML xs) = [x]
 filterNML (PN c xs) = concatMap filterNML xs
 filterNML (PL _) = []
 
-mergeHyphen :: State [(POSTag,Text)] (Maybe [(POSTag,Text)])
-mergeHyphen = fmap (fmap reverse) (go Nothing)
-  where go acc = do s <- get
-                    case s of
-                      [] -> return acc
-                      (x:xs) -> case acc of
-                                  Nothing                -> put xs >> go (Just [x])
-                                  Just ys@((M_HYPH,_):_) -> put xs >> go (Just (x:ys))
-                                  Just ys                ->
-                                    case x of
-                                      (M_HYPH,_) -> put xs >> go (Just (x:ys))
-                                      _          -> return acc 
-
--- formatPrint :: PennTreeGen ChunkTag (POSTag,Text) -> IO ()
--- formatPrint x = putStrLn $ printf "%30s : %s " ((T.intercalate " " . map (^._2) . toList) x) (show x)
 
 
       
 serializeLemma pp txts h_lemma = do
-  {- let tss = map getTerms trs
-      ts = map (T.intercalate " ") tss -}
-      -- ntxt = T.intercalate "\n\n" ts
   let docs = map (flip Document (fromGregorian 1990 1 1)) txts 
   anns <- traverse (annotate pp) docs
   rdocs' <- traverse protobufDoc anns
@@ -97,8 +79,6 @@ serializeLemma pp txts h_lemma = do
 
 
 serializePennTreeDep pp txts (h_ud,h_tr)= do
-  {- let tss = map getTerms trs
-         ts = map (T.intercalate " ") tss -}
   let docs = map (flip Document (fromGregorian 1990 1 1)) txts
   anns <- traverse (annotate pp) docs
   rdocs' <- traverse protobufDoc anns
@@ -118,7 +98,7 @@ serializePennTreeDep pp txts (h_ud,h_tr)= do
 
 process basedir pp = do
   dtr <- build basedir
-  let fps = sort (toList (dirTree dtr))
+  let fps = take 20 $ sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
   withFile "error.log" WriteMode $ \h_err -> do
     flip traverse_ parsefiles $ \f -> do
@@ -129,16 +109,8 @@ process basedir pp = do
       case etr of
         Left err -> hPutStrLn h_err f
         Right trs -> do
-          {- flip mapM_ trs $ \tr -> do
-            let atr = (getADTPennTree . convertTop) tr
-                nmls = filterNML atr
-            when ((not.null) nmls) $ do
-              mapM_ formatPrint nmls
--}
-          let txts = flip map trs $ \tr -> 
-                let atr = (getADTPennTree . convertTop) tr
-                    terms0 = (filter (\(t,_) -> t /= D_NONE) . toList) atr
-                    merged = evalState (unfoldM mergeHyphen) terms0
+          mapM_ print trs
+{-          let txts = flip map trs $ \tr -> 
                 in T.intercalate " " (map (T.concat . map snd) merged)
               
           let bname = takeBaseName f
@@ -147,7 +119,7 @@ process basedir pp = do
           withFile (bname <.> "corenlp_udep") WriteMode $ \h_ud -> 
             withFile (bname <.> "corenlp_ptree") WriteMode $ \h_tr -> 
               errorHandler h_err f (serializePennTreeDep pp txts (h_ud,h_tr))
-
+-}
 
 main :: IO ()
 main = do
