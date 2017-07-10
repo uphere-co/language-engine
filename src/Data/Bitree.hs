@@ -44,6 +44,12 @@ instance (ToJSON n, ToJSON l) => ToJSON (Bitree n l) where
 
 instance (Binary n, Binary l) => Binary (Bitree n l)
 
+
+getRoot :: Bitree n l -> Either n l
+getRoot (PL x)   = Right x
+getRoot (PN x _) = Left x
+
+
 -- | duplicate of comonad is dual to join of monad, i.e. duplicate :: w a -> w (w a)
 --   In Bitree case, we can make a tree where each node is the subtree at the node point using duplicate 
 duplicate :: Bitree c a -> Bitree (Bitree c a) (Bitree c a)
