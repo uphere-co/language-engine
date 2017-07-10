@@ -62,7 +62,24 @@ yagoDateFacts
 <id_1kmo9y9_88c_1eoxwov>    <PowerVR>    rdf:type    <wikicat_Graphics_hardware_companies>   
 <id_13tyf46_88c_4gx1l8>    <de/NEC_PowerVR_PCX>    rdf:type    <wikicat_Graphics_chips>
 
+newtype YagoID = YagoID Text
+               deriving (Eq, Ord)
+
+instance Show YagoID where
+  show (YagoID uid) = "YagoID:" ++ show uid
 -}
+
+data YagoObject = YagoID        Text
+                | YagoRDFverb   Text
+                | YagoOWLclass  Text
+                | YagoRDFSprop  Text
+                | YagoWordnet   Text
+                | YagoWikicat   Text
+                | YagoClass     Text
+                | YagoWikiTitle Text
+                | YagoNonEnWiki Text
+                deriving (Eq, Show)
+
 
 
 object = takeTill (\x -> x=='>' || C.isSpace x)
@@ -75,28 +92,30 @@ parserYAGOtoken prefix postfix f = do
   string postfix
   return (f t)
 
-parserYAGOuid, parserRDFverb, parserOWLclass, parserRDFSprop:: Parser Text
-parserYAGOuid  = parserYAGOtoken "<id_" ">" id
-parserRDFverb  = parserYAGOtoken "rdf:" ""  id
-parserOWLclass = parserYAGOtoken "owl:" ""  id
-parserRDFSprop = parserYAGOtoken "rdfs:" "" id
+
+parserYAGOuid, parserRDFverb, parserOWLclass, parserRDFSprop:: Parser YagoObject
+parserYAGOuid  = parserYAGOtoken "<id_" ">" YagoID
+parserRDFverb  = parserYAGOtoken "rdf:" ""  YagoRDFverb
+parserOWLclass = parserYAGOtoken "owl:" ""  YagoOWLclass
+parserRDFSprop = parserYAGOtoken "rdfs:" "" YagoRDFSprop
 
 
-parserYAGOwordnet, parserYAGOwikicat, parserYAGOclass :: Parser Text
-parserYAGOwordnet = parserYAGOtoken "<wordnet_" ">" id
-parserYAGOwikicat = parserYAGOtoken "<wikicat_" ">" id
-parserYAGOclass   = parserYAGOtoken "<yago" ">"     id
+parserYAGOwordnet, parserYAGOwikicat, parserYAGOclass :: Parser YagoObject
+parserYAGOwordnet = parserYAGOtoken "<wordnet_" ">" YagoWordnet
+parserYAGOwikicat = parserYAGOtoken "<wikicat_" ">" YagoWikicat
+parserYAGOclass   = parserYAGOtoken "<yago" ">"     YagoClass
 
-parserYAGOwikiTitle :: Parser Text
+parserYAGOwikiTitle :: Parser YagoObject
 parserYAGOwikiTitle = do
   string "<"
   fst <- satisfy (not . C.isLower)
   rest <- object
   string ">"
-  return (T.cons fst rest)
+  let title = T.cons fst rest
+  return (YagoWikiTitle title)
 
 --Title by international wikis, except English one.
-parserYAGOnonEnwikiTitle :: Parser Text
+parserYAGOnonEnwikiTitle :: Parser YagoObject
 parserYAGOnonEnwikiTitle = do
   string "<"
   c1 <- satisfy C.isLower
@@ -104,11 +123,11 @@ parserYAGOnonEnwikiTitle = do
   string "/"
   t <- object
   string ">"
-  return t
+  return (YagoNonEnWiki t)
 
 
 
-parserNounToken :: Parser Text
+parserNounToken, parserVerbToken, parserUIDToken :: Parser YagoObject
 parserNounToken = choice [ parserYAGOwordnet
                          , parserYAGOwikicat
                          , parserYAGOwikiTitle
@@ -121,6 +140,7 @@ parserVerbToken = choice [ parserRDFverb
                          , parserYAGOnonEnwikiTitle]
 
 parserUIDToken  = parserYAGOuid
+
 
 parserRDFrowInTSV = do
   uid  <- parserUIDToken
@@ -135,15 +155,15 @@ parserRDFrowInTSV = do
 
 testYagoRdfObjects :: TestTree
 testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
-  eassertEqual (parseOnly parserVerbToken "rdf:type") (Right "type")
-  eassertEqual (parseOnly parserVerbToken "owl:Thing") (Right "Thing")
-  eassertEqual (parseOnly parserVerbToken "rdfs:subClassOf") (Right "subClassOf")
-  eassertEqual (parseOnly parserUIDToken  "<id_5kujp2_1m6_a52wvp>") (Right "5kujp2_1m6_a52wvp")
-  eassertEqual (parseOnly parserNounToken "<wordnet_organization_108008335>") (Right "organization_108008335")
-  eassertEqual (parseOnly parserNounToken "<wikicat_Graphics_hardware_companies>") (Right "Graphics_hardware_companies")
-  eassertEqual (parseOnly parserNounToken "<PowerVR>") (Right "PowerVR")
-  eassertEqual (parseOnly parserNounToken "<de/NEC_PowerVR_PCX>") (Right "NEC_PowerVR_PCX")
-  eassertEqual (parseOnly parserNounToken "<yagoPermanentlyLocatedEntity>") (Right "PermanentlyLocatedEntity")
+  eassertEqual (parseOnly parserVerbToken "rdf:type")  (Right (YagoRDFverb "type"))
+  eassertEqual (parseOnly parserVerbToken "owl:Thing") (Right (YagoOWLclass "Thing"))
+  eassertEqual (parseOnly parserVerbToken "rdfs:subClassOf")        (Right (YagoRDFSprop "subClassOf"))
+  eassertEqual (parseOnly parserUIDToken  "<id_5kujp2_1m6_a52wvp>") (Right (YagoID "5kujp2_1m6_a52wvp"))
+  eassertEqual (parseOnly parserNounToken "<wordnet_organization_108008335>")      (Right (YagoWordnet "organization_108008335"))
+  eassertEqual (parseOnly parserNounToken "<wikicat_Graphics_hardware_companies>") (Right (YagoWikicat "Graphics_hardware_companies"))
+  eassertEqual (parseOnly parserNounToken "<PowerVR>")            (Right (YagoWikiTitle "PowerVR"))
+  eassertEqual (parseOnly parserNounToken "<de/NEC_PowerVR_PCX>") (Right (YagoNonEnWiki "NEC_PowerVR_PCX"))
+  eassertEqual (parseOnly parserNounToken "<yagoPermanentlyLocatedEntity>") (Right (YagoClass "PermanentlyLocatedEntity"))
 
 testYagoTaxonomyTSVrows :: TestTree
 testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
@@ -157,20 +177,20 @@ testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, 
             ,"<id_1kmo9y9_88c_1eoxwov>    <PowerVR>    rdf:type    <wikicat_Graphics_hardware_companies>   "
             ,"<id_13tyf46_88c_4gx1l8>\t\t<de/NEC_PowerVR_PCX>    rdf:type    <wikicat_Graphics_chips>    "
             ]
-    expected=[Right ("4gx1l8_1m6_1snupo6","Graphics_chips","subClassOf","bit_109222051")
-             ,Right ("k664kn_1m6_130ah1o","company_108058098","subClassOf","institution_108053576")
-             ,Right ("130ah1o_1m6_5kujp2","institution_108053576","subClassOf","organization_108008335")
-             ,Right ("5kujp2_1m6_1qdi4lo","organization_108008335","subClassOf","LegalActor")
-             ,Right ("5kujp2_1m6_a52wvp","organization_108008335","subClassOf","social_group_107950920")
-             ,Right ("1kmo9y9_88c_1eoxwov","PowerVR","type","Graphics_hardware_companies")
-             ,Right ("13tyf46_88c_4gx1l8","NEC_PowerVR_PCX","type","Graphics_chips")
+    expected=[Right (YagoID "4gx1l8_1m6_1snupo6", YagoWikicat "Graphics_chips",   YagoRDFSprop "subClassOf", YagoWordnet "bit_109222051")
+             ,Right (YagoID "k664kn_1m6_130ah1o", YagoWordnet "company_108058098",YagoRDFSprop "subClassOf", YagoWordnet "institution_108053576")
+             ,Right (YagoID "130ah1o_1m6_5kujp2", YagoWordnet "institution_108053576", YagoRDFSprop "subClassOf", YagoWordnet "organization_108008335")
+             ,Right (YagoID "5kujp2_1m6_1qdi4lo", YagoWordnet "organization_108008335",YagoRDFSprop "subClassOf", YagoClass"LegalActor")
+             ,Right (YagoID "5kujp2_1m6_a52wvp",  YagoWordnet "organization_108008335",YagoRDFSprop "subClassOf", YagoWordnet "social_group_107950920")
+             ,Right (YagoID "1kmo9y9_88c_1eoxwov",YagoWikiTitle "PowerVR", YagoRDFverb "type", YagoWikicat "Graphics_hardware_companies")
+             ,Right (YagoID "13tyf46_88c_4gx1l8", YagoNonEnWiki "NEC_PowerVR_PCX", YagoRDFverb "type", YagoWikicat "Graphics_chips")
              ]
     rows = map (parseOnly parserRDFrowInTSV) lines 
   mapM_ (uncurry eassertEqual) (zip rows expected)
-
 
 allTest :: TestTree
 allTest =
   testGroup
     "All Unit tests"
     [testYagoRdfObjects, testYagoTaxonomyTSVrows]    
+
