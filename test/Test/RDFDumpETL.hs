@@ -22,6 +22,7 @@ import           WikiEL.WikiEntityTagger
 
 
 import           WikiEL.Type.Wikidata
+import           WikiEL.Type.Wikipedia
 import           WikiEL.Type.FileFormat
 import           WikiEL.ETL.Parser
 import           WikiEL.ETL.LoadData
@@ -60,44 +61,31 @@ yagoDateFacts
 <id_1kmo9y9_88c_1g5nyun>    <PowerVR>    rdf:type    <wikicat_Computer_hardware_companies>   
 <id_1kmo9y9_88c_1eoxwov>    <PowerVR>    rdf:type    <wikicat_Graphics_hardware_companies>   
 <id_13tyf46_88c_4gx1l8>    <de/NEC_PowerVR_PCX>    rdf:type    <wikicat_Graphics_chips>
+
 -}
+
 
 object = takeTill (\x -> x=='>' || C.isSpace x)
 ssep = skipWhile C.isSpace
 
-parserYAGOtoken :: Text -> (Text -> a) -> Parser a
-parserYAGOtoken prefix f = do
+parserYAGOtoken :: Text -> Text -> (Text -> a) -> Parser a
+parserYAGOtoken prefix postfix f = do
   string prefix
   t <- object
-  string ">"
+  string postfix
   return (f t)
 
-parserYAGOtoken2 :: Text -> (Text -> a) -> Parser a
-parserYAGOtoken2 prefix f = do
-  string prefix
-  t <- object
-  return (f t)
+parserYAGOuid, parserRDFverb, parserOWLclass, parserRDFSprop:: Parser Text
+parserYAGOuid  = parserYAGOtoken "<id_" ">" id
+parserRDFverb  = parserYAGOtoken "rdf:" ""  id
+parserOWLclass = parserYAGOtoken "owl:" ""  id
+parserRDFSprop = parserYAGOtoken "rdfs:" "" id
 
-parserYAGOclass :: Parser Text
-parserYAGOclass = parserYAGOtoken "<yago" id
 
-parserRDFverb :: Parser Text
-parserRDFverb = parserYAGOtoken2 "rdf:" id
-
-parserOWLclass :: Parser Text
-parserOWLclass = parserYAGOtoken2 "owl:" id
-
-parserRDFSprop :: Parser Text
-parserRDFSprop = parserYAGOtoken2 "rdfs:" id
-
-parserYAGOuid :: Parser Text
-parserYAGOuid = parserYAGOtoken "<id_" id
-
-parserYAGOwordnet :: Parser Text
-parserYAGOwordnet = parserYAGOtoken "<wordnet_" id
-
-parserYAGOwikicat :: Parser Text
-parserYAGOwikicat = parserYAGOtoken "<wikicat_" id
+parserYAGOwordnet, parserYAGOwikicat, parserYAGOclass :: Parser Text
+parserYAGOwordnet = parserYAGOtoken "<wordnet_" ">" id
+parserYAGOwikicat = parserYAGOtoken "<wikicat_" ">" id
+parserYAGOclass   = parserYAGOtoken "<yago" ">"     id
 
 parserYAGOwikiTitle :: Parser Text
 parserYAGOwikiTitle = do
@@ -118,6 +106,9 @@ parserYAGOnonEnwikiTitle = do
   string ">"
   return t
 
+
+
+parserNounToken :: Parser Text
 parserNounToken = choice [ parserYAGOwordnet
                          , parserYAGOwikicat
                          , parserYAGOwikiTitle
