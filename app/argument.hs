@@ -36,9 +36,9 @@ import           CoreNLP.Simple.Type.Simplified
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
+import           PropBank.Format
 import           PropBank.Parser.Prop
-import           PropBank.Match                    (findRelNode,matchInstances
-                                                   ,printMatchedInst)
+import           PropBank.Match
 import           PropBank.Query
 import           PropBank.Type.Frame
 import           PropBank.Type.Match
@@ -72,7 +72,7 @@ readJSONList :: (FromJSON a) => FilePath -> EitherT String IO [a]
 readJSONList file = EitherT $ eitherDecode <$> liftIO (BL.readFile file)
 
 
-convertTop (PN _ xs) = PN "ROOT" xs
+-- convertTop (PN _ xs) = PN "ROOT" xs
 
 
 loadMatchArticle ptreedir framedir basedir article = do
@@ -94,7 +94,7 @@ loadMatchArticle ptreedir framedir basedir article = do
 
 main = do
   let article = "wsj_2445"
-      ptreedir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170709"
+      ptreedir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
       framedir = "/scratch/wavewave/MASC/Propbank/Propbank-orig/framefiles"
       basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
   void . runEitherT $ do
