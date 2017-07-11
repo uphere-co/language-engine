@@ -7,6 +7,7 @@
 module Test.RDFDumpETL where
 
 import           Data.Maybe                            (fromMaybe)
+import           Control.Arrow                         (first,second)
 import           Data.Text                             (Text)
 import           Test.Tasty.HUnit                      (testCase,testCaseSteps)
 import           Test.Tasty                            (defaultMain, testGroup,TestTree)
@@ -216,7 +217,7 @@ data TurtleState = Comma
 data TurtleRelation = RelationSVO Text Text Text 
                     | RelationVO  Text Text
                     | RelationO   Text
-                    deriving (Show)
+                    deriving (Show, Eq)
 --parserWikidataRdfEndOfLine 
 
 parserWikiAlias :: Parser Text
@@ -276,6 +277,38 @@ splitTripleWithState line = (T.strip row, nextState)
     row = T.init input
     nextState = f (T.last input)
 
+{-
+("wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement",Comma)
+("wikibase:BestRank",Semicolon)
+("wikibase:rank wikibase:NormalRank",Semicolon)
+("ps:P414 wd:Q2632892",Semicolon)
+("pq:P249 \"AVAZ\"",Semicolon)
+("prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95",End)
+
+(Right (RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"),Comma)
+(Right (RelationO "wikibase:BestRank"),Semicolon)
+(Right (RelationVO "wikibase:rank" "wikibase:NormalRank"),Semicolon)
+(Right (RelationVO "ps:P414" "wd:Q2632892"),Semicolon)
+(Right (RelationVO "pq:P249" "\"AVAZ\""),Semicolon)
+(Right (RelationVO "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95"),End)
+-}
+
+testWikidataTtlRelation :: TestTree
+testWikidataTtlRelation = testCaseSteps "Test case for RDF triples in Turtle format" $ \step -> do
+  eassertEqual ("a b c",End)   (splitTripleWithState "a b c .\n")
+  eassertEqual ("a b c",Comma) (splitTripleWithState "a b c,\n")
+  eassertEqual ("d",Semicolon) (splitTripleWithState "  d ;\n")
+  eassertEqual ("b d",Comma) (splitTripleWithState "  b d,\n")
+  eassertEqual ("c",Comma)   (splitTripleWithState "    c,\n")
+  eassertEqual ("c",End)     (splitTripleWithState "    c .\n")
+  let 
+    (row, nextState) = splitTripleWithState "    c.\n"
+  eassertEqual (Right (RelationO "c"))      (parseOnly parserWikidataRdfRelation row)
+  eassertEqual (Right (RelationVO "b" "c")) (parseOnly parserWikidataRdfRelation "b c")
+  eassertEqual (Right (RelationSVO "a" "b" "c d e"))    (parseOnly parserWikidataRdfRelation "a b \"c d e\"@eng")
+  eassertEqual (Right (RelationSVO "a" "b" "c d e@ru")) (parseOnly parserWikidataRdfRelation "a b \"c d e\"@ru")
+
+
 testWikidataRDFdumpTTL :: TestTree
 testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Turtle format(.ttl)" $ \step -> do
   let
@@ -286,29 +319,20 @@ testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Tur
 	pq:P249 "AVAZ" ;
 	prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95 .|])
     lines1 = map splitTripleWithState (T.lines case1)
-    rs1    =  map (\(x,y) -> parseOnly parserWikidataRdfRelation x) lines1
+    rs1    =  map (first (parseOnly parserWikidataRdfRelation)) lines1
+    expected1 = [(Right (RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"),Comma)
+                ,(Right (RelationO "wikibase:BestRank"),Semicolon)
+                ,(Right (RelationVO "wikibase:rank" "wikibase:NormalRank"),Semicolon)
+                ,(Right (RelationVO "ps:P414" "wd:Q2632892"),Semicolon)
+                ]
 
-  mapM_ print rs1
-  mapM_ print lines1
-  print $ splitTripleWithState "a b c .\n"
-  print $ splitTripleWithState "a b c,\n"
-  print $ splitTripleWithState "  d ;\n"
-  print $ splitTripleWithState "  b d,\n"
-  print $ splitTripleWithState "    c,\n"
-  print $ splitTripleWithState "    c .\n"
-  let 
-    (row, nextState) = splitTripleWithState "    c.\n"
-  print row
-  print $ parseOnly parserWikidataRdfRelation row
-  print $ parseOnly parserWikidataRdfRelation "a b \"c d e\"@eng"
-  print $ parseOnly parserWikidataRdfRelation "a b \"c d e\"@ru"
-  print $ parseOnly parserWikidataRdfRelation "b c"
+  mapM_ (uncurry eassertEqual) (zip rs1 expected1)
 
 allWikidataTest :: TestTree
 allWikidataTest =
   testGroup
     "All Wikidata Unit tests"
-    [testWikidataRDFdumpTTL]    
+    [testWikidataTtlRelation, testWikidataRDFdumpTTL]    
 
 
 
