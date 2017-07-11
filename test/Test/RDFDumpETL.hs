@@ -293,8 +293,20 @@ splitTripleWithState line = (T.strip row, nextState)
 (Right (RelationVO "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95"),End)
 -}
 
-testWikidataTtlRelation :: TestTree
-testWikidataTtlRelation = testCaseSteps "Test case for RDF triples in Turtle format" $ \step -> do
+fillMissingSV :: (TurtleState, Text, Text) -> (TurtleRelation,TurtleState) -> ((TurtleState, Text, Text), TurtleRelation)
+fillMissingSV (End, _,_)   (RelationSVO s' v' o', state') = ((state', s',v'), RelationSVO s' v' o')
+fillMissingSV (Semicolon, s,v) (RelationVO v' o', state') = ((state', s, v'), RelationSVO s v' o')
+fillMissingSV (Comma, s,v)     (RelationO  o',    state') = ((state', s, v),  RelationSVO s v o')
+fillMissingSV (_, _, _) _ = error "Wrong formats"
+
+{-
+End -> take (Relation SVO, state)
+(Semicolon S V) (RelationVO V' O', State) -> accum (S,V',O') and (State S V'),
+(Comma S V) (RelatoinO O', State)  -> accum(S,V,O') and (State S V)
+-}
+
+testWikidataTurtleRelation :: TestTree
+testWikidataTurtleRelation = testCaseSteps "Test case for parsing individual lines of Turtle format files" $ \step -> do
   eassertEqual ("a b c",End)   (splitTripleWithState "a b c .\n")
   eassertEqual ("a b c",Comma) (splitTripleWithState "a b c,\n")
   eassertEqual ("d",Semicolon) (splitTripleWithState "  d ;\n")
@@ -308,7 +320,12 @@ testWikidataTtlRelation = testCaseSteps "Test case for RDF triples in Turtle for
   eassertEqual (Right (RelationSVO "a" "b" "c d e"))    (parseOnly parserWikidataRdfRelation "a b \"c d e\"@eng")
   eassertEqual (Right (RelationSVO "a" "b" "c d e@ru")) (parseOnly parserWikidataRdfRelation "a b \"c d e\"@ru")
 
-
+testWikidataTurtleFillMissingSVO :: TestTree
+testWikidataTurtleFillMissingSVO = testCaseSteps "Test case to get complete RDF triples in Turtle format" $ \step -> do
+  eassertEqual (fillMissingSV (End,"","") (RelationSVO "a" "b" "c",End)) ((End, "a", "b"),RelationSVO "a" "b" "c")
+  eassertEqual (fillMissingSV (Comma,"x","y") (RelationO "c",Comma)) ((Comma, "x", "y"),RelationSVO "x" "y" "c")
+  eassertEqual (fillMissingSV (Semicolon,"x","y") (RelationVO "b" "c",Comma)) ((Comma, "x", "b"),RelationSVO "x" "b" "c")
+  
 testWikidataRDFdumpTTL :: TestTree
 testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Turtle format(.ttl)" $ \step -> do
   let
@@ -332,7 +349,10 @@ allWikidataTest :: TestTree
 allWikidataTest =
   testGroup
     "All Wikidata Unit tests"
-    [testWikidataTtlRelation, testWikidataRDFdumpTTL]    
+    [ testWikidataTurtleRelation
+    , testWikidataTurtleFillMissingSVO
+    , testWikidataRDFdumpTTL
+    ]
 
 
 
