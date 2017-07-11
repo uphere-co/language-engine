@@ -289,8 +289,6 @@ splitTripleWithState line = (T.strip row, nextState)
 (Right (RelationO "wikibase:BestRank"),Semicolon)
 (Right (RelationVO "wikibase:rank" "wikibase:NormalRank"),Semicolon)
 (Right (RelationVO "ps:P414" "wd:Q2632892"),Semicolon)
-(Right (RelationVO "pq:P249" "\"AVAZ\""),Semicolon)
-(Right (RelationVO "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95"),End)
 -}
 
 fillMissingSV :: (TurtleState, Text, Text) -> (TurtleRelation,TurtleState) -> ((TurtleState, Text, Text), TurtleRelation)
@@ -299,7 +297,22 @@ fillMissingSV (Semicolon, s,v) (RelationVO v' o', state') = ((state', s, v'), Re
 fillMissingSV (Comma, s,v)     (RelationO  o',    state') = ((state', s, v),  RelationSVO s v o')
 fillMissingSV (_, _, _) _ = error "Wrong formats"
 
+flattenStatementImpl :: (TurtleState,Text,Text) -> [TurtleRelation] -> [(TurtleRelation,TurtleState)] -> [TurtleRelation]
+flattenStatementImpl _ ts []   = ts
+flattenStatementImpl s ts (r:rs) = flattenStatementImpl s' (t:ts) rs
+  where
+    (s', t) = fillMissingSV s r
+
+flattenStatement :: [(TurtleRelation,TurtleState)] -> [TurtleRelation]
+flattenStatement rs = reverse (flattenStatementImpl (End,"","") [] rs)
+
 {-
+= foldl' f accum 
+  where    
+    f accum r = triple:accum
+      where
+        (state, triple) = fillMissingSV (End, "","") r
+
 End -> take (Relation SVO, state)
 (Semicolon S V) (RelationVO V' O', State) -> accum (S,V',O') and (State S V'),
 (Comma S V) (RelatoinO O', State)  -> accum(S,V,O') and (State S V)
@@ -325,7 +338,13 @@ testWikidataTurtleFillMissingSVO = testCaseSteps "Test case to get complete RDF 
   eassertEqual (fillMissingSV (End,"","") (RelationSVO "a" "b" "c",End)) ((End, "a", "b"),RelationSVO "a" "b" "c")
   eassertEqual (fillMissingSV (Comma,"x","y") (RelationO "c",Comma)) ((Comma, "x", "y"),RelationSVO "x" "y" "c")
   eassertEqual (fillMissingSV (Semicolon,"x","y") (RelationVO "b" "c",Comma)) ((Comma, "x", "b"),RelationSVO "x" "b" "c")
-  
+
+rightParse parser x = f r
+  where
+    r = parseOnly parser x
+    f (Right r) = r
+    f (Left  _) = error "Parse error"
+    
 testWikidataRDFdumpTTL :: TestTree
 testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Turtle format(.ttl)" $ \step -> do
   let
@@ -336,14 +355,25 @@ testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Tur
 	pq:P249 "AVAZ" ;
 	prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95 .|])
     lines1 = map splitTripleWithState (T.lines case1)
-    rs1    =  map (first (parseOnly parserWikidataRdfRelation)) lines1
-    expected1 = [(Right (RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"),Comma)
-                ,(Right (RelationO "wikibase:BestRank"),Semicolon)
-                ,(Right (RelationVO "wikibase:rank" "wikibase:NormalRank"),Semicolon)
-                ,(Right (RelationVO "ps:P414" "wd:Q2632892"),Semicolon)
+    rs1    =  map (first (rightParse parserWikidataRdfRelation)) lines1
+    expected1 = [(RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement",Comma)
+                ,(RelationO "wikibase:BestRank",Semicolon)
+                ,(RelationVO "wikibase:rank" "wikibase:NormalRank",Semicolon)
+                ,(RelationVO "ps:P414" "wd:Q2632892",Semicolon)
+                ,(RelationVO "pq:P249" "\"AVAZ\"",Semicolon)
+                ,(RelationVO "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95",End)
                 ]
+    triples1 = [RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"
+               ,RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:BestRank"
+               ,RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "wikibase:rank" "wikibase:NormalRank"
+               ,RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "ps:P414" "wd:Q2632892"
+               ,RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "pq:P249" "\"AVAZ\""
+               ,RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95"
+               ]
+
 
   mapM_ (uncurry eassertEqual) (zip rs1 expected1)
+  mapM_ (uncurry eassertEqual) (zip triples1 (flattenStatement rs1))
 
 allWikidataTest :: TestTree
 allWikidataTest =
