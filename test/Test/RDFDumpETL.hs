@@ -2,10 +2,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Test.RDFDumpETL where
 
 import           Data.Maybe                            (fromMaybe)
+import           Control.Arrow                         (first,second)
 import           Data.Text                             (Text)
 import           Test.Tasty.HUnit                      (testCase,testCaseSteps)
 import           Test.Tasty                            (defaultMain, testGroup,TestTree)
@@ -28,6 +30,8 @@ import           WikiEL.ETL.Parser
 import           WikiEL.ETL.LoadData
 
 --For testing
+import           Text.RawString.QQ
+
 import           Data.Attoparsec.Text
 import           Control.Applicative                   ((<|>))
 
@@ -161,7 +165,6 @@ testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
 
 testYagoTaxonomyTSVrows :: TestTree
 testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
- 
   let 
     lines = [-- samples from : yagoTaxonomy.tsv
              "<id_4gx1l8_1m6_1snupo6>\t<wikicat_Graphics_chips> rdfs:subClassOf <wordnet_bit_109222051>"
@@ -197,11 +200,145 @@ testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, 
              ]
     rows = map (parseOnly parserRDFrowInTSV) lines 
   mapM_ (uncurry eassertEqual) (zip rows expected)
-  print "\"Demography of\tAfghanistan\"@eng"
+
+allYagoTest :: TestTree
+allYagoTest =
+  testGroup
+    "All YAGO Unit tests"
+    [testYagoRdfObjects, testYagoTaxonomyTSVrows]    
+
+
+
+data TurtleState = Comma 
+                 | Semicolon
+                 | End
+                 deriving (Show, Eq)
+
+data TurtleRelation = RelationSVO Text Text Text 
+                    | RelationVO  Text Text
+                    | RelationO   Text
+                    deriving (Show, Eq)
+--parserWikidataRdfEndOfLine 
+
+parserWikiAlias :: Parser Text
+parserWikiAlias = do
+  let alias = takeTill (=='"')
+  string "\""
+  t <- alias
+  string "\"@eng"
+  return t
+
+parserNonEnWikiAlias :: Parser Text
+parserNonEnWikiAlias = do
+  let alias = takeTill (=='"')
+  string "\""
+  t <- alias
+  string "\"@"
+  lan <- takeWhile1 C.isLower
+  return (T.concat [t, "@",lan])
+
+wikidataObject = parserWikiAlias <|> parserNonEnWikiAlias <|> takeWhile1 (not . C.isSpace)
+wikidataSep    = skipWhile C.isSpace 
+--wikidataSep =  skipMany1 (skip C.isSpace)
+
+parserWikidataRdfRelation3 :: Parser TurtleRelation
+parserWikidataRdfRelation3 = do
+  s <- wikidataObject
+  wikidataSep
+  v <- wikidataObject
+  wikidataSep
+  o <- wikidataObject
+  return (RelationSVO s v o)
+
+parserWikidataRdfRelation2 :: Parser TurtleRelation
+parserWikidataRdfRelation2 = do
+  v <- wikidataObject
+  wikidataSep
+  o <- wikidataObject
+  return (RelationVO v o)
+
+parserWikidataRdfRelation1 :: Parser TurtleRelation
+parserWikidataRdfRelation1 = do
+  o <- wikidataObject
+  return (RelationO o)
+
+parserWikidataRdfRelation = choice [ parserWikidataRdfRelation3
+                                   , parserWikidataRdfRelation2
+                                   , parserWikidataRdfRelation1]
+                          
+splitTripleWithState :: Text -> (Text, TurtleState)
+splitTripleWithState line = (T.strip row, nextState)
+  where
+    input = T.strip line
+    f ',' = Comma
+    f ';' = Semicolon
+    f '.' = End
+    f _   = error "Unknown line end."
+    row = T.init input
+    nextState = f (T.last input)
+
+{-
+("wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement",Comma)
+("wikibase:BestRank",Semicolon)
+("wikibase:rank wikibase:NormalRank",Semicolon)
+("ps:P414 wd:Q2632892",Semicolon)
+("pq:P249 \"AVAZ\"",Semicolon)
+("prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95",End)
+
+(Right (RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"),Comma)
+(Right (RelationO "wikibase:BestRank"),Semicolon)
+(Right (RelationVO "wikibase:rank" "wikibase:NormalRank"),Semicolon)
+(Right (RelationVO "ps:P414" "wd:Q2632892"),Semicolon)
+(Right (RelationVO "pq:P249" "\"AVAZ\""),Semicolon)
+(Right (RelationVO "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95"),End)
+-}
+
+testWikidataTtlRelation :: TestTree
+testWikidataTtlRelation = testCaseSteps "Test case for RDF triples in Turtle format" $ \step -> do
+  eassertEqual ("a b c",End)   (splitTripleWithState "a b c .\n")
+  eassertEqual ("a b c",Comma) (splitTripleWithState "a b c,\n")
+  eassertEqual ("d",Semicolon) (splitTripleWithState "  d ;\n")
+  eassertEqual ("b d",Comma) (splitTripleWithState "  b d,\n")
+  eassertEqual ("c",Comma)   (splitTripleWithState "    c,\n")
+  eassertEqual ("c",End)     (splitTripleWithState "    c .\n")
+  let 
+    (row, nextState) = splitTripleWithState "    c.\n"
+  eassertEqual (Right (RelationO "c"))      (parseOnly parserWikidataRdfRelation row)
+  eassertEqual (Right (RelationVO "b" "c")) (parseOnly parserWikidataRdfRelation "b c")
+  eassertEqual (Right (RelationSVO "a" "b" "c d e"))    (parseOnly parserWikidataRdfRelation "a b \"c d e\"@eng")
+  eassertEqual (Right (RelationSVO "a" "b" "c d e@ru")) (parseOnly parserWikidataRdfRelation "a b \"c d e\"@ru")
+
+
+testWikidataRDFdumpTTL :: TestTree
+testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Turtle format(.ttl)" $ \step -> do
+  let
+    case1 = T.pack ([r|wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement,
+		wikibase:BestRank ;
+	wikibase:rank wikibase:NormalRank ;
+	ps:P414 wd:Q2632892 ;
+	pq:P249 "AVAZ" ;
+	prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95 .|])
+    lines1 = map splitTripleWithState (T.lines case1)
+    rs1    =  map (first (parseOnly parserWikidataRdfRelation)) lines1
+    expected1 = [(Right (RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"),Comma)
+                ,(Right (RelationO "wikibase:BestRank"),Semicolon)
+                ,(Right (RelationVO "wikibase:rank" "wikibase:NormalRank"),Semicolon)
+                ,(Right (RelationVO "ps:P414" "wd:Q2632892"),Semicolon)
+                ]
+
+  mapM_ (uncurry eassertEqual) (zip rs1 expected1)
+
+allWikidataTest :: TestTree
+allWikidataTest =
+  testGroup
+    "All Wikidata Unit tests"
+    [testWikidataTtlRelation, testWikidataRDFdumpTTL]    
+
+
 
 allTest :: TestTree
 allTest =
   testGroup
     "All Unit tests"
-    [testYagoRdfObjects, testYagoTaxonomyTSVrows]    
+    [allYagoTest, allWikidataTest]    
 
