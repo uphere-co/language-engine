@@ -218,8 +218,8 @@ data TurtleRelation = RelationSVO Text Text Text
                     | RelationVO  Text Text
                     | RelationO   Text
                     deriving (Show, Eq)
---parserWikidataRdfEndOfLine 
 
+wtoken = takeWhile1 (not . C.isSpace)
 parserWikiAlias :: Parser Text
 parserWikiAlias = do
   let alias = takeTill (=='"')
@@ -234,12 +234,26 @@ parserNonEnWikiAlias = do
   string "\""
   t <- alias
   string "\"@"
-  lan <- takeWhile1 C.isLower
+  lan <- wtoken
   return (T.concat [t, "@",lan])
 
-wikidataObject = parserWikiAlias <|> parserNonEnWikiAlias <|> takeWhile1 (not . C.isSpace)
+parserWikiTypedText :: Parser Text
+parserWikiTypedText = do
+  let getValue = takeTill (=='"')
+  string "\""
+  v <- getValue
+  string "\"^^"
+  t <- wtoken
+  return (T.concat [v, "^^",t])
+
+wikidataObject = choice [ parserWikiAlias
+                        , parserNonEnWikiAlias
+                        , parserWikiTypedText
+                        , wtoken
+                        ]
 wikidataSep    = skipWhile C.isSpace 
 --wikidataSep =  skipMany1 (skip C.isSpace)
+
 
 parserWikidataRdfRelation3 :: Parser TurtleRelation
 parserWikidataRdfRelation3 = do
@@ -370,10 +384,72 @@ testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Tur
                ,RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "pq:P249" "\"AVAZ\""
                ,RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95"
                ]
-
-
   mapM_ (uncurry eassertEqual) (zip rs1 expected1)
   mapM_ (uncurry eassertEqual) (zip triples1 (flattenStatement rs1))
+
+  let
+    case2 = T.pack ([r|wd:Q31 a wikibase:Item ;
+        rdfs:label "Belgium"@en ;
+        skos:prefLabel "Belgium"@en ;
+        schema:name "Belgium"@en ;
+        schema:description "constitutional monarchy in Western Europe"@en,
+                "État d'Europe occidentale"@fr,
+                "西欧国家"@zh-sg,
+                "Staat an Europa"@lb ;
+        skos:altLabel "Kingdom of Belgium"@en,
+                "be"@en,
+                "Королівство Бельгія"@uk ;
+        wdt:P1464 wd:Q7463296 ;
+        wdt:P1036 "2--493" ;
+        wdt:P138 wd:Q206443 ;
+        wdt:P31 wd:Q3624078,
+                wd:Q43702,
+                wd:Q160016,
+                wd:Q6505795 ;
+        wdt:P30 wd:Q46 ;
+        wdt:P36 wd:Q239 ;
+        wdt:P41 <http://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Belgium%20%28civil%29.svg> ;
+        wdt:P297 "BE" ;
+        wdt:P2853 wd:Q1378312,
+                wd:Q2335536 ;
+        wdt:P2927 "+0.8"^^xsd:decimal ;
+        wdt:P1332 "Point(4.77 51.5)"^^geo:wktLiteral ;
+        wdt:P3221 "destination/belgium" ;
+        p:P1464 wds:Q31-b8a6b97e-4815-1e46-db4c-6b5807933064 .|])
+    lines2 = map splitTripleWithState (T.lines case2)
+    rs2    =  map (first (rightParse parserWikidataRdfRelation)) lines2
+    triples2  = [ RelationSVO "wd:Q31" "a" "wikibase:Item"
+                , RelationSVO "wd:Q31" "rdfs:label" "Belgium@en"
+                , RelationSVO "wd:Q31" "skos:prefLabel" "Belgium@en"
+                , RelationSVO "wd:Q31" "schema:name" "Belgium@en"
+                , RelationSVO "wd:Q31" "schema:description" "constitutional monarchy in Western Europe@en"
+                , RelationSVO "wd:Q31" "schema:description" "\201tat d'Europe occidentale@fr"
+                , RelationSVO "wd:Q31" "schema:description" "\35199\27431\22269\23478@zh-sg"
+                , RelationSVO "wd:Q31" "schema:description" "Staat an Europa@lb"
+                , RelationSVO "wd:Q31" "skos:altLabel" "Kingdom of Belgium@en"
+                , RelationSVO "wd:Q31" "skos:altLabel" "be@en"
+                , RelationSVO "wd:Q31" "skos:altLabel" "\1050\1086\1088\1086\1083\1110\1074\1089\1090\1074\1086 \1041\1077\1083\1100\1075\1110\1103@uk"
+                , RelationSVO "wd:Q31" "wdt:P1464" "wd:Q7463296"
+                , RelationSVO "wd:Q31" "wdt:P1036" "\"2--493\""
+                , RelationSVO "wd:Q31" "wdt:P138" "wd:Q206443"
+                , RelationSVO "wd:Q31" "wdt:P31" "wd:Q3624078"
+                , RelationSVO "wd:Q31" "wdt:P31" "wd:Q43702"
+                , RelationSVO "wd:Q31" "wdt:P31" "wd:Q160016"
+                , RelationSVO "wd:Q31" "wdt:P31" "wd:Q6505795"
+                , RelationSVO "wd:Q31" "wdt:P30" "wd:Q46"
+                , RelationSVO "wd:Q31" "wdt:P36" "wd:Q239"
+                , RelationSVO "wd:Q31" "wdt:P41" "<http://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Belgium%20%28civil%29.svg>"
+                , RelationSVO "wd:Q31" "wdt:P297" "\"BE\""
+                , RelationSVO "wd:Q31" "wdt:P2853" "wd:Q1378312"
+                , RelationSVO "wd:Q31" "wdt:P2853" "wd:Q2335536"
+                , RelationSVO "wd:Q31" "wdt:P2927" "+0.8^^xsd:decimal"
+                , RelationSVO "wd:Q31" "wdt:P1332" "Point(4.77 51.5)^^geo:wktLiteral"
+                , RelationSVO "wd:Q31" "wdt:P3221" "\"destination/belgium\""
+                , RelationSVO "wd:Q31" "p:P1464" "wds:Q31-b8a6b97e-4815-1e46-db4c-6b5807933064"
+                ]
+  mapM_ (uncurry eassertEqual) (zip triples2 (flattenStatement rs2))
+  mapM_ print (flattenStatement rs2)
+  
 
 allWikidataTest :: TestTree
 allWikidataTest =
