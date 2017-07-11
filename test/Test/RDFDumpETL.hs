@@ -8,6 +8,7 @@ module Test.RDFDumpETL where
 
 import           Data.Maybe                            (fromMaybe)
 import           Control.Arrow                         (first,second)
+import           Data.List                             (foldl')
 import           Data.Text                             (Text)
 import           Test.Tasty.HUnit                      (testCase,testCaseSteps)
 import           Test.Tasty                            (defaultMain, testGroup,TestTree)
@@ -311,26 +312,15 @@ fillMissingSV (Semicolon, s,v) (RelationVO v' o', state') = ((state', s, v'), Re
 fillMissingSV (Comma, s,v)     (RelationO  o',    state') = ((state', s, v),  RelationSVO s v o')
 fillMissingSV (_, _, _) _ = error "Wrong formats"
 
-flattenStatementImpl :: (TurtleState,Text,Text) -> [TurtleRelation] -> [(TurtleRelation,TurtleState)] -> [TurtleRelation]
-flattenStatementImpl _ ts []   = ts
-flattenStatementImpl s ts (r:rs) = flattenStatementImpl s' (t:ts) rs
-  where
-    (s', t) = fillMissingSV s r
-
 flattenStatement :: [(TurtleRelation,TurtleState)] -> [TurtleRelation]
-flattenStatement rs = reverse (flattenStatementImpl (End,"","") [] rs)
-
-{-
-= foldl' f accum 
-  where    
-    f accum r = triple:accum
+--flattenStatement rs = reverse (flattenStatementImpl ((End,"",""), []) rs)
+flattenStatement rs = reverse triples
+  where
+    (s, triples) = foldl' f ((End,"",""), []) rs
+    f (state, triples) relation = (state', t:triples)
       where
-        (state, triple) = fillMissingSV (End, "","") r
+        (state', t) = fillMissingSV state relation
 
-End -> take (Relation SVO, state)
-(Semicolon S V) (RelationVO V' O', State) -> accum (S,V',O') and (State S V'),
-(Comma S V) (RelatoinO O', State)  -> accum(S,V,O') and (State S V)
--}
 
 testWikidataTurtleRelation :: TestTree
 testWikidataTurtleRelation = testCaseSteps "Test case for parsing individual lines of Turtle format files" $ \step -> do
