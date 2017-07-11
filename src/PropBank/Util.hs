@@ -26,8 +26,8 @@ getLeaves (PN _ xs) = concatMap getLeaves xs
 getLeaves (PL x) = [x]
 
 
-findNoneLeaf :: PennTreeGen c (Int,(Text,a)) -> [(Int,(Text,a))]
-findNoneLeaf = filter (\(_,(t,_)) -> t == "-NONE-") . getLeaves 
+-- findNoneLeaf :: PennTreeGen c (Int,(Text,a)) -> [(Int,(Text,a))]
+-- findNoneLeaf = filter (\(_,(t,_)) -> t == "-NONE-") . getLeaves 
 
 isInside :: Int -> Range -> Bool
 x `isInside` (x1,y1) = x1 <= x && x <= y1

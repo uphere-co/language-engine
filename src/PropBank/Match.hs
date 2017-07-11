@@ -4,7 +4,8 @@ module PropBank.Match where
 
 import           Control.Applicative             (many)
 import           Control.Lens
--- import           Control.Monad.IO.Class          (liftIO)
+import           Control.Monad.Loops             (unfoldM)
+import           Control.Monad.Trans.State
 import qualified Data.Attoparsec.Text       as A
 import           Data.Foldable                   (toList)
 import           Data.List (intercalate)
@@ -12,10 +13,7 @@ import           Data.Maybe                      (fromJust,mapMaybe,listToMaybe)
 import           Data.Monoid                     ((<>))
 import           Data.Text                       (Text)
 import qualified Data.Text                  as T
-import qualified Data.Text.IO               as TIO
--- import           Data.Time.Calendar              (fromGregorian)
 --
--- import qualified CoreNLP.Simple.Type                   as S
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
@@ -25,10 +23,31 @@ import           PropBank.Type.Match
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
--- import           SRL.Type
--- import           SRL.Util
---
 
+
+mergeHyphen :: State [(Int,(POSTag,Text))] (Maybe [(Int,(POSTag,Text))])
+mergeHyphen = fmap (fmap reverse) (go Nothing)
+  where go acc = do s <- get
+                    case s of
+                      [] -> return acc
+                      (x:xs) -> case acc of
+                                  Nothing                    -> put xs >> go (Just [x])
+                                  Just ys@((_,(M_HYPH,_)):_) -> put xs >> go (Just (x:ys))
+                                  Just ys                    ->
+                                    case x of
+                                      (_,(M_HYPH,_)) -> put xs >> go (Just (x:ys))
+                                      _              -> return acc 
+
+getMerged tr = let atr = (getADTPennTree . convertTop) tr
+                   -- terms0 = (filter (\(_,(t,_)) -> t /= D_NONE) . zip [0..] . toList) atr
+               in evalState (unfoldM mergeHyphen) (zip [0..] (toList atr))
+
+exclusionList tr = let f []     = []
+                       f ys@((i,(t,_)):xs) = (if t == D_NONE then [i] else []) ++ map (^._1) xs 
+                   in concatMap f (getMerged tr)
+
+
+convertTop (PN _ xs) = PN "ROOT" xs
 
 
 termRangeForAllNode :: PennTreeGen c (Int,t) -> [Range]
@@ -40,12 +59,13 @@ adjustIndex :: [Int] -> Int -> Either Int Int
 adjustIndex xs n = let m = length (filter (<n) xs)
                    in if n `elem` xs then Left (n-m) else Right (n-m)
 
-adjustIndexFromTree :: PennTree -> Int -> Either Int Int
-adjustIndexFromTree tr =
-  let itr = mkIndexedTree tr
-      excl = map (^._1) (findNoneLeaf itr)
-  in adjustIndex excl 
 
+adjustIndexFromTree :: PennTree -> Int -> Either Int Int
+adjustIndexFromTree = adjustIndex . exclusionList
+{-   let itr = mkIndexedTree tr
+      excl = exclusionList tr  map (^._1) (findNoneLeaf itr)
+  in adjustIndex excl 
+-}
 
 maximalEmbeddedRange :: PennTreeGen c (Int,t) -> Range -> [(Range,PennTreeIdxG c t)]
 maximalEmbeddedRange tr r = go (termRangeTree tr)
@@ -60,6 +80,7 @@ matchR r0 y@(PN (r,_) xs)
 matchR (b,e) x@(PL (n,_))
   | b == n && e == n = Just x
   | otherwise = Nothing
+
 
 matchArgNodes :: (PennTree,PennTree) -> Argument -> [MatchedArgNode]
 matchArgNodes (pt,tr) arg = do
@@ -87,25 +108,6 @@ matchInstances (pt,tr) insts
   = [ MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (pt,tr) inst }
       | inst <- insts ]
 
-
-printMatchedNode :: MatchedArgNode -> IO ()
-printMatchedNode x = do
-  TIO.putStrLn $ T.pack (show (x^.mn_node._1)) <> ":"
-  print (x^.mn_trees)
-
-
-printMatchedArg :: MatchedArgument -> IO ()
-printMatchedArg x = do
-  putStrLn $ show (x^.ma_argument.arg_label)
-  mapM_ printMatchedNode (x^.ma_nodes)
-
-
-printMatchedInst :: MatchedInstance -> IO ()
-printMatchedInst x = do
-  TIO.putStrLn (x^.mi_instance.inst_lemma_type)
-  putStrLn "---"  
-  mapM_ printMatchedArg (x^.mi_arguments)
-  putStrLn "---"  
 
 findRelNode :: [MatchedArgument] -> Int
 findRelNode args =

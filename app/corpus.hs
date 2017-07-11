@@ -17,6 +17,7 @@ import           System.FilePath                   ((</>))
 import           NLP.Parser.PennTreebankII
 import           NLP.Type.PennTreebankII
 --
+import           PropBank.Format
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 import           PropBank.Util
