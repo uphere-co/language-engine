@@ -292,19 +292,6 @@ splitTripleWithState line = (T.strip row, nextState)
     row = T.init input
     nextState = f (T.last input)
 
-{-
-("wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement",Comma)
-("wikibase:BestRank",Semicolon)
-("wikibase:rank wikibase:NormalRank",Semicolon)
-("ps:P414 wd:Q2632892",Semicolon)
-("pq:P249 \"AVAZ\"",Semicolon)
-("prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95",End)
-
-(Right (RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"),Comma)
-(Right (RelationO "wikibase:BestRank"),Semicolon)
-(Right (RelationVO "wikibase:rank" "wikibase:NormalRank"),Semicolon)
-(Right (RelationVO "ps:P414" "wd:Q2632892"),Semicolon)
--}
 
 fillMissingSV :: (TurtleState, Text, Text) -> (TurtleRelation,TurtleState) -> ((TurtleState, Text, Text), TurtleRelation)
 fillMissingSV (End, _,_)   (RelationSVO s' v' o', state') = ((state', s',v'), RelationSVO s' v' o')
@@ -313,10 +300,9 @@ fillMissingSV (Comma, s,v)     (RelationO  o',    state') = ((state', s, v),  Re
 fillMissingSV (_, _, _) _ = error "Wrong formats"
 
 flattenStatement :: [(TurtleRelation,TurtleState)] -> [TurtleRelation]
---flattenStatement rs = reverse (flattenStatementImpl ((End,"",""), []) rs)
 flattenStatement rs = reverse triples
   where
-    (s, triples) = foldl' f ((End,"",""), []) rs
+    (_, triples) = foldl' f ((End,"",""), []) rs
     f (state, triples) relation = (state', t:triples)
       where
         (state', t) = fillMissingSV state relation
