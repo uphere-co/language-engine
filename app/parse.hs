@@ -6,6 +6,8 @@ module Main where
 import           Control.Exception
 import           Control.Lens                  hiding ((<.>))
 import           Control.Monad
+import           Control.Monad.Loops                  (unfoldM)
+import           Control.Monad.Trans.State
 import           Data.Aeson
 import qualified Data.Attoparsec.Text         as A
 import           Data.Bifoldable
@@ -46,12 +48,37 @@ parseOntoNotesPennTree :: FilePath -> IO (Either String [PennTree])
 parseOntoNotesPennTree f = fmap (A.parseOnly (A.many1 (A.skipSpace *> pnode))) (T.IO.readFile f)
 
 
+errorHandler h_err msg action = do
+  r <- try action 
+  case r of
+    Left (e :: SomeException) -> hPutStrLn h_err msg
+    _ -> return ()
+
+
+convertTop (PN _ xs) = PN "ROOT" xs
+
+
+filterNML x@(PN NML xs) = [x]
+filterNML (PN c xs) = concatMap filterNML xs
+filterNML (PL _) = []
+
+
+mergeHyphen :: State [(POSTag,Text)] (Maybe [(POSTag,Text)])
+mergeHyphen = fmap (fmap reverse) (go Nothing)
+  where go acc = do s <- get
+                    case s of
+                      [] -> return acc
+                      (x:xs) -> case acc of
+                                  Nothing                -> put xs >> go (Just [x])
+                                  Just ys@((M_HYPH,_):_) -> put xs >> go (Just (x:ys))
+                                  Just ys                ->
+                                    case x of
+                                      (M_HYPH,_) -> put xs >> go (Just (x:ys))
+                                      _          -> return acc 
+
       
-serializeLemma pp trs h_lemma = do
-  let tss = map getTerms trs
-      ts = map (T.intercalate " ") tss
-      -- ntxt = T.intercalate "\n\n" ts
-      docs = map (flip Document (fromGregorian 1990 1 1)) ts -- ntxt
+serializeLemma pp txts h_lemma = do
+  let docs = map (flip Document (fromGregorian 1990 1 1)) txts 
   anns <- traverse (annotate pp) docs
   rdocs' <- traverse protobufDoc anns
   let rdocs = sequenceA rdocs'
@@ -63,11 +90,8 @@ serializeLemma pp trs h_lemma = do
       BL.hPutStrLn h_lemma (encode lmap)
 
 
-serializePennTreeDep pp trs (h_ud,h_tr)= do
-  let tss = map getTerms trs
-      ts = map (T.intercalate " ") tss
-      -- ntxt = T.intercalate "\n\n" ts
-      docs = map (flip Document (fromGregorian 1990 1 1)) ts -- ntxt
+serializePennTreeDep pp txts (h_ud,h_tr)= do
+  let docs = map (flip Document (fromGregorian 1990 1 1)) txts
   anns <- traverse (annotate pp) docs
   rdocs' <- traverse protobufDoc anns
   let rdocs = sequenceA rdocs'
@@ -84,54 +108,32 @@ serializePennTreeDep pp trs (h_ud,h_tr)= do
           BL.hPutStrLn h_tr (encode ntrs)
 
 
-errorHandler h_err msg action = do
-  r <- try action 
-  case r of
-    Left (e :: SomeException) -> hPutStrLn h_err msg
-    _ -> return ()
-
-
-convertTop (PN _ xs) = PN "ROOT" xs
-
-filterNML x@(PN NML xs) = [x]
-filterNML (PN c xs) = concatMap filterNML xs
-filterNML (PL _) = []
-
-
-
-
 process basedir pp = do
   dtr <- build basedir
   let fps = sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
   withFile "error.log" WriteMode $ \h_err -> do
     flip traverse_ parsefiles $ \f -> do
-      {- 
       putStrLn "\n\n\n=============================================================================================="
       print f
-      putStrLn "==============================================================================================" -}
+      putStrLn "==============================================================================================" 
       etr <- parseOntoNotesPennTree f
       case etr of
         Left err -> hPutStrLn h_err f
         Right trs -> do
-          mapM_ ((\xs -> when ((not.null) xs) (mapM_ formatPrint xs)) . filterNML . getADTPennTree . convertTop) trs
-            where formatPrint :: PennTreeGen ChunkTag (POSTag,Text) -> IO ()
-                  formatPrint x =putStrLn $
-                    printf "%30s : %s "
-                      ((T.intercalate " " . map (^._2) . toList) x)
-                      (show x)
-           {-  where f :: ChunkTag -> [ChunkTag]
-                  f x = [x]
-                  g :: (POSTag,Text) -> [ChunkTag]
-                  g x = [] -}
-          {- 
+          let txts = flip map trs $ \tr -> 
+                let atr = (getADTPennTree . convertTop) tr
+                    terms0 = (filter (\(t,_) -> t /= D_NONE) . toList) atr
+                    merged = evalState (unfoldM mergeHyphen) terms0
+                in T.intercalate " " (map (T.concat . map snd) merged)
+              
           let bname = takeBaseName f
           withFile (bname <.> "corenlp_lemma") WriteMode $ \h_lemma -> do
-            errorHandler h_err f (serializeLemma pp trs h_lemma)
+            errorHandler h_err f (serializeLemma pp txts h_lemma)
           withFile (bname <.> "corenlp_udep") WriteMode $ \h_ud -> 
             withFile (bname <.> "corenlp_ptree") WriteMode $ \h_tr -> 
-              errorHandler h_err f (serializePennTreeDep pp trs (h_ud,h_tr))
-          -}
+              errorHandler h_err f (serializePennTreeDep pp txts (h_ud,h_tr))
+
 
 main :: IO ()
 main = do
@@ -144,8 +146,8 @@ main = do
                      . ( postagger .~ True )
                      . ( lemma .~ True )
                      . ( sutime .~ False )
-                     . ( depparse .~ False ) -- . ( depparse .~ True )
-                     . ( constituency .~ False ) -- . ( constituency .~ True )
+                     . ( depparse .~ True )
+                     . ( constituency .~ True )
                      . ( ner .~ False )
     pp <- prepare pcfg
     process basedir pp 
