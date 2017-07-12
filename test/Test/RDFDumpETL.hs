@@ -204,29 +204,26 @@ allYagoTest =
 
 wtoken = takeWhile1 (not . C.isSpace)
 
-parserWikiAlias, parserNonEnWikiAlias, parserWikiTypedText, parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
+parserWikiAlias, parserNonEnWikiAlias, parserWikiTypedValue, parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
 parserWikiAlias = do
-  let alias = takeTill (=='"')
   char '"'
-  t <- alias
+  alias <- takeTill (=='"')
   string "\"@en"
-  return (Alias t)
+  return (Alias alias)
 
 parserNonEnWikiAlias = do
-  let alias = takeTill (=='"')
   char '"'
-  t <- alias
+  alias <- takeTill (=='"')
   string "\"@"
-  lan <- wtoken
-  return (NonEnAlias lan t)
+  country <- wtoken
+  return (NonEnAlias country alias)
 
-parserWikiTypedText = do
-  let getValue = takeTill (=='"')
+parserWikiTypedValue = do
   char '"'
-  v <- getValue
+  text <- takeTill (=='"')
   string "\"^^"
-  t <- wtoken
-  return (TypedText (T.concat [v, "^^",t]))
+  typeTag <- wtoken
+  return (TypedValue typeTag text)
 
 
 parserURLObject = do
@@ -250,7 +247,7 @@ parserWikiUnknownObject = do
 wikidataObject :: Parser WikidataObject
 wikidataObject = choice [ parserWikiAlias
                         , parserNonEnWikiAlias
-                        , parserWikiTypedText
+                        , parserWikiTypedValue
                         , parserURLObject
                         , parserWikiNamedSpaceObject
                         , parserWikiUnknownObject
