@@ -50,10 +50,14 @@ instance Show YagoID where
   show (YagoID uid) = "YagoID:" ++ show uid
 -}
 
-
+parserTypedValue f = do
+  char '"'
+  text <- takeTill (=='"')
+  string "\"^^"
+  typeTag <- wtoken
+  return (f typeTag text)
 
 object = takeTill (\x -> x=='>' || C.isSpace x)
-ssep = skipWhile C.isSpace
 
 parserYAGOtoken :: Text -> Text -> (Text -> a) -> Parser a
 parserYAGOtoken prefix postfix f = do
@@ -111,6 +115,8 @@ parserYAGOnonEnwikiTitle = do
   string ">"
   return (YagoNonEnWikiTitle c t)
 
+parserYAGOtypedValue :: Parser YagoObject
+parserYAGOtypedValue = parserTypedValue YagoTypedValue 
 
 
 parserNounToken, parserVerbToken, parserUIDToken :: Parser YagoObject
@@ -130,6 +136,7 @@ parserUIDToken  = parserYAGOuid
 
 parserRDFrowInTSV :: Parser YagoRdfTriple
 parserRDFrowInTSV = do
+  let ssep = skipWhile C.isSpace
   uid  <- parserUIDToken
   ssep
   subj <- parserNounToken
@@ -218,13 +225,7 @@ parserNonEnWikiAlias = do
   country <- wtoken
   return (NonEnAlias country alias)
 
-parserWikiTypedValue = do
-  char '"'
-  text <- takeTill (=='"')
-  string "\"^^"
-  typeTag <- wtoken
-  return (TypedValue typeTag text)
-
+parserWikiTypedValue = parserTypedValue TypedValue
 
 parserURLObject = do
   char '<'
