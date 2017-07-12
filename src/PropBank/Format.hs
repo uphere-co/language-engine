@@ -12,6 +12,7 @@ import qualified Data.Text           as T
 import qualified Data.Text.IO        as T.IO
 --
 import           NLP.Type.PennTreebankII
+import           PropBank.Match
 import           PropBank.Parser.Prop
 import           PropBank.Type.Match
 import           PropBank.Type.Prop

@@ -118,6 +118,30 @@ matchArgNodes :: (PennTree,PennTree)  -- ^ (CoreNLP tree, PropBank (human-annota
               -> Argument
               -> [MatchedArgNode]
 matchArgNodes (coretr,proptr) arg = do
+    n <- arg ^. arg_terminals
+    nd <- maybeToList (findNode n proptr)
+    rng <- case nd of
+             ("-NONE-",PL (i,_)) -> adjrange =<< map snd (findLinks l2p i2t 34)
+             _                   -> (adjrange . termRange . snd) nd
+    let zs = maximalEmbeddedRange ipt rng
+    return MatchedArgNode { _mn_node = (rng,n), _mn_trees = zs }
+
+  where
+    l2p = linkID2PhraseNode proptr
+    i2t = index2TraceLinkID (mkPennTreeIdx proptr)
+    adjf = adjustIndexFromTree proptr
+    adjrange (x,y) = case (adjf x, adjf y) of
+                       (Left b,Left e) -> if b == e then [] else [(b,e)]
+                       (Left b,Right e) -> [(b,e)]
+                       (Right b,Left e) -> [(b,e-1)]
+                       (Right b,Right e) -> [(b,e)]
+    ipt = (mkIndexedTree . getADTPennTree) coretr
+
+{- 
+matchArgNodes :: (PennTree,PennTree)  -- ^ (CoreNLP tree, PropBank (human-annotated) tree)
+              -> Argument
+              -> [MatchedArgNode]
+matchArgNodes (coretr,proptr) arg = do
   n <- arg ^. arg_terminals
   let nd = fromJust (findNode n proptr)
   let adjf = adjustIndexFromTree proptr
@@ -130,7 +154,7 @@ matchArgNodes (coretr,proptr) arg = do
   let ipt = (mkIndexedTree . getADTPennTree) coretr
       zs = maximalEmbeddedRange ipt rng
   return MatchedArgNode { _mn_node = (rng,n), _mn_trees = zs }
-
+-}
 
 matchArgs :: (PennTree,PennTree) -> Instance -> [MatchedArgument]
 matchArgs (pt,tr) pr
