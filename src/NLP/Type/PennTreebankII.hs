@@ -17,7 +17,7 @@ module NLP.Type.PennTreebankII
 , isNone, isVerb, isNoun
 , linkIDChunk
 , identifyPOS, identifyChunk, identifyTrace
-, Bitree(..)
+, Bitree(..), LinkID(..)
 , type PennTreeGen, type PennTree, type PennTreeIdxG, type PennTreeIdx, type PennTreeIdxA
 , type Range
 , Lemma(..)
