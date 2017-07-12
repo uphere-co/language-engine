@@ -80,10 +80,17 @@ parserYAGOclass   = parserYAGOtoken "<yago" ">"     YagoClass
 parserYAGOwikiAlias :: Parser YagoObject
 parserYAGOwikiAlias = do
   char '"'
-  t <- takeTill (=='"')
+  n <- takeTill (=='"')
   string "\"@eng"
-  return (YagoWikiAlias t)
+  return (YagoWikiAlias n)
 
+parserYAGOnonEnWikiAlias :: Parser YagoObject
+parserYAGOnonEnWikiAlias = do
+  char '"'
+  n <- takeTill (=='"')
+  string "\"@"
+  c <- takeTill (not . C.isLower)
+  return (YagoNonEnWikiAlias c n)
 
 parserYAGOwikiTitle :: Parser YagoObject
 parserYAGOwikiTitle = do
@@ -113,6 +120,7 @@ parserNounToken = choice [ parserYAGOwordnet
                          , parserYAGOclass
                          , parserYAGOwikiAlias
                          , parserYAGOwikiTitle
+                         , parserYAGOnonEnWikiAlias
                          , parserYAGOnonEnwikiTitle]
 parserVerbToken = choice [ parserRDFverb
                          , parserRDFSprop
@@ -147,6 +155,7 @@ testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
   eassertEqual (parseOnly parserNounToken "<de/NEC_PowerVR_PCX>") (Right (YagoNonEnWikiTitle "de" "NEC_PowerVR_PCX"))
   eassertEqual (parseOnly parserNounToken "<yagoPermanentlyLocatedEntity>") (Right (YagoClass "PermanentlyLocatedEntity"))
   eassertEqual (parseOnly parserNounToken "\"Demography of Afghanistan\"@eng") (Right (YagoWikiAlias "Demography of Afghanistan"))
+  eassertEqual (parseOnly parserNounToken "\"Demography of Afghanistan\"@de") (Right (YagoNonEnWikiAlias "de" "Demography of Afghanistan"))
 
 testYagoTaxonomyTSVrows :: TestTree
 testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
