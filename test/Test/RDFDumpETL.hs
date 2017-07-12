@@ -8,6 +8,7 @@ module Test.RDFDumpETL where
 
 import           Data.Maybe                            (fromMaybe)
 import           Control.Arrow                         (first,second)
+import           Data.List                             (foldl')
 import           Data.Text                             (Text)
 import           Test.Tasty.HUnit                      (testCase,testCaseSteps)
 import           Test.Tasty                            (defaultMain, testGroup,TestTree)
@@ -218,8 +219,8 @@ data TurtleRelation = RelationSVO Text Text Text
                     | RelationVO  Text Text
                     | RelationO   Text
                     deriving (Show, Eq)
---parserWikidataRdfEndOfLine 
 
+wtoken = takeWhile1 (not . C.isSpace)
 parserWikiAlias :: Parser Text
 parserWikiAlias = do
   let alias = takeTill (=='"')
@@ -234,12 +235,26 @@ parserNonEnWikiAlias = do
   string "\""
   t <- alias
   string "\"@"
-  lan <- takeWhile1 C.isLower
+  lan <- wtoken
   return (T.concat [t, "@",lan])
 
-wikidataObject = parserWikiAlias <|> parserNonEnWikiAlias <|> takeWhile1 (not . C.isSpace)
+parserWikiTypedText :: Parser Text
+parserWikiTypedText = do
+  let getValue = takeTill (=='"')
+  string "\""
+  v <- getValue
+  string "\"^^"
+  t <- wtoken
+  return (T.concat [v, "^^",t])
+
+wikidataObject = choice [ parserWikiAlias
+                        , parserNonEnWikiAlias
+                        , parserWikiTypedText
+                        , wtoken
+                        ]
 wikidataSep    = skipWhile C.isSpace 
 --wikidataSep =  skipMany1 (skip C.isSpace)
+
 
 parserWikidataRdfRelation3 :: Parser TurtleRelation
 parserWikidataRdfRelation3 = do
@@ -277,24 +292,24 @@ splitTripleWithState line = (T.strip row, nextState)
     row = T.init input
     nextState = f (T.last input)
 
-{-
-("wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement",Comma)
-("wikibase:BestRank",Semicolon)
-("wikibase:rank wikibase:NormalRank",Semicolon)
-("ps:P414 wd:Q2632892",Semicolon)
-("pq:P249 \"AVAZ\"",Semicolon)
-("prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95",End)
 
-(Right (RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"),Comma)
-(Right (RelationO "wikibase:BestRank"),Semicolon)
-(Right (RelationVO "wikibase:rank" "wikibase:NormalRank"),Semicolon)
-(Right (RelationVO "ps:P414" "wd:Q2632892"),Semicolon)
-(Right (RelationVO "pq:P249" "\"AVAZ\""),Semicolon)
-(Right (RelationVO "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95"),End)
--}
+fillMissingSV :: (TurtleState, Text, Text) -> (TurtleRelation,TurtleState) -> ((TurtleState, Text, Text), TurtleRelation)
+fillMissingSV (End, _,_)   (RelationSVO s' v' o', state') = ((state', s',v'), RelationSVO s' v' o')
+fillMissingSV (Semicolon, s,v) (RelationVO v' o', state') = ((state', s, v'), RelationSVO s v' o')
+fillMissingSV (Comma, s,v)     (RelationO  o',    state') = ((state', s, v),  RelationSVO s v o')
+fillMissingSV (_, _, _) _ = error "Wrong formats"
 
-testWikidataTtlRelation :: TestTree
-testWikidataTtlRelation = testCaseSteps "Test case for RDF triples in Turtle format" $ \step -> do
+flattenStatement :: [(TurtleRelation,TurtleState)] -> [TurtleRelation]
+flattenStatement rs = reverse triples
+  where
+    (_, triples) = foldl' f ((End,"",""), []) rs
+    f (state, triples) relation = (state', t:triples)
+      where
+        (state', t) = fillMissingSV state relation
+
+
+testWikidataTurtleRelation :: TestTree
+testWikidataTurtleRelation = testCaseSteps "Test case for parsing individual lines of Turtle format files" $ \step -> do
   eassertEqual ("a b c",End)   (splitTripleWithState "a b c .\n")
   eassertEqual ("a b c",Comma) (splitTripleWithState "a b c,\n")
   eassertEqual ("d",Semicolon) (splitTripleWithState "  d ;\n")
@@ -308,7 +323,18 @@ testWikidataTtlRelation = testCaseSteps "Test case for RDF triples in Turtle for
   eassertEqual (Right (RelationSVO "a" "b" "c d e"))    (parseOnly parserWikidataRdfRelation "a b \"c d e\"@eng")
   eassertEqual (Right (RelationSVO "a" "b" "c d e@ru")) (parseOnly parserWikidataRdfRelation "a b \"c d e\"@ru")
 
+testWikidataTurtleFillMissingSVO :: TestTree
+testWikidataTurtleFillMissingSVO = testCaseSteps "Test case to get complete RDF triples in Turtle format" $ \step -> do
+  eassertEqual (fillMissingSV (End,"","") (RelationSVO "a" "b" "c",End)) ((End, "a", "b"),RelationSVO "a" "b" "c")
+  eassertEqual (fillMissingSV (Comma,"x","y") (RelationO "c",Comma)) ((Comma, "x", "y"),RelationSVO "x" "y" "c")
+  eassertEqual (fillMissingSV (Semicolon,"x","y") (RelationVO "b" "c",Comma)) ((Comma, "x", "b"),RelationSVO "x" "b" "c")
 
+rightParse parser x = f r
+  where
+    r = parseOnly parser x
+    f (Right r) = r
+    f (Left  _) = error "Parse error"
+    
 testWikidataRDFdumpTTL :: TestTree
 testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Turtle format(.ttl)" $ \step -> do
   let
@@ -319,20 +345,96 @@ testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Tur
 	pq:P249 "AVAZ" ;
 	prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95 .|])
     lines1 = map splitTripleWithState (T.lines case1)
-    rs1    =  map (first (parseOnly parserWikidataRdfRelation)) lines1
-    expected1 = [(Right (RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"),Comma)
-                ,(Right (RelationO "wikibase:BestRank"),Semicolon)
-                ,(Right (RelationVO "wikibase:rank" "wikibase:NormalRank"),Semicolon)
-                ,(Right (RelationVO "ps:P414" "wd:Q2632892"),Semicolon)
+    rs1    =  map (first (rightParse parserWikidataRdfRelation)) lines1
+    expected1 = [(RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement",Comma)
+                ,(RelationO "wikibase:BestRank",Semicolon)
+                ,(RelationVO "wikibase:rank" "wikibase:NormalRank",Semicolon)
+                ,(RelationVO "ps:P414" "wd:Q2632892",Semicolon)
+                ,(RelationVO "pq:P249" "\"AVAZ\"",Semicolon)
+                ,(RelationVO "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95",End)
                 ]
-
+    triples1 = [RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"
+               ,RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:BestRank"
+               ,RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "wikibase:rank" "wikibase:NormalRank"
+               ,RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "ps:P414" "wd:Q2632892"
+               ,RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "pq:P249" "\"AVAZ\""
+               ,RelationSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95"
+               ]
   mapM_ (uncurry eassertEqual) (zip rs1 expected1)
+  mapM_ (uncurry eassertEqual) (zip triples1 (flattenStatement rs1))
+
+  let
+    case2 = T.pack ([r|wd:Q31 a wikibase:Item ;
+        rdfs:label "Belgium"@en ;
+        skos:prefLabel "Belgium"@en ;
+        schema:name "Belgium"@en ;
+        schema:description "constitutional monarchy in Western Europe"@en,
+                "État d'Europe occidentale"@fr,
+                "西欧国家"@zh-sg,
+                "Staat an Europa"@lb ;
+        skos:altLabel "Kingdom of Belgium"@en,
+                "be"@en,
+                "Королівство Бельгія"@uk ;
+        wdt:P1464 wd:Q7463296 ;
+        wdt:P1036 "2--493" ;
+        wdt:P138 wd:Q206443 ;
+        wdt:P31 wd:Q3624078,
+                wd:Q43702,
+                wd:Q160016,
+                wd:Q6505795 ;
+        wdt:P30 wd:Q46 ;
+        wdt:P36 wd:Q239 ;
+        wdt:P41 <http://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Belgium%20%28civil%29.svg> ;
+        wdt:P297 "BE" ;
+        wdt:P2853 wd:Q1378312,
+                wd:Q2335536 ;
+        wdt:P2927 "+0.8"^^xsd:decimal ;
+        wdt:P1332 "Point(4.77 51.5)"^^geo:wktLiteral ;
+        wdt:P3221 "destination/belgium" ;
+        p:P1464 wds:Q31-b8a6b97e-4815-1e46-db4c-6b5807933064 .|])
+    lines2 = map splitTripleWithState (T.lines case2)
+    rs2    =  map (first (rightParse parserWikidataRdfRelation)) lines2
+    triples2  = [ RelationSVO "wd:Q31" "a" "wikibase:Item"
+                , RelationSVO "wd:Q31" "rdfs:label" "Belgium@en"
+                , RelationSVO "wd:Q31" "skos:prefLabel" "Belgium@en"
+                , RelationSVO "wd:Q31" "schema:name" "Belgium@en"
+                , RelationSVO "wd:Q31" "schema:description" "constitutional monarchy in Western Europe@en"
+                , RelationSVO "wd:Q31" "schema:description" "\201tat d'Europe occidentale@fr"
+                , RelationSVO "wd:Q31" "schema:description" "\35199\27431\22269\23478@zh-sg"
+                , RelationSVO "wd:Q31" "schema:description" "Staat an Europa@lb"
+                , RelationSVO "wd:Q31" "skos:altLabel" "Kingdom of Belgium@en"
+                , RelationSVO "wd:Q31" "skos:altLabel" "be@en"
+                , RelationSVO "wd:Q31" "skos:altLabel" "\1050\1086\1088\1086\1083\1110\1074\1089\1090\1074\1086 \1041\1077\1083\1100\1075\1110\1103@uk"
+                , RelationSVO "wd:Q31" "wdt:P1464" "wd:Q7463296"
+                , RelationSVO "wd:Q31" "wdt:P1036" "\"2--493\""
+                , RelationSVO "wd:Q31" "wdt:P138" "wd:Q206443"
+                , RelationSVO "wd:Q31" "wdt:P31" "wd:Q3624078"
+                , RelationSVO "wd:Q31" "wdt:P31" "wd:Q43702"
+                , RelationSVO "wd:Q31" "wdt:P31" "wd:Q160016"
+                , RelationSVO "wd:Q31" "wdt:P31" "wd:Q6505795"
+                , RelationSVO "wd:Q31" "wdt:P30" "wd:Q46"
+                , RelationSVO "wd:Q31" "wdt:P36" "wd:Q239"
+                , RelationSVO "wd:Q31" "wdt:P41" "<http://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Belgium%20%28civil%29.svg>"
+                , RelationSVO "wd:Q31" "wdt:P297" "\"BE\""
+                , RelationSVO "wd:Q31" "wdt:P2853" "wd:Q1378312"
+                , RelationSVO "wd:Q31" "wdt:P2853" "wd:Q2335536"
+                , RelationSVO "wd:Q31" "wdt:P2927" "+0.8^^xsd:decimal"
+                , RelationSVO "wd:Q31" "wdt:P1332" "Point(4.77 51.5)^^geo:wktLiteral"
+                , RelationSVO "wd:Q31" "wdt:P3221" "\"destination/belgium\""
+                , RelationSVO "wd:Q31" "p:P1464" "wds:Q31-b8a6b97e-4815-1e46-db4c-6b5807933064"
+                ]
+  mapM_ (uncurry eassertEqual) (zip triples2 (flattenStatement rs2))
+  mapM_ print (flattenStatement rs2)
+  
 
 allWikidataTest :: TestTree
 allWikidataTest =
   testGroup
     "All Wikidata Unit tests"
-    [testWikidataTtlRelation, testWikidataRDFdumpTTL]    
+    [ testWikidataTurtleRelation
+    , testWikidataTurtleFillMissingSVO
+    , testWikidataRDFdumpTTL
+    ]
 
 
 
