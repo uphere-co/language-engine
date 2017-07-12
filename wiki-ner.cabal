@@ -24,6 +24,8 @@ library
                      , WikiEL.Type.Wikidata
                      , WikiEL.Type.Wikipedia
                      , WikiEL.Type.WordNet
+                     , WikiEL.Type.RDF.Wikidata
+                     , WikiEL.Type.RDF.Yago
                      , WikiEL.ETL.LoadData
                      , WikiEL.ETL.Parser
                      , WikiEL.EntityLinking

@@ -27,6 +27,8 @@ import           WikiEL.WikiEntityTagger
 import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Wikipedia
 import           WikiEL.Type.FileFormat
+import           WikiEL.Type.RDF.Wikidata
+import           WikiEL.Type.RDF.Yago
 import           WikiEL.ETL.Parser
 import           WikiEL.ETL.LoadData
 
@@ -48,22 +50,6 @@ instance Show YagoID where
   show (YagoID uid) = "YagoID:" ++ show uid
 -}
 
-data YagoObject = YagoID        Text
-                | YagoRDFverb   Text
-                | YagoOWLclass  Text
-                | YagoRDFSprop  Text
-                | YagoSKOSverb  Text
-                | YagoVerb      Text
-                | YagoWordnet   Text
-                | YagoWikicat   Text
-                | YagoClass     Text
-                | YagoWikiTitle Text
-                | YagoWikiAlias Text
-                | YagoNonEnWikiTitle Text
-                | YagoNonEnWikiAlias Text
-                deriving (Eq, Show)
-
-type YagoRdfTriple = (YagoObject, YagoObject, YagoObject, YagoObject)
 
 
 object = takeTill (\x -> x=='>' || C.isSpace x)
@@ -209,24 +195,6 @@ allYagoTest =
     [testYagoRdfObjects, testYagoTaxonomyTSVrows]    
 
 
-data WikidataObject = Alias      Text
-                    | NonEnAlias Text
-                    | TypedText  Text
-                    | NameSpaceObject Text Text                    
-                    | URLObject  Text
-                    | UnknownObject Text
-                    deriving(Show, Eq)
-
-data TurtleState = Comma 
-                 | Semicolon
-                 | End
-                 deriving (Show, Eq)
-
-data TurtleRelation = RelationSVO WikidataObject WikidataObject WikidataObject
-                    | RelationVO  WikidataObject WikidataObject
-                    | RelationO   WikidataObject
-                    deriving (Show, Eq)
-                   
 wtoken = takeWhile1 (not . C.isSpace)
 
 parserWikiAlias, parserNonEnWikiAlias, parserWikiTypedText, parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
