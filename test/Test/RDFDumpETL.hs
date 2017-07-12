@@ -323,15 +323,15 @@ splitTripleWithState :: Text -> Maybe (Text, TurtleState)
 splitTripleWithState line = g row nextState
   where
     input = T.strip line
+    row   = (T.strip . T.init) input
     f ',' = Just Comma
     f ';' = Just Semicolon
     f '.' = Just End
-    f _   = Nothing -- for blank lines
-    row = T.init input
+    f _   = Nothing -- ignore lines with wrong format
     nextState = case input of
       "" -> Nothing
       _  -> f (T.last input)      
-    g row (Just state) = Just (T.strip row, state)
+    g row (Just state) = Just (row, state)
     g _ Nothing = Nothing
 
 
