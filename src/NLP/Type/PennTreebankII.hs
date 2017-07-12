@@ -15,6 +15,7 @@ module NLP.Type.PennTreebankII
 , AnchorTag(..)
 , TernaryLogic(..)
 , isNone, isVerb, isNoun
+, linkIDChunk
 , identifyPOS, identifyChunk, identifyTrace
 , Bitree(..)
 , type PennTreeGen, type PennTree, type PennTreeIdxG, type PennTreeIdx, type PennTreeIdxA
@@ -39,7 +40,7 @@ import           Data.Binary                    (Binary)
 import           Data.Bitraversable
 import           Data.Either                    (either)
 import           Data.Foldable                  (toList)
-import           Data.Maybe                     (listToMaybe)
+import           Data.Maybe                     (catMaybes,isNothing,listToMaybe)
 import           Data.Monoid                    ((<>))
 import           Data.String                    (IsString)
 import           Data.Text                      (Text)
@@ -221,6 +222,9 @@ data Trace = Tr_PRO   -- ^ overt subject, subject control and small clauses
            deriving (Show,Eq,Ord,Enum,Bounded)
 
 
+newtype LinkID = LinkID Int deriving (Show,Eq,Ord)
+
+
 data IOBPrefix = I_       -- ^ inside the chunk 
                | B_       -- ^ inside the chunk, preceding word is part of a different chunk
                | O_       -- ^ not part of a chunk
@@ -358,7 +362,14 @@ identifyChunk t =
           | otherwise   -> error ("no such chunk tag : " ++ T.unpack t)
 
 
-identifyTrace :: Text -> (Trace,Maybe Int)
+linkIDChunk :: Text -> [LinkID]
+linkIDChunk t = 
+  let ps = reverse (T.splitOn "-" t)
+      f = either (const Nothing) (Just . LinkID . fst) . decimal
+  in catMaybes . fst . break isNothing . map f $ ps
+
+
+identifyTrace :: Text -> (Trace,Maybe LinkID)
 identifyTrace t =
   let (p:ps) = T.splitOn "-" t
       tr = if | p == "*PRO*"  -> Tr_PRO
@@ -374,10 +385,9 @@ identifyTrace t =
               | p == "*EXP*"  -> Tr_EXP
               | p == "*PPA*"  -> Tr_PPA
               | otherwise   -> error ("no such trace tag : " ++ T.unpack t)
-      mn = either (const Nothing) (Just . fst) . decimal =<< listToMaybe ps
+      mn = either (const Nothing) (Just . LinkID . fst) . decimal =<< listToMaybe ps
   in (tr,mn)
 
-      
 
 -- | chunk = chunktag, token = token in node. 
 --   typically token will be (pos = postag, a = content)
