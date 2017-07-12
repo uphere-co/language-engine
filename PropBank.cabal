@@ -37,6 +37,7 @@ library
   ghc-prof-options:     -auto-all
   build-depends:       base,
                        attoparsec,
+                       bifunctors,
                        directory,
                        discrimination,
                        filepath,

@@ -7,6 +7,7 @@ import           Control.Lens
 import           Control.Monad.Loops             (unfoldM)
 import           Control.Monad.Trans.State
 import qualified Data.Attoparsec.Text       as A
+import           Data.Bifoldable                 (bifoldMap)
 import           Data.Foldable                   (toList)
 import           Data.List (intercalate)
 import           Data.Maybe                      (fromJust,mapMaybe,listToMaybe)
@@ -38,15 +39,29 @@ mergeHyphen = fmap (fmap reverse) (go Nothing)
                                       (_,(M_HYPH,_)) -> put xs >> go (Just (x:ys))
                                       _              -> return acc 
 
+
 getMerged tr = let atr = (getADTPennTree . convertTop) tr
-                   -- terms0 = (filter (\(_,(t,_)) -> t /= D_NONE) . zip [0..] . toList) atr
                in evalState (unfoldM mergeHyphen) (zip [0..] (toList atr))
 
+
+createTraceMap :: PennTree -> [(LinkID,Range)]
+createTraceMap tr = 
+  let itr = (termRangeTree . mkIndexedTree) tr
+  in bifoldMap (\(rng,x) -> [(i,rng) | i <- linkIDChunk x]) (const []) itr
+
+
+findTraces :: PennTreeIdx -> [(Int,(Trace,Maybe LinkID))]
+findTraces = map f . filter (\(_,(pos,_)) -> pos == D_NONE) . toList
+  where f (i,(_,txt)) = (i,identifyTrace txt)
+
+
+exclusionList :: PennTree -> [Int]
 exclusionList tr = let f []     = []
                        f ys@((i,(t,_)):xs) = (if t == D_NONE then [i] else []) ++ map (^._1) xs 
                    in concatMap f (getMerged tr)
 
 
+convertTop :: PennTree -> PennTree
 convertTop (PN _ xs) = PN "ROOT" xs
 
 
@@ -62,10 +77,7 @@ adjustIndex xs n = let m = length (filter (<n) xs)
 
 adjustIndexFromTree :: PennTree -> Int -> Either Int Int
 adjustIndexFromTree = adjustIndex . exclusionList
-{-   let itr = mkIndexedTree tr
-      excl = exclusionList tr  map (^._1) (findNoneLeaf itr)
-  in adjustIndex excl 
--}
+
 
 maximalEmbeddedRange :: PennTreeGen c (Int,t) -> Range -> [(Range,PennTreeIdxG c t)]
 maximalEmbeddedRange tr r = go (termRangeTree tr)
