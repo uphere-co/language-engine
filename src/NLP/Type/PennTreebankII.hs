@@ -9,11 +9,14 @@
 module NLP.Type.PennTreebankII
 ( POSTag(..)
 , ChunkTag(..)
+, Trace(..)
 , IOBPrefix(..)
 , RelationTag(..)
 , AnchorTag(..)
 , TernaryLogic(..)
-, isNone, isVerb, isNoun, identifyPOS, identifyChunk
+, isNone, isVerb, isNoun
+, linkIDChunk
+, identifyPOS, identifyChunk, identifyTrace
 , Bitree(..)
 , type PennTreeGen, type PennTree, type PennTreeIdxG, type PennTreeIdx, type PennTreeIdxA
 , type Range
@@ -35,11 +38,14 @@ import           Data.Bifoldable
 import           Data.Bifunctor
 import           Data.Binary                    (Binary)
 import           Data.Bitraversable
+import           Data.Either                    (either)
 import           Data.Foldable                  (toList)
+import           Data.Maybe                     (catMaybes,isNothing,listToMaybe)
 import           Data.Monoid                    ((<>))
 import           Data.String                    (IsString)
 import           Data.Text                      (Text)
-import qualified Data.Text                 as T  
+import qualified Data.Text                 as T
+import           Data.Text.Read                 (decimal)
 import           GHC.Generics
 --
 import           Data.Attribute
@@ -199,6 +205,26 @@ isWHphrase WHPP   = True
 isWHphrase _      = False
 
 
+
+data Trace = Tr_PRO   -- ^ overt subject, subject control and small clauses
+           | Tr_STAR  -- ^ passive traces including reduced relative clauses
+                      --   and raising constructions
+           | Tr_T     -- ^ trace of A-movement, including parasitic gaps
+           | Tr_NP    -- ^ arbitrary PRO, controlled PRO, and trace of A-movement
+           | Tr_O     -- ^ null complementizer, including null wh-operator
+           | Tr_U     -- ^ unit
+           | Tr_QMARK -- ^ placeholder for ellipsed material
+           | Tr_NOT   -- ^ anti-placeholder in template gapping
+           | Tr_RNR   -- ^ pseudo-attach: right node raising
+           | Tr_ICH   -- ^ pseudo-attach: interpret constituent here
+           | Tr_EXP   -- ^ pseudo-attach: extraposition
+           | Tr_PPA   -- ^ predictable ambiguous attachments
+           deriving (Show,Eq,Ord,Enum,Bounded)
+
+
+newtype LinkID = LinkID Int deriving (Show,Eq,Ord)
+
+
 data IOBPrefix = I_       -- ^ inside the chunk 
                | B_       -- ^ inside the chunk, preceding word is part of a different chunk
                | O_       -- ^ not part of a chunk
@@ -335,6 +361,32 @@ identifyChunk t =
           | p == "NML"  -> NML
           | otherwise   -> error ("no such chunk tag : " ++ T.unpack t)
 
+
+linkIDChunk :: Text -> [LinkID]
+linkIDChunk t = 
+  let ps = reverse (T.splitOn "-" t)
+      f = either (const Nothing) (Just . LinkID . fst) . decimal
+  in catMaybes . fst . break isNothing . map f $ ps
+
+
+identifyTrace :: Text -> (Trace,Maybe LinkID)
+identifyTrace t =
+  let (p:ps) = T.splitOn "-" t
+      tr = if | p == "*PRO*"  -> Tr_PRO
+              | p == "*"      -> Tr_STAR
+              | p == "*T*"    -> Tr_T
+              | p == "(NP *)" -> Tr_NP
+              | p == "0"      -> Tr_O
+              | p == "*U*"    -> Tr_U
+              | p == "*?*"    -> Tr_QMARK
+              | p == "*NOT*"  -> Tr_NOT
+              | p == "*RNR*"  -> Tr_RNR
+              | p == "*ICH*"  -> Tr_ICH
+              | p == "*EXP*"  -> Tr_EXP
+              | p == "*PPA*"  -> Tr_PPA
+              | otherwise   -> error ("no such trace tag : " ++ T.unpack t)
+      mn = either (const Nothing) (Just . LinkID . fst) . decimal =<< listToMaybe ps
+  in (tr,mn)
 
 
 -- | chunk = chunktag, token = token in node. 
