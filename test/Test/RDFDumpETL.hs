@@ -94,7 +94,7 @@ parserYAGOclass   = parserYAGOtoken "<yago" ">"     YagoClass
 parserYAGOwikiAlias :: Parser YagoObject
 parserYAGOwikiAlias = do
   let alias = takeTill (=='"')
-  string "\""
+  char '"'
   t <- alias
   string "\"@eng"
   return (YagoWikiAlias t)
@@ -102,10 +102,10 @@ parserYAGOwikiAlias = do
 
 parserYAGOwikiTitle :: Parser YagoObject
 parserYAGOwikiTitle = do
-  string "<"
+  char '<'
   fst <- satisfy (not . C.isLower)
   rest <- object
-  string ">"
+  char '>'
   let title = T.cons fst rest
   return (YagoWikiTitle title)
 
@@ -213,6 +213,7 @@ data WikidataObject = Alias      Text
                     | NonEnAlias Text
                     | TypedText  Text
                     | NameSpaceObject Text Text                    
+                    | URLObject  Text
                     | UnknownObject Text
                     deriving(Show, Eq)
 
@@ -231,14 +232,14 @@ wtoken = takeWhile1 (not . C.isSpace)
 parserWikiAlias, parserNonEnWikiAlias, parserWikiTypedText, parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
 parserWikiAlias = do
   let alias = takeTill (=='"')
-  string "\""
+  char '"'
   t <- alias
   string "\"@en"
   return (Alias t)
 
 parserNonEnWikiAlias = do
   let alias = takeTill (=='"')
-  string "\""
+  char '"'
   t <- alias
   string "\"@"
   lan <- wtoken
@@ -246,16 +247,23 @@ parserNonEnWikiAlias = do
 
 parserWikiTypedText = do
   let getValue = takeTill (=='"')
-  string "\""
+  char '"'
   v <- getValue
   string "\"^^"
   t <- wtoken
   return (TypedText (T.concat [v, "^^",t]))
 
 
+parserURLObject = do
+  char '<'
+  t <- takeTill (=='>')
+  char '>'
+  return (URLObject t)
+
+
 parserWikiNamedSpaceObject = do
   t <- takeTill (\x -> (x==':') || (C.isSpace x))
-  string ":"
+  char ':'
   n <- wtoken
   return (NameSpaceObject t n)
 
@@ -268,6 +276,7 @@ wikidataObject :: Parser WikidataObject
 wikidataObject = choice [ parserWikiAlias
                         , parserNonEnWikiAlias
                         , parserWikiTypedText
+                        , parserURLObject
                         , parserWikiNamedSpaceObject
                         , parserWikiUnknownObject
                         ]
