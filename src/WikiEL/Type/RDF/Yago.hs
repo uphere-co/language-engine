@@ -15,8 +15,8 @@ data YagoObject = YagoID        Text
                 | YagoClass     Text
                 | YagoWikiTitle Text
                 | YagoWikiAlias Text
-                | YagoNonEnWikiTitle Text
-                | YagoNonEnWikiAlias Text
+                | YagoNonEnWikiTitle Text Text
+                | YagoNonEnWikiAlias Text Text
                 deriving (Eq, Show)
 
 type YagoRdfTriple = (YagoObject, YagoObject, YagoObject, YagoObject)

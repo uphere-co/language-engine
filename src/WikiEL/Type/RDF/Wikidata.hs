@@ -5,7 +5,7 @@ module WikiEL.Type.RDF.Wikidata where
 import           Data.Text                             (Text)
 
 data WikidataObject = Alias      Text
-                    | NonEnAlias Text
+                    | NonEnAlias Text Text
                     | TypedText  Text
                     | NameSpaceObject Text Text                    
                     | URLObject  Text

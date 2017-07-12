@@ -79,9 +79,8 @@ parserYAGOclass   = parserYAGOtoken "<yago" ">"     YagoClass
 
 parserYAGOwikiAlias :: Parser YagoObject
 parserYAGOwikiAlias = do
-  let alias = takeTill (=='"')
   char '"'
-  t <- alias
+  t <- takeTill (=='"')
   string "\"@eng"
   return (YagoWikiAlias t)
 
@@ -99,12 +98,11 @@ parserYAGOwikiTitle = do
 parserYAGOnonEnwikiTitle :: Parser YagoObject
 parserYAGOnonEnwikiTitle = do
   string "<"
-  c1 <- satisfy C.isLower
-  c2 <- satisfy C.isLower
+  c <- takeTill (\x -> (x=='/') || ((not . C.isLower) x))
   string "/"
   t <- object
   string ">"
-  return (YagoNonEnWikiTitle t)
+  return (YagoNonEnWikiTitle c t)
 
 
 
@@ -146,7 +144,7 @@ testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
   eassertEqual (parseOnly parserNounToken "<wordnet_organization_108008335>")      (Right (YagoWordnet "organization_108008335"))
   eassertEqual (parseOnly parserNounToken "<wikicat_Graphics_hardware_companies>") (Right (YagoWikicat "Graphics_hardware_companies"))
   eassertEqual (parseOnly parserNounToken "<PowerVR>")            (Right (YagoWikiTitle "PowerVR"))
-  eassertEqual (parseOnly parserNounToken "<de/NEC_PowerVR_PCX>") (Right (YagoNonEnWikiTitle "NEC_PowerVR_PCX"))
+  eassertEqual (parseOnly parserNounToken "<de/NEC_PowerVR_PCX>") (Right (YagoNonEnWikiTitle "de" "NEC_PowerVR_PCX"))
   eassertEqual (parseOnly parserNounToken "<yagoPermanentlyLocatedEntity>") (Right (YagoClass "PermanentlyLocatedEntity"))
   eassertEqual (parseOnly parserNounToken "\"Demography of Afghanistan\"@eng") (Right (YagoWikiAlias "Demography of Afghanistan"))
 
@@ -179,10 +177,10 @@ testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, 
              ,Right (YagoID "klokc9_1m6_1koas7s", YagoWikicat "Syntactic_entities", YagoRDFSprop "subClassOf", YagoOWLclass "Thing")
              
              ,Right (YagoID "1kmo9y9_88c_1eoxwov",YagoWikiTitle "PowerVR", YagoRDFverb "type", YagoWikicat "Graphics_hardware_companies")
-             ,Right (YagoID "13tyf46_88c_4gx1l8", YagoNonEnWikiTitle "NEC_PowerVR_PCX", YagoRDFverb "type", YagoWikicat "Graphics_chips")
+             ,Right (YagoID "13tyf46_88c_4gx1l8", YagoNonEnWikiTitle "de" "NEC_PowerVR_PCX", YagoRDFverb "type", YagoWikicat "Graphics_chips")
              
              ,Right (YagoID "we31u1_1sz_vfg0ga", YagoWikiTitle "Burnside,_Iowa", YagoSKOSverb "prefLabel", YagoWikiAlias "Burnside, Iowa")
-             ,Right (YagoID "1qt4wt3_1ia_1k16t4w",YagoNonEnWikiTitle "Olli_Tyrväinen", YagoRDFSprop "label", YagoWikiAlias "Olli Tyrvainen")
+             ,Right (YagoID "1qt4wt3_1ia_1k16t4w",YagoNonEnWikiTitle "pl" "Olli_Tyrväinen", YagoRDFSprop "label", YagoWikiAlias "Olli Tyrvainen")
              ,Right (YagoID "1j3k64j_qkd_4hgw54", YagoWikiTitle "Fred_M._Hechinger", YagoVerb "redirectedFrom", YagoWikiAlias "Fred Hechinger")
              ]
     rows = map (parseOnly parserRDFrowInTSV) lines 
@@ -211,7 +209,7 @@ parserNonEnWikiAlias = do
   t <- alias
   string "\"@"
   lan <- wtoken
-  return (NonEnAlias (T.concat [t, "@",lan]))
+  return (NonEnAlias lan t)
 
 parserWikiTypedText = do
   let getValue = takeTill (=='"')
