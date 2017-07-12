@@ -209,11 +209,11 @@ allYagoTest =
     [testYagoRdfObjects, testYagoTaxonomyTSVrows]    
 
 
-data WikidataObject = WikidataAlias      Text
-                    | WikidataNonEnAlias Text
-                    | WikidataTypedText  Text
-                    | WikidataNamedSpaceObject Text Text                    
-                    | WikidataUnknownObject Text
+data WikidataObject = Alias      Text
+                    | NonEnAlias Text
+                    | TypedText  Text
+                    | NameSpaceObject Text Text                    
+                    | UnknownObject Text
                     deriving(Show, Eq)
 
 data TurtleState = Comma 
@@ -233,8 +233,8 @@ parserWikiAlias = do
   let alias = takeTill (=='"')
   string "\""
   t <- alias
-  string "\"@eng"
-  return (WikidataAlias t)
+  string "\"@en"
+  return (Alias t)
 
 parserNonEnWikiAlias = do
   let alias = takeTill (=='"')
@@ -242,7 +242,7 @@ parserNonEnWikiAlias = do
   t <- alias
   string "\"@"
   lan <- wtoken
-  return (WikidataNonEnAlias (T.concat [t, "@",lan]))
+  return (NonEnAlias (T.concat [t, "@",lan]))
 
 parserWikiTypedText = do
   let getValue = takeTill (=='"')
@@ -250,18 +250,18 @@ parserWikiTypedText = do
   v <- getValue
   string "\"^^"
   t <- wtoken
-  return (WikidataTypedText (T.concat [v, "^^",t]))
+  return (TypedText (T.concat [v, "^^",t]))
 
 
 parserWikiNamedSpaceObject = do
   t <- takeTill (\x -> (x==':') || (C.isSpace x))
   string ":"
   n <- wtoken
-  return (WikidataNamedSpaceObject t n)
+  return (NameSpaceObject t n)
 
 parserWikiUnknownObject = do
   t <- wtoken
-  return (WikidataUnknownObject t)
+  return (UnknownObject t)
 
 
 wikidataObject :: Parser WikidataObject
@@ -301,7 +301,15 @@ parserWikidataRdfRelation :: Parser TurtleRelation
 parserWikidataRdfRelation = choice [ parserWikidataRdfRelation3
                                    , parserWikidataRdfRelation2
                                    , parserWikidataRdfRelation1]
-                          
+
+
+rightParse parser x = f r
+  where
+    r = parseOnly parser x
+    f (Right r) = r
+    f (Left  _) = error "Parse error"
+wo = rightParse wikidataObject
+
 splitTripleWithState :: Text -> (Text, TurtleState)
 splitTripleWithState line = (T.strip row, nextState)
   where
@@ -323,24 +331,14 @@ fillMissingSV (_, _, _) _ = error "Wrong formats"
 flattenStatement :: [(TurtleRelation,TurtleState)] -> [TurtleRelation]
 flattenStatement rs = reverse triples
   where
-    (_, triples) = foldl' f ((End, fToken "a", fToken "a"), []) rs
+    (_, triples) = foldl' f ((End, wo "", wo ""), []) rs
     f (state, triples) relation = (state', t:triples)
       where
         (state', t) = fillMissingSV state relation
 
-rightParse parser x = f r
-  where
-    r = parseOnly parser x
-    f (Right r) = r
-    f (Left  _) = error "Parse error"
-    
-
-
-unknown = WikidataUnknownObject
-fToken = rightParse wikidataObject
-relSVO s v o = RelationSVO (fToken s) (fToken v) (fToken o)
-relVO    v o = RelationVO  (fToken v) (fToken o) 
-relO       o = RelationO   (fToken o)
+relSVO s v o = RelationSVO (wo s) (wo v) (wo o)
+relVO    v o = RelationVO  (wo v) (wo o) 
+relO       o = RelationO   (wo o)
 
 testWikidataTurtleRelation :: TestTree
 testWikidataTurtleRelation = testCaseSteps "Test case for parsing individual lines of Turtle format files" $ \step -> do
@@ -354,14 +352,14 @@ testWikidataTurtleRelation = testCaseSteps "Test case for parsing individual lin
     (row, nextState) = splitTripleWithState "    c.\n"
   eassertEqual (Right (relO "c"))      (parseOnly parserWikidataRdfRelation row)
   eassertEqual (Right (relVO "b" "c")) (parseOnly parserWikidataRdfRelation "b c")
-  eassertEqual (Right (relSVO "a" "b" "\"c d e\"@eng"))    (parseOnly parserWikidataRdfRelation "a b \"c d e\"@eng")
+  eassertEqual (Right (relSVO "a" "b" "\"c d e\"@en"))    (parseOnly parserWikidataRdfRelation "a b \"c d e\"@en")
   eassertEqual (Right (relSVO "a" "b" "\"c d e\"@ru")) (parseOnly parserWikidataRdfRelation "a b \"c d e\"@ru")
 
 testWikidataTurtleFillMissingSVO :: TestTree
 testWikidataTurtleFillMissingSVO = testCaseSteps "Test case to get complete RDF triples in Turtle format" $ \step -> do
-  eassertEqual (fillMissingSV (End, fToken "", fToken "") (relSVO "a" "b" "c",End)) ((End, fToken "a", fToken "b"),   relSVO "a" "b" "c")
-  eassertEqual (fillMissingSV (Comma, fToken "x", fToken "y") (relO "c",Comma))     ((Comma, fToken "x", fToken "y"), relSVO "x" "y" "c")
-  eassertEqual (fillMissingSV (Semicolon, fToken "x", fToken "y") (relVO "b" "c",Comma)) ((Comma, fToken "x", fToken "b"), relSVO "x" "b" "c")
+  eassertEqual (fillMissingSV (End, wo "", wo "") (relSVO "a" "b" "c",End)) ((End, wo "a", wo "b"),   relSVO "a" "b" "c")
+  eassertEqual (fillMissingSV (Comma, wo "x", wo "y") (relO "c",Comma))     ((Comma, wo "x", wo "y"), relSVO "x" "y" "c")
+  eassertEqual (fillMissingSV (Semicolon, wo "x", wo "y") (relVO "b" "c",Comma)) ((Comma, wo "x", wo "b"), relSVO "x" "b" "c")
 
 testWikidataRDFdumpTTL :: TestTree
 testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Turtle format(.ttl)" $ \step -> do
@@ -390,7 +388,7 @@ testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Tur
                ]
   mapM_ print lines1
   mapM_ (uncurry eassertEqual) (zip rs1 expected1)
-  --mapM_ (uncurry eassertEqual) (zip triples1 (flattenStatement rs1))
+  mapM_ (uncurry eassertEqual) (zip triples1 (flattenStatement rs1))
 
   let
     case2 = T.pack ([r|wd:Q31 a wikibase:Item ;
