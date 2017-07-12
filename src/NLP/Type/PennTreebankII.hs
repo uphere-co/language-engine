@@ -217,6 +217,7 @@ data Trace = Tr_PRO   -- ^ overt subject, subject control and small clauses
            | Tr_RNR   -- ^ pseudo-attach: right node raising
            | Tr_ICH   -- ^ pseudo-attach: interpret constituent here
            | Tr_EXP   -- ^ pseudo-attach: extraposition
+           | Tr_PPA   -- ^ predictable ambiguous attachments
            deriving (Show,Eq,Ord,Enum,Bounded)
 
 
@@ -364,13 +365,14 @@ identifyTrace t =
               | p == "*"      -> Tr_STAR
               | p == "*T*"    -> Tr_T
               | p == "(NP *)" -> Tr_NP
-              | p == "O"      -> Tr_O
+              | p == "0"      -> Tr_O
               | p == "*U*"    -> Tr_U
               | p == "*?*"    -> Tr_QMARK
               | p == "*NOT*"  -> Tr_NOT
               | p == "*RNR*"  -> Tr_RNR
               | p == "*ICH*"  -> Tr_ICH
               | p == "*EXP*"  -> Tr_EXP
+              | p == "*PPA*"  -> Tr_PPA
               | otherwise   -> error ("no such trace tag : " ++ T.unpack t)
       mn = either (const Nothing) (Just . fst) . decimal =<< listToMaybe ps
   in (tr,mn)
