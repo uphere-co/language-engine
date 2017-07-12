@@ -24,6 +24,7 @@ ex2 = PN "ROOT" [PN "SINV" [PL ("``","``"),PN "S-TPC-1" [PN "NP-SBJ" [PL ("EX","
 
 testex2 = [(11,Right 11),(13,Right 13),(14,Left 14),(15,Left 14),(19,Right 17),(20,Left 18),(21,Right 18)]
 
+{- 
 main' :: IO ()
 main' = do
  mapM_ print (zip [0..] (toList ex1 ))  
@@ -32,8 +33,8 @@ main' = do
  mapM_ print (zip [0..] (toList ex2 ))
  print (getMerged ex2)
  print (exclusionList ex2)
+-}
 
-main = defaultMain unitTests
    
 check ex testex =  getAll (foldMap (\(i,ei') -> All (adjustIndexFromTree ex i == ei')) testex)
 
@@ -43,3 +44,5 @@ unitTests = testGroup "adjust index"
               [ testCase "ex1" (check ex1 testex1 @?= True)
               , testCase "ex2" (check ex2 testex2 @?= True)
               ]
+
+main = defaultMain unitTests

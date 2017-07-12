@@ -159,16 +159,6 @@ parseNomProp :: Text -> [NomInstance]
 parseNomProp = map parseNomInst . T.lines
 
 
--- showPropBankLabel :: PropBankLabel 
 
 
-findNodePathForLeaf :: Int -> PennTree -> [PennTreeGen Text (Int,(Text,Text))]
-findNodePathForLeaf i tr = contain i (mkIndexedTree tr)
-
-findNode :: Node -> PennTree -> Maybe (Text, PennTreeGen Text (Int,(Text,Text)))
-findNode (Node i d) tr = do
-  let lst = reverse (findNodePathForLeaf i tr)
-  PL (_,(headword,_)) <- listToMaybe (take 1 lst)
-  r <- listToMaybe $ drop d lst
-  return (headword,r)
 

@@ -10,7 +10,7 @@ import qualified Data.Attoparsec.Text       as A
 import           Data.Bifoldable                 (bifoldMap)
 import           Data.Foldable                   (toList)
 import           Data.List (intercalate)
-import           Data.Maybe                      (fromJust,mapMaybe,listToMaybe)
+import           Data.Maybe                      (fromJust,mapMaybe,listToMaybe,maybeToList)
 import           Data.Monoid                     ((<>))
 import           Data.Text                       (Text)
 import qualified Data.Text                  as T
@@ -44,15 +44,23 @@ getMerged tr = let atr = (getADTPennTree . convertTop) tr
                in evalState (unfoldM mergeHyphen) (zip [0..] (toList atr))
 
 
-createTraceMap :: PennTree -> [(LinkID,Range)]
-createTraceMap tr = 
+linkID2PhraseNode :: PennTree -> [(LinkID,Range)]
+linkID2PhraseNode tr = 
   let itr = (termRangeTree . mkIndexedTree) tr
   in bifoldMap (\(rng,x) -> [(i,rng) | i <- linkIDChunk x]) (const []) itr
 
 
-findTraces :: PennTreeIdx -> [(Int,(Trace,Maybe LinkID))]
-findTraces = map f . filter (\(_,(pos,_)) -> pos == D_NONE) . toList
+index2TraceLinkID :: PennTreeIdx -> [(Int,(Trace,Maybe LinkID))]
+index2TraceLinkID = map f . filter (\(_,(pos,_)) -> pos == D_NONE) . toList
   where f (i,(_,txt)) = (i,identifyTrace txt)
+
+
+findLinks :: [(LinkID,Range)] -> [(Int,(Trace,Maybe LinkID))] -> Int -> [(LinkID,Range)]
+findLinks l2p i2t i = do
+  (_,(t,ml)) <- filter ((== i) . fst) i2t
+  l <- maybeToList ml
+  r <- filter ((== l) . fst) l2p
+  return r
 
 
 exclusionList :: PennTree -> [Int]
@@ -85,6 +93,18 @@ maximalEmbeddedRange tr r = go (termRangeTree tr)
         go y@(PL (n,_)) = if n `isInside` r then [((n,n),y)] else []
 
 
+findNodePathForLeaf :: Int -> PennTree -> [PennTreeGen Text (Int,(Text,Text))]
+findNodePathForLeaf i tr = contain i (mkIndexedTree tr)
+
+
+findNode :: Node -> PennTree -> Maybe (Text, PennTreeGen Text (Int,(Text,Text)))
+findNode (Node i d) tr = do
+  let lst = reverse (findNodePathForLeaf i tr)
+  PL (_,(headword,_)) <- listToMaybe (take 1 lst)
+  r <- listToMaybe $ drop d lst
+  return (headword,r)
+
+
 matchR :: Range -> PennTreeIdxG c t -> Maybe (PennTreeIdxG c t)
 matchR r0 y@(PN (r,_) xs)
   | r0 == r = Just y 
@@ -94,18 +114,20 @@ matchR (b,e) x@(PL (n,_))
   | otherwise = Nothing
 
 
-matchArgNodes :: (PennTree,PennTree) -> Argument -> [MatchedArgNode]
-matchArgNodes (pt,tr) arg = do
+matchArgNodes :: (PennTree,PennTree)  -- ^ (CoreNLP tree, PropBank (human-annotated) tree)
+              -> Argument
+              -> [MatchedArgNode]
+matchArgNodes (coretr,proptr) arg = do
   n <- arg ^. arg_terminals
-  let nd = fromJust (findNode n tr)
-  let adjf = adjustIndexFromTree tr
+  let nd = fromJust (findNode n proptr)
+  let adjf = adjustIndexFromTree proptr
       adjrange (x,y) = case (adjf x, adjf y) of
                          (Left b,Left e) -> if b == e then [] else [(b,e)]
                          (Left b,Right e) -> [(b,e)]
                          (Right b,Left e) -> [(b,e-1)]
                          (Right b,Right e) -> [(b,e)]
   rng <- (adjrange . termRange . snd) nd
-  let ipt = (mkIndexedTree . getADTPennTree) pt
+  let ipt = (mkIndexedTree . getADTPennTree) coretr
       zs = maximalEmbeddedRange ipt rng
   return MatchedArgNode { _mn_node = (rng,n), _mn_trees = zs }
 

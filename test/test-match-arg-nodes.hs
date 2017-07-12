@@ -4,6 +4,7 @@ module Main where
 
 import           Control.Lens
 import           Data.Foldable
+import           Data.Maybe 
 import           Data.Monoid
 import           Test.Tasty.HUnit
 import           Test.Tasty
@@ -27,19 +28,49 @@ coretr = PN "ROOT" [PN "S" [PN "NP" [PN "NP" [PL ("NNP","Kysor")],PL (",",","),P
 proptr = PN "ROOT" [PN "S" [PN "NP-SBJ" [PN "NP" [PL ("NNP","Kysor")],PL (",",","),PN "NP" [PN "NP" [PL ("DT","a"),PL ("NN","maker")],PN "PP" [PL ("IN","of"),PN "NP" [PN "NML" [PL ("JJ","heavy"),PL ("HYPH","-"),PL ("NN","duty")],PN "NML" [PN "NML" [PL ("NN","truck")],PL ("CC","and"),PN "NML" [PL ("JJ","commercial"),PL ("NN","refrigeration")]],PL ("NN","equipment")]]],PL (",",",")],PN "VP" [PL ("VBD","said"),PN "SBAR" [PL ("-NONE-","0"),PN "S" [PN "NP-SBJ" [PL ("PRP","it")],PN "VP" [PL ("VBZ","expects"),PN "S" [PN "NP-SBJ" [PL ("PRP$","its"),PN "NML" [PL ("JJ","fourth"),PL ("HYPH","-"),PL ("NN","quarter")],PL ("NNS","earnings")],PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","be"),PN "PP-PRD" [PN "ADVP" [PL ("RBR","more"),PL ("RB","closely")],PL ("IN","in"),PN "NP" [PN "NP" [PL ("NN","line")],PN "PP" [PL ("IN","with"),PN "NP" [PN "NP" [PL ("JJ","usual"),PL ("NNS","levels")],PL (",",","),PN "SBAR" [PN "WHNP-1" [PL ("WDT","which")],PN "S" [PN "NP-SBJ" [PL ("-NONE-","*T*-1")],PN "VP" [PL ("VBP","are"),PN "NP-PRD" [PN "NP" [PN "QP" [PL ("IN","between"),PL ("CD","30"),PL ("NNS","cents"),PL ("CC","and"),PL ("CD","50"),PL ("NNS","cents")],PL ("-NONE-","*U*")],PN "NP-ADV" [PL ("DT","a"),PL ("NN","share")]]]]]]]]]]]]]]]],PL (".",".")]]
 
 
+-- newMatchArgNodes :: (PennTree,PennTree) -> Argument -> [] -- [MatchedArgNode]
+newMatchArgNodes (coretr,proptr) arg = do
+    n <- arg ^. arg_terminals
+    nd <- maybeToList (findNode n proptr)
+    rng <- case nd of
+             ("-NONE-",PL (i,_)) -> adjrange =<< map snd (findLinks l2p i2t 34)
+             _                   -> (adjrange . termRange . snd) nd
+    let zs = maximalEmbeddedRange ipt rng
+    return MatchedArgNode { _mn_node = (rng,n), _mn_trees = zs }
+
+  where
+    l2p = linkID2PhraseNode proptr
+    i2t = index2TraceLinkID (mkPennTreeIdx proptr)
+    adjf = adjustIndexFromTree proptr
+    adjrange (x,y) = case (adjf x, adjf y) of
+                       (Left b,Left e) -> if b == e then [] else [(b,e)]
+                       (Left b,Right e) -> [(b,e)]
+                       (Right b,Left e) -> [(b,e-1)]
+                       (Right b,Right e) -> [(b,e)]
+    ipt = (mkIndexedTree . getADTPennTree) coretr
+
+
+
 main = do
+  print (toList (mkPennTreeIdx proptr))
   let insts = parsePropWithFileField NoOmit proptxt
 
+  -- print insts
+  flip mapM_ insts $ \inst -> do
+    print "=="
+    let args = inst^.inst_arguments
+    flip mapM_ args $ \arg -> do
+      print "--"
+      print (newMatchArgNodes (coretr,proptr) arg)
+
+  {- 
   let minsts = matchInstances (coretr,proptr) insts
-
-  -- print minsts
-
   flip mapM_ minsts $ \minst-> do
     let inst = minst^.mi_instance
         args = minst^.mi_arguments
     print (findRelNode (minst^.mi_arguments),inst^.inst_lemma_roleset_id)
     mapM_ (print . (\a->(a^.ma_argument.arg_label.to pbLabelText,a^..ma_nodes.traverse.mn_node._1))) args
-  
+  -}
 {-     
   testlst = (5,(coretr,proptr)), )]
   
