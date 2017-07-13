@@ -50,7 +50,7 @@ import           SRL.Type.Verb
 import           Text.Format.Tree
 
 
-prepare framedir basedir = do
+prepare {- framedir -} basedir = do
   -- propdb <- constructFrameDB framedir
   -- let preddb = constructPredicateDB propdb
   dtr <- build basedir
@@ -75,8 +75,8 @@ readJSONList file = EitherT $ eitherDecode <$> liftIO (BL.readFile file)
 -- convertTop (PN _ xs) = PN "ROOT" xs
 
 
-loadMatchArticle ptreedir framedir basedir article = do
-  (preddb,props,trees) <- liftIO $ prepare framedir basedir
+loadMatchArticle ptreedir {- framedir -} basedir article = do
+  (preddb,props,trees) <- liftIO $ prepare {- framedir -} basedir
   let findf = find (\f -> takeBaseName f == article)
   flip traverse ((,) <$> findf props <*> findf trees) $ \(fprop,ftree) -> do
     insts <- readPropBank fprop 
@@ -92,39 +92,51 @@ loadMatchArticle ptreedir framedir basedir article = do
         pairs = zip cores proptrs
     return (merge (^.inst_tree_id) pairs insts)
 
-main = do
-  let article = "wsj_2445"
-      ptreedir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
-      framedir = "/scratch/wavewave/MASC/Propbank/Propbank-orig/framefiles"
-      basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
+propbankCorpus ptreedir basedir article = do
   void . runEitherT $ do
-    lst' <- loadMatchArticle ptreedir framedir basedir article
-    let lst = concat lst'
+    lst <- concat <$> loadMatchArticle ptreedir {- framedir -} basedir article
     liftIO . flip mapM_ lst $ \(i,(((coretr,coredep,corelma),proptr),insts)) -> do
-      putStrLn "-------------"
+      putStrLn "\n\n\n-------------"
       putStrLn $ "sentence " ++ show i
+      putStrLn "-------------"      
       let tokens = map (^._2) . toList $ coretr
       T.IO.putStrLn (T.intercalate " " tokens)
-      putStrLn "--"
-      putStrLn $ "propbank"
+      
+      -- print coretr
+      putStrLn "\n\n======"
+      -- print proptr
+      putStrLn "-----"      
+      putStrLn "propbank"
+      putStrLn "-----"
       let minsts = matchInstances (coretr,proptr) insts
       flip mapM_ minsts $ \minst-> do
         let inst = minst^.mi_instance
             args = minst^.mi_arguments
         print (findRelNode (minst^.mi_arguments),inst^.inst_lemma_roleset_id)
         mapM_ (print . (\a->(a^.ma_argument.arg_label.to pbLabelText,a^..ma_nodes.traverse.mn_node._1))) args
-     
+
+      -- mapM_ printMatchedInst minsts -- (matchInstances (coretr,proptr) insts)
            
-      putStrLn "--"
-      putStrLn $ "verb property"
+      putStrLn "-----"
+      putStrLn "verb property"
+      putStrLn "-----"      
       let lmap = IM.fromList (map (_2 %~ Lemma) corelma)
       print $ map (\vp->(vp^.vp_index,vp^.vp_lemma.to unLemma)) (verbPropertyFromPennTree lmap coretr)
       showClauseStructure lmap coretr
+      putStrLn "-----"
+      putStrLn "dependency"
+      putStrLn "-----"
+      let tokens = map (^._2) . toList $ coretr
+      --  T.IO.putStrLn (T.intercalate " " tokens)
+          tkmap = IM.fromList (zip [0..] tokens)
+          deptree = fmap (\(i,r) -> let t = fromMaybe "" (IM.lookup (i-1) tkmap) in (i-1,t,r))
+                      (dependencyLabeledTree coredep)
+      T.IO.putStrLn (linePrint (T.pack.show) deptree)
+
       
       {-
-      mapM_ printMatchedInst (matchInstances (coretr,proptr) insts)
        
-      showClauseStructure lmap coretr
+
       let tokens = map (^._2) . toList $ coretr
       T.IO.putStrLn (T.intercalate " " tokens)
       let tkmap = IM.fromList (zip [0..] tokens)
@@ -132,5 +144,10 @@ main = do
           deptree = fmap (\(i,r) -> let t = fromMaybe "" (IM.lookup (i-1) tkmap) in (i-1,t,r))
                       (dependencyLabeledTree coredep)
 
-      T.IO.putStrLn (linePrint (T.pack.show) deptree)
       -}
+main = do
+  let article = "wsj_2445"
+      ptreedir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
+      -- framedir = "/scratch/wavewave/MASC/Propbank/Propbank-orig/framefiles"
+      basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
+  propbankCorpus ptreedir basedir article

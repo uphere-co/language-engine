@@ -16,7 +16,7 @@ import qualified Data.ByteString.Lazy.Char8   as BL
 import           Data.Default
 import           Data.Foldable                        (toList,traverse_)
 import qualified Data.IntMap                  as IM
-import           Data.List                            (intercalate,sort)
+import           Data.List                            (group,intercalate,sort)
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Sequence                as Seq
@@ -35,9 +35,10 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
-import           CoreNLP.Simple.Type          
-import           NLP.Type.PennTreebankII
+import           CoreNLP.Simple.Type
 import           NLP.Parser.PennTreebankII
+import           NLP.Printer.PennTreebankII
+import           NLP.Type.PennTreebankII
 import           PropBank.Match
 
 
@@ -45,8 +46,29 @@ getTerms :: PennTree -> [Text]
 getTerms = map snd . filter (\(t,_) -> t /= "-NONE-") . toList 
 
 
+getNONETerms :: PennTree -> [Text]
+getNONETerms = map snd . filter (\(t,_) -> t == "-NONE-") . toList 
+
+
 parseOntoNotesPennTree :: FilePath -> IO (Either String [PennTree])
 parseOntoNotesPennTree f = fmap (A.parseOnly (A.many1 (A.skipSpace *> pnode))) (T.IO.readFile f)
+
+
+--   print trclst
+--   print $ bifoldMap (\x -> [x]) (const []) tr
+--   print $ chkidlst
+{-   let b = getAll (foldMap (All . (== 1) . length) (group chkidlst))
+  when (not b) $ do
+    print tr
+    T.IO.putStrLn $ prettyPrint 0 tr
+    (error "not unique")
+-}
+
+
+{-   let trcidlst = sort  . mapMaybe (\x->x^._2) $ trclst
+      chk = getAll $ foldMap (\x -> All (x `elem` chkidlst)) trcidlst
+  when (not chk) (error "not matched")
+-}
 
 
 errorHandler h_err msg action = do
@@ -98,8 +120,8 @@ serializePennTreeDep pp txts (h_ud,h_tr)= do
 
 process basedir pp = do
   dtr <- build basedir
-  let fps = take 20 $ sort (toList (dirTree dtr))
-      parsefiles = filter (\x -> takeExtensions x == ".parse") fps
+  let fps = sort (toList (dirTree dtr))
+      parsefiles = take 20 $ filter (\x -> takeExtensions x == ".parse") fps
   withFile "error.log" WriteMode $ \h_err -> do
     flip traverse_ parsefiles $ \f -> do
       putStrLn "\n\n\n=============================================================================================="
@@ -109,7 +131,25 @@ process basedir pp = do
       case etr of
         Left err -> hPutStrLn h_err f
         Right trs -> do
-          mapM_ print trs
+          -- mapM_ print trs
+          flip mapM_ trs $ \tr -> do
+            putStrLn "-------------"
+            print (createTraceMap tr)
+            {- 
+            let trclst = (map identifyTrace . getNONETerms) tr
+            print trclst
+            print $ bifoldMap (\x -> [x]) (const []) tr
+            let chkidlst = sort (bifoldMap (\x -> linkIDChunk x) (const []) tr)
+            print $ chkidlst
+            let b = getAll (foldMap (All . (== 1) . length) (group chkidlst))
+            when (not b) $ do
+              print tr
+              T.IO.putStrLn $ prettyPrint 0 tr
+              (error "not unique")
+            let trcidlst = sort  . mapMaybe (\x->x^._2) $ trclst
+                chk = getAll $ foldMap (\x -> All (x `elem` chkidlst)) trcidlst
+            when (not chk) (error "not matched")
+            -}
 {-          let txts = flip map trs $ \tr -> 
                 in T.intercalate " " (map (T.concat . map snd) merged)
               
@@ -132,8 +172,8 @@ main = do
                      . ( postagger .~ True )
                      . ( lemma .~ True )
                      . ( sutime .~ False )
-                     . ( depparse .~ True )
-                     . ( constituency .~ True )
+                     . ( depparse .~ False ) -- . ( depparse .~ True )
+                     . ( depparse .~ False ) -- . ( constituency .~ True )
                      . ( ner .~ False )
     pp <- prepare pcfg
     process basedir pp 
