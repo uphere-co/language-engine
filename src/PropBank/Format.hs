@@ -18,6 +18,10 @@ import           PropBank.Type.Match
 import           PropBank.Type.Prop
 
 
+formatRoleSetID :: RoleSetID -> T.Text
+formatRoleSetID r = r^._1 <> "." <> r^._2
+
+
 printMatchedNode :: MatchedArgNode -> IO ()
 printMatchedNode x = do
   T.IO.putStrLn $ T.pack (show (x^.mn_node._1)) <> ":"
@@ -42,7 +46,8 @@ showInstance :: (PennTree,Instance) -> IO ()
 showInstance (tr,prop) = do
   T.IO.putStrLn "---------------"
   let roleset = prop^.inst_lemma_roleset_id
-  T.IO.putStrLn (roleset^._1 <> "." <> T.pack (show (roleset^._2)))
+  -- T.IO.putStrLn (roleset^._1 <> "." <> T.pack (show (roleset^._2)))
+  T.IO.putStrLn (formatRoleSetID roleset)
   T.IO.putStrLn "---------------"
   mapM_ (showArgument tr) (prop^.inst_arguments)
 
