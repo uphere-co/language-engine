@@ -79,14 +79,14 @@ loadMatchArticle ptreedir {- framedir -} basedir article = do
   (preddb,props,trees) <- liftIO $ prepare {- framedir -} basedir
   let findf = find (\f -> takeBaseName f == article)
   flip traverse ((,) <$> findf props <*> findf trees) $ \(fprop,ftree) -> do
-    insts <- readPropBank fprop 
+    insts <- readPropBank fprop
     proptrs' <- readOrigPennTree ftree
     let proptrs = map convertTop proptrs'
         ptreefile = article <.> "corenlp_ptree"
         depfile = article <.> "corenlp_udep"
         plemmafile = article <.> "corenlp_lemma"
     coretrs :: [PennTree]  <- readJSONList  (ptreedir </> ptreefile)
-    coredeps :: [Dependency] <- readJSONList (ptreedir </> depfile)    
+    coredeps :: [Dependency] <- readJSONList (ptreedir </> depfile)
     corelmas :: [[(Int,Text)]] <- readJSONList (ptreedir </> plemmafile)
     let cores = zip3 coretrs coredeps corelmas
         pairs = zip cores proptrs
@@ -98,14 +98,14 @@ propbankCorpus ptreedir basedir article = do
     liftIO . flip mapM_ lst $ \(i,(((coretr,coredep,corelma),proptr),insts)) -> do
       putStrLn "\n\n\n-------------"
       putStrLn $ "sentence " ++ show i
-      putStrLn "-------------"      
+      putStrLn "-------------"
       let tokens = map (^._2) . toList $ coretr
       T.IO.putStrLn (T.intercalate " " tokens)
-      
+
       -- print coretr
       putStrLn "\n\n======"
       -- print proptr
-      putStrLn "-----"      
+      putStrLn "-----"
       putStrLn "propbank"
       putStrLn "-----"
       let minsts = matchInstances (coretr,proptr) insts
@@ -116,10 +116,10 @@ propbankCorpus ptreedir basedir article = do
         mapM_ (print . (\a->(a^.ma_argument.arg_label.to pbLabelText,a^..ma_nodes.traverse.mn_node._1))) args
 
       -- mapM_ printMatchedInst minsts -- (matchInstances (coretr,proptr) insts)
-           
+
       putStrLn "-----"
       putStrLn "verb property"
-      putStrLn "-----"      
+      putStrLn "-----"
       let lmap = IM.fromList (map (_2 %~ Lemma) corelma)
       print $ map (\vp->(vp^.vp_index,vp^.vp_lemma.to unLemma)) (verbPropertyFromPennTree lmap coretr)
       showClauseStructure lmap coretr
@@ -133,9 +133,9 @@ propbankCorpus ptreedir basedir article = do
                       (dependencyLabeledTree coredep)
       T.IO.putStrLn (linePrint (T.pack.show) deptree)
 
-      
+
       {-
-       
+
 
       let tokens = map (^._2) . toList $ coretr
       T.IO.putStrLn (T.intercalate " " tokens)
