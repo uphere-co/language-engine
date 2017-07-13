@@ -57,29 +57,30 @@ parserTypedValue f = do
   typeTag <- wtoken
   return (f typeTag text)
 
-object = takeTill (\x -> x=='>' || C.isSpace x)
-
-parserYAGOtoken :: Text -> Text -> (Text -> a) -> Parser a
-parserYAGOtoken prefix postfix f = do
+parserObject :: Text -> Text -> (Text -> a) -> Parser a
+parserObject prefix postfix f = do
+  let 
+    g "" = C.isSpace
+    g x  = (== T.head x)
   string prefix
-  t <- object
+  t <- takeTill (g postfix)
   string postfix
   return (f t)
 
 
 parserYAGOuid, parserRDFverb, parserRDFSprop,parserSKOSverb,parserYAGOverb:: Parser YagoObject
-parserYAGOuid  = parserYAGOtoken "<id_" ">" YagoID
-parserRDFverb  = parserYAGOtoken "rdf:" ""  YagoRDFverb
-parserRDFSprop = parserYAGOtoken "rdfs:" "" YagoRDFSprop
-parserSKOSverb = parserYAGOtoken "skos:" "" YagoSKOSverb
-parserYAGOverb = parserYAGOtoken "<" ">"    YagoVerb
+parserYAGOuid  = parserObject "<id_" ">" YagoID
+parserRDFverb  = parserObject "rdf:" ""  YagoRDFverb
+parserRDFSprop = parserObject "rdfs:" "" YagoRDFSprop
+parserSKOSverb = parserObject "skos:" "" YagoSKOSverb
+parserYAGOverb = parserObject "<" ">"    YagoVerb
 
 
 parserYAGOwordnet, parserYAGOwikicat, parserOWLclass, parserYAGOclass :: Parser YagoObject
-parserYAGOwordnet = parserYAGOtoken "<wordnet_" ">" YagoWordnet
-parserYAGOwikicat = parserYAGOtoken "<wikicat_" ">" YagoWikicat
-parserOWLclass    = parserYAGOtoken "owl:" ""       YagoOWLclass
-parserYAGOclass   = parserYAGOtoken "<yago" ">"     YagoClass
+parserYAGOwordnet = parserObject "<wordnet_" ">" YagoWordnet
+parserYAGOwikicat = parserObject "<wikicat_" ">" YagoWikicat
+parserOWLclass    = parserObject "owl:" ""       YagoOWLclass
+parserYAGOclass   = parserObject "<yago" ">"     YagoClass
 
 parserYAGOwikiAlias :: Parser YagoObject
 parserYAGOwikiAlias = do
@@ -100,7 +101,7 @@ parserYAGOwikiTitle :: Parser YagoObject
 parserYAGOwikiTitle = do
   char '<'
   fst <- satisfy (not . C.isLower)
-  rest <- object
+  rest <- takeTill (=='>')
   char '>'
   let title = T.cons fst rest
   return (YagoWikiTitle title)
@@ -109,9 +110,9 @@ parserYAGOwikiTitle = do
 parserYAGOnonEnwikiTitle :: Parser YagoObject
 parserYAGOnonEnwikiTitle = do
   string "<"
-  c <- takeTill (\x -> (x=='/') || ((not . C.isLower) x))
+  c <- takeTill (\x -> (x=='/') || (not . C.isLower) x)
   string "/"
-  t <- object
+  t <- takeTill (=='>')
   string ">"
   return (YagoNonEnWikiTitle c t)
 
@@ -227,12 +228,7 @@ parserNonEnWikiAlias = do
 
 parserWikiTypedValue = parserTypedValue TypedValue
 
-parserURLObject = do
-  char '<'
-  t <- takeTill (=='>')
-  char '>'
-  return (URLObject t)
-
+parserURLObject = parserObject "<" ">" URLObject
 
 parserWikiNamedSpaceObject = do
   t <- takeTill (\x -> (x==':') || (C.isSpace x))
