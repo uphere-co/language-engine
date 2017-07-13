@@ -1,27 +1,31 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module WikiEL.Convert where
 
-import           Data.Vector                           (Vector)
+import           Data.Vector                           (Vector,toList)
+import           Data.Text                             (Text)
+import qualified Data.Text   as T
 --
 import WikiEL.EntityLinking
 import WikiEL.Misc                                     (IRange(..))
 
-getNameFromEntityMention :: (Show w) => (EntityMention w) -> Vector w
+getNameFromEntityMention :: EntityMention Text -> Text
 getNameFromEntityMention x = case x of
-                               Cite uid ref info@(ir,v,ne) -> v
-                               Self uid     info@(ir,v,ne) -> v
+                               Cite uid ref info@(ir,v,ne) -> T.intercalate " " (toList v)
+                               Self uid     info@(ir,v,ne) -> T.intercalate " " (toList v)
 
-getRangeFromEntityMention :: (Show w) => (EntityMention w) -> (Int,Int)
+getRangeFromEntityMention :: EntityMention Text -> (Int,Int)
 getRangeFromEntityMention x = case x of
                                 Cite uid ref info@(ir,v,ne) -> (beg ir,end ir)
                                 Self uid     info@(ir,v,ne) -> (beg ir, end ir)
     
-getUIDFromEntityMention :: (Show w) => (EntityMention w) -> Int
+getUIDFromEntityMention :: EntityMention Text -> Int
 getUIDFromEntityMention x = case x of
                                 Cite uid ref info@(ir,v,ne) -> (_emuid uid)
                                 Self uid     info@(ir,v,ne) -> (_emuid uid)
 
-getNEFromEntityMention :: (Show w) => (EntityMention w) -> String
+getNEFromEntityMention :: EntityMention Text -> Text
 getNEFromEntityMention x = case x of
-                                Cite uid ref info@(ir,v,ne) -> (show ne)
-                                Self uid     info@(ir,v,ne) -> (show ne)
+                                Cite uid ref info@(ir,v,ne) -> (T.pack $ show ne)
+                                Self uid     info@(ir,v,ne) -> (T.pack $ show ne)
 
