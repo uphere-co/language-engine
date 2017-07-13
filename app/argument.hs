@@ -72,9 +72,6 @@ readJSONList :: (FromJSON a) => FilePath -> EitherT String IO [a]
 readJSONList file = EitherT $ eitherDecode <$> liftIO (BL.readFile file)
 
 
--- convertTop (PN _ xs) = PN "ROOT" xs
-
-
 loadMatchArticle ptreedir {- framedir -} basedir article = do
   (preddb,props,trees) <- liftIO $ prepare {- framedir -} basedir
   let findf = find (\f -> takeBaseName f == article)
@@ -102,9 +99,7 @@ propbankCorpus ptreedir basedir article = do
       let tokens = map (^._2) . toList $ coretr
       T.IO.putStrLn (T.intercalate " " tokens)
 
-      -- print coretr
       putStrLn "\n\n======"
-      -- print proptr
       putStrLn "-----"
       putStrLn "propbank"
       putStrLn "-----"
@@ -114,8 +109,6 @@ propbankCorpus ptreedir basedir article = do
             args = minst^.mi_arguments
         print (findRelNode (minst^.mi_arguments),inst^.inst_lemma_roleset_id)
         mapM_ (print . (\a->(a^.ma_argument.arg_label.to pbLabelText,a^..ma_nodes.traverse.mn_node._1))) args
-
-      -- mapM_ printMatchedInst minsts -- (matchInstances (coretr,proptr) insts)
 
       putStrLn "-----"
       putStrLn "verb property"
@@ -127,24 +120,12 @@ propbankCorpus ptreedir basedir article = do
       putStrLn "dependency"
       putStrLn "-----"
       let tokens = map (^._2) . toList $ coretr
-      --  T.IO.putStrLn (T.intercalate " " tokens)
           tkmap = IM.fromList (zip [0..] tokens)
           deptree = fmap (\(i,r) -> let t = fromMaybe "" (IM.lookup (i-1) tkmap) in (i-1,t,r))
                       (dependencyLabeledTree coredep)
       T.IO.putStrLn (linePrint (T.pack.show) deptree)
 
 
-      {-
-
-
-      let tokens = map (^._2) . toList $ coretr
-      T.IO.putStrLn (T.intercalate " " tokens)
-      let tkmap = IM.fromList (zip [0..] tokens)
-
-          deptree = fmap (\(i,r) -> let t = fromMaybe "" (IM.lookup (i-1) tkmap) in (i-1,t,r))
-                      (dependencyLabeledTree coredep)
-
-      -}
 main = do
   let article = "wsj_2445"
       ptreedir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
