@@ -2,6 +2,8 @@
 , discrimination, filepath, haskeline, lens, monad-loops, nlp-types
 , optparse-applicative, split, stdenv, taggy-lens, text
 , transformers, unordered-containers, yayaml
+, tasty-hunit
+, tasty
 }:
 mkDerivation {
   pname = "PropBank";
@@ -18,6 +20,7 @@ mkDerivation {
     monad-loops nlp-types optparse-applicative split text
     unordered-containers
   ];
+  testHaskellDepends = [ tasty-hunit tasty ];
   description = "PropBank/NomBank parser and query engine";
   license = stdenv.lib.licenses.unfree;
 }
