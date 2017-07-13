@@ -4,6 +4,7 @@ import           Test.Tasty                            (defaultMain, testGroup,T
 import qualified Test.NamedEntityTagger  as NET
 import qualified Test.WikiEntityTagger   as WET
 import qualified Test.CoreNLPEntity      as CNE
+import qualified Test.RDFDumpETL         as RDF
 
 
 unitTests :: TestTree
@@ -13,7 +14,8 @@ unitTests =
     [ NET.allTest
     , WET.allTest
     , CNE.allTest
-    ]    
+    , RDF.allTest
+    ]
 
---main = defaultMain unitTests
-main = NET.main1
+main = defaultMain unitTests
+--main = NET.main1
