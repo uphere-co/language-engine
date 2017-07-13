@@ -105,6 +105,13 @@ toMatchResult []     = Unmatched
 toMatchResult (x:[]) = ExactMatch x
 toMatchResult xs     = MergeMatch xs
 
+
+errorHandler h_err msg action = do
+  r <- try action
+  case r of
+    Left (e :: SomeException) -> hPutStrLn h_err msg >> hFlush h_err
+    _ -> return ()
+
   
 prepare {- framedir -} basedir = do
   -- propdb <- constructFrameDB framedir
@@ -221,8 +228,19 @@ propbankCorpus ptreedir basedir article = do
 
 
 main = do
-  let article = "wsj_2445"
+  let --  article = "wsj_2445"
       ptreedir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
       -- framedir = "/scratch/wavewave/MASC/Propbank/Propbank-orig/framefiles"
       basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-  propbankCorpus ptreedir basedir article
+
+  dtr <- build basedir
+      
+  let fps = sort (toList (dirTree dtr))
+      parsefiles = filter (\x -> takeExtensions x == ".parse") fps
+  flip mapM_ parsefiles $ \f -> do
+    let article = takeBaseName f
+    putStrLn "\n\n\n=============================================================================================="
+    print article
+    putStrLn "=============================================================================================="
+
+    errorHandler stderr "error happened" (propbankCorpus ptreedir basedir article)
