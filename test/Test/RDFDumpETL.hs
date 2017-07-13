@@ -14,7 +14,6 @@ import           Test.Tasty.HUnit                      (testCase,testCaseSteps)
 import           Test.Tasty                            (defaultMain, testGroup,TestTree)
 import qualified Data.Vector                   as V
 import qualified Data.Vector.Unboxed           as UV
-import qualified Data.Char                     as C
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 
@@ -31,6 +30,8 @@ import           WikiEL.Type.RDF.Wikidata
 import           WikiEL.Type.RDF.Yago
 import           WikiEL.ETL.Parser
 import           WikiEL.ETL.LoadData
+import           WikiEL.ETL.RDF.Wikidata
+import           WikiEL.ETL.RDF.Yago
 
 --For testing
 import           Text.RawString.QQ
@@ -51,101 +52,8 @@ instance Show YagoID where
 -}
 
 
-parserObject :: Text -> Text -> (Text -> a) -> Parser a
-parserObject prefix postfix f = do
-  let 
-    g "" = not . C.isSpace
-    g x  = (/= T.head x)
-  string prefix
-  t <- takeWhile1 (g postfix)
-  string postfix
-  return (f t)
-
-parserObject2 :: Text -> Text -> Text -> (Text -> Text -> a) -> Parser a
-parserObject2 prefix sep postfix f = do
-  let 
-    g "" = not . C.isSpace
-    g x  = (/= T.head x)
-  string prefix
-  t1 <- takeWhile1 (g sep)
-  string sep
-  t2 <- takeWhile1 (g postfix)
-  string postfix
-  return (f t1 t2)
-
-parserTypedValue   :: (Text -> Text -> a) -> Parser a
-parserTypedValue  = parserObject2 "\"" "\"^^" ""
 
 
-parserYAGOuid, parserRDFverb, parserRDFSprop,parserSKOSverb,parserYAGOverb:: Parser YagoObject
-parserYAGOuid  = parserObject "<id_" ">" YagoID
-parserRDFverb  = parserObject "rdf:" ""  YagoRDFverb
-parserRDFSprop = parserObject "rdfs:" "" YagoRDFSprop
-parserSKOSverb = parserObject "skos:" "" YagoSKOSverb
-parserYAGOverb = parserObject "<" ">"    YagoVerb
-
-
-parserYAGOwordnet, parserYAGOwikicat, parserOWLclass, parserYAGOclass :: Parser YagoObject
-parserYAGOwordnet = parserObject "<wordnet_" ">" YagoWordnet
-parserYAGOwikicat = parserObject "<wikicat_" ">" YagoWikicat
-parserOWLclass    = parserObject "owl:" ""       YagoOWLclass
-parserYAGOclass   = parserObject "<yago" ">"     YagoClass
-
-parserYAGOwikiAlias :: Parser YagoObject
-parserYAGOwikiAlias = parserObject "\"" "\"@eng" YagoWikiAlias
-
-parserYAGOnonEnWikiAlias :: Parser YagoObject
-parserYAGOnonEnWikiAlias = parserObject2 "\"" "\"@" "" f
-  where
-    f alias country = YagoNonEnWikiAlias country alias
-
-parserYAGOwikiTitle :: Parser YagoObject
-parserYAGOwikiTitle = do
-  char '<'
-  fst <- satisfy (not . C.isLower)
-  rest <- takeWhile1 (/='>')
-  char '>'
-  let title = T.cons fst rest
-  return (YagoWikiTitle title)
-
---Title by international wikis, except English one.
---TODO: Didn't check the country code format.
-parserYAGOnonEnwikiTitle :: Parser YagoObject
-parserYAGOnonEnwikiTitle = parserObject2 "<" "/" ">" YagoNonEnWikiTitle
-
-parserYAGOtypedValue :: Parser YagoObject
-parserYAGOtypedValue = parserTypedValue f
-  where
-    f text typeTag = YagoTypedValue typeTag text
-
-
-parserNounToken, parserVerbToken, parserUIDToken :: Parser YagoObject
-parserNounToken = choice [ parserYAGOwordnet
-                         , parserYAGOwikicat
-                         , parserOWLclass
-                         , parserYAGOclass
-                         , parserYAGOwikiAlias
-                         , parserYAGOwikiTitle
-                         , parserYAGOnonEnWikiAlias
-                         , parserYAGOnonEnwikiTitle]
-parserVerbToken = choice [ parserRDFverb
-                         , parserRDFSprop
-                         , parserSKOSverb
-                         , parserYAGOverb]
-parserUIDToken  = parserYAGOuid
-
-parserRDFrowInTSV :: Parser YagoRdfTriple
-parserRDFrowInTSV = do
-  let ssep = skipWhile C.isSpace
-  uid  <- parserUIDToken
-  ssep
-  subj <- parserNounToken
-  ssep
-  verb <- parserVerbToken
-  ssep
-  obj  <- parserNounToken
-  ssep
-  return (uid, subj, verb, obj)
 
 testYagoRdfObjects :: TestTree
 testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
@@ -208,108 +116,6 @@ allYagoTest =
     "All YAGO Unit tests"
     [testYagoRdfObjects, testYagoTaxonomyTSVrows]    
 
-
-wtoken = takeWhile1 (not . C.isSpace)
-
-parserWikiAlias, parserNonEnWikiAlias, parserWikiTypedValue :: Parser WikidataObject
-parserWikiAlias = parserObject "\"" "\"@en" Alias
-
-
-parserNonEnWikiAlias = parserObject2 "\"" "\"@" "" f
-  where 
-    f alias country = NonEnAlias country alias
-
-parserWikiTypedValue = parserTypedValue f
-  where
-    f text typeTag = TypedValue typeTag text
-
-parserURLObject = parserObject "<" ">" URLObject
-
-parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
-parserWikiNamedSpaceObject = do
-  t <- takeWhile1 (\x -> (x/=':') || (not . C.isSpace) x)
-  char ':'
-  n <- wtoken
-  return (NameSpaceObject t n)
-
-parserWikiUnknownObject = parserObject "" "" UnknownObject
-
-
-wikidataObject :: Parser WikidataObject
-wikidataObject = choice [ parserWikiAlias
-                        , parserNonEnWikiAlias
-                        , parserWikiTypedValue
-                        , parserURLObject
-                        , parserWikiNamedSpaceObject
-                        , parserWikiUnknownObject
-                        ]
-
-wikidataSep    = skipWhile C.isSpace 
---wikidataSep =  skipMany1 (skip C.isSpace)
-
-
-parserWikidataRdfRelation3 :: Parser TurtleRelation
-parserWikidataRdfRelation3 = do
-  s <- wikidataObject
-  wikidataSep
-  v <- wikidataObject
-  wikidataSep
-  o <- wikidataObject
-  return (RelationSVO s v o)
-
-parserWikidataRdfRelation2 :: Parser TurtleRelation
-parserWikidataRdfRelation2 = do
-  v <- wikidataObject
-  wikidataSep
-  o <- wikidataObject
-  return (RelationVO v o)
-
-parserWikidataRdfRelation1 :: Parser TurtleRelation
-parserWikidataRdfRelation1 = do
-  o <- wikidataObject
-  return (RelationO o)
-
-parserWikidataRdfRelation :: Parser TurtleRelation
-parserWikidataRdfRelation = choice [ parserWikidataRdfRelation3
-                                   , parserWikidataRdfRelation2
-                                   , parserWikidataRdfRelation1]
-
-
-splitTripleWithState :: Text -> Either String (Text, TurtleState)
-splitTripleWithState line = g row nextState
-  where
-    input = T.strip line
-    row   = (T.strip . T.init) input
-    f ',' = Right Comma
-    f ';' = Right Semicolon
-    f '.' = Right End
-    f _   = Left "Wrong end of line."
-    nextState = case input of
-      "" -> Left "Blank line."
-      _  -> f (T.last input)
-    g row (Right state) = Right (row, state)
-    g _ (Left msg) = Left msg
-
-parseRDFline :: Parser TurtleRelation -> Either String (Text, TurtleState) -> Either String (TurtleRelation, TurtleState)
-parseRDFline parser (Left msg) = Left msg
-parseRDFline parser (Right (line, state)) = 
-  case parseOnly parser line of
-    (Right rel) -> Right (rel, state)
-    (Left msg)  -> Left msg
-
-fillMissingSV :: (TurtleState, WikidataObject, WikidataObject) -> (TurtleRelation,TurtleState) -> ((TurtleState, WikidataObject, WikidataObject), TurtleRelation)
-fillMissingSV (End, _,_)   (RelationSVO s' v' o', state') = ((state', s',v'), RelationSVO s' v' o')
-fillMissingSV (Semicolon, s,v) (RelationVO v' o', state') = ((state', s, v'), RelationSVO s v' o')
-fillMissingSV (Comma, s,v)     (RelationO  o',    state') = ((state', s, v),  RelationSVO s v o')
-fillMissingSV (_, _, _) _ = error "Wrong formats"
-
-flattenStatement :: [(TurtleRelation,TurtleState)] -> [TurtleRelation]
-flattenStatement rs = reverse triples
-  where
-    (_, triples) = foldl' f ((End, wo "", wo ""), []) rs
-    f (state, triples) relation = (state', t:triples)
-      where
-        (state', t) = fillMissingSV state relation
 
 
 wo x = r

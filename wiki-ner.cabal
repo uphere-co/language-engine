@@ -26,6 +26,8 @@ library
                      , WikiEL.Type.WordNet
                      , WikiEL.Type.RDF.Wikidata
                      , WikiEL.Type.RDF.Yago
+                     , WikiEL.ETL.RDF.Wikidata
+                     , WikiEL.ETL.RDF.Yago
                      , WikiEL.ETL.LoadData
                      , WikiEL.ETL.Parser
                      , WikiEL.EntityLinking
@@ -35,8 +37,14 @@ library
                      , WikiEL.CoreNLP
                      , WikiEL.WikiNamedEntityTagger
                      , WikiEL.WikiEntityClass
-  -- other-modules:       
-  other-extensions:    OverloadedStrings, GeneralizedNewtypeDeriving, FlexibleContexts, ExistentialQuantification, DeriveFunctor, FlexibleInstances, StandaloneDeriving
+  other-modules:       WikiEL.ETL.RDF.Common
+  other-extensions:    OverloadedStrings
+                     , GeneralizedNewtypeDeriving
+                     , FlexibleContexts
+                     , ExistentialQuantification
+                     , DeriveFunctor
+                     , FlexibleInstances
+                     , StandaloneDeriving
   build-depends:       base
                      , tasty-hunit
                      , text
