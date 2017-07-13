@@ -4,7 +4,7 @@ with pkgs;
 
 let 
     hsenv = haskellPackages.ghcWithPackages (p: with p; [
-                aeson
+                aeson cabal-install
             ]);
 
 in stdenv.mkDerivation {
