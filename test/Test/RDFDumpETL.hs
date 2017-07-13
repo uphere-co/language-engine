@@ -73,7 +73,7 @@ parserObject2 prefix sep postfix f = do
   string postfix
   return (f t1 t2)
 
-parserTypedValue :: (Text -> Text -> a) -> Parser a
+parserTypedValue   :: (Text -> Text -> a) -> Parser a
 parserTypedValue  = parserObject2 "\"" "\"^^" ""
 
 
@@ -103,7 +103,7 @@ parserYAGOwikiTitle :: Parser YagoObject
 parserYAGOwikiTitle = do
   char '<'
   fst <- satisfy (not . C.isLower)
-  rest <- takeTill (=='>')
+  rest <- takeWhile1 (/='>')
   char '>'
   let title = T.cons fst rest
   return (YagoWikiTitle title)
@@ -227,7 +227,7 @@ parserURLObject = parserObject "<" ">" URLObject
 
 parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
 parserWikiNamedSpaceObject = do
-  t <- takeTill (\x -> (x==':') || C.isSpace x)
+  t <- takeWhile1 (\x -> (x/=':') || (not . C.isSpace) x)
   char ':'
   n <- wtoken
   return (NameSpaceObject t n)
