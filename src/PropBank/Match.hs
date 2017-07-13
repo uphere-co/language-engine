@@ -2,24 +2,17 @@
 
 module PropBank.Match where
 
-import           Control.Applicative             (many)
 import           Control.Lens
 import           Control.Monad.Loops             (unfoldM)
 import           Control.Monad.Trans.State
-import qualified Data.Attoparsec.Text       as A
 import           Data.Bifoldable                 (bifoldMap)
 import           Data.Foldable                   (toList)
 import           Data.List (intercalate)
-import           Data.Maybe                      (fromJust,mapMaybe,listToMaybe,maybeToList)
-import           Data.Monoid                     ((<>))
+import           Data.Maybe                      (mapMaybe,listToMaybe,maybeToList)
 import           Data.Text                       (Text)
-import qualified Data.Text                  as T
 --
-import           NLP.Parser.PennTreebankII
-import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 --
-import           PropBank.Parser.Prop
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
 import           PropBank.Util
@@ -40,6 +33,7 @@ mergeHyphen = fmap (fmap reverse) (go Nothing)
                                       _              -> return acc 
 
 
+getMerged :: PennTree -> [[(Int,(POSTag,Text))]]
 getMerged tr = let atr = (getADTPennTree . convertTop) tr
                in evalState (unfoldM mergeHyphen) (zip [0..] (toList atr))
 
@@ -57,20 +51,21 @@ index2TraceLinkID = map f . filter (\(_,(pos,_)) -> pos == D_NONE) . toList
 
 findLinks :: [(LinkID,Range)] -> [(Int,(Trace,Maybe LinkID))] -> Int -> [(LinkID,Range)]
 findLinks l2p i2t i = do
-  (_,(t,ml)) <- filter ((== i) . fst) i2t
+  (_,(_,ml)) <- filter ((== i) . fst) i2t
   l <- maybeToList ml
   r <- filter ((== l) . fst) l2p
   return r
 
 
 exclusionList :: PennTree -> [Int]
-exclusionList tr = let f []     = []
-                       f ys@((i,(t,_)):xs) = (if t == D_NONE then [i] else []) ++ map (^._1) xs 
+exclusionList tr = let f []             = []
+                       f ((i,(t,_)):xs) = (if t == D_NONE then [i] else []) ++ map (^._1) xs 
                    in concatMap f (getMerged tr)
 
 
 convertTop :: PennTree -> PennTree
 convertTop (PN _ xs) = PN "ROOT" xs
+convertTop x         = x
 
 
 termRangeForAllNode :: PennTreeGen c (Int,t) -> [Range]
@@ -121,7 +116,7 @@ matchArgNodes (coretr,proptr) arg = do
     n <- arg ^. arg_terminals
     nd <- maybeToList (findNode n proptr)
     rng <- case nd of
-             ("-NONE-",PL (i,_)) -> adjrange =<< map snd (findLinks l2p i2t 34)
+             ("-NONE-",PL (_,_)) -> adjrange =<< map snd (findLinks l2p i2t 34)
              _                   -> (adjrange . termRange . snd) nd
     let zs = maximalEmbeddedRange ipt rng
     return MatchedArgNode { _mn_node = (rng,n), _mn_trees = zs }
@@ -137,24 +132,6 @@ matchArgNodes (coretr,proptr) arg = do
                        (Right b,Right e) -> [(b,e)]
     ipt = (mkIndexedTree . getADTPennTree) coretr
 
-{- 
-matchArgNodes :: (PennTree,PennTree)  -- ^ (CoreNLP tree, PropBank (human-annotated) tree)
-              -> Argument
-              -> [MatchedArgNode]
-matchArgNodes (coretr,proptr) arg = do
-  n <- arg ^. arg_terminals
-  let nd = fromJust (findNode n proptr)
-  let adjf = adjustIndexFromTree proptr
-      adjrange (x,y) = case (adjf x, adjf y) of
-                         (Left b,Left e) -> if b == e then [] else [(b,e)]
-                         (Left b,Right e) -> [(b,e)]
-                         (Right b,Left e) -> [(b,e-1)]
-                         (Right b,Right e) -> [(b,e)]
-  rng <- (adjrange . termRange . snd) nd
-  let ipt = (mkIndexedTree . getADTPennTree) coretr
-      zs = maximalEmbeddedRange ipt rng
-  return MatchedArgNode { _mn_node = (rng,n), _mn_trees = zs }
--}
 
 matchArgs :: (PennTree,PennTree) -> Instance -> [MatchedArgument]
 matchArgs (pt,tr) pr
