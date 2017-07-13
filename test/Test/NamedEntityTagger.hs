@@ -160,9 +160,12 @@ testEntityMentionProperties :: TestTree
 testEntityMentionProperties = testCaseSteps "Test helper functions for accessing info on EntityMention" $ \step -> do
   let
     united_airlines = fromList ["United","Airlines"]
-    -- :: EntityMention Text
-    t1 = (IRange 0 2,   united_airlines, Resolved (uid "Q174769", N.Org))
-  eassertEqual (WEL.entityName t1) "United Airlines"
+    emuid = EL.EntityMentionUID
+    -- t1 :: EMInfo Text
+    t1 = (IRange 0 2,   united_airlines, Resolved (uid "Q174769", N.Org)) 
+    -- em :: EntityMention Text
+    em = EL.Self (emuid 0) t1
+  eassertEqual (WEL.mentionedEntityName em) "United Airlines"
 
 testRunWikiNER :: TestTree
 testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \step -> do

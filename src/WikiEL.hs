@@ -5,6 +5,7 @@
 module WikiEL 
   ( module WikiEL
   , EL.entityName
+  , EL.mentionedEntityName
   ) where
 
 import qualified WikiEL.EntityLinking               as EL

@@ -40,6 +40,9 @@ type EntityMention w = UIDCite EntityMentionUID (EMInfo w)
 entityName :: EMInfo Text -> Text
 entityName (_, ws, _) = T.intercalate " " (toList ws)
 
+mentionedEntityName :: EntityMention Text -> Text
+mentionedEntityName em = entityName (_info em)
+
 toString :: EMInfo Text -> String
 toString em@(range, ws, tag) = show range ++ " \"" ++ T.unpack (entityName em) ++  "\", " ++show tag
 
