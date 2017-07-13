@@ -50,22 +50,31 @@ instance Show YagoID where
   show (YagoID uid) = "YagoID:" ++ show uid
 -}
 
-parserTypedValue f = do
-  char '"'
-  text <- takeTill (=='"')
-  string "\"^^"
-  typeTag <- wtoken
-  return (f typeTag text)
 
 parserObject :: Text -> Text -> (Text -> a) -> Parser a
 parserObject prefix postfix f = do
   let 
-    g "" = C.isSpace
-    g x  = (== T.head x)
+    g "" = not . C.isSpace
+    g x  = (/= T.head x)
   string prefix
-  t <- takeTill (g postfix)
+  t <- takeWhile1 (g postfix)
   string postfix
   return (f t)
+
+parserObject2 :: Text -> Text -> Text -> (Text -> Text -> a) -> Parser a
+parserObject2 prefix sep postfix f = do
+  let 
+    g "" = not . C.isSpace
+    g x  = (/= T.head x)
+  string prefix
+  t1 <- takeWhile1 (g sep)
+  string sep
+  t2 <- takeWhile1 (g postfix)
+  string postfix
+  return (f t1 t2)
+
+parserTypedValue :: (Text -> Text -> a) -> Parser a
+parserTypedValue  = parserObject2 "\"" "\"^^" ""
 
 
 parserYAGOuid, parserRDFverb, parserRDFSprop,parserSKOSverb,parserYAGOverb:: Parser YagoObject
@@ -83,19 +92,12 @@ parserOWLclass    = parserObject "owl:" ""       YagoOWLclass
 parserYAGOclass   = parserObject "<yago" ">"     YagoClass
 
 parserYAGOwikiAlias :: Parser YagoObject
-parserYAGOwikiAlias = do
-  char '"'
-  n <- takeTill (=='"')
-  string "\"@eng"
-  return (YagoWikiAlias n)
+parserYAGOwikiAlias = parserObject "\"" "\"@eng" YagoWikiAlias
 
 parserYAGOnonEnWikiAlias :: Parser YagoObject
-parserYAGOnonEnWikiAlias = do
-  char '"'
-  n <- takeTill (=='"')
-  string "\"@"
-  c <- takeTill (not . C.isLower)
-  return (YagoNonEnWikiAlias c n)
+parserYAGOnonEnWikiAlias = parserObject2 "\"" "\"@" "" f
+  where
+    f alias country = YagoNonEnWikiAlias country alias
 
 parserYAGOwikiTitle :: Parser YagoObject
 parserYAGOwikiTitle = do
@@ -107,17 +109,14 @@ parserYAGOwikiTitle = do
   return (YagoWikiTitle title)
 
 --Title by international wikis, except English one.
+--TODO: Didn't check the country code format.
 parserYAGOnonEnwikiTitle :: Parser YagoObject
-parserYAGOnonEnwikiTitle = do
-  string "<"
-  c <- takeTill (\x -> (x=='/') || (not . C.isLower) x)
-  string "/"
-  t <- takeTill (=='>')
-  string ">"
-  return (YagoNonEnWikiTitle c t)
+parserYAGOnonEnwikiTitle = parserObject2 "<" "/" ">" YagoNonEnWikiTitle
 
 parserYAGOtypedValue :: Parser YagoObject
-parserYAGOtypedValue = parserTypedValue YagoTypedValue 
+parserYAGOtypedValue = parserTypedValue f
+  where
+    f text typeTag = YagoTypedValue typeTag text
 
 
 parserNounToken, parserVerbToken, parserUIDToken :: Parser YagoObject
@@ -212,33 +211,28 @@ allYagoTest =
 
 wtoken = takeWhile1 (not . C.isSpace)
 
-parserWikiAlias, parserNonEnWikiAlias, parserWikiTypedValue, parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
-parserWikiAlias = do
-  char '"'
-  alias <- takeTill (=='"')
-  string "\"@en"
-  return (Alias alias)
+parserWikiAlias, parserNonEnWikiAlias, parserWikiTypedValue :: Parser WikidataObject
+parserWikiAlias = parserObject "\"" "\"@en" Alias
 
-parserNonEnWikiAlias = do
-  char '"'
-  alias <- takeTill (=='"')
-  string "\"@"
-  country <- wtoken
-  return (NonEnAlias country alias)
 
-parserWikiTypedValue = parserTypedValue TypedValue
+parserNonEnWikiAlias = parserObject2 "\"" "\"@" "" f
+  where 
+    f alias country = NonEnAlias country alias
+
+parserWikiTypedValue = parserTypedValue f
+  where
+    f text typeTag = TypedValue typeTag text
 
 parserURLObject = parserObject "<" ">" URLObject
 
+parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
 parserWikiNamedSpaceObject = do
-  t <- takeTill (\x -> (x==':') || (C.isSpace x))
+  t <- takeTill (\x -> (x==':') || C.isSpace x)
   char ':'
   n <- wtoken
   return (NameSpaceObject t n)
 
-parserWikiUnknownObject = do
-  t <- wtoken
-  return (UnknownObject t)
+parserWikiUnknownObject = parserObject "" "" UnknownObject
 
 
 wikidataObject :: Parser WikidataObject
