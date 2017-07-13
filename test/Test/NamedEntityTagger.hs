@@ -22,7 +22,6 @@ import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getSta
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
 import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),entityLinking,entityLinkings,buildEntityMentions)
 import           WikiEL.ETL.LoadData
-
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
 import qualified NLP.Type.NamedEntity          as N
@@ -44,6 +43,7 @@ import           WikiEL.ETL.Parser
 import qualified Data.Map                      as M
 import qualified WikiEL.EntityLinking          as EL
 import qualified WikiEL.Type.FileFormat        as F
+import qualified WikiEL                        as WEL
 
 import           Test.Data.Filename
 
@@ -156,6 +156,14 @@ testWikiNER =
       [testNamedEntityTagging, testNEResolution]
 
 
+testEntityMentionProperties :: TestTree
+testEntityMentionProperties = testCaseSteps "Test helper functions for accessing info on EntityMention" $ \step -> do
+  let
+    united_airlines = fromList ["United","Airlines"]
+    -- :: EntityMention Text
+    t1 = (IRange 0 2,   united_airlines, Resolved (uid "Q174769", N.Org))
+  eassertEqual (WEL.entityName t1) "United Airlines"
+
 testRunWikiNER :: TestTree
 testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \step -> do
   input_raw <- T.IO.readFile rawNewsFile
@@ -259,7 +267,13 @@ allTest :: TestTree
 allTest =
   testGroup
     "All NamedEntityTagger unit tests"
-    [testHelperUtils, testIRangeOps, testWikiNER, testRunWikiNER, testParsingData, testParsingWordNetSynsetFile]    
+    [ testHelperUtils
+    , testIRangeOps
+    , testWikiNER
+    , testEntityMentionProperties
+    , testRunWikiNER
+    , testParsingData
+    , testParsingWordNetSynsetFile]    
 
 
 

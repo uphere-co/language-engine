@@ -4,12 +4,12 @@ module WikiEL.Type.RDF.Wikidata where
 
 import           Data.Text                             (Text)
 
-data WikidataObject = Alias      Text
-                    | NonEnAlias Text Text -- type alias
-                    | TypedValue  Text Text -- type value
+data WikidataObject = Alias           Text
+                    | NonEnAlias      Text Text -- type alias
+                    | TypedValue      Text Text -- type value
                     | NameSpaceObject Text Text -- namespace token
-                    | URLObject  Text
-                    | UnknownObject Text
+                    | URLObject       Text
+                    | UnknownObject   Text
                     deriving(Show, Eq)
 
 data TurtleState = Comma 

@@ -2,8 +2,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
-module WikiEL where
+module WikiEL 
+  ( module WikiEL
+  , EL.entityName
+  ) where
 
+import qualified WikiEL.EntityLinking               as EL
 import           Data.Text                                    (Text)  
 import           Data.Vector                                  (fromList)
 import           NLP.Type.NamedEntity                         (NamedEntityClass,NamedEntityFrag(..))
@@ -12,6 +16,7 @@ import           WikiEL.WikiEntityTagger                      (NameUIDTable,load
 import           WikiEL.WikiEntityClass                       (WikiUID2NETag,ItemClass,fromFiles)
 import           WikiEL.EntityLinking                         (EntityMention,entityLinkings,buildEntityMentions)
 import           WikiEL.Type.FileFormat               
+
 
 extractEntityMentions :: NameUIDTable -> WikiUID2NETag -> [(Text, NamedEntityClass)] -> [EntityMention Text]
 extractEntityMentions wikiTable uid2tag neTokens = linked_mentions
