@@ -243,4 +243,4 @@ main = do
     print article
     putStrLn "=============================================================================================="
 
-    errorHandler stderr "error happened" (propbankCorpus ptreedir basedir article)
+    errorHandler stderr ("error happened in " ++ article) (propbankCorpus ptreedir basedir article)
