@@ -19,7 +19,7 @@ import           Data.HashMap.Strict                (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import qualified Data.IntMap                as IM
 import           Data.List
-import           Data.Maybe                         (fromMaybe)
+import           Data.Maybe                         (fromMaybe,maybeToList)
 import           Data.Monoid
 import           Data.Text                          (Text)
 import qualified Data.Text                  as T
@@ -36,6 +36,7 @@ import           CoreNLP.Simple.Type.Simplified
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
+import qualified NLP.Type.PennTreebankII.Separated as N
 import           PropBank.Format
 import           PropBank.Parser.Prop
 import           PropBank.Match
@@ -48,6 +49,12 @@ import           SRL.Feature.Clause
 import           SRL.Feature.Verb
 import           SRL.Type.Verb
 import           Text.Format.Tree
+
+
+data MatchResult = ExactMatch Range
+                 | MergeMatch [Range]
+                 | Unmatched
+                 deriving Show
 
 
 prepare {- framedir -} basedir = do
@@ -114,7 +121,56 @@ propbankCorpus ptreedir basedir article = do
       putStrLn "verb property"
       putStrLn "-----"
       let lmap = IM.fromList (map (_2 %~ Lemma) corelma)
-      print $ map (\vp->(vp^.vp_index,vp^.vp_lemma.to unLemma)) (verbPropertyFromPennTree lmap coretr)
+          verbprops = verbPropertyFromPennTree lmap coretr
+      -- print $ map (\vp->(vp^.vp_index,vp^.vp_lemma.to unLemma)) verbprops
+      print verbprops
+      let tr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
+      
+      print $ map (\vp->getVerbArgs tr vp) verbprops
+
+      putStrLn "-----"
+      putStrLn "propbank match test"
+      putStrLn "-----"
+      
+      flip mapM_ minsts $ \minst-> do
+        let inst = minst^.mi_instance
+            -- marg0 = find (\a->a^.ma_argument.arg_label == NumberedArgument 0) (minst^.mi_arguments)
+            args = filter (\a->a^.ma_argument.arg_label /= Relation) (minst^.mi_arguments)
+            -- args = maybeToList marg0 ++ oargs
+        putStrLn "*************"
+        T.IO.putStrLn (formatRoleSetID (inst^.inst_lemma_roleset_id))
+        let relidx = findRelNode (minst^.mi_arguments)
+            mvpva = do vp <- find (\vp->vp^.vp_index==relidx) verbprops
+                       va <- getVerbArgs tr vp
+                       return (vp,va)
+        case mvpva of
+          Nothing -> putStrLn "unmatched!"
+          Just (vp,va) -> do
+            print "relation matched"
+            {- 
+            case marg0 of
+              Nothing -> putStrLn "ARG0 unmatched!"
+              Just arg0 -> do
+                T.IO.putStrLn (arg0^.ma_argument.arg_label.to pbLabelText)
+                let ns = arg0^..ma_nodes.traverse.mn_node._1
+                let m = case va^.va_arg0 of
+                          Nothing -> Nothing
+                          Just varg0 -> (find (== getRange varg0))  ns
+                -- print ns
+                print m -}
+            let vargs = maybeToList (va^.va_arg0) ++ va^.va_args
+            
+            flip mapM_ args $ \arg -> do
+              T.IO.putStrLn (arg^.ma_argument.arg_label.to pbLabelText)
+              let ns = arg^..ma_nodes.traverse.mn_node._1
+                  getRng = either (^._1) (\x->(x^._1,x^._1)) 
+              
+              print ns
+              print (map getRng vargs)
+              -- print va
+            
+        -- mapM_ (print . (\a->(a^.ma_argument.arg_label.to pbLabelText,a^..ma_nodes.traverse.mn_node._1))) args
+{-       
       showClauseStructure lmap coretr
       putStrLn "-----"
       putStrLn "dependency"
@@ -124,7 +180,7 @@ propbankCorpus ptreedir basedir article = do
           deptree = fmap (\(i,r) -> let t = fromMaybe "" (IM.lookup (i-1) tkmap) in (i-1,t,r))
                       (dependencyLabeledTree coredep)
       T.IO.putStrLn (linePrint (T.pack.show) deptree)
-
+-}
 
 main = do
   let article = "wsj_2445"
