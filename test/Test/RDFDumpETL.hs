@@ -27,6 +27,8 @@ import           WikiEL.WikiEntityTagger
 import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Wikipedia
 import           WikiEL.Type.FileFormat
+import           WikiEL.Type.RDF.Wikidata
+import           WikiEL.Type.RDF.Yago
 import           WikiEL.ETL.Parser
 import           WikiEL.ETL.LoadData
 
@@ -48,78 +50,73 @@ instance Show YagoID where
   show (YagoID uid) = "YagoID:" ++ show uid
 -}
 
-data YagoObject = YagoID        Text
-                | YagoRDFverb   Text
-                | YagoOWLclass  Text
-                | YagoRDFSprop  Text
-                | YagoSKOSverb  Text
-                | YagoVerb      Text
-                | YagoWordnet   Text
-                | YagoWikicat   Text
-                | YagoClass     Text
-                | YagoWikiTitle Text
-                | YagoWikiAlias Text
-                | YagoNonEnWikiTitle Text
-                | YagoNonEnWikiAlias Text
-                deriving (Eq, Show)
 
-type YagoRdfTriple = (YagoObject, YagoObject, YagoObject, YagoObject)
-
-
-object = takeTill (\x -> x=='>' || C.isSpace x)
-ssep = skipWhile C.isSpace
-
-parserYAGOtoken :: Text -> Text -> (Text -> a) -> Parser a
-parserYAGOtoken prefix postfix f = do
+parserObject :: Text -> Text -> (Text -> a) -> Parser a
+parserObject prefix postfix f = do
+  let 
+    g "" = not . C.isSpace
+    g x  = (/= T.head x)
   string prefix
-  t <- object
+  t <- takeWhile1 (g postfix)
   string postfix
   return (f t)
 
+parserObject2 :: Text -> Text -> Text -> (Text -> Text -> a) -> Parser a
+parserObject2 prefix sep postfix f = do
+  let 
+    g "" = not . C.isSpace
+    g x  = (/= T.head x)
+  string prefix
+  t1 <- takeWhile1 (g sep)
+  string sep
+  t2 <- takeWhile1 (g postfix)
+  string postfix
+  return (f t1 t2)
+
+parserTypedValue :: (Text -> Text -> a) -> Parser a
+parserTypedValue  = parserObject2 "\"" "\"^^" ""
+
 
 parserYAGOuid, parserRDFverb, parserRDFSprop,parserSKOSverb,parserYAGOverb:: Parser YagoObject
-parserYAGOuid  = parserYAGOtoken "<id_" ">" YagoID
-parserRDFverb  = parserYAGOtoken "rdf:" ""  YagoRDFverb
-parserRDFSprop = parserYAGOtoken "rdfs:" "" YagoRDFSprop
-parserSKOSverb = parserYAGOtoken "skos:" "" YagoSKOSverb
-parserYAGOverb = parserYAGOtoken "<" ">"    YagoVerb
+parserYAGOuid  = parserObject "<id_" ">" YagoID
+parserRDFverb  = parserObject "rdf:" ""  YagoRDFverb
+parserRDFSprop = parserObject "rdfs:" "" YagoRDFSprop
+parserSKOSverb = parserObject "skos:" "" YagoSKOSverb
+parserYAGOverb = parserObject "<" ">"    YagoVerb
 
 
 parserYAGOwordnet, parserYAGOwikicat, parserOWLclass, parserYAGOclass :: Parser YagoObject
-parserYAGOwordnet = parserYAGOtoken "<wordnet_" ">" YagoWordnet
-parserYAGOwikicat = parserYAGOtoken "<wikicat_" ">" YagoWikicat
-parserOWLclass    = parserYAGOtoken "owl:" ""       YagoOWLclass
-parserYAGOclass   = parserYAGOtoken "<yago" ">"     YagoClass
+parserYAGOwordnet = parserObject "<wordnet_" ">" YagoWordnet
+parserYAGOwikicat = parserObject "<wikicat_" ">" YagoWikicat
+parserOWLclass    = parserObject "owl:" ""       YagoOWLclass
+parserYAGOclass   = parserObject "<yago" ">"     YagoClass
 
 parserYAGOwikiAlias :: Parser YagoObject
-parserYAGOwikiAlias = do
-  let alias = takeTill (=='"')
-  char '"'
-  t <- alias
-  string "\"@eng"
-  return (YagoWikiAlias t)
+parserYAGOwikiAlias = parserObject "\"" "\"@eng" YagoWikiAlias
 
+parserYAGOnonEnWikiAlias :: Parser YagoObject
+parserYAGOnonEnWikiAlias = parserObject2 "\"" "\"@" "" f
+  where
+    f alias country = YagoNonEnWikiAlias country alias
 
 parserYAGOwikiTitle :: Parser YagoObject
 parserYAGOwikiTitle = do
   char '<'
   fst <- satisfy (not . C.isLower)
-  rest <- object
+  rest <- takeTill (=='>')
   char '>'
   let title = T.cons fst rest
   return (YagoWikiTitle title)
 
 --Title by international wikis, except English one.
+--TODO: Didn't check the country code format.
 parserYAGOnonEnwikiTitle :: Parser YagoObject
-parserYAGOnonEnwikiTitle = do
-  string "<"
-  c1 <- satisfy C.isLower
-  c2 <- satisfy C.isLower
-  string "/"
-  t <- object
-  string ">"
-  return (YagoNonEnWikiTitle t)
+parserYAGOnonEnwikiTitle = parserObject2 "<" "/" ">" YagoNonEnWikiTitle
 
+parserYAGOtypedValue :: Parser YagoObject
+parserYAGOtypedValue = parserTypedValue f
+  where
+    f text typeTag = YagoTypedValue typeTag text
 
 
 parserNounToken, parserVerbToken, parserUIDToken :: Parser YagoObject
@@ -129,6 +126,7 @@ parserNounToken = choice [ parserYAGOwordnet
                          , parserYAGOclass
                          , parserYAGOwikiAlias
                          , parserYAGOwikiTitle
+                         , parserYAGOnonEnWikiAlias
                          , parserYAGOnonEnwikiTitle]
 parserVerbToken = choice [ parserRDFverb
                          , parserRDFSprop
@@ -138,6 +136,7 @@ parserUIDToken  = parserYAGOuid
 
 parserRDFrowInTSV :: Parser YagoRdfTriple
 parserRDFrowInTSV = do
+  let ssep = skipWhile C.isSpace
   uid  <- parserUIDToken
   ssep
   subj <- parserNounToken
@@ -160,9 +159,10 @@ testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
   eassertEqual (parseOnly parserNounToken "<wordnet_organization_108008335>")      (Right (YagoWordnet "organization_108008335"))
   eassertEqual (parseOnly parserNounToken "<wikicat_Graphics_hardware_companies>") (Right (YagoWikicat "Graphics_hardware_companies"))
   eassertEqual (parseOnly parserNounToken "<PowerVR>")            (Right (YagoWikiTitle "PowerVR"))
-  eassertEqual (parseOnly parserNounToken "<de/NEC_PowerVR_PCX>") (Right (YagoNonEnWikiTitle "NEC_PowerVR_PCX"))
+  eassertEqual (parseOnly parserNounToken "<de/NEC_PowerVR_PCX>") (Right (YagoNonEnWikiTitle "de" "NEC_PowerVR_PCX"))
   eassertEqual (parseOnly parserNounToken "<yagoPermanentlyLocatedEntity>") (Right (YagoClass "PermanentlyLocatedEntity"))
   eassertEqual (parseOnly parserNounToken "\"Demography of Afghanistan\"@eng") (Right (YagoWikiAlias "Demography of Afghanistan"))
+  eassertEqual (parseOnly parserNounToken "\"Demography of Afghanistan\"@de") (Right (YagoNonEnWikiAlias "de" "Demography of Afghanistan"))
 
 testYagoTaxonomyTSVrows :: TestTree
 testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
@@ -193,10 +193,10 @@ testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, 
              ,Right (YagoID "klokc9_1m6_1koas7s", YagoWikicat "Syntactic_entities", YagoRDFSprop "subClassOf", YagoOWLclass "Thing")
              
              ,Right (YagoID "1kmo9y9_88c_1eoxwov",YagoWikiTitle "PowerVR", YagoRDFverb "type", YagoWikicat "Graphics_hardware_companies")
-             ,Right (YagoID "13tyf46_88c_4gx1l8", YagoNonEnWikiTitle "NEC_PowerVR_PCX", YagoRDFverb "type", YagoWikicat "Graphics_chips")
+             ,Right (YagoID "13tyf46_88c_4gx1l8", YagoNonEnWikiTitle "de" "NEC_PowerVR_PCX", YagoRDFverb "type", YagoWikicat "Graphics_chips")
              
              ,Right (YagoID "we31u1_1sz_vfg0ga", YagoWikiTitle "Burnside,_Iowa", YagoSKOSverb "prefLabel", YagoWikiAlias "Burnside, Iowa")
-             ,Right (YagoID "1qt4wt3_1ia_1k16t4w",YagoNonEnWikiTitle "Olli_Tyrväinen", YagoRDFSprop "label", YagoWikiAlias "Olli Tyrvainen")
+             ,Right (YagoID "1qt4wt3_1ia_1k16t4w",YagoNonEnWikiTitle "pl" "Olli_Tyrväinen", YagoRDFSprop "label", YagoWikiAlias "Olli Tyrvainen")
              ,Right (YagoID "1j3k64j_qkd_4hgw54", YagoWikiTitle "Fred_M._Hechinger", YagoVerb "redirectedFrom", YagoWikiAlias "Fred Hechinger")
              ]
     rows = map (parseOnly parserRDFrowInTSV) lines 
@@ -209,73 +209,36 @@ allYagoTest =
     [testYagoRdfObjects, testYagoTaxonomyTSVrows]    
 
 
-data WikidataObject = Alias      Text
-                    | NonEnAlias Text
-                    | TypedText  Text
-                    | NameSpaceObject Text Text                    
-                    | URLObject  Text
-                    | UnknownObject Text
-                    deriving(Show, Eq)
-
-data TurtleState = Comma 
-                 | Semicolon
-                 | End
-                 deriving (Show, Eq)
-
-data TurtleRelation = RelationSVO WikidataObject WikidataObject WikidataObject
-                    | RelationVO  WikidataObject WikidataObject
-                    | RelationO   WikidataObject
-                    deriving (Show, Eq)
-                   
 wtoken = takeWhile1 (not . C.isSpace)
 
-parserWikiAlias, parserNonEnWikiAlias, parserWikiTypedText, parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
-parserWikiAlias = do
-  let alias = takeTill (=='"')
-  char '"'
-  t <- alias
-  string "\"@en"
-  return (Alias t)
-
-parserNonEnWikiAlias = do
-  let alias = takeTill (=='"')
-  char '"'
-  t <- alias
-  string "\"@"
-  lan <- wtoken
-  return (NonEnAlias (T.concat [t, "@",lan]))
-
-parserWikiTypedText = do
-  let getValue = takeTill (=='"')
-  char '"'
-  v <- getValue
-  string "\"^^"
-  t <- wtoken
-  return (TypedText (T.concat [v, "^^",t]))
+parserWikiAlias, parserNonEnWikiAlias, parserWikiTypedValue :: Parser WikidataObject
+parserWikiAlias = parserObject "\"" "\"@en" Alias
 
 
-parserURLObject = do
-  char '<'
-  t <- takeTill (=='>')
-  char '>'
-  return (URLObject t)
+parserNonEnWikiAlias = parserObject2 "\"" "\"@" "" f
+  where 
+    f alias country = NonEnAlias country alias
 
+parserWikiTypedValue = parserTypedValue f
+  where
+    f text typeTag = TypedValue typeTag text
 
+parserURLObject = parserObject "<" ">" URLObject
+
+parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
 parserWikiNamedSpaceObject = do
-  t <- takeTill (\x -> (x==':') || (C.isSpace x))
+  t <- takeTill (\x -> (x==':') || C.isSpace x)
   char ':'
   n <- wtoken
   return (NameSpaceObject t n)
 
-parserWikiUnknownObject = do
-  t <- wtoken
-  return (UnknownObject t)
+parserWikiUnknownObject = parserObject "" "" UnknownObject
 
 
 wikidataObject :: Parser WikidataObject
 wikidataObject = choice [ parserWikiAlias
                         , parserNonEnWikiAlias
-                        , parserWikiTypedText
+                        , parserWikiTypedValue
                         , parserURLObject
                         , parserWikiNamedSpaceObject
                         , parserWikiUnknownObject
