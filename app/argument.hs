@@ -57,6 +57,23 @@ data MatchResult = ExactMatch Range
                  deriving Show
 
 
+mkNonOverlappingList [] = Just []
+mkNonOverlappingList (x:xs) =
+  let ys = sortBy (compare `on` fst) (x:xs)
+      zs = zip ys (tail ys)
+  in fmap (head ys :) (mapM (\((i,j),(i',j')) -> if j < i' then Just (i',j') else Nothing) zs)
+
+
+test = mkNonOverlappingList [(1,3), (7,9), (4,5) ]
+test2 = mkNonOverlappingList [(1,3), (6,9), (4,6) ]
+
+{- 
+mkContiguousList xs = 
+
+
+contiguousMatch (i,j) lst = x 
+-}
+                          
 prepare {- framedir -} basedir = do
   -- propdb <- constructFrameDB framedir
   -- let preddb = constructPredicateDB propdb
