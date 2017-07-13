@@ -57,23 +57,51 @@ data MatchResult = ExactMatch Range
                  deriving Show
 
 
-mkNonOverlappingList [] = Just []
-mkNonOverlappingList (x:xs) =
+newtype NoOverlapSegments = NoOverlapSegments [Range]
+                          deriving Show
+
+mkNoOverlapSegments :: [Range] -> Maybe NoOverlapSegments
+mkNoOverlapSegments [] = Just (NoOverlapSegments [])
+mkNoOverlapSegments (x:xs) =
   let ys = sortBy (compare `on` fst) (x:xs)
       zs = zip ys (tail ys)
-  in fmap (head ys :) (mapM (\((i,j),(i',j')) -> if j < i' then Just (i',j') else Nothing) zs)
+  in fmap (NoOverlapSegments . (head ys :))
+          (mapM (\((i,j),(i',j')) -> if j < i' then Just (i',j') else Nothing) zs)
 
 
-test = mkNonOverlappingList [(1,3), (7,9), (4,5) ]
-test2 = mkNonOverlappingList [(1,3), (6,9), (4,6) ]
-
-{- 
-mkContiguousList xs = 
+test = mkNoOverlapSegments [(1,3), (7,9), (4,5) ]
+test2 = mkNoOverlapSegments [(1,3), (6,9), (4,6) ]
 
 
-contiguousMatch (i,j) lst = x 
--}
-                          
+newtype ContiguousSegments = ContiguousSegments [[Range]]
+                           deriving Show
+
+
+-- the implementation is not very good. I will change it.
+mkContiguousSegments :: NoOverlapSegments -> ContiguousSegments
+mkContiguousSegments (NoOverlapSegments xs) = ContiguousSegments (go [] [] xs)
+  where go deck   acc []     = acc ++ [reverse deck]
+        go []     acc (r:rs) = go [r] acc rs
+        go (z:zs) acc (r:rs) = let (i,j) = r
+                                   (i',j') = z
+                               in if j'+1 == i
+                                  then go (r:z:zs) acc          rs
+                                  else go [r]      (acc ++ [reverse (z:zs)]) rs
+
+test3 = fmap mkContiguousSegments test
+
+contiguousMatch :: ContiguousSegments -> Range -> [Range]
+contiguousMatch (ContiguousSegments segs) (i,j) = foldMap match segs 
+  where match xs = 
+          let (_,bs) = break (\x->x^._1 == i) xs
+              (es,rs) = break (\x->x^._2 == j) bs
+          in case rs of
+               []    -> []
+               (r:_) -> es++[r]
+  
+
+
+  
 prepare {- framedir -} basedir = do
   -- propdb <- constructFrameDB framedir
   -- let preddb = constructPredicateDB propdb
