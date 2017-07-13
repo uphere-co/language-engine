@@ -16,7 +16,7 @@ import qualified Data.ByteString.Lazy.Char8   as BL
 import           Data.Default
 import           Data.Foldable                        (toList,traverse_)
 import qualified Data.IntMap                  as IM
-import           Data.List                            (intercalate,sort)
+import           Data.List                            (group,intercalate,sort)
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Sequence                as Seq
@@ -34,14 +34,20 @@ import           Text.Printf
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple
-import          CoreNLP.Simple.Convert
-import           CoreNLP.Simple.Type          
-import           NLP.Type.PennTreebankII
+import           CoreNLP.Simple.Convert
+import           CoreNLP.Simple.Type
 import           NLP.Parser.PennTreebankII
+import           NLP.Printer.PennTreebankII
+import           NLP.Type.PennTreebankII
+import           PropBank.Match
 
 
 getTerms :: PennTree -> [Text]
-getTerms = map snd . filter (\(t,_) -> t /= "-NONE-") . toList 
+getTerms = map snd . filter (\(t,_) -> t /= "-NONE-") . toList
+
+
+getNONETerms :: PennTree -> [Text]
+getNONETerms = map snd . filter (\(t,_) -> t == "-NONE-") . toList
 
 
 parseOntoNotesPennTree :: FilePath -> IO (Either String [PennTree])
@@ -49,13 +55,10 @@ parseOntoNotesPennTree f = fmap (A.parseOnly (A.many1 (A.skipSpace *> pnode))) (
 
 
 errorHandler h_err msg action = do
-  r <- try action 
+  r <- try action
   case r of
-    Left (e :: SomeException) -> hPutStrLn h_err msg
+    Left (e :: SomeException) -> hPutStrLn h_err msg >> hFlush h_err
     _ -> return ()
-
-
-convertTop (PN _ xs) = PN "ROOT" xs
 
 
 filterNML x@(PN NML xs) = [x]
@@ -63,22 +66,8 @@ filterNML (PN c xs) = concatMap filterNML xs
 filterNML (PL _) = []
 
 
-mergeHyphen :: State [(POSTag,Text)] (Maybe [(POSTag,Text)])
-mergeHyphen = fmap (fmap reverse) (go Nothing)
-  where go acc = do s <- get
-                    case s of
-                      [] -> return acc
-                      (x:xs) -> case acc of
-                                  Nothing                -> put xs >> go (Just [x])
-                                  Just ys@((M_HYPH,_):_) -> put xs >> go (Just (x:ys))
-                                  Just ys                ->
-                                    case x of
-                                      (M_HYPH,_) -> put xs >> go (Just (x:ys))
-                                      _          -> return acc 
-
-      
 serializeLemma pp txts h_lemma = do
-  let docs = map (flip Document (fromGregorian 1990 1 1)) txts 
+  let docs = map (flip Document (fromGregorian 1990 1 1)) txts
   anns <- traverse (annotate pp) docs
   rdocs' <- traverse protobufDoc anns
   let rdocs = sequenceA rdocs'
@@ -116,29 +105,26 @@ process basedir pp = do
     flip traverse_ parsefiles $ \f -> do
       putStrLn "\n\n\n=============================================================================================="
       print f
-      putStrLn "==============================================================================================" 
+      putStrLn "=============================================================================================="
       etr <- parseOntoNotesPennTree f
       case etr of
         Left err -> hPutStrLn h_err f
         Right trs -> do
-          let txts = flip map trs $ \tr -> 
-                let atr = (getADTPennTree . convertTop) tr
-                    terms0 = (filter (\(t,_) -> t /= D_NONE) . toList) atr
-                    merged = evalState (unfoldM mergeHyphen) terms0
-                in T.intercalate " " (map (T.concat . map snd) merged)
-              
+          let txts = flip map trs $ \tr ->
+                let merged = getMerged tr
+                in T.intercalate " " (map (T.concat . map (snd.snd)) merged)
           let bname = takeBaseName f
           withFile (bname <.> "corenlp_lemma") WriteMode $ \h_lemma -> do
             errorHandler h_err f (serializeLemma pp txts h_lemma)
-          withFile (bname <.> "corenlp_udep") WriteMode $ \h_ud -> 
-            withFile (bname <.> "corenlp_ptree") WriteMode $ \h_tr -> 
+          withFile (bname <.> "corenlp_udep") WriteMode $ \h_ud ->
+            withFile (bname <.> "corenlp_ptree") WriteMode $ \h_tr ->
               errorHandler h_err f (serializePennTreeDep pp txts (h_ud,h_tr))
 
 
 main :: IO ()
 main = do
   let basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-  
+
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
     let pcfg = def & ( tokenizer .~ True )
@@ -150,4 +136,4 @@ main = do
                      . ( constituency .~ True )
                      . ( ner .~ False )
     pp <- prepare pcfg
-    process basedir pp 
+    process basedir pp
