@@ -48,21 +48,6 @@ main' = do
       print "--"
       print (matchArgNodes (coretr,proptr) arg)
 
-  {-  
-  let minsts = matchInstances (coretr,proptr) insts
-  flip mapM_ minsts $ \minst-> do
-    printMatchedInst minst
-    {- 
-    let inst = minst^.mi_instance
-        args = minst^.mi_arguments
-    print (findRelNode (minst^.mi_arguments),inst^.inst_lemma_roleset_id)
-    mapM_ (print . (\a->(a^.ma_argument.arg_label.to pbLabelText,a^..ma_nodes.traverse.mn_node._1))) args
-     -}
-  -}
-
-
-
--- check ex testex = getAll (foldMap (\(i,ei') -> All (testArgMatch ex == ei')) testex)
 
 testPredArg :: (String -> IO ()) -> (Int,(Text,Text),Int,Range) -> Assertion
 testPredArg step (i,(lma,rolnum),n,rng) = do
