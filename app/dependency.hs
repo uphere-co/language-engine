@@ -54,8 +54,8 @@ mainProcess pp = do
     let tr = decodeToPennTree (fromJust (sent^.S.parseTree))
         itr = mkPennTreeIdx tr
         -- dtr = depLevelTree dep itr
-        dtr' = depTree dep (mkAnnotatable itr)
-        ditr = depInfoTree dep (mkAnnotatable itr)
+        -- dtr' = depTree dep (mkAnnotatable itr)
+        -- ditr = depInfoTree dep (mkAnnotatable itr)
 
     liftIO $ print (motherMap dep)
     liftIO $ putStrLn "==============="

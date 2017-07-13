@@ -4,6 +4,7 @@
 module SRL.Format where
 
 import           Control.Lens
+import           Data.IntMap                   (IntMap)
 import qualified Data.IntMap             as IM
 import           Data.List                     (intercalate)
 import           Data.Maybe
@@ -11,9 +12,8 @@ import           Data.Monoid
 import qualified Data.Text               as T
 import           Data.Text                     (Text)
 import           Data.Tree               as Tr
-import           Text.Printf
+import           Text.Printf            hiding (formatArg)
 --
-import           Data.Attribute
 import           Data.Bitree
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
@@ -38,28 +38,29 @@ formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
         
 
 formatVerbProperty :: VerbProperty -> String
-formatVerbProperty vp = printf "%3d %15s %8s %15s %8s %s"
+formatVerbProperty vp = printf "%3d %-15s : %20s %s"
                           (vp^.vp_index) (vp^.vp_lemma.to unLemma)
-                          (show (vp^.vp_tense)) (show (vp^.vp_aspect)) (show (vp^.vp_voice))
+                          (show (vp^.vp_tense) ++ "." ++ show (vp^.vp_aspect) ++ "." ++ show (vp^.vp_voice))
                           (show (vp^.vp_words))
 
 
 formatVerbArgs :: VerbArgs (Either (Range,STag) (Int,POSTag)) -> String
-formatVerbArgs va = printf "%7s %-15s %s"
+formatVerbArgs va = printf "%10s %-20s %s"
                       (maybe "" formatArg (va^.va_arg0))
                       (T.intercalate " " (map (^._2) (va^.va_string)))
                       ((intercalate " " . map (printf "%7s" . formatArg)) (va^.va_args))
   where
     formatArg a = case a of
-                    Right (_,p) -> show p
-                    Left  (_,(S_RT))        -> "ROOT"
+                    Right (_  ,p)           -> show p
+                    Left  (_  ,(S_RT))      -> "ROOT"
                     Left  (rng,(S_SBAR _))  -> "SBAR" ++ show rng
                     Left  (rng,(S_CL c))    -> show c ++ show rng
-                    Left  (rng,(S_VP _))    -> "VP"
-                    Left  (rng,(S_PP t))    -> "(PP " ++ show t ++ ")"
-                    Left  (rng,(S_OTHER t)) -> show t
+                    Left  (_  ,(S_VP _))    -> "VP"
+                    Left  (rng,(S_PP t))    -> "(PP " ++ show t ++ ")" ++ show rng
+                    Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
 
+showVerb :: IntMap Text -> (Lemma ,[Int]) -> Text
 showVerb tkmap (lma,is) = unLemma lma <> " : " <> fullwords
   where fullwords = T.intercalate " " $ map (\i -> fromMaybe "" (IM.lookup i tkmap)) is
 

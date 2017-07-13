@@ -18,7 +18,6 @@ import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
 --
 import           SRL.Feature.Verb
-import           SRL.Type
 import           SRL.Type.Verb
 --
 import           Test.Tasty.HUnit
@@ -158,10 +157,10 @@ testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,
 
 
 checkVP :: (Text,(Tense,Aspect,Voice),[(Int,(Lemma,Text))],PennTree,Dependency) -> Bool
-checkVP (txt,expresult,lmatknlst,pt,dep) = -- do
-  let lmap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
-      tkmap= IM.fromList (map (\(i,(_,t)) -> (i,t)) lmatknlst)
-      vps = verbPropertyFromPennTree lmap pt
+checkVP (_txt,expresult,lmatknlst,pt,_dep) =
+  let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
+      -- tkmap= IM.fromList (map (\(i,(_,t)) -> (i,t)) lmatknlst)
+      vps = verbPropertyFromPennTree lemmamap pt
   in case vps of
        vp:[] -> expresult == (vp^.vp_tense,vp^.vp_aspect,vp^.vp_voice)
        _ -> False 

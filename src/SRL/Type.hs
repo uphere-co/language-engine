@@ -10,7 +10,6 @@ import           Data.Text               (Text)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
 import qualified CoreNLP.Simple.Type.Simplified        as S
-import           Data.Attribute
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
