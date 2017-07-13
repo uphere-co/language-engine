@@ -57,7 +57,7 @@ parseOntoNotesPennTree f = fmap (A.parseOnly (A.many1 (A.skipSpace *> pnode))) (
 errorHandler h_err msg action = do
   r <- try action
   case r of
-    Left (e :: SomeException) -> hPutStrLn h_err msg
+    Left (e :: SomeException) -> hPutStrLn h_err msg >> hFlush h_err
     _ -> return ()
 
 
@@ -110,11 +110,9 @@ process basedir pp = do
       case etr of
         Left err -> hPutStrLn h_err f
         Right trs -> do
-          flip mapM_ trs $ \tr -> do
           let txts = flip map trs $ \tr ->
                 let merged = getMerged tr
                 in T.intercalate " " (map (T.concat . map (snd.snd)) merged)
-
           let bname = takeBaseName f
           withFile (bname <.> "corenlp_lemma") WriteMode $ \h_lemma -> do
             errorHandler h_err f (serializeLemma pp txts h_lemma)
