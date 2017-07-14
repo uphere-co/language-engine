@@ -5,6 +5,7 @@ module Main where
 import           Control.Lens
 import           Data.Foldable
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet        as HS
 import           Data.List                     (sort)
 import           Data.Maybe
 import qualified Data.Text           as T
@@ -54,10 +55,12 @@ main2 = do
   let ks = HM.keys (rdb^.rolesetDB)
 
   txt <- T.IO.readFile "OntoNotes_propbank_statistics_only_wall_street_journal.txt"
-  let ws = map (head . T.words) (T.lines txt)
+  let ws = map ((\(l:_:f:_) -> (l,f)) . T.words) (T.lines txt)
 
-  forM_ ws $ \w -> do
-    putStrLn (printf "%20s : %s" w (T.intercalate " " (getVNCls rdb w)))
+  forM_ ws $ \(l,f) -> do
+    let cls = getVNCls rdb l
+        cls_dedupe = HS.toList (HS.fromList cls)
+    putStrLn (printf "%20s : %6s :  %s" l f (T.intercalate ", " cls_dedupe))
   
 
 
