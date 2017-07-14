@@ -5,25 +5,18 @@
 
 module PropBank.Parser.Prop where
 
-import           Control.Applicative         (many,(<|>))
-import           Control.Lens
+import           Control.Applicative         ((<|>))
 import qualified Data.Attoparsec.Text as A
-import           Data.Foldable               (toList)
-import qualified Data.List            as L   (lookup)
-import           Data.Maybe                  (listToMaybe)
-import           Data.Monoid                 ((<>))
 import           Data.Text                   (Text)
 import qualified Data.Text            as T
-import qualified Data.Text.IO         as TIO
 import           Data.Text.Read              (decimal)
---
-import           NLP.Type.PennTreebankII     (PennTreeGen,Bitree(..),PennTree,mkIndexedTree,contain)
 --
 import           PropBank.Type.Prop
 
 
 readDecimal :: Text -> Int
 readDecimal x = case decimal x of {Left err -> error err; Right (n,_) -> n } 
+
 
 parseInst :: Text -> Instance
 parseInst txt =
@@ -157,8 +150,3 @@ parseProp omit = case omit of
 
 parseNomProp :: Text -> [NomInstance]
 parseNomProp = map parseNomInst . T.lines
-
-
-
-
-
