@@ -75,6 +75,9 @@ test-suite test
                      , containers
                      , attoparsec
                      , xxhash
+                     , binary
+                     , random
+                     , split
                      , raw-strings-qq
                      , tasty
                      , nlp-types

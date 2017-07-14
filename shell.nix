@@ -23,6 +23,9 @@ let
               containers
               attoparsec
               xxhash
+              binary
+              random
+              split
               raw-strings-qq
               p.nlp-types
             ]);

@@ -46,7 +46,9 @@ import           Data.Digest.XXHash                    (XXHash,xxHash')
 import           Data.Int                              (Int32, Int64)
 import           Data.Bits                             (shift)
 import           Data.Text.Encoding                    (encodeUtf8)
-
+import           Data.Binary                           (encode)
+import           System.Random                         (StdGen,getStdGen,randoms)
+import           Data.List.Split                       (chunksOf)
 {-
 yagoDateFacts
 <Guus_Kouwenhoven>    <wasBornOnDate>    "1942-02-15"^^xsd:date .
@@ -104,7 +106,7 @@ testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, 
     expected=[Right (YagoID "4gx1l8_1m6_1snupo6", YagoWikicat "Graphics_chips",   YagoRDFSprop "subClassOf", YagoWordnet "bit_109222051")
              ,Right (YagoID "k664kn_1m6_130ah1o", YagoWordnet "company_108058098",YagoRDFSprop "subClassOf", YagoWordnet "institution_108053576")
              ,Right (YagoID "130ah1o_1m6_5kujp2", YagoWordnet "institution_108053576", YagoRDFSprop "subClassOf", YagoWordnet "organization_108008335")
-             ,Right (YagoID "5kujp2_1m6_1qdi4lo", YagoWordnet "organization_108008335",YagoRDFSprop "subClassOf", YagoClass"LegalActor")
+             ,Right (YagoID "5kujp2_1m6_1qdi4lo", YagoWordnet "organization_108008335",YagoRDFSprop "subClassOf", YagoClass "LegalActor")
              ,Right (YagoID "5kujp2_1m6_a52wvp",  YagoWordnet "organization_108008335",YagoRDFSprop "subClassOf", YagoWordnet "social_group_107950920")
              ,Right (YagoID "klokc9_1m6_1koas7s", YagoWikicat "Syntactic_entities", YagoRDFSprop "subClassOf", YagoOWLclass "Thing")
              
@@ -256,11 +258,12 @@ wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement,
                 , relSVO "wd:Q31" "wdt:P3221" "\"destination/belgium\""
                 , relSVO "wd:Q31" "p:P1464" "wds:Q31-b8a6b97e-4815-1e46-db4c-6b5807933064"
                 ]
-  mapM_ (uncurry eassertEqual) (zip triples2 (flattenStatement (rights rs2)))
   let
     lines = map splitTripleWithState (T.lines ( T.concat [case1,"\n\n", case2, "\n", case1]))
     rs    = map (parseRDFline parserWikidataRdfRelation) lines
-  mapM_ print (flattenStatement (rights rs))
+  --mapM_ print (flattenStatement (rights rs))
+  mapM_ (uncurry eassertEqual) (zip triples2 (flattenStatement (rights rs2)))
+  
 
 allWikidataTest :: TestTree
 allWikidataTest =
@@ -277,44 +280,48 @@ allWikidataTest =
 --newtype NewInt = NewInt Int
 --               deriving (Eq,Ord,Show,UV.Unbox,MVector MVector, Vector Vector)
 --newtype SomeID = SomeID Word64 deriving (Show,Eq,Unbox,M.MVector MVector,G.Vector Vector)
-type RDFObjectHash = XXHash
-type RDFObjectUID  = Int64
+type Triple = (Int64,XXHash,XXHash,XXHash)
 
 
 -- XXHash is GHC.Word.Word32.
-fromXXHash :: XXHash -> RDFObjectUID
+fromXXHash :: XXHash -> Int64
 fromXXHash = fromIntegral
 
-fromXXHashPair :: XXHash -> XXHash -> RDFObjectUID
+fromXXHashPair :: XXHash -> XXHash -> Int64
 fromXXHashPair high low = fromXXHash low + shift (fromXXHash high) 32
 
-fromText :: Text -> RDFObjectUID
+fromText :: Text -> Int64
 fromText str = fromXXHashPair high low
   where
     hash = xxHash' . encodeUtf8
     (left,right) = T.splitAt (T.length str `div` 2) str
     (high, low)   = (hash left, hash right)
 
+
+
+randomTriple :: [XXHash] -> Triple
+randomTriple [high,low,s,v,o] = (fromXXHashPair high low, s `mod` nObject, v `mod` nProp, o `mod` nObject)
+  where
+    nObject = 100
+    nProp   = 1000
+
 testInt64Hash :: TestTree
 testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
   eassertEqual ((xxHash' . encodeUtf8) "a") 1426945110
   eassertEqual ((xxHash' . encodeUtf8) "bc") 2194405884
   eassertEqual (fromXXHashPair 1426945110 2194405884) 6128682582831528444
+  eassertEqual (fromXXHashPair 1 1) 4294967297
   eassertEqual (fromText "abc") 6128682582831528444
   
---wordsHash :: [Text] -> RDFObjectHash
---wordsHash words = UV.fromList (map (xxHash' . encodeUtf8) words)
--- 2^32+1 == 4294967297
 testUnboxedVector :: TestTree
 testUnboxedVector = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
+  print $ encode (211 :: Int)
+  g <- getStdGen
   let
-    v = UV.fromList ([(1,2,3),(1,2,3),(1,2,3)] :: [(RDFObjectHash,RDFObjectHash,RDFObjectHash)])
-    --v = UV.fromList ([(1,2,3),(1,2,3),(1,2,3)] :: [(NewInt,NewInt,NewInt)])
-    x1 = 1 :: XXHash
-    x2 = 1 :: XXHash
-    uid = "abc"
-    x  = shift (fromXXHash x1) 32 + fromXXHash x2
-  print ""
+    rs = Prelude.take 200 (randoms g :: [XXHash])
+    rss = chunksOf 5 rs
+    triples = map randomTriple rss
+  mapM_ print triples
 
 
 allGenericRdfTripleTest :: TestTree
