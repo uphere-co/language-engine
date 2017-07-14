@@ -118,13 +118,16 @@ allYagoTest =
 
 
 
-wo x = r
+toWikidataObject x = r
   where
     Right r = parseOnly wikidataObject x    
 
 relSVO s v o = RelationSVO (wo s) (wo v) (wo o)
+  where wo = toWikidataObject
 relVO    v o = RelationVO  (wo v) (wo o) 
+  where wo = toWikidataObject
 relO       o = RelationO   (wo o)
+  where wo = toWikidataObject
 
 testWikidataTurtleRelation :: TestTree
 testWikidataTurtleRelation = testCaseSteps "Test case for parsing individual lines of Turtle format files" $ \step -> do
@@ -145,6 +148,7 @@ testWikidataTurtleRelation = testCaseSteps "Test case for parsing individual lin
 
 testWikidataTurtleFillMissingSVO :: TestTree
 testWikidataTurtleFillMissingSVO = testCaseSteps "Test case to get complete RDF triples in Turtle format" $ \step -> do
+  let wo = toWikidataObject
   eassertEqual (fillMissingSV (End, wo "", wo "") (relSVO "a" "b" "c",End)) ((End, wo "a", wo "b"),   relSVO "a" "b" "c")
   eassertEqual (fillMissingSV (Comma, wo "x", wo "y") (relO "c",Comma))     ((Comma, wo "x", wo "y"), relSVO "x" "y" "c")
   eassertEqual (fillMissingSV (Semicolon, wo "x", wo "y") (relVO "b" "c",Comma)) ((Comma, wo "x", wo "b"), relSVO "x" "b" "c")
