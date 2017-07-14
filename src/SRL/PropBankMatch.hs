@@ -20,7 +20,7 @@ import qualified CoreNLP.Simple.Type        as S
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII      (prettyPrint)
 import           NLP.Type.PennTreebankII
-import           PropBank.Match
+-- import           PropBank.Match
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 import           PropBank.Util
@@ -35,14 +35,13 @@ propbank (pennfile,propfile,omit) =  do
   props <- liftIO $ parseProp omit <$> T.IO.readFile propfile
   return (trs,props)
 
+
 mkDocFromPennTree :: PennTree -> S.Document
 mkDocFromPennTree = flip S.Document (fromGregorian 2017 4 17)
                   . T.intercalate " "
                   . map snd
                   . filter (\(t :: Text,_) -> t /= "-NONE-")
                   . getLeaves  
-
-
 
 
 showMatchedInstance :: (Int,SentenceInfo,PennTree,[Instance]) -> IO ()

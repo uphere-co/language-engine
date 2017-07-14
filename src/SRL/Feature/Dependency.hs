@@ -11,7 +11,6 @@ module SRL.Feature.Dependency where
 
 import           Control.Lens            hiding (levels,Level)
 import           Data.Function                  (on)
-import           Data.Graph                     (buildG,dfs)
 import           Data.IntMap                    (IntMap)
 import qualified Data.IntMap             as IM
 import           Data.List                      (minimumBy,sortBy)
@@ -38,10 +37,8 @@ annotateLevel levelmap (n,txt) = (n,(IM.lookup n levelmap,txt))
 
 
 levelMap :: Dependency -> IntMap Int
-levelMap (Dependency root nods edgs0) = 
-  let bnds = let xs = map fst nods in (minimum xs, maximum xs)
-      edgs = map fst edgs0
-      searchtree = head (dfs (buildG bnds edgs) [root])
+levelMap dep = 
+  let searchtree = dependencyIndexTree dep
   in IM.fromList  $ map (\(i,n) -> (i-1,n)) $ concat $ zipWith (\xs n -> map (,n) xs) (levels searchtree) [0..]
 
 

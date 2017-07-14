@@ -11,8 +11,7 @@ import           Data.Discrimination
 import           Data.IntMap       (IntMap)
 import qualified Data.IntMap as IM 
 import           Data.Text         (Text)
-import qualified Data.Text   as T  (intercalate, unpack)
-import           Data.Tree
+import qualified Data.Text   as T  (intercalate)
 --
 import           Data.Attribute
 import           Data.Bitree

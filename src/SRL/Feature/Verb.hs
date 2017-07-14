@@ -18,9 +18,8 @@ import           Data.Monoid
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmatize)
 import           Data.Attribute
-import           Data.Bitree                                 (duplicate,getRoot)
+import           Data.Bitree                                 (getRoot)
 import           Data.BitreeZipper
-import           Data.List                                   (sortBy)
 import           NLP.Type.PennTreebankII
 --
 import           SRL.Type
@@ -32,22 +31,27 @@ phraseType (PN (i,c) _)   = (i,Left c)
 phraseType (PL (n,(p,_))) = ((n,n),Right p)
 
 
+getLeaf :: Bitree c (i,t) -> Maybe t
 getLeaf (PL (_,x)) = Just x
 getLeaf _          = Nothing
 
 
+getLeafIndex :: Bitree c (i,t) -> Maybe i
 getLeafIndex (PL (i,_)) = Just i
 getLeafIndex _          = Nothing
 
 
+isLemmaAs :: Lemma -> BitreeICP (Lemma ': as) -> Bool
 isLemmaAs lma (PL (_,x)) = ahead (getAnnot x) == lma
 isLemmaAs _   _          = False
 
 
+isPOSAs :: POSTag -> BitreeICP as -> Bool
 isPOSAs pos (PL (_,x)) = posTag x == pos
 isPOSAs _   _          = False
 
 
+isChunkAs :: ChunkTag -> BitreeICP as -> Bool
 isChunkAs chk (PN (_,x) _) = chunkTag x == chk
 isChunkAs _   _            = False
 
@@ -61,13 +65,15 @@ isVBG :: BitreeZipperICP a -> Bool
 isVBG z = isPOSAs VBG (current z)
 
 
+getIdxPOS :: BitreeICP a -> Maybe (Int,POSTag)
 getIdxPOS w = (,) <$> getLeafIndex w <*> fmap posTag (getLeaf w)
 
+
 withCopula :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,POSTag)
-withCopula z = do p1 <- parent z
-                  p2 <- (parent <=< parent) z
-                  p3 <- (parent <=< parent <=< parent) z
-                  check1 p1 z <|> check2 p1 p2 z <|> check3 p1 p2 p3 z
+withCopula x = do p1 <- parent x
+                  p2 <- (parent <=< parent) x
+                  p3 <- (parent <=< parent <=< parent) x
+                  check1 p1 x <|> check2 p1 p2 x <|> check3 p1 p2 p3 x
   where check1 p1 z = do
           w <- current <$> (prev <=< parent) z
           guard (isChunkAs VP (current p1))
@@ -90,7 +96,7 @@ withCopula z = do p1 <- parent z
 
 
 withHave :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,POSTag)
-withHave z = check1 z <|> check2 z <|> check3 z
+withHave x = check1 x <|> check2 x <|> check3 x
   where check1 z = do w <- current <$> (prev <=< parent) z
                       guard (isLemmaAs "have" w)
                       getIdxPOS w
@@ -175,8 +181,6 @@ voice (pt,sent) =
   let ipt = mkAnnotatable (mkPennTreeIdx pt)
       lemmamap = mkLemmaMap sent
       lemmapt = lemmatize lemmamap ipt
-      -- getf (PL x) = Right x
-      -- getf (PN x _) = Left x
       testf z = case getRoot (current z) of
                   Right (n,ALeaf (VBN,_) annot)
                     -> Just (n,(ahead annot,if isPassive z then Passive else Active))
@@ -188,10 +192,8 @@ voice (pt,sent) =
 verbPropertyFromPennTree :: IntMap Lemma -> PennTree -> [VerbProperty]
 verbPropertyFromPennTree lemmamap pt = 
   let lemmapt = lemmatize lemmamap (mkAnnotatable (mkPennTreeIdx pt))
-      -- getf (PL x) = Right x
-      -- getf (PN x _) = Left x
       phase1 z = case getRoot (current z) of
-                  Right (i,ALeaf (pos,_) annot)
+                  Right (_,ALeaf (pos,_) annot)
                     -> if isVerb pos && ahead annot /= "be" && ahead annot /= "have"
                        then verbProperty z
                        else Nothing
@@ -200,7 +202,7 @@ verbPropertyFromPennTree lemmamap pt =
       identified_verbs = concatMap (\vp -> vp^.vp_words) vps1
       
       phase2 z = case getRoot (current z) of
-                  Right (i,ALeaf (pos,_) annot)
+                  Right (i,ALeaf (pos,_) _annot)
                     -> if isVerb pos && (not (i `elem` identified_verbs))
                        then verbProperty z
                        else Nothing

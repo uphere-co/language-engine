@@ -20,13 +20,11 @@ import           NLP.Type.PennTreebankII
 import           PropBank.Match
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
-import           PropBank.Util
 --
 import           SRL.Feature.Dependency
 import           SRL.Feature.ParseTreePath
 import           SRL.Feature.Verb
 import           SRL.Format
-import           SRL.PropBankMatch
 import           SRL.Type
 import           SRL.Type.Verb
 import           SRL.Util
@@ -42,16 +40,15 @@ verbTree vps = fmap squash . worker
     vps_map = IM.fromList (map (\vp -> (vp^.vp_index,(vp^.vp_lemma,vp^.vp_words))) vps)
     identified_verbs = concatMap (\vp -> init (vp^.vp_words)) vps
     
-    
     worker (PL (i,l)) = let lma = ahead (atail (getAnnot l))
                         in if (lma == "be" || lma == "have") && (i `elem` identified_verbs)
                            then Nothing
                            else registerVerb (i,lma)
-      where registerVerb (i,lma) = if isVerb (posTag l)
-                                   then do v <- IM.lookup i vps_map
-                                           let mlvl = ahead (getAnnot l)
-                                           return (PL (i,v,mlvl))
-                                   else Nothing
+      where registerVerb (j,_) = if isVerb (posTag l)
+                                 then do v <- IM.lookup j vps_map
+                                         let mlvl = ahead (getAnnot l)
+                                         return (PL (j,v,mlvl))
+                                 else Nothing
     worker (PN _ xs) = let xs' = mapMaybe worker xs
                          in case xs' of
                               []  -> Nothing
@@ -64,10 +61,10 @@ verbTree vps = fmap squash . worker
     getLevel (PL (_i,_,ml))   = ml
     getLevel (PN (_i,_,ml) _) = ml
 
-    squash (PN y [z@(PN w ws)]) = if y == w then squash z else PN y [squash z]
-    squash (PN y [z@(PL w)   ]) = if y == w then PL w     else PN y [squash z]
-    squash (PN y ys)            = PN y (map squash ys)
-    squash x                    = x
+    squash (PN y [z@(PN w _)]) = if y == w then squash z else PN y [squash z]
+    squash (PN y [z@(PL w  )]) = if y == w then PL w     else PN y [squash z]
+    squash (PN y ys)           = PN y (map squash ys)
+    squash x                   = x
 
 
 calcSRLFeature :: SentenceInfo -> Int -> NodeRange -> Maybe SRLFeature
@@ -77,8 +74,8 @@ calcSRLFeature sentinfo predidx (Single rng) =
       parsetree = parseTreePathFull (predidx,rng) ipt
       path = maybe [] (simplifyPTP . parseTreePath) parsetree
       dltr = bimap convn convl (depLevelTree dep (mkAnnotatable ipt))
-        where convn (rng,ANode c  _) = (rng,c)
-              convl (i  ,ALeaf pt x) = (i  ,(ahead x,pt))
+        where convn (r,ANode c  _) = (r,c)
+              convl (i,ALeaf pt x) = (i,(ahead x,pt))
       dprpath = depRelPath dep ipt (predidx,rng) 
       hd = headWord =<< matchR rng dltr
   in  Just (SRLFeat rng path dprpath hd)
