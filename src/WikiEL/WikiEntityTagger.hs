@@ -7,14 +7,11 @@ module WikiEL.WikiEntityTagger where
 import           Data.Maybe                            (fromJust, isNothing)
 import           Data.List                             (inits, transpose)
 import           Data.Text                             (Text)
-import           Control.Monad.Primitive               (PrimMonad, PrimState)
 import           Control.Monad.ST                      (ST, runST)
 import           Control.Arrow                         (second)
-import           Data.Vector.Generic.Mutable           (MVector)
 import           Data.Vector                           (Vector,backpermute,findIndices
                                                        ,slice,fromList,toList,unsafeThaw,modify)
 import           Data.Vector.Unboxed                   ((!))
-import           Data.Ord                              (Ord)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
 import           Data.Text.Encoding                    (encodeUtf8)
 import           Data.Digest.XXHash                    (XXHash,xxHash')
@@ -26,11 +23,12 @@ import qualified Data.Vector.Unboxed           as UV
 
 
 import qualified WikiEL.Type.Wikidata         as Wiki
-import           WikiEL.Type.Wikidata                 (ItemID)
-import           WikiEL.Type.FileFormat               (EntityReprFile,EntityReprRow(..))
+import           WikiEL.Type.Wikidata                  (ItemID)
+import           WikiEL.Type.FileFormat                (EntityReprFile,EntityReprRow(..))
 import           WikiEL.ETL.LoadData                   (loadEntityReprs)
 import           WikiEL.Misc                           (IRange(..))
 import           Assert                                (massertEqual,eassertEqual)
+import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
 
 type WordHash = XXHash
 type WordsHash = UV.Vector WordHash
@@ -40,23 +38,6 @@ ithElementOrdering i lhs rhs | UV.length lhs <= i = LT
                              | UV.length rhs <= i = GT
                              | otherwise = compare (lhs!i) (rhs!i)
 
-binarySearchLR :: (PrimMonad m, MVector v e, Ord e) => v (PrimState m) e -> e -> m (Int,Int)
-binarySearchLR vec elm = do
-  idxL <- VS.binarySearchL vec elm
-  idxR <- VS.binarySearchR vec elm
-  return (idxL, idxR)  
-
-binarySearchLRBy :: (PrimMonad m, MVector v e) => VS.Comparison e -> v (PrimState m) e -> e -> m (Int,Int)
-binarySearchLRBy comp vec elm = do
-  idxL <- VS.binarySearchLBy comp vec elm
-  idxR <- VS.binarySearchRBy comp vec elm
-  return (idxL, idxR)  
-
-binarySearchLRByBounds :: (PrimMonad m, MVector v e) => VS.Comparison e -> v (PrimState m) e -> e -> Int -> Int -> m (Int,Int)
-binarySearchLRByBounds comp vec elm l u = do
-  idxL <- VS.binarySearchLByBounds comp vec elm l u
-  idxR <- VS.binarySearchRByBounds comp vec elm l u
-  return (idxL, idxR)  
 
 greedyMatchImpl :: Vector WordsHash -> WordsHash -> (Int, IRange) -> (Int, IRange)
 greedyMatchImpl entities words (i, IRange beg end) = runST $ do

@@ -21,6 +21,7 @@ import           WikiEL.WikiEntityClass                (SuperclassUID(..),Subcla
 import           WikiEL.Misc                           (IRange(..))
 import           Assert                                (assert,massertEqual,eassertEqual)
 import           WikiEL.WikiEntityTagger
+import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
 
 
 import           WikiEL.Type.Wikidata

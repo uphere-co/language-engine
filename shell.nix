@@ -26,6 +26,7 @@ let
               binary
               random
               split
+              tuple
               raw-strings-qq
               p.nlp-types
             ]);
