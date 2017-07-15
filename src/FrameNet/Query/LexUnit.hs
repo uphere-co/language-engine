@@ -66,10 +66,8 @@ loadLUData dir = do
       putStrLn (show i)
     async (parseLUFile fp)
   xs <- mapM wait as
-    
-  let lumap = foldl' insertLU emptyDB xs
+  return (foldl' insertLU emptyDB xs)
 
-  return lumap 
 
 
 queryLU :: LexUnitDB -> IO ()
