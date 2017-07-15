@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module FrameNet.Type.Common where
@@ -58,4 +59,10 @@ makeLenses ''FrameReference
 data CoreType = Core | Peripheral | ExtraThematic | CoreUnexpressed
               deriving (Show,Eq,Ord,Enum,Bounded,Generic)
 
-                       
+
+identifyCoreType :: Text -> Maybe CoreType
+identifyCoreType "Core"             = Just Core
+identifyCoreType "Peripheral"       = Just Peripheral
+identifyCoreType "Extra-Thematic"   = Just ExtraThematic
+identifyCoreType "Core-Unexpressed" = Just CoreUnexpressed
+identifyCoreType _                  = Nothing

@@ -7,6 +7,7 @@ import           Control.Lens           ((^?),(^.),(^..),_Just,only)
 import           Text.Taggy.Lens
 --
 import           FrameNet.Parser.Common
+import           FrameNet.Type.Common
 import           FrameNet.Type.Frame
 import           FrameNet.Util
 
@@ -27,7 +28,7 @@ p_FE x = FE <$> (readDecimal =<< (x ^. attr "ID"))
             <*> x ^. attr "name"
             <*> x ^. attr "abbrev"
             <*> (readTime =<< (x ^. attr "cDate"))
-            <*> x ^. attr "coreType"
+            <*> (identifyCoreType =<< (x ^. attr "coreType"))
             <*> x ^. attr "fgColor"
             <*> x ^. attr "bgColor"
             <*> getOnly1 x "definition" ^? _Just.element.contents

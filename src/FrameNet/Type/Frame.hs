@@ -17,7 +17,7 @@ data FE = FE { _fe_ID :: Int
              , _fe_name :: Text
              , _fe_abbrev :: Text
              , _fe_cDate :: DateTime
-             , _fe_coreType :: Text
+             , _fe_coreType :: CoreType
              , _fe_fgColor :: Text
              , _fe_bgColor :: Text
              , _fe_definition :: Text
