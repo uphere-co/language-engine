@@ -113,7 +113,11 @@ p_annoSet x = AnnoSet <$> (readDecimal =<< x ^. attr "ID")
 -- | parser for FrameNet.Type.Header.FE
 p_header_frame :: Element -> Maybe [FE]
 p_header_frame x = mapM p_fe (getOnly x "FE")
-  where p_fe x = FE <$> x ^. attr "name"
+  where p_fe x = FE <$> x^.attr "name"
+                    <*> optional (x^.attr "abbrev")
+                    <*> (identifyCoreType =<< (x ^. attr "type"))
+                    <*> x^.attr "bgColor"
+                    <*> x^.attr "fgColor"
 
 
 p_header :: Element -> Maybe Header
@@ -123,6 +127,9 @@ p_header x = Header <$> mapM p_corpus (getOnly x "corpus")
 
 p_corpus :: Element -> Maybe Corpus
 p_corpus x = Corpus <$> mapM p_document (getOnly x "document")
+                    <*> (readDecimal =<< x ^. attr "ID")
+                    <*> x ^. attr "name"
+                    <*> x ^. attr "description"
 
 
 p_document :: Element -> Maybe Document

@@ -34,21 +34,24 @@ p_FE x = FE <$> (readDecimal =<< (x ^. attr "ID"))
             <*> getOnly1 x "definition" ^? _Just.element.contents
             <*> mapM p_semType (getOnly x "semType")
 
+
 p_FEcoreSet :: Element -> Maybe FEcoreSet
 p_FEcoreSet x = FEcoreSet <$> mapM p_memberFE (getOnly x "memberFE")
+
 
 p_memberFE :: Element -> Maybe MemberFE
 p_memberFE x = MemberFE <$> (readDecimal =<< (x ^. attr "ID"))
                         <*> x ^. attr "name"
 
+
 p_frameRelation :: Element -> Maybe FrameRelation
 p_frameRelation x = FrameRelation <$> x ^. attr "type"
                                   <*> mapM p_relatedFrame (getOnly x "relatedFrame")
 
+
 p_relatedFrame :: Element -> Maybe RelatedFrame
 p_relatedFrame x = RelatedFrame <$> (readDecimal =<< (x ^. attr "ID"))
                                 <*> pure (x ^. element . contents)
-
 
 
 p_lexUnit :: Element -> Maybe LexUnit
@@ -63,6 +66,7 @@ p_lexUnit x = LexUnit <$> (readDecimal =<< (x ^. attr "ID"))
                       <*> (p_sentenceCount =<< getOnly1 x "sentenceCount")
                       <*> mapM p_lexeme  (getOnly x "lexeme")
                       <*> mapM p_semType (getOnly x "semType")
+
 
 p_sentenceCount :: Element -> Maybe SentenceCount
 p_sentenceCount x = SentenceCount <$> (readDecimal =<< (x ^. attr "total"))

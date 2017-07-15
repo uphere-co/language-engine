@@ -1,6 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+------------------------------------------------------------------------
+--
+-- This module follows the definition of (framenet)/schema/sentence.xsd
+--
+------------------------------------------------------------------------
+
 module FrameNet.Type.Sentence where
 
 import           Control.Lens

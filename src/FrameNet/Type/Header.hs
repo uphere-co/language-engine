@@ -1,6 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+
+------------------------------------------------------------------------
+--
+-- This module follows the definition of (framenet)/schema/header.xsd
+--
+------------------------------------------------------------------------
+
 module FrameNet.Type.Header where
 
 import           Control.Lens
@@ -17,16 +24,22 @@ data Document = Document { _doc_ID :: Int
 
 makeLenses ''Document
 
-data Corpus = Corpus { _corpus_document :: [Document] }
+
+data Corpus = Corpus { _corpus_document    :: [Document]
+                     , _corpus_ID          :: Int
+                     , _corpus_name        :: Text
+                     , _corpus_description :: Text
+                     }
             deriving (Show,Eq,Ord,Generic)
 
 makeLenses ''Corpus
 
+
 data FE = FE { _fe_name :: Text
-             -- , _fe_abbrev :: Maybe Text
-             -- , _fe_type :: CoreType
-             -- , _fe_bgColor :: Text
-             -- , _fe_fgColor :: Text
+             , _fe_abbrev :: Maybe Text
+             , _fe_type :: CoreType
+             , _fe_bgColor :: Text
+             , _fe_fgColor :: Text
              }
         deriving (Show,Eq,Ord,Generic)
 
