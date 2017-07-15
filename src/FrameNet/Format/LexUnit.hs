@@ -42,4 +42,7 @@ printLexUnit lu = do
   TIO.putStrLn ("definition: " <> lu^.lexunit_definition)
   TIO.putStrLn "---- example sentences -----"  
   mapM_ (putStrLn . formatSentence) . take 3 $ (lu^..lexunit_subCorpus.traverse.subcorp_sentence.traverse)
+  TIO.putStrLn "----------------------------"
+  print (lu^.lexunit_header)
+  
   TIO.putStrLn "============================"
