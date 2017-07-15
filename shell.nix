@@ -11,6 +11,7 @@ let
 
   hsenv = haskellPackages.ghcWithPackages (p: with p; [
             async
+            binary-orphans
             monad-loops
             optparse-applicative
             split
