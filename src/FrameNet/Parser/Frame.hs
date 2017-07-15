@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module FrameNet.Parse.Frame where
+module FrameNet.Parser.Frame where
 
 import           Control.Applicative    ((<$>),(<*>))
 import           Control.Lens           ((^?),(^.),(^..),_Just,only)
 import           Text.Taggy.Lens
 --
-import           FrameNet.Parse.Common
+import           FrameNet.Parser.Common
 import           FrameNet.Type.Frame
 import           FrameNet.Util
 

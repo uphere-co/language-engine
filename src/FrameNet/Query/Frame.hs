@@ -18,7 +18,7 @@ import           System.Directory             (getDirectoryContents)
 import           Text.Taggy.Lens
 --
 import           FrameNet.Format.Frame
-import           FrameNet.Parse.Frame
+import           FrameNet.Parser.Frame
 import           FrameNet.Type.Frame
 
 newtype FrameDB = FrameDB { _frameDB :: HashMap Text Frame } 

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module FrameNet.Parse.Sentence where
+module FrameNet.Parser.Sentence where
 
 import           Control.Applicative
 import           Control.Lens            ((^?),(^.),_Just)

@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module FrameNet.Parse.LexUnit where
+module FrameNet.Parser.LexUnit where
 
 import           Control.Applicative
 import           Control.Lens             ((^?),(^.),_Just)
 import           Data.Text                (Text)
 import           Text.Taggy.Lens
 --
-import           FrameNet.Parse.Common
-import           FrameNet.Parse.Sentence
+import           FrameNet.Parser.Common
+import           FrameNet.Parser.Sentence
 import           FrameNet.Type.Common
 import           FrameNet.Type.LexUnit
 import           FrameNet.Util
