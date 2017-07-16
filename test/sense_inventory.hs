@@ -27,10 +27,8 @@ import           OntoNotes.Parser.SenseInventory
 load dir = do
   cnts <- getDirectoryContents dir
   let fs = sort (filter (\x -> takeExtensions x == ".xml") cnts) 
-  -- let fs = ["stock-v.xml"] -- [ "fracture-v.xml" ] -- [ "get-v.xml" ]
   flip traverse fs $ \f -> do
     let fp = dir  </> f
-    -- print fp
     txt <- T.L.IO.readFile fp
     case txt ^? html . allNamed (only "inventory") of
       Nothing -> error "nothing"
@@ -43,12 +41,15 @@ getSenses lma simap = do
   si <- maybeToList (HM.lookup lma simap)
   s <- si^.inventory_senses
   let txt1 = text (printf "%2s.%-6s %-40s   " (s^.sense_group) (s^.sense_n) (T.take 40 (s^.sense_name)))
-      txt_fn = vcat top (map (text.show) (catMaybes (s^..sense_mappings.mappings_fn)))
-      txt_wn = vcat top $ let lst = map (text.printf "%-30s") (catMaybes (s^..sense_mappings.mappings_wn.traverse.wn_lemma))
+      mappings = s^.sense_mappings 
+  
+      txt_fn = vcat top $ let lst = maybe [] (T.splitOn ",") (mappings^.mappings_fn)
+                          in if null lst then [text (printf "%-30s" ("" :: String))] else map (text.printf "%-30s") lst
+      txt_wn = vcat top $ let lst = map (text.printf "%-30s") (catMaybes (mappings^..mappings_wn.traverse.wn_lemma))
                           in if null lst then [text (printf "%-30s" ("" :: String))] else lst
                                               
-  return (txt1 <+> txt_wn <+> txt_fn)
-  -- return (s^.sense_group,s^.sense_n , s^.sense_name, s^.sense_mappings)
+  return (txt1 <+> txt_fn <+> txt_wn)
+
 
 
 main :: IO ()
@@ -62,7 +63,6 @@ main = do
 
       merge :: [(Text,Text)] -> (Text,Int)
       merge lst = let (lma,_) = head lst
-                      -- (lma,_) = T.break (== '.') l
                   in case mapM (decimal.snd) lst of
                        Left _     -> (lma,0)
                        Right lst' -> (lma,sum (map fst lst'))
