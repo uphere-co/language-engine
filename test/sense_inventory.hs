@@ -40,7 +40,7 @@ load dir = do
 
 getSenses lma simap = do si <- maybeToList (HM.lookup lma simap)
                          s <- si^.inventory_senses
-                         return (s^.sense_name)
+                         return (s^.sense_group,s^.sense_n , s^.sense_name)
 
 
 main :: IO ()
@@ -53,18 +53,25 @@ main = do
   let ws = map ((\(l:_:f:_) -> (l,f)) . T.words) (T.lines txt)
 
       merge :: [(Text,Text)] -> (Text,Int)
-      merge lst = let (l,_) = head lst
-                      (lma,_) = T.break (== '.') l
+      merge lst = let (lma,_) = head lst
+                      -- (lma,_) = T.break (== '.') l
                   in case mapM (decimal.snd) lst of
                        Left _     -> (lma,0)
                        Right lst' -> (lma,sum (map fst lst'))
                      
-      merged = sortBy (flip compare `on` snd) . map merge . groupBy ((==) `on` fst) $ ws 
-  
+      merged = sortBy (flip compare `on` snd) . map merge . groupBy ((==) `on` fst)
+             . sortBy (flip compare `on` fst)
+             . map (\(l,f)-> let (lma,_) = T.break (== '.') l in (lma,f))
+             $ ws 
+  -- print merged
+  -- (print . take 100 . groupBy ((==) `on` fst) . sortBy (compare `on` fst)) ws
+
+   
   forM_ (take 20 merged) $ \(lma,f) -> do
     let lmav = lma <> "-v"
-        doc = text (printf "%20s : %6d " lma f) <+> vcat (map (text.show) (getSenses lmav simap))
+        doc = text (printf "%20s : %6d " lma f) <+> vcat (map (sizedText 20.show) (getSenses lmav simap)) 
     
     putStrLn (render doc)
     
   -- print (length sis)
+ 
