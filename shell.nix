@@ -38,6 +38,7 @@ let
             cabal-install
 
             attoparsec
+            boxes
             discrimination
             directory-tree
             either
