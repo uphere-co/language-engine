@@ -54,6 +54,7 @@ data Sense = Sense { _sense_commentary :: Maybe Text
                    }
            deriving Show
 
+makeLenses ''Sense
 
 data Inventory = Inventory { _inventory_commentary :: Maybe Text
                            , _inventory_senses     :: [Sense]
