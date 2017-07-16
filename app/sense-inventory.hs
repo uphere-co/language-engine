@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
@@ -21,10 +22,15 @@ import           Text.PrettyPrint.Boxes hiding ((<>))
 import           Text.Printf
 import           Text.Taggy.Lens
 --
+import           VerbNet.Parser.SemLink
+import           VerbNet.Type.SemLink
 import           OntoNotes.Parser.SenseInventory
 
 
-load dir = do
+data VorN = V | N deriving Eq
+
+
+loadSenseInventory dir = do
   cnts <- getDirectoryContents dir
   let fs = sort (filter (\x -> takeExtensions x == ".xml") cnts)
   flip traverse fs $ \f -> do
@@ -37,13 +43,35 @@ load dir = do
                   Right c  -> return c
 
 
-verbnet txt = let (_,cls') = T.breakOn "-" txt
-                  cls = if T.null cls' then cls' else T.tail cls'
-              in cls
+loadSemLink file = do
+  txt <- T.L.IO.readFile file
+  case txt ^? html . allNamed (only "verbnet-framenet_MappingData") of
+    Nothing -> error "nothing"
+    Just f -> case p_vnfnmappingdata f of
+                Left err -> error err
+                Right c -> return c
+  
 
 
-getSenses lma simap = do
-  si <- maybeToList (HM.lookup lma simap)
+verbnet semlinkmap lma txt =
+  let (_,cls') = T.breakOn "-" txt
+  in if T.null cls'
+     then ("" :: String)
+     else
+       let cls = T.tail cls'
+       in printf "%-8s -> %s" cls (fromMaybe "" (HM.lookup (lma,cls) semlinkmap))
+
+
+
+{- 
+    cls = if T.null cls' then cls' else T.tail cls'
+  in cls
+-}
+
+
+getSenses lma vorn sensemap semlinkmap = do
+  let lmav = lma <> case vorn of V -> "-v" ; N -> "-n"
+  si <- maybeToList (HM.lookup lmav sensemap)
   s <- si^.inventory_senses
   let txt1 = text (printf "%2s.%-6s %-40s   " (s^.sense_group) (s^.sense_n) (T.take 40 (s^.sense_name)))
       mappings = s^.sense_mappings
@@ -57,22 +85,36 @@ getSenses lma simap = do
                              else map (text.printf "%-30s") lst
       txt_wn = vcat top $ let lst = map (text.printf "%-30s") (catMaybes (mappings^..mappings_wn.traverse.wn_lemma))
                           in if null lst then [text (printf "%-30s" ("" :: String))] else lst
-      txt_vn = vcat top $ let lst = maybe [] (map verbnet . T.splitOn ",") (mappings^.mappings_vn)
-                          in if null lst
-                             then [text (printf "%-20s" ("" :: String))]
-                             else map (text.printf "%-20s") lst
-
+      txt_vn = case vorn of
+                 V -> vcat top $ let lst = maybe [] (map (verbnet semlinkmap lma) . T.splitOn ",") (mappings^.mappings_vn)
+                                 in if null lst
+                                    then [text (printf "%-20s" ("" :: String))]
+                                    else map (text.printf "%-20s") lst
+                 N -> vcat top [text (printf "%-20s" ("" :: String))]
 
 
   return (txt1 <+> txt_pb <+> txt_fn <+> txt_wn <+> txt_vn)
 
+data Config = Config { _cfg_sense_inventory_file :: FilePath
+                     , _cfg_semlink_file :: FilePath }
 
+makeLenses ''Config
+              
+cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
+             , _cfg_semlink_file = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
+             }
 
 main :: IO ()
 main = do
-  let dir= "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
-  sis <- load dir
-  let simap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
+  semlink <- loadSemLink (cfg^.cfg_semlink_file)
+  let semlinkmap = HM.fromList (map (\c-> ((c^.vnc_vnmember,c^.vnc_class),c^.vnc_fnframe)) (semlink^.vnfnmap_vnclslst))
+
+  -- print (HM.lookup ("oust","10.1") slmap )
+
+  sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
+
+  
+  let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
 
   txt <- T.IO.readFile "run/OntoNotes_propbank_statistics_only_wall_street_journal.txt"
   let ws = map ((\(l:_:f:_) -> (l,f)) . T.words) (T.lines txt)
@@ -89,7 +131,8 @@ main = do
              $ ws
 
   forM_ merged $ \(lma,f) -> do
-    let lmav = lma <> "-v"
-        doc = text (printf "%20s:%6d " lma f) <+> vcat top (getSenses lmav simap)
+    let -- lmav = lma <> "-v"
+        doc = text (printf "%20s:%6d " lma f) <+> vcat top (getSenses lma V sensemap semlinkmap )
     putStrLn "-------------------------------------------"
     putStrLn (render doc)
+
