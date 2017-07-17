@@ -22,11 +22,14 @@ library
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10,
+                       boxes,
                        directory,
                        filepath,
                        lens,
+                       -- pretty,
                        taggy-lens,
                        text,
+                       unordered-containers,
                        --
                        nlp-types
   hs-source-dirs:      src

@@ -3,6 +3,7 @@
 , HCoreNLP           ? <HCoreNLP>
 , nlp-types          ? <nlp-types>
 , PropBank           ? <PropBank>
+, VerbNet            ? <VerbNet>
 , wiki-ner           ? <wiki-ner>
 }:
 
@@ -25,7 +26,8 @@ let
       "wiki-ner" = self.callPackage (import wiki-ner) {};
     
       "nlp-types" = self.callPackage (import nlp-types) {};
-      "PropBank" = self.callPackage (import PropBank) {};      
+      "PropBank" = self.callPackage (import PropBank) {};
+      "VerbNet" = self.callPackage (import VerbNet) {};
     };
   newHaskellPackages = haskellPackages.override {
     overrides = self: super: hsconfig self super // config2 self super;
@@ -36,6 +38,7 @@ let
             cabal-install
 
             attoparsec
+            boxes
             discrimination
             directory-tree
             either
@@ -55,6 +58,7 @@ let
             
             p.nlp-types
             p.PropBank
+            p.VerbNet
             p.wiki-ner
           ]);
 
