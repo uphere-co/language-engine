@@ -31,6 +31,19 @@ import           OntoNotes.Parser.SenseInventory
 data VorN = V | N deriving Eq
 
 
+data Config = Config { _cfg_sense_inventory_file :: FilePath
+                     , _cfg_semlink_file         :: FilePath
+                     , _cfg_statistics           :: FilePath
+                     }
+
+makeLenses ''Config
+              
+cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
+             , _cfg_semlink_file = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
+             , _cfg_statistics = "run/OntoNotes_propbank_statistics_only_wall_street_journal.txt"               
+             }
+
+
 loadSenseInventory dir = do
   cnts <- getDirectoryContents dir
   let fs = sort (filter (\x -> takeExtensions x == ".xml") cnts)
@@ -59,14 +72,22 @@ loadSemLink file = do
                 Left err -> error err
                 Right c -> return c
   
+loadStatistics file = do
+  txt <- T.IO.readFile file
+  return $ map ((\(l:_:f:_) -> (l,f)) . T.words) (T.lines txt)
 
 
 verbnet semlinkmap lma txt =
   let (_,cls') = T.breakOn "-" txt
   in if T.null cls'
-     then ("" :: String)
+     then text (printf "%-43s" ("" :: String))
      else let cls = T.tail cls'
-          in printf "%-8s -> %s" cls (maybe "" (T.intercalate ",") (HM.lookup (lma,cls) semlinkmap))
+              frms = fromMaybe [] (HM.lookup (lma,cls) semlinkmap)
+          in text (printf "%-8s -> " cls) <+>
+             vcat top (if null frms
+                       then [text (printf "%-30s" ("":: String))]
+                       else map (text.printf "%-30s") frms
+                      )
 
 
 
@@ -90,37 +111,25 @@ getSenses lma vorn sensemap semlinkmap = do
       txt_vn = case vorn of
                  V -> vcat top $ let lst = maybe [] (map (verbnet semlinkmap lma) . T.splitOn ",") (mappings^.mappings_vn)
                                  in if null lst
-                                    then [text (printf "%-20s" ("" :: String))]
-                                    else map (text.printf "%-20s") lst
-                 N -> vcat top [text (printf "%-20s" ("" :: String))]
+                                    then [text (printf "%-43s" ("" :: String))]
+                                    else lst --  map (text.printf "%-20s") lst
+                 N -> vcat top [text (printf "%-42s" ("" :: String))]
 
 
-  return (txt1 <+> txt_pb <+> txt_fn <+> txt_wn <+> txt_vn)
+  return (txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn )
 
-data Config = Config { _cfg_sense_inventory_file :: FilePath
-                     , _cfg_semlink_file :: FilePath }
-
-makeLenses ''Config
-              
-cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
-             , _cfg_semlink_file = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
-             }
 
 main :: IO ()
 main = do
   semlink <- loadSemLink (cfg^.cfg_semlink_file)
   let semlinkmap = createVNFNDB semlink
-  -- print (HM.lookup ("oust","10.1") slmap )
 
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
-
-  
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
 
-  txt <- T.IO.readFile "run/OntoNotes_propbank_statistics_only_wall_street_journal.txt"
-  let ws = map ((\(l:_:f:_) -> (l,f)) . T.words) (T.lines txt)
+  ws <- loadStatistics (cfg^.cfg_statistics)
 
-      merge :: [(Text,Text)] -> (Text,Int)
+  let merge :: [(Text,Text)] -> (Text,Int)
       merge lst = let (lma,_) = head lst
                   in case mapM (decimal.snd) lst of
                        Left _     -> (lma,0)
