@@ -37,8 +37,14 @@ data UIDCite uid info = Cite { _uid  :: uid
 type EMInfo w = (IRange, Vector w, PreNE)
 type EntityMention w = UIDCite EntityMentionUID (EMInfo w)
 
+entityName :: EMInfo Text -> Text
+entityName (_, ws, _) = T.intercalate " " (toList ws)
+
+mentionedEntityName :: EntityMention Text -> Text
+mentionedEntityName em = entityName (_info em)
+
 toString :: EMInfo Text -> String
-toString (range, ws, tag) = show range ++ " \"" ++ T.unpack (T.intercalate " " (toList ws)) ++  "\", " ++show tag
+toString em@(range, ws, tag) = show range ++ " \"" ++ T.unpack (entityName em) ++  "\", " ++show tag
 
 instance (Show a) => Show (UIDCite a (EMInfo Text))  where
   show (Cite uid ref info) = "Cite {" ++ show uid ++ " cites " ++ show ref ++ ",\t" ++ toString info ++ "}"
