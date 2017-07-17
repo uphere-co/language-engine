@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -6,6 +7,7 @@ module Main where
 import           Control.Lens hiding (para)
 import           Data.Foldable
 import           Data.Function
+import           Data.HashMap.Strict           (HashMap)
 import qualified Data.HashMap.Strict as HM
 import           Data.List
 import           Data.Maybe
@@ -17,7 +19,6 @@ import qualified Data.Text.Lazy.IO   as T.L.IO
 import           Data.Text.Read                (decimal)
 import           System.Directory
 import           System.FilePath
--- import           Text.PrettyPrint hiding ((<>)) --              (hcat,nest,render,text,vcat,($$))
 import           Text.PrettyPrint.Boxes hiding ((<>))
 import           Text.Printf
 import           Text.Taggy.Lens
@@ -43,6 +44,13 @@ loadSenseInventory dir = do
                   Right c  -> return c
 
 
+
+createVNFNDB :: VNFNMappingData -> HashMap (Text,Text) [Text]
+createVNFNDB semlink = 
+  let lst = map (\c-> ((c^.vnc_vnmember,c^.vnc_class),c^.vnc_fnframe)) (semlink^.vnfnmap_vnclslst)
+  in foldl' (\(!acc) (k,v) -> HM.insertWith (++) k [v] acc) HM.empty lst
+
+
 loadSemLink file = do
   txt <- T.L.IO.readFile file
   case txt ^? html . allNamed (only "verbnet-framenet_MappingData") of
@@ -57,16 +65,10 @@ verbnet semlinkmap lma txt =
   let (_,cls') = T.breakOn "-" txt
   in if T.null cls'
      then ("" :: String)
-     else
-       let cls = T.tail cls'
-       in printf "%-8s -> %s" cls (fromMaybe "" (HM.lookup (lma,cls) semlinkmap))
+     else let cls = T.tail cls'
+          in printf "%-8s -> %s" cls (maybe "" (T.intercalate ",") (HM.lookup (lma,cls) semlinkmap))
 
 
-
-{- 
-    cls = if T.null cls' then cls' else T.tail cls'
-  in cls
--}
 
 
 getSenses lma vorn sensemap semlinkmap = do
@@ -107,8 +109,7 @@ cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/da
 main :: IO ()
 main = do
   semlink <- loadSemLink (cfg^.cfg_semlink_file)
-  let semlinkmap = HM.fromList (map (\c-> ((c^.vnc_vnmember,c^.vnc_class),c^.vnc_fnframe)) (semlink^.vnfnmap_vnclslst))
-
+  let semlinkmap = createVNFNDB semlink
   -- print (HM.lookup ("oust","10.1") slmap )
 
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
