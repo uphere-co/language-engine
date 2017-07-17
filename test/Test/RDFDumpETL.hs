@@ -49,6 +49,13 @@ import           Data.Text.Encoding                    (encodeUtf8)
 import           Data.Binary                           (encode)
 import           System.Random                         (StdGen,getStdGen,randoms)
 import           Data.List.Split                       (chunksOf)
+import           Data.Vector.Algorithms.Intro          (sort, sortBy)
+import           Data.Ord                              (Ordering)
+import           Data.Tuple.Select                     (sel1,sel2,sel3,sel4)
+
+import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
+
+
 {-
 yagoDateFacts
 <Guus_Kouwenhoven>    <wasBornOnDate>    "1942-02-15"^^xsd:date .
@@ -282,6 +289,12 @@ allWikidataTest =
 --newtype SomeID = SomeID Word64 deriving (Show,Eq,Unbox,M.MVector MVector,G.Vector Vector)
 type Triple = (Int64,XXHash,XXHash,XXHash)
 
+getUID :: Triple -> Int64
+getUID = sel1
+getSubj, getVerb, getObj :: Triple -> XXHash
+getSubj = sel2
+getVerb = sel3
+getObj = sel4
 
 -- XXHash is GHC.Word.Word32.
 fromXXHash :: XXHash -> Int64
@@ -299,6 +312,10 @@ fromText str = fromXXHashPair high low
 
 
 
+orderingBySubj :: Triple -> Triple -> Ordering
+orderingBySubj lhs rhs = compare (getSubj lhs) (getSubj rhs)
+
+
 randomTriple :: [XXHash] -> Triple
 randomTriple [high,low,s,v,o] = (fromXXHashPair high low, s `mod` nObject, v `mod` nProp, o `mod` nObject)
   where
@@ -312,7 +329,8 @@ testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
   eassertEqual (fromXXHashPair 1426945110 2194405884) 6128682582831528444
   eassertEqual (fromXXHashPair 1 1) 4294967297
   eassertEqual (fromText "abc") 6128682582831528444
-  
+
+
 testUnboxedVector :: TestTree
 testUnboxedVector = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
   print $ encode (211 :: Int)
@@ -320,8 +338,9 @@ testUnboxedVector = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTa
   let
     rs = Prelude.take 200 (randoms g :: [XXHash])
     rss = chunksOf 5 rs
-    triples = map randomTriple rss
-  mapM_ print triples
+    triples = UV.fromList (map randomTriple rss)
+    sortedTriples = UV.modify (sortBy orderingBySubj) triples
+  mapM_ print (UV.toList sortedTriples)
 
 
 allGenericRdfTripleTest :: TestTree
