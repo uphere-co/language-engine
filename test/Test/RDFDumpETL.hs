@@ -48,7 +48,6 @@ import           Data.Bits                             (shift)
 import           Data.Text.Encoding                    (encodeUtf8)
 import           Data.Binary                           (encode)
 import           System.Random.MWC                     (createSystemRandom, withSystemRandom, asGenST, uniformVector)
-import           Data.List.Split                       (chunksOf)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
 import           Data.Ord                              (Ordering)
 import           Data.Tuple.Select                     (sel1,sel2,sel3,sel4)
@@ -329,12 +328,9 @@ testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
   eassertEqual ((xxHash' . encodeUtf8) "") 46947589
   eassertEqual ((xxHash' . encodeUtf8) "a") 1426945110
   eassertEqual ((xxHash' . encodeUtf8) "bc") 2194405884
-  eassertEqual (fromXXHashPair 1426945110 2194405884) 6128682582831528444
-  eassertEqual (fromText "abc") 6128682582831528444
-  eassertEqual (fromXXHashPair 46947589 1426945110) 201638360807994454
-  eassertEqual (fromText "a") 201638360807994454
-  eassertEqual (fromXXHashPair 46947589 46947589) 201638359427996933
-  eassertEqual (fromText "") 201638359427996933
+  eassertEqual (fromText "abc") (fromXXHashPair 1426945110 2194405884)
+  eassertEqual (fromText "a") (fromXXHashPair 46947589 1426945110) 
+  eassertEqual (fromText "") (fromXXHashPair 46947589 46947589)
 
 
 testUnboxedVector :: TestTree

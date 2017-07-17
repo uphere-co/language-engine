@@ -84,7 +84,6 @@ test-suite test
                      , xxhash
                      , binary
                      , mwc-random
-                     , split
                      , raw-strings-qq
                      , tasty
                      , nlp-types
