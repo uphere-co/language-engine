@@ -324,11 +324,16 @@ randomTriple [high,low,s,v,o] = (fromXXHashPair high low, s `mod` nObject, v `mo
 
 testInt64Hash :: TestTree
 testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
+  eassertEqual (fromXXHashPair 1 1) 4294967297
+  eassertEqual ((xxHash' . encodeUtf8) "") 46947589
   eassertEqual ((xxHash' . encodeUtf8) "a") 1426945110
   eassertEqual ((xxHash' . encodeUtf8) "bc") 2194405884
   eassertEqual (fromXXHashPair 1426945110 2194405884) 6128682582831528444
-  eassertEqual (fromXXHashPair 1 1) 4294967297
   eassertEqual (fromText "abc") 6128682582831528444
+  eassertEqual (fromXXHashPair 46947589 1426945110) 201638360807994454
+  eassertEqual (fromText "a") 201638360807994454
+  eassertEqual (fromXXHashPair 46947589 46947589) 201638359427996933
+  eassertEqual (fromText "") 201638359427996933
 
 
 testUnboxedVector :: TestTree
