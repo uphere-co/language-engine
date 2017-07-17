@@ -10,10 +10,12 @@ import qualified Data.IntMap                as IM
 import           Data.List
 import           Data.Maybe
 import           Data.Text                        (Text)
+import qualified Data.Text.IO               as T.IO
 import           System.Directory
 import           System.FilePath
 --
 import           FrameNet.Query.LexUnit
+import           FrameNet.Type.Common
 import           FrameNet.Type.LexUnit
 
 {- 
@@ -45,17 +47,36 @@ main :: IO ()
 main = do
   bstr <- BL.readFile "test.dat"
   let lst = decode bstr :: [LexUnit]
-      LexUnitDB ldb _ = foldl' insertLU emptyDB lst
-      mresults = traverse (flip IM.lookup ldb) [4748,4727]
+      -- idxs = map (^.lexunit_basicLUAttributes.bluattr_ID) lst
+      -- LexUnitDB ldb _ = foldl' insertLU emptyDB lst
+      -- mresults = traverse (flip IM.lookup ldb) [4748,4727]
+  -- print idxs
+  {-     
   case mresults of
     Nothing -> print "lookup failed"
-    Just results -> do
-      let pts :: [Text]
-          pts = do lu <- results
+    Just results -> do -}
+  do
+      let extractPTfromPattern patt = do vu <- maybeToList (patt^.patt_valenceUnit)
+                                         return (vu^.vu_PT)
+          pts :: [Text]
+          pts = do lu <- lst -- results
                    v <- maybeToList (lu^.lexunit_valences)
-                   patt <- v^..val_FERealization.traverse.fereal_pattern.traverse
-                   vu <- maybeToList (patt^.patt_valenceUnit)
-                   let pt = vu^.vu_PT
-                   return pt
-      mapM_ print pts
+                   patt <- (v^..val_FERealization.traverse.fereal_pattern.traverse) ++
+                           (v^..val_FEGroupRealization.traverse.fegroup_pattern.traverse)
+                   extractPTfromPattern patt
 
+          fevals :: [Text]
+          fevals = do lu <- lst
+                      v <- maybeToList (lu^.lexunit_valences)
+                      fereal <- (v^..val_FERealization.traverse)
+                      feval <- maybeToList (fereal^.fereal_FE)
+                      return (feval ^.feval_name)
+{-           gpts :: [Text]
+          gtps = do lu <- lst
+                    v <- maybeToList (lu^.lexunit_valences)
+                    patt
+-}
+                    
+          pts' = (map head . group . sort) pts 
+      -- mapM_ (T.IO.putStrLn) pts'
+      mapM_ (T.IO.putStrLn) fevals
