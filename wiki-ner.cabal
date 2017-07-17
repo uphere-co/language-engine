@@ -37,6 +37,7 @@ library
                      , WikiEL.CoreNLP
                      , WikiEL.WikiNamedEntityTagger
                      , WikiEL.WikiEntityClass
+                     , WikiEL.Convert
   other-modules:       WikiEL.ETL.RDF.Common
   other-extensions:    OverloadedStrings
                      , GeneralizedNewtypeDeriving
@@ -46,6 +47,7 @@ library
                      , FlexibleInstances
                      , StandaloneDeriving
   build-depends:       base
+                     , binary
                      , tasty-hunit
                      , text
                      , primitive

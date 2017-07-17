@@ -1,29 +1,24 @@
-{ mkDerivation, base
-, containers, text, vector-algorithms
-, tasty-hunit
-, nlp-types
+{ mkDerivation, attoparsec, base, containers, nlp-types, primitive
+, stdenv, tasty, tasty-hunit, text, vector, vector-algorithms
+, xxhash
 }:
-
 mkDerivation {
   pname = "wiki-ner";
   version = "0.1.0.0";
   src = builtins.filterSource
-    (path: type: type != "directory" || baseNameOf path != "dist" || baseNameOf path != ".cabal-sandbox")
-    ./.;
 
+  (path: type: type != "directory" || baseNameOf path != "dist" || baseNameOf path != ".cabal-sandbox")
+  ./.;
+  
   libraryHaskellDepends = [
-    containers text vector-algorithms tasty-hunit
-    nlp-types
-  ];
-  executableHaskellDepends = [
-    containers text vector-algorithms tasty-hunit
-    nlp-types
+    attoparsec base containers nlp-types primitive tasty-hunit text
+    vector vector-algorithms xxhash
   ];
   testHaskellDepends = [
-    containers text vector-algorithms tasty-hunit
-    nlp-types
+    attoparsec base containers nlp-types primitive tasty tasty-hunit
+    text vector vector-algorithms xxhash
   ];
-  license = "unknown";
+  license = stdenv.lib.licenses.unfree;
   doHaddock = false;
-  doCheck   = false;
+  doCheck = false;
 }
