@@ -47,7 +47,7 @@ import           Data.Int                              (Int32, Int64)
 import           Data.Bits                             (shift)
 import           Data.Text.Encoding                    (encodeUtf8)
 import           Data.Binary                           (encode)
-import           System.Random                         (StdGen,getStdGen,randoms)
+import           System.Random.MWC                     (createSystemRandom, withSystemRandom, asGenST, uniformVector)
 import           Data.List.Split                       (chunksOf)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
 import           Data.Ord                              (Ordering)
@@ -316,9 +316,10 @@ orderingBySubj :: Triple -> Triple -> Ordering
 orderingBySubj lhs rhs = compare (getSubj lhs) (getSubj rhs)
 
 
-randomTriple :: [XXHash] -> Triple
-randomTriple [high,low,s,v,o] = (fromXXHashPair high low, s `mod` nObject, v `mod` nProp, o `mod` nObject)
+randomTriple :: (XXHash,XXHash,XXHash,XXHash) -> Triple
+randomTriple (high,s,v,o) = (fromXXHashPair high low, s `mod` nObject, v `mod` nProp, o `mod` nObject)
   where
+    low = s+v+o -- adhoc hashing since Random.MWC only support up to 4 tuples.
     nObject = 100
     nProp   = 1000
 
@@ -337,16 +338,13 @@ testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
 
 
 testUnboxedVector :: TestTree
-testUnboxedVector = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
+testUnboxedVector = testCaseSteps "Generate unboxed vector of random RDF triples" $ \step -> do
   print $ encode (211 :: Int)
-  g <- getStdGen
+  rs <- withSystemRandom . asGenST $ \gen -> uniformVector gen 20000
   let
-    rs = Prelude.take 200 (randoms g :: [XXHash])
-    rss = chunksOf 5 rs
-    triples = UV.fromList (map randomTriple rss)
-    sortedTriples = UV.modify (sortBy orderingBySubj) triples
-  mapM_ print (UV.toList sortedTriples)
-
+    triples = UV.map randomTriple rs -- 1.2s with 0.2M triples
+    sortedTriples = UV.modify (sortBy orderingBySubj) triples -- 4.0s with 0.2M triples
+  mapM_ print (UV.toList (UV.slice 0 100 sortedTriples))
 
 allGenericRdfTripleTest :: TestTree
 allGenericRdfTripleTest =

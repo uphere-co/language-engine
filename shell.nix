@@ -24,7 +24,7 @@ let
               attoparsec
               xxhash
               binary
-              random
+              mwc-random
               split
               tuple
               raw-strings-qq
