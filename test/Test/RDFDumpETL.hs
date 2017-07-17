@@ -6,7 +6,7 @@
 
 module Test.RDFDumpETL where
 
-import           Data.Maybe                            (Maybe(..),fromJust, mapMaybe)
+import           Data.Either                           (Either(..),rights)
 import           Control.Arrow                         (first,second)
 import           Data.List                             (foldl')
 import           Data.Text                             (Text)
@@ -73,7 +73,7 @@ parserObject2 prefix sep postfix f = do
   string postfix
   return (f t1 t2)
 
-parserTypedValue :: (Text -> Text -> a) -> Parser a
+parserTypedValue   :: (Text -> Text -> a) -> Parser a
 parserTypedValue  = parserObject2 "\"" "\"^^" ""
 
 
@@ -103,7 +103,7 @@ parserYAGOwikiTitle :: Parser YagoObject
 parserYAGOwikiTitle = do
   char '<'
   fst <- satisfy (not . C.isLower)
-  rest <- takeTill (=='>')
+  rest <- takeWhile1 (/='>')
   char '>'
   let title = T.cons fst rest
   return (YagoWikiTitle title)
@@ -227,7 +227,7 @@ parserURLObject = parserObject "<" ">" URLObject
 
 parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
 parserWikiNamedSpaceObject = do
-  t <- takeTill (\x -> (x==':') || C.isSpace x)
+  t <- takeWhile1 (\x -> (x/=':') || (not . C.isSpace) x)
   char ':'
   n <- wtoken
   return (NameSpaceObject t n)
@@ -275,28 +275,27 @@ parserWikidataRdfRelation = choice [ parserWikidataRdfRelation3
                                    , parserWikidataRdfRelation1]
 
 
-rightParse parser x = f r
-  where
-    r = parseOnly parser x
-    f (Right r) = r
-    f (Left  _) = error "Parse error"
-wo = rightParse wikidataObject
-
-splitTripleWithState :: Text -> Maybe (Text, TurtleState)
+splitTripleWithState :: Text -> Either String (Text, TurtleState)
 splitTripleWithState line = g row nextState
   where
     input = T.strip line
     row   = (T.strip . T.init) input
-    f ',' = Just Comma
-    f ';' = Just Semicolon
-    f '.' = Just End
-    f _   = Nothing -- ignore lines with wrong format
+    f ',' = Right Comma
+    f ';' = Right Semicolon
+    f '.' = Right End
+    f _   = Left "Wrong end of line."
     nextState = case input of
-      "" -> Nothing
-      _  -> f (T.last input)      
-    g row (Just state) = Just (row, state)
-    g _ Nothing = Nothing
+      "" -> Left "Blank line."
+      _  -> f (T.last input)
+    g row (Right state) = Right (row, state)
+    g _ (Left msg) = Left msg
 
+parseRDFline :: Parser TurtleRelation -> Either String (Text, TurtleState) -> Either String (TurtleRelation, TurtleState)
+parseRDFline parser (Left msg) = Left msg
+parseRDFline parser (Right (line, state)) = 
+  case parseOnly parser line of
+    (Right rel) -> Right (rel, state)
+    (Left msg)  -> Left msg
 
 fillMissingSV :: (TurtleState, WikidataObject, WikidataObject) -> (TurtleRelation,TurtleState) -> ((TurtleState, WikidataObject, WikidataObject), TurtleRelation)
 fillMissingSV (End, _,_)   (RelationSVO s' v' o', state') = ((state', s',v'), RelationSVO s' v' o')
@@ -312,20 +311,27 @@ flattenStatement rs = reverse triples
       where
         (state', t) = fillMissingSV state relation
 
+
+wo x = r
+  where
+    Right r = parseOnly wikidataObject x    
+
 relSVO s v o = RelationSVO (wo s) (wo v) (wo o)
 relVO    v o = RelationVO  (wo v) (wo o) 
 relO       o = RelationO   (wo o)
 
 testWikidataTurtleRelation :: TestTree
 testWikidataTurtleRelation = testCaseSteps "Test case for parsing individual lines of Turtle format files" $ \step -> do
-  eassertEqual ("a b c",End)   (fromJust $ splitTripleWithState "a b c .\n")
-  eassertEqual ("a b c",Comma) (fromJust $ splitTripleWithState "a b c,\n")
-  eassertEqual ("d",Semicolon) (fromJust $ splitTripleWithState "  d ;\n")
-  eassertEqual ("b d",Comma) (fromJust $ splitTripleWithState "  b d,\n")
-  eassertEqual ("c",Comma)   (fromJust $ splitTripleWithState "    c,\n")
-  eassertEqual ("c",End)     (fromJust $ splitTripleWithState "    c .\n")
+  eassertEqual (Left "Blank line.")        (splitTripleWithState "\n")
+  eassertEqual (Left "Wrong end of line.") (splitTripleWithState "a b c\n")
+  eassertEqual (Right ("a b c",End))   (splitTripleWithState "a b c .\n")
+  eassertEqual (Right ("a b c",Comma)) (splitTripleWithState "a b c,\n")
+  eassertEqual (Right ("d",Semicolon)) (splitTripleWithState "  d ;\n")
+  eassertEqual (Right ("b d",Comma)) (splitTripleWithState "  b d,\n")
+  eassertEqual (Right ("c",Comma))   (splitTripleWithState "    c,\n")
+  eassertEqual (Right ("c",End))     (splitTripleWithState "    c .\n")
   let 
-    (row, nextState) = fromJust $ splitTripleWithState "    c.\n"
+    Right (row, nextState) = splitTripleWithState "    c.\n"
   eassertEqual (Right (relO "c"))      (parseOnly parserWikidataRdfRelation row)
   eassertEqual (Right (relVO "b" "c")) (parseOnly parserWikidataRdfRelation "b c")
   eassertEqual (Right (relSVO "a" "b" "\"c d e\"@en"))    (parseOnly parserWikidataRdfRelation "a b \"c d e\"@en")
@@ -340,31 +346,37 @@ testWikidataTurtleFillMissingSVO = testCaseSteps "Test case to get complete RDF 
 testWikidataRDFdumpTTL :: TestTree
 testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Turtle format(.ttl)" $ \step -> do
   let
-    case1 = T.pack ([r|wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement,
+    case1 = T.pack ([r|
+wd:Q2309 p:P414 wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 .
+
+wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement,
 		wikibase:BestRank ;
 	wikibase:rank wikibase:NormalRank ;
 	ps:P414 wd:Q2632892 ;
 	pq:P249 "AVAZ" ;
-	prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95 .|])
-    lines1 = mapMaybe splitTripleWithState (T.lines case1)
-    rs1    =  map (first (rightParse parserWikidataRdfRelation)) lines1
-    expected1 = [(relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement",Comma)
-                ,(relO "wikibase:BestRank",Semicolon)
-                ,(relVO "wikibase:rank" "wikibase:NormalRank",Semicolon)
-                ,(relVO "ps:P414" "wd:Q2632892",Semicolon)
-                ,(relVO "pq:P249" "\"AVAZ\"",Semicolon)
-                ,(relVO "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95",End)
+	prov:wasDerivedFrom wdref:2d11114e74636670e7d7b2ee58260de401e31e95 .
+    |])
+    lines1 = map splitTripleWithState (T.lines case1)
+    rs1    =  map (parseRDFline parserWikidataRdfRelation) lines1
+    expected1 = [ (relSVO "wd:Q2309" "p:P414" "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 .", End)
+                , (relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement",Comma)
+                , (relO "wikibase:BestRank",Semicolon)
+                , (relVO "wikibase:rank" "wikibase:NormalRank",Semicolon)
+                , (relVO "ps:P414" "wd:Q2632892",Semicolon)
+                , (relVO "pq:P249" "\"AVAZ\"",Semicolon)
+                , (relVO "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95",End)
                 ]
-    triples1 = [relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"
-               ,relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:BestRank"
-               ,relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "wikibase:rank" "wikibase:NormalRank"
-               ,relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "ps:P414" "wd:Q2632892"
-               ,relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "pq:P249" "\"AVAZ\""
-               ,relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95"
+    triples1 = [ relSVO "wd:Q2309" "p:P414" "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 ."
+               , relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"
+               , relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:BestRank"
+               , relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "wikibase:rank" "wikibase:NormalRank"
+               , relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "ps:P414" "wd:Q2632892"
+               , relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "pq:P249" "\"AVAZ\""
+               , relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95"
                ]
   mapM_ print lines1
-  mapM_ (uncurry eassertEqual) (zip rs1 expected1)
-  mapM_ (uncurry eassertEqual) (zip triples1 (flattenStatement rs1))
+  mapM_ (uncurry eassertEqual) (zip (rights rs1) expected1)
+  mapM_ (uncurry eassertEqual) (zip triples1 (flattenStatement (rights rs1)))
 
   let
     case2 = T.pack ([r|wd:Q31 a wikibase:Item ;
@@ -395,8 +407,8 @@ testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Tur
         wdt:P1332 "Point(4.77 51.5)"^^geo:wktLiteral ;
         wdt:P3221 "destination/belgium" ;
         p:P1464 wds:Q31-b8a6b97e-4815-1e46-db4c-6b5807933064 .|])
-    lines2 = mapMaybe splitTripleWithState (T.lines case2)
-    rs2    =  map (first (rightParse parserWikidataRdfRelation)) lines2
+    lines2 = map splitTripleWithState (T.lines case2)
+    rs2    = map (parseRDFline parserWikidataRdfRelation) lines2
     triples2  = [ relSVO "wd:Q31" "a" "wikibase:Item"
                 , relSVO "wd:Q31" "rdfs:label" "\"Belgium\"@en"
                 , relSVO "wd:Q31" "skos:prefLabel" "\"Belgium\"@en"
@@ -426,11 +438,11 @@ testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Tur
                 , relSVO "wd:Q31" "wdt:P3221" "\"destination/belgium\""
                 , relSVO "wd:Q31" "p:P1464" "wds:Q31-b8a6b97e-4815-1e46-db4c-6b5807933064"
                 ]
-  mapM_ (uncurry eassertEqual) (zip triples2 (flattenStatement rs2))
+  mapM_ (uncurry eassertEqual) (zip triples2 (flattenStatement (rights rs2)))
   let
-    lines = mapMaybe splitTripleWithState (T.lines ( T.concat [case1,"\n\n", case2, "\n", case1]))
-    rs    =  map (first (rightParse parserWikidataRdfRelation)) lines
-  mapM_ print (flattenStatement rs)
+    lines = map splitTripleWithState (T.lines ( T.concat [case1,"\n\n", case2, "\n", case1]))
+    rs    = map (parseRDFline parserWikidataRdfRelation) lines
+  mapM_ print (flattenStatement (rights rs))
 
 allWikidataTest :: TestTree
 allWikidataTest =
