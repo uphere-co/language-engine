@@ -4,7 +4,8 @@
 
 module Main where
 
-import           Control.Lens hiding (para)
+import           Control.Lens           hiding (para)
+import           Data.Either.Extra             (fromRight)
 import           Data.Foldable
 import           Data.Function
 import           Data.HashMap.Strict           (HashMap)
@@ -18,6 +19,7 @@ import qualified Data.Text.IO        as T.IO
 import qualified Data.Text.Lazy.IO   as T.L.IO
 import           Data.Text.Read                (decimal)
 import           System.Directory
+import           System.Directory.Tree
 import           System.FilePath
 import           Text.PrettyPrint.Boxes hiding ((<>))
 import           Text.Printf
@@ -25,6 +27,7 @@ import           Text.Taggy.Lens
 --
 import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
+import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
 
 
@@ -34,13 +37,15 @@ data VorN = V | N deriving Eq
 data Config = Config { _cfg_sense_inventory_file :: FilePath
                      , _cfg_semlink_file         :: FilePath
                      , _cfg_statistics           :: FilePath
+                     , _cfg_wsj_directory        :: FilePath
                      }
 
 makeLenses ''Config
               
 cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
              , _cfg_semlink_file = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
-             , _cfg_statistics = "run/OntoNotes_propbank_statistics_only_wall_street_journal.txt"               
+             , _cfg_statistics = "run/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
+             , _cfg_wsj_directory = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
              }
 
 
@@ -92,11 +97,12 @@ verbnet semlinkmap lma txt =
 
 
 
-getSenses lma vorn sensemap semlinkmap = do
+formatSenses lma vorn sensemap semlinkmap sensestat = do
   let lmav = lma <> case vorn of V -> "-v" ; N -> "-n"
   si <- maybeToList (HM.lookup lmav sensemap)
   s <- si^.inventory_senses
-  let txt1 = text (printf "%2s.%-6s %-40s   " (s^.sense_group) (s^.sense_n) (T.take 40 (s^.sense_name)))
+  let num = fromMaybe 0 (HM.lookup (lma,either error fst (decimal (s^.sense_n))) sensestat)
+      txt1 = text (printf "%2s.%-6s (%4d cases) | %-40s   " (s^.sense_group) (s^.sense_n) num (T.take 40 (s^.sense_name)))
       mappings = s^.sense_mappings
       txt_pb = vcat top $ let lst = T.splitOn "," (mappings^.mappings_pb)
                           in if null lst
@@ -119,8 +125,36 @@ getSenses lma vorn sensemap semlinkmap = do
   return (txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn )
 
 
+formatStat :: ((Text,Int),Int) -> String
+formatStat ((lma,sens),num) = printf "%20s.%-2d : %5d" lma sens num
+
+
+senseInstStatistics :: FilePath -> IO (HashMap (Text,Int) Int)
+senseInstStatistics basedir = do
+  dtr <- build basedir
+  let fps = sort (toList (dirTree dtr))
+      sfiles = filter (\x -> takeExtensions x == ".sense") fps
+
+  sinstss <- flip mapM sfiles $ \fp -> do
+    txt <- T.IO.readFile fp
+    -- print fp
+    let lst = T.lines txt
+        wss = map T.words lst
+    case traverse parseSenseInst wss of
+      Left err -> error err
+      Right lst -> return lst
+
+  let sinsts = concat sinstss
+      sinsts_verb = filter (\s-> T.last (s^.sinst_sense) == 'v') sinsts  
+      ks = map (\s -> ( T.init (T.init (s^.sinst_sense)) ,s^.sinst_sense_num)) sinsts_verb
+      acc = foldl' (\(!acc) k -> HM.insertWith (+) k 1 acc) HM.empty ks
+  -- mapM_ (putStrLn.formatStat) . sortBy (flip compare `on` snd) . HM.toList $ acc
+  return acc
+
+
 main :: IO ()
 main = do
+  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   semlink <- loadSemLink (cfg^.cfg_semlink_file)
   let semlinkmap = createVNFNDB semlink
 
@@ -141,8 +175,8 @@ main = do
              $ ws
 
   forM_ merged $ \(lma,f) -> do
-    let -- lmav = lma <> "-v"
-        doc = text (printf "%20s:%6d " lma f) <+> vcat top (getSenses lma V sensemap semlinkmap )
+    let doc = text (printf "%20s:%6d " lma f) <+>
+              vcat top (formatSenses lma V sensemap semlinkmap sensestat )
     putStrLn "-------------------------------------------"
     putStrLn (render doc)
 
