@@ -17,6 +17,7 @@ p_frame x = Frame <$> (readDecimal =<< (x ^. attr "ID"))
                   <*> x ^. attr "name"
                   <*> (readTime =<< (x ^. attr "cDate"))
                   <*> getOnly1 x "definition" ^? _Just.element.contents
+                  <*> mapM p_semType (getOnly x "semType")
                   <*> mapM p_FE (x ^.. elements . named (only "FE"))
                   <*> mapM p_FEcoreSet (x ^.. elements . named (only "FEcoreSet"))
                   <*> mapM p_frameRelation (x ^.. elements . named (only "frameRelation"))

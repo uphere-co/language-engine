@@ -1,5 +1,6 @@
 module FrameNet.Type.PhraseType where
 
+{-
 data NullInstantiation = CNI
                        | DNI
                        | INI
@@ -51,3 +52,4 @@ data PhraseType = PT_NI  NullInstantiation
                 | PT_AVP
                 | PT_Other OtherType
                   
+-}
