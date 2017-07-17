@@ -4,27 +4,33 @@
 
 module Main where
 
-import           Control.Lens           hiding (para)
-import           Data.Either.Extra             (fromRight)
+import           Control.Lens              hiding (para)
+import           Data.Binary
+import qualified Data.ByteString.Lazy.Char8 as BL
+import           Data.Either.Extra                (fromRight)
 import           Data.Foldable
 import           Data.Function
-import           Data.HashMap.Strict           (HashMap)
-import qualified Data.HashMap.Strict as HM
+import qualified Data.IntMap                as IM
+import           Data.HashMap.Strict              (HashMap)
+import qualified Data.HashMap.Strict        as HM
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
-import           Data.Text                     (Text)
-import qualified Data.Text           as T
-import qualified Data.Text.IO        as T.IO
-import qualified Data.Text.Lazy.IO   as T.L.IO
-import           Data.Text.Read                (decimal)
+import           Data.Text                        (Text)
+import qualified Data.Text                  as T
+import qualified Data.Text.IO               as T.IO
+import qualified Data.Text.Lazy.IO          as T.L.IO
+import           Data.Text.Read                   (decimal)
 import           System.Directory
 import           System.Directory.Tree
 import           System.FilePath
-import           Text.PrettyPrint.Boxes hiding ((<>))
+import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
 import           Text.Taggy.Lens
 --
+import           FrameNet.Query.LexUnit
+import           FrameNet.Type.Common (fr_frame)
+import           FrameNet.Type.LexUnit
 import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
 import           OntoNotes.Parser.Sense
@@ -38,6 +44,7 @@ data Config = Config { _cfg_sense_inventory_file :: FilePath
                      , _cfg_semlink_file         :: FilePath
                      , _cfg_statistics           :: FilePath
                      , _cfg_wsj_directory        :: FilePath
+                     , _cfg_framenet_file        :: FilePath
                      }
 
 makeLenses ''Config
@@ -46,7 +53,9 @@ cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/da
              , _cfg_semlink_file = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
              , _cfg_statistics = "run/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
              , _cfg_wsj_directory = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
+             , _cfg_framenet_file = "run/FrameNet_ListOfLexUnit.bin"
              }
+  
 
 
 loadSenseInventory dir = do
@@ -82,6 +91,14 @@ loadStatistics file = do
   return $ map ((\(l:_:f:_) -> (l,f)) . T.words) (T.lines txt)
 
 
+loadFrameNet file = do
+  bstr <- BL.readFile file
+  let lst = decode bstr :: [LexUnit]
+      lexunitdb = foldl' insertLU emptyDB lst
+  return lexunitdb
+  
+
+
 verbnet semlinkmap lma txt =
   let (_,cls') = T.breakOn "-" txt
   in if T.null cls'
@@ -94,7 +111,13 @@ verbnet semlinkmap lma txt =
                        else map (text.printf "%-30s") frms
                       )
 
-
+framesFromLU :: LexUnitDB -> Text -> [Text]
+framesFromLU ludb lma = do
+  i <- fromMaybe [] (HM.lookup lma (ludb^.nameIDmap))
+  l <- maybeToList (IM.lookup i (ludb^.lexunitDB))
+  frm <- maybeToList (l^.lexunit_frameReference^.fr_frame)
+  return frm
+  
 
 
 formatSenses lma vorn sensemap semlinkmap sensestat = do
@@ -152,8 +175,15 @@ senseInstStatistics basedir = do
   return acc
 
 
+
+
 main :: IO ()
 main = do
+  ludb <- loadFrameNet (cfg^.cfg_framenet_file)
+  -- print (HM.lookup "cut.v" (ludb^.nameIDmap))
+  -- print (HM.toList (ludb^.nameIDmap))
+  -- print (IM.lookup 4748 (ludb^.lexunitDB))
+   
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   semlink <- loadSemLink (cfg^.cfg_semlink_file)
   let semlinkmap = createVNFNDB semlink
@@ -175,8 +205,11 @@ main = do
              $ ws
 
   forM_ merged $ \(lma,f) -> do
-    let doc = text (printf "%20s:%6d " lma f) <+>
+    
+    let frms = framesFromLU ludb (lma <> ".v")
+        doc = text (printf "%20s:%6d " lma f) <+>
               vcat top (formatSenses lma V sensemap semlinkmap sensestat )
-    putStrLn "-------------------------------------------"
+    putStrLn "====================================================================================================================="
     putStrLn (render doc)
+    putStrLn $ "From FrameNet Lexical Unit " ++ show (lma <> ".v") ++ ": " ++ show frms
 
