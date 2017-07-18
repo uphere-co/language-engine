@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -8,19 +9,13 @@ module Test.RDFDumpETL where
 
 import           Data.Either                           (Either(..),rights)
 import           Control.Arrow                         (first,second)
-import           Data.List                             (foldl')
 import           Data.Text                             (Text)
 import           Test.Tasty.HUnit                      (testCase,testCaseSteps)
 import           Test.Tasty                            (defaultMain, testGroup,TestTree)
-import qualified Data.Vector                   as V
-import qualified Data.Vector.Unboxed           as UV
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 
-import           WikiEL.WikiEntityClass                (SuperclassUID(..),SubclassUID(..),fromRows,buildRelations,allRelationPairs,getAncestors,isSubclass)
-import           WikiEL.Misc                           (IRange(..))
 import           Assert                                (assert,massertEqual,eassertEqual)
-import           WikiEL.WikiEntityTagger
 
 
 import           WikiEL.Type.Wikidata
@@ -38,6 +33,28 @@ import           Text.RawString.QQ
 
 import           Data.Attoparsec.Text
 import           Control.Applicative                   ((<|>))
+
+
+-- 
+--import qualified Data.Vector.Generic.Mutable   as M
+--import qualified Data.Vector.Generic           as G
+import qualified Data.Vector.Unboxed           as UV
+--import           Data.Vector.Generic.Mutable           (MVector)
+--import           Data.Vector.Generic                   (Vector)
+--import           Data.Vector.Unboxed           
+import           Data.Digest.XXHash                    (XXHash,xxHash')
+import           Data.Int                              (Int32, Int64)
+import           Data.Bits                             (shift)
+import           Data.Text.Encoding                    (encodeUtf8)
+import           Data.Binary                           (encode)
+import           System.Random                         (StdGen,getStdGen,randoms)
+import           Data.List.Split                       (chunksOf)
+import           Data.Vector.Algorithms.Intro          (sort, sortBy)
+import           Data.Ord                              (Ordering)
+import           Data.Tuple.Select                     (sel1,sel2,sel3,sel4)
+
+import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
+
 
 {-
 yagoDateFacts
@@ -96,14 +113,14 @@ testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, 
     expected=[Right (YagoID "4gx1l8_1m6_1snupo6", YagoWikicat "Graphics_chips",   YagoRDFSprop "subClassOf", YagoWordnet "bit_109222051")
              ,Right (YagoID "k664kn_1m6_130ah1o", YagoWordnet "company_108058098",YagoRDFSprop "subClassOf", YagoWordnet "institution_108053576")
              ,Right (YagoID "130ah1o_1m6_5kujp2", YagoWordnet "institution_108053576", YagoRDFSprop "subClassOf", YagoWordnet "organization_108008335")
-             ,Right (YagoID "5kujp2_1m6_1qdi4lo", YagoWordnet "organization_108008335",YagoRDFSprop "subClassOf", YagoClass"LegalActor")
+             ,Right (YagoID "5kujp2_1m6_1qdi4lo", YagoWordnet "organization_108008335",YagoRDFSprop "subClassOf", YagoClass "LegalActor")
              ,Right (YagoID "5kujp2_1m6_a52wvp",  YagoWordnet "organization_108008335",YagoRDFSprop "subClassOf", YagoWordnet "social_group_107950920")
              ,Right (YagoID "klokc9_1m6_1koas7s", YagoWikicat "Syntactic_entities", YagoRDFSprop "subClassOf", YagoOWLclass "Thing")
              
              ,Right (YagoID "1kmo9y9_88c_1eoxwov",YagoWikiTitle "PowerVR", YagoRDFverb "type", YagoWikicat "Graphics_hardware_companies")
              ,Right (YagoID "13tyf46_88c_4gx1l8", YagoNonEnWikiTitle "de" "NEC_PowerVR_PCX", YagoRDFverb "type", YagoWikicat "Graphics_chips")
              
-             ,Right (YagoID "we31u1_1sz_vfg0ga", YagoWikiTitle "Burnside,_Iowa", YagoSKOSverb "prefLabel", YagoWikiAlias "Burnside, Iowa")
+             ,Right (YagoID "we31u1_1sz_vfg0ga",  YagoWikiTitle "Burnside,_Iowa", YagoSKOSverb "prefLabel", YagoWikiAlias "Burnside, Iowa")
              ,Right (YagoID "1qt4wt3_1ia_1k16t4w",YagoNonEnWikiTitle "pl" "Olli_Tyrväinen", YagoRDFSprop "label", YagoWikiAlias "Olli Tyrvainen")
              ,Right (YagoID "1j3k64j_qkd_4hgw54", YagoWikiTitle "Fred_M._Hechinger", YagoVerb "redirectedFrom", YagoWikiAlias "Fred Hechinger")
              ]
@@ -136,9 +153,9 @@ testWikidataTurtleRelation = testCaseSteps "Test case for parsing individual lin
   eassertEqual (Right ("a b c",End))   (splitTripleWithState "a b c .\n")
   eassertEqual (Right ("a b c",Comma)) (splitTripleWithState "a b c,\n")
   eassertEqual (Right ("d",Semicolon)) (splitTripleWithState "  d ;\n")
-  eassertEqual (Right ("b d",Comma)) (splitTripleWithState "  b d,\n")
-  eassertEqual (Right ("c",Comma))   (splitTripleWithState "    c,\n")
-  eassertEqual (Right ("c",End))     (splitTripleWithState "    c .\n")
+  eassertEqual (Right ("b d",  Comma)) (splitTripleWithState "  b d,\n")
+  eassertEqual (Right ("c",    Comma)) (splitTripleWithState "    c,\n")
+  eassertEqual (Right ("c",    End))   (splitTripleWithState "    c .\n")
   let 
     Right (row, nextState) = splitTripleWithState "    c.\n"
   eassertEqual (Right (relO "c"))      (parseOnly parserWikidataRdfRelation row)
@@ -248,11 +265,12 @@ wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement,
                 , relSVO "wd:Q31" "wdt:P3221" "\"destination/belgium\""
                 , relSVO "wd:Q31" "p:P1464" "wds:Q31-b8a6b97e-4815-1e46-db4c-6b5807933064"
                 ]
-  mapM_ (uncurry eassertEqual) (zip triples2 (flattenStatement (rights rs2)))
   let
     lines = map splitTripleWithState (T.lines ( T.concat [case1,"\n\n", case2, "\n", case1]))
     rs    = map (parseRDFline parserWikidataRdfRelation) lines
-  mapM_ print (flattenStatement (rights rs))
+  --mapM_ print (flattenStatement (rights rs))
+  mapM_ (uncurry eassertEqual) (zip triples2 (flattenStatement (rights rs2)))
+  
 
 allWikidataTest :: TestTree
 allWikidataTest =
@@ -265,9 +283,85 @@ allWikidataTest =
 
 
 
+
+--newtype NewInt = NewInt Int
+--               deriving (Eq,Ord,Show,UV.Unbox,MVector MVector, Vector Vector)
+--newtype SomeID = SomeID Word64 deriving (Show,Eq,Unbox,M.MVector MVector,G.Vector Vector)
+type Triple = (Int64,XXHash,XXHash,XXHash)
+
+getUID :: Triple -> Int64
+getUID = sel1
+getSubj, getVerb, getObj :: Triple -> XXHash
+getSubj = sel2
+getVerb = sel3
+getObj = sel4
+
+-- XXHash is GHC.Word.Word32.
+fromXXHash :: XXHash -> Int64
+fromXXHash = fromIntegral
+
+fromXXHashPair :: XXHash -> XXHash -> Int64
+fromXXHashPair high low = fromXXHash low + shift (fromXXHash high) 32
+
+fromText :: Text -> Int64
+fromText str = fromXXHashPair high low
+  where
+    hash = xxHash' . encodeUtf8
+    (left,right) = T.splitAt (T.length str `div` 2) str
+    (high, low)   = (hash left, hash right)
+
+
+
+orderingBySubj :: Triple -> Triple -> Ordering
+orderingBySubj lhs rhs = compare (getSubj lhs) (getSubj rhs)
+
+
+randomTriple :: [XXHash] -> Triple
+randomTriple [high,low,s,v,o] = (fromXXHashPair high low, s `mod` nObject, v `mod` nProp, o `mod` nObject)
+  where
+    nObject = 100
+    nProp   = 1000
+
+testInt64Hash :: TestTree
+testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
+  eassertEqual (fromXXHashPair 1 1) 4294967297
+  eassertEqual ((xxHash' . encodeUtf8) "") 46947589
+  eassertEqual ((xxHash' . encodeUtf8) "a") 1426945110
+  eassertEqual ((xxHash' . encodeUtf8) "bc") 2194405884
+  eassertEqual (fromXXHashPair 1426945110 2194405884) 6128682582831528444
+  eassertEqual (fromText "abc") 6128682582831528444
+  eassertEqual (fromXXHashPair 46947589 1426945110) 201638360807994454
+  eassertEqual (fromText "a") 201638360807994454
+  eassertEqual (fromXXHashPair 46947589 46947589) 201638359427996933
+  eassertEqual (fromText "") 201638359427996933
+
+
+testUnboxedVector :: TestTree
+testUnboxedVector = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
+  print $ encode (211 :: Int)
+  g <- getStdGen
+  let
+    rs = Prelude.take 200 (randoms g :: [XXHash])
+    rss = chunksOf 5 rs
+    triples = UV.fromList (map randomTriple rss)
+    sortedTriples = UV.modify (sortBy orderingBySubj) triples
+  mapM_ print (UV.toList sortedTriples)
+
+
+allGenericRdfTripleTest :: TestTree
+allGenericRdfTripleTest =
+  testGroup
+    "All unit tests for general RDF triple store"
+    [ testInt64Hash
+    , testUnboxedVector
+    ]
+
 allTest :: TestTree
 allTest =
   testGroup
     "All Unit tests"
-    [allYagoTest, allWikidataTest]    
+    [ allYagoTest
+    , allWikidataTest
+    , allGenericRdfTripleTest]    
+
 

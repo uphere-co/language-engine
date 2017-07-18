@@ -39,6 +39,7 @@ library
                      , WikiEL.WikiEntityClass
                      , WikiEL.Convert
   other-modules:       WikiEL.ETL.RDF.Common
+                     , WikiEL.BinarySearch
   other-extensions:    OverloadedStrings
                      , GeneralizedNewtypeDeriving
                      , FlexibleContexts
@@ -53,6 +54,7 @@ library
                      , primitive
                      , vector
                      , vector-algorithms
+                     , tuple
                      , containers
                      , attoparsec
                      , xxhash
@@ -62,11 +64,12 @@ library
 
 test-suite test
   type: exitcode-stdio-1.0
-  hs-source-dirs: test
+  hs-source-dirs: test, src
   other-modules:       Test.Data.Filename
                      , Test.NamedEntityTagger
                      , Test.WikiEntityTagger
                      , Test.CoreNLPEntity
+                     , WikiEL.BinarySearch
   main-is: testAll.hs
   build-depends:       base
                      , tasty-hunit
@@ -75,8 +78,12 @@ test-suite test
                      , vector
                      , vector-algorithms
                      , containers
+                     , tuple
                      , attoparsec
                      , xxhash
+                     , binary
+                     , random
+                     , split
                      , raw-strings-qq
                      , tasty
                      , nlp-types
