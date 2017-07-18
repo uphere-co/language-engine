@@ -24,7 +24,7 @@ let
     self: super: {
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
       "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
-      "HFrameNet" = self.callPackage (import HFrameNet) {};
+      "HFrameNet" = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HFrameNet)) {};
       "wiki-ner" = self.callPackage (import wiki-ner) {};
     
       "nlp-types" = self.callPackage (import nlp-types) {};

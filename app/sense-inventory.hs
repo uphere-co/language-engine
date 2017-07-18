@@ -5,6 +5,7 @@
 module Main where
 
 import           Control.Lens              hiding (para)
+import           Control.Monad
 import           Data.Binary
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Either.Extra                (fromRight)
@@ -53,7 +54,7 @@ cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/da
              , _cfg_semlink_file = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
              , _cfg_statistics = "run/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
              , _cfg_wsj_directory = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-             , _cfg_framenet_file = "run/FrameNet_ListOfLexUnit.bin"
+             , _cfg_framenet_file = "/home/wavewave/repo/srcp/HFrameNet/run/FrameNet_ListOfLexUnit.bin"
              }
   
 
@@ -124,7 +125,7 @@ formatSenses lma vorn sensemap semlinkmap sensestat = do
   let lmav = lma <> case vorn of V -> "-v" ; N -> "-n"
   si <- maybeToList (HM.lookup lmav sensemap)
   s <- si^.inventory_senses
-  let num = fromMaybe 0 (HM.lookup (lma,either error fst (decimal (s^.sense_n))) sensestat)
+  let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
       txt1 = text (printf "%2s.%-6s (%4d cases) | %-40s   " (s^.sense_group) (s^.sense_n) num (T.take 40 (s^.sense_name)))
       mappings = s^.sense_mappings
       txt_pb = vcat top $ let lst = T.splitOn "," (mappings^.mappings_pb)
@@ -148,11 +149,11 @@ formatSenses lma vorn sensemap semlinkmap sensestat = do
   return (txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn )
 
 
-formatStat :: ((Text,Int),Int) -> String
-formatStat ((lma,sens),num) = printf "%20s.%-2d : %5d" lma sens num
+formatStat :: ((Text,Text),Int) -> String
+formatStat ((lma,sens),num) = printf "%20s.%-5s : %5d" lma sens num
 
 
-senseInstStatistics :: FilePath -> IO (HashMap (Text,Int) Int)
+senseInstStatistics :: FilePath -> IO (HashMap (Text,Text) Int)
 senseInstStatistics basedir = do
   dtr <- build basedir
   let fps = sort (toList (dirTree dtr))
@@ -180,9 +181,6 @@ senseInstStatistics basedir = do
 main :: IO ()
 main = do
   ludb <- loadFrameNet (cfg^.cfg_framenet_file)
-  -- print (HM.lookup "cut.v" (ludb^.nameIDmap))
-  -- print (HM.toList (ludb^.nameIDmap))
-  -- print (IM.lookup 4748 (ludb^.lexunitDB))
    
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   semlink <- loadSemLink (cfg^.cfg_semlink_file)
@@ -204,12 +202,24 @@ main = do
              . map (\(l,f)-> let (lma,_) = T.break (== '.') l in (lma,f))
              $ ws
 
-  forM_ merged $ \(lma,f) -> do
+  forM_ (take 10 merged) $ \(lma,f) -> do
     
     let frms = framesFromLU ludb (lma <> ".v")
         doc = text (printf "%20s:%6d " lma f) <+>
               vcat top (formatSenses lma V sensemap semlinkmap sensestat )
+
+    let findnonzero = do
+          si <- maybeToList (HM.lookup (lma <> "-v") sensemap)
+          s <- si^.inventory_senses
+          let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
+          guard (num > 0)
+          return (s^.sense_group, s^.sense_n, num)
+
+              
+    T.IO.putStrLn lma
+    mapM_ (\(g,n,num)->putStrLn (printf "%6s.%-6s  %d" g n num)) findnonzero
+{-               
     putStrLn "====================================================================================================================="
     putStrLn (render doc)
     putStrLn $ "From FrameNet Lexical Unit " ++ show (lma <> ".v") ++ ": " ++ show frms
-
+-}
