@@ -337,8 +337,18 @@ compareOV lhs rhs | getObj lhs  == getObj rhs   = compareV lhs rhs
                   | otherwise                   = compareO lhs rhs
 
 orderingBySVO,orderingByOVS :: Triple -> Triple -> Ordering
-orderingBySVO lhs rhs | getSubj lhs == getSubj rhs  = compareVO lhs rhs
-                      | otherwise                   = compareS  lhs rhs
+-- much slower version:
+--orderingBySVO lhs rhs | getSubj lhs == getSubj rhs  = compareVO lhs rhs
+--                      | otherwise                   = compareS  lhs rhs
+--{- much faster version:
+orderingBySVO lhs@(_,ls,lv,lo) rhs@(_,rs,rv,ro) = case compare ls rs of
+  LT -> LT
+  GT -> GT
+  EQ -> case compare lv rv of
+    LT -> LT
+    GT -> GT
+    EQ -> compare lo ro
+---}
 orderingByOVS lhs rhs | getObj  lhs == getObj  rhs  = compareVS lhs rhs
                       | otherwise                   = compareO  lhs rhs
 
@@ -376,18 +386,31 @@ testUnboxedVector = testCaseSteps "Generate unboxed vector of random RDF triples
   rs <- withSystemRandom . asGenST $ \gen -> uniformVector gen 20000
   let
     triples = UV.map randomTriple rs -- 1.2s with 0.2M triples
-    sortedTriples = UV.modify (sortBy orderingBySVO) triples -- 4.0s with 0.2M triples
+    triplesbySVO = UV.modify (sortBy orderingBySVO) triples -- 4.0s with 0.2M triples
     v1in = [(1,2)] :: [(Subj,Verb)]
-    v1out = UV.concat (map (foo compareSV fillFromSV sortedTriples) v1in)
+    v1out = UV.concat (map (foo compareSV fillFromSV triplesbySVO) v1in)
     v2in  = UV.map    (\x -> (getObj x, 3:: Obj)) v1out
-    v2out = UV.concat (map (foo compareSV fillFromSV sortedTriples) (UV.toList v2in))
+    v2out = UV.concat (map (foo compareSV fillFromSV triplesbySVO) (UV.toList v2in))
 
-
-  mapM_ print (UV.toList (UV.slice 1000 50 sortedTriples))
+  --mapM_ print (UV.toList (UV.slice 1000 50 triplesbySVO))
   print "======================"
   print v1out
   print "----------------"
   print v2out
+
+  print "/////////////////////////////////"
+  let
+    triplesbyOVS = UV.modify (sortBy orderingByOVS) triples -- 4.0s with 0.2M triples
+    w1in = [(1,2)] :: [(Verb,Obj)]
+    w1out = UV.concat (map (foo compareOV fillFromVO triplesbyOVS) w1in)
+    w2in  = UV.map    (\x -> (getSubj x, 3:: Verb)) w1out
+    w2out = UV.concat (map (foo compareSV fillFromSV triplesbySVO) (UV.toList w2in))
+
+  --mapM_ print (UV.toList (UV.slice 1000 50 triplesbyOVS))
+  print "======================"
+  print w1out
+  print "----------------"
+  print w2out
 
 allGenericRdfTripleTest :: TestTree
 allGenericRdfTripleTest =
