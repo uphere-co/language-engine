@@ -321,30 +321,26 @@ fromText str = fromXXHashPair high low
     (high, low)   = (hash left, hash right)
 
 
-orderingBySubj :: Triple -> Triple -> Ordering
-orderingBySubj lhs@(_,ls,lv,lo) rhs@(_,rs,rv,ro) = case compare ls rs of
-  LT -> LT
-  GT -> GT
-  EQ -> case compare lv rv of
-    LT -> LT
-    GT -> GT
-    EQ -> compare lo ro
+compareS,compareV,compareO :: Triple -> Triple -> Ordering
+compareS lhs rhs = compare (getSubj lhs) (getSubj rhs)
+compareV lhs rhs = compare (getVerb lhs) (getVerb rhs)
+compareO lhs rhs = compare (getObj  lhs) (getObj  rhs)
 
---compareSV :: (Subj,Verb) -> Triple -> Ordering
-compareSV :: Triple -> Triple -> Ordering
-compareSV lhs@(_,ls,lv,_) rhs@(_,rs,rv,ro) = case compare ls rs of
---compareSV lhs@(ls,lv) rhs@(_,rs,rv,ro) = case compare ls rs of
-  LT -> LT
-  GT -> GT
-  EQ -> compare lv rv
+compareSV,compareVS,compareVO,compareOV :: Triple -> Triple -> Ordering
+compareSV lhs rhs | getSubj lhs == getSubj rhs  = compareV lhs rhs
+                  | otherwise                   = compareS lhs rhs
+compareVS lhs rhs | getVerb lhs == getVerb rhs  = compareS lhs rhs
+                  | otherwise                   = compareV lhs rhs
+compareVO lhs rhs | getVerb lhs == getVerb rhs  = compareO lhs rhs
+                  | otherwise                   = compareV lhs rhs
+compareOV lhs rhs | getObj lhs  == getObj rhs   = compareV lhs rhs
+                  | otherwise                   = compareO lhs rhs
 
---compareVO :: (Verb,Obj) -> Triple -> Ordering
-compareVO :: Triple -> Triple -> Ordering
-compareVO lhs@(_,_,lv,lo) rhs@(_,rs,rv,ro) = case compare lv rv of
---compareVO lhs@(lv,lo) rhs@(_,rs,rv,ro) = case compare lv rv of
-    LT -> LT
-    GT -> GT
-    EQ -> compare lo ro
+orderingBySVO,orderingByOVS :: Triple -> Triple -> Ordering
+orderingBySVO lhs rhs | getSubj lhs == getSubj rhs  = compareVO lhs rhs
+                      | otherwise                   = compareS  lhs rhs
+orderingByOVS lhs rhs | getObj  lhs == getObj  rhs  = compareVS lhs rhs
+                      | otherwise                   = compareO  lhs rhs
 
 
 randomTriple :: (XXHash,XXHash,XXHash,XXHash) -> Triple
@@ -365,8 +361,8 @@ testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
   eassertEqual (fromText    "") (fromXXHashPair 46947589   46947589)
 
 
-fillSV (s,v) = (0,s,v,0)
-fillVO (v,o) = (0,0,v,o)
+fillFromSV (s,v) = (0,s,v,0)
+fillFromVO (v,o) = (0,0,v,o)
 
 foo comp conv vec val = runST $ do
   mvec <- UV.unsafeThaw vec
@@ -380,19 +376,18 @@ testUnboxedVector = testCaseSteps "Generate unboxed vector of random RDF triples
   rs <- withSystemRandom . asGenST $ \gen -> uniformVector gen 20000
   let
     triples = UV.map randomTriple rs -- 1.2s with 0.2M triples
-    sortedTriples = UV.modify (sortBy orderingBySubj) triples -- 4.0s with 0.2M triples
-    v1 =  foo compareSV fillSV sortedTriples (1,2) 
-    v2 = UV.map (\x -> (getObj x, 3:: Obj)) v1
-    v12 = UV.zip v1 v2 
-
-    v3 = foo compareSV fillSV sortedTriples (UV.head v2)
-    v3s = UV.concat (map (foo compareSV fillSV sortedTriples) (UV.toList v2))
+    sortedTriples = UV.modify (sortBy orderingBySVO) triples -- 4.0s with 0.2M triples
+    v1in = [(1,2)] :: [(Subj,Verb)]
+    v1out = UV.concat (map (foo compareSV fillFromSV sortedTriples) v1in)
+    v2in  = UV.map    (\x -> (getObj x, 3:: Obj)) v1out
+    v2out = UV.concat (map (foo compareSV fillFromSV sortedTriples) (UV.toList v2in))
 
 
-  --mapM_ print (UV.toList (UV.slice 0 100 sortedTriples))
-  print v1
+  mapM_ print (UV.toList (UV.slice 1000 50 sortedTriples))
+  print "======================"
+  print v1out
   print "----------------"
-  print v3s
+  print v2out
 
 allGenericRdfTripleTest :: TestTree
 allGenericRdfTripleTest =
