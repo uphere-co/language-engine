@@ -43,13 +43,14 @@ import qualified Data.Vector.Unboxed           as UV
 --import           Data.Vector.Generic                   (Vector)
 --import           Data.Vector.Unboxed           
 import           Data.Digest.XXHash                    (XXHash,xxHash')
+import           Data.Word                             (Word64)
 import           Data.Int                              (Int32, Int64)
 import           Data.Bits                             (shift)
 import           Data.Text.Encoding                    (encodeUtf8)
 import           Data.Binary                           (encode)
 import           System.Random.MWC                     (createSystemRandom, withSystemRandom, asGenST, uniformVector)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
-import           Data.Ord                              (Ordering)
+import           Data.Ord                              (Ordering,comparing)
 import           Data.Tuple.Select                     (sel1,sel2,sel3,sel4)
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
@@ -286,23 +287,29 @@ allWikidataTest =
 --newtype NewInt = NewInt Int
 --               deriving (Eq,Ord,Show,UV.Unbox,MVector MVector, Vector Vector)
 --newtype SomeID = SomeID Word64 deriving (Show,Eq,Unbox,M.MVector MVector,G.Vector Vector)
-type Triple = (Int64,XXHash,XXHash,XXHash)
+type UID = Word64
+type Subj = XXHash
+type Verb = XXHash
+type Obj  = XXHash
+type Triple = (UID,Subj,Verb,Obj)
 
-getUID :: Triple -> Int64
-getUID = sel1
-getSubj, getVerb, getObj :: Triple -> XXHash
+getUID  :: Triple -> UID
+getUID  = sel1
+getSubj :: Triple -> Subj
 getSubj = sel2
+getVerb :: Triple -> Verb
 getVerb = sel3
-getObj = sel4
+getObj  :: Triple -> Obj
+getObj  = sel4
 
 -- XXHash is GHC.Word.Word32.
-fromXXHash :: XXHash -> Int64
+fromXXHash :: XXHash -> UID
 fromXXHash = fromIntegral
 
-fromXXHashPair :: XXHash -> XXHash -> Int64
+fromXXHashPair :: XXHash -> XXHash -> UID
 fromXXHashPair high low = fromXXHash low + shift (fromXXHash high) 32
 
-fromText :: Text -> Int64
+fromText :: Text -> UID
 fromText str = fromXXHashPair high low
   where
     hash = xxHash' . encodeUtf8
@@ -310,9 +317,21 @@ fromText str = fromXXHashPair high low
     (high, low)   = (hash left, hash right)
 
 
-
+--{-
 orderingBySubj :: Triple -> Triple -> Ordering
-orderingBySubj lhs rhs = compare (getSubj lhs) (getSubj rhs)
+orderingBySubj lhs@(_,ls,lv,lo) rhs@(_,rs,rv,ro) = case compare ls rs of
+  LT -> LT
+  GT -> GT
+  EQ -> case compare lv rv of
+    LT -> LT
+    GT -> GT
+    EQ -> compare lo ro
+---}
+{-
+orderingBySubj :: Triple -> Triple -> Ordering
+--orderingBySubj = compare `on` snd
+orderingBySubj = comparing snd
+-}
 
 
 randomTriple :: (XXHash,XXHash,XXHash,XXHash) -> Triple
@@ -320,7 +339,7 @@ randomTriple (high,s,v,o) = (fromXXHashPair high low, s `mod` nObject, v `mod` n
   where
     low = s+v+o -- adhoc hashing since Random.MWC only support up to 4 tuples.
     nObject = 100
-    nProp   = 1000
+    nProp   = 100
 
 testInt64Hash :: TestTree
 testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do

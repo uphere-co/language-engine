@@ -11,13 +11,16 @@ cabal sandbox init
 cabal install --only-dependencies
 
 # Build & run
-cabal configure --enable-tests
-cabal test
+cabal configure --enable-tests --builddir=../dists/wiki-ner
+cabal test --builddir=../dists/wiki-ner
 # or run tests in parallel 
-cabal build test
+cabal build test --builddir=../dists/wiki-ner
+# without --builddir:
 ./dist/build/test/test  +RTS -N -RTS
+# with --builddir:
+../dists/wiki-ner/build/test/test  +RTS -N -RTS
 # Or run tests in REPL
-cabal repl test
+cabal repl test --builddir=../dists/wiki-ner
 
 # Clean up
 cabal clean
