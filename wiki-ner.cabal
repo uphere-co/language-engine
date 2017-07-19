@@ -54,7 +54,7 @@ library
                      , primitive
                      , vector
                      , vector-algorithms
-                     , tuple
+                     , lens
                      , containers
                      , attoparsec
                      , xxhash
@@ -78,8 +78,8 @@ test-suite test
                      , primitive
                      , vector
                      , vector-algorithms
+                     , lens
                      , containers
-                     , tuple
                      , attoparsec
                      , xxhash
                      , binary

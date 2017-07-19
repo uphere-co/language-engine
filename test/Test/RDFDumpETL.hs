@@ -51,7 +51,10 @@ import           Data.Binary                           (encode)
 import           System.Random.MWC                     (createSystemRandom, withSystemRandom, asGenST, uniformVector)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
 import           Data.Ord                              (Ordering,comparing)
-import           Data.Tuple.Select                     (sel1,sel2,sel3,sel4)
+import           Control.Lens.Getter                   ((^.))
+import           Control.Lens.Setter                   ((.~))
+import           Control.Lens.Tuple                    (_1,_2,_3,_4)
+
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
 
@@ -294,13 +297,13 @@ type Obj  = XXHash
 type Triple = (UID,Subj,Verb,Obj)
 
 getUID  :: Triple -> UID
-getUID  = sel1
+getUID  t = t^._1
 getSubj :: Triple -> Subj
-getSubj = sel2
+getSubj t = t^._2
 getVerb :: Triple -> Verb
-getVerb = sel3
+getVerb t = t^._3
 getObj  :: Triple -> Obj
-getObj  = sel4
+getObj  t = t^._4
 
 -- XXHash is GHC.Word.Word32.
 fromXXHash :: XXHash -> UID
@@ -317,7 +320,6 @@ fromText str = fromXXHashPair high low
     (high, low)   = (hash left, hash right)
 
 
---{-
 orderingBySubj :: Triple -> Triple -> Ordering
 orderingBySubj lhs@(_,ls,lv,lo) rhs@(_,rs,rv,ro) = case compare ls rs of
   LT -> LT
@@ -326,12 +328,6 @@ orderingBySubj lhs@(_,ls,lv,lo) rhs@(_,rs,rv,ro) = case compare ls rs of
     LT -> LT
     GT -> GT
     EQ -> compare lo ro
----}
-{-
-orderingBySubj :: Triple -> Triple -> Ordering
---orderingBySubj = compare `on` snd
-orderingBySubj = comparing snd
--}
 
 
 randomTriple :: (XXHash,XXHash,XXHash,XXHash) -> Triple
@@ -348,8 +344,8 @@ testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
   eassertEqual ((xxHash' . encodeUtf8) "a") 1426945110
   eassertEqual ((xxHash' . encodeUtf8) "bc") 2194405884
   eassertEqual (fromText "abc") (fromXXHashPair 1426945110 2194405884)
-  eassertEqual (fromText "a") (fromXXHashPair 46947589 1426945110) 
-  eassertEqual (fromText "") (fromXXHashPair 46947589 46947589)
+  eassertEqual (fromText   "a") (fromXXHashPair 46947589   1426945110) 
+  eassertEqual (fromText    "") (fromXXHashPair 46947589   46947589)
 
 
 testUnboxedVector :: TestTree

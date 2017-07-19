@@ -26,7 +26,7 @@ let
               binary
               mwc-random
               split
-              tuple
+              lens
               raw-strings-qq
               p.nlp-types
             ]);
