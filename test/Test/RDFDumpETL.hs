@@ -54,6 +54,7 @@ import           Data.Ord                              (Ordering,comparing)
 import           Control.Lens.Getter                   ((^.))
 import           Control.Lens.Setter                   ((.~))
 import           Control.Lens.Tuple                    (_1,_2,_3,_4)
+import           Control.Monad.ST                      (runST)
 
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
@@ -290,7 +291,7 @@ allWikidataTest =
 --newtype NewInt = NewInt Int
 --               deriving (Eq,Ord,Show,UV.Unbox,MVector MVector, Vector Vector)
 --newtype SomeID = SomeID Word64 deriving (Show,Eq,Unbox,M.MVector MVector,G.Vector Vector)
-type UID = Word64
+type UID  = Word64
 type Subj = XXHash
 type Verb = XXHash
 type Obj  = XXHash
@@ -329,6 +330,22 @@ orderingBySubj lhs@(_,ls,lv,lo) rhs@(_,rs,rv,ro) = case compare ls rs of
     GT -> GT
     EQ -> compare lo ro
 
+--compareSV :: (Subj,Verb) -> Triple -> Ordering
+compareSV :: Triple -> Triple -> Ordering
+compareSV lhs@(_,ls,lv,_) rhs@(_,rs,rv,ro) = case compare ls rs of
+--compareSV lhs@(ls,lv) rhs@(_,rs,rv,ro) = case compare ls rs of
+  LT -> LT
+  GT -> GT
+  EQ -> compare lv rv
+
+--compareVO :: (Verb,Obj) -> Triple -> Ordering
+compareVO :: Triple -> Triple -> Ordering
+compareVO lhs@(_,_,lv,lo) rhs@(_,rs,rv,ro) = case compare lv rv of
+--compareVO lhs@(lv,lo) rhs@(_,rs,rv,ro) = case compare lv rv of
+    LT -> LT
+    GT -> GT
+    EQ -> compare lo ro
+
 
 randomTriple :: (XXHash,XXHash,XXHash,XXHash) -> Triple
 randomTriple (high,s,v,o) = (fromXXHashPair high low, s `mod` nObject, v `mod` nProp, o `mod` nObject)
@@ -348,6 +365,15 @@ testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
   eassertEqual (fromText    "") (fromXXHashPair 46947589   46947589)
 
 
+fillSV (s,v) = (0,s,v,0)
+fillVO (v,o) = (0,0,v,o)
+
+foo comp conv vec val = runST $ do
+  mvec <- UV.unsafeThaw vec
+  (beg,end) <- binarySearchLRBy comp mvec (conv val)
+  return (UV.slice beg (end-beg) vec)
+
+
 testUnboxedVector :: TestTree
 testUnboxedVector = testCaseSteps "Generate unboxed vector of random RDF triples" $ \step -> do
   print $ encode (211 :: Int)
@@ -355,7 +381,18 @@ testUnboxedVector = testCaseSteps "Generate unboxed vector of random RDF triples
   let
     triples = UV.map randomTriple rs -- 1.2s with 0.2M triples
     sortedTriples = UV.modify (sortBy orderingBySubj) triples -- 4.0s with 0.2M triples
-  mapM_ print (UV.toList (UV.slice 0 100 sortedTriples))
+    v1 =  foo compareSV fillSV sortedTriples (1,2) 
+    v2 = UV.map (\x -> (getObj x, 3:: Obj)) v1
+    v12 = UV.zip v1 v2 
+
+    v3 = foo compareSV fillSV sortedTriples (UV.head v2)
+    v3s = UV.concat (map (foo compareSV fillSV sortedTriples) (UV.toList v2))
+
+
+  --mapM_ print (UV.toList (UV.slice 0 100 sortedTriples))
+  print v1
+  print "----------------"
+  print v3s
 
 allGenericRdfTripleTest :: TestTree
 allGenericRdfTripleTest =
