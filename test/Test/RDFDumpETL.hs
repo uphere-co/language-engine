@@ -370,11 +370,17 @@ testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
   eassertEqual (fromText   "a") (fromXXHashPair 46947589   1426945110) 
   eassertEqual (fromText    "") (fromXXHashPair 46947589   46947589)
 
+garbageU = 0 :: UID
+garbageS = 0 :: Subj
+garbageV = 0 :: Verb
+garbageO = 0 :: Obj
 
-fillFromSV (s,v) = (0,s,v,0)
-fillFromVO (v,o) = (0,0,v,o)
+fillFromSV :: (Subj,Verb) -> Triple
+fillFromSV (s,v) = (garbageU,s,v,garbageO)
+fillFromVO :: (Verb,Obj)  -> Triple
+fillFromVO (v,o) = (garbageU,garbageS,v,o)
 
-foo comp conv vec val = runST $ do
+lookupTriples comp conv vec val = runST $ do
   mvec <- UV.unsafeThaw vec
   (beg,end) <- binarySearchLRBy comp mvec (conv val)
   return (UV.slice beg (end-beg) vec)
@@ -387,26 +393,30 @@ testUnboxedVector = testCaseSteps "Generate unboxed vector of random RDF triples
   let
     triples = UV.map randomTriple rs -- 1.2s with 0.2M triples
     triplesbySVO = UV.modify (sortBy orderingBySVO) triples -- 4.0s with 0.2M triples
-    v1in = [(1,2)] :: [(Subj,Verb)]
-    v1out = UV.concat (map (foo compareSV fillFromSV triplesbySVO) v1in)
-    v2in  = UV.map    (\x -> (getObj x, 3:: Obj)) v1out
-    v2out = UV.concat (map (foo compareSV fillFromSV triplesbySVO) (UV.toList v2in))
-
+    triplesbyOVS = UV.modify (sortBy orderingByOVS) triples
+    lookupBySV = lookupTriples compareSV fillFromSV triplesbySVO
+    lookupByOV = lookupTriples compareOV fillFromVO triplesbyOVS
   --mapM_ print (UV.toList (UV.slice 1000 50 triplesbySVO))
+  --mapM_ print (UV.toList (UV.slice 1000 50 triplesbyOVS))
+
+  step "list y for (x,3,y) where (1,2,x)"
+  let
+    v1in = [(1,2)] :: [(Subj,Verb)]
+    v1out = UV.concat (map lookupBySV v1in)
+    v2in  = UV.map    (\x -> (getObj x, 3:: Obj)) v1out
+    v2out = UV.concat (map lookupBySV (UV.toList v2in))
   print "======================"
   print v1out
   print "----------------"
   print v2out
-
   print "/////////////////////////////////"
+  
+  step "list y for (x,3,y) where (x,1,2)"
   let
-    triplesbyOVS = UV.modify (sortBy orderingByOVS) triples -- 4.0s with 0.2M triples
     w1in = [(1,2)] :: [(Verb,Obj)]
-    w1out = UV.concat (map (foo compareOV fillFromVO triplesbyOVS) w1in)
+    w1out = UV.concat (map lookupByOV w1in)
     w2in  = UV.map    (\x -> (getSubj x, 3:: Verb)) w1out
-    w2out = UV.concat (map (foo compareSV fillFromSV triplesbySVO) (UV.toList w2in))
-
-  --mapM_ print (UV.toList (UV.slice 1000 50 triplesbyOVS))
+    w2out = UV.concat (map lookupBySV (UV.toList w2in))
   print "======================"
   print w1out
   print "----------------"
