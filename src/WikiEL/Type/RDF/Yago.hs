@@ -18,6 +18,7 @@ data YagoObject = YagoID        Text
                 | YagoNonEnWikiTitle Text Text -- lang title
                 | YagoNonEnWikiAlias Text Text -- lang alias
                 | YagoTypedValue Text Text     -- type value
+                | YagoTextValue Text
                 deriving (Eq, Show)
 
 type YagoRdfTriple = (YagoObject, YagoObject, YagoObject, YagoObject)
