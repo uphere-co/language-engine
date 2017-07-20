@@ -17,5 +17,6 @@ unitTests =
     , RDF.allTest
     ]
 
-main = defaultMain unitTests
+--main = defaultMain unitTests
+main = RDF.main1
 --main = NET.main1

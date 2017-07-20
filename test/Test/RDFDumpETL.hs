@@ -83,15 +83,15 @@ testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
   eassertEqual (parseOnly parserVerbToken "skos:prefLabel")         (Right (YagoSKOSverb "prefLabel"))
   eassertEqual (parseOnly parserVerbToken "<hasWikipediaAnchorText>") (Right (YagoVerb "hasWikipediaAnchorText"))
   eassertEqual (parseOnly parserVerbToken "<redirectedFrom>")         (Right (YagoVerb "redirectedFrom"))
-  eassertEqual (parseOnly parserUIDToken  "<id_5kujp2_1m6_a52wvp>") (Right (YagoID "5kujp2_1m6_a52wvp"))
+  eassertEqual (parseOnly parserUIDToken  "<id_5kujp2_1m6_a52wvp>")   (Right (YagoID "5kujp2_1m6_a52wvp"))
   eassertEqual (parseOnly parserNounToken "owl:Thing") (Right (YagoOWLclass "Thing"))
   eassertEqual (parseOnly parserNounToken "<wordnet_organization_108008335>")      (Right (YagoWordnet "organization_108008335"))
   eassertEqual (parseOnly parserNounToken "<wikicat_Graphics_hardware_companies>") (Right (YagoWikicat "Graphics_hardware_companies"))
-  eassertEqual (parseOnly parserNounToken "<PowerVR>")            (Right (YagoWikiTitle "PowerVR"))
   eassertEqual (parseOnly parserNounToken "<de/NEC_PowerVR_PCX>") (Right (YagoNonEnWikiTitle "de" "NEC_PowerVR_PCX"))
-  eassertEqual (parseOnly parserNounToken "<yagoPermanentlyLocatedEntity>") (Right (YagoClass "PermanentlyLocatedEntity"))
+  eassertEqual (parseOnly parserNounToken "<yagoPermanentlyLocatedEntity>")    (Right (YagoClass "PermanentlyLocatedEntity"))
   eassertEqual (parseOnly parserNounToken "\"Demography of Afghanistan\"@eng") (Right (YagoWikiAlias "Demography of Afghanistan"))
-  eassertEqual (parseOnly parserNounToken "\"Demography of Afghanistan\"@de") (Right (YagoNonEnWikiAlias "de" "Demography of Afghanistan"))
+  eassertEqual (parseOnly parserNounToken "\"Demography of Afghanistan\"@de")  (Right (YagoNonEnWikiAlias "de" "Demography of Afghanistan"))
+  eassertEqual (parseOnly parserNounToken "\"Fred Hechinger\"")  (Right (YagoTextValue "Fred Hechinger"))
 
 testYagoTaxonomyTSVrows :: TestTree
 testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
@@ -438,4 +438,23 @@ allTest =
     , allWikidataTest
     , allGenericRdfTripleTest]    
 
+
+hasWikiAlias (_,ts,tv@(YagoVerb v),to@(YagoWikiAlias _)) | v =="redirectedFrom" = Right (ts, to)
+hasWikiAlias _ = Left "Not English Wikipedia redirects."
+
+hasWordNet (_,ts,tv,to@(YagoWordnet _)) = Right (ts, to)
+hasWordNet _ = Left "Not WordNet synsets."
+
+main1 = do
+  file <- T.IO.readFile "yago/sample"
+  let
+    lines = T.lines file
+    rows = map (parseOnly parserRDFrowInTSV) lines
+    aliases = map hasWikiAlias (rights rows)
+    synsets = map hasWordNet (rights rows)
+  --mapM_ T.IO.putStrLn lines
+  --mapM_ print rows
+  print "============================"
+  mapM_ print (rights aliases)
+  mapM_ print (rights synsets)
 
