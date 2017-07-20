@@ -83,6 +83,7 @@ data Frame = Frame { _frame_ID :: Int
                    , _frame_name :: Text
                    , _frame_cDate :: DateTime
                    , _frame_definition :: Text
+                   , _frame_semType :: [SemType]
                    , _frame_FE :: [FE]
                    , _frame_FEcoreSet :: [FEcoreSet]
                    , _frame_frameRelation :: [FrameRelation]

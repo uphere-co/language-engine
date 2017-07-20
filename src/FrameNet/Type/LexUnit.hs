@@ -12,6 +12,7 @@ import           GHC.Generics
 import           FrameNet.Type.Common
 import           FrameNet.Type.Header
 import           FrameNet.Type.Sentence
+-- import           FrameNet.Type.PhraseType
 
 
 data AnnoSet = AnnoSet { _anno_ID :: Int }

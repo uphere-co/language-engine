@@ -50,6 +50,7 @@ library
                        FrameNet.Type.Header
                        FrameNet.Type.Frame
                        FrameNet.Type.LexUnit
+                       -- FrameNet.Type.PhraseType
                        FrameNet.Type.Sentence
                        FrameNet.Util
   ghc-options:         -O2 -Wall -threaded
