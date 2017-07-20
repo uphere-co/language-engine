@@ -25,6 +25,7 @@ import           Data.Text.Read                   (decimal)
 import           System.Directory
 import           System.Directory.Tree
 import           System.FilePath
+import           System.IO
 import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
 import           Text.Taggy.Lens
@@ -126,7 +127,7 @@ formatSenses lma vorn sensemap semlinkmap sensestat = do
   si <- maybeToList (HM.lookup lmav sensemap)
   s <- si^.inventory_senses
   let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
-      txt1 = text (printf "%2s.%-6s (%4d cases) | %-40s   " (s^.sense_group) (s^.sense_n) num (T.take 40 (s^.sense_name)))
+      txt1 = text (printf "%2s.%-6s (%4d cases) |  " (s^.sense_group) (s^.sense_n) num )
       mappings = s^.sense_mappings
       txt_pb = vcat top $ let lst = T.splitOn "," (mappings^.mappings_pb)
                           in if null lst
@@ -144,9 +145,11 @@ formatSenses lma vorn sensemap semlinkmap sensestat = do
                                     then [text (printf "%-43s" ("" :: String))]
                                     else lst --  map (text.printf "%-20s") lst
                  N -> vcat top [text (printf "%-42s" ("" :: String))]
-
-
-  return (txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn )
+      txt_definition = text ("definition: " ++ T.unpack (s^.sense_name))
+      txt_commentary = text (T.unpack (fromMaybe "" (s^.sense_commentary)))
+      txt_examples   = text (T.unpack (s^.sense_examples))
+      txt_detail = vcat left [txt_definition,txt_commentary,txt_examples]
+  return (vcat left [(txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn),txt_detail])
 
 
 formatStat :: ((Text,Text),Int) -> String
@@ -202,12 +205,12 @@ main = do
              . map (\(l,f)-> let (lma,_) = T.break (== '.') l in (lma,f))
              $ ws
 
-  forM_ (take 10 merged) $ \(lma,f) -> do
-    
+  forM_ merged $ \(lma,f) -> do
+    T.IO.hPutStrLn stderr lma    
     let frms = framesFromLU ludb (lma <> ".v")
-        doc = text (printf "%20s:%6d " lma f) <+>
+        doc = text (printf "%20s:%6d " lma f) //
               vcat top (formatSenses lma V sensemap semlinkmap sensestat )
-
+{- 
     let findnonzero = do
           si <- maybeToList (HM.lookup (lma <> "-v") sensemap)
           s <- si^.inventory_senses
@@ -217,9 +220,10 @@ main = do
 
               
     T.IO.putStrLn lma
-    mapM_ (\(g,n,num)->putStrLn (printf "%6s.%-6s  %d" g n num)) findnonzero
-{-               
-    putStrLn "====================================================================================================================="
-    putStrLn (render doc)
-    putStrLn $ "From FrameNet Lexical Unit " ++ show (lma <> ".v") ++ ": " ++ show frms
+    mapM_ (\(g,n,num)->putStrLn (printf "%1s.%-6s" g n)) findnonzero
+    putStrLn ""
 -}
+    putStrLn "====================================================================================================================="
+    putStrLn $ "From FrameNet Lexical Unit " ++ show (lma <> ".v") ++ ": " ++ show frms
+    putStrLn (render doc)
+
