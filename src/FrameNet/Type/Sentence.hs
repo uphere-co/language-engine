@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 ------------------------------------------------------------------------
@@ -10,14 +12,26 @@
 module FrameNet.Type.Sentence where
 
 import           Control.Lens
+import           Data.Binary
+import           Data.Binary.Orphans  -- for UTCTime
 import           Data.Text
-import           Data.Time.Clock  (UTCTime)
+import           Data.Time.Calendar
+import           Data.Time.Clock
 import           GHC.Generics
 --
 
+{- 
+-- orphan instance
+deriving instance Generic Day
+deriving instance Binary Day
+deriving instance Generic DiffTime
+deriving instance Binary DiffTime
+deriving instance Generic UTCTime
+deriving instance Binary UTCTime
+-}
 
 data IType = APos | CNI | INI | DNI | INC
-           deriving (Show,Eq,Ord,Enum,Bounded,Generic)
+           deriving (Show,Eq,Ord,Enum,Bounded,Generic,Binary)
 
 
 data Label = Label { _label_name :: Text
@@ -29,7 +43,7 @@ data Label = Label { _label_name :: Text
                    , _label_feID :: Maybe Int
                    , _lbael_cBy  :: Maybe Text
                    }
-           deriving (Show,Eq,Ord,Generic)
+           deriving (Show,Eq,Ord,Generic,Binary)
                     
 makeLenses ''Label
 
@@ -37,7 +51,7 @@ data Layer = Layer { _layer_label :: [Label]
                    , _layer_name :: Text
                    , _layer_rank :: Maybe Int
                    }
-           deriving (Show,Eq,Ord,Generic)
+           deriving (Show,Eq,Ord,Generic,Binary)
 
 makeLenses ''Layer                    
                  
@@ -52,7 +66,7 @@ data AnnotationSet = AnnotationSet { _annoset_layer :: [Layer]
                                    , _annoset_cxnID :: Maybe Int
                                    , _annoset_cDate :: Maybe UTCTime
                                    }
-                   deriving (Show,Eq,Ord,Generic)
+                   deriving (Show,Eq,Ord,Generic,Binary)
 
 makeLenses ''AnnotationSet
 
@@ -67,6 +81,6 @@ data Sentence = Sentence { _sent_text :: Text
                          , _sent_corpID :: Maybe Int
                          , _sent_externalID :: Maybe Text 
                          }
-              deriving (Show,Eq,Ord,Generic)
+              deriving (Show,Eq,Ord,Generic,Binary)
 
 makeLenses ''Sentence

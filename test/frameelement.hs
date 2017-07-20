@@ -9,8 +9,8 @@ import           Data.List
 import           System.FilePath
 import           Text.Printf
 --
-import FrameNet.Query.Frame
-import FrameNet.Type.Frame
+import           FrameNet.Query.Frame
+import           FrameNet.Type.Frame
 
 main = do
   let fndir = "/scratch/wavewave/FrameNet/1.7/fndata/fndata-1.7"

@@ -20,6 +20,8 @@ library
   -- other-extensions:    
   build-depends:       base,
                        async,
+                       binary,
+                       binary-orphans,
                        containers,
                        directory,
                        filepath,
