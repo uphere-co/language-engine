@@ -13,6 +13,7 @@ import           Data.List
 import           Data.Maybe                   (fromMaybe)
 import           Data.Monoid
 import           Data.Text                    (Text)
+import qualified Data.Text             as T
 import qualified Data.Text.IO          as TIO
 import           Data.Traversable
 import           System.Directory
@@ -32,7 +33,7 @@ main = do
   putStrLn "OntoNotes: section Wall Street Journal"
   putStrLn "======================================"
   
-  let propframedir = "/scratch/wavewave/MASC/Propbank/Propbank-orig/framefiles"
+  let propframedir = "/home/wavewave/repo/srcc/propbank-frames/frames" -- "/scratch/wavewave/MASC/Propbank/Propbank-orig/framefiles"
   propdb <- constructFrameDB propframedir
   let preddb = constructPredicateDB propdb
   
@@ -43,20 +44,15 @@ main = do
 
   let fps = sort (toList (dirTree dtr))
       props = filter (\x -> takeExtensions x == ".prop") fps
-      -- props' = [ "/scratch/wavewave/LDC/ontonotes-release-5.0/data/files/data/english/annotations/nw/wsj/14/wsj_1455.prop" ]
-      -- props' = [ "/scratch/wavewave/LDC/ontonotes-release-5.0/data/files/data/english/annotations/nw/wsj/09/wsj_0931.prop" ]
-      props' = props
-  lst <- flip traverse props' $ \fp -> do
+  instss <- flip traverse props $ \fp -> do
     hPutStrLn stderr fp
     txt <- TIO.readFile fp
     return (parsePropWithFileField NoOmit txt)
 
-  let rolesets = map (^.inst_lemma_roleset_id) $ concat lst
+  let insts_v = filter (\p->T.last (p^.inst_lemma_type) == 'v') (concat instss)
+      rolesets = map (^.inst_lemma_roleset_id) insts_v
       acc = foldl' (flip (HM.alter (\case { Nothing -> Just 1; Just n -> Just (n+1)}))) HM.empty rolesets
-  
-
-  mapM_ (putStrLn . formatStat preddb) . sortBy (flip compare `on` snd) . HM.toList $ acc -- rolesets
-
+  mapM_ (putStrLn . formatStat preddb) . sortBy (flip compare `on` snd) . HM.toList $ acc
 
 
 lookupRoleset :: PredicateDB -> (Text,Text) -> Maybe Text
