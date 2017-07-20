@@ -1,15 +1,24 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
+
+------------------------------------------------------------------------
+--
+-- This module follows the definition of (framenet)/schema/sentence.xsd
+--
+------------------------------------------------------------------------
 
 module FrameNet.Type.Sentence where
 
 import           Control.Lens
 import           Data.Text
 import           Data.Time.Clock  (UTCTime)
+import           GHC.Generics
 --
 
 
 data IType = APos | CNI | INI | DNI | INC
-           deriving (Show)
+           deriving (Show,Eq,Ord,Enum,Bounded,Generic)
+
 
 data Label = Label { _label_name :: Text
                    , _label_start :: Maybe Int
@@ -20,7 +29,7 @@ data Label = Label { _label_name :: Text
                    , _label_feID :: Maybe Int
                    , _lbael_cBy  :: Maybe Text
                    }
-           deriving (Show)
+           deriving (Show,Eq,Ord,Generic)
                     
 makeLenses ''Label
 
@@ -28,7 +37,7 @@ data Layer = Layer { _layer_label :: [Label]
                    , _layer_name :: Text
                    , _layer_rank :: Maybe Int
                    }
-           deriving (Show)
+           deriving (Show,Eq,Ord,Generic)
 
 makeLenses ''Layer                    
                  
@@ -43,7 +52,7 @@ data AnnotationSet = AnnotationSet { _annoset_layer :: [Layer]
                                    , _annoset_cxnID :: Maybe Int
                                    , _annoset_cDate :: Maybe UTCTime
                                    }
-                   deriving (Show)
+                   deriving (Show,Eq,Ord,Generic)
 
 makeLenses ''AnnotationSet
 
@@ -58,6 +67,6 @@ data Sentence = Sentence { _sent_text :: Text
                          , _sent_corpID :: Maybe Int
                          , _sent_externalID :: Maybe Text 
                          }
-              deriving (Show)
+              deriving (Show,Eq,Ord,Generic)
 
 makeLenses ''Sentence

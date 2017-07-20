@@ -24,7 +24,7 @@ import           System.FilePath              ((</>),takeExtensions)
 import           Text.Taggy.Lens
 --
 import           FrameNet.Format.LexUnit      (printLexUnit)
-import           FrameNet.Parse.LexUnit       (p_lexUnit)
+import           FrameNet.Parser.LexUnit       (p_lexUnit)
 import           FrameNet.Type.Common
 import           FrameNet.Type.LexUnit
 

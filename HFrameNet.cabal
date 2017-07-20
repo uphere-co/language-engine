@@ -37,15 +37,15 @@ library
   exposed-modules:     FrameNet
                        FrameNet.Format.Frame
                        FrameNet.Format.LexUnit
-                       FrameNet.Parse
-                       FrameNet.Parse.Common
-                       FrameNet.Parse.Frame
-                       FrameNet.Parse.LexUnit
-                       FrameNet.Parse.Sentence
+                       FrameNet.Parser.Common
+                       FrameNet.Parser.Frame
+                       FrameNet.Parser.LexUnit
+                       FrameNet.Parser.Sentence
                        FrameNet.Query
                        FrameNet.Query.Frame
                        FrameNet.Query.LexUnit
                        FrameNet.Type.Common
+                       FrameNet.Type.Header
                        FrameNet.Type.Frame
                        FrameNet.Type.LexUnit
                        FrameNet.Type.Sentence

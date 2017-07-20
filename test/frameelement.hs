@@ -19,7 +19,7 @@ main = do
   let lst = map snd $ HM.toList db
       fes = map (\f -> f^..frame_FE
                           .traverse
-                          .filtered (\r -> r^. fe_coreType == "Core" )
+                          .filtered (\r -> r^. fe_coreType == "Core-Unexpressed" )
                           .fe_name)
                           -- .to ((,) <$> view fe_ID <*> view fe_name))
                           -- .runGetter ((,) <$> Getter fe_ID <*> Getter fe_name))

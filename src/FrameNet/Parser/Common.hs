@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module FrameNet.Parse.Common where
+module FrameNet.Parser.Common where
 
 import           Control.Lens           ((^.))
 import           Text.Taggy.Lens
