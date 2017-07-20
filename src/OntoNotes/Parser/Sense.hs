@@ -13,7 +13,7 @@ data SenseInstance = SenseInstance { _sinst_file :: Text
                                    , _sinst_sentence_id :: Int
                                    , _sinst_token_id :: Int
                                    , _sinst_sense :: Text
-                                   , _sinst_sense_num :: Int
+                                   , _sinst_sense_num :: Text
                                    }
                      deriving Show
 
@@ -26,10 +26,12 @@ parseSenseInst ws = do
   _sinst_sentence_id <- fst <$> decimal _sinst_sentence_id'
   _sinst_token_id <- fst <$> decimal _sinst_token_id'
   case rest of
-    _sinst_sense_num':[]   -> fmap fst (decimal _sinst_sense_num')
-                            >>= \_sinst_sense_num -> return SenseInstance {..}
-    _:_sinst_sense_num':[] -> fmap fst (decimal _sinst_sense_num')
-                              >>= \_sinst_sense_num -> return SenseInstance {..}
+    _sinst_sense_num:[]   -> return SenseInstance {..}
+      --  fmap fst (decimal _sinst_sense_num')
+                              -- >>= \_sinst_sense_num -> return SenseInstance {..}
+    _:_sinst_sense_num:[] -> return SenseInstance {..}
+                              -- fmap fst (decimal _sinst_sense_num')
+                              -- >>= \_sinst_sense_num -> return SenseInstance {..}
     _ -> Left "sense_num"
 
 

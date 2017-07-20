@@ -1,6 +1,7 @@
 { pkgs               ? import <nixpkgs> {}
 , uphere-nix-overlay ? <uphere-nix-overlay>
 , HCoreNLP           ? <HCoreNLP>
+, HFrameNet          ? <HFrameNet>
 , nlp-types          ? <nlp-types>
 , PropBank           ? <PropBank>
 , VerbNet            ? <VerbNet>
@@ -23,6 +24,7 @@ let
     self: super: {
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
       "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
+      "HFrameNet" = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HFrameNet)) {};
       "wiki-ner" = self.callPackage (import wiki-ner) {};
     
       "nlp-types" = self.callPackage (import nlp-types) {};
@@ -55,7 +57,7 @@ let
             taggy-lens
             p.HCoreNLP
             p.HCoreNLP-Proto
-            
+            p.HFrameNet
             p.nlp-types
             p.PropBank
             p.VerbNet
