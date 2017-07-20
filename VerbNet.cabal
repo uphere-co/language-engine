@@ -19,7 +19,9 @@ library
   exposed-modules:
                        VerbNet
                        VerbNet.Parser
+                       VerbNet.Parser.SemLink
                        VerbNet.Type
+                       VerbNet.Type.SemLink
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10,
