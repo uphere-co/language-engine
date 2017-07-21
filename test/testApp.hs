@@ -12,10 +12,11 @@ import           WikiEL.ETL.Util
 
 
 
-hasWikiAlias (_,ts,tv@(YagoVerb v),to@(YagoWikiAlias _)) | v =="redirectedFrom" = Right (ts, to)
-hasWikiAlias _ = Left "Not English Wikipedia redirects."
+hasWikiAlias (Right (_,ts,tv@(YagoVerb v),to@(YagoWikiAlias _))) | v =="redirectedFrom" = Right (ts, to)
+hasWikiAlias (Right _) = Left "Not English Wikipedia redirects."
+hasWikiAlias (Left msg) = Left msg
 
-hasWordNet (_,ts,tv,to@(YagoWordnet _)) = Right (ts, to)
+hasWordNet (Right (_,ts,tv,to@(YagoWordnet _))) = Right (ts, to)
 hasWordNet _ = Left "Not WordNet synsets."
 
 
@@ -24,10 +25,11 @@ f block = do
   let
     lines = T.lines block
     rows = map readlineYAGO lines
-    aliases = map hasWikiAlias (rights rows)
-    synsets = map hasWordNet (rights rows)
+    aliases = map (hasWikiAlias.readlineYAGO) lines
+    --synsets = map hasWordNet (rights rows)
   mapM_ print (rights aliases)
-  mapM_ print (rights synsets)
+  mapM_ print rows
+  --mapM_ print (rights synsets)
 
 main1 = readBlocks stdin f
 
