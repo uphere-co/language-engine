@@ -84,6 +84,7 @@ testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
   eassertEqual (parseOnly parserVerbToken "<hasWikipediaAnchorText>") (Right (YagoVerb "hasWikipediaAnchorText"))
   eassertEqual (parseOnly parserVerbToken "<redirectedFrom>")         (Right (YagoVerb "redirectedFrom"))
   eassertEqual (parseOnly parserUIDToken  "<id_5kujp2_1m6_a52wvp>")   (Right (YagoID "5kujp2_1m6_a52wvp"))
+  eassertEqual (parseOnly parserNounToken "<id_5kujp2_1m6_a52wvp>")   (Right (YagoID "5kujp2_1m6_a52wvp"))
   eassertEqual (parseOnly parserNounToken "owl:Thing") (Right (YagoOWLclass "Thing"))
   eassertEqual (parseOnly parserNounToken "<wordnet_organization_108008335>")      (Right (YagoWordnet "organization_108008335"))
   eassertEqual (parseOnly parserNounToken "<wikicat_Graphics_hardware_companies>") (Right (YagoWikicat "Graphics_hardware_companies"))
@@ -92,6 +93,8 @@ testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
   eassertEqual (parseOnly parserNounToken "\"Demography of Afghanistan\"@eng") (Right (YagoWikiAlias "Demography of Afghanistan"))
   eassertEqual (parseOnly parserNounToken "\"Demography of Afghanistan\"@de")  (Right (YagoNonEnWikiAlias "de" "Demography of Afghanistan"))
   eassertEqual (parseOnly parserNounToken "\"Fred Hechinger\"")  (Right (YagoTextValue "Fred Hechinger"))
+  eassertEqual (parseOnly parserNounToken "<http://www.example.com/>")  (Right (YagoURL "http://www.example.com/"))
+  eassertEqual (parseOnly parserNounToken "<http://en.wikipedia.org/wiki/Donald_Trump%2C_Jr.>")  (Right (YagoURL "http://en.wikipedia.org/wiki/Donald_Trump%2C_Jr."))
 
 testYagoTaxonomyTSVrows :: TestTree
 testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
@@ -110,9 +113,12 @@ testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, 
             ,"<id_we31u1_1sz_vfg0ga>\t<Burnside,_Iowa>\tskos:prefLabel\t\"Burnside, Iowa\"@eng"
             ,"<id_1qt4wt3_1ia_1k16t4w>\t<pl/Olli_Tyrväinen>\trdfs:label \"Olli Tyrvainen\"@eng    "
             ,"<id_1j3k64j_qkd_4hgw54> <Fred_M._Hechinger>\t<redirectedFrom> \"Fred Hechinger\"@eng "
-            -- samples from yagoConteXtFacts_en.tsv : No ID for RDF triples
-            --"	<Afghani_man>	<hasWikipediaAnchorText>	\"Demography of Afghanistan\"@eng	"
-            --"	<AssistiveTechnology>	<hasWikipediaAnchorText>	\"Assistive_technology\"@eng"
+            -- other samples from yago3_entire_tsv
+            ,"        <fr/Alison_Moir>        <linksTo>       <Donald_Trump>"
+            ,"        <Donald_Trump,_Jr.>     owl:sameAs      <http://dbpedia.org/resource/Donald_Trump,_Jr.>"
+            ,"<id_1e1ybux_88c_1koas7s>        <Dubalgundi>    rdf:type        owl:Thing"
+            ,"<id_1roo4zd_115_1uyvovk> <id_83enei_88c_zo71oj> <extractionSource> <http://en.wikipedia.org/wiki/Donald_Trump_%28song%29>"
+            ,"<id_1gucu9u_p3m_zkjp59> <Donald_Trump,_Jr.>     <hasGender>     <male>"
             ]
     expected=[Right (YagoID "4gx1l8_1m6_1snupo6", YagoWikicat "Graphics_chips",   YagoRDFSprop "subClassOf", YagoWordnet "bit_109222051")
              ,Right (YagoID "k664kn_1m6_130ah1o", YagoWordnet "company_108058098",YagoRDFSprop "subClassOf", YagoWordnet "institution_108053576")
@@ -127,6 +133,12 @@ testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, 
              ,Right (YagoID "we31u1_1sz_vfg0ga",  YagoWikiTitle "Burnside,_Iowa", YagoSKOSverb "prefLabel", YagoWikiAlias "Burnside, Iowa")
              ,Right (YagoID "1qt4wt3_1ia_1k16t4w",YagoNonEnWikiTitle "pl" "Olli_Tyrväinen", YagoRDFSprop "label", YagoWikiAlias "Olli Tyrvainen")
              ,Right (YagoID "1j3k64j_qkd_4hgw54", YagoWikiTitle "Fred_M._Hechinger", YagoVerb "redirectedFrom", YagoWikiAlias "Fred Hechinger")
+             
+             ,Right (YagoID "None",YagoNonEnWikiTitle "fr" "Alison_Moir",YagoVerb "linksTo",YagoWikiTitle "Donald_Trump")
+             ,Right (YagoID "None",YagoWikiTitle "Donald_Trump,_Jr.", YagoOWLclass "sameAs", YagoURL "http://dbpedia.org/resource/Donald_Trump,_Jr.")
+             ,Right (YagoID "1e1ybux_88c_1koas7s", YagoWikiTitle "Dubalgundi", YagoRDFverb "type", YagoOWLclass "Thing")
+             ,Right (YagoID "1roo4zd_115_1uyvovk",YagoID "83enei_88c_zo71oj",YagoVerb "extractionSource",YagoURL "http://en.wikipedia.org/wiki/Donald_Trump_%28song%29")
+             ,Right (YagoID "1gucu9u_p3m_zkjp59",YagoWikiTitle "Donald_Trump,_Jr.",YagoVerb "hasGender",YagoNoun "male")
              ]
     rows = map (parseOnly parserRDFrowInTSV) lines 
   mapM_ (uncurry eassertEqual) (zip rows expected)

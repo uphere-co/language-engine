@@ -10,6 +10,8 @@ import           WikiEL.ETL.RDF.Common      (parserObject,parserObject2,parserTy
 import           WikiEL.Type.RDF.Yago
 
 
+nullID :: YagoObject
+nullID = YagoID "None"
 
 parserYAGOuid, parserRDFverb, parserRDFSprop,parserSKOSverb,parserYAGOverb:: Parser YagoObject
 parserYAGOuid  = parserObject "<id_" ">" YagoID
@@ -47,32 +49,40 @@ parserYAGOwikiTitle = do
 parserYAGOnonEnwikiTitle :: Parser YagoObject
 parserYAGOnonEnwikiTitle = parserObject2 "<" "/" ">" YagoNonEnWikiTitle
 
-parserYAGOtypedValue, parserYAGOtextValue :: Parser YagoObject
+parserYAGOtypedValue, parserYAGOtextValue,parserYAGOurl :: Parser YagoObject
 parserYAGOtypedValue = parserTypedValue f
   where
     f text typeTag = YagoTypedValue typeTag text
 parserYAGOtextValue = parserObject "\"" "\""    YagoTextValue
+parserYAGOurl   = parserObject "<http" ">"  toURL
+  where toURL x = YagoURL (T.append "http" x)
 
-
-parserNounToken, parserVerbToken, parserUIDToken :: Parser YagoObject
-parserNounToken = choice [ parserYAGOwordnet
+parserNounToken, parserVerbToken, parserUIDToken,parserYAGOnoun :: Parser YagoObject
+parserNounToken = choice [ -- Ordering matters. 
+                           parserYAGOwordnet
                          , parserYAGOwikicat
                          , parserOWLclass
                          , parserYAGOclass
                          , parserYAGOwikiAlias
                          , parserYAGOwikiTitle
                          , parserYAGOnonEnWikiAlias
-                         , parserYAGOnonEnwikiTitle
                          , parserYAGOtypedValue
-                         , parserYAGOtextValue]
+                         , parserYAGOtextValue
+                         , parserYAGOurl  -- Must be prior to parserYAGOnonEnwikiTitle.
+                         , parserYAGOuid  -- Must be prior to parserYAGOnonEnwikiTitle.
+                         , parserYAGOnonEnwikiTitle
+                         , parserYAGOnoun -- Must be subsequent to parserYAGOnonEnwikiTitle.
+                         ]
 parserVerbToken = choice [ parserRDFverb
                          , parserRDFSprop
                          , parserSKOSverb
-                         , parserYAGOverb]
+                         , parserYAGOverb
+                         , parserOWLclass]
 parserUIDToken  = parserYAGOuid
+parserYAGOnoun = parserObject "<" ">"    YagoNoun
 
-parserRDFrowInTSV :: Parser YagoRdfTriple
-parserRDFrowInTSV = do
+parserRDF4colRowInTSV :: Parser YagoRdfTriple
+parserRDF4colRowInTSV = do
   let ssep = skipWhile C.isSpace
   uid  <- parserUIDToken
   ssep
@@ -84,3 +94,18 @@ parserRDFrowInTSV = do
   ssep
   return (uid, subj, verb, obj)
 
+parserRDF3colRowInTSV :: Parser YagoRdfTriple
+parserRDF3colRowInTSV = do
+  let ssep = skipWhile C.isSpace
+  ssep
+  subj <- parserNounToken
+  ssep
+  verb <- parserVerbToken
+  ssep
+  obj  <- parserNounToken
+  ssep
+  return (nullID,subj, verb, obj)
+
+
+parserRDFrowInTSV = choice [ parserRDF4colRowInTSV
+                           , parserRDF3colRowInTSV]
