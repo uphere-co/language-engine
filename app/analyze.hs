@@ -44,7 +44,8 @@ import           CoreNLP.Simple.Type.Simplified
 import           CoreNLP.Simple.Util
 import           FrameNet.Query.Frame
 import           FrameNet.Query.LexUnit
-import           FrameNet.Type.Common (fr_frame)
+import           FrameNet.Type.Frame hiding (LexUnit)
+import           FrameNet.Type.Common                        (fr_frame, CoreType(..))
 import           FrameNet.Type.LexUnit
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
@@ -201,17 +202,40 @@ runParser pp txt = do
   return (psents,sents,tokss,parsetrees,deps)
 
 
-formatSenses lma sensemap sensestat = do
+formatSenses lma sensemap sensestat framedb ontomap = do
   let lmav = lma <> "-v"
   si <- maybeToList (HM.lookup lmav sensemap)
   s <- si^.inventory_senses
   let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
       txt_def = T.take 40 (s^.sense_name)
-      txt1 = printf "%2s.%-6s (%4d cases) | %-40s | " (s^.sense_group) (s^.sense_n) num txt_def
+      (txt_frame,txt_fecore,txt_feperi)
+        = fromMaybe ("","","") $ do
+            lst <- HM.lookup lma ontomap
+            frtxt <- lookup (s^.sense_group <> "." <> s^.sense_n) lst
+            case frtxt of
+              "copula"    -> return ("** COPULA **"    , "","")
+              "idioms"    -> return ("** IDIOMS **"    , "","")
+              "lightverb" -> return ("** LIGHT VERB **", "","")
+              _ -> do
+                frame <- HM.lookup frtxt (framedb^.frameDB)
+                let fes = frame^..frame_FE.traverse
+                    corefes = filter (\fe -> fe^.fe_coreType == Core) fes
+                    perifes = filter (\fe -> fe^.fe_coreType == Peripheral) fes
+                    fecoretxt = T.intercalate ", " (map (^.fe_name) corefes)
+                    feperitxt = T.intercalate ", " (map (^.fe_name) perifes)
+                return (frtxt,fecoretxt,feperitxt)
+      txt1 = printf "%2s.%-6s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s "
+               (s^.sense_group)
+               (s^.sense_n)
+               num
+               txt_def
+               txt_frame
+               txt_fecore
+               txt_feperi
   return txt1 
 
 
-sentStructure pp sensemap sensestat txt = do
+sentStructure pp sensemap sensestat framedb ontomap txt = do
   (psents,sents,tokss,mptrs,deps) <- runParser pp txt
   flip mapM_ (zip4 psents sents mptrs deps) $ \(psent,sent,mptr,dep) -> do
     flip mapM_ mptr $ \ptr -> do
@@ -240,7 +264,7 @@ sentStructure pp sensemap sensestat txt = do
       
       forM_ lmas $ \lma -> do
         putStrLn (printf "Verb: %-20s" lma)
-        mapM_ putStrLn (formatSenses lma sensemap sensestat)
+        mapM_ putStrLn (formatSenses lma sensemap sensestat framedb ontomap)
         putStrLn "--------------------------------------------------------------------------------------------------"  
         
 
@@ -249,15 +273,33 @@ sentStructure pp sensemap sensestat txt = do
 
 
 
-queryProcess pp sensemap sensestat = do
+queryProcess pp sensemap sensestat framedb ontomap = do
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     let input = T.pack input'
-    sentStructure pp sensemap sensestat input
+    sentStructure pp sensemap sensestat framedb ontomap input
     
 
-main' = do
-  ludb <- loadFrameNet (cfg^.cfg_framenet_lubin)
-   
+{- 
+main = do
+  -- ludb <- loadFrameNet (cfg^.cfg_framenet_file)
+  
+  let xs = do (w,lst) <- mapFromONtoFN
+              (m,t) <- lst
+              let mfr = HM.lookup t (fdb^.frameDB)
+              guard (isNothing mfr) 
+              return (w,m,t)
+  -- mapM_ print . filter (\(_,_,t) -> isJust (T.find (\c -> c == ' ' || c == '(') t)) $  xs
+
+  mapM_ print xs
+-}
+
+
+main = do
+  -- ludb <- loadFrameNet (cfg^.cfg_framenet_lubin)
+  framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
+
+  let ontomap = HM.fromList mapFromONtoFN
+    
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   -- semlink <- loadSemLink (cfg^.cfg_semlink_file)
   -- let semlinkmap = createVNFNDB semlink
@@ -278,18 +320,5 @@ main' = do
 
     -- mapM_ (sentStructure pp . (^._3) ) ordered
     -- sentStructure pp txt
-    queryProcess pp sensemap sensestat
+    queryProcess pp sensemap sensestat framedb ontomap 
 
-main = do
-  -- ludb <- loadFrameNet (cfg^.cfg_framenet_file)
-  fdb <- loadFrameData (cfg^.cfg_framenet_framedir)
-  
-  let xs = do (w,lst) <- mapFromONtoFN
-              (m,t) <- lst
-              let mfr = HM.lookup t (fdb^.frameDB)
-              guard (isNothing mfr) 
-              return (w,m,t)
-  -- mapM_ print . filter (\(_,_,t) -> isJust (T.find (\c -> c == ' ' || c == '(') t)) $  xs
-
-  mapM_ print xs
-  
