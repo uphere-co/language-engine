@@ -54,7 +54,8 @@ import           SRL.Feature.Verb
 --
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
-
+--
+import           OntoNotesFrameNet
 
 
 
@@ -250,7 +251,7 @@ queryProcess pp sensemap sensestat = do
     sentStructure pp sensemap sensestat input
     
 
-main = do
+main' = do
   ludb <- loadFrameNet (cfg^.cfg_framenet_file)
    
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
@@ -274,3 +275,11 @@ main = do
     -- mapM_ (sentStructure pp . (^._3) ) ordered
     -- sentStructure pp txt
     queryProcess pp sensemap sensestat
+
+main = do
+  let xs = do (w,lst) <- mapFromONtoFN
+              (m,t) <- lst 
+              return (w,m,t)
+  mapM_ print . filter (\(_,_,t) -> isJust (T.find (\c -> c == ' ' || c == '(') t)) $  xs
+
+  
