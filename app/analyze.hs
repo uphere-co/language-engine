@@ -33,10 +33,17 @@ import           System.FilePath
 import           System.IO
 import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
+import           Text.ProtocolBuffers.Basic       (Utf8)
+import           Text.ProtocolBuffers.WireMessage (messageGet)
 import           Text.Taggy.Lens
+
 --
+import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
+import qualified CoreNLP.Proto.CoreNLPProtos.Timex     as Tmx
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
+import qualified CoreNLP.Proto.HCoreNLPProto.ListTimex as T
+import qualified CoreNLP.Proto.HCoreNLPProto.TimexWithOffset as T
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
@@ -55,6 +62,9 @@ import           SRL.Feature.Clause
 import           SRL.Feature.Dependency
 import           SRL.Feature.Verb
 import           SRL.Type.Verb
+import           Type
+import           Util.Doc
+import           View
 --
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
@@ -188,19 +198,95 @@ convertToken_charIndex t = do
 formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
 
 
+{- 
+addSUTime :: [SentItem] -> T.ListTimex
+          -> [(SentItem,[TagPos (Maybe Utf8)])]
+addSUTime sents tmxs =
+  let f t = ( fromIntegral (t^.T.characterOffsetBegin) + 1
+            , fromIntegral (t^.T.characterOffsetEnd)
+            , t^. T.timex . Tmx.value
+            )
+  in filter (not.null.(^._2)) $ map (addTag (map f (tmxs^..T.timexes.traverse))) sents
+-}
+
+
+type SentIdx = Int
+type CharIdx = Int
+type BeginEnd = (CharIdx,CharIdx)
+type TagPos a = (CharIdx,CharIdx,a)
+type SentItem = (SentIdx,BeginEnd,Text)
+
+
+getSentenceOffsets :: D.Document -> [(SentIdx,BeginEnd)]
+getSentenceOffsets doc = 
+  let sents = toListOf (D.sentence . traverse) doc
+  in zip ([1..] :: [Int]) $ flip map sents $ \s -> 
+       let b = fromJust $ fromJust $ firstOf (S.token . traverse . TK.beginChar) s
+           e = fromJust $ fromJust $ lastOf  (S.token . traverse . TK.endChar) s
+       in (fromIntegral b+1,fromIntegral e)
+
+
+addText :: Text -> (SentIdx,BeginEnd) -> SentItem
+addText txt (n,(b,e)) = (n,(b,e),slice (b-1) e txt)
+
+
+addTag :: [TagPos a] -> SentItem -> (SentItem,[TagPos a])
+addTag lst i@(_,(b,e),_) = (i,filter check lst)
+  where check (b',e',_) = b' >= b && e' <= e 
+
+
+addSUTime :: [SentItem] -> T.ListTimex
+          -> [(SentItem,[TagPos (Maybe Utf8)])]
+addSUTime sents tmxs =
+  let f t = ( fromIntegral (t^.T.characterOffsetBegin) + 1
+            , fromIntegral (t^.T.characterOffsetEnd)
+            , t^. T.timex . Tmx.value
+            )
+  in filter (not.null.(^._2)) $ map (addTag (map f (tmxs^..T.timexes.traverse))) sents
+
+
+
+underlineText :: BeginEnd -> Text -> [TagPos a] -> IO ()
+underlineText (b0,_e0) txt lst = do
+  let f (b,e,_) = ((),b-b0+1,e-b0+1)
+      tagged = map f lst
+      ann = (AnnotText . map (\(t,m)-> (t,isJust m)) . tagText tagged) txt
+      xss = lineSplitAnnot 80 ann
+  sequence_ (concatMap (map cutePrintAnnot) xss)
+
+formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
+formatTimex (s,a) = do 
+  -- T.IO.putStrLn $ "Sentence " <> T.pack (show (s^._1)) 
+  underlineText (s^._2) (s^._3) a
+  T.IO.putStrLn "----------"
+  print a
+  
+{-   T.IO.putStrLn "----------"
+  print b
+  T.IO.putStrLn "=========="
+-}
+
 runParser pp txt = do
   doc <- getDoc txt
   ann <- annotate pp doc
   pdoc <- getProtoDoc ann
+  lbstr_sutime <- BL.fromStrict <$> serializeTimex ann
+  mtmx <- case fmap fst (messageGet lbstr_sutime) :: Either String T.ListTimex of
+    Left err -> return Nothing
+    Right rsutime -> do
+      let sentidxs = getSentenceOffsets pdoc
+          sents = map (addText txt) sentidxs 
+          sentswithtmx = addSUTime sents rsutime
+      -- mapM_ formatResult sentswithtmx
+      return (Just sentswithtmx)
   let psents = getProtoSents pdoc
-  
       parsetrees = map (\x -> pure . decodeToPennTree =<< (x^.S.parseTree) ) psents
       sents = map (convertSentence pdoc) psents
       Right deps = mapM sentToDep psents
 
       tktokss = map (getTKTokens) psents
       tokss = map (mapMaybe convertToken_charIndex) tktokss
-  return (psents,sents,tokss,parsetrees,deps)
+  return (psents,sents,tokss,parsetrees,deps,mtmx)
 
 
 formatSenses lma sensemap sensestat framedb ontomap = do
@@ -237,7 +323,14 @@ formatSenses lma sensemap sensestat framedb ontomap = do
 
 
 sentStructure pp sensemap sensestat framedb ontomap txt = do
-  (psents,sents,tokss,mptrs,deps) <- runParser pp txt
+  (psents,sents,tokss,mptrs,deps,mtmx) <- runParser pp txt
+  putStrLn "\n\n\n\n\n\n\n\n================================================================================================="
+  -- T.IO.putStrLn txt
+  case mtmx of
+    Nothing -> putStrLn "Time annotation not successful!"
+    Just sentswithtmx -> mapM_ formatTimex sentswithtmx
+  putStrLn "-------------------------------------------------------------------------------------------------"
+  
   flip mapM_ (zip4 psents sents mptrs deps) $ \(psent,sent,mptr,dep) -> do
     flip mapM_ mptr $ \ptr -> do
       let tkns = zip [0..] (getTKTokens psent)
@@ -249,8 +342,6 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
           idltr = depLevelTree dep iltr
           vps = verbPropertyFromPennTree lmap ptr
           vtree = verbTree vps idltr
-      putStrLn "================================================================================================="
-      T.IO.putStrLn txt          
       putStrLn "--------------------------------------------------------------------------------------------------"
       T.IO.putStrLn  . T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip [0..] . map snd . toList $ ptr
 
@@ -271,7 +362,7 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
         putStrLn (printf "Verb: %-20s" lma)
         mapM_ putStrLn (formatSenses lma sensemap sensestat framedb ontomap)
         putStrLn "--------------------------------------------------------------------------------------------------"  
-        
+             
 
 
 
@@ -282,7 +373,8 @@ queryProcess pp sensemap sensestat framedb ontomap = do
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     let input = T.pack input'
     sentStructure pp sensemap sensestat framedb ontomap input
-    
+    putStrLn "=================================================================================================\n\n\n\n"
+        
 
 {- 
 main = do
@@ -320,6 +412,7 @@ main = do
                        . (words2sentences .~ True)
                        . (postagger .~ True)
                        . (lemma .~ True)
+                       . (sutime .~ True)
                        . (constituency .~ True)
                   )
 
