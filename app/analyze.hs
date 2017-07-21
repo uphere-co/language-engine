@@ -54,6 +54,7 @@ import           SRL.Feature
 import           SRL.Feature.Clause
 import           SRL.Feature.Dependency
 import           SRL.Feature.Verb
+import           SRL.Type.Verb
 --
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
@@ -248,21 +249,25 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
           idltr = depLevelTree dep iltr
           vps = verbPropertyFromPennTree lmap ptr
           vtree = verbTree vps idltr
+      putStrLn "================================================================================================="
+      T.IO.putStrLn txt          
       putStrLn "--------------------------------------------------------------------------------------------------"
       T.IO.putStrLn  . T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip [0..] . map snd . toList $ ptr
 
       putStrLn "--------------------------------------------------------------------------------------------------"
       let lmaposs = concatMap (filter (\t -> isVerb (t^.token_pos))) $ tokss
           lmas = map (^.token_lemma) lmaposs
-      mapM_ (putStrLn . formatLemmaPOS) lmaposs 
+      -- mapM_ (putStrLn . formatLemmaPOS) lmaposs 
       -- mapM_ (T.IO.putStrLn . formatBitree (^._2.to (showVerb tkmap))) vtree
       -- putStrLn "---------------------------------------------------------------"
       showClauseStructure lmap ptr
       -- putStrLn "---------------------------------------------------------------"
       -- (T.IO.putStrLn . prettyPrint 0) ptr
       putStrLn "================================================================================================="
+
+
       
-      forM_ lmas $ \lma -> do
+      forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
         putStrLn (printf "Verb: %-20s" lma)
         mapM_ putStrLn (formatSenses lma sensemap sensestat framedb ontomap)
         putStrLn "--------------------------------------------------------------------------------------------------"  
