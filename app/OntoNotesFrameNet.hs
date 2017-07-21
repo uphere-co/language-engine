@@ -20,16 +20,16 @@ mapFromONtoFN =
     , ( "say"
       , [("1.1", "Statement")
         ,("1.2", "Sign")
-        ,("1.3", "Conditional_occurence")
+        ,("1.3", "Conditional_occurrence")
         ,("1.4", "Statement")
-        ,("1.5", "Spelling_and_pronunciation")
+        ,("1.5", "Spelling_and_pronouncing")
         ,("1.6", "none")])
       
     , ( "have"
       , [("1.1", "Possession")
         ,("1.2", "copula") -- "(copula)")  
         ,("1.3", "Being_employed")
-        ,("1.4", "Undergo")  --  || Perception_experience")
+        ,("1.4", "Undergoing")  --  || Perception_experience")
         ,("1.5", "Personal_relationship")
         ,("1.6", "Causation")
         ,("1.7", "Getting") -- "(Getting)")
@@ -47,7 +47,7 @@ mapFromONtoFN =
         ,("1.6", "Coming_to_be") -- "(Coming_to_be) || (Becoming)")
         ,("1.7", "Getting")
         ,("1.8", "Accomplishment")
-        ,("1.9", "Self-motion")
+        ,("1.9", "Self_motion")
         ,("1.15", "Conduct")
         ,("1.16", "idioms")])
 
@@ -74,14 +74,14 @@ mapFromONtoFN =
         ,("1.11.1", "Becoming")
         ,("1.11.2", "Arriving")
         ,("1.11.3", "Activity_start")
-        ,("1.11.5", "Activity_continue")  -- "(Activity_continue) | (State_continue)")
+        ,("1.11.5", "Activity_ongoing")  -- "(Activity_continue) | (State_continue)")
         ,("1.11.6", "Arriving")
         ,("1.11.7", "Activity_finish")
         ,("1.11.8", "Becoming_aware")
         ,("1.11.13", "Personal_relationship") -- "(Personal_relationship)")
         ,("1.11.17", "Recovery")
         ,("1.11.19", "Avoiding")
-        ,("1.11.20", "Assistence") -- "(Assistence)")
+        ,("1.11.20", "Assistance") -- "(Assistence)")
         ,("1.11.23", "Getting")
         ,("1.11.26", "Experiencer_focus")
         ,("1.11.33", "Waking_up")
@@ -118,7 +118,7 @@ mapFromONtoFN =
     , ( "use"
       , [("1.1", "Using")
         ,("1.2", "Ingest_substance")
-        ,("1.3", "Expend_resources")
+        ,("1.3", "Expend_resource")
         ,("1.4", "Frequency")]) -- "(Frequency)")])
 
     , ( "do"
@@ -181,7 +181,7 @@ mapFromONtoFN =
       , [("1.1", "Perception_experience")
         ,("1.2", "Grasp")
         ,("1.3", "Perception_experience")
-        ,("1.4", "Verify")
+        ,("1.4", "Verification")
         ,("1.5", "Attention")   -- (Attention)
         ,("1.6", "Meet_with")])
 
@@ -234,7 +234,7 @@ mapFromONtoFN =
         ,("1.4", "Sufficiency")])
 
     , ( "fall"
-      , [("1.1", "Change_poisition_on_a_scale") -- "Change_poisition_on_a_scale || Motion_directional")
+      , [("1.1", "Change_position_on_a_scale") -- "Change_poisition_on_a_scale || Motion_directional")
         ,("1.2", "Coming_to_be")
         ,("1.3", "Catastrophe") -- "(Catastrophe)")
         ,("1.4", "Event") -- "(Event)")
@@ -463,7 +463,7 @@ mapFromONtoFN =
         ,("1.2", "Motion_directional")
         ,("1.3", "Arranging")
         ,("1.4", "Arranging")
-        ,("1.5", "Causing")
+        ,("1.5", "Causation")
         ,("1.6", "Cause_to_start")
         ,("1.8", "Arranging")])
 
@@ -564,7 +564,7 @@ mapFromONtoFN =
         ,("1.5", "Causation")])
 
     , ( "open"
-      , [("1.1", "Change_accesibility")
+      , [("1.1", "Change_accessibility")
         ,("1.2", "Activity_start")
         ,("1.5", "Use_firearm")])
 
@@ -597,7 +597,7 @@ mapFromONtoFN =
       , [("1.1", "Make_acquaintance")
         ,("1.2", "Meet_with")
         ,("1.3", "Locative_relation")
-        ,("1.4", "Meet_specification")
+        ,("1.4", "Meet_specifications")
         ,("1.5", "Undergoing")])
 
     , ( "win"
@@ -639,7 +639,7 @@ mapFromONtoFN =
 
     , ( "write"
       , [("1.1", "Text_creation")
-        ,("1.2", "Spelling_and_pronunciation")
+        ,("1.2", "Spelling_and_pronouncing")
         ,("1.5", "Cause_change_of_position_on_a_scale")])
 
     , ( "yield"
@@ -973,7 +973,7 @@ mapFromONtoFN =
 
     , ( "establish"
       , [("1.1", "Intentionally_create")
-        ,("1.2", "Explainig_the_facts")])
+        ,("1.2", "Explaining_the_facts")])
 
     , ( "stay"
       , [("1.1", "State_continue")
@@ -1025,7 +1025,7 @@ mapFromONtoFN =
       , [("1.1", "Replacing")]) --  "Replacing - Take_place_of")])
 
     , ( "assume"
-      , [("1.1", "Conditional_occurence") -- "Awareness || Conditional_occurence")
+      , [("1.1", "Conditional_occurrence") -- "Awareness || Conditional_occurence")
         ,("1.2", "Activity_start")]) --  "(Activity_start <- begin.v)")])
 
     , ( "reject"
@@ -1042,9 +1042,9 @@ mapFromONtoFN =
         ,("1.3", "Motion")]) -- "Motion - Cause_motion")])
 
     , ( "drive"
-      , [("1.1", "Operating_vehicle")
+      , [("1.1", "Operate_vehicle")
         ,("1.2", "Causation")
-        ,("1.5", "Self-motion")])
+        ,("1.5", "Self_motion")])
 
     , ( "boost"
       , [("1.1", "Cause_change_of_position_on_a_scale")
@@ -1212,7 +1212,7 @@ mapFromONtoFN =
 
     , ( "suffer"
       , [("1.1", "Eventive_affecting") -- "Catastrophe || Eventive_affecting")
-        ,("1.2", "Imporovement_or_decline")])
+        ,("1.2", "Improvement_or_decline")])
 
     , ( "publish"
       , [("1.1", "Publishing")])
@@ -1267,7 +1267,7 @@ mapFromONtoFN =
         ,("1.7.1", "Placing") -- "(Placing)")
         ,("1.7.2", "Getting")
         ,("1.7.3", "Becoming_aware")
-        ,("1.7.4", "Changing_position_on_a_scale")  -- "Changing_position_on_a_scale - Cause_cahnge_of_position_on_a_scale")
+        ,("1.7.4", "Change_position_on_a_scale")  -- "Changing_position_on_a_scale - Cause_cahnge_of_position_on_a_scale")
         ,("1.7.6", "Choosing")
         ,("1.7.8", "Hit_or_miss")
         ,("1.7.10", "Personal_relationship")]) -- "(Personal_relationship <- date.v)")])
@@ -1410,7 +1410,7 @@ mapFromONtoFN =
 
     , ( "adjust"
       , [("1.1", "Adjusting")
-        ,("1.2", "Adopting_selection")]) -- "(Adopting_selection)")])
+        ,("1.2", "Adopt_selection")]) -- "(Adopting_selection)")])
 
     , ( "speak"
       , [("1.1", "Communication")
@@ -1442,7 +1442,7 @@ mapFromONtoFN =
     , ( "realize"
       , [("1.1", "Coming_to_believe")
         ,("1.2", "Accomplishment") -- "(Accomplishment)")
-        ,("1.3", "Earnings_or_losses")])
+        ,("1.3", "Earnings_and_losses")])
 
     , ( "fly"
       , [("1.1", "Motion") -- "Motion - Cause_motion")
@@ -1479,7 +1479,7 @@ mapFromONtoFN =
         ,("1.3", "Telling")]) -- "(Telling)")])
 
     , ( "pursue"
-      , [("1.1", "Seeking_to_acheive") -- "Seeking_to_acheive || Seeking")
+      , [("1.1", "Seeking_to_achieve") -- "Seeking_to_acheive || Seeking")
         ,("1.2", "Seeking")])
 
     , ( "offset"
@@ -1500,7 +1500,7 @@ mapFromONtoFN =
     , ( "retire"
       , [("1.1", "Quitting")
         ,("1.3", "Process_stop")
-        ,("1.6", "Remove")]) --  "(Remove?)")])
+        ,("1.6", "Removing")]) --  "(Remove?)")])
 
     , ( "permit"
       , [("1.1", "Preventing_or_letting")])
@@ -1541,7 +1541,7 @@ mapFromONtoFN =
     , ( "stem"
       , [("1.1", "Origin")
         ,("1.3", "Hindering")
-        ,("1.5", "Resolving_problem")]) -- "(Resolving_problem <- deal.v)")])
+        ,("1.5", "Resolve_problem")]) -- "(Resolving_problem <- deal.v)")])
 
     , ( "promote"
       , [("1.1", "Cause_to_make_progress") -- "(Cause_to_make_progress) | (Cause_to_expand)")
@@ -1585,8 +1585,8 @@ mapFromONtoFN =
       , [("1.1", "Self_motion")])
 
     , ( "blame"
-      , [("1.1", "Judgement_communication")
-        ,("1.2", "Judgement")])
+      , [("1.1", "Judgment_communication")
+        ,("1.2", "Judgment")])
 
     , ( "ban"
       , [("1.1", "Prohibiting_or_licensing")
@@ -1651,7 +1651,7 @@ mapFromONtoFN =
     , ( "miss"
       , [("1.1", "Hit_or_miss")
         ,("1.2", "Perception_experience")
-        ,("1.3", "Possesion") -- "(Possesion)")
+        ,("1.3", "Possession") -- "(Possesion)")
         ,("1.4", "Experiencer_focus")])
 
     , ( "measure"
