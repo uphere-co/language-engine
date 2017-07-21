@@ -74,6 +74,7 @@ let
             attoparsec
             bifunctors
             bindings-DSL
+            boxes
             fficxx
             fficxx-runtime
             foreign-store
@@ -82,6 +83,7 @@ let
             cabal-install
             p.newsapi
             p.HCoreNLP
+            p.HFrameNet
             p.PropBank
             p.semantic-role-labeler
             p.textview
