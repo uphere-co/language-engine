@@ -3,24 +3,14 @@
 module Test.RDFDumpETL where
 
 import           Data.Text                             (Text)
-import           System.IO                             (Handle,stdin,stdout)
+import           System.IO                             (stdin,stdout)
 import qualified Data.Text                     as T
-import qualified Data.Text.IO                  as T.IO
 import           Data.Either                           (rights)
 
 import           WikiEL.ETL.RDF
+import           WikiEL.ETL.Util
 
 
-readBlocksImpl :: Handle -> (Text -> IO ()) -> Text -> IO ()
-readBlocksImpl _ _ "" = return ()
-readBlocksImpl handle fBlock prevBlock = do
-  block <- T.IO.hGetChunk handle
-  fBlock block
-  readBlocksImpl handle fBlock block
-
-readBlocks :: Handle -> (Text -> IO ()) -> IO ()
-readBlocks stdin f = readBlocksImpl stdin f dummy
-  where dummy = "asdf"
 
 hasWikiAlias (_,ts,tv@(YagoVerb v),to@(YagoWikiAlias _)) | v =="redirectedFrom" = Right (ts, to)
 hasWikiAlias _ = Left "Not English Wikipedia redirects."

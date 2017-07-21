@@ -437,19 +437,3 @@ allTest =
     [ allYagoTest
     , allWikidataTest
     , allGenericRdfTripleTest]    
-
-
-
-main1 = do
-  file <- T.IO.readFile "yago/sample"
-  let
-    lines = T.lines file
-    rows = map (parseOnly parserRDFrowInTSV) lines
-    aliases = map hasWikiAlias (rights rows)
-    synsets = map hasWordNet (rights rows)
-  --mapM_ T.IO.putStrLn lines
-  --mapM_ print rows
-  print "============================"
-  mapM_ print (rights aliases)
-  mapM_ print (rights synsets)
-
