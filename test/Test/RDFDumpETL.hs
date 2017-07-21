@@ -439,11 +439,6 @@ allTest =
     , allGenericRdfTripleTest]    
 
 
-hasWikiAlias (_,ts,tv@(YagoVerb v),to@(YagoWikiAlias _)) | v =="redirectedFrom" = Right (ts, to)
-hasWikiAlias _ = Left "Not English Wikipedia redirects."
-
-hasWordNet (_,ts,tv,to@(YagoWordnet _)) = Right (ts, to)
-hasWordNet _ = Left "Not WordNet synsets."
 
 main1 = do
   file <- T.IO.readFile "yago/sample"
