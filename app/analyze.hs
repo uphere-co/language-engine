@@ -201,41 +201,13 @@ formatSenses lma sensemap sensestat = do
   si <- maybeToList (HM.lookup lmav sensemap)
   s <- si^.inventory_senses
   let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
-      txt1 = printf "%2s.%-6s (%4d cases) |  " (s^.sense_group) (s^.sense_n) num
-{- 
-      mappings = s^.sense_mappings
-      txt_pb = vcat top $ let lst = T.splitOn "," (mappings^.mappings_pb)
-                          in if null lst
-                             then [text (printf "%-20s" ("" :: String))]
-                             else map (text.printf "%-20s") lst
-      txt_fn = vcat top $ let lst = maybe [] (T.splitOn ",") (mappings^.mappings_fn)
-                          in if null lst
-                             then [text (printf "%-30s" ("" :: String))]
-                             else map (text.printf "%-30s") lst
-      txt_wn = vcat top $ let lst = map (text.printf "%-30s") (catMaybes (mappings^..mappings_wn.traverse.wn_lemma))
-                          in if null lst then [text (printf "%-30s" ("" :: String))] else lst
-      txt_vn = case vorn of
-                 V -> vcat top $ let lst = maybe [] (map (verbnet semlinkmap lma) . T.splitOn ",") (mappings^.mappings_vn)
-                                 in if null lst
-                                    then [text (printf "%-43s" ("" :: String))]
-                                    else lst --  map (text.printf "%-20s") lst
-                 N -> vcat top [text (printf "%-42s" ("" :: String))]
-      txt_definition = text ("definition: " ++ T.unpack (s^.sense_name))
-      txt_commentary = text (T.unpack (fromMaybe "" (s^.sense_commentary)))
-      txt_examples   = text (T.unpack (s^.sense_examples))
-      txt_detail = vcat left [txt_definition,txt_commentary,txt_examples]
-  -- return (vcat left [(txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn),txt_detail]) -}
+      txt_def = T.take 40 (s^.sense_name)
+      txt1 = printf "%2s.%-6s (%4d cases) | %-40s | " (s^.sense_group) (s^.sense_n) num txt_def
   return txt1 
-
-
 
 
 sentStructure pp sensemap sensestat txt = do
   (psents,sents,tokss,mptrs,deps) <- runParser pp txt
-  -- putStrLn "--------------------------------------------------------------------------------------------------"
-  -- print (
-  -- T.IO.putStrLn txt
-  -- putStrLn "---------------------------------------------------------------"
   flip mapM_ (zip4 psents sents mptrs deps) $ \(psent,sent,mptr,dep) -> do
     flip mapM_ mptr $ \ptr -> do
       let tkns = zip [0..] (getTKTokens psent)
