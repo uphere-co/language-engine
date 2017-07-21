@@ -2,6 +2,7 @@
 , uphere-nix-overlay ? <uphere-nix-overlay>
 , fetchfin           ? <fetchfin>
 , HCoreNLP           ? <HCoreNLP>
+, HFrameNet          ? <HFrameNet>
 , HUKB               ? <HUKB>
 , HWordNet           ? <HWordNet>
 , nlp-types          ? <nlp-types>
@@ -48,6 +49,7 @@ let
       "newsapi" = self.callPackage (import (fetchfin + "/newsapi")) {};
       "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
+      "HFrameNet" = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HFrameNet)) {};      
       "HWordNet" = self.callPackage (import HWordNet) {};
       "predicate-matrix" = self.callPackage (import predicate-matrix) {};
       "PropBank" = self.callPackage (import PropBank) {};
