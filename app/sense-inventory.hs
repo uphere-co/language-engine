@@ -152,6 +152,34 @@ formatSenses lma vorn sensemap semlinkmap sensestat = do
   return (vcat left [(txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn),txt_detail])
 
 
+formatSenseConstructions lma vorn sensemap sensestat = do
+  let lmav = lma <> case vorn of V -> "-v" ; N -> "-n"
+  si <- maybeToList (HM.lookup lmav sensemap)
+  s <- si^.inventory_senses
+  let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
+      txt1 = text (printf "%2s.%-6s (%4d cases) |  " (s^.sense_group) (s^.sense_n) num )
+      mappings = s^.sense_mappings
+      txt_pb = vcat top $ let lst = T.splitOn "," (mappings^.mappings_pb)
+                          in if null lst
+                             then [text (printf "%-20s" ("" :: String))]
+                             else map (text.printf "%-20s") lst
+      txt_wn = vcat top $ let lst = map (text.printf "%-30s") (catMaybes (mappings^..mappings_wn.traverse.wn_lemma))
+                          in if null lst then [text (printf "%-30s" ("" :: String))] else lst
+      {- 
+      txt_vn = case vorn of
+                 V -> vcat top $ let lst = maybe [] (map (verbnet semlinkmap lma) . T.splitOn ",") (mappings^.mappings_vn)
+                                 in if null lst
+                                    then [text (printf "%-43s" ("" :: String))]
+                                    else lst 
+                 N -> vcat top [text (printf "%-42s" ("" :: String))] -}
+      txt_definition = map (text . T.unpack . T.strip) $ T.lines (s^.sense_name)
+      txt_commentary = map (text . T.unpack . T.strip) $ T.lines (fromMaybe "" (s^.sense_commentary))
+      -- txt_examples   = text (T.unpack (s^.sense_examples))
+      txt_detail = vcat left (txt_definition ++ txt_commentary) -- ,txt_examples]
+  return ((txt1 <+> vcat left [txt_detail,txt_wn]) // text "---------------------------------------------------------------------------------------------------------------")
+
+
+
 formatStat :: ((Text,Text),Int) -> String
 formatStat ((lma,sens),num) = printf "%20s.%-5s : %5d" lma sens num
 
@@ -181,8 +209,8 @@ senseInstStatistics basedir = do
 
 
 
-main :: IO ()
-main = do
+listSenseDetail :: IO ()
+listSenseDetail = do
   ludb <- loadFrameNet (cfg^.cfg_framenet_file)
    
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
@@ -205,7 +233,7 @@ main = do
              . map (\(l,f)-> let (lma,_) = T.break (== '.') l in (lma,f))
              $ ws
 
-  forM_ merged $ \(lma,f) -> do
+  forM_ (take 50 merged) $ \(lma,f) -> do
     T.IO.hPutStrLn stderr lma    
     let frms = framesFromLU ludb (lma <> ".v")
         doc = text (printf "%20s:%6d " lma f) //
@@ -227,3 +255,40 @@ main = do
     putStrLn $ "From FrameNet Lexical Unit " ++ show (lma <> ".v") ++ ": " ++ show frms
     putStrLn (render doc)
 
+
+listSenseConstruction :: IO ()
+listSenseConstruction = do
+  -- ludb <- loadFrameNet (cfg^.cfg_framenet_file)
+   
+  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
+  -- semlink <- loadSemLink (cfg^.cfg_semlink_file)
+  -- let semlinkmap = createVNFNDB semlink
+
+  sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
+  let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
+
+  ws <- loadStatistics (cfg^.cfg_statistics)
+
+  let merge :: [(Text,Text)] -> (Text,Int)
+      merge lst = let (lma,_) = head lst
+                  in case mapM (decimal.snd) lst of
+                       Left _     -> (lma,0)
+                       Right lst' -> (lma,sum (map fst lst'))
+
+      merged = sortBy (flip compare `on` snd) . map merge . groupBy ((==) `on` fst)
+             . sortBy (flip compare `on` fst)
+             . map (\(l,f)-> let (lma,_) = T.break (== '.') l in (lma,f))
+             $ ws
+
+  forM_ merged $ \(lma,f) -> do
+    T.IO.hPutStrLn stderr lma    
+    let -- frms = framesFromLU ludb (lma <> ".v")
+        doc = text "=====================================================================================================================" //
+              text (printf "%20s:%6d " lma f) //
+              text "---------------------------------------------------------------------------------------------------------------" // 
+              vcat top (formatSenseConstructions lma V sensemap sensestat )
+    putStrLn (render doc)
+  
+
+
+main = listSenseConstruction
