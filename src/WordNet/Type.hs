@@ -2,34 +2,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module WordNet.Type where
-{- ( module NLP.Type.WordNet
-, IndexItem
-, LexItem
-, Pointer
-, Frame
-, DataItem
-, formatLI
-, idx_lemma
-, idx_pos
-, idx_ptr_symbol
-, idx_tagsense_cnt
-, idx_synset_offset
-, lex_word
-, lex_id
-, ptr_pointer_symbol
-, ptr_synset_offset
-, ptr_pos
-, ptr_sourcetarget
-, frame_f_num
-, frame_w_num
-, data_syn_offset
-, data_lex_filenum
-, data_ss_type
-, data_word_lex_id
-, data_ptr
-, data_frames
-, data_gloss
-) where -}
 
 import           Control.Lens
 import           Data.Monoid
@@ -40,6 +12,8 @@ import qualified Data.Text.Lazy   as TL
 --
 import           WordNet.Type.Lexicographer
 import           WordNet.Type.POS
+
+
 
 
 data IndexItem
@@ -53,10 +27,10 @@ data IndexItem
 
 makeLenses ''IndexItem
 
-data LexItem = LI { _lex_word :: Text, _lex_id :: Int } deriving Show
+data LexItem = LI { _lex_word :: Text, _lex_id :: LexicographerID } deriving Show
 
 formatLI :: LexItem -> Text
-formatLI (LI w i) = TL.toStrict $ format "{}.{}" (w,i)
+formatLI (LI w i) = TL.toStrict $ format "{}.{}" (w,unLex i)
 
 
 data Pointer = Pointer { _ptr_pointer_symbol :: Text

@@ -5,7 +5,7 @@ module WordNet.Query where
 
 import           Control.Lens
 import           Control.Monad              (join)
--- import           Data.HashMap.Strict        (HashMap)
+import           Data.HashMap.Strict        (HashMap)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.IntMap         as IM
 import           Data.Maybe                 (maybeToList)
@@ -26,7 +26,7 @@ data WordNetDB = WNDB { _indexNounDB :: HM.HashMap Text [Int]
                       , _dataVerbDB  :: IM.IntMap ([LexItem],Text)
                       , _dataAdjDB   :: IM.IntMap ([LexItem],Text)
                       , _dataAdvDB   :: IM.IntMap ([LexItem],Text)
-                      -- , _senseIdxDB  :: HM.HashMap (Text,Int) Int
+                      , _senseIdxDB  :: HM.HashMap (Text,Int) Int
                       }
 
 makeLenses ''WordNetDB                 
@@ -34,9 +34,9 @@ makeLenses ''WordNetDB
 
 createWordNetDB :: ([IndexItem],[IndexItem],[IndexItem],[IndexItem])
                 -> ([DataItem],[DataItem],[DataItem],[DataItem])
-                -- -> [SenseItem]
+                -> [SenseItem]
                 -> WordNetDB 
-createWordNetDB ilsts dlsts =
+createWordNetDB ilsts dlsts slists =
   WNDB (createLemmaMap (ilsts^._1))
        (createLemmaMap (ilsts^._2))
        (createLemmaMap (ilsts^._3))
@@ -45,7 +45,7 @@ createWordNetDB ilsts dlsts =
        (createConceptMap True  (dlsts^._2))
        (createConceptMap False (dlsts^._3))
        (createConceptMap False (dlsts^._4))
-       -- (createSenseMap slists)
+       (createSenseMap slists)
 
 
 createLemmaMap :: [IndexItem] -> HM.HashMap Text [Int]
@@ -56,10 +56,11 @@ createConceptMap :: Bool -> [DataItem] -> IM.IntMap ([LexItem],Text)
 createConceptMap _isVerb
   = IM.fromList . map (\x->(x^.data_syn_offset,(x^.data_word_lex_id,x^.data_gloss)))
 
-{- 
+
 createSenseMap :: [SenseItem] -> HM.HashMap (Text,Int) Int
-createSenseMap = HM.fromList . map (\x->((x^.sense_lemma,x^.sense_lexid),x^.sense_ss))
--}
+createSenseMap _ = HM.fromList []
+-- HM.fromList . map (\x->((x^.sense_sense_key.skey_lemma,x^.sense_lexid),x^.sense_ss))
+
 
 indexDB :: WordNetDB -> POS -> HM.HashMap Text [Int]
 indexDB w POS_N = w^.indexNounDB
@@ -75,8 +76,8 @@ dataDB w POS_A = w^.dataAdjDB
 dataDB w POS_R = w^.dataAdvDB
 
 
--- senseDB :: WordNetDB -> HashMap (Text,Int) Int
--- senseDB w = w^.senseIdxDB
+senseDB :: WordNetDB -> HashMap (Text,Int) Int
+senseDB w = w^.senseIdxDB
 
 
 parseFile :: (Text -> Maybe a) -> FilePath -> IO [Maybe a]
@@ -91,8 +92,10 @@ lookupLemma w p t = do
    n <- join . maybeToList $ HM.lookup t (indexDB w p)
    maybeToList (lookupConcept w p n)
 
+
 lookupConcept :: WordNetDB -> POS -> Int -> Maybe ([LexItem],Text)
 lookupConcept w p n = IM.lookup n (dataDB w p)
 
--- lookupSense :: WordNetDB -> Text -> Int -> Maybe Int
--- lookupSense w t i = HM.lookup (t,i) (w^.senseIdxDB)
+
+lookupSense :: WordNetDB -> Text -> Int -> Maybe Int
+lookupSense w t i = HM.lookup (t,i) (w^.senseIdxDB)

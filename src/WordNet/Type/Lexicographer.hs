@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -18,11 +19,18 @@ import           Data.Hashable
 import           Data.Monoid
 import           Data.Text
 import qualified Data.Text as T
+import           Data.Text.Buildable
 import           Data.Tuple     (swap)
 import           GHC.Generics
 --
 import           WordNet.Type.POS
 
+
+newtype LexicographerID = LexicographerID { unLex :: Int }
+                        deriving (Show,Ord,Eq,Generic,Binary,Hashable)
+
+
+                                 
 
 data LexicographerFile = AdjAll            -- 00
                        | AdjPert           -- 01
@@ -215,7 +223,7 @@ instance Binary Marker
 instance Hashable Marker
 
 data SSWord = SSWord { _ssw_word   :: [Text]
-                     , _ssw_lexid  :: Maybe Int
+                     , _ssw_lexid  :: Maybe LexicographerID
                      , _ssw_marker :: Maybe Marker
                      }
             deriving (Show,Eq,Ord,Generic)

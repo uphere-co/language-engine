@@ -8,6 +8,7 @@ import qualified Data.Text    as T
 --
 import           WordNet.Parser.Common
 import           WordNet.Type
+import           WordNet.Type.Lexicographer (LexicographerID(..))
 import           WordNet.Type.POS
 
 
@@ -20,7 +21,7 @@ readSSType 'r' = Just Adverb
 readSSType _   = Nothing
 
 parseLexItem :: [Text] -> Maybe LexItem
-parseLexItem (x:y:[]) = LI <$> pure x <*> readDecimal y
+parseLexItem (x:y:[]) = LI <$> pure x <*> (LexicographerID <$> readDecimal y)
 parseLexItem _        = Nothing
 
 parseFrame :: Int -> [Text] -> Maybe ([Frame],[Text])
