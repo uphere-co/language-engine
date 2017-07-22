@@ -66,11 +66,10 @@ import           Type
 import           Util.Doc
 import           View
 --
+import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
 --
-import           OntoNotesFrameNet
-
 
 
 data VorN = V | N deriving Eq

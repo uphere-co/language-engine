@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module OntoNotesFrameNet where
+module OntoNotes.Mapping.FrameNet where
 
 import Data.Text  (Text)
 
