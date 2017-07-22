@@ -163,20 +163,20 @@ formatSenseConstructions lma vorn sensemap sensestat = do
                           in if null lst
                              then [text (printf "%-20s" ("" :: String))]
                              else map (text.printf "%-20s") lst
-      txt_wn = vcat top $ let lst = map (text.printf "%-30s") (catMaybes (mappings^..mappings_wn.traverse.wn_lemma))
+      wns = mappings^..mappings_wn.traverse -- .to ((,) <$> (^.wn_lemma) <*> (^.wn_contents))
+      txt_wn = vcat top $ let lst = map (text.show) wns in lst
+      {- txt_wn = vcat top $ let lst = map (text.printf "%-30s") (catMaybes (mappings^..mappings_wn.traverse.wn_lemma))
                           in if null lst then [text (printf "%-30s" ("" :: String))] else lst
-      {- 
-      txt_vn = case vorn of
-                 V -> vcat top $ let lst = maybe [] (map (verbnet semlinkmap lma) . T.splitOn ",") (mappings^.mappings_vn)
-                                 in if null lst
-                                    then [text (printf "%-43s" ("" :: String))]
-                                    else lst 
-                 N -> vcat top [text (printf "%-42s" ("" :: String))] -}
+      txt_wn_basic =
+        vcat top $ let lst = map (text.printf "%-30s") (mappings^..mappings_wn.traverse.wn_contents)
+                   in if null lst then [text (printf "%-30s" ("" :: String))] else lst
+      -}                                                                                 
       txt_definition = map (text . T.unpack . T.strip) $ T.lines (s^.sense_name)
       txt_commentary = map (text . T.unpack . T.strip) $ T.lines (fromMaybe "" (s^.sense_commentary))
       -- txt_examples   = text (T.unpack (s^.sense_examples))
       txt_detail = vcat left (txt_definition ++ txt_commentary) -- ,txt_examples]
-  return ((txt1 <+> vcat left [txt_detail,txt_wn]) // text "---------------------------------------------------------------------------------------------------------------")
+  return $ (txt1 <+> vcat left [txt_detail,txt_wn]) //
+           text "---------------------------------------------------------------------------------------------------------------"
 
 
 

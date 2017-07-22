@@ -2,6 +2,7 @@
 , uphere-nix-overlay ? <uphere-nix-overlay>
 , HCoreNLP           ? <HCoreNLP>
 , HFrameNet          ? <HFrameNet>
+, HWordNet           ? <HWordNet>
 , nlp-types          ? <nlp-types>
 , PropBank           ? <PropBank>
 , VerbNet            ? <VerbNet>
@@ -23,9 +24,10 @@ let
   config2 =
     self: super: {
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
-      "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
-      "HFrameNet" = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HFrameNet)) {};
-      "wiki-ner" = self.callPackage (import wiki-ner) {};
+      "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
+      "HFrameNet"      = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HFrameNet)) {};
+      "HWordNet"       = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HWordNet)) {};
+      "wiki-ner"  = self.callPackage (import wiki-ner) {};
     
       "nlp-types" = self.callPackage (import nlp-types) {};
       "PropBank" = self.callPackage (import PropBank) {};
@@ -58,6 +60,7 @@ let
             p.HCoreNLP
             p.HCoreNLP-Proto
             p.HFrameNet
+            p.HWordNet
             p.nlp-types
             p.PropBank
             p.VerbNet
