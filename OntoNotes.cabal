@@ -17,6 +17,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     OntoNotes
+                       OntoNotes.Mapping.FrameNet
                        OntoNotes.Parser.Sense
                        OntoNotes.Parser.SenseInventory
   -- other-modules:       

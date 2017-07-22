@@ -11,9 +11,9 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Either.Extra                (fromRight)
 import           Data.Foldable
 import           Data.Function
-import qualified Data.IntMap                as IM
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
+import qualified Data.IntMap                as IM
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
