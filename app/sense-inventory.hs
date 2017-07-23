@@ -6,6 +6,7 @@ module Main where
 
 import           Control.Lens              hiding (para)
 import           Control.Monad
+import           Data.Either                      (rights)
 import           Data.Foldable
 import           Data.Function
 import           Data.HashMap.Strict              (HashMap)
@@ -27,6 +28,11 @@ import           Text.Printf
 import           FrameNet.Query.LexUnit
 import           FrameNet.Type.Common (fr_frame)
 import           FrameNet.Type.LexUnit
+import           WordNet.Format
+import           WordNet.Query
+import           WordNet.Type
+import           WordNet.Type.POS
+--
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
 --
@@ -85,29 +91,42 @@ formatSenses lma vorn sensemap semlinkmap sensestat = do
   return (vcat left [(txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn),txt_detail])
 
 
-formatWordNet lma vorn sensemap sensestat = do
+
+
+listWordNets :: WN -> [Text]
+listWordNets wn = T.splitOn "," (wn^.wn_contents)
+
+
+formatWordNet lma vorn sensemap sensestat wndb = do
   let lmav = lma <> case vorn of V -> "-v" ; N -> "-n"
   si <- maybeToList (HM.lookup lmav sensemap)
   s <- si^.inventory_senses
   let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
       txt1 = text (printf "%2s.%-6s (%4d cases) |  " (s^.sense_group) (s^.sense_n) num )
       mappings = s^.sense_mappings
-      txt_pb = vcat top $ let lst = T.splitOn "," (mappings^.mappings_pb)
-                          in if null lst
-                             then [text (printf "%-20s" ("" :: String))]
-                             else map (text.printf "%-20s") lst
-      wns = mappings^..mappings_wn.traverse -- .to ((,) <$> (^.wn_lemma) <*> (^.wn_contents))
-      txt_wn = vcat top $ let lst = map (text.show) wns in lst
-      {- txt_wn = vcat top $ let lst = map (text.printf "%-30s") (catMaybes (mappings^..mappings_wn.traverse.wn_lemma))
-                          in if null lst then [text (printf "%-30s" ("" :: String))] else lst
-      txt_wn_basic =
-        vcat top $ let lst = map (text.printf "%-30s") (mappings^..mappings_wn.traverse.wn_contents)
-                   in if null lst then [text (printf "%-30s" ("" :: String))] else lst
-      -}                                                                                 
+      wns = mappings^..mappings_wn.traverse
+      txt_wn = vcat top $ do wn <- wns
+                             snumtxt <- listWordNets wn
+                             snum <- fst <$> rights [decimal snumtxt]
+                             let l = case wn^.wn_lemma of
+                                       Nothing -> lma
+                                       Just l' -> l'
+                                 wnsense = l <> "." <> T.pack (show snum)
+                                 result = find (\x -> x^._1 == SenseNumber snum) (lookupLemma wndb POS_V l)
+                                 restxt = flip (maybe "") result $ \(_,xs,txt) ->
+                                            printf "%-20s: %-45s | %s"
+                                              wnsense
+                                              (T.intercalate "," (map formatLI xs))
+                                              txt
+                                 --  formatSynset (xs,txt)) result
+                                 -- SenseNumber snum
+                                 
+                             return (text restxt)
+
       txt_definition = map (text . T.unpack . T.strip) $ T.lines (s^.sense_name)
       txt_commentary = map (text . T.unpack . T.strip) $ T.lines (fromMaybe "" (s^.sense_commentary))
-      -- txt_examples   = text (T.unpack (s^.sense_examples))
-      txt_detail = vcat left (txt_definition ++ txt_commentary) -- ,txt_examples]
+      txt_examples   = map (text . T.unpack . T.strip) $ T.lines (s^.sense_examples)
+      txt_detail = vcat left (txt_definition ++ txt_commentary ++ txt_examples)
   return $ (txt1 <+> vcat left [txt_detail,txt_wn]) //
            text "---------------------------------------------------------------------------------------------------------------"
 
@@ -122,7 +141,7 @@ formatStat ((lma,sens),num) = printf "%20s.%-5s : %5d" lma sens num
 
 listSenseDetail :: IO ()
 listSenseDetail = do
-  (ludb,sensestat,semlinkmap,sensemap,ws) <- loadAll
+  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAll
   
   let merged = mergeStatPB2Lemma ws 
   forM_ merged $ \(lma,f) -> do
@@ -161,9 +180,9 @@ mergeStatPB2Lemma ws =
 
 
 
-listSenseConstruction :: IO ()
-listSenseConstruction = do
-  (ludb,sensestat,semlinkmap,sensemap,ws) <- loadAll
+listSenseWordNet :: IO ()
+listSenseWordNet = do
+  (ludb,sensestat,semlinkmap,sensemap,ws,wndb) <- loadAll
   
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
@@ -172,14 +191,14 @@ listSenseConstruction = do
   ws <- loadStatistics (cfg^.cfg_statistics)
   let merged = mergeStatPB2Lemma ws
 
-  forM_ (take 50 merged) $ \(lma,f) -> do
+  forM_ merged $ \(lma,f) -> do
     T.IO.hPutStrLn stderr lma    
     let doc = text "=====================================================================================================================" //
               text (printf "%20s:%6d " lma f) //
               text "---------------------------------------------------------------------------------------------------------------" // 
-              vcat top (formatWordNet lma V sensemap sensestat )
+              vcat top (formatWordNet lma V sensemap sensestat wndb)
     putStrLn (render doc)
   
 
 
-main = listSenseConstruction
+main = listSenseWordNet

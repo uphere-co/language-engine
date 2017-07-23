@@ -64,7 +64,7 @@ import           Common.Load
 
 
 
-
+{- 
 senseInstStatistics :: FilePath -> IO (HashMap (Text,Text) Int)
 senseInstStatistics basedir = do
   dtr <- build basedir
@@ -86,7 +86,7 @@ senseInstStatistics basedir = do
       acc = foldl' (\(!acc) k -> HM.insertWith (+) k 1 acc) HM.empty ks
   -- mapM_ (putStrLn.formatStat) . sortBy (flip compare `on` snd) . HM.toList $ acc
   return acc
-
+-}
 
 convertToken_charIndex :: TK.Token -> Maybe Token
 convertToken_charIndex t = do
