@@ -26,16 +26,16 @@ Library
   ghc-prof-options:     -auto-all
   exposed-modules:
                      WordNet
-                     WordNet.Type
-                     WordNet.Type.Lexicographer
-                     WordNet.Type.POS
-                     WordNet.API.Query
+                     WordNet.Format 
                      WordNet.Parser.Common
                      WordNet.Parser.Data
                      WordNet.Parser.Index
                      WordNet.Parser.Lexicographer
                      WordNet.Query
                      WordNet.Query.SynsetDB
+                     WordNet.Type
+                     WordNet.Type.Lexicographer
+                     WordNet.Type.POS
                   
   build-depends:       base,
                        --

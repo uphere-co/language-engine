@@ -11,7 +11,7 @@ import           Data.Text.Read             (decimal)
 import           Options.Applicative
 import           System.Console.Haskeline
 --
-import           WordNet.API.Query
+import           WordNet.Query
 import           WordNet.Type.POS
 
 
