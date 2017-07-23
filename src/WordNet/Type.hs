@@ -1,5 +1,3 @@
--- {-# LANGUAGE DeriveAnyClass #-}
--- {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -11,8 +9,6 @@ import           Data.Maybe
 import           Data.Monoid
 import           Data.Text              (Text)
 import qualified Data.Text        as T
-import           Data.Text.Format 
-import qualified Data.Text.Lazy   as TL
 import           GHC.Generics
 --
 import           WordNet.Type.Lexicographer
@@ -39,8 +35,6 @@ makeLenses ''IndexItem
 
 data LexItem = LI { _lex_word :: Text, _lex_id :: LexID } deriving Show
 
-formatLI :: LexItem -> Text
-formatLI (LI w i) = TL.toStrict $ format "{}.{}" (w,unLexID i)
 
 
 data Pointer = Pointer { _ptr_pointer_symbol :: Text
