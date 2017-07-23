@@ -117,43 +117,13 @@ formatStat :: ((Text,Text),Int) -> String
 formatStat ((lma,sens),num) = printf "%20s.%-5s : %5d" lma sens num
 
 
-senseInstStatistics :: FilePath -> IO (HashMap (Text,Text) Int)
-senseInstStatistics basedir = do
-  dtr <- build basedir
-  let fps = sort (toList (dirTree dtr))
-      sfiles = filter (\x -> takeExtensions x == ".sense") fps
-
-  sinstss <- flip mapM sfiles $ \fp -> do
-    txt <- T.IO.readFile fp
-    -- print fp
-    let lst = T.lines txt
-        wss = map T.words lst
-    case traverse parseSenseInst wss of
-      Left err -> error err
-      Right lst -> return lst
-
-  let sinsts = concat sinstss
-      sinsts_verb = filter (\s-> T.last (s^.sinst_sense) == 'v') sinsts  
-      ks = map (\s -> ( T.init (T.init (s^.sinst_sense)) ,s^.sinst_sense_num)) sinsts_verb
-      acc = foldl' (\(!acc) k -> HM.insertWith (+) k 1 acc) HM.empty ks
-  -- mapM_ (putStrLn.formatStat) . sortBy (flip compare `on` snd) . HM.toList $ acc
-  return acc
-
 
 
 
 listSenseDetail :: IO ()
 listSenseDetail = do
-  ludb <- loadFrameNet (cfg^.cfg_framenet_file)
-   
-  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
-  semlink <- loadSemLink (cfg^.cfg_semlink_file)
-  let semlinkmap = createVNFNDB semlink
-
-  sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
-  let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-
-  ws <- loadStatistics (cfg^.cfg_statistics)
+  (ludb,sensestat,semlinkmap,sensemap,ws) <- loadAll
+  
   let merged = mergeStatPB2Lemma ws 
   forM_ merged $ \(lma,f) -> do
     T.IO.hPutStrLn stderr lma    
@@ -193,6 +163,8 @@ mergeStatPB2Lemma ws =
 
 listSenseConstruction :: IO ()
 listSenseConstruction = do
+  (ludb,sensestat,semlinkmap,sensemap,ws) <- loadAll
+  
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
@@ -200,7 +172,7 @@ listSenseConstruction = do
   ws <- loadStatistics (cfg^.cfg_statistics)
   let merged = mergeStatPB2Lemma ws
 
-  forM_ merged $ \(lma,f) -> do
+  forM_ (take 50 merged) $ \(lma,f) -> do
     T.IO.hPutStrLn stderr lma    
     let doc = text "=====================================================================================================================" //
               text (printf "%20s:%6d " lma f) //
