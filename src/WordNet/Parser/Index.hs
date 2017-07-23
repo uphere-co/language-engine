@@ -36,14 +36,13 @@ parseSense :: Text -> Maybe SenseItem
 parseSense = go . T.words
   where
     go (skey:soffset':snumber':cnt':[]) = do
-      let lemmass:lexfilenum':lexid':headword:headid':[] = T.splitOn ":" skey
+      let lemmass:lexfilenum':lexid':headword':headid':[] = T.splitOn ":" skey
           lemma:ss':[] = T.splitOn "%" lemmass
       ss <- toEnum <$> readDecimal ss'
       lexfilenum <- toEnum <$> readDecimal lexfilenum'
-      lexid <- LexID <$> readDecimal lexid'
-      let headid = case (readDecimal headid') of
-            Nothing -> LexID (-1)   -- why?
-            Just n  -> LexID n
+      let lexid = LexID (T.head lexid')
+      let headword = if T.null headword' then Nothing else Just headword'
+      let headid = if T.null headid' then Nothing else Just (LexID (T.head headid'))
       soffset <- SynsetOffset <$> readDecimal soffset'
       snumber <- SenseNumber <$> readDecimal snumber'
       cnt <- readDecimal cnt'

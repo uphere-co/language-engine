@@ -96,7 +96,11 @@ main' = do
 
 test_data = "01427127 35 v 02 take e have 0 001 @ 01426397 v 0000 01 + 09 00 | have sex with; archaic use; \"He had taken this woman when she was most vulnerable\""
 
+test_data2 = "00014201 29 v 02 shiver 0 shudder 0 004 @ 00010054 v 0000 + 00348801 n 0202 + 00867983 n 0102 + 14340287 n 0102 02 + 01 00 + 02 00 | shake, as from cold; \"The children are shivering--turn on the heat!\"  "
+
+
 
 main :: IO ()
 main = do
   print (parseData True test_data)
+  print (parseData True test_data2)

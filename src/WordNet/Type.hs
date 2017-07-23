@@ -7,6 +7,7 @@
 module WordNet.Type where
 
 import           Control.Lens
+import           Data.Maybe
 import           Data.Monoid
 import           Data.Text              (Text)
 import qualified Data.Text        as T
@@ -70,8 +71,8 @@ makeLenses ''DataItem
 data LexSense = LexSense { _lexsens_sstype      :: SSType
                          , _lexsens_lex_filenum :: LexicographerFile
                          , _lexsens_lex_id      :: LexID
-                         , _lexsens_head_word   :: Text
-                         , _lexsens_head_id     :: LexID }
+                         , _lexsens_head_word   :: Maybe Text
+                         , _lexsens_head_id     :: Maybe LexID }
               deriving Show
 
 makeLenses ''LexSense                       
@@ -85,8 +86,9 @@ makeLenses ''SenseKey
 
 
 headWord :: LexSense -> Text
-headWord l | T.null (l^.lexsens_head_word) = ""
-           | otherwise = l^.lexsens_head_word <> "." <> T.pack (show (l^.lexsens_head_id))
+headWord l = fromMaybe "" (l^.lexsens_head_word) <> "." <>
+             maybe "" (T.singleton . unLexID) (l^.lexsens_head_id)
+
 
 
 data SenseItem = SenseItem { _sense_sense_key :: SenseKey

@@ -39,20 +39,19 @@ runSingleQuery input typ db = do
 queryLemma :: Text -> POS -> WordNetDB -> IO ()
 queryLemma input typ db = do
   case typ of
-    POS_N -> putStrLn "-- Noun --"      >> mapM_ print (lookupLemma db POS_N input) -- (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_N input)
-    POS_V -> putStrLn "-- Verb --"      >> mapM_ print (lookupLemma db POS_V input) -- (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_V input) >> mapM_ print (lookupLemma db POS_V input)
-      
-    POS_A -> putStrLn "-- Adjective --" >> mapM_ print (lookupLemma db POS_A input) -- (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_A input)
-    POS_R -> putStrLn "-- Adverb --"    >> mapM_ print (lookupLemma db POS_R input) -- (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_R input)
+    POS_N -> putStrLn "-- Noun --"      >> (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_N input)
+    POS_V -> putStrLn "-- Verb --"      >> (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_V input)
+    POS_A -> putStrLn "-- Adjective --" >> (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_A input)
+    POS_R -> putStrLn "-- Adverb --"    >> (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_R input)
 
 
 querySynset :: SynsetOffset -> POS -> WordNetDB -> IO ()
 querySynset n typ db = do
   case typ of
-    POS_N -> putStrLn "-- Noun --"      >> mapM_ print (lookupSynset db POS_N n) -- (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_N n)
-    POS_V -> putStrLn "-- Verb --"      >> mapM_ print (lookupSynset db POS_N n) -- (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_V n)
-    POS_A -> putStrLn "-- Adjective --" >> mapM_ print (lookupSynset db POS_N n) -- (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_A n)
-    POS_R -> putStrLn "-- Adverb --"    >> mapM_ print (lookupSynset db POS_N n) -- (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_R n)
+    POS_N -> putStrLn "-- Noun --"      >> (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_N n)
+    POS_V -> putStrLn "-- Verb --"      >> (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_V n)
+    POS_A -> putStrLn "-- Adjective --" >> (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_A n)
+    POS_R -> putStrLn "-- Adverb --"    >> (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_R n)
 
 {- 
 getQueryLemma :: Text -> POS -> WordNetDB -> [(SenseNumber,[LexItemText]

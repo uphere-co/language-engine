@@ -86,12 +86,11 @@ parseFile p fp = do
   return $ map p lst
 
 
-lookupLemma :: WordNetDB -> POS -> Text -> [(SenseNumber,Maybe ([LexItem],Text))]
+lookupLemma :: WordNetDB -> POS -> Text -> [(SenseNumber,[LexItem],Text)]
 lookupLemma w p t = do
   (snum,soff) <- join . maybeToList $ HM.lookup t (indexDB w p)
-  -- (ls,desc) <- maybeToList (lookupSynset w p soff)
-  let re=  lookupSynset w p soff
-  return (snum,re) -- (snum,ls,desc)
+  (ls,desc) <- maybeToList (lookupSynset w p soff)
+  return (snum,ls,desc)
    
    -- maybeToList (lookupSynset w p n)
 

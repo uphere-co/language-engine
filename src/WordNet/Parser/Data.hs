@@ -21,7 +21,7 @@ readSSType 'r' = Just Adverb
 readSSType _   = Nothing
 
 parseLexItem :: [Text] -> Maybe LexItem
-parseLexItem (x:y:[]) = LI <$> pure x <*> (LexID <$> readDecimal y)
+parseLexItem (x:y:[]) = LI <$> pure x <*> pure (LexID (T.head y))
 parseLexItem _        = Nothing
 
 parseFrame :: Int -> [Text] -> Maybe ([Frame],[Text])

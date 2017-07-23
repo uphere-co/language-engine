@@ -26,7 +26,7 @@ import           GHC.Generics
 import           WordNet.Type.POS
 
 
-newtype LexID = LexID { unLexID :: Int }
+newtype LexID = LexID { unLexID :: Char }
               deriving (Show,Ord,Eq,Generic,Binary,Hashable)
 
 
