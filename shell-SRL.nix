@@ -9,6 +9,7 @@
 , predicate-matrix   ? <predicate-matrix>
 , PropBank           ? <PropBank>
 , semantic-role-labeler ? <semantic-role-labeler>
+, VerbNet            ? <VerbNet>
 , wiki-ner           ? <wiki-ner>
 , textview           ? <textview>
 }:
@@ -56,7 +57,9 @@ let
       "semantic-role-labeler" = self.callPackage (import semantic-role-labeler) {};
       "wiki-ner" = self.callPackage (import wiki-ner) {};
       "fastText" = self.callPackage fastTextNix { inherit fasttext; };
+      "VerbNet" = self.callPackage (import VerbNet) {};
   };
+  
   ukb = import (uphere-nix-overlay + "/nix/cpp-modules/ukb.nix") { inherit stdenv fetchgit fetchurl boost; };
   config3 = import (HUKB + "/HUKB-driver/config.nix") { pkgs = newpkgs; inherit uphere-nix-overlay ukb; };
   config4 =
@@ -84,9 +87,11 @@ let
             p.newsapi
             p.HCoreNLP
             p.HFrameNet
+            p.HWordNet
             p.PropBank
             p.semantic-role-labeler
             p.textview
+            p.VerbNet
           ]);
 
 in
