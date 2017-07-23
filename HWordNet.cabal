@@ -34,7 +34,6 @@ Library
                      WordNet.Parser.Data
                      WordNet.Parser.Index
                      WordNet.Parser.Lexicographer
-                     WordNet.Parser.Sense
                      WordNet.Query
                      WordNet.Query.SynsetDB
                   

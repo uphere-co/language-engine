@@ -25,54 +25,59 @@ loadDB fp = do
               <*> (catMaybes <$> parseFile (parseData True ) (fp </> "data.verb"))
               <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adj"))
               <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adv"))
-  ss <- (catMaybes <$> parseFile parseSense (fp </> "index.sense"))
-  return (createWordNetDB is ds ss)
+  -- ss <- (catMaybes <$> parseFile parseSense (fp </> "index.sense"))
+  return (createWordNetDB is ds {- ss -})
 
 
 runSingleQuery :: String -> POS -> WordNetDB -> IO ()
 runSingleQuery input typ db = do
   case decimal (T.pack input) of
     Left _str    -> queryLemma (T.pack input) typ db
-    Right (n,_) -> queryConcept n typ db
+    Right (n,_)  -> querySynset n typ db
 
 
 queryLemma :: Text -> POS -> WordNetDB -> IO ()
 queryLemma input typ db = do
   case typ of
-    POS_N -> putStrLn "-- Noun --" >> (mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_N input)
-    POS_V -> putStrLn "-- Verb --" >> (mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_V input)
-    POS_A -> putStrLn "-- Adjective --" >> (mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_A input)
-    POS_R -> putStrLn "-- Adverb --" >> (mapM_ (TIO.putStrLn . format) $ lookupLemma db POS_R input)
+    POS_N -> putStrLn "-- Noun --"      >> mapM_ print (lookupLemma db POS_N input) -- (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_N input)
+    POS_V -> putStrLn "-- Verb --"      >> mapM_ print (lookupLemma db POS_V input) -- (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_V input) >> mapM_ print (lookupLemma db POS_V input)
+      
+    POS_A -> putStrLn "-- Adjective --" >> mapM_ print (lookupLemma db POS_A input) -- (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_A input)
+    POS_R -> putStrLn "-- Adverb --"    >> mapM_ print (lookupLemma db POS_R input) -- (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_R input)
 
 
-queryConcept :: Int -> POS -> WordNetDB -> IO ()
-queryConcept n typ db = do
+querySynset :: SynsetOffset -> POS -> WordNetDB -> IO ()
+querySynset n typ db = do
   case typ of
-    POS_N -> putStrLn "-- Noun --" >> (mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_N n)
-    POS_V -> putStrLn "-- Verb --" >> (mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_V n)
-    POS_A -> putStrLn "-- Adjective --" >> (mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_A n)
-    POS_R -> putStrLn "-- Adverb --" >> (mapM_ (TIO.putStrLn . format) $ lookupConcept db POS_R n)
+    POS_N -> putStrLn "-- Noun --"      >> mapM_ print (lookupSynset db POS_N n) -- (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_N n)
+    POS_V -> putStrLn "-- Verb --"      >> mapM_ print (lookupSynset db POS_N n) -- (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_V n)
+    POS_A -> putStrLn "-- Adjective --" >> mapM_ print (lookupSynset db POS_N n) -- (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_A n)
+    POS_R -> putStrLn "-- Adverb --"    >> mapM_ print (lookupSynset db POS_N n) -- (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_R n)
 
-
-getQueryLemma :: Text -> POS -> WordNetDB -> [Text]
+{- 
+getQueryLemma :: Text -> POS -> WordNetDB -> [(SenseNumber,[LexItemText]
 getQueryLemma input typ db = do
   case typ of
-    POS_N -> fmap format $ lookupLemma db POS_N input
-    POS_V -> fmap format $ lookupLemma db POS_V input
-    POS_A -> fmap format $ lookupLemma db POS_A input
-    POS_R -> fmap format $ lookupLemma db POS_R input
+    POS_N -> fmap formatLemmaSynset $ lookupLemma db POS_N input
+    POS_V -> fmap formatLemmaSynset $ lookupLemma db POS_V input
+    POS_A -> fmap formatLemmaSynset $ lookupLemma db POS_A input
+    POS_R -> fmap formatLemmaSynset $ lookupLemma db POS_R input
 
 
-getQueryConcept :: Int -> POS -> WordNetDB -> Maybe ([LexItem],Text)
-getQueryConcept n typ db = do
+getQuerySynset :: SynsetOffset -> POS -> WordNetDB -> Maybe ([LexItem],Text)
+getQuerySynset n typ db = do
   case typ of
-    POS_N -> lookupConcept db POS_N n
-    POS_V -> lookupConcept db POS_V n
-    POS_A -> lookupConcept db POS_A n
-    POS_R -> lookupConcept db POS_R n
-
+    POS_N -> lookupSynset db POS_N n
+    POS_V -> lookupSynset db POS_V n
+    POS_A -> lookupSynset db POS_A n
+    POS_R -> lookupSynset db POS_R n
+-}
 
 -- getQuerySense t i db = lookupSense db t i
 
-format :: ([LexItem],Text) -> Text
-format (xs,txt) = T.intercalate "," (map formatLI xs) <> " | " <> txt
+formatLemmaSynset :: (SenseNumber,[LexItem],Text) -> Text
+formatLemmaSynset (SenseNumber n,xs,txt) = "sense: " <> T.pack (show n) <> " | " <> formatSynset (xs,txt)
+
+formatSynset :: ([LexItem],Text) -> Text
+formatSynset (xs,txt) = "lexicographer id: " <> T.intercalate "," (map formatLI xs) <>
+                        " | " <> txt

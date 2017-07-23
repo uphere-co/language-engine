@@ -26,8 +26,8 @@ import           GHC.Generics
 import           WordNet.Type.POS
 
 
-newtype LexicographerID = LexicographerID { unLex :: Int }
-                        deriving (Show,Ord,Eq,Generic,Binary,Hashable)
+newtype LexID = LexID { unLexID :: Int }
+              deriving (Show,Ord,Eq,Generic,Binary,Hashable)
 
 
                                  
@@ -223,7 +223,7 @@ instance Binary Marker
 instance Hashable Marker
 
 data SSWord = SSWord { _ssw_word   :: [Text]
-                     , _ssw_lexid  :: Maybe LexicographerID
+                     , _ssw_lexid  :: Maybe LexID
                      , _ssw_marker :: Maybe Marker
                      }
             deriving (Show,Eq,Ord,Generic)

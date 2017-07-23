@@ -8,6 +8,7 @@ import           Data.Text                    (Text)
 --
 -- import           WordNet.API.Query
 import           WordNet.Query.SynsetDB
+import           WordNet.Parser.Data
 import           WordNet.Parser.Lexicographer
 
 
@@ -86,8 +87,16 @@ testdata_adj_cluster
     ]
 
 
-main :: IO ()
-main = do
+main' :: IO ()
+main' = do
   let txt = testdata_adj_cluster !! 2
       er = parse (many1 p_synset_adj_cluster) txt
   showResult True er 
+
+
+test_data = "01427127 35 v 02 take e have 0 001 @ 01426397 v 0000 01 + 09 00 | have sex with; archaic use; \"He had taken this woman when she was most vulnerable\""
+
+
+main :: IO ()
+main = do
+  print (parseData True test_data)
