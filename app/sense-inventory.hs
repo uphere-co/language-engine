@@ -31,8 +31,7 @@ import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
 --
 import           Common.Load
-
-data VorN = V | N deriving Eq
+import           Common.Type
 
 
 verbnet semlinkmap lma txt =
