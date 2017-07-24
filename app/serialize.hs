@@ -20,7 +20,7 @@ data ProgOption = ProgOption { dir :: FilePath
 pOptions :: Parser ProgOption
 pOptions = ProgOption <$> strOption (long "dir" <> short 'd' <> help "Directory")
                       <*> switch (long "test" <> short 't' <> help "testing")
-                      <*> strArgument (help "filename")
+                      <*> strArgument (metavar "FILENAME" <> help "filename")
   
 
 progOption :: ParserInfo ProgOption 

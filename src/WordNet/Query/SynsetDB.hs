@@ -21,14 +21,14 @@ import           WordNet.Parser.Lexicographer
 import           WordNet.Type.Lexicographer
 import           WordNet.Type.POS
 
- 
+
 data SynsetDB
   = SynsetDB { _synsetdb_noun      :: [(Text,[Synset])]
              , _synsetdb_verb      :: [(Text,[Synset])]
              , _synsetdb_adverb    :: [(Text,[Synset])]
              , _synsetdb_adjective :: [(Text,[Either Synset SynsetCluster])]
              }
-  deriving (Generic)            
+  deriving (Generic)
 
 instance Binary SynsetDB
 
@@ -94,7 +94,7 @@ adjectiveFiles1 = [ "adj.pert"
 
 
 showResult :: (Show a) => Bool -> Result [a] -> IO ()
-showResult doesshowresult er = do 
+showResult doesshowresult er = do
   case er of
     Fail i xs err -> mapM_ print xs >> print err >> print (T.take 100 i)
     Partial f -> case (f "") of
@@ -114,7 +114,7 @@ process dir typ files = do
     case er of
       Left err -> error err
       Right lst -> let x = (T.pack f,catMaybes lst) in return (x:xs)
-    
+
 
 processAdjAll :: FilePath -> IO (Text,[Either Synset SynsetCluster])
 processAdjAll dir = do
@@ -135,4 +135,4 @@ processAll dir = do
   madj1 <- map (\(f,xs) -> (f,map Left xs)) <$> process dir Adjective adjectiveFiles1
   madj2 <- processAdjAll dir
   return (SynsetDB mnoun mverb madv (madj2:madj1))
-
+  -- return (SynsetDB undefined undefined undefined [madj2])
