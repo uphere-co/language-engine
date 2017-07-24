@@ -4,9 +4,10 @@ module WikiEL.ETL.RDF.Wikidata where
 
 import           Data.Text                  (Text)
 import           Data.List                  (foldl')
+import           Data.Either                (Either)
+import           Data.Attoparsec.Text
 import qualified Data.Text                     as T
 import qualified Data.Char                     as C
-import           Data.Attoparsec.Text
 
 import           WikiEL.ETL.RDF.Common      (parserObject,parserObject2,parserTypedValue)
 import           WikiEL.Type.RDF.Wikidata
@@ -97,18 +98,27 @@ parseRDFline parser (Right (line, state)) =
     (Right rel) -> Right (rel, state)
     (Left msg)  -> Left msg
 
-fillMissingSV :: (TurtleState, WikidataObject, WikidataObject) -> (TurtleRelation,TurtleState) -> ((TurtleState, WikidataObject, WikidataObject), TurtleRelation)
-fillMissingSV (End, _,_)   (RelationSVO s' v' o', state') = ((state', s',v'), RelationSVO s' v' o')
-fillMissingSV (Semicolon, s,v) (RelationVO v' o', state') = ((state', s, v'), RelationSVO s v' o')
-fillMissingSV (Comma, s,v)     (RelationO  o',    state') = ((state', s, v),  RelationSVO s v o')
-fillMissingSV (_, _, _) _ = error "Wrong formats"
 
-flattenStatement :: [(TurtleRelation,TurtleState)] -> [TurtleRelation]
+fromRight :: Either a b -> b
+fromRight (Right x) = x
+fromRight (Left _)  = error "Got something Left."
+
+dummy :: WikidataObject
+dummy = fromRight (parseOnly wikidataObject "")
+
+fillMissingSV :: (TurtleState, WikidataObject, WikidataObject) -> (TurtleRelation,TurtleState) -> ((TurtleState, WikidataObject, WikidataObject), Either String TurtleRelation)
+fillMissingSV (End, _,_)   (RelationSVO s' v' o', state') = ((state', s',v'), Right (RelationSVO s' v' o'))
+fillMissingSV (Semicolon, s,v) (RelationVO v' o', state') = ((state', s, v'), Right (RelationSVO s v' o'))
+fillMissingSV (Comma, s,v)     (RelationO  o',    state') = ((state', s, v),  Right (RelationSVO s v o'))
+fillMissingSV (_, _, _) _ = ((End, dummy,dummy), Left "Errors in filling missing SVO.")
+
+flattenStatement :: [Either String (TurtleRelation,TurtleState)] -> [Either String TurtleRelation]
 flattenStatement rs = reverse triples
   where
-    Right dummy = parseOnly wikidataObject ""
     (_, triples) = foldl' f ((End, dummy, dummy), []) rs
-    f (state, triples) relation = (state', t:triples)
+
+    f (state, triples) (Left msg)       = (state, Left msg : triples)
+    f (state, triples) (Right relation) = (state', t:triples)
       where
         (state', t) = fillMissingSV state relation
 

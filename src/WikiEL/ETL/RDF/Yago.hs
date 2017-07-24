@@ -109,3 +109,4 @@ parserRDF3colRowInTSV = do
 
 parserRDFrowInTSV = choice [ parserRDF4colRowInTSV
                            , parserRDF3colRowInTSV]
+

@@ -106,6 +106,7 @@ testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, 
             ,"<id_5kujp2_1m6_1qdi4lo>\t<wordnet_organization_108008335>    rdfs:subClassOf    <yagoLegalActor>"
             ,"<id_5kujp2_1m6_a52wvp> <wordnet_organization_108008335>    rdfs:subClassOf    <wordnet_social_group_107950920>"
             ,"<id_klokc9_1m6_1koas7s>\t<wikicat_Syntactic_entities>\trdfs:subClassOf\towl:Thing  "
+            --"<hbfix3>\t<wordnet_cabbage_107713895>\trdfs:subClassOf\t<wordnet_cabbage_111875691>\t"
             -- samples from : yagoTypes.tsv
             ,"<id_1kmo9y9_88c_1eoxwov>    <PowerVR>    rdf:type    <wikicat_Graphics_hardware_companies>   "
             ,"<id_13tyf46_88c_4gx1l8>\t<de/NEC_PowerVR_PCX>    rdf:type    <wikicat_Graphics_chips>    "
@@ -162,6 +163,8 @@ relVO    v o = RelationVO  (wo v) (wo o)
 relO       o = RelationO   (wo o)
   where wo = toWikidataObject
 
+rightSVO s v o = Right (relSVO s v o)
+
 testWikidataTurtleRelation :: TestTree
 testWikidataTurtleRelation = testCaseSteps "Test case for parsing individual lines of Turtle format files" $ \step -> do
   eassertEqual (Left "Blank line.")        (splitTripleWithState "\n")
@@ -182,9 +185,9 @@ testWikidataTurtleRelation = testCaseSteps "Test case for parsing individual lin
 testWikidataTurtleFillMissingSVO :: TestTree
 testWikidataTurtleFillMissingSVO = testCaseSteps "Test case to get complete RDF triples in Turtle format" $ \step -> do
   let wo = toWikidataObject
-  eassertEqual (fillMissingSV (End, wo "", wo "") (relSVO "a" "b" "c",End)) ((End, wo "a", wo "b"),   relSVO "a" "b" "c")
-  eassertEqual (fillMissingSV (Comma, wo "x", wo "y") (relO "c",Comma))     ((Comma, wo "x", wo "y"), relSVO "x" "y" "c")
-  eassertEqual (fillMissingSV (Semicolon, wo "x", wo "y") (relVO "b" "c",Comma)) ((Comma, wo "x", wo "b"), relSVO "x" "b" "c")
+  eassertEqual (fillMissingSV (End, wo "", wo "") (relSVO "a" "b" "c",End)) ((End, wo "a", wo "b"),   Right (relSVO "a" "b" "c"))
+  eassertEqual (fillMissingSV (Comma, wo "x", wo "y") (relO "c",Comma))     ((Comma, wo "x", wo "y"), Right (relSVO "x" "y" "c"))
+  eassertEqual (fillMissingSV (Semicolon, wo "x", wo "y") (relVO "b" "c",Comma)) ((Comma, wo "x", wo "b"), Right (relSVO "x" "b" "c"))
 
 testWikidataRDFdumpTTL :: TestTree
 testWikidataRDFdumpTTL = testCaseSteps "Parse a full RDF dump of Wikidata in Turtle format(.ttl)" $ \step -> do
@@ -209,17 +212,20 @@ wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement,
                 , (relVO "pq:P249" "\"AVAZ\"",Semicolon)
                 , (relVO "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95",End)
                 ]
-    triples1 = [ relSVO "wd:Q2309" "p:P414" "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 ."
-               , relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"
-               , relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:BestRank"
-               , relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "wikibase:rank" "wikibase:NormalRank"
-               , relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "ps:P414" "wd:Q2632892"
-               , relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "pq:P249" "\"AVAZ\""
-               , relSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95"
+    triples1 = [ Left "Blank line."
+               , rightSVO "wd:Q2309" "p:P414" "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 ."
+               , Left "Blank line."
+               , rightSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:Statement"
+               , rightSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "a" "wikibase:BestRank"
+               , rightSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "wikibase:rank" "wikibase:NormalRank"
+               , rightSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "ps:P414" "wd:Q2632892"
+               , rightSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "pq:P249" "\"AVAZ\""
+               , rightSVO "wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672" "prov:wasDerivedFrom" "wdref:2d11114e74636670e7d7b2ee58260de401e31e95"
+               , Left "Blank line."
                ]
   mapM_ print lines1
   mapM_ (uncurry eassertEqual) (zip (rights rs1) expected1)
-  mapM_ (uncurry eassertEqual) (zip triples1 (flattenStatement (rights rs1)))
+  mapM_ (uncurry eassertEqual) (zip triples1 (flattenStatement rs1))
 
   let
     case2 = T.pack ([r|wd:Q31 a wikibase:Item ;
@@ -252,40 +258,40 @@ wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement,
         p:P1464 wds:Q31-b8a6b97e-4815-1e46-db4c-6b5807933064 .|])
     lines2 = map splitTripleWithState (T.lines case2)
     rs2    = map (parseRDFline parserWikidataRdfRelation) lines2
-    triples2  = [ relSVO "wd:Q31" "a" "wikibase:Item"
-                , relSVO "wd:Q31" "rdfs:label" "\"Belgium\"@en"
-                , relSVO "wd:Q31" "skos:prefLabel" "\"Belgium\"@en"
-                , relSVO "wd:Q31" "schema:name" "\"Belgium\"@en"
-                , relSVO "wd:Q31" "schema:description" "\"constitutional monarchy in Western Europe\"@en"
-                , relSVO "wd:Q31" "schema:description" "\"État d'Europe occidentale\"@fr"
-                , relSVO "wd:Q31" "schema:description" "\"西欧国家\"@zh-sg"
-                , relSVO "wd:Q31" "schema:description" "\"Staat an Europa\"@lb"
-                , relSVO "wd:Q31" "skos:altLabel" "\"Kingdom of Belgium\"@en"
-                , relSVO "wd:Q31" "skos:altLabel" "\"be\"@en"
-                , relSVO "wd:Q31" "skos:altLabel" "\"Королівство Бельгія\"@uk"
-                , relSVO "wd:Q31" "wdt:P1464" "wd:Q7463296"
-                , relSVO "wd:Q31" "wdt:P1036" "\"2--493\""
-                , relSVO "wd:Q31" "wdt:P138" "wd:Q206443"
-                , relSVO "wd:Q31" "wdt:P31" "wd:Q3624078"
-                , relSVO "wd:Q31" "wdt:P31" "wd:Q43702"
-                , relSVO "wd:Q31" "wdt:P31" "wd:Q160016"
-                , relSVO "wd:Q31" "wdt:P31" "wd:Q6505795"
-                , relSVO "wd:Q31" "wdt:P30" "wd:Q46"
-                , relSVO "wd:Q31" "wdt:P36" "wd:Q239"
-                , relSVO "wd:Q31" "wdt:P41" "<http://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Belgium%20%28civil%29.svg>"
-                , relSVO "wd:Q31" "wdt:P297" "\"BE\""
-                , relSVO "wd:Q31" "wdt:P2853" "wd:Q1378312"
-                , relSVO "wd:Q31" "wdt:P2853" "wd:Q2335536"
-                , relSVO "wd:Q31" "wdt:P2927" "\"+0.8\"^^xsd:decimal"
-                , relSVO "wd:Q31" "wdt:P1332" "\"Point(4.77 51.5)\"^^geo:wktLiteral"
-                , relSVO "wd:Q31" "wdt:P3221" "\"destination/belgium\""
-                , relSVO "wd:Q31" "p:P1464" "wds:Q31-b8a6b97e-4815-1e46-db4c-6b5807933064"
+    triples2  = [ rightSVO "wd:Q31" "a" "wikibase:Item"
+                , rightSVO "wd:Q31" "rdfs:label" "\"Belgium\"@en"
+                , rightSVO "wd:Q31" "skos:prefLabel" "\"Belgium\"@en"
+                , rightSVO "wd:Q31" "schema:name" "\"Belgium\"@en"
+                , rightSVO "wd:Q31" "schema:description" "\"constitutional monarchy in Western Europe\"@en"
+                , rightSVO "wd:Q31" "schema:description" "\"État d'Europe occidentale\"@fr"
+                , rightSVO "wd:Q31" "schema:description" "\"西欧国家\"@zh-sg"
+                , rightSVO "wd:Q31" "schema:description" "\"Staat an Europa\"@lb"
+                , rightSVO "wd:Q31" "skos:altLabel" "\"Kingdom of Belgium\"@en"
+                , rightSVO "wd:Q31" "skos:altLabel" "\"be\"@en"
+                , rightSVO "wd:Q31" "skos:altLabel" "\"Королівство Бельгія\"@uk"
+                , rightSVO "wd:Q31" "wdt:P1464" "wd:Q7463296"
+                , rightSVO "wd:Q31" "wdt:P1036" "\"2--493\""
+                , rightSVO "wd:Q31" "wdt:P138" "wd:Q206443"
+                , rightSVO "wd:Q31" "wdt:P31" "wd:Q3624078"
+                , rightSVO "wd:Q31" "wdt:P31" "wd:Q43702"
+                , rightSVO "wd:Q31" "wdt:P31" "wd:Q160016"
+                , rightSVO "wd:Q31" "wdt:P31" "wd:Q6505795"
+                , rightSVO "wd:Q31" "wdt:P30" "wd:Q46"
+                , rightSVO "wd:Q31" "wdt:P36" "wd:Q239"
+                , rightSVO "wd:Q31" "wdt:P41" "<http://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Belgium%20%28civil%29.svg>"
+                , rightSVO "wd:Q31" "wdt:P297" "\"BE\""
+                , rightSVO "wd:Q31" "wdt:P2853" "wd:Q1378312"
+                , rightSVO "wd:Q31" "wdt:P2853" "wd:Q2335536"
+                , rightSVO "wd:Q31" "wdt:P2927" "\"+0.8\"^^xsd:decimal"
+                , rightSVO "wd:Q31" "wdt:P1332" "\"Point(4.77 51.5)\"^^geo:wktLiteral"
+                , rightSVO "wd:Q31" "wdt:P3221" "\"destination/belgium\""
+                , rightSVO "wd:Q31" "p:P1464" "wds:Q31-b8a6b97e-4815-1e46-db4c-6b5807933064"
                 ]
   let
     lines = map splitTripleWithState (T.lines ( T.concat [case1,"\n\n", case2, "\n", case1]))
     rs    = map (parseRDFline parserWikidataRdfRelation) lines
   --mapM_ print (flattenStatement (rights rs))
-  mapM_ (uncurry eassertEqual) (zip triples2 (flattenStatement (rights rs2)))
+  mapM_ (uncurry eassertEqual) (zip triples2 (flattenStatement rs2))
   
 
 allWikidataTest :: TestTree
