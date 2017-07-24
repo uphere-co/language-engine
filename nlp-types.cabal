@@ -28,6 +28,7 @@ library
                        NLP.Type.UniversalDependencies2.Morphology
                        NLP.Type.UniversalDependencies2.Syntax
                        Text.Taggy.Lens.Util
+                       Text.TaggedText
                                      
   -- other-modules:       
   -- other-extensions:    
