@@ -25,6 +25,7 @@ import           FrameNet.Type.Frame    hiding (LexUnit)
 import           FrameNet.Type.LexUnit
 import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
+import           WordNet.Query
 --
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
@@ -36,7 +37,7 @@ data Config = Config { _cfg_sense_inventory_file :: FilePath
                      , _cfg_wsj_directory        :: FilePath
                      , _cfg_framenet_lubin       :: FilePath
                      , _cfg_framenet_framedir    :: FilePath
-                     -- , _cfg_wordnet_dict         :: FilePath
+                     , _cfg_wordnet_dict         :: FilePath
                      }
 
 makeLenses ''Config
@@ -48,7 +49,7 @@ cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/da
              , _cfg_wsj_directory = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
              , _cfg_framenet_lubin = "/home/wavewave/repo/srcp/HFrameNet/run/FrameNet_ListOfLexUnit.bin"
              , _cfg_framenet_framedir = "/scratch/wavewave/FrameNet/1.7/fndata/fndata-1.7/frame"
-             -- , _cfg_wordnet_dict = "/scratch/wavewave/wordnet/WordNet-3.0/dict"
+             , _cfg_wordnet_dict = "/scratch/wavewave/wordnet/WordNet-3.0/dict"
              }
   
 
@@ -73,6 +74,7 @@ loadSemLink file = do
     Just f -> case p_vnfnmappingdata f of
                 Left err -> error err
                 Right c -> return c
+
   
 loadStatistics file = do
   txt <- T.IO.readFile file
@@ -124,7 +126,9 @@ loadAll = do
 
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-  ws <- loadStatistics (cfg^.cfg_statistics)
-  
-  return (ludb,sensestat,semlinkmap,sensemap,ws)  
+  wordstat <- loadStatistics (cfg^.cfg_statistics)
+
+  wndb <- loadDB (cfg^.cfg_wordnet_dict)
+
+  return (ludb,sensestat,semlinkmap,sensemap,wordstat,wndb)  
 
