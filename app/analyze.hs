@@ -9,7 +9,7 @@ import           Control.Lens          hiding (Level)
 import           Control.Monad
 import           Control.Monad.Loops
 import           Control.Monad.IO.Class           (liftIO)
-import           Data.Binary
+
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
@@ -17,26 +17,21 @@ import           Data.Foldable
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import qualified Data.IntMap                as IM
-import           Data.List                        (foldl',minimumBy,sort,sortBy,zip4)
+import           Data.List                        (foldl',sort,zip4)
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                        (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
-import qualified Data.Text.Lazy.IO          as T.L.IO
+
 import           Language.Java              as J
 import           System.Console.Haskeline
-import           System.Directory
 import           System.Directory.Tree
 import           System.Environment
 import           System.FilePath
-import           System.IO
-import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
 import           Text.ProtocolBuffers.Basic       (Utf8)
 import           Text.ProtocolBuffers.WireMessage (messageGet)
-import           Text.Taggy.Lens
-
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
@@ -50,13 +45,8 @@ import           CoreNLP.Simple.Type
 import           CoreNLP.Simple.Type.Simplified
 import           CoreNLP.Simple.Util
 import           FrameNet.Query.Frame
-import           FrameNet.Query.LexUnit
 import           FrameNet.Type.Frame hiding (LexUnit)
-import           FrameNet.Type.Common                        (fr_frame, CoreType(..))
-import           FrameNet.Type.LexUnit
-import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
-import           SRL.Format                                  (formatBitree,showVerb)
 import           SRL.Feature
 import           SRL.Feature.Clause
 import           SRL.Feature.Dependency
@@ -69,92 +59,10 @@ import           View
 import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
+import           OntoNotes.Mapping.FrameNet
 --
+import           Common.Load
 
-
-data VorN = V | N deriving Eq
-
-
-data Config = Config { _cfg_sense_inventory_file :: FilePath
-                     -- , _cfg_semlink_file         :: FilePath
-                     , _cfg_statistics           :: FilePath
-                     , _cfg_wsj_directory        :: FilePath
-                     , _cfg_framenet_lubin       :: FilePath
-                     , _cfg_framenet_framedir    :: FilePath                                                    
-                     }
-
-makeLenses ''Config
-              
-cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
-             -- , _cfg_semlink_file = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
-             , _cfg_statistics = "run/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
-             , _cfg_wsj_directory = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-             , _cfg_framenet_lubin = "/home/wavewave/repo/srcp/HFrameNet/run/FrameNet_ListOfLexUnit.bin"
-             , _cfg_framenet_framedir = "/scratch/wavewave/FrameNet/1.7/fndata/fndata-1.7/frame"
-             }
-  
-
-
-loadSenseInventory dir = do
-  cnts <- getDirectoryContents dir
-  let fs = sort (filter (\x -> takeExtensions x == ".xml") cnts)
-  flip traverse fs $ \f -> do
-    let fp = dir  </> f
-    txt <- T.L.IO.readFile fp
-    case txt ^? html . allNamed (only "inventory") of
-      Nothing -> error "nothing"
-      Just f -> case p_inventory f of
-                  Left err -> error err
-                  Right c  -> return c
-
-{- 
-createVNFNDB :: VNFNMappingData -> HashMap (Text,Text) [Text]
-createVNFNDB semlink = 
-  let lst = map (\c-> ((c^.vnc_vnmember,c^.vnc_class),c^.vnc_fnframe)) (semlink^.vnfnmap_vnclslst)
-  in foldl' (\(!acc) (k,v) -> HM.insertWith (++) k [v] acc) HM.empty lst
-
-
-loadSemLink file = do
-  txt <- T.L.IO.readFile file
-  case txt ^? html . allNamed (only "verbnet-framenet_MappingData") of
-    Nothing -> error "nothing"
-    Just f -> case p_vnfnmappingdata f of
-                Left err -> error err
-                Right c -> return c
--}
-
-loadStatistics file = do
-  txt <- T.IO.readFile file
-  return $ map ((\(l:_:f:_) -> (l,f)) . T.words) (T.lines txt)
-
-
-loadFrameNet file = do
-  bstr <- BL.readFile file
-  let lst = decode bstr :: [LexUnit]
-      lexunitdb = foldl' insertLU emptyDB lst
-  return lexunitdb
-  
-
-
-verbnet semlinkmap lma txt =
-  let (_,cls') = T.breakOn "-" txt
-  in if T.null cls'
-     then text (printf "%-43s" ("" :: String))
-     else let cls = T.tail cls'
-              frms = fromMaybe [] (HM.lookup (lma,cls) semlinkmap)
-          in text (printf "%-8s -> " cls) <+>
-             vcat top (if null frms
-                       then [text (printf "%-30s" ("":: String))]
-                       else map (text.printf "%-30s") frms
-                      )
-
-framesFromLU :: LexUnitDB -> Text -> [Text]
-framesFromLU ludb lma = do
-  i <- fromMaybe [] (HM.lookup lma (ludb^.nameIDmap))
-  l <- maybeToList (IM.lookup i (ludb^.lexunitDB))
-  frm <- maybeToList (l^.lexunit_frameReference^.fr_frame)
-  return frm
-  
 
 senseInstStatistics :: FilePath -> IO (HashMap (Text,Text) Int)
 senseInstStatistics basedir = do
@@ -179,12 +87,6 @@ senseInstStatistics basedir = do
   return acc
 
 
-
-
-
-
-
-
 convertToken_charIndex :: TK.Token -> Maybe Token
 convertToken_charIndex t = do
   (b',e') <- (,) <$> t^.TK.beginChar <*> t^.TK.endChar
@@ -195,18 +97,6 @@ convertToken_charIndex t = do
   return (Token (b,e) w p l)
 
 formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
-
-
-{- 
-addSUTime :: [SentItem] -> T.ListTimex
-          -> [(SentItem,[TagPos (Maybe Utf8)])]
-addSUTime sents tmxs =
-  let f t = ( fromIntegral (t^.T.characterOffsetBegin) + 1
-            , fromIntegral (t^.T.characterOffsetEnd)
-            , t^. T.timex . Tmx.value
-            )
-  in filter (not.null.(^._2)) $ map (addTag (map f (tmxs^..T.timexes.traverse))) sents
--}
 
 
 type SentIdx = Int
@@ -253,17 +143,14 @@ underlineText (b0,_e0) txt lst = do
       xss = lineSplitAnnot 80 ann
   sequence_ (concatMap (map cutePrintAnnot) xss)
 
+
 formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
 formatTimex (s,a) = do 
   -- T.IO.putStrLn $ "Sentence " <> T.pack (show (s^._1)) 
   underlineText (s^._2) (s^._3) a
   T.IO.putStrLn "----------"
   print a
-  
-{-   T.IO.putStrLn "----------"
-  print b
-  T.IO.putStrLn "=========="
--}
+
 
 runParser pp txt = do
   doc <- getDoc txt
