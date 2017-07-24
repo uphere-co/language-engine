@@ -54,6 +54,7 @@ import           Data.Ord                              (Ordering,comparing)
 import           Control.Lens.Getter                   ((^.))
 import           Control.Lens.Setter                   ((.~))
 import           Control.Lens.Tuple                    (_1,_2,_3,_4)
+import           Control.Monad.ST                      (runST)
 
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
@@ -290,7 +291,7 @@ allWikidataTest =
 --newtype NewInt = NewInt Int
 --               deriving (Eq,Ord,Show,UV.Unbox,MVector MVector, Vector Vector)
 --newtype SomeID = SomeID Word64 deriving (Show,Eq,Unbox,M.MVector MVector,G.Vector Vector)
-type UID = Word64
+type UID  = Word64
 type Subj = XXHash
 type Verb = XXHash
 type Obj  = XXHash
@@ -320,14 +321,36 @@ fromText str = fromXXHashPair high low
     (high, low)   = (hash left, hash right)
 
 
-orderingBySubj :: Triple -> Triple -> Ordering
-orderingBySubj lhs@(_,ls,lv,lo) rhs@(_,rs,rv,ro) = case compare ls rs of
+compareS,compareV,compareO :: Triple -> Triple -> Ordering
+compareS lhs rhs = compare (getSubj lhs) (getSubj rhs)
+compareV lhs rhs = compare (getVerb lhs) (getVerb rhs)
+compareO lhs rhs = compare (getObj  lhs) (getObj  rhs)
+
+compareSV,compareVS,compareVO,compareOV :: Triple -> Triple -> Ordering
+compareSV lhs rhs | getSubj lhs == getSubj rhs  = compareV lhs rhs
+                  | otherwise                   = compareS lhs rhs
+compareVS lhs rhs | getVerb lhs == getVerb rhs  = compareS lhs rhs
+                  | otherwise                   = compareV lhs rhs
+compareVO lhs rhs | getVerb lhs == getVerb rhs  = compareO lhs rhs
+                  | otherwise                   = compareV lhs rhs
+compareOV lhs rhs | getObj lhs  == getObj rhs   = compareV lhs rhs
+                  | otherwise                   = compareO lhs rhs
+
+orderingBySVO,orderingByOVS :: Triple -> Triple -> Ordering
+-- much slower version:
+--orderingBySVO lhs rhs | getSubj lhs == getSubj rhs  = compareVO lhs rhs
+--                      | otherwise                   = compareS  lhs rhs
+--{- much faster version:
+orderingBySVO lhs@(_,ls,lv,lo) rhs@(_,rs,rv,ro) = case compare ls rs of
   LT -> LT
   GT -> GT
   EQ -> case compare lv rv of
     LT -> LT
     GT -> GT
     EQ -> compare lo ro
+---}
+orderingByOVS lhs rhs | getObj  lhs == getObj  rhs  = compareVS lhs rhs
+                      | otherwise                   = compareO  lhs rhs
 
 
 randomTriple :: (XXHash,XXHash,XXHash,XXHash) -> Triple
@@ -347,6 +370,21 @@ testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
   eassertEqual (fromText   "a") (fromXXHashPair 46947589   1426945110) 
   eassertEqual (fromText    "") (fromXXHashPair 46947589   46947589)
 
+garbageU = 0 :: UID
+garbageS = 0 :: Subj
+garbageV = 0 :: Verb
+garbageO = 0 :: Obj
+
+fillFromSV :: (Subj,Verb) -> Triple
+fillFromSV (s,v) = (garbageU,s,v,garbageO)
+fillFromVO :: (Verb,Obj)  -> Triple
+fillFromVO (v,o) = (garbageU,garbageS,v,o)
+
+lookupTriples comp conv vec val = runST $ do
+  mvec <- UV.unsafeThaw vec
+  (beg,end) <- binarySearchLRBy comp mvec (conv val)
+  return (UV.slice beg (end-beg) vec)
+
 
 testUnboxedVector :: TestTree
 testUnboxedVector = testCaseSteps "Generate unboxed vector of random RDF triples" $ \step -> do
@@ -354,8 +392,35 @@ testUnboxedVector = testCaseSteps "Generate unboxed vector of random RDF triples
   rs <- withSystemRandom . asGenST $ \gen -> uniformVector gen 20000
   let
     triples = UV.map randomTriple rs -- 1.2s with 0.2M triples
-    sortedTriples = UV.modify (sortBy orderingBySubj) triples -- 4.0s with 0.2M triples
-  mapM_ print (UV.toList (UV.slice 0 100 sortedTriples))
+    triplesbySVO = UV.modify (sortBy orderingBySVO) triples -- 4.0s with 0.2M triples
+    triplesbyOVS = UV.modify (sortBy orderingByOVS) triples
+    lookupBySV = lookupTriples compareSV fillFromSV triplesbySVO
+    lookupByOV = lookupTriples compareOV fillFromVO triplesbyOVS
+  --mapM_ print (UV.toList (UV.slice 1000 50 triplesbySVO))
+  --mapM_ print (UV.toList (UV.slice 1000 50 triplesbyOVS))
+
+  step "list y for (x,3,y) where (1,2,x)"
+  let
+    v1in = [(1,2)] :: [(Subj,Verb)]
+    v1out = UV.concat (map lookupBySV v1in)
+    v2in  = UV.map    (\x -> (getObj x, 3:: Obj)) v1out
+    v2out = UV.concat (map lookupBySV (UV.toList v2in))
+  print "======================"
+  print v1out
+  print "----------------"
+  print v2out
+  print "/////////////////////////////////"
+  
+  step "list y for (x,3,y) where (x,1,2)"
+  let
+    w1in = [(1,2)] :: [(Verb,Obj)]
+    w1out = UV.concat (map lookupByOV w1in)
+    w2in  = UV.map    (\x -> (getSubj x, 3:: Verb)) w1out
+    w2out = UV.concat (map lookupBySV (UV.toList w2in))
+  print "======================"
+  print w1out
+  print "----------------"
+  print w2out
 
 allGenericRdfTripleTest :: TestTree
 allGenericRdfTripleTest =
