@@ -1,19 +1,30 @@
 ## Wiki named entity annotator
 ### Using nix-shell
 ```
-#Set nlp-types in $NIX_PATH or add `--argstr nlp-types (nlp-types)` option.
+# Set nlp-types in $NIX_PATH or add `--argstr nlp-types (nlp-types)` option.
 nix-shell shell.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 20 --cores 20
 
-cabal configure --enable-tests
-cabal test
-# or run tests in parallel 
-cabal build test
-./dist/build/test/test  +RTS -N -RTS
-#Or run tests in REPL
-cabal repl test
 
-#Clean up
+# Setup Cabal sandbox
+cabal sandbox delete
+cabal sandbox init
+cabal install --only-dependencies
+
+# Build & run
+cabal configure --enable-tests --builddir=../dists/wiki-ner
+cabal test --builddir=../dists/wiki-ner
+# or run tests in parallel 
+cabal build test --builddir=../dists/wiki-ner
+# without --builddir:
+./dist/build/test/test  +RTS -N -RTS
+# with --builddir:
+../dists/wiki-ner/build/test/test  +RTS -N -RTS
+# Or run tests in REPL
+cabal repl test --builddir=../dists/wiki-ner
+
+# Clean up
 cabal clean
+cabal sandbox delete
 ```
 
 ### Using nix-build

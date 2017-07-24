@@ -43,15 +43,18 @@ import qualified Data.Vector.Unboxed           as UV
 --import           Data.Vector.Generic                   (Vector)
 --import           Data.Vector.Unboxed           
 import           Data.Digest.XXHash                    (XXHash,xxHash')
+import           Data.Word                             (Word64)
 import           Data.Int                              (Int32, Int64)
 import           Data.Bits                             (shift)
 import           Data.Text.Encoding                    (encodeUtf8)
 import           Data.Binary                           (encode)
-import           System.Random                         (StdGen,getStdGen,randoms)
-import           Data.List.Split                       (chunksOf)
+import           System.Random.MWC                     (createSystemRandom, withSystemRandom, asGenST, uniformVector)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
-import           Data.Ord                              (Ordering)
-import           Data.Tuple.Select                     (sel1,sel2,sel3,sel4)
+import           Data.Ord                              (Ordering,comparing)
+import           Control.Lens.Getter                   ((^.))
+import           Control.Lens.Setter                   ((.~))
+import           Control.Lens.Tuple                    (_1,_2,_3,_4)
+
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
 
@@ -287,23 +290,29 @@ allWikidataTest =
 --newtype NewInt = NewInt Int
 --               deriving (Eq,Ord,Show,UV.Unbox,MVector MVector, Vector Vector)
 --newtype SomeID = SomeID Word64 deriving (Show,Eq,Unbox,M.MVector MVector,G.Vector Vector)
-type Triple = (Int64,XXHash,XXHash,XXHash)
+type UID = Word64
+type Subj = XXHash
+type Verb = XXHash
+type Obj  = XXHash
+type Triple = (UID,Subj,Verb,Obj)
 
-getUID :: Triple -> Int64
-getUID = sel1
-getSubj, getVerb, getObj :: Triple -> XXHash
-getSubj = sel2
-getVerb = sel3
-getObj = sel4
+getUID  :: Triple -> UID
+getUID  t = t^._1
+getSubj :: Triple -> Subj
+getSubj t = t^._2
+getVerb :: Triple -> Verb
+getVerb t = t^._3
+getObj  :: Triple -> Obj
+getObj  t = t^._4
 
 -- XXHash is GHC.Word.Word32.
-fromXXHash :: XXHash -> Int64
+fromXXHash :: XXHash -> UID
 fromXXHash = fromIntegral
 
-fromXXHashPair :: XXHash -> XXHash -> Int64
+fromXXHashPair :: XXHash -> XXHash -> UID
 fromXXHashPair high low = fromXXHash low + shift (fromXXHash high) 32
 
-fromText :: Text -> Int64
+fromText :: Text -> UID
 fromText str = fromXXHashPair high low
   where
     hash = xxHash' . encodeUtf8
@@ -311,16 +320,22 @@ fromText str = fromXXHashPair high low
     (high, low)   = (hash left, hash right)
 
 
-
 orderingBySubj :: Triple -> Triple -> Ordering
-orderingBySubj lhs rhs = compare (getSubj lhs) (getSubj rhs)
+orderingBySubj lhs@(_,ls,lv,lo) rhs@(_,rs,rv,ro) = case compare ls rs of
+  LT -> LT
+  GT -> GT
+  EQ -> case compare lv rv of
+    LT -> LT
+    GT -> GT
+    EQ -> compare lo ro
 
 
-randomTriple :: [XXHash] -> Triple
-randomTriple [high,low,s,v,o] = (fromXXHashPair high low, s `mod` nObject, v `mod` nProp, o `mod` nObject)
+randomTriple :: (XXHash,XXHash,XXHash,XXHash) -> Triple
+randomTriple (high,s,v,o) = (fromXXHashPair high low, s `mod` nObject, v `mod` nProp, o `mod` nObject)
   where
+    low = s+v+o -- adhoc hashing since Random.MWC only support up to 4 tuples.
     nObject = 100
-    nProp   = 1000
+    nProp   = 100
 
 testInt64Hash :: TestTree
 testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
@@ -328,25 +343,19 @@ testInt64Hash = testCaseSteps "Tests for 64-bit hash" $ \step -> do
   eassertEqual ((xxHash' . encodeUtf8) "") 46947589
   eassertEqual ((xxHash' . encodeUtf8) "a") 1426945110
   eassertEqual ((xxHash' . encodeUtf8) "bc") 2194405884
-  eassertEqual (fromXXHashPair 1426945110 2194405884) 6128682582831528444
-  eassertEqual (fromText "abc") 6128682582831528444
-  eassertEqual (fromXXHashPair 46947589 1426945110) 201638360807994454
-  eassertEqual (fromText "a") 201638360807994454
-  eassertEqual (fromXXHashPair 46947589 46947589) 201638359427996933
-  eassertEqual (fromText "") 201638359427996933
+  eassertEqual (fromText "abc") (fromXXHashPair 1426945110 2194405884)
+  eassertEqual (fromText   "a") (fromXXHashPair 46947589   1426945110) 
+  eassertEqual (fromText    "") (fromXXHashPair 46947589   46947589)
 
 
 testUnboxedVector :: TestTree
-testUnboxedVector = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do
+testUnboxedVector = testCaseSteps "Generate unboxed vector of random RDF triples" $ \step -> do
   print $ encode (211 :: Int)
-  g <- getStdGen
+  rs <- withSystemRandom . asGenST $ \gen -> uniformVector gen 20000
   let
-    rs = Prelude.take 200 (randoms g :: [XXHash])
-    rss = chunksOf 5 rs
-    triples = UV.fromList (map randomTriple rss)
-    sortedTriples = UV.modify (sortBy orderingBySubj) triples
-  mapM_ print (UV.toList sortedTriples)
-
+    triples = UV.map randomTriple rs -- 1.2s with 0.2M triples
+    sortedTriples = UV.modify (sortBy orderingBySubj) triples -- 4.0s with 0.2M triples
+  mapM_ print (UV.toList (UV.slice 0 100 sortedTriples))
 
 allGenericRdfTripleTest :: TestTree
 allGenericRdfTripleTest =

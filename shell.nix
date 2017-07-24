@@ -24,9 +24,9 @@ let
               attoparsec
               xxhash
               binary
-              random
+              mwc-random
               split
-              tuple
+              lens
               raw-strings-qq
               p.nlp-types
             ]);

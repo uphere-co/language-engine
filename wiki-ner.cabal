@@ -54,13 +54,14 @@ library
                      , primitive
                      , vector
                      , vector-algorithms
-                     , tuple
+                     , lens
                      , containers
                      , attoparsec
                      , xxhash
                      , nlp-types
-
   default-language:    Haskell2010
+  ghc-options:        -O2
+
 
 test-suite test
   type: exitcode-stdio-1.0
@@ -77,18 +78,19 @@ test-suite test
                      , primitive
                      , vector
                      , vector-algorithms
+                     , lens
                      , containers
-                     , tuple
                      , attoparsec
                      , xxhash
                      , binary
-                     , random
-                     , split
+                     , mwc-random
                      , raw-strings-qq
                      , tasty
                      , nlp-types
                      , wiki-ner
   default-language:    Haskell2010
-  ghc-options: 
-    -threaded
+  ghc-options:        -threaded
+                      -O2
+--                      -prof
+--                      -fprof-auto
 
