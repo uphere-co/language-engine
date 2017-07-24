@@ -8,7 +8,7 @@
 mkDerivation {
   pname = "semantic-role-labeler";
   version = "0.1.0.0";
-  src = ./.;
+  src = builtins.filterSource (path: type: type != "directory" || baseNameOf path != "dist" || baseNameOf path != ".cabal-sandbox") ./.;
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
@@ -24,4 +24,6 @@ mkDerivation {
     vector
   ];
   license = "unknown";
+  doHaddock = false;
+  doCheck = false;
 }
