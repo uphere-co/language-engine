@@ -16,9 +16,19 @@ extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
 
 library
-  -- exposed-modules:     
+  hs-source-dirs:      lib
+  exposed-modules:     TimeTagger.TemporalExpression     
   -- other-modules:       
-  -- other-extensions:    
-  build-depends:       base >=4.9 && <4.10
-  -- hs-source-dirs:      
+  build-depends:       base,
+                       --
+                       bytestring,
+                       jvm,
+                       lens,
+                       nlp-types,
+                       protocol-buffers,
+                       text,
+                       time,
+                       --
+                       HCoreNLP,
+                       HCoreNLP-Proto
   default-language:    Haskell2010

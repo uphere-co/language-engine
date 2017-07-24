@@ -26,6 +26,7 @@ let
             cabal-install
             p.HCoreNLP
             p.HCoreNLP-Proto
+            p.nlp-types
           ]);
 
 in
