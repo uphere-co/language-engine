@@ -1,45 +1,25 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module WordNet.Type where
-{- ( module NLP.Type.WordNet
-, IndexItem
-, LexItem
-, Pointer
-, Frame
-, DataItem
-, formatLI
-, idx_lemma
-, idx_pos
-, idx_ptr_symbol
-, idx_tagsense_cnt
-, idx_synset_offset
-, lex_word
-, lex_id
-, ptr_pointer_symbol
-, ptr_synset_offset
-, ptr_pos
-, ptr_sourcetarget
-, frame_f_num
-, frame_w_num
-, data_syn_offset
-, data_lex_filenum
-, data_ss_type
-, data_word_lex_id
-, data_ptr
-, data_frames
-, data_gloss
-) where -}
 
 import           Control.Lens
+import           Data.Maybe
 import           Data.Monoid
 import           Data.Text              (Text)
 import qualified Data.Text        as T
-import           Data.Text.Format 
-import qualified Data.Text.Lazy   as TL
+import           GHC.Generics
 --
 import           WordNet.Type.Lexicographer
 import           WordNet.Type.POS
+
+
+newtype SynsetOffset = SynsetOffset { unSynsetOffset :: Int }
+                     deriving (Show,Eq,Ord,Enum,Num,Real,Integral)
+
+newtype SenseNumber = SenseNumber { unSenseNumber :: Int }
+                    deriving (Show,Eq,Ord,Enum,Num,Real,Integral)
 
 
 data IndexItem
@@ -47,20 +27,18 @@ data IndexItem
               , _idx_pos :: POS
               , _idx_ptr_symbol :: [Text]
               , _idx_tagsense_cnt :: Int
-              , _idx_synset_offset :: [Int] -- ^ length = sense_cnt = synset_cnt
+              , _idx_synset_offset :: [(SenseNumber,SynsetOffset)] -- ^ length = sense_cnt = synset_cnt
               }
   deriving (Show)
 
 makeLenses ''IndexItem
 
-data LexItem = LI { _lex_word :: Text, _lex_id :: Int } deriving Show
+data LexItem = LI { _lex_word :: Text, _lex_id :: LexID } deriving Show
 
-formatLI :: LexItem -> Text
-formatLI (LI w i) = TL.toStrict $ format "{}.{}" (w,i)
 
 
 data Pointer = Pointer { _ptr_pointer_symbol :: Text
-                       , _ptr_synset_offset :: Int
+                       , _ptr_synset_offset :: SynsetOffset
                        , _ptr_pos :: Text
                        , _ptr_sourcetarget :: (Text,Text) }
              deriving (Show)
@@ -71,7 +49,7 @@ data Frame = Frame { _frame_f_num :: Int
                    , _frame_w_num :: Int
                    } deriving Show
 
-data DataItem = DataItem { _data_syn_offset :: Int
+data DataItem = DataItem { _data_syn_offset :: SynsetOffset
                          , _data_lex_filenum :: Int
                          , _data_ss_type :: SSType
                          , _data_word_lex_id :: [LexItem]
@@ -86,9 +64,9 @@ makeLenses ''DataItem
                            
 data LexSense = LexSense { _lexsens_sstype      :: SSType
                          , _lexsens_lex_filenum :: LexicographerFile
-                         , _lexsens_lex_id      :: Int
-                         , _lexsens_head_word   :: Text
-                         , _lexsens_head_id     :: Int }
+                         , _lexsens_lex_id      :: LexID
+                         , _lexsens_head_word   :: Maybe Text
+                         , _lexsens_head_id     :: Maybe LexID }
               deriving Show
 
 makeLenses ''LexSense                       
@@ -102,13 +80,14 @@ makeLenses ''SenseKey
 
 
 headWord :: LexSense -> Text
-headWord l | T.null (l^.lexsens_head_word) = ""
-           | otherwise = l^.lexsens_head_word <> "." <> T.pack (show (l^.lexsens_head_id))
+headWord l = fromMaybe "" (l^.lexsens_head_word) <> "." <>
+             maybe "" (T.singleton . unLexID) (l^.lexsens_head_id)
+
 
 
 data SenseItem = SenseItem { _sense_sense_key :: SenseKey
-                           , _sense_soffset :: Int
-                           , _sense_snumber :: Int
+                           , _sense_soffset :: SynsetOffset
+                           , _sense_snumber :: SenseNumber
                            , _sense_cnt :: Int
                            } deriving (Show)
 

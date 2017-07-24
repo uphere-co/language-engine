@@ -8,6 +8,7 @@ import qualified Data.Text    as T
 --
 import           WordNet.Parser.Common
 import           WordNet.Type
+import           WordNet.Type.Lexicographer (LexID(..))
 import           WordNet.Type.POS
 
 
@@ -20,7 +21,7 @@ readSSType 'r' = Just Adverb
 readSSType _   = Nothing
 
 parseLexItem :: [Text] -> Maybe LexItem
-parseLexItem (x:y:[]) = LI <$> pure x <*> readDecimal y
+parseLexItem (x:y:[]) = LI <$> pure x <*> pure (LexID (T.head y))
 parseLexItem _        = Nothing
 
 parseFrame :: Int -> [Text] -> Maybe ([Frame],[Text])
@@ -51,7 +52,7 @@ parseData isVerb = worker . T.words
           p_ptr (z1:z2:z3:z4:[]) = do
             off <- readDecimal z2
             let st = T.splitAt 2 z4
-            return (Pointer z1 off z3 st)
+            return (Pointer z1 (SynsetOffset off) z3 st)
           p_ptr _ = Nothing
           rem2'@(rem20:rem2s) = concat rem2
       ptrs <- mapM p_ptr ptrstr
@@ -61,6 +62,6 @@ parseData isVerb = worker . T.words
                        parseFrame n rem2s
                      else return ([],rem2')
       let _:comments = rem3 
-      return (DataItem o num typ wordlexids ptrs fs (T.intercalate " " comments))
+      return (DataItem (SynsetOffset o) num typ wordlexids ptrs fs (T.intercalate " " comments))
     worker _ = Nothing
   

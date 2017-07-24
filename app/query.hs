@@ -11,7 +11,7 @@ import           Data.Text.Read             (decimal)
 import           Options.Applicative
 import           System.Console.Haskeline
 --
-import           WordNet.API.Query
+import           WordNet.Query
 import           WordNet.Type.POS
 
 
@@ -38,8 +38,8 @@ main = do
         queryLemma (T.pack input) POS_A db 
         queryLemma (T.pack input) POS_R db 
       Right (n,_) -> do
-        queryConcept n POS_N db
-        queryConcept n POS_V db
-        queryConcept n POS_A db
-        queryConcept n POS_R db
+        querySynset n POS_N db
+        querySynset n POS_V db
+        querySynset n POS_A db
+        querySynset n POS_R db
 

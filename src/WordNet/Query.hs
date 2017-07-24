@@ -5,23 +5,28 @@ module WordNet.Query where
 
 import           Control.Lens
 import           Control.Monad              (join)
--- import           Data.HashMap.Strict        (HashMap)
+import           Data.HashMap.Strict        (HashMap)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.IntMap         as IM
-import           Data.Maybe                 (maybeToList)
+import           Data.Maybe                 (catMaybes,maybeToList)
 import           Data.Text                  (Text)
 import qualified Data.Text           as T
 import qualified Data.Text.IO        as TIO
+import           Data.Text.Read
+import           System.FilePath
 --
+import           WordNet.Format
 import           WordNet.Parser.Common
+import           WordNet.Parser.Data
+import           WordNet.Parser.Index
 import           WordNet.Type
 import           WordNet.Type.POS
 
 
-data WordNetDB = WNDB { _indexNounDB :: HM.HashMap Text [Int]
-                      , _indexVerbDB :: HM.HashMap Text [Int]
-                      , _indexAdjDB  :: HM.HashMap Text [Int]
-                      , _indexAdvDB  :: HM.HashMap Text [Int]
+data WordNetDB = WNDB { _indexNounDB :: HM.HashMap Text [(SenseNumber,SynsetOffset)]
+                      , _indexVerbDB :: HM.HashMap Text [(SenseNumber,SynsetOffset)]
+                      , _indexAdjDB  :: HM.HashMap Text [(SenseNumber,SynsetOffset)]
+                      , _indexAdvDB  :: HM.HashMap Text [(SenseNumber,SynsetOffset)]
                       , _dataNounDB  :: IM.IntMap ([LexItem],Text)
                       , _dataVerbDB  :: IM.IntMap ([LexItem],Text)
                       , _dataAdjDB   :: IM.IntMap ([LexItem],Text)
@@ -36,32 +41,32 @@ createWordNetDB :: ([IndexItem],[IndexItem],[IndexItem],[IndexItem])
                 -> ([DataItem],[DataItem],[DataItem],[DataItem])
                 -- -> [SenseItem]
                 -> WordNetDB 
-createWordNetDB ilsts dlsts =
+createWordNetDB ilsts dlsts {- slists -} =
   WNDB (createLemmaMap (ilsts^._1))
        (createLemmaMap (ilsts^._2))
        (createLemmaMap (ilsts^._3))
        (createLemmaMap (ilsts^._4))
-       (createConceptMap False (dlsts^._1))
-       (createConceptMap True  (dlsts^._2))
-       (createConceptMap False (dlsts^._3))
-       (createConceptMap False (dlsts^._4))
+       (createSynsetMap (dlsts^._1))
+       (createSynsetMap (dlsts^._2))
+       (createSynsetMap (dlsts^._3))
+       (createSynsetMap (dlsts^._4))
        -- (createSenseMap slists)
 
 
-createLemmaMap :: [IndexItem] -> HM.HashMap Text [Int]
+createLemmaMap :: [IndexItem] -> HM.HashMap Text [(SenseNumber,SynsetOffset)]
 createLemmaMap = HM.fromList . map (\x->(x^.idx_lemma,x^.idx_synset_offset))
 
 
-createConceptMap :: Bool -> [DataItem] -> IM.IntMap ([LexItem],Text)
-createConceptMap _isVerb
-  = IM.fromList . map (\x->(x^.data_syn_offset,(x^.data_word_lex_id,x^.data_gloss)))
+createSynsetMap :: [DataItem] -> IM.IntMap ([LexItem],Text)
+createSynsetMap = IM.fromList . map (\x->(x^.data_syn_offset.to unSynsetOffset,(x^.data_word_lex_id,x^.data_gloss)))
 
 {- 
 createSenseMap :: [SenseItem] -> HM.HashMap (Text,Int) Int
-createSenseMap = HM.fromList . map (\x->((x^.sense_lemma,x^.sense_lexid),x^.sense_ss))
+createSenseMap _ = HM.fromList []
+-- HM.fromList . map (\x->((x^.sense_sense_key.skey_lemma,x^.sense_lexid),x^.sense_ss))
 -}
 
-indexDB :: WordNetDB -> POS -> HM.HashMap Text [Int]
+indexDB :: WordNetDB -> POS -> HM.HashMap Text [(SenseNumber,SynsetOffset)]
 indexDB w POS_N = w^.indexNounDB
 indexDB w POS_V = w^.indexVerbDB
 indexDB w POS_A = w^.indexAdjDB
@@ -74,10 +79,10 @@ dataDB w POS_V = w^.dataVerbDB
 dataDB w POS_A = w^.dataAdjDB
 dataDB w POS_R = w^.dataAdvDB
 
-
--- senseDB :: WordNetDB -> HashMap (Text,Int) Int
--- senseDB w = w^.senseIdxDB
-
+{- 
+senseDB :: WordNetDB -> HashMap (Text,Int) Int
+senseDB w = w^.senseIdxDB
+-}
 
 parseFile :: (Text -> Maybe a) -> FilePath -> IO [Maybe a]
 parseFile p fp = do
@@ -86,13 +91,59 @@ parseFile p fp = do
   return $ map p lst
 
 
-lookupLemma :: WordNetDB -> POS -> Text -> [([LexItem],Text)]
+lookupLemma :: WordNetDB -> POS -> Text -> [(SenseNumber,[LexItem],Text)]
 lookupLemma w p t = do
-   n <- join . maybeToList $ HM.lookup t (indexDB w p)
-   maybeToList (lookupConcept w p n)
+  (snum,soff) <- join . maybeToList $ HM.lookup t (indexDB w p)
+  (ls,desc) <- maybeToList (lookupSynset w p soff)
+  return (snum,ls,desc)
+   
+   -- maybeToList (lookupSynset w p n)
 
-lookupConcept :: WordNetDB -> POS -> Int -> Maybe ([LexItem],Text)
-lookupConcept w p n = IM.lookup n (dataDB w p)
 
--- lookupSense :: WordNetDB -> Text -> Int -> Maybe Int
--- lookupSense w t i = HM.lookup (t,i) (w^.senseIdxDB)
+lookupSynset :: WordNetDB -> POS -> SynsetOffset -> Maybe ([LexItem],Text)
+lookupSynset w p (SynsetOffset n) = IM.lookup n (dataDB w p)
+
+
+{- 
+lookupSense :: WordNetDB -> Text -> Int -> Maybe Int
+lookupSense w t i = HM.lookup (t,i) (w^.senseIdxDB)
+-}
+
+loadDB :: FilePath -> IO WordNetDB
+loadDB fp = do
+  is <- (,,,) <$> (catMaybes <$> parseFile parseIndex (fp </> "index.noun"))
+              <*> (catMaybes <$> parseFile parseIndex (fp </> "index.verb"))
+              <*> (catMaybes <$> parseFile parseIndex (fp </> "index.adj"))
+              <*> (catMaybes <$> parseFile parseIndex (fp </> "index.adv"))
+  ds <- (,,,) <$> (catMaybes <$> parseFile (parseData False) (fp </> "data.noun"))
+              <*> (catMaybes <$> parseFile (parseData True ) (fp </> "data.verb"))
+              <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adj"))
+              <*> (catMaybes <$> parseFile (parseData False) (fp </> "data.adv"))
+  -- ss <- (catMaybes <$> parseFile parseSense (fp </> "index.sense"))
+  return (createWordNetDB is ds {- ss -})
+
+
+runSingleQuery :: String -> POS -> WordNetDB -> IO ()
+runSingleQuery input typ db = do
+  case decimal (T.pack input) of
+    Left _str    -> queryLemma (T.pack input) typ db
+    Right (n,_)  -> querySynset n typ db
+
+
+queryLemma :: Text -> POS -> WordNetDB -> IO ()
+queryLemma input typ db = do
+  case typ of
+    POS_N -> putStrLn "-- Noun --"      >> (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_N input)
+    POS_V -> putStrLn "-- Verb --"      >> (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_V input)
+    POS_A -> putStrLn "-- Adjective --" >> (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_A input)
+    POS_R -> putStrLn "-- Adverb --"    >> (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_R input)
+
+
+querySynset :: SynsetOffset -> POS -> WordNetDB -> IO ()
+querySynset n typ db = do
+  case typ of
+    POS_N -> putStrLn "-- Noun --"      >> (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_N n)
+    POS_V -> putStrLn "-- Verb --"      >> (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_V n)
+    POS_A -> putStrLn "-- Adjective --" >> (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_A n)
+    POS_R -> putStrLn "-- Adverb --"    >> (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_R n)
+

@@ -15,6 +15,7 @@ import           Data.Maybe                      (fromMaybe)
 import           Data.Monoid
 import           Data.Text                       (Text)
 import qualified Data.Text                  as T
+import           Numeric                         (showHex)
 --
 import           WordNet.Type.Lexicographer
 import           WordNet.Type.POS
@@ -103,12 +104,12 @@ p_word_lexid = do
   return (ws,md)
 -}
 
-p_word_lexid_marker :: Parser ([Text],Maybe Int,Maybe Marker)
+p_word_lexid_marker :: Parser ([Text],Maybe LexID,Maybe Marker)
 p_word_lexid_marker = do
   ws <- do ws' <- many (p_nonlasttoken <* char '_')
            w <- p_token
            return (ws'++[w])
-  md :: Maybe Int <- optional (read <$> many1 digit)
+  md <- fmap (LexID . head . flip showHex "") <$> optional (read <$> many1 digit)
   mk <- optional ( (string "(p)"  >> return Marker_P) <|>
                    (string "(a)"  >> return Marker_A) <|>
                    (string "(ip)" >> return Marker_IP)
