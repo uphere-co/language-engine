@@ -45,6 +45,7 @@ import           CoreNLP.Simple.Type
 import           CoreNLP.Simple.Type.Simplified
 import           CoreNLP.Simple.Util
 import           FrameNet.Query.Frame
+import           FrameNet.Type.Common
 import           FrameNet.Type.Frame hiding (LexUnit)
 import           NLP.Type.PennTreebankII
 import           SRL.Feature
@@ -63,7 +64,7 @@ import           OntoNotes.Mapping.FrameNet
 --
 import           Common.Load
 
-
+{- 
 senseInstStatistics :: FilePath -> IO (HashMap (Text,Text) Int)
 senseInstStatistics basedir = do
   dtr <- build basedir
@@ -85,7 +86,7 @@ senseInstStatistics basedir = do
       acc = foldl' (\(!acc) k -> HM.insertWith (+) k 1 acc) HM.empty ks
   -- mapM_ (putStrLn.formatStat) . sortBy (flip compare `on` snd) . HM.toList $ acc
   return acc
-
+-}
 
 convertToken_charIndex :: TK.Token -> Maybe Token
 convertToken_charIndex t = do
