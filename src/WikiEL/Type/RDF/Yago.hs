@@ -10,6 +10,7 @@ data YagoObject = YagoID        Text
                 | YagoRDFSprop  Text
                 | YagoSKOSverb  Text
                 | YagoVerb      Text
+                | YagoNoun      Text
                 | YagoWordnet   Text
                 | YagoWikicat   Text
                 | YagoClass     Text
@@ -19,6 +20,7 @@ data YagoObject = YagoID        Text
                 | YagoNonEnWikiAlias Text Text -- lang alias
                 | YagoTypedValue Text Text     -- type value
                 | YagoTextValue Text
+                | YagoURL       Text
                 deriving (Eq, Show)
 
 type YagoRdfTriple = (YagoObject, YagoObject, YagoObject, YagoObject)
