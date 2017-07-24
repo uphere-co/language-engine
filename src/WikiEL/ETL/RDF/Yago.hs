@@ -47,10 +47,11 @@ parserYAGOwikiTitle = do
 parserYAGOnonEnwikiTitle :: Parser YagoObject
 parserYAGOnonEnwikiTitle = parserObject2 "<" "/" ">" YagoNonEnWikiTitle
 
-parserYAGOtypedValue :: Parser YagoObject
+parserYAGOtypedValue, parserYAGOtextValue :: Parser YagoObject
 parserYAGOtypedValue = parserTypedValue f
   where
     f text typeTag = YagoTypedValue typeTag text
+parserYAGOtextValue = parserObject "\"" "\""    YagoTextValue
 
 
 parserNounToken, parserVerbToken, parserUIDToken :: Parser YagoObject
@@ -61,7 +62,9 @@ parserNounToken = choice [ parserYAGOwordnet
                          , parserYAGOwikiAlias
                          , parserYAGOwikiTitle
                          , parserYAGOnonEnWikiAlias
-                         , parserYAGOnonEnwikiTitle]
+                         , parserYAGOnonEnwikiTitle
+                         , parserYAGOtypedValue
+                         , parserYAGOtextValue]
 parserVerbToken = choice [ parserRDFverb
                          , parserRDFSprop
                          , parserSKOSverb

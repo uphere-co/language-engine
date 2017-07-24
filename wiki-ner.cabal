@@ -24,12 +24,10 @@ library
                      , WikiEL.Type.Wikidata
                      , WikiEL.Type.Wikipedia
                      , WikiEL.Type.WordNet
-                     , WikiEL.Type.RDF.Wikidata
-                     , WikiEL.Type.RDF.Yago
-                     , WikiEL.ETL.RDF.Wikidata
-                     , WikiEL.ETL.RDF.Yago
                      , WikiEL.ETL.LoadData
                      , WikiEL.ETL.Parser
+                     , WikiEL.ETL.RDF
+                     , WikiEL.ETL.Util
                      , WikiEL.EntityLinking
                      , WikiEL.Misc
                      , WikiEL.WikiEntityTagger
@@ -39,6 +37,10 @@ library
                      , WikiEL.WikiEntityClass
                      , WikiEL.Convert
   other-modules:       WikiEL.ETL.RDF.Common
+                     , WikiEL.ETL.RDF.Wikidata
+                     , WikiEL.ETL.RDF.Yago
+                     , WikiEL.Type.RDF.Wikidata
+                     , WikiEL.Type.RDF.Yago
                      , WikiEL.BinarySearch
   other-extensions:    OverloadedStrings
                      , GeneralizedNewtypeDeriving
@@ -70,7 +72,6 @@ test-suite test
                      , Test.NamedEntityTagger
                      , Test.WikiEntityTagger
                      , Test.CoreNLPEntity
-                     , WikiEL.BinarySearch
   main-is: testAll.hs
   build-depends:       base
                      , tasty-hunit

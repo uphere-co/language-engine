@@ -6,7 +6,6 @@ nix-shell shell.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 20
 
 
 # Setup Cabal sandbox
-cabal sandbox delete
 cabal sandbox init
 cabal install --only-dependencies
 
@@ -25,6 +24,9 @@ cabal repl test --builddir=../dists/wiki-ner
 # Clean up
 cabal clean
 cabal sandbox delete
+
+# Run test app in interactive mode.
+cat yago/sample | runhaskell -i./src/ test/testApp.hs 
 ```
 
 ### Using nix-build
