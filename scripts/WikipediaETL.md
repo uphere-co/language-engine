@@ -205,10 +205,27 @@ real	15m55.255s
 ```
 
 ## YAGO and Wikidata
+#### Get WordNet synset per entity
 ```
 # run with `wikicatOfWordNetT`:
-$ time cat yago/yagoTaxonomy.tsv | runhaskell -i./src/ test/testApp.hs > typedCats 
+$ time cat yago/yagoTaxonomy.tsv | runhaskell -i./src/ test/testApp.hs > yago/typedCats 
 real	0m54.654s
-$ time join -1 2 -2 1 -t$'\t' <(sort -k2,2 -t$'\t' enwiki/page_id.category.wikidata.sorted) <(sort -k1,1 -t$'\t' typedCats) > enwiki/page_id.category.wikidata.wordnet.sorted
+$ time join -1 2 -2 1 -t$'\t' <(sort -k2,2 -t$'\t' enwiki/page_id.category.wikidata.sorted) <(sort -k1,1 -t$'\t' yago/typedCats) > enwiki/page_id.category.wikidata.wordnet.sorted
 real	1m5.242s
+```
+
+#### Get names per entity
+```
+$ time cat page_id.category.wikidata.wordnet.sorted | awk -F '\t' '{print $4}' | sort | uniq > entities.wikidata
+$ time cat page_id.category.wikidata.wordnet.sorted | awk -F '\t' '{print $3}' | sort | uniq > entities.wiki
+real	0m52.277s
+
+$ time cat redirects | grep -Fwf entities.wiki > entities.wiki_alias
+real	0m31.076s
+$ time join -1 2 -2 2 -t$'\t' <(sort -k2,2 -t$'\t' entities.wiki_alias)  <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) | sed 's/_/ /g' | awk -F '\t' '{print $5 "\t" $3}' > names.wiki_alias
+real	0m14.269s
+$ time cat ../wikidata/wikidata.all_entities | grep -Fwf entities.wikidata > names.wikidata_alias
+real	0m6.339s
+$ time cat names.* | sort | uniq > names
+real	0m27.200s
 ```
