@@ -154,7 +154,7 @@ join -1 2 -2 1 -t$'\t' <(sort -t$'\t' -k2,2 jel.page) page_id.wiki_id.txt.sorted
 ```
 
 #### ETL to get Wikidata - WordNet mapping 
-Download `wordnet_links.ttl.gz` from [here](wiki.dbpedia.org/services-resources/datasets/dbpedia-datasets).
+Download `wordnet_links.ttl.gz` from [here](http://wiki.dbpedia.org/services-resources/datasets/dbpedia-datasets).
 ```
 tail +2 dbpedia/wordnet_links.ttl | sed 's/> / /g' | awk '/^#/ {next} {print $1 "\t" $3}' | sed 's/<http:\/\/dbpedia.org\/resource\///g' | sed 's/<http:\/\/www.w3.org\/2006\/03\/wn\/wn20\/instances\///g'  > wordnet_links.tsv
 join -1 2 -2 1 -t$'\t' <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) <(sort -k1,1 -t$'\t' wordnet_links.tsv) > page_id.wiki_id.wordnet.tsv
@@ -202,4 +202,13 @@ $ time lbzcat yago3_entire_tsv.bz2 | grep -v '<[a-z][a-z]/' | lbzip2 --fast > ya
 real	15m55.255s
 -rw-r--r-- 1 jihuni uphere 11445536941 Jul  5 07:10 yago3_entire.en.tsv.bz2
 -rw-r--r-- 1 jihuni uphere 13613624731 Jul  5 01:51 yago3_entire_tsv.bz2
+```
+
+## YAGO and Wikidata
+```
+# run with `wikicatOfWordNetT`:
+$ time cat yago/yagoTaxonomy.tsv | runhaskell -i./src/ test/testApp.hs > typedCats 
+real	0m54.654s
+$ time join -1 2 -2 1 -t$'\t' <(sort -k2,2 -t$'\t' enwiki/page_id.category.wikidata.sorted) <(sort -k1,1 -t$'\t' typedCats) > enwiki/page_id.category.wikidata.wordnet.sorted
+real	1m5.242s
 ```
