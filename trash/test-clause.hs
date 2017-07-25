@@ -30,16 +30,18 @@ import           CoreNLP.Simple.Type
 import           CoreNLP.Simple.Util
 --
 import           NLP.Printer.PennTreebankII
+import           NLP.Syntax.Clause
+import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
 import           Data.BitreeZipper
 import           Text.Format.Tree
 --
-import           SRL.Feature
-import           SRL.Feature.Clause
-import           SRL.Feature.Dependency
-import           SRL.Feature.Verb
-import           SRL.Format
-import           SRL.Type
+-- import           SRL.Feature
+-- import           SRL.Feature.Clause
+-- import           SRL.Feature.Dependency
+-- import           SRL.Feature.Verb
+-- import           SRL.Format
+-- import           SRL.Type
 
 
 

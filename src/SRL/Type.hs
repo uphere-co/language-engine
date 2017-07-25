@@ -16,7 +16,8 @@ import           NLP.Type.UniversalDependencies2.Syntax
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
 --
-import           SRL.Type.Verb
+import           NLP.Syntax.Type
+-- import           SRL.Type.Verb
 
 
 data Position = Before | After | Embed

@@ -1,10 +1,11 @@
 { pkgs ? import <nixpkgs> {}
 , uphere-nix-overlay ? <uphere-nix-overlay>
-, HCoreNLP ? <HCoreNLP>
-, nlp-types ? <nlp-types>
-, PropBank ? <PropBank>
-, wiki-ner ? <wiki-ner>
-, textview ? <textview>
+, HCoreNLP           ? <HCoreNLP>
+, nlp-types          ? <nlp-types>
+, PropBank           ? <PropBank>
+, syntactic-analysis ? <syntactic-analysis>
+, wiki-ner           ? <wiki-ner>
+, textview           ? <textview>
 }:
 
 
@@ -44,6 +45,7 @@ let
       "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
       "wiki-ner" = self.callPackage (import wiki-ner) {};
       "fastText" = self.callPackage fastTextNix { inherit fasttext; };
+      "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
       "textview" = self.callPackage (import textview) {};
     };  
   newHaskellPackages = haskellPackages.override {
@@ -78,8 +80,9 @@ let
             p.PropBank
             p.HCoreNLP
             p.HCoreNLP-Proto
+            p.syntactic-analysis
+            p.textview            
             p.wiki-ner
-            p.textview
             fastText
           ]);
 

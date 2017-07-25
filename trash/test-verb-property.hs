@@ -17,9 +17,6 @@ import           CoreNLP.Simple.Type.Simplified
 import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
 --
-import           SRL.Feature.Verb
-import           SRL.Type.Verb
---
 import           Test.Tasty.HUnit
 import           Test.Tasty
 
