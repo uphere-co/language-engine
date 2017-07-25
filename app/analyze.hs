@@ -85,12 +85,12 @@ data Config = Config { _cfg_sense_inventory_file :: FilePath
 
 makeLenses ''Config
               
-cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
+cfg = Config { _cfg_sense_inventory_file = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
              -- , _cfg_semlink_file = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
-             , _cfg_statistics = "run/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
-             , _cfg_wsj_directory = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-             , _cfg_framenet_lubin = "/home/wavewave/repo/srcp/HFrameNet/run/FrameNet_ListOfLexUnit.bin"
-             , _cfg_framenet_framedir = "/scratch/wavewave/FrameNet/1.7/fndata/fndata-1.7/frame"
+             , _cfg_statistics = "/data/groups/uphere/data/NLP/run/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
+             , _cfg_wsj_directory = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
+             , _cfg_framenet_lubin = "/data/groups/uphere/data/NLP/run/FrameNet_ListOfLexUnit.bin"
+             , _cfg_framenet_framedir = "/data/groups/uphere/data/NLP/FrameNet/1.7/fndata/fndata-1.7/frame"
              }
   
 

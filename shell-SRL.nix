@@ -11,6 +11,7 @@
 , semantic-role-labeler ? <semantic-role-labeler>
 , wiki-ner           ? <wiki-ner>
 , textview           ? <textview>
+, uphere-opaleye     ? <uphere-opaleye>
 }:
 
 let newpkgs = import pkgs.path {
@@ -47,6 +48,7 @@ let
       "nlp-types" = self.callPackage (import nlp-types) {};
       "textview" = self.callPackage (import textview) {};
       "newsapi" = self.callPackage (import (fetchfin + "/newsapi")) {};
+      "newsapi-db" = self.callPackage (import (fetchfin + "/newsapi/db")) {};
       "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
       "HFrameNet" = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HFrameNet)) {};      
@@ -56,7 +58,8 @@ let
       "semantic-role-labeler" = self.callPackage (import semantic-role-labeler) {};
       "wiki-ner" = self.callPackage (import wiki-ner) {};
       "fastText" = self.callPackage fastTextNix { inherit fasttext; };
-  };
+      "uphere-opaleye" = self.callPackage (import uphere-opaleye) {}; 
+    };
   ukb = import (uphere-nix-overlay + "/nix/cpp-modules/ukb.nix") { inherit stdenv fetchgit fetchurl boost; };
   config3 = import (HUKB + "/HUKB-driver/config.nix") { pkgs = newpkgs; inherit uphere-nix-overlay ukb; };
   config4 =
