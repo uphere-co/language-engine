@@ -3,6 +3,7 @@
 module WikiEL.ETL.RDF.Wikidata where
 
 import           Data.Text                  (Text)
+import           Data.Tuple                 (snd)
 import           Data.List                  (foldl')
 import           Data.Either                (Either)
 import           Data.Attoparsec.Text
@@ -122,6 +123,4 @@ flattenStatementStream prevState rs = (lastState, reverse triples)
         (state', t) = fillMissingSV state relation
 
 flattenStatement :: [Either String (TurtleRelation,TurtleState)] -> [Either String TurtleRelation]
-flattenStatement rs = ts
-  where
-    (_, ts) = flattenStatementStream initState rs
+flattenStatement  = snd . flattenStatementStream initState

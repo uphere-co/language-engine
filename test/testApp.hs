@@ -21,31 +21,34 @@ isWordNet (Right (_,ts,tv,to@(YagoWordnet _))) = True
 isWordNet _ = False
 
 
-f :: Text -> IO ()
-f block = do
+yago :: Text -> Text -> IO Text
+yago prevPartialBlock block = do
   let
-    lines = T.lines block
+    (mainBlock,partialBlock) = T.breakOnEnd "\n" block
+    lines = T.lines (T.append prevPartialBlock mainBlock)
     aliases = map (hasWikiAlias.readlineYAGO) lines
-    synsets = filter (isWordNet.readlineYAGO)    lines
+    synsets = filter (isWordNet.readlineYAGO) lines
   --mapM_ print (rights aliases)
   mapM_ T.IO.putStrLn synsets
+  return partialBlock
 
 
-g :: ParsingState -> Text -> IO ParsingState
-g prevState block = do
+wikidata :: (ParsingState,Text) -> Text -> IO (ParsingState,Text)
+wikidata (prevState, prevPartialBlock) block = do
   let
-    lines = T.lines block
+    (mainBlock,partialBlock) = T.breakOnEnd "\n" block
+    lines = T.lines (T.append prevPartialBlock mainBlock)
     rs    = map readlineWikidata lines
     (state,ts)    = flattenStatementStream prevState rs
   --mapM_ print rs
   mapM_ print ts
-  return state
+  return (state,partialBlock)
   --mapM_ T.IO.putStrLn rs
   
 
 
-main1 = readBlocks stdin f
-main2 = readBlocks2 stdin g initState
+main1 = readBlocks stdin yago ""
+main2 = readBlocks stdin wikidata (initState, "")
 
 main :: IO ()
-main = main2
+main = main1
