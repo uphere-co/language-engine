@@ -35,6 +35,7 @@ in stdenv.mkDerivation {
   buildInputs = [ 
                   hsenv 
                   p7zip
+                  lbzip2
                 ];
   shellHook = ''
      PS1="\n\[\033[0;35m\][\u@\h.devel:\w]\$\[\033[0m\] "

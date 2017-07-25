@@ -4,6 +4,9 @@ module WikiEL.ETL.RDF
   , readlineYAGO
   , readlineWikidata
   , WikiEL.ETL.RDF.Wikidata.flattenStatement
+  , WikiEL.ETL.RDF.Wikidata.flattenStatementStream
+  , WikiEL.ETL.RDF.Wikidata.initState
+  , WikiEL.ETL.RDF.Wikidata.ParsingState
   ) where
 
 import           Data.Attoparsec.Text                  (parseOnly)

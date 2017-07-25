@@ -165,6 +165,13 @@ relO       o = RelationO   (wo o)
 
 rightSVO s v o = Right (relSVO s v o)
 
+testWikidataObject :: TestTree
+testWikidataObject = testCaseSteps "Wikidata objects in RDF dumps." $ \step -> do
+  eassertEqual (toWikidataObject "\"be\"@en")    (Alias "be")
+  eassertEqual (toWikidataObject "\"be\"@en-gb") (NonEnAlias "en-gb" "be")
+  eassertEqual (toWikidataObject "\"Maps of Scotland\"") (TextValue "Maps of Scotland")
+  eassertEqual (toWikidataObject "wd:Q1") (NameSpaceObject "wd" "Q1")
+  
 testWikidataTurtleRelation :: TestTree
 testWikidataTurtleRelation = testCaseSteps "Test case for parsing individual lines of Turtle format files" $ \step -> do
   eassertEqual (Left "Blank line.")        (splitTripleWithState "\n")
@@ -238,6 +245,7 @@ wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement,
                 "Staat an Europa"@lb ;
         skos:altLabel "Kingdom of Belgium"@en,
                 "be"@en,
+                "be"@en-gb,
                 "Королівство Бельгія"@uk ;
         wdt:P1464 wd:Q7463296 ;
         wdt:P1036 "2--493" ;
@@ -268,6 +276,7 @@ wds:Q2309-93C0587E-8BCE-4C97-835A-CF249E10C672 a wikibase:Statement,
                 , rightSVO "wd:Q31" "schema:description" "\"Staat an Europa\"@lb"
                 , rightSVO "wd:Q31" "skos:altLabel" "\"Kingdom of Belgium\"@en"
                 , rightSVO "wd:Q31" "skos:altLabel" "\"be\"@en"
+                , rightSVO "wd:Q31" "skos:altLabel" "\"be\"@en-gb"
                 , rightSVO "wd:Q31" "skos:altLabel" "\"Королівство Бельгія\"@uk"
                 , rightSVO "wd:Q31" "wdt:P1464" "wd:Q7463296"
                 , rightSVO "wd:Q31" "wdt:P1036" "\"2--493\""
@@ -299,6 +308,7 @@ allWikidataTest =
   testGroup
     "All Wikidata Unit tests"
     [ testWikidataTurtleRelation
+    , testWikidataObject
     , testWikidataTurtleFillMissingSVO
     , testWikidataRDFdumpTTL
     ]

@@ -2,6 +2,7 @@
 
 module WikiEL.ETL.Util 
   ( readBlocks
+  , readBlocks2
   ) where
 
 import           Data.Text                             (Text)
@@ -22,3 +23,16 @@ readBlocksImpl handle fBlock prevPartialBlock = do
 
 readBlocks :: Handle -> (Text -> IO ()) -> IO ()
 readBlocks stdin f = readBlocksImpl stdin f ""
+
+readBlocksImpl2 :: Handle -> (a -> Text -> IO a) -> a -> Text -> IO ()
+readBlocksImpl2 handle fBlock prevState prevPartialBlock = do
+  chunk <- T.IO.hGetChunk handle
+  case chunk of
+      "" -> return ()
+      _  -> do
+              let (block,partialBlock) = T.breakOnEnd "\n" chunk
+              state <- fBlock prevState (T.append prevPartialBlock block)
+              readBlocksImpl2 handle fBlock state partialBlock
+
+readBlocks2 :: Handle -> (a -> Text -> IO a) -> a -> IO ()
+readBlocks2 stdin f state = readBlocksImpl2 stdin f state ""
