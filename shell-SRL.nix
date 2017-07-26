@@ -9,6 +9,7 @@
 , predicate-matrix   ? <predicate-matrix>
 , PropBank           ? <PropBank>
 , semantic-role-labeler ? <semantic-role-labeler>
+, syntactic-analysis ? <syntactic-analysis>
 , VerbNet            ? <VerbNet>
 , wiki-ner           ? <wiki-ner>
 , textview           ? <textview>
@@ -55,6 +56,7 @@ let
       "predicate-matrix" = self.callPackage (import predicate-matrix) {};
       "PropBank" = self.callPackage (import PropBank) {};
       "semantic-role-labeler" = self.callPackage (import semantic-role-labeler) {};
+      "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
       "wiki-ner" = self.callPackage (import wiki-ner) {};
       "fastText" = self.callPackage fastTextNix { inherit fasttext; };
       "VerbNet" = self.callPackage (import VerbNet) {};

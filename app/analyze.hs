@@ -47,12 +47,12 @@ import           CoreNLP.Simple.Util
 import           FrameNet.Query.Frame
 import           FrameNet.Type.Common
 import           FrameNet.Type.Frame hiding (LexUnit)
+import           NLP.Syntax.Clause
+import           NLP.Syntax.Type
+import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
 import           SRL.Feature
-import           SRL.Feature.Clause
 import           SRL.Feature.Dependency
-import           SRL.Feature.Verb
-import           SRL.Type.Verb
 import           Type
 import           Util.Doc
 import           View
@@ -85,9 +85,9 @@ type SentItem = (SentIdx,BeginEnd,Text)
 
 
 getSentenceOffsets :: D.Document -> [(SentIdx,BeginEnd)]
-getSentenceOffsets doc = 
+getSentenceOffsets doc =
   let sents = toListOf (D.sentence . traverse) doc
-  in zip ([1..] :: [Int]) $ flip map sents $ \s -> 
+  in zip ([1..] :: [Int]) $ flip map sents $ \s ->
        let b = fromJust $ fromJust $ firstOf (S.token . traverse . TK.beginChar) s
            e = fromJust $ fromJust $ lastOf  (S.token . traverse . TK.endChar) s
        in (fromIntegral b+1,fromIntegral e)
@@ -99,7 +99,7 @@ addText txt (n,(b,e)) = (n,(b,e),slice (b-1) e txt)
 
 addTag :: [TagPos a] -> SentItem -> (SentItem,[TagPos a])
 addTag lst i@(_,(b,e),_) = (i,filter check lst)
-  where check (b',e',_) = b' >= b && e' <= e 
+  where check (b',e',_) = b' >= b && e' <= e
 
 
 addSUTime :: [SentItem] -> T.ListTimex
@@ -123,8 +123,8 @@ underlineText (b0,_e0) txt lst = do
 
 
 formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
-formatTimex (s,a) = do 
-  -- T.IO.putStrLn $ "Sentence " <> T.pack (show (s^._1)) 
+formatTimex (s,a) = do
+  -- T.IO.putStrLn $ "Sentence " <> T.pack (show (s^._1))
   underlineText (s^._2) (s^._3) a
   T.IO.putStrLn "----------"
   print a
@@ -139,7 +139,7 @@ runParser pp txt = do
     Left err -> return Nothing
     Right rsutime -> do
       let sentidxs = getSentenceOffsets pdoc
-          sents = map (addText txt) sentidxs 
+          sents = map (addText txt) sentidxs
           sentswithtmx = addSUTime sents rsutime
       -- mapM_ formatResult sentswithtmx
       return (Just sentswithtmx)
@@ -183,7 +183,7 @@ formatSenses lma sensemap sensestat framedb ontomap = do
                txt_frame
                txt_fecore
                txt_feperi
-  return txt1 
+  return txt1
 
 
 sentStructure pp sensemap sensestat framedb ontomap txt = do
@@ -194,12 +194,12 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
     Nothing -> putStrLn "Time annotation not successful!"
     Just sentswithtmx -> mapM_ formatTimex sentswithtmx
   putStrLn "-------------------------------------------------------------------------------------------------"
-  
+
   flip mapM_ (zip4 psents sents mptrs deps) $ \(psent,sent,mptr,dep) -> do
     flip mapM_ mptr $ \ptr -> do
       let tkns = zip [0..] (getTKTokens psent)
           tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
-      
+
       let itr = mkAnnotatable (mkPennTreeIdx ptr)
           lmap= mkLemmaMap psent
           iltr = lemmatize lmap itr
@@ -212,7 +212,7 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
       putStrLn "--------------------------------------------------------------------------------------------------"
       let lmaposs = concatMap (filter (\t -> isVerb (t^.token_pos))) $ tokss
           lmas = map (^.token_lemma) lmaposs
-      -- mapM_ (putStrLn . formatLemmaPOS) lmaposs 
+      -- mapM_ (putStrLn . formatLemmaPOS) lmaposs
       -- mapM_ (T.IO.putStrLn . formatBitree (^._2.to (showVerb tkmap))) vtree
       -- putStrLn "---------------------------------------------------------------"
       showClauseStructure lmap ptr
@@ -221,12 +221,12 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
       putStrLn "================================================================================================="
 
 
-      
+
       forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
         putStrLn (printf "Verb: %-20s" lma)
         mapM_ putStrLn (formatSenses lma sensemap sensestat framedb ontomap)
-        putStrLn "--------------------------------------------------------------------------------------------------"  
-             
+        putStrLn "--------------------------------------------------------------------------------------------------"
+
 
 
 
@@ -238,16 +238,16 @@ queryProcess pp sensemap sensestat framedb ontomap = do
     let input = T.pack input'
     sentStructure pp sensemap sensestat framedb ontomap input
     putStrLn "=================================================================================================\n\n\n\n"
-        
 
-{- 
+
+{-
 main = do
   -- ludb <- loadFrameNet (cfg^.cfg_framenet_file)
-  
+
   let xs = do (w,lst) <- mapFromONtoFN
               (m,t) <- lst
               let mfr = HM.lookup t (fdb^.frameDB)
-              guard (isNothing mfr) 
+              guard (isNothing mfr)
               return (w,m,t)
   -- mapM_ print . filter (\(_,_,t) -> isJust (T.find (\c -> c == ' ' || c == '(') t)) $  xs
 
@@ -260,7 +260,7 @@ main = do
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
 
   let ontomap = HM.fromList mapFromONtoFN
-    
+
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   -- semlink <- loadSemLink (cfg^.cfg_semlink_file)
   -- let semlinkmap = createVNFNDB semlink
@@ -269,7 +269,7 @@ main = do
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
 
   ws <- loadStatistics (cfg^.cfg_statistics)
-  
+
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
     pp <- prepare (def & (tokenizer .~ True)
@@ -282,5 +282,4 @@ main = do
 
     -- mapM_ (sentStructure pp . (^._3) ) ordered
     -- sentStructure pp txt
-    queryProcess pp sensemap sensestat framedb ontomap 
-
+    queryProcess pp sensemap sensestat framedb ontomap
