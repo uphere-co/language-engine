@@ -3,42 +3,42 @@
 module WikiEL.ETL.RDF.Wikidata where
 
 import           Data.Text                  (Text)
+import           Data.Tuple                 (snd)
 import           Data.List                  (foldl')
+import           Data.Either                (Either)
+import           Data.Attoparsec.Text
 import qualified Data.Text                     as T
 import qualified Data.Char                     as C
-import           Data.Attoparsec.Text
 
 import           WikiEL.ETL.RDF.Common      (parserObject,parserObject2,parserTypedValue)
 import           WikiEL.Type.RDF.Wikidata
 
 
-parserWikiAlias, parserNonEnWikiAlias, parserWikiTypedValue :: Parser WikidataObject
-parserWikiAlias = parserObject "\"" "\"@en" Alias
-
-parserNonEnWikiAlias = parserObject2 "\"" "\"@" "" f
+parserWikiAlias,parserWikiTypedValue,parserWikiTextValue,parserURLObject :: Parser WikidataObject
+parserWikiAlias = parserObject2 "\"" "\"@" "" f
   where 
-    f alias country = NonEnAlias country alias
+    f alias country | country == "en" = Alias alias
+    f alias country                   = NonEnAlias country alias
 
 parserWikiTypedValue = parserTypedValue f
   where
     f text typeTag = TypedValue typeTag text
-
+parserWikiTextValue = parserObject "\"" "\"" TextValue
 parserURLObject = parserObject "<" ">" URLObject
 
 parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
 parserWikiNamedSpaceObject = do
-  t <- takeWhile1 (\x -> (x/=':') || (not . C.isSpace) x)
+  t <- takeWhile1 (\x -> (x/=':') && (not . C.isSpace) x)
   char ':'
   n <- takeWhile1 (not . C.isSpace)
   return (NameSpaceObject t n)
 
 parserWikiUnknownObject = parserObject "" "" UnknownObject
 
-
 wikidataObject :: Parser WikidataObject
 wikidataObject = choice [ parserWikiAlias
-                        , parserNonEnWikiAlias
                         , parserWikiTypedValue
+                        , parserWikiTextValue
                         , parserURLObject
                         , parserWikiNamedSpaceObject
                         , parserWikiUnknownObject
@@ -97,18 +97,30 @@ parseRDFline parser (Right (line, state)) =
     (Right rel) -> Right (rel, state)
     (Left msg)  -> Left msg
 
-fillMissingSV :: (TurtleState, WikidataObject, WikidataObject) -> (TurtleRelation,TurtleState) -> ((TurtleState, WikidataObject, WikidataObject), TurtleRelation)
-fillMissingSV (End, _,_)   (RelationSVO s' v' o', state') = ((state', s',v'), RelationSVO s' v' o')
-fillMissingSV (Semicolon, s,v) (RelationVO v' o', state') = ((state', s, v'), RelationSVO s v' o')
-fillMissingSV (Comma, s,v)     (RelationO  o',    state') = ((state', s, v),  RelationSVO s v o')
-fillMissingSV (_, _, _) _ = error "Wrong formats"
 
-flattenStatement :: [(TurtleRelation,TurtleState)] -> [TurtleRelation]
-flattenStatement rs = reverse triples
+fromRight :: Either a b -> b
+fromRight (Right x) = x
+fromRight (Left _)  = error "Got something Left."
+
+type ParsingState = (TurtleState, WikidataObject, WikidataObject)
+initState :: ParsingState
+initState = (End, dummy,dummy)
+  where dummy = fromRight (parseOnly wikidataObject "_DUMMY_")
+
+fillMissingSV :: ParsingState -> (TurtleRelation,TurtleState) -> (ParsingState, Either String TurtleRelation)
+fillMissingSV (End, _,_)   (RelationSVO s' v' o', state') = ((state', s',v'), Right (RelationSVO s' v' o'))
+fillMissingSV (Semicolon, s,v) (RelationVO v' o', state') = ((state', s, v'), Right (RelationSVO s v' o'))
+fillMissingSV (Comma, s,v)     (RelationO  o',    state') = ((state', s, v),  Right (RelationSVO s v o'))
+fillMissingSV x _ = (initState, Left ("Errors in filling missing SVO : " ++ show x))
+
+flattenStatementStream :: ParsingState -> [Either String (TurtleRelation,TurtleState)] -> (ParsingState, [Either String TurtleRelation])
+flattenStatementStream prevState rs = (lastState, reverse triples)
   where
-    Right dummy = parseOnly wikidataObject ""
-    (_, triples) = foldl' f ((End, dummy, dummy), []) rs
-    f (state, triples) relation = (state', t:triples)
+    (lastState, triples) = foldl' f (prevState, []) rs
+    f (state, ts) (Left msg)       = (state, Left msg : ts)
+    f (state, ts) (Right relation) = (state', t:ts)
       where
         (state', t) = fillMissingSV state relation
 
+flattenStatement :: [Either String (TurtleRelation,TurtleState)] -> [Either String TurtleRelation]
+flattenStatement  = snd . flattenStatementStream initState

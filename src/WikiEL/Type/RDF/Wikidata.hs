@@ -7,6 +7,7 @@ import           Data.Text                             (Text)
 data WikidataObject = Alias           Text
                     | NonEnAlias      Text Text -- type alias
                     | TypedValue      Text Text -- type value
+                    | TextValue       Text
                     | NameSpaceObject Text Text -- namespace token
                     | URLObject       Text
                     | UnknownObject   Text
