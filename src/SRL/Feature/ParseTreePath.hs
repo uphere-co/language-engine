@@ -5,9 +5,10 @@ module SRL.Feature.ParseTreePath where
 import           Data.List                      (group)
 --
 import           Data.BitreeZipper
+import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
 --
-import           SRL.Feature.Verb
+-- import           SRL.Feature.Verb
 import           SRL.Type
 --
 

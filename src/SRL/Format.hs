@@ -21,8 +21,8 @@ import           PropBank.Type.Prop
 import           Text.Format.Tree
 --
 import           SRL.Type
-import           SRL.Type.Clause
-import           SRL.Type.Verb
+-- import           SRL.Type.Clause
+-- import           SRL.Type.Verb
 import           SRL.Util
 
 
@@ -30,7 +30,7 @@ import           SRL.Util
 formatRngText :: [Text] -> (Int,Int) -> String
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
-
+{- 
 formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
   where toTree (PN x xs) = Tr.Node x (map toTree xs)
@@ -59,6 +59,7 @@ formatVerbArgs va = printf "%10s %-20s %s"
                     Left  (rng,(S_PP t))    -> "(PP " ++ show t ++ ")" ++ show rng
                     Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
+-}
 
 showVerb :: IntMap Text -> (Lemma ,[Int]) -> Text
 showVerb tkmap (lma,is) = unLemma lma <> " : " <> fullwords

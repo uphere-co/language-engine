@@ -16,6 +16,8 @@ import           Data.List                      (sortBy,zipWith4)
 import           Data.Maybe                     (mapMaybe)
 --
 import           Data.Attribute
+import           NLP.Syntax.Verb
+import           NLP.Syntax.Type
 import           NLP.Type.PennTreebankII
 import           PropBank.Match
 import           PropBank.Type.Match
@@ -23,10 +25,10 @@ import           PropBank.Type.Prop
 --
 import           SRL.Feature.Dependency
 import           SRL.Feature.ParseTreePath
-import           SRL.Feature.Verb
+-- import           SRL.Feature.Verb
 import           SRL.Format
 import           SRL.Type
-import           SRL.Type.Verb
+-- import           SRL.Type.Verb
 import           SRL.Util
 --
 

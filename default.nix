@@ -2,8 +2,10 @@
 , bytestring, containers, data-default, discrimination, either
 , fastText, filepath, foreign-store, HCoreNLP, HCoreNLP-Proto, jni
 , jvm, lens, nlp-types, optparse-applicative, PropBank, split
-, stdenv, tasty, tasty-hunit, text, textview, time, transformers
-, vector
+, stdenv
+, syntactic-analysis
+, text, time, transformers, vector
+, textview
 }:
 mkDerivation {
   pname = "semantic-role-labeler";
@@ -14,13 +16,15 @@ mkDerivation {
   libraryHaskellDepends = [
     attoparsec base bifunctors bindings-svm bytestring containers
     data-default discrimination either fastText filepath foreign-store
-    HCoreNLP HCoreNLP-Proto jni jvm lens nlp-types PropBank split text
-    textview time vector
+    HCoreNLP HCoreNLP-Proto jni jvm lens nlp-types PropBank
+    syntactic-analysis
+    split text time vector textview
   ];
   executableHaskellDepends = [
     attoparsec base bytestring containers data-default either fastText
     filepath foreign-store HCoreNLP HCoreNLP-Proto jni jvm lens
-    nlp-types optparse-applicative PropBank text time transformers
+    nlp-types optparse-applicative PropBank syntactic-analysis
+    text time transformers
     vector
   ];
   testHaskellDepends = [
