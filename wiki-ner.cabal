@@ -33,6 +33,7 @@ library
                      , WikiEL.WikiEntityTagger
                      , WikiEL.NamedEntity
                      , WikiEL.CoreNLP
+                     , WikiEL.WordNet
                      , WikiEL.WikiNamedEntityTagger
                      , WikiEL.WikiEntityClass
                      , WikiEL.Convert

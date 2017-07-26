@@ -26,7 +26,6 @@ import           WikiEL.ETL.LoadData
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
 import qualified NLP.Type.NamedEntity          as N
 import qualified WikiEL.WikiEntityClass        as WC
-
 -- to be moved
 import           Data.Text.Encoding                    (encodeUtf8)
 import           Data.Digest.XXHash                    (XXHash,xxHash')
@@ -39,6 +38,7 @@ import           WikiEL.Type.WordNet
 import           WikiEL.Type.Equity
 import           WikiEL.Type.FileFormat
 import           WikiEL.ETL.Parser
+import           WikiEL.WordNet
 
 import qualified Data.Map                      as M
 import qualified WikiEL.EntityLinking          as EL
@@ -329,9 +329,7 @@ main1 = do
   wordNetMapping <- loadWordNetMapping wordnetMappingFile  
   let
     wn = buildWordNetSynsetLookup wordNetMapping
-    lookupWordNet (Right key) = M.lookup key wn
-    lookupWordNet _ = Nothing
-    synsets = mapMaybe (lookupWordNet . entityUID) linked_mentions
+    synsets = map (lookupWordNet wn . entityUID) linked_mentions
   --mapM_ print wiki_entities
   --{-
   print "Entity-linked named entities"
@@ -343,10 +341,6 @@ main1 = do
   mapM_ print companyWithSymbols
   --print tickerMap
   --}
-
-
-buildWordNetSynsetLookup :: [WordNetMappingRow] -> M.Map ItemID [Synset]
-buildWordNetSynsetLookup mapping = M.fromListWith (++) (map (\x -> (F._itemID x,  [F._synset x])) mapping)
 
 main2 = do
     propertyNames <- loadPropertyNames propertyNameFile
