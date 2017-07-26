@@ -2,7 +2,9 @@
 , bytestring, containers, data-default, discrimination, either
 , fastText, filepath, foreign-store, HCoreNLP, HCoreNLP-Proto, jni
 , jvm, lens, nlp-types, optparse-applicative, PropBank, split
-, stdenv, text, time, transformers, vector
+, stdenv
+, syntactic-analysis
+, text, time, transformers, vector
 , textview
 }:
 mkDerivation {
@@ -14,13 +16,15 @@ mkDerivation {
   libraryHaskellDepends = [
     attoparsec base bifunctors bindings-svm bytestring containers
     data-default discrimination either fastText filepath foreign-store
-    HCoreNLP HCoreNLP-Proto jni jvm lens nlp-types PropBank split text
-    time vector textview
+    HCoreNLP HCoreNLP-Proto jni jvm lens nlp-types PropBank
+    syntactic-analysis
+    split text time vector textview
   ];
   executableHaskellDepends = [
     attoparsec base bytestring containers data-default either fastText
     filepath foreign-store HCoreNLP HCoreNLP-Proto jni jvm lens
-    nlp-types optparse-applicative PropBank text time transformers
+    nlp-types optparse-applicative PropBank syntactic-analysis
+    text time transformers
     vector
   ];
   license = "unknown";
