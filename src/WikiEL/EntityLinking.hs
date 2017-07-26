@@ -11,8 +11,9 @@ import           Data.Text                             (Text)
 import qualified Data.Text                  as T
 
 import           WikiEL.Misc                           (IRange(..),RelativePosition(..),relativePos,isContain,subVector) 
+import           WikiEL.Type.Wikidata                  (ItemID)
 import           NLP.Type.NamedEntity                  (NamedEntity, OrderedNamedEntity)
-import           WikiEL.WikiNamedEntityTagger          (PreNE(..))
+import           WikiEL.WikiNamedEntityTagger          (PreNE(..),resolvedUID)
 import qualified NLP.Type.NamedEntity       as N
 
 mayRefer :: NamedEntity -> NamedEntity -> Bool
@@ -39,6 +40,11 @@ type EntityMention w = UIDCite EntityMentionUID (EMInfo w)
 
 entityName :: EMInfo Text -> Text
 entityName (_, ws, _) = T.intercalate " " (toList ws)
+
+entityUID :: EntityMention w -> Either String ItemID 
+entityUID m = resolvedUID tag
+  where
+    (_,_,tag) = _info m
 
 mentionedEntityName :: EntityMention Text -> Text
 mentionedEntityName em = entityName (_info em)

@@ -13,7 +13,6 @@ import           WikiEL.ETL.RDF
 import           WikiEL.ETL.Util
 
 
-
 hasWikiAlias :: Either a YagoRdfTriple -> Maybe (YagoObject, YagoObject)
 hasWikiAlias (Right (_,ts,tv@(YagoVerb v),to@(YagoWikiAlias _))) | v =="redirectedFrom" = Just (ts, to)
 hasWikiAlias _ = Nothing
@@ -58,5 +57,6 @@ wikidata (prevState, prevPartialBlock) block = do
 main1 = readBlocks stdin yago ""
 main2 = readBlocks stdin wikidata (initState, "")
 
+
 main :: IO ()
-main = main1
+main = main2
