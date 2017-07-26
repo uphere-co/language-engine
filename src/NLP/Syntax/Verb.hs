@@ -144,7 +144,7 @@ isPassive z
 
 
 
-verbProperty :: BitreeZipperICP (Lemma ': as) -> Maybe VerbProperty -- (Tense,Aspect,Voice,[Int])
+verbProperty :: BitreeZipperICP (Lemma ': as) -> Maybe VerbProperty
 verbProperty z = do
   i <- getLeafIndex (current z)
   lma <- ahead . getAnnot <$> getLeaf (current z)
