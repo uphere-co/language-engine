@@ -154,7 +154,7 @@ join -1 2 -2 1 -t$'\t' <(sort -t$'\t' -k2,2 jel.page) page_id.wiki_id.txt.sorted
 ```
 
 #### ETL to get Wikidata - WordNet mapping 
-Download `wordnet_links.ttl.gz` from [here](wiki.dbpedia.org/services-resources/datasets/dbpedia-datasets).
+Download `wordnet_links.ttl.gz` from [here](http://wiki.dbpedia.org/services-resources/datasets/dbpedia-datasets).
 ```
 tail +2 dbpedia/wordnet_links.ttl | sed 's/> / /g' | awk '/^#/ {next} {print $1 "\t" $3}' | sed 's/<http:\/\/dbpedia.org\/resource\///g' | sed 's/<http:\/\/www.w3.org\/2006\/03\/wn\/wn20\/instances\///g'  > wordnet_links.tsv
 join -1 2 -2 1 -t$'\t' <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) <(sort -k1,1 -t$'\t' wordnet_links.tsv) > page_id.wiki_id.wordnet.tsv
@@ -202,4 +202,30 @@ $ time lbzcat yago3_entire_tsv.bz2 | grep -v '<[a-z][a-z]/' | lbzip2 --fast > ya
 real	15m55.255s
 -rw-r--r-- 1 jihuni uphere 11445536941 Jul  5 07:10 yago3_entire.en.tsv.bz2
 -rw-r--r-- 1 jihuni uphere 13613624731 Jul  5 01:51 yago3_entire_tsv.bz2
+```
+
+## YAGO and Wikidata
+#### Get WordNet synset per entity
+```
+# run with `wikicatOfWordNetT`:
+$ time cat yago/yagoTaxonomy.tsv | runhaskell -i./src/ test/testApp.hs > yago/typedCats 
+real	0m54.654s
+$ time join -1 2 -2 1 -t$'\t' <(sort -k2,2 -t$'\t' enwiki/page_id.category.wikidata.sorted) <(sort -k1,1 -t$'\t' yago/typedCats) > enwiki/page_id.category.wikidata.wordnet.sorted
+real	1m5.242s
+```
+
+#### Get names per entity
+```
+$ time cat page_id.category.wikidata.wordnet.sorted | awk -F '\t' '{print $4}' | sort | uniq > entities.wikidata
+$ time cat page_id.category.wikidata.wordnet.sorted | awk -F '\t' '{print $3}' | sort | uniq > entities.wiki
+real	0m52.277s
+
+$ time cat redirects | grep -Fwf entities.wiki > entities.wiki_alias
+real	0m31.076s
+$ time join -1 2 -2 2 -t$'\t' <(sort -k2,2 -t$'\t' entities.wiki_alias)  <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) | sed 's/_/ /g' | awk -F '\t' '{print $5 "\t" $3}' > names.wiki_alias
+real	0m14.269s
+$ time cat ../wikidata/wikidata.all_entities | grep -Fwf entities.wikidata > names.wikidata_alias
+real	0m6.339s
+$ time cat names.* | sort | uniq > names
+real	0m27.200s
 ```

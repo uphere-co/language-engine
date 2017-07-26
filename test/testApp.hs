@@ -3,6 +3,7 @@
 module Test.RDFDumpETL where
 
 import           Data.Text                             (Text)
+import           Data.Maybe                            (mapMaybe)
 import           System.IO                             (stdin,stdout)
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
@@ -13,13 +14,18 @@ import           WikiEL.ETL.Util
 
 
 
-hasWikiAlias (Right (_,ts,tv@(YagoVerb v),to@(YagoWikiAlias _))) | v =="redirectedFrom" = Right (ts, to)
-hasWikiAlias (Right _) = Left "Not English Wikipedia redirects."
-hasWikiAlias (Left msg) = Left msg
+hasWikiAlias :: Either a YagoRdfTriple -> Maybe (YagoObject, YagoObject)
+hasWikiAlias (Right (_,ts,tv@(YagoVerb v),to@(YagoWikiAlias _))) | v =="redirectedFrom" = Just (ts, to)
+hasWikiAlias _ = Nothing
 
+isWordNet :: Either a YagoRdfTriple -> Bool
 isWordNet (Right (_,ts,tv,to@(YagoWordnet _))) = True
 isWordNet _ = False
 
+wikicatOfWordNetT :: Either a YagoRdfTriple -> Maybe Text
+wikicatOfWordNetT (Right (_,ts@(YagoWikicat cat),tv,to@(YagoWordnet synset)) ) = x
+  where x = Just (T.concat [cat, "\t",synset])
+wikicatOfWordNetT _ = Nothing
 
 yago :: Text -> Text -> IO Text
 yago prevPartialBlock block = do
@@ -28,8 +34,10 @@ yago prevPartialBlock block = do
     lines = T.lines (T.append prevPartialBlock mainBlock)
     aliases = map (hasWikiAlias.readlineYAGO) lines
     synsets = filter (isWordNet.readlineYAGO) lines
+    typedCats = mapMaybe (wikicatOfWordNetT.readlineYAGO) lines
   --mapM_ print (rights aliases)
-  mapM_ T.IO.putStrLn synsets
+  --mapM_ T.IO.putStrLn synsets
+  mapM_ T.IO.putStrLn typedCats
   return partialBlock
 
 
