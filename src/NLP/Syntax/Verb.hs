@@ -12,6 +12,7 @@ import           Control.Lens                                ((^.))
 import           Control.Monad
 import           Data.Foldable                               (toList)
 import           Data.IntMap                                 (IntMap)
+import           Data.Text                                   (Text)
 import           Data.Maybe
 import           Data.Monoid
 --
@@ -23,8 +24,7 @@ import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 --
 import           NLP.Syntax.Type
--- import           SRL.Type
--- import           SRL.Type.Verb
+
 
 type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
 
@@ -216,3 +216,77 @@ verbPropertyFromPennTree lemmamap pt =
   in vps1 <> vps2
 
 
+
+-- | excerpted from https://en.wiktionary.org/wiki/Category:English_control_verbs 
+controlVerbs :: [Text]
+controlVerbs =
+  [ "allow"
+  , "ask"
+  , "attempt"
+  , "bother"
+  , "cause"
+  , "command"
+  , "compel"
+  , "connive"
+  , "constrain"
+  , "contrive"
+  , "convince"
+  , "demand"
+  , "desire"
+  , "endeavor"
+  , "fail"
+  , "help"
+  , "hope"
+  , "incentivize"
+  , "long"
+  , "make"
+  , "manage"
+  , "oblige"
+  , "order"
+  , "permit"
+  , "persuade"
+  , "plan"
+  , "plot"
+  , "proceed"
+  , "require"
+  , "start"
+  , "strain"
+  , "strive"
+  , "struggle"
+  , "tell"
+  , "try"
+  , "wait"
+  , "want"
+  , "wish"
+  , "would"
+  , "yearn"
+  ]
+
+
+-- | https://en.wiktionary.org/wiki/Category:English_copulative_verbs
+--   This class of verbs seems closely related to subject raising.
+copulativeVerbs :: [Text]
+copulativeVerbs =
+  [ "act"
+  , "appear"
+  , "arrive"
+  , "be"
+  , "become"
+  , "bleed"
+  , "break"
+  , "come"
+  , "emerge"
+  , "fall"
+  , "feel"
+  , "get"
+  , "grow"
+  , "keep"
+  , "look"
+  , "play"
+  , "prove"
+  , "remain"
+  , "run"
+  , "seem"
+  , "sound"
+  , "test"
+  ] 
