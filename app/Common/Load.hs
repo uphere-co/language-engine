@@ -44,12 +44,12 @@ makeLenses ''Config
 
               
 cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
-             , _cfg_semlink_file = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
-             , _cfg_statistics = "run/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
-             , _cfg_wsj_directory = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-             , _cfg_framenet_lubin = "/home/wavewave/repo/srcp/HFrameNet/run/FrameNet_ListOfLexUnit.bin"
-             , _cfg_framenet_framedir = "/scratch/wavewave/FrameNet/1.7/fndata/fndata-1.7/frame"
-             , _cfg_wordnet_dict = "/scratch/wavewave/wordnet/WordNet-3.0/dict"
+             , _cfg_semlink_file         = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
+             , _cfg_statistics           = "/scratch/wavewave/run/20170717/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
+             , _cfg_wsj_directory        = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
+             , _cfg_framenet_lubin       = "/scratch/wavewave/run/20170717/FrameNet_ListOfLexUnit.bin"
+             , _cfg_framenet_framedir    = "/scratch/wavewave/FrameNet/1.7/fndata/fndata-1.7/frame"
+             , _cfg_wordnet_dict         = "/scratch/wavewave/wordnet/WordNet-3.0/dict"
              }
   
 
