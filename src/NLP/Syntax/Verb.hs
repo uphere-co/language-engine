@@ -153,34 +153,25 @@ auxBe z fd fg fn f =
 
 
 auxHave z = 
-  if | isLemmaAs "have" (current z) && isPOSAs VBD (current z)
-       -> return Past
-     | isLemmaAs "have" (current z)
-       -> return Present
-     | otherwise
-       -> Nothing
+  if | isLemmaAs "have" (current z) && isPOSAs VBD (current z) -> return Past
+     | isLemmaAs "have" (current z)                            -> return Present
+     | otherwise                                               -> Nothing
 
   
 tenseAspectVoice :: BitreeZipperICP (Lemma ': as) -> Maybe (Tense,Aspect,Voice,[Int])
 tenseAspectVoice z
   | isPOSAs VBN (current z) = do
       z1 <- (child1 <=< parent <=< parent) z
-      ((auxBe
-        z1
+      ((auxBe z1
         (return (Past,Simple,Passive,[getIdx z1,getIdx z]))
-        -- undefined
-        (do z2 <- (child1 <=< parent <=< parent) z1
-            if | isLemmaAs "be" (current z2) && isPOSAs VBD (current z2)
-                 -> return (Past,Progressive,Passive,map getIdx [z2,z1,z])
-               | isLemmaAs "be" (current z2) && isPOSAs VBN (current z2) -> do
-                   z3 <- (child1 <=< parent <=< parent) z2
-                   t <- auxHave z3
-                   return (t,PerfectProgressive,Passive,map getIdx [z3,z2,z1,z])
-               | isLemmaAs "be" (current z2)
-                 -> return (Present,Progressive,Passive,[getIdx z2,getIdx z1,getIdx z])
-               | otherwise
-                 -> Nothing
-        ) 
+        ((child1 <=< parent <=< parent) z1 >>= \z2 -> 
+          auxBe z2
+            (return (Past,Progressive,Passive,map getIdx [z2,z1,z]))
+            Nothing
+            ((child1 <=< parent <=< parent) z2 >>= \z3 -> do
+               t <- auxHave z3
+               return (t,PerfectProgressive,Passive,map getIdx [z3,z2,z1,z]))
+            (return (Present,Progressive,Passive,[getIdx z2,getIdx z1,getIdx z])))
         (do z2 <- (child1 <=< parent <=< parent) z1
             t <- auxHave z2
             return (t,Perfect,Passive,map getIdx [z2,z1,z])
@@ -193,28 +184,14 @@ tenseAspectVoice z
              -> return (Present,Perfect,Active,[getIdx z1,getIdx z])
            | otherwise
              -> Nothing))
-     {-    
-      if | isLemmaAs "be" (current z1) && isPOSAs VBD (current z1)
-           -> 
-         | isLemmaAs "be" (current z1) && isPOSAs VBG (current z1) -> 
-         | isLemmaAs "be" (current z1) && isPOSAs VBN (current z1) -> do
-
-         | isLemmaAs "be" (current z1)
-           -> -}
-
   | isPOSAs VBG (current z) = do
       z1 <- (child1 <=< parent <=< parent) z
-      if | isLemmaAs "be" (current z1) && isPOSAs VBD (current z1)
-           -> return (Past,Progressive,Active,[getIdx z1,getIdx z])
-      if | isLemmaAs "be" (current z1) && isPOSAs VBD (current z1)
-           -> return (Past,Progressive,Active,[getIdx z1,getIdx z])
-
-
-           
-         | isLemmaAs "be" (current z1) 
-           -> return (Present,Progressive,Active,[getIdx z1,getIdx z])
-         | otherwise
-           -> Nothing
+      auxBe z1 (return (Past,Progressive,Active,[getIdx z1,getIdx z]))
+               Nothing
+               (do z2 <- (child1 <=< parent <=< parent) z1
+                   t <- auxHave z2
+                   return (t,PerfectProgressive,Active,map getIdx [z2,z1,z]))
+               (return (Present,Progressive,Active,[getIdx z1,getIdx z]))
   | isPOSAs VBD (current z) = return (Past,Simple,Active,[getIdx z])
   | otherwise               = return (Present,Simple,Active,[getIdx z])
   where getIdx = fst . fromJust . getIdxPOS . current 
