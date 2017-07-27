@@ -24,16 +24,16 @@ import           Test.Tasty.HUnit
 import           Test.Tasty
 
 
-ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22
-  :: (Text,(Tense,Aspect,Voice),[(Int,(Lemma,Text))],PennTree,Dependency)
-ex1 = ( "He was fined $25,000.", (Past,Simple,Passive)
+ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23
+  :: (Text,(Tense,Aspect,Voice{- ,Maybe Text -}),[(Int,(Lemma,Text))],PennTree,Dependency)
+ex1 = ( "He was fined $25,000.", (Past,Simple,Passive{- ,Nothing -})
       , [(0,("he","He")),(1,("be","was")),(2,("fine","fined")),(3,("$","$")),(4,("25,000","25,000")),(5,(".","."))]
       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","He")],PN "VP" [PL ("VBD","was"),PN "VP" [PL ("VBN","fined"),PN "NP" [PL ("$","$"),PL ("CD","25,000")]]],PL (".",".")]]
       , Dependency 3 [(1,"He"),(2,"was"),(3,"fined"),(4,"$"),(5,"25,000")] [((3,1),NSUBJPASS),((3,2),AUXPASS),((3,5),DOBJ),((5,4),DEP)]
       )
 
 
-ex2 = ( "He will be fined $25,000.", (Present,Simple,Passive)
+ex2 = ( "He will be fined $25,000.", (Present,Simple,Passive{- ,Just "will" -})
       , [(0,("he","He")),(1,("will","will")),(2,("be","be")),(3,("fine","fined")),(4,("$","$")),(5,("25,000","25,000")),(6,(".","."))]       
       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","He")],PN "VP" [PL ("MD","will"),PN "VP" [PL ("VB","be"),PN "VP" [PL ("VBN","fined"),PN "NP" [PL ("$","$"),PL ("CD","25,000")]]]],PL (".",".")]]
       , Dependency 4 [(1,"He"),(2,"will"),(3,"be"),(4,"fined"),(5,"$"),(6,"25,000")] [((4,1),NSUBJPASS),((4,2),AUX),((4,3),AUXPASS),((4,6),DOBJ),((6,5),DEP)]
@@ -41,7 +41,7 @@ ex2 = ( "He will be fined $25,000.", (Present,Simple,Passive)
 
 
 
-ex3 = ( "He has been fined $25,000.", (Present,Perfect,Passive)
+ex3 = ( "He has been fined $25,000.", (Present,Perfect,Passive{- ,Nothing-})
       , [(0,("he","He")),(1,("have","has")),(2,("be","been")),(3,("fine","fined")),(4,("$","$")),(5,("25,000","25,000")),(6,(".","."))]
       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","He")],PN "VP" [PL ("VBZ","has"),PN "VP" [PL ("VBN","been"),PN "VP" [PL ("VBN","fined"),PN "NP" [PL ("$","$"),PL ("CD","25,000")]]]],PL (".",".")]]
       , Dependency 4 [(1,"He"),(2,"has"),(3,"been"),(4,"fined"),(5,"$"),(6,"25,000")] [((4,1),NSUBJPASS),((4,2),AUX),((4,3),AUXPASS),((4,6),DOBJ),((6,5),DEP)]
@@ -184,9 +184,15 @@ ex22 = ( "He's actively considering a breakup of giant Wall Street banks.", (Pre
        , Dependency 4 [(1,"He"),(2,"'s"),(3,"actively"),(4,"considering"),(5,"a"),(6,"breakup"),(7,"of"),(8,"giant"),(9,"Wall"),(10,"Street"),(11,"banks")] [((4,1),NSUBJ),((4,2),AUX),((4,3),ADVMOD),((4,6),DOBJ),((6,5),DET),((6,11),NMOD),((11,7),CASE),((11,8),AMOD),((11,9),COMPOUND),((11,10),COMPOUND)]
        )
          
+
+ex23 = ( "A major federal civil rights law does not protect employees from discrimination.",(Present,Simple,Active)
+       , [(0,("a","A")),(1,("major","major")),(2,("federal","federal")),(3,("civil","civil")),(4,("rights","rights")),(5,("law","law")),(6,("do","does")),(7,("not","not")),(8,("protect","protect")),(9,("employee","employees")),(10,("from","from")),(11,("discrimination","discrimination")),(12,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","A"),PL ("JJ","major"),PL ("JJ","federal"),PL ("JJ","civil"),PL ("NNS","rights"),PL ("NN","law")],PN "VP" [PL ("VBZ","does"),PL ("RB","not"),PN "VP" [PL ("VB","protect"),PN "NP" [PL ("NNS","employees")],PN "PP" [PL ("IN","from"),PN "NP" [PL ("NN","discrimination")]]]],PL (".",".")]]
+       , Dependency 9 [(1,"A"),(2,"major"),(3,"federal"),(4,"civil"),(5,"rights"),(6,"law"),(7,"does"),(8,"not"),(9,"protect"),(10,"employees"),(11,"from"),(12,"discrimination")] [((6,1),DET),((6,2),AMOD),((6,3),AMOD),((6,4),AMOD),((6,5),COMPOUND),((9,6),NSUBJ),((9,7),AUX),((9,8),NEG),((9,10),DOBJ),((9,12),NMOD),((12,11),CASE)]
+       )
   
 testcases :: [(Text,(Tense,Aspect,Voice),[(Int,(Lemma,Text))],PennTree,Dependency)]
-testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22]
+testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23]
 
 
 

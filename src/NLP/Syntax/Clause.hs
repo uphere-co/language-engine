@@ -22,10 +22,6 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
--- import           SRL.Feature.Verb
--- import           SRL.Format
---import           SRL.Type.Clause
--- import           SRL.Type.Verb
 
 
 currentlevel :: Bitree (Range,(STag,Int)) t -> Int
