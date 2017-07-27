@@ -49,6 +49,9 @@ data Frame = Frame { _frame_f_num :: Int
                    , _frame_w_num :: Int
                    } deriving Show
 
+makeLenses ''Frame
+
+
 data DataItem = DataItem { _data_syn_offset :: SynsetOffset
                          , _data_lex_filenum :: Int
                          , _data_ss_type :: SSType
