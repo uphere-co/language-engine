@@ -40,7 +40,8 @@ import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import           PropBank.Match
-
+--
+import           OntoNotes.App.Serializer
 
 getTerms :: PennTree -> [Text]
 getTerms = map snd . filter (\(t,_) -> t /= "-NONE-") . toList
@@ -65,36 +66,6 @@ filterNML x@(PN NML xs) = [x]
 filterNML (PN c xs) = concatMap filterNML xs
 filterNML (PL _) = []
 
-
-serializeLemma pp txts h_lemma = do
-  let docs = map (flip Document (fromGregorian 1990 1 1)) txts
-  anns <- traverse (annotate pp) docs
-  rdocs' <- traverse protobufDoc anns
-  let rdocs = sequenceA rdocs'
-  case rdocs of
-    Left err -> print err
-    Right ds -> do
-      let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
-          lmap= map (map (_2 %~ unLemma) . IM.toList . mkLemmaMap) sents
-      BL.hPutStrLn h_lemma (encode lmap)
-
-
-serializePennTreeDep pp txts (h_ud,h_tr)= do
-  let docs = map (flip Document (fromGregorian 1990 1 1)) txts
-  anns <- traverse (annotate pp) docs
-  rdocs' <- traverse protobufDoc anns
-  let rdocs = sequenceA rdocs'
-  case rdocs of
-    Left err -> print err
-    Right ds -> do
-      let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
-          ntrs = map decodeToPennTree (mapMaybe (^.S.parseTree) sents)
-          edeps = mapM sentToDep sents
-      case edeps of
-        Left err -> print err
-        Right deps -> do
-          BL.hPutStrLn h_ud (encode deps)
-          BL.hPutStrLn h_tr (encode ntrs)
 
 
 process basedir pp = do

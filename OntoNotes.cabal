@@ -18,24 +18,29 @@ cabal-version:       >=1.10
 library
   exposed-modules:     OntoNotes
                        OntoNotes.App.Load
+                       OntoNotes.App.Serializer
                        OntoNotes.Mapping.FrameNet
                        OntoNotes.Parser.Sense
                        OntoNotes.Parser.SenseInventory
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10,
+                       aeson,
                        binary,
                        boxes,
                        bytestring,
+                       containers,
                        directory,
                        directory-tree,
                        filepath,
                        lens,
-                       -- pretty,
                        taggy-lens,
                        text,
+                       time,
                        unordered-containers,
                        --
+                       HCoreNLP,
+                       HCoreNLP-Proto,
                        HFrameNet,
                        HWordNet,
                        nlp-types,
