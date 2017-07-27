@@ -97,19 +97,10 @@ lookupLemma w p t = do
   (ls,desc) <- maybeToList (lookupSynset w p soff)
   return (snum,ls,desc)
    
-   -- maybeToList (lookupSynset w p n)
-
 
 lookupSynset :: WordNetDB -> POS -> SynsetOffset -> Maybe ([LexItem],Text)
 lookupSynset w p (SynsetOffset n) = (dataDB w p) ^? at n._Just.to ((,)<$>view data_word_lex_id<*>view data_gloss)
 
---   IM.lookup n (dataDB w p)
-
-
-{- 
-lookupSense :: WordNetDB -> Text -> Int -> Maybe Int
-lookupSense w t i = HM.lookup (t,i) (w^.senseIdxDB)
--}
 
 loadDB :: FilePath -> IO WordNetDB
 loadDB fp = do
