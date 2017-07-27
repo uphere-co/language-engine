@@ -24,7 +24,7 @@ import           Test.Tasty.HUnit
 import           Test.Tasty
 
 
-ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21
+ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22
   :: (Text,(Tense,Aspect,Voice),[(Int,(Lemma,Text))],PennTree,Dependency)
 ex1 = ( "He was fined $25,000.", (Past,Simple,Passive)
       , [(0,("he","He")),(1,("be","was")),(2,("fine","fined")),(3,("$","$")),(4,("25,000","25,000")),(5,(".","."))]
@@ -176,10 +176,17 @@ ex21 = ( "I looked at the tree.", (Past,Simple,Active)
        , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","looked"),PN "PP" [PL ("IN","at"),PN "NP" [PL ("DT","the"),PL ("NN","tree")]]],PL (".",".")]]
        , Dependency 2 [(1,"I"),(2,"looked"),(3,"at"),(4,"the"),(5,"tree")] [((2,1),NSUBJ),((2,5),NMOD),((5,3),CASE),((5,4),DET)]
        )
-    
+
+
+ex22 = ( "President Donald Trump said he's actively considering a breakup of giant Wall Street banks.", (Present,Progressive,Active)
+       , [(0,("President","President")),(1,("Donald","Donald")),(2,("Trump","Trump")),(3,("say","said")),(4,("he","he")),(5,("be","'s")),(6,("actively","actively")),(7,("consider","considering")),(8,("a","a")),(9,("breakup","breakup")),(10,("of","of")),(11,("giant","giant")),(12,("Wall","Wall")),(13,("Street","Street")),(14,("bank","banks")),(15,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","President"),PL ("NNP","Donald"),PL ("NNP","Trump")],PN "VP" [PL ("VBD","said"),PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","he")],PN "VP" [PL ("VBZ","'s"),PN "ADVP" [PL ("RB","actively")],PN "VP" [PL ("VBG","considering"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("NN","breakup")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("JJ","giant"),PL ("NNP","Wall"),PL ("NNP","Street"),PL ("NNS","banks")]]]]]]]],PL (".",".")]]
+       , Dependency 4 [(1,"President"),(2,"Donald"),(3,"Trump"),(4,"said"),(5,"he"),(6,"'s"),(7,"actively"),(8,"considering"),(9,"a"),(10,"breakup"),(11,"of"),(12,"giant"),(13,"Wall"),(14,"Street"),(15,"banks")] [((3,1),COMPOUND),((3,2),COMPOUND),((4,3),NSUBJ),((4,8),CCOMP),((8,5),NSUBJ),((8,6),AUX),((8,7),ADVMOD),((8,10),DOBJ),((10,9),DET),((10,15),NMOD),((15,11),CASE),((15,12),AMOD),((15,13),COMPOUND),((15,14),COMPOUND)]
+       )
+         
   
 testcases :: [(Text,(Tense,Aspect,Voice),[(Int,(Lemma,Text))],PennTree,Dependency)]
-testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21]
+testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22]
 
 
 
