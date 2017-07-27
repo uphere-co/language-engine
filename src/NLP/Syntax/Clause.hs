@@ -169,8 +169,7 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
 getVerbArgs :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
             -> VerbProperty
             -> Maybe (VerbArgs (Either (Range,STag) (Int,POSTag)))
-getVerbArgs tr vp = do z <- findVerb (vp^.vp_index) tr
-                       return (verbArgs z)
+getVerbArgs tr vp = verbArgs <$> findVerb (vp^.vp_index) tr
 
 
 cutOutLevel0 :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))

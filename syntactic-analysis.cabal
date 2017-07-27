@@ -27,6 +27,7 @@ library
                        bifunctors,
                        containers,
                        lens,
+                       monad-loops,
                        text,
                        --
                        HCoreNLP,
