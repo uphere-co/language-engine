@@ -14,6 +14,7 @@ import qualified Data.Text                  as T
 --
 import           CoreNLP.Simple.Type.Simplified
 --
+import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
@@ -23,7 +24,7 @@ import           Test.Tasty.HUnit
 import           Test.Tasty
 
 
-ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17
+ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21
   :: (Text,(Tense,Aspect,Voice),[(Int,(Lemma,Text))],PennTree,Dependency)
 ex1 = ( "He was fined $25,000.", (Past,Simple,Passive)
       , [(0,("he","He")),(1,("be","was")),(2,("fine","fined")),(3,("$","$")),(4,("25,000","25,000")),(5,(".","."))]
@@ -149,17 +150,50 @@ ex17 = ( "I had done the job at that time.", (Past,Perfect,Active)
        )
 
 
+ex18 = ( "WhatsApp is being targeted by China's censors.", (Present,Progressive,Passive)
+       , [(0,("WhatsApp","WhatsApp")),(1,("be","is")),(2,("be","being")),(3,("target","targeted")),(4,("by","by")),(5,("China","China")),(6,("'s","'s")),(7,("censor","censors")),(8,(".","."))]       
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","WhatsApp")],PN "VP" [PL ("VBZ","is"),PN "VP" [PL ("VBG","being"),PN "VP" [PL ("VBN","targeted"),PN "PP" [PL ("IN","by"),PN "NP" [PN "NP" [PL ("NNP","China"),PL ("POS","'s")],PL ("NNS","censors")]]]]],PL (".",".")]]
+       , Dependency 4 [(1,"WhatsApp"),(2,"is"),(3,"being"),(4,"targeted"),(5,"by"),(6,"China"),(7,"'s"),(8,"censors")] [((4,1),NSUBJPASS),((4,2),AUX),((4,3),AUXPASS),((4,8),NMOD),((6,7),CASE),((8,5),CASE),((8,6),NMOD)]
+       )
+
+
+
+ex19 = ( "WhatsApp have been being targeted by China's censors.", (Present,PerfectProgressive,Passive)
+       , [(0,("WhatsApp","WhatsApp")),(1,("have","have")),(2,("be","been")),(3,("be","being")),(4,("target","targeted")),(5,("by","by")),(6,("China","China")),(7,("'s","'s")),(8,("censor","censors")),(9,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","WhatsApp")],PN "VP" [PL ("VBP","have"),PN "VP" [PL ("VBN","been"),PN "VP" [PL ("VBG","being"),PN "VP" [PL ("VBN","targeted"),PN "PP" [PL ("IN","by"),PN "NP" [PN "NP" [PL ("NNP","China"),PL ("POS","'s")],PL ("NNS","censors")]]]]]],PL (".",".")]]
+       , Dependency 5 [(1,"WhatsApp"),(2,"have"),(3,"been"),(4,"being"),(5,"targeted"),(6,"by"),(7,"China"),(8,"'s"),(9,"censors")] [((5,1),NSUBJPASS),((5,2),AUX),((5,3),AUX),((5,4),AUXPASS),((5,9),NMOD),((7,8),CASE),((9,6),CASE),((9,7),NMOD)]
+       )
+
+
+ex20 = ( "WhatsApp should not have been being targeted by China's censors.", (Present,PerfectProgressive,Passive)
+       , [(0,("WhatsApp","WhatsApp")),(1,("should","should")),(2,("not","not")),(3,("have","have")),(4,("be","been")),(5,("be","being")),(6,("target","targeted")),(7,("by","by")),(8,("China","China")),(9,("'s","'s")),(10,("censor","censors")),(11,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","WhatsApp")],PN "VP" [PL ("MD","should"),PL ("RB","not"),PN "VP" [PL ("VB","have"),PN "VP" [PL ("VBN","been"),PN "VP" [PL ("VBG","being"),PN "VP" [PL ("VBN","targeted"),PN "PP" [PL ("IN","by"),PN "NP" [PN "NP" [PL ("NNP","China"),PL ("POS","'s")],PL ("NNS","censors")]]]]]]],PL (".",".")]]
+       , Dependency 7 [(1,"WhatsApp"),(2,"should"),(3,"not"),(4,"have"),(5,"been"),(6,"being"),(7,"targeted"),(8,"by"),(9,"China"),(10,"'s"),(11,"censors")] [((7,1),NSUBJPASS),((7,2),AUX),((7,3),NEG),((7,4),AUX),((7,5),AUX),((7,6),AUXPASS),((7,11),NMOD),((9,10),CASE),((11,8),CASE),((11,9),NMOD)]
+       )
+
+ex21 = ( "I looked at the tree.", (Past,Simple,Active)
+       , [(0,("I","I")),(1,("look","looked")),(2,("at","at")),(3,("the","the")),(4,("tree","tree")),(5,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","looked"),PN "PP" [PL ("IN","at"),PN "NP" [PL ("DT","the"),PL ("NN","tree")]]],PL (".",".")]]
+       , Dependency 2 [(1,"I"),(2,"looked"),(3,"at"),(4,"the"),(5,"tree")] [((2,1),NSUBJ),((2,5),NMOD),((5,3),CASE),((5,4),DET)]
+       )
+    
+  
 testcases :: [(Text,(Tense,Aspect,Voice),[(Int,(Lemma,Text))],PennTree,Dependency)]
-testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17 ]
+testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21]
 
 
+
+mkVPS lmatknlst pt =
+  let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
+  in verbPropertyFromPennTree lemmamap pt
 
 
 checkVP :: (Text,(Tense,Aspect,Voice),[(Int,(Lemma,Text))],PennTree,Dependency) -> Bool
 checkVP (_txt,expresult,lmatknlst,pt,_dep) =
-  let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
+  let vps = mkVPS lmatknlst pt
+  {- let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
       -- tkmap= IM.fromList (map (\(i,(_,t)) -> (i,t)) lmatknlst)
-      vps = verbPropertyFromPennTree lemmamap pt
+      vps = verbPropertyFromPennTree lemmamap pt -}
   in case vps of
        vp:[] -> expresult == (vp^.vp_tense,vp^.vp_aspect,vp^.vp_voice)
        _ -> False 
@@ -167,8 +201,9 @@ checkVP (_txt,expresult,lmatknlst,pt,_dep) =
 
 unitTestsVerbProperty :: TestTree
 unitTestsVerbProperty = testGroup "verb property" . flip map testcases $ \c ->
-  testCase (T.unpack (c^._1) ++ show (c^._2)) $ checkVP c @?= True
-
+  testCase (T.unpack (c^._1) ++ show (c^._2)) $
+    (checkVP c == True) @? (show (mkVPS (c^._3) (c^._4)) ++ "\n" ++ T.unpack (prettyPrint 0 (c^._4)))
+ 
 
 unitTests :: TestTree
 unitTests = testGroup "All Unit tests" [unitTestsVerbProperty]

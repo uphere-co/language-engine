@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -23,8 +24,8 @@ import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 --
 import           NLP.Syntax.Type
--- import           SRL.Type
--- import           SRL.Type.Verb
+--
+import           Debug.Trace
 
 type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
 
@@ -143,13 +144,88 @@ isPassive z
     in (b1 && b2) || (b1 && b3) || (b1 && b4)
 
 
+auxBe z fd fg fn f =
+   if | isLemmaAs "be" (current z) && isPOSAs VBD (current z) -> fd
+      | isLemmaAs "be" (current z) && isPOSAs VBG (current z) -> fg
+      | isLemmaAs "be" (current z) && isPOSAs VBN (current z) -> fn
+      | isLemmaAs "be" (current z)                            -> f
+      | otherwise                                             -> Nothing  
+
+
+auxHave z = 
+  if | isLemmaAs "have" (current z) && isPOSAs VBD (current z)
+       -> return Past
+     | isLemmaAs "have" (current z)
+       -> return Present
+     | otherwise
+       -> Nothing
+
+  
+tenseAspectVoice :: BitreeZipperICP (Lemma ': as) -> Maybe (Tense,Aspect,Voice,[Int])
+tenseAspectVoice z
+  | isPOSAs VBN (current z) = do
+      z1 <- (child1 <=< parent <=< parent) z
+      ((auxBe
+        z1
+        (return (Past,Simple,Passive,[getIdx z1,getIdx z]))
+        -- undefined
+        (do z2 <- (child1 <=< parent <=< parent) z1
+            if | isLemmaAs "be" (current z2) && isPOSAs VBD (current z2)
+                 -> return (Past,Progressive,Passive,map getIdx [z2,z1,z])
+               | isLemmaAs "be" (current z2) && isPOSAs VBN (current z2) -> do
+                   z3 <- (child1 <=< parent <=< parent) z2
+                   t <- auxHave z3
+                   return (t,PerfectProgressive,Passive,map getIdx [z3,z2,z1,z])
+               | isLemmaAs "be" (current z2)
+                 -> return (Present,Progressive,Passive,[getIdx z2,getIdx z1,getIdx z])
+               | otherwise
+                 -> Nothing
+        ) 
+        (do z2 <- (child1 <=< parent <=< parent) z1
+            t <- auxHave z2
+            return (t,Perfect,Passive,map getIdx [z2,z1,z])
+        )
+        (return (Present,Simple,Passive,[getIdx z1,getIdx z])))
+       <|>
+       (if |isLemmaAs "have" (current z1) && isPOSAs VBD (current z1)
+             -> return (Past,Perfect,Active,[getIdx z1,getIdx z])
+           | isLemmaAs "have" (current z1) 
+             -> return (Present,Perfect,Active,[getIdx z1,getIdx z])
+           | otherwise
+             -> Nothing))
+     {-    
+      if | isLemmaAs "be" (current z1) && isPOSAs VBD (current z1)
+           -> 
+         | isLemmaAs "be" (current z1) && isPOSAs VBG (current z1) -> 
+         | isLemmaAs "be" (current z1) && isPOSAs VBN (current z1) -> do
+
+         | isLemmaAs "be" (current z1)
+           -> -}
+
+  | isPOSAs VBG (current z) = do
+      z1 <- (child1 <=< parent <=< parent) z
+      if | isLemmaAs "be" (current z1) && isPOSAs VBD (current z1)
+           -> return (Past,Progressive,Active,[getIdx z1,getIdx z])
+      if | isLemmaAs "be" (current z1) && isPOSAs VBD (current z1)
+           -> return (Past,Progressive,Active,[getIdx z1,getIdx z])
+
+
+           
+         | isLemmaAs "be" (current z1) 
+           -> return (Present,Progressive,Active,[getIdx z1,getIdx z])
+         | otherwise
+           -> Nothing
+  | isPOSAs VBD (current z) = return (Past,Simple,Active,[getIdx z])
+  | otherwise               = return (Present,Simple,Active,[getIdx z])
+  where getIdx = fst . fromJust . getIdxPOS . current 
+
 
 verbProperty :: BitreeZipperICP (Lemma ': as) -> Maybe VerbProperty -- (Tense,Aspect,Voice,[Int])
 verbProperty z = do
   i <- getLeafIndex (current z)
   lma <- ahead . getAnnot <$> getLeaf (current z)
   pos <- posTag <$> getLeaf (current z)
-  let b0 = isVBN z
+  {- let b0 = isVBN z
       b1 = isVBG z
       m2 = withCopula z
       b2 = isJust m2
@@ -167,9 +243,10 @@ verbProperty z = do
               (Perfect,           _      ,_     ,Just p) -> if snd p == VBD then Past else Present
               (PerfectProgressive,_      ,_     ,Just p) -> if snd p == VBD then Past else Present
               (_                 ,Passive,Just p,_     ) -> if snd p == VBD then Past else Present
-              _                                          -> if pos == VBD then Past else Present
-      aux = findAux z
-      is = catMaybes $
+              _                                          -> if pos == VBD then Past else Present -}
+  (tns,asp,vo,is) <- tenseAspectVoice z
+  let aux = findAux z
+      {- is = catMaybes $
              [fmap fst aux] <>
              (if asp == Perfect || asp == PerfectProgressive
               then [fmap fst m3]
@@ -177,7 +254,7 @@ verbProperty z = do
              (if asp == Progressive || asp == PerfectProgressive || vo == Passive
               then [fmap fst m2]
               else []) <>
-             [Just i]
+             [Just i] -}
   return (VerbProperty i lma tns asp vo aux is)
 
 
