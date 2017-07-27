@@ -374,6 +374,7 @@ semiModalVerbs = [ "ought"
                  , "used_to"
                  ]
   
-nonModalAuxilary = [ "have_to"
+nonModalAuxilary = [ "be_going_to"
+                   , "have_to"
                    , "do"
                    ]
