@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -90,6 +91,52 @@ errorHandler h_err msg action = do
     _ -> return ()
 
 
+text_buy1
+  = [ "The family bought a new car."
+    , "According to his official biography, he bought his first bison in 1976."
+    , "Should I fire him because he bought his degree from the internet instead of attending a regular university?"
+    , "She wanted to buy his love with her dedication to him and his work."
+    , "Money can't buy me love."
+    , "My mom's boyfriend would try to buy my trust by taking us out to eat."
+    , "Novell, under pressure, will buy back its stock."
+    , "I think my used car was bought back once by the manufacturer and the dealer didn't tell me when I bought it."
+    , "Businessmen opposed to the Vietnam war tried to buy time for anti-war spots on a radio station."
+    , "A New Hampshire Poll and Two Dollars Will Buy You a Cup of Coffee."
+    , "No amount of money can buy you safety."
+    , "The insurance premium you forego will buy you a pretty good road bike."
+    ]
+
+text_examine3
+  = [ "Candidates must pass a qualifying test which examines for general and specific knowledge."
+    , "A psychiatrist was examined on the mental state of the defendant."
+    , "The prosecutor examined the witness under oath."
+    ]
+ 
+text_monopolize1
+  = [ "China has charged that the U.S. monopolizes the Internet."
+    , "He monopolized the use of the goods and services for his own interest."
+    , "Why must she always monopolize the conversation?"
+    ]
+        
+text_forge1
+  = [ "Forge the silver into a bowl."
+    , "Forge a pair of tongues."
+    , "Forge the metal into a sword."
+    , "The two governments met to forge an alliance."
+    , "Childhood abuse can forge a person's outlook on life."
+    , "Ideas that were forged out of reality are most beneficial."
+    , "A family insurance plan should be forged out of love."
+    ]
+
+text_round8
+  = [ "I've rounded up some simple tips and tutorials for the conference."
+    , "Kay has rounded up a bunch of great articles on our tax system."
+    , "The police rounded up all the suspects."
+    ]
+
+      
+
+
 
 listSenseExample basedir pp = do
   (_ludb,sensestat,_semlinkmap,sensemap,ws,_wndb) <- loadAll
@@ -103,11 +150,25 @@ listSenseExample basedir pp = do
 
   withFile (basedir </> "error.log") WriteMode $ \h_err -> 
     forM_ merged $ \(lma,f) -> do
-      T.IO.hPutStrLn stdout lma
         
-      let lst = formatExample lma sensemap sensestat
-      forM_ lst $ \(lmav,sense,txts) -> do
+      let lst = -- filter (\x-> (x^._1 == "buy-v") || (x^._1 == "examine-v") || (x^._1 == "monopolize-v") ||
+                --              (x^._1 == "forge-v") || (x^._1 == "round-v") 
+                --        ) $
+                  formatExample lma sensemap sensestat
+      forM_ lst $ \(lmav,sense,txts') -> do
+        T.IO.hPutStrLn stdout lmav
+        
+        -- print (lmav,sense,txts')
         let bname = T.unpack (lmav <> "_" <> sense)
+        let txts = if | bname == "buy-v_1"        -> text_buy1
+                      | bname == "examine-v_3"    -> text_examine3
+                      | bname == "monopolize-v_1" -> text_monopolize1
+                      | bname == "forge-v_1"      -> text_forge1
+                      | bname == "round-v_8"      -> text_round8
+                      | otherwise                 -> txts'
+
+        -- print txts
+        
         withFile (basedir </> bname <.> "corenlp_lemma") WriteMode $ \h_lemma -> do
           withFile (basedir </> bname <.> "corenlp_udep") WriteMode $ \h_ud -> do
             withFile (basedir </> bname <.> "corenlp_ptree") WriteMode $ \h_tr -> do
