@@ -153,9 +153,6 @@ findPrevVerb z = do
   where
     prevVerbInSiblings x = iterateUntilM (\z' -> case getIdxPOS (current z') of {Nothing -> False; Just (_,pos) -> isVerb pos}) prev x
 
-     
-  --listToMaybe lst
-
 
 auxBe z fd fg fn f =
    if | isLemmaAs "be" (current z) && isPOSAs VBD (current z) -> fd
@@ -174,7 +171,7 @@ auxHave z =
 tenseAspectVoice :: BitreeZipperICP (Lemma ': as) -> Maybe (Tense,Aspect,Voice,[Int])
 tenseAspectVoice z
   | isPOSAs VBN (current z) = do
-      z1 <- findPrevVerb z -- (child1 <=< parent <=< parent) z
+      z1 <- findPrevVerb z
       ((auxBe z1
         (return (Past,Simple,Passive,[getIdx z1,getIdx z]))
         (findPrevVerb z1 >>= \z2 -> 
@@ -191,12 +188,7 @@ tenseAspectVoice z
         )
         (return (Present,Simple,Passive,[getIdx z1,getIdx z])))
        <|>
-       (if |isLemmaAs "have" (current z1) && isPOSAs VBD (current z1)
-             -> return (Past,Perfect,Active,[getIdx z1,getIdx z])
-           | isLemmaAs "have" (current z1) 
-             -> return (Present,Perfect,Active,[getIdx z1,getIdx z])
-           | otherwise
-             -> Nothing))
+       (auxHave z1 >>= \t -> return (t,Perfect,Active,map getIdx [z1,z])))
   | isPOSAs VBG (current z) = do
       z1 <- findPrevVerb z
       auxBe z1 (return (Past,Progressive,Active,[getIdx z1,getIdx z]))
@@ -210,41 +202,13 @@ tenseAspectVoice z
   where getIdx = fst . fromJust . getIdxPOS . current 
 
 
-verbProperty :: BitreeZipperICP (Lemma ': as) -> Maybe VerbProperty -- (Tense,Aspect,Voice,[Int])
+verbProperty :: BitreeZipperICP (Lemma ': as) -> Maybe VerbProperty
 verbProperty z = do
   i <- getLeafIndex (current z)
   lma <- ahead . getAnnot <$> getLeaf (current z)
   pos <- posTag <$> getLeaf (current z)
-  {- let b0 = isVBN z
-      b1 = isVBG z
-      m2 = withCopula z
-      b2 = isJust m2
-      m3 = withHave z
-      b3 = isJust m3
-      asp = if b0 && b3
-            then Perfect
-            else if (b1 && b2)
-                 then if b3
-                      then PerfectProgressive
-                      else Progressive
-                 else Simple
-      vo  = if isPassive z then Passive else Active
-      tns = case (asp,vo,m2,m3) of
-              (Perfect,           _      ,_     ,Just p) -> if snd p == VBD then Past else Present
-              (PerfectProgressive,_      ,_     ,Just p) -> if snd p == VBD then Past else Present
-              (_                 ,Passive,Just p,_     ) -> if snd p == VBD then Past else Present
-              _                                          -> if pos == VBD then Past else Present -}
   (tns,asp,vo,is) <- tenseAspectVoice z
   let aux = findAux z
-      {- is = catMaybes $
-             [fmap fst aux] <>
-             (if asp == Perfect || asp == PerfectProgressive
-              then [fmap fst m3]
-              else []) <>
-             (if asp == Progressive || asp == PerfectProgressive || vo == Passive
-              then [fmap fst m2]
-              else []) <>
-             [Just i] -}
   return (VerbProperty i lma tns asp vo aux is)
 
 
