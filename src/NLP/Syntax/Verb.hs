@@ -11,6 +11,7 @@ module NLP.Syntax.Verb where
 import           Control.Applicative
 import           Control.Lens                                ((^.))
 import           Control.Monad
+import           Control.Monad.Loops                         (iterateUntilM,unfoldWhileM)
 import           Data.Foldable                               (toList)
 import           Data.IntMap                                 (IntMap)
 import           Data.Maybe
@@ -144,6 +145,14 @@ isPassive z
     in (b1 && b2) || (b1 && b3) || (b1 && b4)
 
 
+
+findPrevVP :: BitreeZipperICP (Lemma ': as) -> Maybe (BitreeZipperICP (Lemma ': as))
+findPrevVP z = do
+  p <- parent z
+  iterateUntilM (\z' -> case getIdxPOS (current z') of {Nothing -> False; Just (_,p) -> isVerb p}) prev p
+  --listToMaybe lst
+
+
 auxBe z fd fg fn f =
    if | isLemmaAs "be" (current z) && isPOSAs VBD (current z) -> fd
       | isLemmaAs "be" (current z) && isPOSAs VBG (current z) -> fg
@@ -161,18 +170,18 @@ auxHave z =
 tenseAspectVoice :: BitreeZipperICP (Lemma ': as) -> Maybe (Tense,Aspect,Voice,[Int])
 tenseAspectVoice z
   | isPOSAs VBN (current z) = do
-      z1 <- (child1 <=< parent <=< parent) z
+      z1 <- findPrevVP z -- (child1 <=< parent <=< parent) z
       ((auxBe z1
         (return (Past,Simple,Passive,[getIdx z1,getIdx z]))
-        ((child1 <=< parent <=< parent) z1 >>= \z2 -> 
+        (findPrevVP z1 >>= \z2 -> 
           auxBe z2
             (return (Past,Progressive,Passive,map getIdx [z2,z1,z]))
             Nothing
-            ((child1 <=< parent <=< parent) z2 >>= \z3 -> do
+            (findPrevVP z2 >>= \z3 -> do
                t <- auxHave z3
                return (t,PerfectProgressive,Passive,map getIdx [z3,z2,z1,z]))
             (return (Present,Progressive,Passive,[getIdx z2,getIdx z1,getIdx z])))
-        (do z2 <- (child1 <=< parent <=< parent) z1
+        (do z2 <- findPrevVP z1
             t <- auxHave z2
             return (t,Perfect,Passive,map getIdx [z2,z1,z])
         )
@@ -185,10 +194,10 @@ tenseAspectVoice z
            | otherwise
              -> Nothing))
   | isPOSAs VBG (current z) = do
-      z1 <- (child1 <=< parent <=< parent) z
+      z1 <- findPrevVP z
       auxBe z1 (return (Past,Progressive,Active,[getIdx z1,getIdx z]))
                Nothing
-               (do z2 <- (child1 <=< parent <=< parent) z1
+               (do z2 <- findPrevVP z1
                    t <- auxHave z2
                    return (t,PerfectProgressive,Active,map getIdx [z2,z1,z]))
                (return (Present,Progressive,Active,[getIdx z1,getIdx z]))
