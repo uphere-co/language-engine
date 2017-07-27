@@ -86,10 +86,22 @@ process basedir pp = do
                 in T.intercalate " " (map (T.concat . map (snd.snd)) merged)
           let bname = takeBaseName f
           withFile (bname <.> "corenlp_lemma") WriteMode $ \h_lemma -> do
-            errorHandler h_err f (serializeLemma pp txts h_lemma)
+            errorHandler h_err f $ do
+              anns <- annotateTexts pp txts
+              mbstr <- serializeLemma pp anns
+              case mbstr of
+                Just bstr -> BL.hPutStrLn h_lemma bstr
+                Nothing -> return ()
           withFile (bname <.> "corenlp_udep") WriteMode $ \h_ud ->
             withFile (bname <.> "corenlp_ptree") WriteMode $ \h_tr ->
-              errorHandler h_err f (serializePennTreeDep pp txts (h_ud,h_tr))
+              errorHandler h_err f $ do 
+                anns <- annotateTexts pp txts
+                mbstr <- serializePennTreeDep pp anns
+                case mbstr of
+                  Just (bstr_deps,bstr_ntrs) -> do
+                    BL.hPutStrLn h_ud bstr_deps
+                    BL.hPutStrLn h_tr bstr_ntrs
+                  Nothing -> return ()
 
 
 main :: IO ()

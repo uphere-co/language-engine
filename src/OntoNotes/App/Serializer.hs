@@ -17,33 +17,34 @@ import           NLP.Type.PennTreebankII
 
 
 
-serializeLemma pp txts h_lemma = do
-  let docs = map (flip Document (fromGregorian 1990 1 1)) txts
-  anns <- traverse (annotate pp) docs
+annotateTexts pp txts = let docs = map (flip Document (fromGregorian 1990 1 1)) txts
+                        in traverse (annotate pp) docs
+
+serializeLemma pp anns {- h_lemma -} = do
   rdocs' <- traverse protobufDoc anns
   let rdocs = sequenceA rdocs'
   case rdocs of
-    Left err -> print err
+    Left err -> print err >> return Nothing
     Right ds -> do
       let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
           lmap= map (map (_2 %~ unLemma) . IM.toList . mkLemmaMap) sents
-      BL.hPutStrLn h_lemma (encode lmap)
+      -- BL.hPutStrLn h_lemma (encode lmap)
+      return (Just (encode lmap))
 
 
-serializePennTreeDep pp txts (h_ud,h_tr)= do
-  let docs = map (flip Document (fromGregorian 1990 1 1)) txts
-  anns <- traverse (annotate pp) docs
+serializePennTreeDep pp anns {- (h_ud,h_tr) -} = do
   rdocs' <- traverse protobufDoc anns
   let rdocs = sequenceA rdocs'
   case rdocs of
-    Left err -> print err
+    Left err -> print err >> return Nothing
     Right ds -> do
       let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
           ntrs = map decodeToPennTree (mapMaybe (^.S.parseTree) sents)
           edeps = mapM sentToDep sents
       case edeps of
-        Left err -> print err
+        Left err -> print err >> return Nothing
         Right deps -> do
-          BL.hPutStrLn h_ud (encode deps)
-          BL.hPutStrLn h_tr (encode ntrs)
+          return (Just (encode deps,encode ntrs))
+          {- BL.hPutStrLn h_ud (encode deps)
+          BL.hPutStrLn h_tr (encode ntrs) -}
 
