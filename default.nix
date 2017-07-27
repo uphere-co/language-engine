@@ -4,7 +4,7 @@
 , jvm, lens, nlp-types, optparse-applicative, PropBank, split
 , stdenv
 , syntactic-analysis
-, text, time, transformers, vector
+, tasty, tasty-hunit, text, time, transformers, vector
 , textview
 }:
 mkDerivation {
