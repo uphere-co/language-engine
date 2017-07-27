@@ -14,6 +14,7 @@ import           Control.Monad
 import           Control.Monad.Loops                         (iterateUntilM,unfoldWhileM)
 import           Data.Foldable                               (toList)
 import           Data.IntMap                                 (IntMap)
+import           Data.Text                                   (Text)
 import           Data.Maybe
 import           Data.Monoid
 --
@@ -27,6 +28,7 @@ import           NLP.Type.PennTreebankII
 import           NLP.Syntax.Type
 --
 import           Debug.Trace
+
 
 type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
 
@@ -145,7 +147,6 @@ isPassive z
     in (b1 && b2) || (b1 && b3) || (b1 && b4)
 
 
-
 findPrevVerb :: BitreeZipperICP (Lemma ': as) -> Maybe (BitreeZipperICP (Lemma ': as))
 findPrevVerb z = do
     p <- parent z
@@ -247,3 +248,107 @@ verbPropertyFromPennTree lemmamap pt =
   in vps1 <> vps2
 
 
+
+-- | excerpted from https://en.wiktionary.org/wiki/Category:English_control_verbs 
+controlVerbs :: [Text]
+controlVerbs =
+  [ "allow"
+  , "ask"
+  , "attempt"
+  , "bother"
+  , "cause"
+  , "command"
+  , "compel"
+  , "connive"
+  , "constrain"
+  , "contrive"
+  , "convince"
+  , "demand"
+  , "desire"
+  , "endeavor"
+  , "fail"
+  , "help"
+  , "hope"
+  , "incentivize"
+  , "long"
+  , "make"
+  , "manage"
+  , "oblige"
+  , "order"
+  , "permit"
+  , "persuade"
+  , "plan"
+  , "plot"
+  , "proceed"
+  , "require"
+  , "start"
+  , "strain"
+  , "strive"
+  , "struggle"
+  , "tell"
+  , "try"
+  , "wait"
+  , "want"
+  , "wish"
+  , "would"
+  , "yearn"
+  ]
+
+
+-- | https://en.wiktionary.org/wiki/Category:English_copulative_verbs
+--   This class of verbs seems closely related to subject raising.
+copulativeVerbs :: [Text]
+copulativeVerbs =
+  [ "act"
+  , "appear"
+  , "arrive"
+  , "be"
+  , "become"
+  , "bleed"
+  , "break"
+  , "come"
+  , "emerge"
+  , "fall"
+  , "feel"
+  , "get"
+  , "grow"
+  , "keep"
+  , "look"
+  , "play"
+  , "prove"
+  , "remain"
+  , "run"
+  , "seem"
+  , "sound"
+  , "test"
+  ] 
+
+{-
+ -- from werdy
+  copulas.add("act");
+		copulas.add("appear");
+		copulas.add("be");
+		copulas.add("become");
+		copulas.add("come");
+		copulas.add("come out");
+		copulas.add("end up");
+		copulas.add("get");
+		copulas.add("go");
+		copulas.add("grow");
+		copulas.add("fall");
+		copulas.add("feel");
+		copulas.add("keep");
+		copulas.add("leave");
+		copulas.add("look");
+		copulas.add("prove");
+		copulas.add("remain");
+		copulas.add("seem");
+		copulas.add("smell");
+		copulas.add("sound");
+		copulas.add("stay");
+		copulas.add("taste");
+		copulas.add("turn");
+		copulas.add("turn up");
+		copulas.add("wind up");
+		copulas.add("have");
+-}

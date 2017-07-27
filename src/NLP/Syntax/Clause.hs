@@ -195,11 +195,7 @@ showClauseStructure lemmamap ptree  = do
               g (Right x)     = T.pack (show x)
 
   T.IO.putStrLn (formatBitree id tr')
-
   let rngs = clauseRanges tr
-  
-
-  
   flip mapM_ vps $ \vp -> do
     putStrLn $ printf "%-50s | Clause %7s:  %s"
                  (formatVerbProperty vp)
