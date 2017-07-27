@@ -290,3 +290,33 @@ copulativeVerbs =
   , "sound"
   , "test"
   ] 
+
+{-
+ -- from werdy
+  copulas.add("act");
+		copulas.add("appear");
+		copulas.add("be");
+		copulas.add("become");
+		copulas.add("come");
+		copulas.add("come out");
+		copulas.add("end up");
+		copulas.add("get");
+		copulas.add("go");
+		copulas.add("grow");
+		copulas.add("fall");
+		copulas.add("feel");
+		copulas.add("keep");
+		copulas.add("leave");
+		copulas.add("look");
+		copulas.add("prove");
+		copulas.add("remain");
+		copulas.add("seem");
+		copulas.add("smell");
+		copulas.add("sound");
+		copulas.add("stay");
+		copulas.add("taste");
+		copulas.add("turn");
+		copulas.add("turn up");
+		copulas.add("wind up");
+		copulas.add("have");
+-}
