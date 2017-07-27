@@ -352,3 +352,28 @@ copulativeVerbs =
 		copulas.add("wind up");
 		copulas.add("have");
 -}
+
+
+-- | modal verbs
+--   https://en.wikipedia.org/wiki/English_modal_verbs
+modalVerbs = [ "can"
+             , "could"
+             , "may"
+             , "might"
+             , "shall"
+             , "should"
+             , "will"
+             , "would"
+             , "must"
+             ]
+
+semiModalVerbs = [ "ought"
+                 , "dare"
+                 , "need"
+                 , "had_better"
+                 , "used_to"
+                 ]
+  
+nonModalAuxilary = [ "have_to"
+                   , "do"
+                   ]
