@@ -88,7 +88,9 @@ process basedir pp = do
           withFile (bname <.> "corenlp_lemma") WriteMode $ \h_lemma -> do
             errorHandler h_err f $ do
               anns <- annotateTexts pp txts
-              mbstr <- serializeLemma pp anns
+              rdocs' <- traverse protobufDoc anns
+              let rdocs = sequenceA rdocs'
+              mbstr <- serializeLemma rdocs
               case mbstr of
                 Just bstr -> BL.hPutStrLn h_lemma bstr
                 Nothing -> return ()
@@ -96,7 +98,9 @@ process basedir pp = do
             withFile (bname <.> "corenlp_ptree") WriteMode $ \h_tr ->
               errorHandler h_err f $ do 
                 anns <- annotateTexts pp txts
-                mbstr <- serializePennTreeDep pp anns
+                rdocs' <- traverse protobufDoc anns
+                let rdocs = sequenceA rdocs'
+                mbstr <- serializePennTreeDep rdocs
                 case mbstr of
                   Just (bstr_deps,bstr_ntrs) -> do
                     BL.hPutStrLn h_ud bstr_deps
