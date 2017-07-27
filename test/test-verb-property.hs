@@ -178,10 +178,10 @@ ex21 = ( "I looked at the tree.", (Past,Simple,Active)
        )
 
 
-ex22 = ( "President Donald Trump said he's actively considering a breakup of giant Wall Street banks.", (Present,Progressive,Active)
-       , [(0,("President","President")),(1,("Donald","Donald")),(2,("Trump","Trump")),(3,("say","said")),(4,("he","he")),(5,("be","'s")),(6,("actively","actively")),(7,("consider","considering")),(8,("a","a")),(9,("breakup","breakup")),(10,("of","of")),(11,("giant","giant")),(12,("Wall","Wall")),(13,("Street","Street")),(14,("bank","banks")),(15,(".","."))]
-       , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","President"),PL ("NNP","Donald"),PL ("NNP","Trump")],PN "VP" [PL ("VBD","said"),PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","he")],PN "VP" [PL ("VBZ","'s"),PN "ADVP" [PL ("RB","actively")],PN "VP" [PL ("VBG","considering"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("NN","breakup")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("JJ","giant"),PL ("NNP","Wall"),PL ("NNP","Street"),PL ("NNS","banks")]]]]]]]],PL (".",".")]]
-       , Dependency 4 [(1,"President"),(2,"Donald"),(3,"Trump"),(4,"said"),(5,"he"),(6,"'s"),(7,"actively"),(8,"considering"),(9,"a"),(10,"breakup"),(11,"of"),(12,"giant"),(13,"Wall"),(14,"Street"),(15,"banks")] [((3,1),COMPOUND),((3,2),COMPOUND),((4,3),NSUBJ),((4,8),CCOMP),((8,5),NSUBJ),((8,6),AUX),((8,7),ADVMOD),((8,10),DOBJ),((10,9),DET),((10,15),NMOD),((15,11),CASE),((15,12),AMOD),((15,13),COMPOUND),((15,14),COMPOUND)]
+ex22 = ( "He's actively considering a breakup of giant Wall Street banks.", (Present,Progressive,Active)
+       , [(0,("he","He")),(1,("be","'s")),(2,("actively","actively")),(3,("consider","considering")),(4,("a","a")),(5,("breakup","breakup")),(6,("of","of")),(7,("giant","giant")),(8,("Wall","Wall")),(9,("Street","Street")),(10,("bank","banks")),(11,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","He")],PN "VP" [PL ("VBZ","'s"),PN "ADVP" [PL ("RB","actively")],PN "VP" [PL ("VBG","considering"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("NN","breakup")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("JJ","giant"),PL ("NNP","Wall"),PL ("NNP","Street"),PL ("NNS","banks")]]]]],PL (".",".")]]
+       , Dependency 4 [(1,"He"),(2,"'s"),(3,"actively"),(4,"considering"),(5,"a"),(6,"breakup"),(7,"of"),(8,"giant"),(9,"Wall"),(10,"Street"),(11,"banks")] [((4,1),NSUBJ),((4,2),AUX),((4,3),ADVMOD),((4,6),DOBJ),((6,5),DET),((6,11),NMOD),((11,7),CASE),((11,8),AMOD),((11,9),COMPOUND),((11,10),COMPOUND)]
        )
          
   
@@ -198,9 +198,6 @@ mkVPS lmatknlst pt =
 checkVP :: (Text,(Tense,Aspect,Voice),[(Int,(Lemma,Text))],PennTree,Dependency) -> Bool
 checkVP (_txt,expresult,lmatknlst,pt,_dep) =
   let vps = mkVPS lmatknlst pt
-  {- let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
-      -- tkmap= IM.fromList (map (\(i,(_,t)) -> (i,t)) lmatknlst)
-      vps = verbPropertyFromPennTree lemmamap pt -}
   in case vps of
        vp:[] -> expresult == (vp^.vp_tense,vp^.vp_aspect,vp^.vp_voice)
        _ -> False 

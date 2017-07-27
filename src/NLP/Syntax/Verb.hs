@@ -146,10 +146,14 @@ isPassive z
 
 
 
-findPrevVP :: BitreeZipperICP (Lemma ': as) -> Maybe (BitreeZipperICP (Lemma ': as))
-findPrevVP z = do
-  p <- parent z
-  iterateUntilM (\z' -> case getIdxPOS (current z') of {Nothing -> False; Just (_,p) -> isVerb p}) prev p
+findPrevVerb :: BitreeZipperICP (Lemma ': as) -> Maybe (BitreeZipperICP (Lemma ': as))
+findPrevVerb z = do
+    p <- parent z
+    (prevVerbInSiblings p <|> (parent p >>= prevVerbInSiblings))
+  where
+    prevVerbInSiblings x = iterateUntilM (\z' -> case getIdxPOS (current z') of {Nothing -> False; Just (_,pos) -> isVerb pos}) prev x
+
+     
   --listToMaybe lst
 
 
@@ -170,18 +174,18 @@ auxHave z =
 tenseAspectVoice :: BitreeZipperICP (Lemma ': as) -> Maybe (Tense,Aspect,Voice,[Int])
 tenseAspectVoice z
   | isPOSAs VBN (current z) = do
-      z1 <- findPrevVP z -- (child1 <=< parent <=< parent) z
+      z1 <- findPrevVerb z -- (child1 <=< parent <=< parent) z
       ((auxBe z1
         (return (Past,Simple,Passive,[getIdx z1,getIdx z]))
-        (findPrevVP z1 >>= \z2 -> 
+        (findPrevVerb z1 >>= \z2 -> 
           auxBe z2
             (return (Past,Progressive,Passive,map getIdx [z2,z1,z]))
             Nothing
-            (findPrevVP z2 >>= \z3 -> do
+            (findPrevVerb z2 >>= \z3 -> do
                t <- auxHave z3
                return (t,PerfectProgressive,Passive,map getIdx [z3,z2,z1,z]))
             (return (Present,Progressive,Passive,[getIdx z2,getIdx z1,getIdx z])))
-        (do z2 <- findPrevVP z1
+        (do z2 <- findPrevVerb z1
             t <- auxHave z2
             return (t,Perfect,Passive,map getIdx [z2,z1,z])
         )
@@ -194,10 +198,10 @@ tenseAspectVoice z
            | otherwise
              -> Nothing))
   | isPOSAs VBG (current z) = do
-      z1 <- findPrevVP z
+      z1 <- findPrevVerb z
       auxBe z1 (return (Past,Progressive,Active,[getIdx z1,getIdx z]))
                Nothing
-               (do z2 <- findPrevVP z1
+               (do z2 <- findPrevVerb z1
                    t <- auxHave z2
                    return (t,PerfectProgressive,Active,map getIdx [z2,z1,z]))
                (return (Present,Progressive,Active,[getIdx z1,getIdx z]))
