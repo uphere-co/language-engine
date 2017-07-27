@@ -35,10 +35,10 @@ import           WordNet.Type.POS
 --
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
---
-import           Common.Load
-import           Common.Type
+import           OntoNotes.App.Load
 
+
+data VorN = V | N 
 
 verbnet semlinkmap lma txt =
   let (_,cls') = T.breakOn "-" txt
@@ -136,9 +136,6 @@ formatStat :: ((Text,Text),Int) -> String
 formatStat ((lma,sens),num) = printf "%20s.%-5s : %5d" lma sens num
 
 
-
-
-
 listSenseDetail :: IO ()
 listSenseDetail = do
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAll
@@ -165,6 +162,7 @@ listSenseDetail = do
     putStrLn "====================================================================================================================="
     putStrLn $ "From FrameNet Lexical Unit " ++ show (lma <> ".v") ++ ": " ++ show frms
     putStrLn (render doc)
+
 
 mergeStatPB2Lemma ws = 
   let merge :: [(Text,Text)] -> (Text,Int)
