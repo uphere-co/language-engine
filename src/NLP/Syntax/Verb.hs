@@ -137,13 +137,6 @@ isPassive z
     in (b1 && b2) || (b1 && b3) || (b1 && b4)
 
 
-findPrevVerb :: BitreeZipperICP (Lemma ': as) -> Maybe (BitreeZipperICP (Lemma ': as))
-findPrevVerb z = do
-    p <- parent z
-    (prevVerbInSiblings p <|> (parent p >>= prevVerbInSiblings))
-  where
-    prevVerbInSiblings x = iterateUntilM (\z' -> case getIdxPOS (current z') of {Nothing -> False; Just (_,pos) -> isVerb pos}) prev x
-
 
 auxBe z fd fg fn f =
    if | isLemmaAs "be" (current z) && isPOSAs VBD (current z) -> fd
@@ -162,6 +155,20 @@ auxHave z =
 type AuxNeg = (Maybe (Int,Lemma),Maybe (Int,Lemma))
 
 
+findSiblings dir pred x = iterateUntilM (pred.current) dir x
+
+
+findPrevVerb :: BitreeZipperICP (Lemma ': as) -> Maybe (BitreeZipperICP (Lemma ': as))
+findPrevVerb z = do
+    p <- parent z
+    (prevVerbInSiblings p <|> (parent p >>= prevVerbInSiblings))
+  where
+    prevVerbInSiblings = findSiblings prev (\x -> case getIdxPOS x of {Nothing -> False; Just (_,pos) -> isVerb pos})
+    -- prevVerbInSiblings x = iterateUntilM (\z' -> case getIdxPOS (current z') of {Nothing -> False; Just (_,pos) -> isVerb pos}) prev x
+
+
+
+
 findAux :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,Lemma)
 findAux z = do
   p <- parent z
@@ -177,8 +184,9 @@ findAux z = do
 findNeg :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,Lemma)
 findNeg z = intLemma =<< (findNegInSiblings prev z <|> findNegInSiblings next z)
   where
-    findNegInSiblings dir x = (\f -> iterateUntilM f dir x) $ \z' ->
-                                isPOSAs RB (current z') && (isLemmaAs "not" (current z') || isLemmaAs "n't" (current z'))
+    -- findNegInSiblings dir x = (\f -> iterateUntilM f dir x) $ \z' ->
+    --                            isPOSAs RB (current z') && (isLemmaAs "not" (current z') || isLemmaAs "n't" (current z'))
+    findNegInSiblings dir = findSiblings dir (\x -> isPOSAs RB x && (isLemmaAs "not" x || isLemmaAs "n't" x))
     intLemma c = do
       i <- getLeafIndex (current c)
       l <- ahead . getAnnot <$> getLeaf (current c)
@@ -227,7 +235,6 @@ verbProperty z = do
   lma <- ahead . getAnnot <$> getLeaf (current z)
   pos <- posTag <$> getLeaf (current z)
   (tns,asp,vo,(aux,neg),is) <- tenseAspectVoiceAuxNeg z
-  -- let aux = findAux z
   return (VerbProperty i lma tns asp vo aux neg is)
 
 
