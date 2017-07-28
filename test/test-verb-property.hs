@@ -186,7 +186,7 @@ ex22 = ( "He's actively considering a breakup of giant Wall Street banks.", (Pre
        )
          
 
-ex23 = ( "A major federal civil rights law does not protect employees from discrimination.",(Present,Simple,Active,Nothing,Just "not")
+ex23 = ( "A major federal civil rights law does not protect employees from discrimination.",(Present,Simple,Active,Just "do",Just "not")
        , [(0,("a","A")),(1,("major","major")),(2,("federal","federal")),(3,("civil","civil")),(4,("rights","rights")),(5,("law","law")),(6,("do","does")),(7,("not","not")),(8,("protect","protect")),(9,("employee","employees")),(10,("from","from")),(11,("discrimination","discrimination")),(12,(".","."))]
        , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","A"),PL ("JJ","major"),PL ("JJ","federal"),PL ("JJ","civil"),PL ("NNS","rights"),PL ("NN","law")],PN "VP" [PL ("VBZ","does"),PL ("RB","not"),PN "VP" [PL ("VB","protect"),PN "NP" [PL ("NNS","employees")],PN "PP" [PL ("IN","from"),PN "NP" [PL ("NN","discrimination")]]]],PL (".",".")]]
        , Dependency 9 [(1,"A"),(2,"major"),(3,"federal"),(4,"civil"),(5,"rights"),(6,"law"),(7,"does"),(8,"not"),(9,"protect"),(10,"employees"),(11,"from"),(12,"discrimination")] [((6,1),DET),((6,2),AMOD),((6,3),AMOD),((6,4),AMOD),((6,5),COMPOUND),((9,6),NSUBJ),((9,7),AUX),((9,8),NEG),((9,10),DOBJ),((9,12),NMOD),((12,11),CASE)]
