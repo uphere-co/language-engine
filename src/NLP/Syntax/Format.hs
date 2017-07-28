@@ -4,6 +4,7 @@ module NLP.Syntax.Format where
 
 import           Control.Lens
 import           Data.List                     (intercalate)
+import           Data.Maybe
 import           Data.Text                     (Text)
 import qualified Data.Text               as T
 import           Data.Tree               as Tr
@@ -23,9 +24,11 @@ formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
         
 
 formatVerbProperty :: VerbProperty -> String
-formatVerbProperty vp = printf "%3d %-15s : %20s %s"
+formatVerbProperty vp = printf "%3d %-15s : %-35s  aux: %-7s neg: %-5s | %s"
                           (vp^.vp_index) (vp^.vp_lemma.to unLemma)
                           (show (vp^.vp_tense) ++ "." ++ show (vp^.vp_aspect) ++ "." ++ show (vp^.vp_voice))
+                          (fromMaybe "" (vp^?vp_auxiliary._Just._2.to unLemma))
+                          (fromMaybe "" (vp^?vp_negation._Just._2.to unLemma))
                           (show (vp^.vp_words))
 
 

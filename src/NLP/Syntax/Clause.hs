@@ -22,10 +22,6 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
--- import           SRL.Feature.Verb
--- import           SRL.Format
---import           SRL.Type.Clause
--- import           SRL.Type.Verb
 
 
 currentlevel :: Bitree (Range,(STag,Int)) t -> Int
@@ -199,11 +195,7 @@ showClauseStructure lemmamap ptree  = do
               g (Right x)     = T.pack (show x)
 
   T.IO.putStrLn (formatBitree id tr')
-
   let rngs = clauseRanges tr
-  
-
-  
   flip mapM_ vps $ \vp -> do
     putStrLn $ printf "%-50s | Clause %7s:  %s"
                  (formatVerbProperty vp)
