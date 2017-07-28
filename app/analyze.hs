@@ -185,15 +185,19 @@ formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) =
   printf "%2s.%-6s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s " sgrp sn num txt_def txt_frame txt_fecore txt_feperi
 
 
-formatSenses :: [(Text,Text,Int,Text,Text,Text,Text)] -> String
-formatSenses lst = let t = chooseFrame lst
-                   in "Top frame: "
-                      ++ printf " %-20s | %-40s      ------      %-30s\n"
-                          (fromMaybe "" (t^?_Just._5))
-                          (fromMaybe "" (t^?_Just._6))
-                          (fromMaybe "" (t^?_Just._7))
-                      ++ "\n\n\n*********************************************\n"
-                      ++ intercalate "\n" (map formatSense lst) 
+formatSenses :: Bool  -- ^ doesShowOtherSense
+             -> [(Text,Text,Int,Text,Text,Text,Text)]
+             -> String
+formatSenses doesShowOtherSense lst
+  = let t = chooseFrame lst
+    in "Top frame: "
+       ++ printf " %-20s | %-40s      ------      %-30s\n"
+            (fromMaybe "" (t^?_Just._5))
+            (fromMaybe "" (t^?_Just._6))
+            (fromMaybe "" (t^?_Just._7))
+       ++ if doesShowOtherSense
+          then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense lst)
+          else ""
 
 sentStructure pp sensemap sensestat framedb ontomap txt = do
   (psents,sents,tokss,mptrs,deps,mtmx) <- runParser pp txt
@@ -227,7 +231,7 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
       forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
         putStrLn (printf "Verb: %-20s" lma)
         let senses = getSenses lma sensemap sensestat framedb ontomap
-        (putStrLn . formatSenses) senses
+        (putStrLn . formatSenses False) senses
         putStrLn "--------------------------------------------------------------------------------------------------"
 
 
@@ -242,32 +246,10 @@ queryProcess pp sensemap sensestat framedb ontomap = do
     sentStructure pp sensemap sensestat framedb ontomap input
     putStrLn "=================================================================================================\n\n\n\n"
 
-
-{-
 main = do
-  -- ludb <- loadFrameNet (cfg^.cfg_framenet_file)
-
-  let xs = do (w,lst) <- mapFromONtoFN
-              (m,t) <- lst
-              let mfr = HM.lookup t (fdb^.frameDB)
-              guard (isNothing mfr)
-              return (w,m,t)
-  -- mapM_ print . filter (\(_,_,t) -> isJust (T.find (\c -> c == ' ' || c == '(') t)) $  xs
-
-  mapM_ print xs
--}
-
-
-main = do
-  -- ludb <- loadFrameNet (cfg^.cfg_framenet_lubin)
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
-
   let ontomap = HM.fromList mapFromONtoFN
-
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
-  -- semlink <- loadSemLink (cfg^.cfg_semlink_file)
-  -- let semlinkmap = createVNFNDB semlink
-
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
 
@@ -282,7 +264,4 @@ main = do
                        . (sutime .~ True)
                        . (constituency .~ True)
                   )
-
-    -- mapM_ (sentStructure pp . (^._3) ) ordered
-    -- sentStructure pp txt
     queryProcess pp sensemap sensestat framedb ontomap
