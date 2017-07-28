@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Common.Load where
+module OntoNotes.App.Load where
 
 import           Control.Lens
 import           Data.Binary

@@ -61,8 +61,7 @@ import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
 import           OntoNotes.Mapping.FrameNet
---
-import           Common.Load
+import           OntoNotes.App.Load
 
 
 convertToken_charIndex :: TK.Token -> Maybe Token

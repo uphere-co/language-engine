@@ -17,14 +17,18 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     OntoNotes
+                       OntoNotes.App.Load
                        OntoNotes.Mapping.FrameNet
                        OntoNotes.Parser.Sense
                        OntoNotes.Parser.SenseInventory
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10,
+                       binary,
                        boxes,
+                       bytestring,
                        directory,
+                       directory-tree,
                        filepath,
                        lens,
                        -- pretty,
@@ -32,6 +36,9 @@ library
                        text,
                        unordered-containers,
                        --
-                       nlp-types
+                       HFrameNet,
+                       HWordNet,
+                       nlp-types,
+                       VerbNet
   hs-source-dirs:      src
   default-language:    Haskell2010
