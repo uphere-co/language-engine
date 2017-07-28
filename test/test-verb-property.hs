@@ -11,10 +11,12 @@ import           Control.Lens               hiding (levels)
 import qualified Data.IntMap                as IM
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
+import qualified Data.Text.IO               as T.IO
 --
 import           CoreNLP.Simple.Type.Simplified
 --
 import           NLP.Printer.PennTreebankII
+import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
@@ -223,3 +225,10 @@ unitTests = testGroup "All Unit tests" [unitTestsVerbProperty]
 main :: IO ()
 main = defaultMain unitTests
 
+
+mainShow :: IO ()
+mainShow = do
+  flip mapM_ testcases $ \c -> do
+    putStrLn "--------------------------------------------------------------------------"
+    T.IO.putStrLn (c^._1)
+    mapM_ (putStrLn.formatVerbProperty) (mkVPS (c^._3) (c^._4))
