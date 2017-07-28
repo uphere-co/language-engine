@@ -27,7 +27,7 @@ import           Test.Tasty
 
 
 -- | (Tense,Aspect,Voice,Maybe Text,Maybe Text) == (tense,aspect,voice,auxiliary,negation)
-ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23
+ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24
   :: (Text,(Tense,Aspect,Voice,Maybe Text,Maybe Text),[(Int,(Lemma,Text))],PennTree,Dependency)
 ex1 = ( "He was fined $25,000.", (Past,Simple,Passive,Nothing,Nothing)
       , [(0,("he","He")),(1,("be","was")),(2,("fine","fined")),(3,("$","$")),(4,("25,000","25,000")),(5,(".","."))]
@@ -194,8 +194,15 @@ ex23 = ( "A major federal civil rights law does not protect employees from discr
        , Dependency 9 [(1,"A"),(2,"major"),(3,"federal"),(4,"civil"),(5,"rights"),(6,"law"),(7,"does"),(8,"not"),(9,"protect"),(10,"employees"),(11,"from"),(12,"discrimination")] [((6,1),DET),((6,2),AMOD),((6,3),AMOD),((6,4),AMOD),((6,5),COMPOUND),((9,6),NSUBJ),((9,7),AUX),((9,8),NEG),((9,10),DOBJ),((9,12),NMOD),((12,11),CASE)]
        )
   
+
+ex24 = ( "It isn't done.", (Present,Simple,Passive,Nothing,Just "not")
+       , [(0,("it","It")),(1,("be","is")),(2,("not","n't")),(3,("do","done")),(4,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","It")],PN "VP" [PL ("VBZ","is"),PL ("RB","n't"),PN "VP" [PL ("VBN","done")]],PL (".",".")]]
+       , Dependency 4 [(1,"It"),(2,"is"),(3,"n't"),(4,"done")] [((4,1),NSUBJPASS),((4,2),AUXPASS),((4,3),NEG)]
+       )
+
 testcases :: [(Text,(Tense,Aspect,Voice,Maybe Text,Maybe Text),[(Int,(Lemma,Text))],PennTree,Dependency)]
-testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23]
+testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24]
 
 
 
