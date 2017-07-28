@@ -1267,7 +1267,7 @@ mapFromONtoFN =
         ,("1.7.1", "Placing") -- "(Placing)")
         ,("1.7.2", "Getting")
         ,("1.7.3", "Becoming_aware")
-        ,("1.7.4", "Change_position_on_a_scale")  -- "Changing_position_on_a_scale - Cause_cahnge_of_position_on_a_scale")
+        ,("1.7.4", "Change_position_on_a_scale")  -- "Change_position_on_a_scale - Cause_change_of_position_on_a_scale")
         ,("1.7.6", "Choosing")
         ,("1.7.8", "Hit_or_miss")
         ,("1.7.10", "Personal_relationship")]) -- "(Personal_relationship <- date.v)")])
@@ -1776,7 +1776,7 @@ mapFromONtoFN =
         ,("1.4", "Reliance")])
 
     , ( "bid"
-      , [("1.1", "Commercial_scenario")])  --  Commercial_scenario
+      , [("1.1", "Commerce_scenario")])  --  Commercial_scenario
 
     , ( "advance"
       , [("1.1", "Self_motion") -- "Self_motion || Cause_motion")
@@ -1793,7 +1793,7 @@ mapFromONtoFN =
     , ( "step"
       , [("1.1", "Self_motion") -- "Self_motion || Transition_to_a_state")
         ,("1.3", "Cause_motion")
-        ,("1.10", "Cause_change_position_on_a_scale") -- "Cause_change_position_on_a_scale || Cause_change_of_strength")
+        ,("1.10", "Cause_change_of_position_on_a_scale") -- "Cause_change_position_on_a_scale || Cause_change_of_strength")
         ,("1.11", "none")])
 
     , ( "attribute"
@@ -1818,8 +1818,8 @@ mapFromONtoFN =
     , ( "clear"
       , [("1.1", "Emptying") -- "Emptying || Removing")
         ,("1.2", "Improvement_or_decline")
-        ,("1.3", "(Deciding)")
-        ,("1.4", "(Evading)")
+        ,("1.3", "Deciding")    -- (Deciding)
+        ,("1.4", "Evading")   -- (Evading)
         ,("1.6", "Quitting_a_place")])
 
     , ( "achieve"
@@ -1900,7 +1900,7 @@ mapFromONtoFN =
 
     , ( "project"
       , [("1.1", "Communication")
-        ,("1.5", "Estimation")])
+        ,("1.5", "Estimating")])
 
     , ( "fund"
       , [("1.1", "Funding")
@@ -2075,8 +2075,8 @@ mapFromONtoFN =
 
     , ( "dismiss"
       , [("1.1", "Respond_to_proposal") -- "Respond_to_proposal || Judgment")
-        ,("1.2", "Activity_end") -- "Activity_end || Firing")
-        ,("1.3", "Activity_end")])
+        ,("1.2", "Activity_finish") -- "Activity_finish || Firing")
+        ,("1.3", "Activity_finish")])
 
     , ( "challenge"
       , [("1.1", "Compliance") -- "(Compliance)")
