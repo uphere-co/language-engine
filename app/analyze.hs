@@ -9,15 +9,15 @@ import           Control.Lens          hiding (Level)
 import           Control.Monad
 import           Control.Monad.Loops
 import           Control.Monad.IO.Class           (liftIO)
-
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
 import           Data.Foldable
+import           Data.Function                    (on)
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import qualified Data.IntMap                as IM
-import           Data.List                        (foldl',sort,zip4)
+import           Data.List                        (intercalate,foldl',sort,zip4)
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                        (Text)
@@ -152,7 +152,8 @@ runParser pp txt = do
   return (psents,sents,tokss,parsetrees,deps,mtmx)
 
 
-formatSenses lma sensemap sensestat framedb ontomap = do
+
+getSenses lma sensemap sensestat framedb ontomap = do
   let lmav = lma <> "-v"
   si <- maybeToList (HM.lookup lmav sensemap)
   s <- si^.inventory_senses
@@ -174,16 +175,29 @@ formatSenses lma sensemap sensestat framedb ontomap = do
                     fecoretxt = T.intercalate ", " (map (^.fe_name) corefes)
                     feperitxt = T.intercalate ", " (map (^.fe_name) perifes)
                 return (frtxt,fecoretxt,feperitxt)
-      txt1 = printf "%2s.%-6s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s "
-               (s^.sense_group)
-               (s^.sense_n)
-               num
-               txt_def
-               txt_frame
-               txt_fecore
-               txt_feperi
-  return txt1
+  return (s^.sense_group,s^.sense_n,num,txt_def,txt_frame,txt_fecore,txt_feperi)
 
+chooseFrame [] = Nothing
+chooseFrame xs = Just (maximumBy (compare `on` (^._3)) xs)
+
+
+formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) = 
+  printf "%2s.%-6s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s " sgrp sn num txt_def txt_frame txt_fecore txt_feperi
+
+
+formatSenses :: Bool  -- ^ doesShowOtherSense
+             -> [(Text,Text,Int,Text,Text,Text,Text)]
+             -> String
+formatSenses doesShowOtherSense lst
+  = let t = chooseFrame lst
+    in "Top frame: "
+       ++ printf " %-20s | %-40s      ------      %-30s\n"
+            (fromMaybe "" (t^?_Just._5))
+            (fromMaybe "" (t^?_Just._6))
+            (fromMaybe "" (t^?_Just._7))
+       ++ if doesShowOtherSense
+          then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense lst)
+          else ""
 
 sentStructure pp sensemap sensestat framedb ontomap txt = do
   (psents,sents,tokss,mptrs,deps,mtmx) <- runParser pp txt
@@ -211,19 +225,13 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
       putStrLn "--------------------------------------------------------------------------------------------------"
       let lmaposs = concatMap (filter (\t -> isVerb (t^.token_pos))) $ tokss
           lmas = map (^.token_lemma) lmaposs
-      -- mapM_ (putStrLn . formatLemmaPOS) lmaposs
-      -- mapM_ (T.IO.putStrLn . formatBitree (^._2.to (showVerb tkmap))) vtree
-      -- putStrLn "---------------------------------------------------------------"
       showClauseStructure lmap ptr
-      -- putStrLn "---------------------------------------------------------------"
-      -- (T.IO.putStrLn . prettyPrint 0) ptr
       putStrLn "================================================================================================="
-
-
 
       forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
         putStrLn (printf "Verb: %-20s" lma)
-        mapM_ putStrLn (formatSenses lma sensemap sensestat framedb ontomap)
+        let senses = getSenses lma sensemap sensestat framedb ontomap
+        (putStrLn . formatSenses False) senses
         putStrLn "--------------------------------------------------------------------------------------------------"
 
 
@@ -238,32 +246,10 @@ queryProcess pp sensemap sensestat framedb ontomap = do
     sentStructure pp sensemap sensestat framedb ontomap input
     putStrLn "=================================================================================================\n\n\n\n"
 
-
-{-
 main = do
-  -- ludb <- loadFrameNet (cfg^.cfg_framenet_file)
-
-  let xs = do (w,lst) <- mapFromONtoFN
-              (m,t) <- lst
-              let mfr = HM.lookup t (fdb^.frameDB)
-              guard (isNothing mfr)
-              return (w,m,t)
-  -- mapM_ print . filter (\(_,_,t) -> isJust (T.find (\c -> c == ' ' || c == '(') t)) $  xs
-
-  mapM_ print xs
--}
-
-
-main = do
-  -- ludb <- loadFrameNet (cfg^.cfg_framenet_lubin)
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
-
   let ontomap = HM.fromList mapFromONtoFN
-
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
-  -- semlink <- loadSemLink (cfg^.cfg_semlink_file)
-  -- let semlinkmap = createVNFNDB semlink
-
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
 
@@ -278,7 +264,4 @@ main = do
                        . (sutime .~ True)
                        . (constituency .~ True)
                   )
-
-    -- mapM_ (sentStructure pp . (^._3) ) ordered
-    -- sentStructure pp txt
     queryProcess pp sensemap sensestat framedb ontomap
