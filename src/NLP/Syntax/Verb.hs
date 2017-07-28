@@ -117,16 +117,6 @@ withHave x = check1 x <|> check2 x <|> check3 x
                       getIdxPOS w
 
 
-findAux :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,Lemma)
-findAux z = do
-  p <- parent z
-  guard (isChunkAs VP (current p))
-  c <- child1 p
-  if isPOSAs MD (current c)
-    then do i <- getLeafIndex (current c)
-            l <- ahead . getAnnot <$> getLeaf (current c)
-            return (i,l)
-    else findAux p
           
           
 
@@ -168,38 +158,66 @@ auxHave z =
      | isLemmaAs "have" (current z)                            -> return Present
      | otherwise                                               -> Nothing
 
-  
-tenseAspectVoice :: BitreeZipperICP (Lemma ': as) -> Maybe (Tense,Aspect,Voice,[Int])
-tenseAspectVoice z
+
+type AuxNeg = (Maybe (Int,Lemma),Maybe (Int,Lemma))
+
+
+findAux :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,Lemma)
+findAux z = do
+  p <- parent z
+  guard (isChunkAs VP (current p))
+  c <- child1 p
+  if isPOSAs MD (current c)
+    then do i <- getLeafIndex (current c)
+            l <- ahead . getAnnot <$> getLeaf (current c)
+            return (i,l)
+    else findAux p
+
+
+findNeg :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,Lemma)
+findNeg z = intLemma =<< (findNegInSiblings prev z <|> findNegInSiblings next z)
+  where
+    findNegInSiblings dir x = (\f -> iterateUntilM f dir x) $ \z' ->
+                                isPOSAs RB (current z') && (isLemmaAs "not" (current z') || isLemmaAs "n't" (current z'))
+    intLemma c = do
+      i <- getLeafIndex (current c)
+      l <- ahead . getAnnot <$> getLeaf (current c)
+      return (i,l)                                  
+
+
+findAuxNeg z = (findAux z,findNeg z) 
+        
+tenseAspectVoiceAuxNeg :: BitreeZipperICP (Lemma ': as) -> Maybe (Tense,Aspect,Voice,AuxNeg,[Int])
+tenseAspectVoiceAuxNeg z
   | isPOSAs VBN (current z) = do
       z1 <- findPrevVerb z
       ((auxBe z1
-        (return (Past,Simple,Passive,[getIdx z1,getIdx z]))
+        (return (Past,Simple,Passive,findAuxNeg z1,[getIdx z1,getIdx z]))
         (findPrevVerb z1 >>= \z2 -> 
           auxBe z2
-            (return (Past,Progressive,Passive,map getIdx [z2,z1,z]))
+            (return (Past,Progressive,Passive,findAuxNeg z2,map getIdx [z2,z1,z]))
             Nothing
             (findPrevVerb z2 >>= \z3 -> do
                t <- auxHave z3
-               return (t,PerfectProgressive,Passive,map getIdx [z3,z2,z1,z]))
-            (return (Present,Progressive,Passive,[getIdx z2,getIdx z1,getIdx z])))
+               return (t,PerfectProgressive,Passive,findAuxNeg z3,map getIdx [z3,z2,z1,z]))
+            (return (Present,Progressive,Passive,findAuxNeg z2,[getIdx z2,getIdx z1,getIdx z])))
         (do z2 <- findPrevVerb z1
             t <- auxHave z2
-            return (t,Perfect,Passive,map getIdx [z2,z1,z])
+            return (t,Perfect,Passive,findAuxNeg z2,map getIdx [z2,z1,z])
         )
-        (return (Present,Simple,Passive,[getIdx z1,getIdx z])))
+        (return (Present,Simple,Passive,findAuxNeg z1,[getIdx z1,getIdx z])))
        <|>
-       (auxHave z1 >>= \t -> return (t,Perfect,Active,map getIdx [z1,z])))
+       (auxHave z1 >>= \t -> return (t,Perfect,Active,findAuxNeg z1,map getIdx [z1,z])))
   | isPOSAs VBG (current z) = do
       z1 <- findPrevVerb z
-      auxBe z1 (return (Past,Progressive,Active,[getIdx z1,getIdx z]))
+      auxBe z1 (return (Past,Progressive,Active,findAuxNeg z1,[getIdx z1,getIdx z]))
                Nothing
                (do z2 <- findPrevVerb z1
                    t <- auxHave z2
-                   return (t,PerfectProgressive,Active,map getIdx [z2,z1,z]))
-               (return (Present,Progressive,Active,[getIdx z1,getIdx z]))
-  | isPOSAs VBD (current z) = return (Past,Simple,Active,[getIdx z])
-  | otherwise               = return (Present,Simple,Active,[getIdx z])
+                   return (t,PerfectProgressive,Active,findAuxNeg z2,map getIdx [z2,z1,z]))
+               (return (Present,Progressive,Active,findAuxNeg z1,[getIdx z1,getIdx z]))
+  | isPOSAs VBD (current z) = return (Past,Simple,Active,findAuxNeg z,[getIdx z])
+  | otherwise               = return (Present,Simple,Active,findAuxNeg z,[getIdx z])
   where getIdx = fst . fromJust . getIdxPOS . current 
 
 
@@ -208,9 +226,9 @@ verbProperty z = do
   i <- getLeafIndex (current z)
   lma <- ahead . getAnnot <$> getLeaf (current z)
   pos <- posTag <$> getLeaf (current z)
-  (tns,asp,vo,is) <- tenseAspectVoice z
-  let aux = findAux z
-  return (VerbProperty i lma tns asp vo aux is)
+  (tns,asp,vo,(aux,neg),is) <- tenseAspectVoiceAuxNeg z
+  -- let aux = findAux z
+  return (VerbProperty i lma tns asp vo aux neg is)
 
 
 voice :: (PennTree,S.Sentence) -> [(Int,(Lemma,Voice))]
