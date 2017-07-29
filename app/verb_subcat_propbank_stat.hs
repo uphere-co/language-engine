@@ -10,7 +10,7 @@ import           Data.Function                (on)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict   as HM
 import           Data.List
-import           Data.Maybe                   (fromMaybe)
+import           Data.Maybe                   (fromMaybe,maybeToList,mapMaybe)
 import           Data.Monoid
 import           Data.Text                    (Text)
 import qualified Data.Text             as T
@@ -22,6 +22,7 @@ import           System.FilePath
 import           System.IO
 import           Text.Printf
 --
+import           PropBank.Format
 import           PropBank.Parser.Prop
 import           PropBank.Query
 import           PropBank.Type.Frame
@@ -35,12 +36,21 @@ lookupRoleset db (lma,sens) = do
   defn <- Data.List.lookup (lma <> "." <> sens) $ map (\r -> (r^.roleset_id,fromMaybe "" (r^.roleset_name))) rs
   return defn
 
+maybeNumberedArgument :: PropBankLabel -> Maybe Int
+maybeNumberedArgument (NumberedArgument n) = Just n
+maybeNumberedArgument _                    = Nothing
+  
+formatInst :: Instance -> String
+formatInst inst = show (mapMaybe maybeNumberedArgument (inst^..inst_arguments.traverse.arg_label))
+
+
 
 formatStatInst :: PredicateDB -> HashMap RoleSetID [Instance] -> (RoleSetID,Int) -> String
-formatStatInst db imap ((lma,sens),num) =
-  let mdefn = lookupRoleset db (lma,sens)
-      minsts = HM.lookup (lma,sens) imap
-  in printf "%20s.%s : %5d == %5d : %s" lma sens num (maybe 0 length minsts) (fromMaybe "" mdefn)
+formatStatInst db imap (rid,num) =
+  let mdefn = lookupRoleset db rid
+      minsts = HM.lookup rid imap
+  in printf "%20s : %5d : %s\n" (formatRoleSetID rid) num  (fromMaybe "" mdefn)
+     ++ (intercalate "\n" . map formatInst . concat . maybeToList) minsts
 
 
 
@@ -63,8 +73,8 @@ main = do
     txt <- TIO.readFile fp
     return (parsePropWithFileField NoOmit txt)
 
-  let insts_v = filter (\p->T.last (p^.inst_lemma_type) == 'v') (concat instss)
-      test_insts_v = filter (\x -> x^.inst_lemma_roleset_id._1 == "call") insts_v
+  let all_insts_v = filter (\p->T.last (p^.inst_lemma_type) == 'v') (concat instss)
+      insts_v = filter (\x -> x^.inst_lemma_roleset_id._1 == "call") all_insts_v
 
       classified_insts = foldl' addfunc  HM.empty insts_v
         where addfunc acc inst = HM.insertWith (++) (inst^.inst_lemma_roleset_id) [inst] acc
