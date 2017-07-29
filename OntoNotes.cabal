@@ -19,6 +19,7 @@ library
   exposed-modules:     OntoNotes
                        OntoNotes.App.Load
                        OntoNotes.App.Serializer
+                       OntoNotes.Corpus.PropBank
                        OntoNotes.Mapping.FrameNet
                        OntoNotes.Parser.Sense
                        OntoNotes.Parser.SenseInventory
