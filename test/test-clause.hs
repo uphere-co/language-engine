@@ -8,8 +8,6 @@
 module Main where
 
 import           Control.Lens               hiding (levels)
--- import qualified Data.ByteString.Char8      as B
--- import           Data.Default
 import           Data.Foldable
 import           Data.List                         (foldl')
 import qualified Data.IntMap                as IM
@@ -17,17 +15,7 @@ import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
--- import           Data.Time.Calendar                (fromGregorian)
--- import           Language.Java              as J
 import           System.Environment                (getEnv)
---
-{- import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
-import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
-import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
-import           CoreNLP.Simple
-import           CoreNLP.Simple.Convert
-import           CoreNLP.Simple.Type
-import           CoreNLP.Simple.Util -}
 --
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
@@ -36,12 +24,6 @@ import           NLP.Type.PennTreebankII
 import           Data.BitreeZipper
 import           Text.Format.Tree
 --
--- import           SRL.Feature
--- import           SRL.Feature.Clause
--- import           SRL.Feature.Dependency
--- import           SRL.Feature.Verb
--- import           SRL.Format
--- import           SRL.Type
 
 
 
@@ -73,12 +55,17 @@ testlemma5 = [(0,"Russia"),(1,"be"),(2,"hope"),(3,"that"),(4,"the"),(5,"``"),(6,
 
 
 process (testpt,testlemma) = do
-  putStrLn "--------------------------------------------------"
+  putStrLn "--------------------------------------------------------------------------------------------------------------------"
   T.IO.putStrLn (T.intercalate " " (map snd (toList testpt)))
-  T.IO.putStrLn $ prettyPrint 0 testpt
+  putStrLn "--------------------------------------------------------------------------------------------------------------------"
+  T.IO.putStrLn  . T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip [0..] . map snd . toList $ testpt
+  putStrLn "--------------------------------------------------------------------------------------------------------------------"
   let lmap1 = IM.fromList (map (_2 %~ Lemma) testlemma)
   showClauseStructure lmap1 testpt
+  putStrLn "--------------------------------------------------------------------------------------------------------------------"  
+  T.IO.putStrLn $ prettyPrint 0 testpt
 
+  putStrLn "--------------------------------------------------------------------------------------------------------------------"
 
 main =
   mapM_ process [ (testpt1,testlemma1)
