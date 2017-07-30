@@ -73,14 +73,12 @@ errorHandler h_err msg action = do
     _ -> return ()
 
   
-prepare {- framedir -} basedir = do
-  -- propdb <- constructFrameDB framedir
-  -- let preddb = constructPredicateDB propdb
+prepare basedir = do
   dtr <- build basedir
   let fps = sort (toList (dirTree dtr))
       props = filter (\x -> takeExtensions x == ".prop") fps
       trees = filter (\x -> takeExtensions x == ".parse") fps
-  return ((),props,trees) -- (preddb,props,trees)
+  return (props,trees)
 
 
 readPropBank propfile = liftIO $ parsePropWithFileField NoOmit <$> T.IO.readFile propfile
@@ -95,8 +93,8 @@ readJSONList :: (FromJSON a) => FilePath -> EitherT String IO [a]
 readJSONList file = EitherT $ eitherDecode <$> liftIO (BL.readFile file)
 
 
-loadMatchArticle ptreedir {- framedir -} basedir article = do
-  (preddb,props,trees) <- liftIO $ prepare {- framedir -} basedir
+loadMatchArticle ptreedir basedir article = do
+  (props,trees) <- liftIO $ prepare basedir
   let findf = find (\f -> takeBaseName f == article)
   flip traverse ((,) <$> findf props <*> findf trees) $ \(fprop,ftree) -> do
     insts <- readPropBank fprop
@@ -115,7 +113,7 @@ loadMatchArticle ptreedir {- framedir -} basedir article = do
 
 propbankCorpus ptreedir basedir article = do
   void . runEitherT $ do
-    lst <- concat <$> loadMatchArticle ptreedir {- framedir -} basedir article
+    lst <- concat <$> loadMatchArticle ptreedir basedir article
     liftIO . flip mapM_ lst $ \(i,(((coretr,coredep,corelma),proptr),insts)) -> do
       putStrLn "\n\n\n-------------"
       putStrLn $ "sentence " ++ show i

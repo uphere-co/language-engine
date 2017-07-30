@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -5,16 +6,18 @@ module Main where
 
 import           Control.Exception
 import           Control.Lens
+import           Control.Monad.IO.Class
+import           Data.Attoparsec.Text  as A
 import           Data.Foldable
 import           Data.Function                (on)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict   as HM
 import           Data.List
-import           Data.Maybe                   (fromMaybe,maybeToList,mapMaybe)
+import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                    (Text)
 import qualified Data.Text             as T
-import qualified Data.Text.IO          as TIO
+import qualified Data.Text.IO          as T.IO
 import           Data.Traversable
 import           System.Directory
 import           System.Directory.Tree
@@ -22,11 +25,16 @@ import           System.FilePath
 import           System.IO
 import           Text.Printf
 --
+import           NLP.Parser.PennTreebankII
+import           NLP.Printer.PennTreebankII
+import           NLP.Type.PennTreebankII
 import           PropBank.Format
 import           PropBank.Parser.Prop
+import           PropBank.Match
 import           PropBank.Query
 import           PropBank.Type.Frame
 import           PropBank.Type.Prop
+import           PropBank.Util                (merge)
 
 
 lookupRoleset :: PredicateDB -> (Text,Text) -> Maybe Text
@@ -40,12 +48,34 @@ maybeNumberedArgument :: PropBankLabel -> Maybe Int
 maybeNumberedArgument (NumberedArgument n) = Just n
 maybeNumberedArgument _                    = Nothing
 
-formatInst :: Instance -> String
-formatInst inst = show (mapMaybe maybeNumberedArgument (inst^..inst_arguments.traverse.arg_label))
+
+
+formatArgNodes :: PennTree -> Argument -> Text
+formatArgNodes tr arg =
+  let nodes = arg^.arg_terminals
+  in T.intercalate "\n" . map (T.pack . show . snd) . mapMaybe (\n -> findNode n tr) $  nodes
+
+
+formatInst :: (Int,PennTree,Instance) -> String
+formatInst (_,tr,inst) =
+  let args = inst^.inst_arguments
+      
+  in "\n================================================================\n" ++
+     (T.unpack . T.intercalate " " . map snd . toList) tr                   ++
+     "\n================================================================\n" ++
+     (intercalate "\n--------------------------------------------------------------\n" $ flip map args $ \arg ->
+          show (arg^.arg_label) ++ "\n" ++ (T.unpack (formatArgNodes tr arg))
+     )
+       
+   --  T.unpack (prettyPrint 0 tr) ++ "\n" ++ show args
 
 
 
-formatStatInst :: PredicateDB -> HashMap RoleSetID [Instance] -> (RoleSetID,Int) -> String
+
+formatStatInst :: PredicateDB
+               -> HashMap RoleSetID [(Int,PennTree,Instance)]
+               -> (RoleSetID,Int)
+               -> String
 formatStatInst db imap (rid,num) =
   let mdefn = lookupRoleset db rid
       minsts = HM.lookup rid imap
@@ -53,6 +83,19 @@ formatStatInst db imap (rid,num) =
      ++ (intercalate "\n" . map formatInst . concat . maybeToList) minsts
 
 
+readPropBank propfile = parsePropWithFileField NoOmit <$> T.IO.readFile propfile
+
+readOrigPennTree pennfile = do
+  txt <- T.IO.readFile pennfile
+  case A.parseOnly (A.many1 (A.skipSpace *> pnode)) txt of
+    Left err -> error err
+    Right r -> return r
+
+showStatInst preddb classified_inst_map = do
+  let lst = HM.toList classified_inst_map
+      stat = map (_2 %~ length) lst
+      sorted = sortBy (flip compare `on` (^._2)) stat
+  mapM_ (putStrLn . formatStatInst preddb classified_inst_map) stat
 
 
 main = do
@@ -65,22 +108,34 @@ main = do
 
   dtr <- build basedir
 
-  let fps = sort (toList (dirTree dtr))
+  let fps = {- Prelude.take 100 $ -} sort (toList (dirTree dtr))
       props = filter (\x -> takeExtensions x == ".prop") fps
-  instss <- flip traverse props $ \fp -> do
-    hPutStrLn stderr fp
-    txt <- TIO.readFile fp
-    return (parsePropWithFileField NoOmit txt)
+      trees = filter (\x -> takeExtensions x == ".parse") fps
+      pairs = flip map props $ \fp -> 
+                let article = takeBaseName fp
+                    findf = find (\f -> takeBaseName f == article)
+                in (,) <$> findf props <*> findf trees
+    
+  parsedpairs <- flip traverse (catMaybes pairs) $ \(fprop,ftree) -> do
+    hPutStrLn stderr fprop
+    insts <- readPropBank fprop
+    proptrs' <- readOrigPennTree ftree
+    let proptrs = map convertTop proptrs'
+    return (merge (^.inst_tree_id) proptrs insts)
 
-  let all_insts_v = filter (\p->T.last (p^.inst_lemma_type) == 'v') (concat instss)
-      insts_v = filter (\x -> x^.inst_lemma_roleset_id._1 == "call") all_insts_v
-
-      classified_insts = foldl' addfunc  HM.empty insts_v
-        where addfunc acc inst = HM.insertWith (++) (inst^.inst_lemma_roleset_id) [inst] acc
-      rolesets = map (^.inst_lemma_roleset_id) insts_v
+  let flatParsedPairs = do (i,(tr,insts)) <- parsedpairs^..traverse.traverse
+                           inst <- insts
+                           return (i,tr,inst)
+  let insts_v = filter (\p->T.last (p^._3.inst_lemma_type) == 'v') flatParsedPairs
+      -- insts_v = filter (\x -> x^._3.inst_lemma_roleset_id._1 == "call") all_insts_v
+      classified_inst_map = foldl' addfunc  HM.empty insts_v
+          where addfunc acc x = HM.insertWith (++) (x^._3.inst_lemma_roleset_id) [x] acc
+      {- rolesets = map (^.inst_lemma_roleset_id) insts_v
       stat = foldl' (flip (HM.alter (\case { Nothing -> Just 1; Just n -> Just (n+1)}))) HM.empty rolesets
+      -}
+  showStatInst preddb classified_inst_map
 
-  mapM_ (putStrLn . formatStatInst preddb classified_insts) . sortBy (flip compare `on` snd) . HM.toList $ stat
+-- ) . sortBy (flip compare `on` snd) . HM.toList $ stat
 
 
   -- mapM_ (putStrLn . formatStat preddb) . sortBy (flip compare `on` snd) . HM.toList $ acc
