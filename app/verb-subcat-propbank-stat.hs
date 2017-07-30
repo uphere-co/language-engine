@@ -73,19 +73,41 @@ data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
 
 makeLenses ''ArgTable
 
-mkArgTable :: PennTree -> [Argument] -> ArgTable
-mkArgTable tr args = ArgTable (findArg Relation)
-                              (findArg (NumberedArgument 0))
-                              (findArg (NumberedArgument 1))
-                              (findArg (NumberedArgument 2))
-                              (findArg (NumberedArgument 3))
-                              (findArg (NumberedArgument 4))
+{- 
+formatNode :: PennTreeIdx -> Node -> Text
+formatNode itr nodes = map (phraseType . snd) . mapMaybe (\n -> findNode n itr) $  nodes
   where
-    itr = mkPennTreeIdx tr
+-}
+
+headPreposition :: [PennTreeIdx] -> Maybe Text
+headPreposition xs = getFirst (foldMap (First . f) xs)   
+  where f (PN _ _)        = Nothing
+        f (PL (_,(IN,t))) = Just t
+        f (PL (_,(TO,t))) = Just t
+        
+
+phraseNodeType (PN (_,c) xs) = case c of
+                                 PP -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headPreposition xs)
+                                 _  -> T.pack (show c)
+phraseNodeType (PL (_,(D_NONE,t))) = t
+phraseNodeType (PL (_,(p     ,t))) = case isNoun p of
+                                       Yes -> "NP"
+                                       _   -> "??" <> T.pack (show (p,t))
+
+mkArgTable :: PennTreeIdx -> [Argument] -> ArgTable
+mkArgTable itr args = ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (findArg Relation))
+                               (phraseNodeType <$> findArg (NumberedArgument 0))
+                               (phraseNodeType <$> findArg (NumberedArgument 1))
+                               (phraseNodeType <$> findArg (NumberedArgument 2))
+                               (phraseNodeType <$> findArg (NumberedArgument 3))
+                               (phraseNodeType <$> findArg (NumberedArgument 4))
+  where
+    -- itr = mkPennTreeIdx tr
     findArg l = do a <- find (\a -> a^.arg_label == l) args
                    let ns = a^.arg_terminals
-                   return (formatArgNodes tr ns)
-
+                   case ns of
+                     n:_ -> snd <$> findNode n itr 
+                     _   -> Nothing
 
 formatArgTable tbl = printf "%-10s   arg0:%-10s   arg1:%-10s    arg2:%-10s   arg3:%-10s   arg4:%-10s"
                        (fromMaybe "" (tbl^.tbl_rel))
@@ -97,9 +119,9 @@ formatArgTable tbl = printf "%-10s   arg0:%-10s   arg1:%-10s    arg2:%-10s   arg
 
 
 
-formatArgNodes :: PennTree -> [Node] -> Text
-formatArgNodes tr nodes = T.intercalate "\n" . map (T.pack . show . snd) . mapMaybe (\n -> findNode n tr) $  nodes
+                                    
   -- let nodes = arg^.arg_terminals
+
 
 
 formatInst :: Bool  -- ^ show detail?
@@ -114,15 +136,18 @@ formatInst doesShowDetail (_,corenlp,proptr,inst) =
       
       verbprops = verbPropertyFromPennTree lmap coretr 
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
-      -- iproptr = mkPennTreeIdx proptr
-      argtable = mkArgTable proptr args
+      iproptr = mkPennTreeIdx proptr
+      argtable = mkArgTable iproptr args
       
-  in "\n================================================================\n" ++
-     T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
-     "\n"                                                                   ++
-     "\n================================================================\n" ++
-     if doesShowDetail then formatPropMatch verbprops clausetr minst ++ "\n" else "" ++
-     formatArgTable argtable
+  in 
+     if doesShowDetail
+       then "\n================================================================\n" ++
+            T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
+            "\n"                                                                   ++
+            "\n================================================================\n" ++
+            formatPropMatch verbprops clausetr minst ++ "\n"
+       else ""
+     ++ formatArgTable argtable
                                                                                   
      -- (intercalate "\n--------------------------------------------------------------\n" $
         {- flip map args $ \arg ->
@@ -140,7 +165,10 @@ formatStatInst :: Bool           -- ^ show detail?
 formatStatInst doesShowDetail db imap (rid,num) =
   let mdefn = lookupRoleset db rid
       minsts = HM.lookup rid imap
-  in printf "%20s : %5d : %s\n" (formatRoleSetID rid) num  (fromMaybe "" mdefn)
+  in
+     "\n============================================================================\n"
+     ++ printf "%20s : %5d : %s\n" (formatRoleSetID rid) num  (fromMaybe "" mdefn)
+     ++ "============================================================================\n"
      ++ (intercalate "\n" . map (formatInst doesShowDetail) . concat . maybeToList) minsts
 
  
