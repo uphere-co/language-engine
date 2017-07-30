@@ -11,6 +11,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Either
 import           Data.Attoparsec.Text  as A  hiding (try)
+import           Data.Either.Extra
 import           Data.Foldable
 import           Data.Function                (on)
 import           Data.HashMap.Strict          (HashMap)
@@ -95,11 +96,6 @@ showStatInst preddb classified_inst_map = do
   mapM_ (putStrLn . formatStatInst preddb classified_inst_map) stat
 
 
-errorHandler h_err msg action = do
-  r <- try action
-  case r of
-    Left (e :: SomeException) -> hPutStrLn h_err msg >> hFlush h_err
-    _ -> return ()
 
 showError (Left err) = print err
 showError (Right _) = return ()
@@ -113,7 +109,7 @@ main = do
       basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
 
   dtr <- build basedir
-  let fps = sort (toList (dirTree dtr))
+  let fps = Prelude.take 100 $ sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".prop") fps
 {- 
   -- let fps = Prelude.take 100 $ sort (toList (dirTree dtr))
@@ -123,13 +119,15 @@ main = do
                 let article = takeBaseName fp
                     findf = find (\f -> takeBaseName f == article)
                 in (,) <$> findf props <*> findf trees -}
-  (showError <=< runEitherT) $ do
-    parsedpairs
-      <- fmap (concat . catMaybes) <$> flip traverse parsefiles $ \f -> do
-           let article  = takeBaseName f
-           liftIO $ print article
-           loadMatchArticle corenlpdir basedir article
-    liftIO $ print parsedpairs
+  -- (showError <=< runEitherT) $ do
+  parsedpairs <- fmap (concat . catMaybes) $ do
+    flip traverse parsefiles $ \f -> do
+      let article  = takeBaseName f
+      -- print article
+      join . eitherToMaybe <$> runEitherT (loadMatchArticle corenlpdir basedir article)
+      
+    -- liftIO $ print parsedpairs
+    -- return (eitherToMaybe r)
     {- 
     parsedpairs <- flip traverse (catMaybes pairs) $ \(fprop,ftree) -> do
     
@@ -139,19 +137,20 @@ main = do
       let proptrs = map convertTop proptrs'
       return (merge (^.inst_tree_id) proptrs insts)
     -}
-    let flatParsedPairs = do (i,(((_,_,_),tr),insts)) <- parsedpairs
-                             inst <- insts
-                             return (i,tr,inst)
-    let insts_v = filter (\p->T.last (p^._3.inst_lemma_type) == 'v') flatParsedPairs
-        -- insts_v = filter (\x -> x^._3.inst_lemma_roleset_id._1 == "call") all_insts_v
-        classified_inst_map = foldl' addfunc  HM.empty insts_v
-            where addfunc acc x = HM.insertWith (++) (x^._3.inst_lemma_roleset_id) [x] acc
-        {- rolesets = map (^.inst_lemma_roleset_id) insts_v
-        stat = foldl' (flip (HM.alter (\case { Nothing -> Just 1; Just n -> Just (n+1)}))) HM.empty rolesets
-        -}
-    liftIO $ showStatInst preddb classified_inst_map
+  let flatParsedPairs = do (i,(((_,_,_),tr),insts)) <- parsedpairs
+                           inst <- insts
+                           return (i,tr,inst)
+  let insts_v = filter (\p->T.last (p^._3.inst_lemma_type) == 'v') flatParsedPairs
+      -- insts_v = filter (\x -> x^._3.inst_lemma_roleset_id._1 == "call") all_insts_v
+      classified_inst_map = foldl' addfunc  HM.empty insts_v
+          where addfunc acc x = HM.insertWith (++) (x^._3.inst_lemma_roleset_id) [x] acc
+      {- rolesets = map (^.inst_lemma_roleset_id) insts_v
+      stat = foldl' (flip (HM.alter (\case { Nothing -> Just 1; Just n -> Just (n+1)}))) HM.empty rolesets
+      -}
+  showStatInst preddb classified_inst_map
 
 -- ) . sortBy (flip compare `on` snd) . HM.toList $ stat
 
 
   -- mapM_ (putStrLn . formatStat preddb) . sortBy (flip compare `on` snd) . HM.toList $ acc
+ 

@@ -50,12 +50,10 @@ import           PropBank.Type.Prop
 import           PropBank.Util                     (merge)
 import           Text.Format.Tree
 --
+import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
 
-
   
-
-
 
 
 

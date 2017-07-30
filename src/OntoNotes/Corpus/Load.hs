@@ -2,6 +2,7 @@
 
 module OntoNotes.Corpus.Load where
 
+import           Control.Exception
 import           Control.Lens           hiding ((<.>))
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Either
@@ -14,6 +15,7 @@ import           Data.Text                          (Text)
 import qualified Data.Text.IO               as T.IO
 import           System.Directory.Tree
 import           System.FilePath
+import           System.IO
 --
 import           CoreNLP.Simple.Type.Simplified
 import           NLP.Parser.PennTreebankII
@@ -63,3 +65,11 @@ loadMatchArticle ptreedir basedir article = do
     let cores = zip3 coretrs coredeps corelmas
         pairs = zip cores proptrs
     return (merge (^.inst_tree_id) pairs insts)
+
+
+
+errorHandler h_err msg action = do
+  r <- try action
+  case r of
+    Left (e :: SomeException) -> hPutStrLn h_err msg >> hFlush h_err
+    _ -> return ()
