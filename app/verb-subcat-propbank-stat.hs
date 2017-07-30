@@ -74,18 +74,13 @@ data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
 
 makeLenses ''ArgTable
 
-{- 
-formatNode :: PennTreeIdx -> Node -> Text
-formatNode itr nodes = map (phraseType . snd) . mapMaybe (\n -> findNode n itr) $  nodes
-  where
--}
 
 headPreposition :: [PennTreeIdx] -> Maybe Text
 headPreposition xs = getFirst (foldMap (First . f) xs)   
   where f (PN _ _)        = Nothing
         f (PL (_,(IN,t))) = Just t
         f (PL (_,(TO,t))) = Just t
-        
+        f (PL (_,(_,t)))  = Nothing        
 
 phraseNodeType (PN (_,c) xs) = case c of
                                  PP -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headPreposition xs)
@@ -103,7 +98,6 @@ mkArgTable itr args = ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (
                                (phraseNodeType <$> findArg (NumberedArgument 3))
                                (phraseNodeType <$> findArg (NumberedArgument 4))
   where
-    -- itr = mkPennTreeIdx tr
     findArg l = do a <- find (\a -> a^.arg_label == l) args
                    let ns = a^.arg_terminals
                    case ns of
@@ -118,12 +112,6 @@ formatArgTable mvpva tbl = printf "%-15s (%-8s)  arg0: %-10s   arg1: %-10s    ar
                              (fromMaybe "" (tbl^.tbl_arg2))
                              (fromMaybe "" (tbl^.tbl_arg3))
                              (fromMaybe "" (tbl^.tbl_arg4))
-
-
-
-                                    
-  -- let nodes = arg^.arg_terminals
-
 
 
 formatInst :: Bool  -- ^ show detail?
@@ -151,13 +139,6 @@ formatInst doesShowDetail (_,corenlp,proptr,inst) =
        else ""
      ++ formatArgTable mvpva argtable
                                                                                   
-     -- (intercalate "\n--------------------------------------------------------------\n" $
-        {- flip map args $ \arg ->
-          show (arg^.arg_label) ++ "\n" ++ (T.unpack (formatArgNodes proptr arg)) -}
-     -- )
-   --  T.unpack (prettyPrint 0 tr) ++ "\n" ++ show args
-
-
 
 formatStatInst :: Bool           -- ^ show detail?
                -> PredicateDB
@@ -214,19 +195,19 @@ main = do
       basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
 
   dtr <- build basedir
-  let fps = Prelude.take 100 $ sort (toList (dirTree dtr))
+  let fps = {- Prelude.take 100 $ -} sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".prop") fps
       
   parsedpairs <- fmap (concat . catMaybes) $ do
     flip traverse parsefiles $ \f -> do
       let article  = takeBaseName f
-      -- print article
+      hPutStrLn stderr article
       join . eitherToMaybe <$> runEitherT (loadMatchArticle corenlpdir basedir article)
       
   let flatParsedPairs = do (i,(((coretr,_,corelma),proptr),insts)) <- parsedpairs
                            inst <- insts
                            return (i,(coretr,corelma),proptr,inst)
-  let insts_v = filter (\p->T.last (p^._4.inst_lemma_type) == 'v') flatParsedPairs
+  let insts_v = filter (\p->T.last (p^._4.inst_lemma_type) == 'v' {- && p^._4.inst_lemma_roleset_id._1 == "call" -}) flatParsedPairs
       classified_inst_map = foldl' addfunc  HM.empty insts_v
           where addfunc acc x = HM.insertWith (++) (x^._4.inst_lemma_roleset_id) [x] acc
   showStatInst (showDetail opt) preddb classified_inst_map
