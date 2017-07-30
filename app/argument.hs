@@ -53,7 +53,7 @@ import           Text.Format.Tree
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
 
-  
+
 
 
 
@@ -92,35 +92,12 @@ propbankCorpus ptreedir basedir article = do
       -- print $ map (\vp->getVerbArgs tr vp) verbprops
       -}
       showClauseStructure lmap coretr
-      
+
       putStrLn "-----"
       putStrLn "propbank match test"
       putStrLn "-----"
-      
-      flip mapM_ minsts $ \minst-> do
-        let inst = minst^.mi_instance
-            args = filter (\a->a^.ma_argument.arg_label /= Relation) (minst^.mi_arguments)
-        putStrLn "*************"
-        T.IO.putStrLn (formatRoleSetID (inst^.inst_lemma_roleset_id))
-        let relidx = findRelNode (minst^.mi_arguments)
-            mvpva = do vp <- find (\vp->vp^.vp_index==relidx) verbprops
-                       va <- getVerbArgs tr vp
-                       return (vp,va)
-        case mvpva of
-          Nothing -> putStrLn "unmatched!"
-          Just (vp,va) -> do
-            print "relation matched"
-            let vargs = maybeToList (va^.va_arg0) ++ va^.va_args
-            
-            flip mapM_ args $ \arg -> do
-              let ns = arg^..ma_nodes.traverse.mn_node._1
-                  getRng = either (^._1) (\x->(x^._1,x^._1)) 
-              let nosegs = fromJust (mkNoOverlapSegments (map getRng vargs))
-              putStrLn $
-                printf "%15s : %s"
-                  (arg^.ma_argument.arg_label.to pbLabelText)              
-                  (show (zip ns (map (toMatchResult . contiguousMatch (mkContiguousSegments nosegs)) ns)))
-        -- mapM_ (print . (\a->(a^.ma_argument.arg_label.to pbLabelText,a^..ma_nodes.traverse.mn_node._1))) args
+
+      mapM_ (putStrLn . formatPropMatch verbprops tr) minsts
 
       putStrLn "-----"
       putStrLn "dependency"
