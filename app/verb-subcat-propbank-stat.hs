@@ -10,20 +10,21 @@ import           Control.Lens
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Either
-import           Data.Attoparsec.Text  as A  hiding (try)
+import qualified Data.Attoparsec.Text       as A
 import           Data.Either.Extra
 import           Data.Foldable
-import           Data.Function                (on)
-import           Data.HashMap.Strict          (HashMap)
-import qualified Data.HashMap.Strict   as HM
-import qualified Data.IntMap           as IM
+import           Data.Function                      (on)
+import           Data.HashMap.Strict                (HashMap)
+import qualified Data.HashMap.Strict        as HM
+import qualified Data.IntMap                as IM
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
-import           Data.Text                    (Text)
-import qualified Data.Text             as T
-import qualified Data.Text.IO          as T.IO
+import           Data.Text                          (Text)
+import qualified Data.Text                  as T
+import qualified Data.Text.IO               as T.IO
 import           Data.Traversable
+import           Options.Applicative
 import           System.Directory
 import           System.Directory.Tree
 import           System.FilePath
@@ -40,10 +41,10 @@ import           PropBank.Format
 import           PropBank.Parser.Prop
 import           PropBank.Match
 import           PropBank.Query
-import           PropBank.Type.Frame
+import           PropBank.Type.Frame          hiding (ProgOption)
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
-import           PropBank.Util                (merge)
+import           PropBank.Util                       (merge)
 --
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
@@ -70,8 +71,10 @@ formatArgNodes tr arg =
   in T.intercalate "\n" . map (T.pack . show . snd) . mapMaybe (\n -> findNode n tr) $  nodes
 
 
-formatInst :: (Int,(PennTree,LemmaList),PennTree,Instance) -> String
-formatInst (_,corenlp,proptr,inst) =
+formatInst :: Bool  -- ^ show detail?
+           -> (Int,(PennTree,LemmaList),PennTree,Instance)
+           -> String
+formatInst doesShowDetail (_,corenlp,proptr,inst) =
   let args = inst^.inst_arguments
       lmap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
       coretr = corenlp^._1
@@ -84,39 +87,60 @@ formatInst (_,corenlp,proptr,inst) =
      T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
      "\n"                                                                   ++
      "\n================================================================\n" ++
-     formatPropMatch verbprops clausetr minst                               ++
-     "\n"                                                                   ++     
+     if doesShowDetail then formatPropMatch verbprops clausetr minst ++ "\n" else "" ++
      (intercalate "\n--------------------------------------------------------------\n" $
         flip map args $ \arg ->
           show (arg^.arg_label) ++ "\n" ++ (T.unpack (formatArgNodes proptr arg))
      )
-       
+     ++ "\n" ++ show (mkPennTreeIdx proptr)   
    --  T.unpack (prettyPrint 0 tr) ++ "\n" ++ show args
 
 
 
-formatStatInst :: PredicateDB
+formatStatInst :: Bool           -- ^ show detail?
+               -> PredicateDB
                -> HashMap RoleSetID [(Int,(PennTree,LemmaList),PennTree,Instance)]
                -> (RoleSetID,Int)
                -> String
-formatStatInst db imap (rid,num) =
+formatStatInst doesShowDetail db imap (rid,num) =
   let mdefn = lookupRoleset db rid
       minsts = HM.lookup rid imap
   in printf "%20s : %5d : %s\n" (formatRoleSetID rid) num  (fromMaybe "" mdefn)
-     ++ (intercalate "\n" . map formatInst . concat . maybeToList) minsts
+     ++ (intercalate "\n" . map (formatInst doesShowDetail) . concat . maybeToList) minsts
 
  
-showStatInst preddb classified_inst_map = do
+showStatInst doesShowDetail preddb classified_inst_map = do
   let lst = HM.toList classified_inst_map
       stat = sortBy (flip compare `on` (^._2)) $ map (_2 %~ length) lst
-  mapM_ (putStrLn . formatStatInst preddb classified_inst_map) stat
+  mapM_ (putStrLn . formatStatInst doesShowDetail preddb classified_inst_map) stat
 
 
 
 showError (Left err) = print err
 showError (Right _) = return ()
 
+
+
+
+
+
+
+
+
+data ProgOption = ProgOption { showDetail :: Bool
+                             } deriving Show
+
+pOptions :: Parser ProgOption
+pOptions = ProgOption <$> switch (long "detail" <> short 'd' <> help "Whether to show detail")
+
+progOption :: ParserInfo ProgOption 
+progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant to verb subcategorization")
+
+
+
 main = do
+  opt <- execParser progOption
+  
   let propframedir = "/home/wavewave/repo/srcc/propbank-frames/frames" 
   propdb <- constructFrameDB propframedir
   let preddb = constructPredicateDB propdb
@@ -140,5 +164,5 @@ main = do
   let insts_v = filter (\p->T.last (p^._4.inst_lemma_type) == 'v') flatParsedPairs
       classified_inst_map = foldl' addfunc  HM.empty insts_v
           where addfunc acc x = HM.insertWith (++) (x^._4.inst_lemma_roleset_id) [x] acc
-  showStatInst preddb classified_inst_map
+  showStatInst (showDetail opt) preddb classified_inst_map
  
