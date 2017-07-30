@@ -72,7 +72,7 @@ propbankCorpus ptreedir basedir article = do
       let minsts = matchInstances (coretr,proptr) insts
           lmap = IM.fromList (map (_2 %~ Lemma) corelma)
           verbprops = verbPropertyFromPennTree lmap coretr
-          tr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
+          clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       
       {- 
       putStrLn "-----"
@@ -97,7 +97,7 @@ propbankCorpus ptreedir basedir article = do
       putStrLn "propbank match test"
       putStrLn "-----"
 
-      mapM_ (putStrLn . formatPropMatch verbprops tr) minsts
+      mapM_ (putStrLn . formatPropMatch verbprops clausetr) minsts
 
       putStrLn "-----"
       putStrLn "dependency"

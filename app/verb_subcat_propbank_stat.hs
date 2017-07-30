@@ -32,17 +32,22 @@ import           Text.Printf
 --
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
+import           NLP.Syntax.Clause
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
+import qualified NLP.Type.PennTreebankII.Separated as N
 import           PropBank.Format
 import           PropBank.Parser.Prop
 import           PropBank.Match
 import           PropBank.Query
 import           PropBank.Type.Frame
+import           PropBank.Type.Match
 import           PropBank.Type.Prop
 import           PropBank.Util                (merge)
 --
 import           OntoNotes.Corpus.Load
+import           OntoNotes.Corpus.PropBank
+
 
 type LemmaList = [(Int,Text)]
 
@@ -66,20 +71,21 @@ formatArgNodes tr arg =
 
 
 formatInst :: (Int,(PennTree,LemmaList),PennTree,Instance) -> String
-formatInst (_,corenlp,tr,inst) =
+formatInst (_,corenlp,proptr,inst) =
   let args = inst^.inst_arguments
       lmap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
       coretr = corenlp^._1
+      
+      minst = MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (coretr,proptr) inst }
+      
       verbprops = verbPropertyFromPennTree lmap coretr 
-      tr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
+      clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
   in "\n================================================================\n" ++
-     (T.unpack . T.intercalate " " . map snd . toList) tr                   ++
+     (T.unpack . T.intercalate " " . map snd . toList) proptr               ++
      "\n================================================================\n" ++
-     verbprops
-     
-     
+     formatPropMatch verbprops clausetr minst ++  
      (intercalate "\n--------------------------------------------------------------\n" $ flip map args $ \arg ->
-          show (arg^.arg_label) ++ "\n" ++ (T.unpack (formatArgNodes tr arg))
+          show (arg^.arg_label) ++ "\n" ++ (T.unpack (formatArgNodes proptr arg))
      )
        
    --  T.unpack (prettyPrint 0 tr) ++ "\n" ++ show args
