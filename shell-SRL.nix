@@ -8,7 +8,7 @@
 , nlp-types          ? <nlp-types>
 , predicate-matrix   ? <predicate-matrix>
 , PropBank           ? <PropBank>
-, semantic-role-labeler ? <semantic-role-labeler>
+#, semantic-role-labeler ? <semantic-role-labeler>
 , syntactic-analysis ? <syntactic-analysis>
 , VerbNet            ? <VerbNet>
 , wiki-ner           ? <wiki-ner>
@@ -39,10 +39,10 @@ let
 
   haskellPackages1 = haskellPackages.override { overrides = config1; };
 
-  fastTextNix = import (semantic-role-labeler + "/fasttext/default.nix") {
-    inherit stdenv;
-    haskellPackages = haskellPackages1;
-  };
+  #fastTextNix = import (semantic-role-labeler + "/fasttext/default.nix") {
+  #  inherit stdenv;
+  #  haskellPackages = haskellPackages1;
+  #};
 
   config2 =
     self: super: {
@@ -55,7 +55,7 @@ let
       "HWordNet" = self.callPackage (import HWordNet) {};
       "predicate-matrix" = self.callPackage (import predicate-matrix) {};
       "PropBank" = self.callPackage (import PropBank) {};
-      "semantic-role-labeler" = self.callPackage (import semantic-role-labeler) {};
+      # "semantic-role-labeler" = self.callPackage (import semantic-role-labeler) {};
       "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
       "wiki-ner" = self.callPackage (import wiki-ner) {};
       "fastText" = self.callPackage fastTextNix { inherit fasttext; };
@@ -91,7 +91,8 @@ let
             p.HFrameNet
             p.HWordNet
             p.PropBank
-            p.semantic-role-labeler
+            p.syntactic-analysis
+            # p.semantic-role-labeler
             p.textview
             p.VerbNet
           ]);

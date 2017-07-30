@@ -81,10 +81,13 @@ formatInst (_,corenlp,proptr,inst) =
       verbprops = verbPropertyFromPennTree lmap coretr 
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
   in "\n================================================================\n" ++
-     (T.unpack . T.intercalate " " . map snd . toList) proptr               ++
+     T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
+     "\n"                                                                   ++
      "\n================================================================\n" ++
-     formatPropMatch verbprops clausetr minst ++  
-     (intercalate "\n--------------------------------------------------------------\n" $ flip map args $ \arg ->
+     formatPropMatch verbprops clausetr minst                               ++
+     "\n"                                                                   ++     
+     (intercalate "\n--------------------------------------------------------------\n" $
+        flip map args $ \arg ->
           show (arg^.arg_label) ++ "\n" ++ (T.unpack (formatArgNodes proptr arg))
      )
        
