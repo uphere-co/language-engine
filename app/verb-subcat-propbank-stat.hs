@@ -104,7 +104,7 @@ mkArgTable itr args = ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (
                      n:_ -> snd <$> findNode n itr 
                      _   -> Nothing
 
-formatArgTable mvpva tbl = printf "%-15s (%-8s)  arg0: %-10s   arg1: %-10s    arg2: %-10s   arg3: %-10s   arg4: %-10s"
+formatArgTable mvpva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s    arg2: %-10s   arg3: %-10s   arg4: %-10s"
                              (fromMaybe "" (tbl^.tbl_rel))
                              (maybe "unmatched" (\(vp,va) -> show (vp^.vp_voice)) mvpva)
                              (fromMaybe "" (tbl^.tbl_arg0))
