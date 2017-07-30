@@ -76,33 +76,32 @@ toMatchResult xs     = MergeMatch xs
 matchVerbPropertyWithRelation :: [VerbProperty]
                               -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
                               -> MatchedInstance
-                              -> Maybe (VerbProperty,VerbArgs (Either (Range,STag) (Int,POSTag)))
+                              -> Maybe (VerbProperty,Maybe (VerbArgs (Either (Range,STag) (Int,POSTag))))
 matchVerbPropertyWithRelation verbprops clausetr minst = do
-  let inst = minst^.mi_instance
-      args = filter (\a->a^.ma_argument.arg_label /= Relation) (minst^.mi_arguments)
   relidx <- findRelNode (minst^.mi_arguments)
   vp <- find (\vp->vp^.vp_index==relidx) verbprops
-  va <- getVerbArgs clausetr vp
-  return (vp,va)
+  let mva = getVerbArgs clausetr vp
+  return (vp,mva)
 
 
      
-formatMatchedVerb minst mvpva =                  
+formatMatchedVerb minst mvpmva =                  
   let inst = minst^.mi_instance
       args = filter (\a->a^.ma_argument.arg_label /= Relation) (minst^.mi_arguments)
       header_str = "*************\n"
                    ++ T.unpack (formatRoleSetID (inst^.inst_lemma_roleset_id))
       content_str
-        = flip (maybe "unmatched!\n") mvpva $ \(vp,va) -> 
-            let vargs = maybeToList (va^.va_arg0) ++ va^.va_args
-            in "relation matched\n" ++
-                  (intercalate "\n" . flip map args $ \arg -> 
-                    let ns = arg^..ma_nodes.traverse.mn_node._1
-                        getRng = either (^._1) (\x->(x^._1,x^._1)) 
-                        nosegs = fromJust (mkNoOverlapSegments (map getRng vargs))
-                    in printf "%15s : %s"
-                         (arg^.ma_argument.arg_label.to pbLabelText)              
-                         (show (zip ns (map (toMatchResult . contiguousMatch (mkContiguousSegments nosegs)) ns))))
+        = flip (maybe "unmatched!\n") mvpmva $ \(vp,mva) ->
+            flip (maybe "argument unmatched!\n") mva $ \va -> 
+              let vargs = maybeToList (va^.va_arg0) ++ va^.va_args
+              in "relation matched\n" ++
+                    (intercalate "\n" . flip map args $ \arg -> 
+                      let ns = arg^..ma_nodes.traverse.mn_node._1
+                          getRng = either (^._1) (\x->(x^._1,x^._1)) 
+                          nosegs = fromJust (mkNoOverlapSegments (map getRng vargs))
+                      in printf "%15s : %s"
+                           (arg^.ma_argument.arg_label.to pbLabelText)              
+                           (show (zip ns (map (toMatchResult . contiguousMatch (mkContiguousSegments nosegs)) ns))))
   in header_str ++ "\n" ++ content_str
                     
 

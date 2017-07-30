@@ -104,14 +104,14 @@ mkArgTable itr args = ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (
                      n:_ -> snd <$> findNode n itr 
                      _   -> Nothing
 
-formatArgTable mvpva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s    arg2: %-10s   arg3: %-10s   arg4: %-10s"
-                             (fromMaybe "" (tbl^.tbl_rel))
-                             (maybe "unmatched" (\(vp,va) -> show (vp^.vp_voice)) mvpva)
-                             (fromMaybe "" (tbl^.tbl_arg0))
-                             (fromMaybe "" (tbl^.tbl_arg1))
-                             (fromMaybe "" (tbl^.tbl_arg2))
-                             (fromMaybe "" (tbl^.tbl_arg3))
-                             (fromMaybe "" (tbl^.tbl_arg4))
+formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s    arg2: %-10s   arg3: %-10s   arg4: %-10s"
+                              (fromMaybe "" (tbl^.tbl_rel))
+                              (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
+                              (fromMaybe "" (tbl^.tbl_arg0))
+                              (fromMaybe "" (tbl^.tbl_arg1))
+                              (fromMaybe "" (tbl^.tbl_arg2))
+                              (fromMaybe "" (tbl^.tbl_arg3))
+                              (fromMaybe "" (tbl^.tbl_arg4))
 
 
 formatInst :: Bool  -- ^ show detail?
@@ -128,17 +128,17 @@ formatInst doesShowDetail (_,corenlp,proptr,inst) =
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       iproptr = mkPennTreeIdx proptr
       argtable = mkArgTable iproptr args
-      mvpva = matchVerbPropertyWithRelation verbprops clausetr minst
+      mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
   in 
      if doesShowDetail
        then "\n================================================================\n" ++
             T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
             "\n"                                                                   ++
             "\n================================================================\n" ++
-            formatMatchedVerb minst mvpva ++ "\n"
+            formatMatchedVerb minst mvpmva ++ "\n"
        else ""
-     ++ formatArgTable mvpva argtable
-                                                                                  
+     ++ formatArgTable mvpmva argtable
+
 
 formatStatInst :: Bool           -- ^ show detail?
                -> PredicateDB
@@ -195,7 +195,7 @@ main = do
       basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
 
   dtr <- build basedir
-  let fps = Prelude.take 1000 $ sort (toList (dirTree dtr))
+  let fps = Prelude.take 100 $ sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".prop") fps
       
   parsedpairs <- fmap (concat . catMaybes) $ do
