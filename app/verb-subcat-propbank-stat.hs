@@ -195,7 +195,7 @@ main = do
       basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
 
   dtr <- build basedir
-  let fps = {- Prelude.take 100 $ -} sort (toList (dirTree dtr))
+  let fps = Prelude.take 1000 $ sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".prop") fps
       
   parsedpairs <- fmap (concat . catMaybes) $ do
@@ -207,7 +207,7 @@ main = do
   let flatParsedPairs = do (i,(((coretr,_,corelma),proptr),insts)) <- parsedpairs
                            inst <- insts
                            return (i,(coretr,corelma),proptr,inst)
-  let insts_v = filter (\p->T.last (p^._4.inst_lemma_type) == 'v' {- && p^._4.inst_lemma_roleset_id._1 == "call" -}) flatParsedPairs
+  let insts_v = filter (\p->T.last (p^._4.inst_lemma_type) == 'v') flatParsedPairs
       classified_inst_map = foldl' addfunc  HM.empty insts_v
           where addfunc acc x = HM.insertWith (++) (x^._4.inst_lemma_roleset_id) [x] acc
   showStatInst (showDetail opt) preddb classified_inst_map

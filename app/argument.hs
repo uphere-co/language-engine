@@ -54,10 +54,6 @@ import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
 
 
-
-
-
-
 propbankCorpus ptreedir basedir article = do
   void . runEitherT $ do
     lst <- concat <$> loadMatchArticle ptreedir basedir article
@@ -74,23 +70,6 @@ propbankCorpus ptreedir basedir article = do
           verbprops = verbPropertyFromPennTree lmap coretr
           clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       
-      {- 
-      putStrLn "-----"
-      putStrLn "propbank"
-      putStrLn "-----"
-      flip mapM_ minsts $ \minst-> do
-        let inst = minst^.mi_instance
-            args = minst^.mi_arguments
-        print (findRelNode (minst^.mi_arguments),inst^.inst_lemma_roleset_id)
-        mapM_ (print . (\a->(a^.ma_argument.arg_label.to pbLabelText,a^..ma_nodes.traverse.mn_node._1))) args
-
-      putStrLn "-----"
-      putStrLn "verb property"
-      putStrLn "-----"
-      print $ map (\vp->(vp^.vp_index,vp^.vp_lemma.to unLemma)) verbprops
-      -- print verbprops
-      -- print $ map (\vp->getVerbArgs tr vp) verbprops
-      -}
       showClauseStructure lmap coretr
 
       putStrLn "-----"

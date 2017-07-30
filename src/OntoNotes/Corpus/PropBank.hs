@@ -77,13 +77,13 @@ matchVerbPropertyWithRelation :: [VerbProperty]
                               -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
                               -> MatchedInstance
                               -> Maybe (VerbProperty,VerbArgs (Either (Range,STag) (Int,POSTag)))
-matchVerbPropertyWithRelation verbprops clausetr minst = 
+matchVerbPropertyWithRelation verbprops clausetr minst = do
   let inst = minst^.mi_instance
       args = filter (\a->a^.ma_argument.arg_label /= Relation) (minst^.mi_arguments)
-      relidx = findRelNode (minst^.mi_arguments)
-  in do vp <- find (\vp->vp^.vp_index==relidx) verbprops
-        va <- getVerbArgs clausetr vp
-        return (vp,va)
+  relidx <- findRelNode (minst^.mi_arguments)
+  vp <- find (\vp->vp^.vp_index==relidx) verbprops
+  va <- getVerbArgs clausetr vp
+  return (vp,va)
 
 
      
