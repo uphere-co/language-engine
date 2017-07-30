@@ -70,7 +70,9 @@ data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
                          , _tbl_arg1 :: Maybe Text
                          , _tbl_arg2 :: Maybe Text
                          , _tbl_arg3 :: Maybe Text
-                         , _tbl_arg4 :: Maybe Text } 
+                         , _tbl_arg4 :: Maybe Text
+                         -- , _tbl_link :: Maybe Text
+                         } 
 
 makeLenses ''ArgTable
 
@@ -82,29 +84,42 @@ headPreposition xs = getFirst (foldMap (First . f) xs)
         f (PL (_,(TO,t))) = Just t
         f (PL (_,(_,t)))  = Nothing        
 
+
 phraseNodeType (PN (_,c) xs) = case c of
-                                 PP -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headPreposition xs)
-                                 _  -> T.pack (show c)
+                                 PP   -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headPreposition xs)
+                                 WHNP -> "NP"
+                                 _     -> T.pack (show c)
 phraseNodeType (PL (_,(D_NONE,t))) = t
 phraseNodeType (PL (_,(p     ,t))) = case isNoun p of
                                        Yes -> "NP"
                                        _   -> "??" <> T.pack (show (p,t))
 
-mkArgTable :: PennTreeIdx -> [Argument] -> ArgTable
-mkArgTable itr args = ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (findArg Relation))
-                               (phraseNodeType <$> findArg (NumberedArgument 0))
-                               (phraseNodeType <$> findArg (NumberedArgument 1))
-                               (phraseNodeType <$> findArg (NumberedArgument 2))
-                               (phraseNodeType <$> findArg (NumberedArgument 3))
-                               (phraseNodeType <$> findArg (NumberedArgument 4))
-  where
-    findArg l = do a <- find (\a -> a^.arg_label == l) args
-                   let ns = a^.arg_terminals
-                   case ns of
-                     n:_ -> snd <$> findNode n itr 
-                     _   -> Nothing
 
-formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s    arg2: %-10s   arg3: %-10s   arg4: %-10s"
+mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> [Argument] -> ArgTable
+mkArgTable itr l2p args =
+    ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (findArg (== Relation)))
+             (phraseNodeType . adj <$> findArg (== NumberedArgument 0))
+             (phraseNodeType . adj <$> findArg (== NumberedArgument 1))
+             (phraseNodeType . adj <$> findArg (== NumberedArgument 2))
+             (phraseNodeType . adj <$> findArg (== NumberedArgument 3))
+             (phraseNodeType . adj <$> findArg (== NumberedArgument 4))
+             -- (T.pack . show <$> findArg (\case LinkArgument _ -> True ; _ -> False))
+  where
+    adj x@(PL (_,(D_NONE,t))) = let (trc,mlid) = identifyTrace t
+                                    mlnk = do lid <-mlid 
+                                              rng <- lookup lid l2p
+                                              matchR rng itr
+                                in case mlnk of
+                                     Nothing -> x
+                                     Just lnk -> lnk
+    adj x                     = x                     
+    findArg lcond = do a <- find (\a -> lcond (a^.arg_label)) args
+                       let ns = a^.arg_terminals
+                       case ns of
+                         n:_ -> snd <$> findNode n itr 
+                         _   -> Nothing
+
+formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s" --    link: %-10s
                               (fromMaybe "" (tbl^.tbl_rel))
                               (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
                               (fromMaybe "" (tbl^.tbl_arg0))
@@ -112,6 +127,7 @@ formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s    
                               (fromMaybe "" (tbl^.tbl_arg2))
                               (fromMaybe "" (tbl^.tbl_arg3))
                               (fromMaybe "" (tbl^.tbl_arg4))
+                              -- (fromMaybe "" (tbl^.tbl_link))
 
 
 formatInst :: Bool  -- ^ show detail?
@@ -126,19 +142,21 @@ formatInst doesShowDetail (_,corenlp,proptr,inst) =
       
       verbprops = verbPropertyFromPennTree lmap coretr 
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
+      l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
-      argtable = mkArgTable iproptr args
+      argtable = mkArgTable iproptr l2p args
       mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
   in 
-     if doesShowDetail
+     (if doesShowDetail
        then "\n================================================================\n" ++
             T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
             "\n"                                                                   ++
             "\n================================================================\n" ++
             formatMatchedVerb minst mvpmva ++ "\n"
        else ""
+     )
      ++ formatArgTable mvpmva argtable
-
+     
 
 formatStatInst :: Bool           -- ^ show detail?
                -> PredicateDB
@@ -195,7 +213,7 @@ main = do
       basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
 
   dtr <- build basedir
-  let fps = Prelude.take 100 $ sort (toList (dirTree dtr))
+  let fps = sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".prop") fps
       
   parsedpairs <- fmap (concat . catMaybes) $ do
