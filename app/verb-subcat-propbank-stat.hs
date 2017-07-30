@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
@@ -63,12 +64,42 @@ maybeNumberedArgument :: PropBankLabel -> Maybe Int
 maybeNumberedArgument (NumberedArgument n) = Just n
 maybeNumberedArgument _                    = Nothing
 
+data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
+                         , _tbl_arg0 :: Maybe Text
+                         , _tbl_arg1 :: Maybe Text
+                         , _tbl_arg2 :: Maybe Text
+                         , _tbl_arg3 :: Maybe Text
+                         , _tbl_arg4 :: Maybe Text } 
+
+makeLenses ''ArgTable
+
+mkArgTable :: PennTree -> [Argument] -> ArgTable
+mkArgTable tr args = ArgTable (findArg Relation)
+                              (findArg (NumberedArgument 0))
+                              (findArg (NumberedArgument 1))
+                              (findArg (NumberedArgument 2))
+                              (findArg (NumberedArgument 3))
+                              (findArg (NumberedArgument 4))
+  where
+    itr = mkPennTreeIdx tr
+    findArg l = do a <- find (\a -> a^.arg_label == l) args
+                   let ns = a^.arg_terminals
+                   return (formatArgNodes tr ns)
 
 
-formatArgNodes :: PennTree -> Argument -> Text
-formatArgNodes tr arg =
-  let nodes = arg^.arg_terminals
-  in T.intercalate "\n" . map (T.pack . show . snd) . mapMaybe (\n -> findNode n tr) $  nodes
+formatArgTable tbl = printf "%-10s   arg0:%-10s   arg1:%-10s    arg2:%-10s   arg3:%-10s   arg4:%-10s"
+                       (fromMaybe "" (tbl^.tbl_rel))
+                       (fromMaybe "" (tbl^.tbl_arg0))
+                       (fromMaybe "" (tbl^.tbl_arg1))
+                       (fromMaybe "" (tbl^.tbl_arg2))
+                       (fromMaybe "" (tbl^.tbl_arg3))
+                       (fromMaybe "" (tbl^.tbl_arg4))
+
+
+
+formatArgNodes :: PennTree -> [Node] -> Text
+formatArgNodes tr nodes = T.intercalate "\n" . map (T.pack . show . snd) . mapMaybe (\n -> findNode n tr) $  nodes
+  -- let nodes = arg^.arg_terminals
 
 
 formatInst :: Bool  -- ^ show detail?
@@ -83,16 +114,20 @@ formatInst doesShowDetail (_,corenlp,proptr,inst) =
       
       verbprops = verbPropertyFromPennTree lmap coretr 
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
+      -- iproptr = mkPennTreeIdx proptr
+      argtable = mkArgTable proptr args
+      
   in "\n================================================================\n" ++
      T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
      "\n"                                                                   ++
      "\n================================================================\n" ++
      if doesShowDetail then formatPropMatch verbprops clausetr minst ++ "\n" else "" ++
-     (intercalate "\n--------------------------------------------------------------\n" $
-        flip map args $ \arg ->
-          show (arg^.arg_label) ++ "\n" ++ (T.unpack (formatArgNodes proptr arg))
-     )
-     ++ "\n" ++ show (mkPennTreeIdx proptr)   
+     formatArgTable argtable
+                                                                                  
+     -- (intercalate "\n--------------------------------------------------------------\n" $
+        {- flip map args $ \arg ->
+          show (arg^.arg_label) ++ "\n" ++ (T.unpack (formatArgNodes proptr arg)) -}
+     -- )
    --  T.unpack (prettyPrint 0 tr) ++ "\n" ++ show args
 
 
