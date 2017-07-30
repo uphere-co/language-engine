@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -71,7 +72,7 @@ data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
                          , _tbl_arg2 :: Maybe Text
                          , _tbl_arg3 :: Maybe Text
                          , _tbl_arg4 :: Maybe Text
-                         -- , _tbl_link :: Maybe Text
+                         , _tbl_file_sentid :: (FilePath,Int)
                          } 
 
 makeLenses ''ArgTable
@@ -95,14 +96,15 @@ phraseNodeType (PL (_,(p     ,t))) = case isNoun p of
                                        _   -> "??" <> T.pack (show (p,t))
 
 
-mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> [Argument] -> ArgTable
-mkArgTable itr l2p args =
+mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> (FilePath,Int) -> [Argument] -> ArgTable
+mkArgTable itr l2p (file,sentid) args  =
     ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (findArg (== Relation)))
              (phraseNodeType . adj <$> findArg (== NumberedArgument 0))
              (phraseNodeType . adj <$> findArg (== NumberedArgument 1))
              (phraseNodeType . adj <$> findArg (== NumberedArgument 2))
              (phraseNodeType . adj <$> findArg (== NumberedArgument 3))
              (phraseNodeType . adj <$> findArg (== NumberedArgument 4))
+             (file,sentid)
              -- (T.pack . show <$> findArg (\case LinkArgument _ -> True ; _ -> False))
   where
     adj x@(PL (_,(D_NONE,t))) = let (trc,mlid) = identifyTrace t
@@ -119,7 +121,7 @@ mkArgTable itr l2p args =
                          n:_ -> snd <$> findNode n itr 
                          _   -> Nothing
 
-formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s" --    link: %-10s
+formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d" --    link: %-10s
                               (fromMaybe "" (tbl^.tbl_rel))
                               (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
                               (fromMaybe "" (tbl^.tbl_arg0))
@@ -127,13 +129,14 @@ formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   a
                               (fromMaybe "" (tbl^.tbl_arg2))
                               (fromMaybe "" (tbl^.tbl_arg3))
                               (fromMaybe "" (tbl^.tbl_arg4))
-                              -- (fromMaybe "" (tbl^.tbl_link))
+                              (tbl^.tbl_file_sentid._1)
+                              (tbl^.tbl_file_sentid._2)
 
 
 formatInst :: Bool  -- ^ show detail?
-           -> (Int,(PennTree,LemmaList),PennTree,Instance)
+           -> ((FilePath,Int),(PennTree,LemmaList),PennTree,Instance)
            -> String
-formatInst doesShowDetail (_,corenlp,proptr,inst) =
+formatInst doesShowDetail (filesentid,corenlp,proptr,inst) =
   let args = inst^.inst_arguments
       lmap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
       coretr = corenlp^._1
@@ -144,7 +147,7 @@ formatInst doesShowDetail (_,corenlp,proptr,inst) =
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
-      argtable = mkArgTable iproptr l2p args
+      argtable = mkArgTable iproptr l2p filesentid args
       mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
   in 
      (if doesShowDetail
@@ -160,7 +163,7 @@ formatInst doesShowDetail (_,corenlp,proptr,inst) =
 
 formatStatInst :: Bool           -- ^ show detail?
                -> PredicateDB
-               -> HashMap RoleSetID [(Int,(PennTree,LemmaList),PennTree,Instance)]
+               -> HashMap RoleSetID [((FilePath,Int),(PennTree,LemmaList),PennTree,Instance)]
                -> (RoleSetID,Int)
                -> String
 formatStatInst doesShowDetail db imap (rid,num) =
@@ -220,11 +223,12 @@ main = do
     flip traverse parsefiles $ \f -> do
       let article  = takeBaseName f
       hPutStrLn stderr article
-      join . eitherToMaybe <$> runEitherT (loadMatchArticle corenlpdir basedir article)
+      (o :: Maybe [(Int,(_,_))]) <- join . eitherToMaybe <$> runEitherT (loadMatchArticle corenlpdir basedir article)
+      return . fmap (map (_1 %~ \i -> (article,i))) $ o
       
-  let flatParsedPairs = do (i,(((coretr,_,corelma),proptr),insts)) <- parsedpairs
+  let flatParsedPairs = do (filesentid,(((coretr,_,corelma),proptr),insts)) <- parsedpairs
                            inst <- insts
-                           return (i,(coretr,corelma),proptr,inst)
+                           return (filesentid,(coretr,corelma),proptr,inst)
   let insts_v = filter (\p->T.last (p^._4.inst_lemma_type) == 'v') flatParsedPairs
       classified_inst_map = foldl' addfunc  HM.empty insts_v
           where addfunc acc x = HM.insertWith (++) (x^._4.inst_lemma_roleset_id) [x] acc
