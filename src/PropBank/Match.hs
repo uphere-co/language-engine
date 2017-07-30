@@ -146,6 +146,3 @@ findRelNode args = do
     listToMaybe (a1^..ma_nodes.traverse.mn_node._1._1)
 
 
-{-   where headf [] = error ("findRelNode: " ++ intercalate "\n" (map show args))
-        headf (x:_) = x
--}
