@@ -35,6 +35,7 @@ import           Text.Printf
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
+import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -109,13 +110,14 @@ mkArgTable itr args = ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (
                      n:_ -> snd <$> findNode n itr 
                      _   -> Nothing
 
-formatArgTable tbl = printf "%-10s   arg0:%-10s   arg1:%-10s    arg2:%-10s   arg3:%-10s   arg4:%-10s"
-                       (fromMaybe "" (tbl^.tbl_rel))
-                       (fromMaybe "" (tbl^.tbl_arg0))
-                       (fromMaybe "" (tbl^.tbl_arg1))
-                       (fromMaybe "" (tbl^.tbl_arg2))
-                       (fromMaybe "" (tbl^.tbl_arg3))
-                       (fromMaybe "" (tbl^.tbl_arg4))
+formatArgTable mvpva tbl = printf "%-15s (%-8s)  arg0: %-10s   arg1: %-10s    arg2: %-10s   arg3: %-10s   arg4: %-10s"
+                             (fromMaybe "" (tbl^.tbl_rel))
+                             (maybe "unmatched" (\(vp,va) -> show (vp^.vp_voice)) mvpva)
+                             (fromMaybe "" (tbl^.tbl_arg0))
+                             (fromMaybe "" (tbl^.tbl_arg1))
+                             (fromMaybe "" (tbl^.tbl_arg2))
+                             (fromMaybe "" (tbl^.tbl_arg3))
+                             (fromMaybe "" (tbl^.tbl_arg4))
 
 
 
@@ -138,16 +140,16 @@ formatInst doesShowDetail (_,corenlp,proptr,inst) =
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       iproptr = mkPennTreeIdx proptr
       argtable = mkArgTable iproptr args
-      
+      mvpva = matchVerbPropertyWithRelation verbprops clausetr minst
   in 
      if doesShowDetail
        then "\n================================================================\n" ++
             T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
             "\n"                                                                   ++
             "\n================================================================\n" ++
-            formatPropMatch verbprops clausetr minst ++ "\n"
+            formatMatchedVerb minst mvpva ++ "\n"
        else ""
-     ++ formatArgTable argtable
+     ++ formatArgTable mvpva argtable
                                                                                   
      -- (intercalate "\n--------------------------------------------------------------\n" $
         {- flip map args $ \arg ->
@@ -166,7 +168,7 @@ formatStatInst doesShowDetail db imap (rid,num) =
   let mdefn = lookupRoleset db rid
       minsts = HM.lookup rid imap
   in
-     "\n============================================================================\n"
+     "\n\n\n============================================================================\n"
      ++ printf "%20s : %5d : %s\n" (formatRoleSetID rid) num  (fromMaybe "" mdefn)
      ++ "============================================================================\n"
      ++ (intercalate "\n" . map (formatInst doesShowDetail) . concat . maybeToList) minsts
