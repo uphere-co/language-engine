@@ -48,67 +48,16 @@ import           PropBank.Type.Frame
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
 import           PropBank.Util                     (merge)
--- import           SRL.Feature.Clause
--- import           SRL.Feature.Verb
--- import           SRL.Type.Verb
 import           Text.Format.Tree
 --
 import           OntoNotes.Corpus.PropBank
 
 
-
-
-
--- test = mkNoOverlapSegments [(1,3), (7,9), (4,5) ]
--- test2 = mkNoOverlapSegments [(1,3), (6,9), (4,6) ]
--- test3 = fmap mkContiguousSegments test
-
-
-
-
-errorHandler h_err msg action = do
-  r <- try action
-  case r of
-    Left (e :: SomeException) -> hPutStrLn h_err msg >> hFlush h_err
-    _ -> return ()
-
   
-prepare basedir = do
-  dtr <- build basedir
-  let fps = sort (toList (dirTree dtr))
-      props = filter (\x -> takeExtensions x == ".prop") fps
-      trees = filter (\x -> takeExtensions x == ".parse") fps
-  return (props,trees)
 
 
-readPropBank propfile = liftIO $ parsePropWithFileField NoOmit <$> T.IO.readFile propfile
 
 
-readOrigPennTree pennfile
-  = hoistEither . A.parseOnly (A.many1 (A.skipSpace *> pnode))
-    =<< liftIO (T.IO.readFile pennfile)
-
-
-readJSONList :: (FromJSON a) => FilePath -> EitherT String IO [a]
-readJSONList file = EitherT $ eitherDecode <$> liftIO (BL.readFile file)
-
-
-loadMatchArticle ptreedir basedir article = do
-  (props,trees) <- liftIO $ prepare basedir
-  let findf = find (\f -> takeBaseName f == article)
-  flip traverse ((,) <$> findf props <*> findf trees) $ \(fprop,ftree) -> do
-    insts <- readPropBank fprop
-    proptrs' <- readOrigPennTree ftree
-    let proptrs = map convertTop proptrs'
-        ptreefile = article <.> "corenlp_ptree"
-        depfile = article <.> "corenlp_udep"
-        plemmafile = article <.> "corenlp_lemma"
-    coretrs :: [PennTree]  <- readJSONList  (ptreedir </> ptreefile)
-    coredeps :: [Dependency] <- readJSONList (ptreedir </> depfile)
-    corelmas :: [[(Int,Text)]] <- readJSONList (ptreedir </> plemmafile)
-    let cores = zip3 coretrs coredeps corelmas
-        pairs = zip cores proptrs
-    return (merge (^.inst_tree_id) pairs insts)
 
 
 propbankCorpus ptreedir basedir article = do

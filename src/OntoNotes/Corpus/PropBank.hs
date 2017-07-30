@@ -58,3 +58,4 @@ toMatchResult :: [Range] -> MatchResult
 toMatchResult []     = Unmatched
 toMatchResult (x:[]) = ExactMatch x
 toMatchResult xs     = MergeMatch xs
+
