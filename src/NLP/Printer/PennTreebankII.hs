@@ -2,6 +2,7 @@
 
 module NLP.Printer.PennTreebankII where
 
+import           Data.Foldable           (toList)
 import           Data.Monoid             ((<>))
 import           Data.Text               (Text)
 import qualified Data.Text as T  
@@ -26,5 +27,7 @@ prettyPrint n (PL ("?", _)) = "\n" <> indent n <> "(?     ?)"
 prettyPrint _ (PL (t, txt)) = fmttag t <> " " <> txt
 
 
-formatIndexedTokensFromTree :: PennTree -> Text
-formatIndexedTokensFromTree = T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip [0..] . map snd . toList
+formatIndexTokensFromTree :: Int      -- ^ starting token number
+                          -> PennTree
+                          -> Text
+formatIndexTokensFromTree n = T.intercalate "\t" . map (\(i,t)->(t<>"-"<>T.pack (show i))) . zip [n..] . map snd . toList
