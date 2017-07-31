@@ -97,6 +97,18 @@ instance ToTuple '[a,b,c,d] where
     = (x,y,z,w)
   fromTuple (x,y,z,w) = x `acons` (y `acons` (z `acons` (w `acons` anil)))
 
+instance ToTuple '[a,b,c,d,e] where
+  type Tuple '[a,b,c,d,e] = (a,b,c,d,e)
+  toTuple (AttribCons x (AttribCons y (AttribCons z (AttribCons w (AttribCons v AttribNil)))))
+    = (x,y,z,w,v)
+  fromTuple (x,y,z,w,v) = x `acons` (y `acons` (z `acons` (w `acons` (v `acons` anil))))
+
+instance ToTuple '[a1,a2,a3,a4,a5,a6] where
+  type Tuple '[a1,a2,a3,a4,a5,a6] = (a1,a2,a3,a4,a5,a6)
+  toTuple (AttribCons a1 (AttribCons a2 (AttribCons a3 (AttribCons a4 (AttribCons a5 (AttribCons a6 AttribNil))))))
+    = (a1,a2,a3,a4,a5,a6)
+  fromTuple (a1,a2,a3,a4,a5,a6) = a1 `acons` (a2 `acons` (a3 `acons` (a4 `acons` (a5 `acons` (a6 `acons` anil)))))
+
 
 acons = AttribCons
 
