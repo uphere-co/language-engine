@@ -4,6 +4,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main where
 
@@ -33,6 +34,7 @@ import           System.FilePath
 import           System.IO
 import           Text.Printf
 --
+import           Data.Attribute
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
@@ -51,6 +53,7 @@ import           PropBank.Util                       (merge)
 --
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
+import           OntoNotes.Parser.Sense
 
 
 type LemmaList = [(Int,Text)]
@@ -105,7 +108,6 @@ mkArgTable itr l2p (file,sentid) args  =
              (phraseNodeType . adj <$> findArg (== NumberedArgument 3))
              (phraseNodeType . adj <$> findArg (== NumberedArgument 4))
              (file,sentid)
-             -- (T.pack . show <$> findArg (\case LinkArgument _ -> True ; _ -> False))
   where
     adj x@(PL (_,(D_NONE,t))) = let (trc,mlid) = identifyTrace t
                                     mlnk = do lid <-mlid 
@@ -121,7 +123,7 @@ mkArgTable itr l2p (file,sentid) args  =
                          n:_ -> snd <$> findNode n itr 
                          _   -> Nothing
 
-formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d" --    link: %-10s
+formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d"
                               (fromMaybe "" (tbl^.tbl_rel))
                               (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
                               (fromMaybe "" (tbl^.tbl_arg0))
@@ -204,26 +206,34 @@ progOption :: ParserInfo ProgOption
 progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant to verb subcategorization")
 
 
+data Config = Config { _propframedir :: FilePath
+                     , _corenlpdir   :: FilePath
+                     , _basedir      :: FilePath
+                     }
 
-main = do
+makeLenses ''Config
+           
+config = Config { _propframedir = "/home/wavewave/repo/srcc/propbank-frames/frames"
+                , _corenlpdir   = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
+                , _basedir      = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
+                }
+
+
+main' = do
   opt <- execParser progOption
   
-  let propframedir = "/home/wavewave/repo/srcc/propbank-frames/frames" 
-  propdb <- constructFrameDB propframedir
+  propdb <- constructFrameDB (config^.propframedir)
   let preddb = constructPredicateDB propdb
 
-  let corenlpdir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
-      basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-
-  dtr <- build basedir
-  let fps = sort (toList (dirTree dtr))
+  dtr <- build (config^.basedir)
+  let fps = Prelude.take 20 $ sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".prop") fps
       
   parsedpairs <- fmap (concat . catMaybes) $ do
     flip traverse parsefiles $ \f -> do
       let article  = takeBaseName f
       hPutStrLn stderr article
-      (o :: Maybe [(Int,(_,_))]) <- join . eitherToMaybe <$> runEitherT (loadMatchArticle corenlpdir basedir article)
+      (o :: Maybe [(Int,(_,_))]) <- join . eitherToMaybe <$> runEitherT (loadMatchArticle (config^.corenlpdir) (config^.basedir) article)
       return . fmap (map (_1 %~ \i -> (article,i))) $ o
       
   let flatParsedPairs = do (filesentid,(((coretr,_,corelma),proptr),insts)) <- parsedpairs
@@ -233,4 +243,38 @@ main = do
       classified_inst_map = foldl' addfunc  HM.empty insts_v
           where addfunc acc x = HM.insertWith (++) (x^._4.inst_lemma_roleset_id) [x] acc
   showStatInst (showDetail opt) preddb classified_inst_map
- 
+
+
+readSenseInsts sensefile = fmap (rights . map parseSenseInst . map T.words . T.lines) (T.IO.readFile sensefile)
+
+
+  
+main = do
+  dtr <- build (config^.basedir)
+  let fps = Prelude.take 20 $ sort (toList (dirTree dtr))
+      parsefiles = filter (\x -> takeExtensions x == ".parse") fps
+      propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps
+      sensefiles = filter (\x -> takeExtensions x == ".sense") fps
+      lst = map (\x -> fromTuple (takeBaseName x,x)) parsefiles
+      joiner = joinAttrib takeBaseName 
+     
+      lst' = mapMaybe (\(i,mf1,mf2,f3) -> (i,,,) <$> mf1 <*> mf2 <*> pure f3)
+           . map toTuple $ sensefiles `joiner` (propfiles `joiner` lst)
+
+  mapM_ print lst'
+  
+  flip mapM_ lst' $ \(article,sensefile,propfile,parsefile) -> do
+    (mprops :: Maybe [(Int,(_,_))]) <- join . eitherToMaybe <$> runEitherT (loadMatchArticle (config^.corenlpdir) (config^.basedir) article)
+    senses <- readSenseInsts sensefile
+    case mprops of
+      Nothing -> return ()
+      Just props -> do
+        let props' = do (i,(((coretr,_,corelma),proptr),insts)) <- props
+                        inst <- insts
+                        let predid = inst^.inst_predicate_id
+                        return ((i,predid),(coretr,corelma),proptr,inst)
+        
+        -- let props' = map (\x -> (x^._1,x^,_2)
+        let merged = filter (\x -> isJust (x^._2)) . map toTuple $
+                       joinAttrib (\x->(x^.sinst_sentence_id,x^.sinst_token_id)) senses (map fromTuple props')
+        mapM_ print merged
