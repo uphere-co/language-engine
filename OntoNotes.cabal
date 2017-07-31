@@ -20,18 +20,35 @@ library
                        OntoNotes.Mapping.FrameNet
                        OntoNotes.Parser.Sense
                        OntoNotes.Parser.SenseInventory
+                       OntoNotes.Application.Analyze
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10,
                        boxes,
                        directory,
                        filepath,
+                       jni,
                        lens,
                        -- pretty,
                        taggy-lens,
                        text,
                        unordered-containers,
                        --
-                       nlp-types
+                       nlp-types,
+                       --
+                       monad-loops,
+                       binary,
+                       bytestring,
+                       data-default,
+                       containers,
+                       jvm,
+                       haskeline,
+                       directory-tree,
+                       protocol-buffers,
+                       HCoreNLP-Proto,
+                       HCoreNLP,
+                       HFrameNet,
+                       semantic-role-labeler,
+                       textview
   hs-source-dirs:      src
   default-language:    Haskell2010
