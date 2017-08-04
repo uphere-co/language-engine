@@ -181,7 +181,7 @@ formatStatInst doesShowDetail sensedb imap ((sense,sense_num),count) =
       minsts = HM.lookup (sense,sense_num) imap
   in 
      "\n\n\n============================================================================\n"
-     ++ printf "%20s : %6d :  %s\n" (sense <> ":" <> sense_num) count (fromMaybe "" mdefn)
+     ++ printf "%20s : %6d :  %s\n" (sense <> "." <> sense_num) count (fromMaybe "" mdefn)
      ++ "============================================================================\n"
      ++ (intercalate "\n" . map (formatInst doesShowDetail) . concat . maybeToList) minsts
 
