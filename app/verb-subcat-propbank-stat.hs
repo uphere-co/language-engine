@@ -63,6 +63,7 @@ import           Debug.Trace
 
 type LemmaList = [(Int,Text)]
 
+
 lookupRoleset :: PredicateDB -> (Text,Text) -> Maybe Text
 lookupRoleset db (lma,sens) = do
   p <- HM.lookup lma (db^.predicateDB)
@@ -70,9 +71,11 @@ lookupRoleset db (lma,sens) = do
   defn <- Data.List.lookup (lma <> "." <> sens) $ map (\r -> (r^.roleset_id,fromMaybe "" (r^.roleset_name))) rs
   return defn
 
+
 maybeNumberedArgument :: PropBankLabel -> Maybe Int
 maybeNumberedArgument (NumberedArgument n) = Just n
 maybeNumberedArgument _                    = Nothing
+
 
 data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
                          , _tbl_arg0 :: Maybe Text
@@ -128,6 +131,7 @@ mkArgTable itr l2p (file,sid,tid) args  =
                          n:_ -> snd <$> findNode n itr 
                          _   -> Nothing
 
+
 formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
                               (fromMaybe "" (tbl^.tbl_rel))
                               (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
@@ -170,7 +174,6 @@ formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,sense) =
      
 
 formatStatInst :: Bool           -- ^ show detail?
-               -- -> PredicateDB
                -> HashMap Text Inventory
                -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
                -> ((Text,Text),Int)
@@ -186,7 +189,8 @@ formatStatInst doesShowDetail sensedb imap ((sense,sense_num),count) =
      ++ (intercalate "\n" . map (formatInst doesShowDetail) . concat . maybeToList) minsts
 
 
-showStatInst :: Bool -> HashMap Text Inventory
+showStatInst :: Bool
+             -> HashMap Text Inventory
              -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
              -> IO ()
 showStatInst doesShowDetail sensedb classified_inst_map = do
@@ -200,10 +204,7 @@ showError (Left err) = print err
 showError (Right _) = return ()
 
 
-
 readSenseInsts sensefile = fmap (rights . map parseSenseInst . map T.words . T.lines) (T.IO.readFile sensefile)
-
-
 
 
 
@@ -217,20 +218,20 @@ pOptions = ProgOption <$> switch (long "detail" <> short 'd' <> help "Whether to
 progOption :: ParserInfo ProgOption 
 progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant to verb subcategorization")
 
-
+{- 
 data Config = Config { _propframedir :: FilePath
                      , _corenlpdir   :: FilePath
                      , _basedir      :: FilePath
                      }
 
 makeLenses ''Config
-           
+         
 config = Config { _propframedir = "/home/wavewave/repo/srcc/propbank-frames/frames"
                 , _corenlpdir   = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
                 , _basedir      = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
                 }
 
-
+-}
 
 
 
@@ -245,12 +246,12 @@ mergePropSense proptr insts senses =
 main = do
   opt <- execParser progOption
   
-  propdb <- constructFrameDB (config^.propframedir)
+  propdb <- constructFrameDB (cfg^.cfg_propbank_framedir)
   let preddb = constructPredicateDB propdb
 
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
-  dtr <- build (config^.basedir)
+  dtr <- build (cfg^.cfg_wsj_directory)
   let fps = sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
@@ -264,7 +265,9 @@ main = do
   matchedpairs <- fmap (concat . catMaybes) $ do
     flip traverse lst' $ \(article,sensefile,propfile,parsefile) -> do
       hPutStrLn stderr article
-      (mprops :: Maybe [(Int,(_,_))]) <- join . eitherToMaybe <$> runEitherT (loadMatchArticle (config^.corenlpdir) (config^.basedir) article)
+      (mprops :: Maybe [(Int,(_,_))])
+        <- join . eitherToMaybe <$>
+             runEitherT (loadMatchArticle (cfg^.cfg_wsj_corenlp_directory) (cfg^.cfg_wsj_directory) article)
       senses <- readSenseInsts sensefile
       let match (i,r) = let ss = filter (\s -> s^.sinst_sentence_id == i) senses
                         in ((article,i),(r,ss))

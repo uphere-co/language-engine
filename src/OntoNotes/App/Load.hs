@@ -41,6 +41,8 @@ data Config = Config { _cfg_sense_inventory_file :: FilePath
                      , _cfg_framenet_lubin       :: FilePath
                      , _cfg_framenet_framedir    :: FilePath
                      , _cfg_wordnet_dict         :: FilePath
+                     , _cfg_propbank_framedir    :: FilePath
+                     , _cfg_wsj_corenlp_directory :: FilePath
                      }
 
 makeLenses ''Config
@@ -53,6 +55,8 @@ cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/da
              , _cfg_framenet_lubin       = "/scratch/wavewave/run/20170717/FrameNet_ListOfLexUnit.bin"
              , _cfg_framenet_framedir    = "/scratch/wavewave/FrameNet/1.7/fndata/fndata-1.7/frame"
              , _cfg_wordnet_dict         = "/scratch/wavewave/wordnet/WordNet-3.0/dict"
+             , _cfg_propbank_framedir    = "/home/wavewave/repo/srcc/propbank-frames/frames"
+             , _cfg_wsj_corenlp_directory = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
              }
   
 
@@ -99,7 +103,7 @@ createVNFNDB semlink =
 
 
 
-loadAll = do
+loadAllexceptPropBank = do
   ludb <- loadFrameNet (cfg^.cfg_framenet_lubin)
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   semlink <- loadSemLink (cfg^.cfg_semlink_file)

@@ -146,7 +146,7 @@ formatStat ((lma,sens),num) = printf "%20s.%-5s : %5d" lma sens num
 
 listSenseDetail :: IO ()
 listSenseDetail = do
-  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAll
+  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
 
   let merged = mergeStatPB2Lemma ws
   forM_ merged $ \(lma,f) -> do
@@ -175,7 +175,7 @@ mergeStatPB2Lemma ws =
 
 listSenseWordNet :: IO ()
 listSenseWordNet = do
-  (ludb,sensestat,semlinkmap,sensemap,ws,wndb) <- loadAll
+  (ludb,sensestat,semlinkmap,sensemap,ws,wndb) <- loadAllexceptPropBank
 
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)

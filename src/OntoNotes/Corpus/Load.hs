@@ -96,9 +96,8 @@ senseInstStatistics basedir = do
       Right lst -> return lst
 
   let sinsts = concat sinstss
-      sinsts_verb = filter (\s-> T.last (s^.sinst_sense) == 'v') sinsts  
+      sinsts_verb = filter (\s-> T.last (s^.sinst_sense) == 'v') sinsts
       ks = map (\s -> ( T.init (T.init (s^.sinst_sense)) ,s^.sinst_sense_num)) sinsts_verb
       acc = foldl' (\(!acc) k -> HM.insertWith (+) k 1 acc) HM.empty ks
   -- mapM_ (putStrLn.formatStat) . sortBy (flip compare `on` snd) . HM.toList $ acc
   return acc
-
