@@ -92,20 +92,24 @@ makeLenses ''ArgTable
 headPreposition :: [PennTreeIdx] -> Maybe Text
 headPreposition xs = getFirst (foldMap (First . f) xs)   
   where f (PN _ _)        = Nothing
-        f (PL (_,(IN,t))) = Just t
-        f (PL (_,(TO,t))) = Just t
+        f (PL (_,(IN,t))) = Just (T.toLower t)
+        f (PL (_,(TO,t))) = Just (T.toLower t)
         f (PL _         ) = Nothing        
 
 headAdverb :: [PennTreeIdx] -> Maybe Text
 headAdverb xs = getLast (foldMap (Last . f) xs)   
-  where f (PN _ _)        = Nothing
-        f (PL (_,(RB,t))) = Just t
-        f (PL _  )        = Nothing
+  where f (PN _ _)         = Nothing
+        f (PL (_,(pos,t))) = if isAdverb pos then Just (T.toLower t) else Nothing
+        -- f (PL _  )        = Nothing
 
  
 phraseNodeType (PN (_,c) xs) = case c of
                                  PP   -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headPreposition xs)
-                                 ADVP -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headAdverb xs)
+                                 ADVP -> case headAdverb xs of
+                                           Just t -> T.pack (show c) <> "-" <> t
+                                           Nothing -> case headPreposition xs of
+                                                        Just t -> T.pack (show c) <> "-" <> "PP" <> "-" <> t
+                                                        Nothing -> T.pack (show c)
                                  WHNP -> "NP"
                                  _     -> T.pack (show c)
 phraseNodeType (PL (_,(D_NONE,t))) = t
@@ -260,7 +264,7 @@ main = do
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
-  let fps = {- Prelude.take 1000 $ -} sort (toList (dirTree dtr))
+  let fps = Prelude.take 1000 $ sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps
