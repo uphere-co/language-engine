@@ -14,7 +14,7 @@ module NLP.Type.PennTreebankII
 , RelationTag(..)
 , AnchorTag(..)
 , TernaryLogic(..)
-, isNone, isVerb, isNoun
+, isNone, isVerb, isNoun, isAdverb, isWHword
 , linkIDChunk
 , identifyPOS, identifyChunk, identifyTrace
 , Bitree(..), LinkID(..)
