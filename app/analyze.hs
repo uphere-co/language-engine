@@ -47,12 +47,13 @@ import           CoreNLP.Simple.Util
 import           FrameNet.Query.Frame
 import           FrameNet.Type.Common
 import           FrameNet.Type.Frame hiding (LexUnit)
+import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
-import           SRL.Feature
-import           SRL.Feature.Dependency
+-- import           SRL.Feature
+-- import           SRL.Feature.Dependency
 import           Type
 import           Util.Doc
 import           View
@@ -216,12 +217,13 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
       let itr = mkAnnotatable (mkPennTreeIdx ptr)
           lmap= mkLemmaMap psent
           iltr = lemmatize lmap itr
-          idltr = depLevelTree dep iltr
           vps = verbPropertyFromPennTree lmap ptr
-          vtree = verbTree vps idltr
-      putStrLn "--------------------------------------------------------------------------------------------------"
-      T.IO.putStrLn  . T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip [0..] . map snd . toList $ ptr
+          -- idltr = depLevelTree dep iltr
+          -- vtree = verbTree vps idltr
 
+      putStrLn "--------------------------------------------------------------------------------------------------"
+      T.IO.putStrLn (formatIndexTokensFromTree 0 ptr)
+      
       putStrLn "--------------------------------------------------------------------------------------------------"
       let lmaposs = concatMap (filter (\t -> isVerb (t^.token_pos))) $ tokss
           lmas = map (^.token_lemma) lmaposs

@@ -48,74 +48,15 @@ import           PropBank.Type.Frame
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
 import           PropBank.Util                     (merge)
--- import           SRL.Feature.Clause
--- import           SRL.Feature.Verb
--- import           SRL.Type.Verb
 import           Text.Format.Tree
 --
+import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
-
-
-
-
-
--- test = mkNoOverlapSegments [(1,3), (7,9), (4,5) ]
--- test2 = mkNoOverlapSegments [(1,3), (6,9), (4,6) ]
--- test3 = fmap mkContiguousSegments test
-
-
-
-
-errorHandler h_err msg action = do
-  r <- try action
-  case r of
-    Left (e :: SomeException) -> hPutStrLn h_err msg >> hFlush h_err
-    _ -> return ()
-
-  
-prepare {- framedir -} basedir = do
-  -- propdb <- constructFrameDB framedir
-  -- let preddb = constructPredicateDB propdb
-  dtr <- build basedir
-  let fps = sort (toList (dirTree dtr))
-      props = filter (\x -> takeExtensions x == ".prop") fps
-      trees = filter (\x -> takeExtensions x == ".parse") fps
-  return ((),props,trees) -- (preddb,props,trees)
-
-
-readPropBank propfile = liftIO $ parsePropWithFileField NoOmit <$> T.IO.readFile propfile
-
-
-readOrigPennTree pennfile
-  = hoistEither . A.parseOnly (A.many1 (A.skipSpace *> pnode))
-    =<< liftIO (T.IO.readFile pennfile)
-
-
-readJSONList :: (FromJSON a) => FilePath -> EitherT String IO [a]
-readJSONList file = EitherT $ eitherDecode <$> liftIO (BL.readFile file)
-
-
-loadMatchArticle ptreedir {- framedir -} basedir article = do
-  (preddb,props,trees) <- liftIO $ prepare {- framedir -} basedir
-  let findf = find (\f -> takeBaseName f == article)
-  flip traverse ((,) <$> findf props <*> findf trees) $ \(fprop,ftree) -> do
-    insts <- readPropBank fprop
-    proptrs' <- readOrigPennTree ftree
-    let proptrs = map convertTop proptrs'
-        ptreefile = article <.> "corenlp_ptree"
-        depfile = article <.> "corenlp_udep"
-        plemmafile = article <.> "corenlp_lemma"
-    coretrs :: [PennTree]  <- readJSONList  (ptreedir </> ptreefile)
-    coredeps :: [Dependency] <- readJSONList (ptreedir </> depfile)
-    corelmas :: [[(Int,Text)]] <- readJSONList (ptreedir </> plemmafile)
-    let cores = zip3 coretrs coredeps corelmas
-        pairs = zip cores proptrs
-    return (merge (^.inst_tree_id) pairs insts)
 
 
 propbankCorpus ptreedir basedir article = do
   void . runEitherT $ do
-    lst <- concat <$> loadMatchArticle ptreedir {- framedir -} basedir article
+    lst <- concat <$> loadMatchArticle ptreedir basedir article
     liftIO . flip mapM_ lst $ \(i,(((coretr,coredep,corelma),proptr),insts)) -> do
       putStrLn "\n\n\n-------------"
       putStrLn $ "sentence " ++ show i
@@ -127,55 +68,15 @@ propbankCorpus ptreedir basedir article = do
       let minsts = matchInstances (coretr,proptr) insts
           lmap = IM.fromList (map (_2 %~ Lemma) corelma)
           verbprops = verbPropertyFromPennTree lmap coretr
-          tr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
+          clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       
-      {- 
-      putStrLn "-----"
-      putStrLn "propbank"
-      putStrLn "-----"
-      flip mapM_ minsts $ \minst-> do
-        let inst = minst^.mi_instance
-            args = minst^.mi_arguments
-        print (findRelNode (minst^.mi_arguments),inst^.inst_lemma_roleset_id)
-        mapM_ (print . (\a->(a^.ma_argument.arg_label.to pbLabelText,a^..ma_nodes.traverse.mn_node._1))) args
-
-      putStrLn "-----"
-      putStrLn "verb property"
-      putStrLn "-----"
-      print $ map (\vp->(vp^.vp_index,vp^.vp_lemma.to unLemma)) verbprops
-      -- print verbprops
-      -- print $ map (\vp->getVerbArgs tr vp) verbprops
-      -}
       showClauseStructure lmap coretr
-      
+
       putStrLn "-----"
       putStrLn "propbank match test"
       putStrLn "-----"
-      
-      flip mapM_ minsts $ \minst-> do
-        let inst = minst^.mi_instance
-            args = filter (\a->a^.ma_argument.arg_label /= Relation) (minst^.mi_arguments)
-        putStrLn "*************"
-        T.IO.putStrLn (formatRoleSetID (inst^.inst_lemma_roleset_id))
-        let relidx = findRelNode (minst^.mi_arguments)
-            mvpva = do vp <- find (\vp->vp^.vp_index==relidx) verbprops
-                       va <- getVerbArgs tr vp
-                       return (vp,va)
-        case mvpva of
-          Nothing -> putStrLn "unmatched!"
-          Just (vp,va) -> do
-            print "relation matched"
-            let vargs = maybeToList (va^.va_arg0) ++ va^.va_args
-            
-            flip mapM_ args $ \arg -> do
-              let ns = arg^..ma_nodes.traverse.mn_node._1
-                  getRng = either (^._1) (\x->(x^._1,x^._1)) 
-              let nosegs = fromJust (mkNoOverlapSegments (map getRng vargs))
-              putStrLn $
-                printf "%15s : %s"
-                  (arg^.ma_argument.arg_label.to pbLabelText)              
-                  (show (zip ns (map (toMatchResult . contiguousMatch (mkContiguousSegments nosegs)) ns)))
-        -- mapM_ (print . (\a->(a^.ma_argument.arg_label.to pbLabelText,a^..ma_nodes.traverse.mn_node._1))) args
+
+      mapM_ (putStrLn . formatPropMatch verbprops clausetr) minsts
 
       putStrLn "-----"
       putStrLn "dependency"
