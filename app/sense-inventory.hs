@@ -159,18 +159,6 @@ listSenseDetail = do
     putStrLn (render doc)
 
 
-mergeStatPB2Lemma ws =
-  let merge :: [(Text,Text)] -> (Text,Int)
-      merge lst = let (lma,_) = head lst
-                  in case mapM (decimal.snd) lst of
-                       Left _     -> (lma,0)
-                       Right lst' -> (lma,sum (map fst lst'))
-
-  in sortBy (flip compare `on` snd) . map merge . groupBy ((==) `on` fst)
-     . sortBy (flip compare `on` fst)
-     . map (\(l,f)-> let (lma,_) = T.break (== '.') l in (lma,f))
-     $ ws
-
 
 
 listSenseWordNet :: IO ()

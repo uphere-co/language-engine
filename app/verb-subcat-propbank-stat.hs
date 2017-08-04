@@ -183,7 +183,7 @@ formatStatInst doesShowDetail sensedb imap ((sense,sense_num),count) =
                  (^.sense_name) <$> find (\s->s^.sense_n == sense_num) (inv^.inventory_senses)
       minsts = HM.lookup (sense,sense_num) imap
   in 
-     "\n\n\n============================================================================\n"
+     "\n============================================================================\n"
      ++ printf "%20s : %6d :  %s\n" (sense <> "." <> sense_num) count (fromMaybe "" mdefn)
      ++ "============================================================================\n"
      ++ (intercalate "\n" . map (formatInst doesShowDetail) . concat . maybeToList) minsts
@@ -191,12 +191,31 @@ formatStatInst doesShowDetail sensedb imap ((sense,sense_num),count) =
 
 showStatInst :: Bool
              -> HashMap Text Inventory
+             -> [(Text,Int)] -- lemmastat
+             -> HashMap (Text,Text) Int -- sensestat
              -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
+ 
              -> IO ()
-showStatInst doesShowDetail sensedb classified_inst_map = do
+showStatInst doesShowDetail sensedb lemmastat sensestat classified_inst_map = do
   let lst = HM.toList classified_inst_map
-      stat = sortBy (flip compare `on` (^._2)) $ map (_2 %~ length) lst
-  mapM_ (putStrLn . formatStatInst doesShowDetail sensedb classified_inst_map) stat
+      -- stat = sortBy (flip compare `on` (^._2)) $ map (_2 %~ length) lst
+  forM_ lemmastat $ \(lma,f) -> do
+    let headstr = printf "%20s:%6d" lma f :: String
+        lmasensestat = -- sortBy (flip compare `on` (^._2))
+                       map (_2 %~ length) . filter (\((sense,_),_)->sense == lma <> "-v") 
+        strs = map (formatStatInst doesShowDetail sensedb classified_inst_map) (lmasensestat lst)
+    -- print lma
+    -- print (lmasensestat lst)
+    putStrLn "\n\n\n\n\n*************************************************************"
+    putStrLn "*************************************************************"
+    putStrLn "****                                                     ****"
+    putStrLn (printf "****             %27s             ****" headstr)
+    putStrLn "****                                                     ****"    
+    putStrLn "*************************************************************"
+    putStrLn "*************************************************************"
+    
+    mapM_ putStrLn strs
+  -- mapM_ (putStrLn . ) stat
 
 
 
@@ -285,8 +304,10 @@ main = do
   -- print classified_inst_map
 
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
+  rolesetstat <- loadStatistics (cfg^.cfg_statistics)
+  let lemmastat = mergeStatPB2Lemma rolesetstat
   
-  showStatInst (showDetail opt) sensedb classified_inst_map
+  showStatInst (showDetail opt) sensedb lemmastat sensestat classified_inst_map
 
 
 

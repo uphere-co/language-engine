@@ -11,12 +11,14 @@ import           Data.Aeson
 import qualified Data.Attoparsec.Text       as A
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Foldable
+import           Data.Function                      (on)
 import           Data.HashMap.Strict                (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import           Data.List
 import           Data.Text                          (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
+import           Data.Text.Read                     (decimal)
 import           System.Directory.Tree
 import           System.FilePath
 import           System.IO
@@ -101,3 +103,17 @@ senseInstStatistics basedir = do
       acc = foldl' (\(!acc) k -> HM.insertWith (+) k 1 acc) HM.empty ks
   -- mapM_ (putStrLn.formatStat) . sortBy (flip compare `on` snd) . HM.toList $ acc
   return acc
+
+mergeStatPB2Lemma :: [(Text,Text)] -> [(Text,Int)]
+mergeStatPB2Lemma ws =
+  let merge :: [(Text,Text)] -> (Text,Int)
+      merge lst = let (lma,_) = head lst
+                  in case mapM (decimal.snd) lst of
+                       Left _     -> (lma,0)
+                       Right lst' -> (lma,sum (map fst lst'))
+
+  in sortBy (flip compare `on` snd) . map merge . groupBy ((==) `on` fst)
+     . sortBy (flip compare `on` fst)
+     . map (\(l,f)-> let (lma,_) = T.break (== '.') l in (lma,f))
+     $ ws
+
