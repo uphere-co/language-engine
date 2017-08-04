@@ -4,8 +4,9 @@
 {-# LANGUAGE ExistentialQuantification #-}
 module WikiEL 
   ( module WikiEL
+  , module WikiEL.WordNet
   , EL.entityName
-  , EL.mentionedEntityName
+  , EL.mentionedEntityName  
   ) where
 
 import qualified WikiEL.EntityLinking               as EL
@@ -17,6 +18,8 @@ import           WikiEL.WikiEntityTagger                      (NameUIDTable,load
 import           WikiEL.WikiEntityClass                       (WikiUID2NETag,ItemClass,fromFiles)
 import           WikiEL.EntityLinking                         (EntityMention,entityLinkings,buildEntityMentions)
 import           WikiEL.Type.FileFormat               
+
+import           WikiEL.WordNet -- for WordNet synset lookup. 
 
 
 extractEntityMentions :: NameUIDTable -> WikiUID2NETag -> [(Text, NamedEntityClass)] -> [EntityMention Text]

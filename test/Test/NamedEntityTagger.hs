@@ -20,13 +20,12 @@ import           WikiEL.WikiEntityTagger                      (loadWETagger,wiki
 import           WikiEL.WikiEntityClass                       (fromFiles,getNEClass)
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,parseStanfordNE,namedEntityAnnotator)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
-import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),entityLinking,entityLinkings,buildEntityMentions)
+import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),entityLinking,entityLinkings,buildEntityMentions,entityUID)
 import           WikiEL.ETL.LoadData
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
 import qualified NLP.Type.NamedEntity          as N
 import qualified WikiEL.WikiEntityClass        as WC
-
 -- to be moved
 import           Data.Text.Encoding                    (encodeUtf8)
 import           Data.Digest.XXHash                    (XXHash,xxHash')
@@ -39,6 +38,7 @@ import           WikiEL.Type.WordNet
 import           WikiEL.Type.Equity
 import           WikiEL.Type.FileFormat
 import           WikiEL.ETL.Parser
+import           WikiEL.WordNet
 
 import qualified Data.Map                      as M
 import qualified WikiEL.EntityLinking          as EL
@@ -321,25 +321,29 @@ main1 = do
     mentions = buildEntityMentions text wiki_named_entities
     linked_mentions = entityLinkings mentions
 
+    -- Company symbols
     orgMentions = mapMaybe getOrgs linked_mentions
     companyWithSymbols = mapMaybe (getCompanySymbol tickerMap) orgMentions
 
+  -- WordNet synsets
+  wordNetMapping <- loadWordNetMapping wordnetMappingFile  
+  let
+    wn = buildWordNetSynsetLookup wordNetMapping
+    synsets = map (lookupWordNet wn . entityUID) linked_mentions
+  --mapM_ print wiki_entities
+  --{-
   print "Entity-linked named entities"
   mapM_ print linked_mentions
+  mapM_ print synsets
   print "Entity-linked organization entities"
   mapM_ print orgMentions
   print "Entity-linked public company entities"
   mapM_ print companyWithSymbols
   --print tickerMap
-
-
-buildWordNetSynsetLookup :: [WordNetMappingRow] -> M.Map ItemID [Synset]
-buildWordNetSynsetLookup mapping = M.fromListWith (++) (map (\x -> (F._itemID x,  [F._synset x])) mapping)
+  --}
 
 main2 = do
-    let 
-      propertyFile = propertyNameFile
-    propertyNames <- loadPropertyNames propertyFile
+    propertyNames <- loadPropertyNames propertyNameFile
     wordNetMapping <- loadWordNetMapping wordnetMappingFile
     let
       lookupWordNet key = M.lookup key (buildWordNetSynsetLookup wordNetMapping)

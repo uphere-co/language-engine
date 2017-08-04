@@ -53,8 +53,23 @@ awk '{print $1}' items.brand > ne.brand
 ## Get representations
 grep -Fwf ne.brand ../wikidata/wikidata.all_entities > uid.brand
 
-#Aggregate uid reprs.
+# Aggregate uid reprs.
 cat uid.* | sort | uniq > uid
+
+## Prepare name alias data with WordNet synsets for Entity linking 
+# Persons
+grep -E "employee_|executive_" enwiki/page_id.category.wikidata.wordnet.sorted | awk -F'\t' '{print $4}'| sort | uniq > ne.person.1
+# Organizations
+grep -E "company_|institution_" enwiki/page_id.category.wikidata.wordnet.sorted | awk -F'\t' '{print $4}'| sort | uniq > ne.org.1
+sed -i 's/q/Q/g' ne.*.1
+cat ne.brand ne.person ne.org | sort | uniq > ne.1
+cat ../enwiki/names | sed 's/q/Q/g' | grep -Fwf ne.1 | sort | uniq > uid.1
+cat ../wikidata/wikidata.all_entities | grep -Fwf ne.1 | sort | uniq > uid.1
+rm ne.org ne.person uid
+ln -s ne.org.1 ne.org
+ln -s ne.person.1 ne.person
+ln -s uid.1 uid
+
 
 
 # Public companies with their P31 and P279 property values
