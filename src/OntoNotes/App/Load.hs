@@ -27,6 +27,7 @@ import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
 import           WordNet.Query
 --
+import           OntoNotes.Corpus.Load
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
 import           OntoNotes.Type.Sense
@@ -95,28 +96,6 @@ createVNFNDB semlink =
   in foldl' (\(!acc) (k,v) -> HM.insertWith (++) k [v] acc) HM.empty lst
 
 
-
-senseInstStatistics :: FilePath -> IO (HashMap (Text,Text) Int)
-senseInstStatistics basedir = do
-  dtr <- build basedir
-  let fps = sort (toList (dirTree dtr))
-      sfiles = filter (\x -> takeExtensions x == ".sense") fps
-
-  sinstss <- flip mapM sfiles $ \fp -> do
-    txt <- T.IO.readFile fp
-    -- print fp
-    let lst = T.lines txt
-        wss = map T.words lst
-    case traverse parseSenseInst wss of
-      Left err -> error err
-      Right lst -> return lst
-
-  let sinsts = concat sinstss
-      sinsts_verb = filter (\s-> T.last (s^.sinst_sense) == 'v') sinsts  
-      ks = map (\s -> ( T.init (T.init (s^.sinst_sense)) ,s^.sinst_sense_num)) sinsts_verb
-      acc = foldl' (\(!acc) k -> HM.insertWith (+) k 1 acc) HM.empty ks
-  -- mapM_ (putStrLn.formatStat) . sortBy (flip compare `on` snd) . HM.toList $ acc
-  return acc
 
 
 

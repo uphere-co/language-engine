@@ -280,6 +280,8 @@ main = do
 
   -- mapM_ (\x -> putStrLn "=======" >> print x) insts_v
   -- print classified_inst_map
+
+  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   
   showStatInst (showDetail opt) sensedb classified_inst_map
 

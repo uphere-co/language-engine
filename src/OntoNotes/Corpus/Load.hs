@@ -1,17 +1,21 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module OntoNotes.Corpus.Load where
 
 import           Control.Exception
-import           Control.Lens           hiding ((<.>))
+import           Control.Lens                hiding ((<.>))
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Either
 import           Data.Aeson
 import qualified Data.Attoparsec.Text       as A
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Foldable
+import           Data.HashMap.Strict                (HashMap)
+import qualified Data.HashMap.Strict        as HM
 import           Data.List
 import           Data.Text                          (Text)
+import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import           System.Directory.Tree
 import           System.FilePath
@@ -24,7 +28,9 @@ import           PropBank.Match
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 import           PropBank.Util
-
+--
+import           OntoNotes.Parser.Sense
+import           OntoNotes.Type.Sense
 
 
 readJSONList :: (FromJSON a) => FilePath -> EitherT String IO [a]
@@ -73,3 +79,26 @@ errorHandler h_err msg action = do
   case r of
     Left (e :: SomeException) -> hPutStrLn h_err msg >> hFlush h_err
     _ -> return ()
+
+senseInstStatistics :: FilePath -> IO (HashMap (Text,Text) Int)
+senseInstStatistics basedir = do
+  dtr <- build basedir
+  let fps = sort (toList (dirTree dtr))
+      sfiles = filter (\x -> takeExtensions x == ".sense") fps
+
+  sinstss <- flip mapM sfiles $ \fp -> do
+    txt <- T.IO.readFile fp
+    -- print fp
+    let lst = T.lines txt
+        wss = map T.words lst
+    case traverse parseSenseInst wss of
+      Left err -> error err
+      Right lst -> return lst
+
+  let sinsts = concat sinstss
+      sinsts_verb = filter (\s-> T.last (s^.sinst_sense) == 'v') sinsts  
+      ks = map (\s -> ( T.init (T.init (s^.sinst_sense)) ,s^.sinst_sense_num)) sinsts_verb
+      acc = foldl' (\(!acc) k -> HM.insertWith (+) k 1 acc) HM.empty ks
+  -- mapM_ (putStrLn.formatStat) . sortBy (flip compare `on` snd) . HM.toList $ acc
+  return acc
+

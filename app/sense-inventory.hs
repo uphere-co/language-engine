@@ -33,10 +33,11 @@ import           WordNet.Query
 import           WordNet.Type
 import           WordNet.Type.POS
 --
+import           OntoNotes.App.Load
+import           OntoNotes.Corpus.Load
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
-import           OntoNotes.App.Load
-
+import           OntoNotes.Type.SenseInventory
 
 data VorN = V | N
 
