@@ -72,7 +72,8 @@ showArgument :: PennTree -> Argument -> IO ()
 showArgument tr arg = do
   putStr (show (arg^.arg_label) <> ": ")
   let format (t,n) = "(" <> t <> ") " <>   (T.intercalate " " . map (^._2._2) . toList) n
-  mapM_ (\x -> T.IO.putStr (maybe "Nothing" format (findNode x tr)) >> T.IO.putStr ", ") (arg^.arg_terminals)
+      itr = mkIndexedTree tr
+  mapM_ (\x -> T.IO.putStr (maybe "Nothing" format (findNode x itr)) >> T.IO.putStr ", ") (arg^.arg_terminals)
   T.IO.putStr "\n"
 
 

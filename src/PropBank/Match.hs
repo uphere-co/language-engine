@@ -88,13 +88,14 @@ maximalEmbeddedRange tr r = go (termRangeTree tr)
         go y@(PL (n,_)) = if n `isInside` r then [((n,n),y)] else []
 
 
-findNodePathForLeaf :: Int -> PennTree -> [PennTreeGen Text (Int,(Text,Text))]
-findNodePathForLeaf i tr = contain i (mkIndexedTree tr)
+{- 
+findNodePathForLeaf :: Int -> PennTreeGen c (Int,t) -> [PennTreeGen c (Int,t)]
+findNodePathForLeaf i itr = contain i (mkIndexedTree tr)
+-}
 
-
-findNode :: Node -> PennTree -> Maybe (Text, PennTreeGen Text (Int,(Text,Text)))
-findNode (Node i d) tr = do
-  let lst = reverse (findNodePathForLeaf i tr)
+findNode :: Node -> PennTreeGen c (Int,(p,t)) -> Maybe (p, PennTreeGen c (Int,(p,t)))
+findNode (Node i d) itr = do
+  let lst = reverse (contain i itr) -- (findNodePathForLeaf i tr)
   PL (_,(headword,_)) <- listToMaybe (take 1 lst)
   r <- listToMaybe $ drop d lst
   return (headword,r)
@@ -114,7 +115,8 @@ matchArgNodes :: (PennTree,PennTree)  -- ^ (CoreNLP tree, PropBank (human-annota
               -> [MatchedArgNode]
 matchArgNodes (coretr,proptr) arg = do
     n <- arg ^. arg_terminals
-    nd <- maybeToList (findNode n proptr)
+    let iproptr = mkIndexedTree proptr
+    nd <- maybeToList (findNode n iproptr)
     rng <- case nd of
              ("-NONE-",PL (_,_)) -> adjrange =<< map snd (findLinks l2p i2t 34)
              _                   -> (adjrange . termRange . snd) nd
@@ -134,14 +136,13 @@ matchArgNodes (coretr,proptr) arg = do
 
 
 matchArgs :: (PennTree,PennTree) -> Instance -> [MatchedArgument]
-matchArgs (pt,tr) pr
-  = [ MatchedArgument { _ma_argument = a, _ma_nodes = matchArgNodes (pt,tr) a } | a <- pr^.inst_arguments ]
+matchArgs (coretr,proptr) pr
+  = [ MatchedArgument { _ma_argument = a, _ma_nodes = matchArgNodes (coretr,proptr) a } | a <- pr^.inst_arguments ]
 
 
 matchInstances :: (PennTree,PennTree) -> [Instance] -> [MatchedInstance]
-matchInstances (pt,tr) insts
-  = [ MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (pt,tr) inst }
-      | inst <- insts ]
+matchInstances (coretr,proptr) insts
+  = [ MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (coretr,proptr) inst } | inst <- insts ]
 
 
 findRelNode :: [MatchedArgument] -> Int
