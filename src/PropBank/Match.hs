@@ -7,7 +7,7 @@ import           Control.Monad.Loops             (unfoldM)
 import           Control.Monad.Trans.State
 import           Data.Bifoldable                 (bifoldMap)
 import           Data.Foldable                   (toList)
-import           Data.List (intercalate)
+import           Data.List                       (find,intercalate)
 import           Data.Maybe                      (mapMaybe,listToMaybe,maybeToList)
 import           Data.Text                       (Text)
 --
@@ -88,14 +88,9 @@ maximalEmbeddedRange tr r = go (termRangeTree tr)
         go y@(PL (n,_)) = if n `isInside` r then [((n,n),y)] else []
 
 
-{- 
-findNodePathForLeaf :: Int -> PennTreeGen c (Int,t) -> [PennTreeGen c (Int,t)]
-findNodePathForLeaf i itr = contain i (mkIndexedTree tr)
--}
-
 findNode :: Node -> PennTreeGen c (Int,(p,t)) -> Maybe (p, PennTreeGen c (Int,(p,t)))
 findNode (Node i d) itr = do
-  let lst = reverse (contain i itr) -- (findNodePathForLeaf i tr)
+  let lst = reverse (contain i itr)
   PL (_,(headword,_)) <- listToMaybe (take 1 lst)
   r <- listToMaybe $ drop d lst
   return (headword,r)
@@ -145,13 +140,9 @@ matchInstances (coretr,proptr) insts
   = [ MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (coretr,proptr) inst } | inst <- insts ]
 
 
-findRelNode :: [MatchedArgument] -> Int
-findRelNode args =
-    let a1 = headf $ filter (\a -> a ^. ma_argument.arg_label == Relation) args
-    in headf (a1^..ma_nodes.traverse.mn_node._1._1)
-  where headf [] = error ("findRelNode: " ++ intercalate "\n" (map show args))
-        headf (x:_) = x
-
-
+findRelNode :: [MatchedArgument] -> Maybe Int
+findRelNode args = do
+    a1 <- find (\a -> a ^. ma_argument.arg_label == Relation) args
+    listToMaybe (a1^..ma_nodes.traverse.mn_node._1._1)
 
 
