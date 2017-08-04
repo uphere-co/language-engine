@@ -1,5 +1,4 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module OntoNotes.Parser.Sense where
 
@@ -7,17 +6,8 @@ import           Control.Lens
 import           Data.Text            (Text)
 import qualified Data.Text    as T
 import           Data.Text.Read
-
-
-data SenseInstance = SenseInstance { _sinst_file :: Text
-                                   , _sinst_sentence_id :: Int
-                                   , _sinst_token_id :: Int
-                                   , _sinst_sense :: Text
-                                   , _sinst_sense_num :: Text
-                                   }
-                     deriving Show
-
-makeLenses ''SenseInstance
+--
+import           OntoNotes.Type.Sense
 
 
 parseSenseInst :: [Text] -> Either String SenseInstance
