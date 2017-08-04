@@ -94,11 +94,18 @@ headPreposition xs = getFirst (foldMap (First . f) xs)
   where f (PN _ _)        = Nothing
         f (PL (_,(IN,t))) = Just t
         f (PL (_,(TO,t))) = Just t
-        f (PL (_,(_,t)))  = Nothing        
+        f (PL _         ) = Nothing        
 
+headAdverb :: [PennTreeIdx] -> Maybe Text
+headAdverb xs = getLast (foldMap (Last . f) xs)   
+  where f (PN _ _)        = Nothing
+        f (PL (_,(RB,t))) = Just t
+        f (PL _  )        = Nothing
 
+ 
 phraseNodeType (PN (_,c) xs) = case c of
                                  PP   -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headPreposition xs)
+                                 ADVP -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headAdverb xs)
                                  WHNP -> "NP"
                                  _     -> T.pack (show c)
 phraseNodeType (PL (_,(D_NONE,t))) = t
@@ -191,18 +198,16 @@ formatStatInst doesShowDetail sensedb imap ((sense,sense_num),count) =
 
 showStatInst :: Bool
              -> HashMap Text Inventory
-             -> [(Text,Int)] -- lemmastat
-             -> HashMap (Text,Text) Int -- sensestat
+             -> [(Text,Int)]                -- ^ lemmastat
+             -> HashMap (Text,Text) Int     -- ^ sensestat
              -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
  
              -> IO ()
 showStatInst doesShowDetail sensedb lemmastat sensestat classified_inst_map = do
   let lst = HM.toList classified_inst_map
-      -- stat = sortBy (flip compare `on` (^._2)) $ map (_2 %~ length) lst
   forM_ lemmastat $ \(lma,f) -> do
     let headstr = printf "%20s:%6d" lma f :: String
-        lmasensestat = -- sortBy (flip compare `on` (^._2))
-                       map (_2 %~ length) . filter (\((sense,_),_)->sense == lma <> "-v") 
+        lmasensestat = map (_2 %~ length) . filter (\((sense,_),_)->sense == lma <> "-v") 
         strs = map (formatStatInst doesShowDetail sensedb classified_inst_map) (lmasensestat lst)
     -- print lma
     -- print (lmasensestat lst)
@@ -213,9 +218,7 @@ showStatInst doesShowDetail sensedb lemmastat sensestat classified_inst_map = do
     putStrLn "****                                                     ****"    
     putStrLn "*************************************************************"
     putStrLn "*************************************************************"
-    
     mapM_ putStrLn strs
-  -- mapM_ (putStrLn . ) stat
 
 
 
@@ -237,20 +240,6 @@ pOptions = ProgOption <$> switch (long "detail" <> short 'd' <> help "Whether to
 progOption :: ParserInfo ProgOption 
 progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant to verb subcategorization")
 
-{- 
-data Config = Config { _propframedir :: FilePath
-                     , _corenlpdir   :: FilePath
-                     , _basedir      :: FilePath
-                     }
-
-makeLenses ''Config
-         
-config = Config { _propframedir = "/home/wavewave/repo/srcc/propbank-frames/frames"
-                , _corenlpdir   = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
-                , _basedir      = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-                }
-
--}
 
 
 
@@ -271,7 +260,7 @@ main = do
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
-  let fps = sort (toList (dirTree dtr))
+  let fps = {- Prelude.take 1000 $ -} sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps
@@ -299,9 +288,6 @@ main = do
       insts_v = filter (\p->T.last (p^._4.inst_lemma_type) == 'v') flatMatchedPairs
       classified_inst_map = foldl' addfunc  HM.empty insts_v
           where addfunc acc x = HM.insertWith (++) (x^._5.to getSenseID) [x] acc
-
-  -- mapM_ (\x -> putStrLn "=======" >> print x) insts_v
-  -- print classified_inst_map
 
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   rolesetstat <- loadStatistics (cfg^.cfg_statistics)
