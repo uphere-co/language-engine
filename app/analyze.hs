@@ -113,11 +113,12 @@ addSUTime sents tmxs =
 
 underlineText :: BeginEnd -> Text -> [TagPos a] -> IO ()
 underlineText (b0,_e0) txt lst = do
-  let f (b,e,_) = ((),b-b0+1,e-b0+1)
-      tagged = map f lst
+  let f n (b,e,_) = (n,b-b0+1,e-b0+1)
+      tagged = zipWith f [1..] lst
       ann = AnnotText (tagText tagged txt)
       xss = lineSplitAnnot Nothing 80 ann
-  sequence_ (concatMap (map (cutePrintAnnot isJust)) xss)
+      formatInt = T.pack . show
+  sequence_ (concatMap (map (cutePrintAnnotWithLabel (fmap formatInt))) xss)
 
 
 formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
