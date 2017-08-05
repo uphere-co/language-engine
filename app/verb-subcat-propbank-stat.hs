@@ -80,7 +80,7 @@ maybeNumberedArgument _                    = Nothing
 
 
 
-
+formatArgPatt :: ArgPattern -> String
 formatArgPatt patt = printf "arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s"
                        (fromMaybe "" (patt^.patt_arg0))
                        (fromMaybe "" (patt^.patt_arg1))
@@ -89,6 +89,7 @@ formatArgPatt patt = printf "arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-1
                        (fromMaybe "" (patt^.patt_arg4))
 
 
+formatArgTable :: Maybe (VerbProperty,_) -> ArgTable -> String
 formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
                               (fromMaybe "" (tbl^.tbl_rel))
                               (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
@@ -130,6 +131,9 @@ formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,sense) =
      ++ formatArgTable mvpmva argtable
      
 
+formatStatInst :: Bool -> ((Text,Text),Int)
+               -> (Maybe Text, [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)])
+               -> String
 formatStatInst doesShowDetail ((sense,sense_num),count) (mdefn,insts) = --- sensedb imap  =
   "\n============================================================================\n"
   ++ printf "%20s : %6d :  %s\n" (sense <> "." <> sense_num) count (fromMaybe "" mdefn)

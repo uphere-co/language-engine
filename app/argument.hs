@@ -5,55 +5,34 @@
 
 module Main where
 
-import           Control.Exception
+
 import           Control.Lens                hiding ((<.>))
 import           Control.Monad
 import           Control.Monad.IO.Class             (liftIO)
 import           Control.Monad.Trans.Either
-import           Data.Aeson
-import qualified Data.Attoparsec.Text       as A
-import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Foldable
-import           Data.Function                      (on)
-import           Data.HashMap.Strict                (HashMap)
-import qualified Data.HashMap.Strict        as HM
 import qualified Data.IntMap                as IM
 import           Data.List
-import           Data.Maybe                         (fromJust,fromMaybe,maybeToList)
-import           Data.Monoid
-import           Data.Text                          (Text)
+import           Data.Maybe                         (fromMaybe)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
-import           Data.Traversable
-import qualified Data.Tree                  as Tree
-import           System.Directory
 import           System.Directory.Tree
 import           System.FilePath
 import           System.IO
-import           Text.Printf
 --
 import           CoreNLP.Simple.Type.Simplified
-import           NLP.Parser.PennTreebankII
-import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Verb
-import           NLP.Syntax.Type
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
-import           PropBank.Format
-import           PropBank.Parser.Prop
 import           PropBank.Match
-import           PropBank.Query
-import           PropBank.Type.Frame
-import           PropBank.Type.Match
-import           PropBank.Type.Prop
-import           PropBank.Util                     (merge)
 import           Text.Format.Tree
 --
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
 
 
+propbankCorpus :: FilePath -> FilePath -> String -> IO ()
 propbankCorpus ptreedir basedir article = do
   void . runEitherT $ do
     lst <- concat <$> loadMatchArticle ptreedir basedir article
@@ -61,16 +40,16 @@ propbankCorpus ptreedir basedir article = do
       putStrLn "\n\n\n-------------"
       putStrLn $ "sentence " ++ show i
       putStrLn "-------------"
-      let tokens = map (^._2) . toList $ coretr
-      T.IO.putStrLn (T.intercalate " " tokens)
+      let tkns = map (^._2) . toList $ coretr
+      T.IO.putStrLn (T.intercalate " " tkns)
 
       putStrLn "\n\n======"
       let minsts = matchInstances (coretr,proptr) insts
-          lmap = IM.fromList (map (_2 %~ Lemma) corelma)
-          verbprops = verbPropertyFromPennTree lmap coretr
+          lemmamap = IM.fromList (map (_2 %~ Lemma) corelma)
+          verbprops = verbPropertyFromPennTree lemmamap coretr
           clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       
-      showClauseStructure lmap coretr
+      showClauseStructure lemmamap coretr
 
       putStrLn "-----"
       putStrLn "propbank match test"
@@ -81,13 +60,13 @@ propbankCorpus ptreedir basedir article = do
       putStrLn "-----"
       putStrLn "dependency"
       putStrLn "-----"
-      let tokens = map (^._2) . toList $ coretr
-          tkmap = IM.fromList (zip [0..] tokens)
-          deptree = fmap (\(i,r) -> let t = fromMaybe "" (IM.lookup (i-1) tkmap) in (i-1,t,r))
+      let tkmap = IM.fromList (zip [0..] tkns)
+          deptree = fmap (\(j,r) -> let t = fromMaybe "" (IM.lookup (j-1) tkmap) in (j-1,t,r))
                       (dependencyLabeledTree coredep)
       T.IO.putStrLn (linePrint (T.pack.show) deptree)
 
 
+main :: IO ()
 main = do
   let --  article = "wsj_2445"
       ptreedir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
