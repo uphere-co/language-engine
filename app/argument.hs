@@ -76,7 +76,7 @@ propbankCorpus ptreedir basedir article = do
       putStrLn "propbank match test"
       putStrLn "-----"
 
-      mapM_ (putStrLn . formatPropMatch verbprops clausetr) minsts
+      mapM_ (\minst -> putStrLn (formatMatchedVerb minst (matchVerbPropertyWithRelation verbprops clausetr minst))) minsts
 
       putStrLn "-----"
       putStrLn "dependency"
