@@ -41,6 +41,7 @@ library
                        either,
                        filepath,
                        hashable,
+                       jvm,
                        lens,
                        taggy-lens,
                        text,
@@ -56,4 +57,138 @@ library
                        syntactic-analysis,
                        VerbNet
   hs-source-dirs:      src
+  default-language:    Haskell2010  
+  ghc-options:         -O2 -Wall -Werror
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+                       -threaded
+  ghc-prof-options:    -caf-all -auto-all
+
+
+Executable analyze
+  Main-is:             analyze.hs
+  hs-source-dirs:      app
   default-language:    Haskell2010
+  ghc-options:         -O2 -Wall
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+  ghc-prof-options:    -caf-all -auto-all
+  other-modules:       
+  build-depends:       base,
+                       --
+                       bytestring,
+                       containers,
+                       data-default,
+                       directory-tree,
+                       filepath,
+                       haskeline,
+                       jvm,
+                       lens,
+                       monad-loops,
+                       protocol-buffers,
+                       text,
+                       unordered-containers,
+                       --
+                       HCoreNLP,
+                       HCoreNLP-Proto,
+                       HFrameNet,
+                       nlp-types,
+                       syntactic-analysis,
+                       textview,
+                       --
+                       OntoNotes
+
+
+Executable argument
+  Main-is:             argument.hs
+  hs-source-dirs:      app
+  default-language:    Haskell2010
+  ghc-options:         -O2 -Wall
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+  ghc-prof-options:    -caf-all -auto-all
+  other-modules:       
+  build-depends:       base,
+                       --
+                       aeson,
+                       attoparsec,
+                       bytestring,
+                       containers,
+                       directory,
+                       directory-tree,
+                       either,
+                       filepath,
+                       lens,
+                       text,
+                       unordered-containers,
+                       --
+                       HCoreNLP,
+                       nlp-types,
+                       PropBank,
+                       syntactic-analysis,
+                       textview,
+                       --
+                       OntoNotes
+                         
+
+Executable sense-inventory
+  Main-is:             sense-inventory.hs
+  hs-source-dirs:      app
+  default-language:    Haskell2010
+  ghc-options:         -O2 -Wall
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+  ghc-prof-options:    -caf-all -auto-all
+  other-modules:       
+  build-depends:       base,
+                       --
+                       boxes,
+                       containers,
+                       directory-tree,
+                       filepath,
+                       lens,
+                       text,
+                       unordered-containers,
+                       --
+                       HFrameNet,
+                       HWordNet,
+                       --
+                       OntoNotes
+
+
+Executable verb-subcat-propbank-stat
+  Main-is:             verb-subcat-propbank-stat.hs
+  hs-source-dirs:      app
+  default-language:    Haskell2010
+  ghc-options:         -O2 -Wall
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+  ghc-prof-options:    -caf-all -auto-all
+  other-modules:       
+  build-depends:       base,
+                       --
+                       attoparsec,
+                       containers,
+                       directory,
+                       directory-tree,
+                       either,
+                       extra,
+                       filepath,
+                       hashable,
+                       lens,
+                       optparse-applicative,
+                       text,
+                       unordered-containers,
+                       --
+                       nlp-types,
+                       PropBank,
+                       syntactic-analysis,
+                       --
+                       OntoNotes
+                                                
+                         
