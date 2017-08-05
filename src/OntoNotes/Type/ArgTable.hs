@@ -26,6 +26,12 @@ data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
 
 makeLenses ''ArgTable
 
+
+-- | https://en.wiktionary.org/wiki/Category:English_prepositions
+-- listOfPrepositions = [ ""
+--                      ] 
+
+
 headPreposition :: [PennTreeIdx] -> Maybe Text
 headPreposition xs = getFirst (foldMap (First . f) xs)   
   where f (PN _ _)        = Nothing
@@ -44,8 +50,9 @@ phraseNodeType (PN (_,c) xs) = case c of
                                  ADVP -> case headAdverb xs of
                                            Just t -> T.pack (show c) <> "-" <> t
                                            Nothing -> case headPreposition xs of
-                                                        Just t -> T.pack (show c) <> "-" <> "PP" <> "-" <> t
-                                                        Nothing -> T.pack (show c)
+                                                        Just t -> "PP-" <> t
+                                                        Nothing -> "??ADVP"
+                                 PRT  -> "PP" <> maybe "" (\t -> "-" <> t) (headAdverb xs)
                                  WHNP -> "NP"
                                  _     -> T.pack (show c)
 phraseNodeType (PL (_,(D_NONE,t))) = t
