@@ -8,7 +8,6 @@ module OntoNotes.Type.ArgTable where
 import           Control.Lens
 import           Data.Hashable
 import           Data.Foldable
-import           Data.List
 import           Data.Monoid
 import           Data.Text                    (Text)
 import qualified Data.Text               as T
@@ -16,9 +15,9 @@ import           GHC.Generics
 --
 import           NLP.Type.PennTreebankII
 import           PropBank.Match
-import           PropBank.Type.Frame
 import           PropBank.Type.Prop
-  
+
+                 
 data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
                          , _tbl_arg0 :: Maybe Text
                          , _tbl_arg1 :: Maybe Text
@@ -31,9 +30,7 @@ data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
 
 makeLenses ''ArgTable
 
-data ArgPattern = ArgPattern { -- _patt_lemma :: Text
-                             -- ,
-                               _patt_arg0 :: Maybe Text
+data ArgPattern = ArgPattern { _patt_arg0 :: Maybe Text
                              , _patt_arg1 :: Maybe Text
                              , _patt_arg2 :: Maybe Text
                              , _patt_arg3 :: Maybe Text
@@ -66,12 +63,14 @@ headPreposition xs = getFirst (foldMap (First . f) xs)
         f (PL (_,(TO,t))) = Just (T.toLower t)
         f (PL _         ) = Nothing        
 
+
 headAdverb :: [PennTreeIdx] -> Maybe Text
 headAdverb xs = getLast (foldMap (Last . f) xs)   
   where f (PN _ _)         = Nothing
         f (PL (_,(pos,t))) = if isAdverb pos then Just (T.toLower t) else Nothing
 
- 
+
+phraseNodeType :: PennTreeIdx -> Text
 phraseNodeType (PN (_,c) xs) = case c of
                                  PP   -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headPreposition xs)
                                  ADVP -> case headAdverb xs of
@@ -98,7 +97,7 @@ mkArgTable itr l2p (file,sid,tid) args  =
              (phraseNodeType . adj <$> findArg (== NumberedArgument 4))
              (file,sid,tid)
   where
-    adj x@(PL (_,(D_NONE,t))) = let (trc,mlid) = identifyTrace t
+    adj x@(PL (_,(D_NONE,t))) = let (_trc,mlid) = identifyTrace t
                                     mlnk = do lid <-mlid 
                                               rng <- lookup lid l2p
                                               matchR rng itr

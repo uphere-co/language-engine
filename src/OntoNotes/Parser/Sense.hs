@@ -2,9 +2,7 @@
 
 module OntoNotes.Parser.Sense where
 
-import           Control.Lens
 import           Data.Text            (Text)
-import qualified Data.Text    as T
 import           Data.Text.Read
 --
 import           OntoNotes.Type.Sense
@@ -17,11 +15,7 @@ parseSenseInst ws = do
   _sinst_token_id <- fst <$> decimal _sinst_token_id'
   case rest of
     _sinst_sense_num:[]   -> return SenseInstance {..}
-      --  fmap fst (decimal _sinst_sense_num')
-                              -- >>= \_sinst_sense_num -> return SenseInstance {..}
     _:_sinst_sense_num:[] -> return SenseInstance {..}
-                              -- fmap fst (decimal _sinst_sense_num')
-                              -- >>= \_sinst_sense_num -> return SenseInstance {..}
     _ -> Left "sense_num"
 
 
