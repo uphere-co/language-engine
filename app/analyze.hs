@@ -51,9 +51,9 @@ import           NLP.Syntax.Clause
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
-import           Type
-import           Util.Doc
-import           View
+import           Text.Annotation.Type
+import           Text.Annotation.Util.Doc
+import           Text.Annotation.View
 --
 import           OntoNotes.App.Load
 import           OntoNotes.Corpus.Load
