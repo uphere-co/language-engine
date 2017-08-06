@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
@@ -18,15 +19,20 @@ import           Data.Function                    (on)
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 -- import qualified Data.IntMap                as IM
-import           Data.List                        (intercalate,zip4)
+import           Data.List                        (intercalate,mapAccumL,zip4)
 import           Data.Maybe
+import           Data.Map                         (Map)
+import qualified Data.Map                   as M
 import           Data.Monoid
 import           Data.Text                        (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
-
+import           Data.Time.Calendar               (fromGregorian)
+import           Data.Vector                      (Vector)
+import qualified Data.Vector                as V
 import           Language.Java              as J
 import           System.Console.Haskeline
+import           System.FilePath
 import           System.Environment
 import           Text.Printf
 import           Text.ProtocolBuffers.Basic       (Utf8)
@@ -51,16 +57,43 @@ import           NLP.Syntax.Clause
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
+import           PropBank.Util
 import           Text.Annotation.Type
 import           Text.Annotation.Util.Doc
 import           Text.Annotation.View
+
+
+import           WikiEL                                       (loadEMtagger)
+import           WikiEL.CoreNLP                               (parseNEROutputStr)
+import           WikiEL.WikiEntityTagger                      (loadWETagger,wikiAnnotator)
+import           WikiEL.WikiEntityClass                       (fromFiles,getNEClass)
+import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,parseStanfordNE,namedEntityAnnotator)
+import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
+import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),UIDCite(..),entityLinking,entityLinkings,buildEntityMentions,entityUID)
+import           WikiEL.ETL.LoadData
+-- For testing:
+import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
+import qualified NLP.Type.NamedEntity          as N
+import qualified WikiEL.WikiEntityClass        as WC
+import           WikiEL.Type.Wikidata
+import           WikiEL.Type.Wikipedia
+import           WikiEL.Type.WordNet
+import           WikiEL.Type.Equity
+import           WikiEL.Type.FileFormat
+import           WikiEL.ETL.Parser
+import           WikiEL.WordNet
+import qualified WikiEL.EntityLinking          as EL
+import qualified WikiEL.Type.FileFormat        as F
+import qualified WikiEL                        as WEL
+
+
 --
 import           OntoNotes.App.Load
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Type.SenseInventory
 
-
+{-
 convertToken_charIndex :: TK.Token -> Maybe Token
 convertToken_charIndex t = do
   (b',e') <- (,) <$> t^.TK.beginChar <*> t^.TK.endChar
@@ -69,7 +102,7 @@ convertToken_charIndex t = do
   p <- identifyPOS . cutf8 <$> (t^.TK.pos)
   l <- cutf8 <$> (t^.TK.lemma)
   return (Token (b,e) w p l)
-
+-}
 
 formatLemmaPOS :: Token -> String
 formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
@@ -82,13 +115,12 @@ type TagPos a = (CharIdx,CharIdx,a)
 type SentItem = (SentIdx,BeginEnd,Text)
 
 
-getSentenceOffsets :: D.Document -> [(SentIdx,BeginEnd)]
-getSentenceOffsets doc =
-  let sents = toListOf (D.sentence . traverse) doc
-  in zip ([1..] :: [Int]) $ flip map sents $ \s ->
-       let b = fromJust $ fromJust $ firstOf (S.token . traverse . TK.beginChar) s
-           e = fromJust $ fromJust $ lastOf  (S.token . traverse . TK.endChar) s
-       in (fromIntegral b+1,fromIntegral e)
+getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd)]
+getSentenceOffsets psents =
+  zip ([1..] :: [Int]) $ flip map psents $ \s ->
+    let b = fromJust $ fromJust $ firstOf (S.token . traverse . TK.beginChar) s
+        e = fromJust $ fromJust $ lastOf  (S.token . traverse . TK.endChar) s
+    in (fromIntegral b+1,fromIntegral e)
 
 
 addText :: Text -> (SentIdx,BeginEnd) -> SentItem
@@ -139,7 +171,8 @@ runParser pp txt = do
   mtmx <- case fmap fst (messageGet lbstr_sutime) :: Either String T.ListTimex of
     Left _ -> return Nothing
     Right rsutime -> do
-      let sentidxs = getSentenceOffsets pdoc
+      let psents = toListOf (D.sentence . traverse) pdoc
+          sentidxs = getSentenceOffsets psents
           sents = map (addText txt) sentidxs
           sentswithtmx = addSUTime sents rsutime
       -- mapM_ formatResult sentswithtmx
@@ -150,7 +183,7 @@ runParser pp txt = do
       Right deps = mapM sentToDep psents
 
       tktokss = map (getTKTokens) psents
-      tokss = map (mapMaybe convertToken_charIndex) tktokss
+      tokss = map (mapMaybe convertToken) tktokss
   return (psents,sents,tokss,parsetrees,deps,mtmx)
 
 
@@ -216,7 +249,6 @@ sentStructure :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
 sentStructure pp sensemap sensestat framedb ontomap txt = do
   (psents,sents,_tokss,mptrs,deps,mtmx) <- runParser pp txt
   putStrLn "\n\n\n\n\n\n\n\n================================================================================================="
-  -- T.IO.putStrLn txt
   case mtmx of
     Nothing -> putStrLn "Time annotation not successful!"
     Just sentswithtmx -> mapM_ formatTimex sentswithtmx
@@ -224,22 +256,14 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
 
   flip mapM_ (zip4 psents sents mptrs deps) $ \(psent,_sent,mptr,_dep) -> do
     flip mapM_ mptr $ \ptr -> do
-      -- let tkns = zip [0..] (getTKTokens psent)
-          -- tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
-
-      let -- itr = mkAnnotatable (mkPennTreeIdx ptr)
-          lemmamap = mkLemmaMap psent
-          -- iltr = lemmatize lmap itr
+      let lemmamap = mkLemmaMap psent
           vps = verbPropertyFromPennTree lemmamap ptr
-          -- idltr = depLevelTree dep iltr
-          -- vtree = verbTree vps idltr
 
+      
       putStrLn "--------------------------------------------------------------------------------------------------"
       T.IO.putStrLn (formatIndexTokensFromTree 0 ptr)
       
       putStrLn "--------------------------------------------------------------------------------------------------"
-      -- let lmaposs = concatMap (filter (\t -> isVerb (t^.token_pos))) $ tokss
-      --     lmas = map (^.token_lemma) lmaposs
       showClauseStructure lemmamap ptr
       putStrLn "================================================================================================="
 
@@ -248,6 +272,18 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
         let senses = getSenses lma sensemap sensestat framedb ontomap
         (putStrLn . formatSenses False) senses
         putStrLn "--------------------------------------------------------------------------------------------------"
+
+
+-- -- abandoned code to simplify the resultant text.
+      -- let tkns = zip [0..] (getTKTokens psent)
+      -- tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
+      -- itr = mkAnnotatable (mkPennTreeIdx ptr)
+      -- iltr = lemmatize lmap itr
+      -- idltr = depLevelTree dep iltr
+      -- vtree = verbTree vps idltr
+      -- let lmaposs = concatMap (filter (\t -> isVerb (t^.token_pos))) $ tokss
+      --     lmas = map (^.token_lemma) lmaposs
+
 
 
 queryProcess :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
@@ -263,17 +299,13 @@ queryProcess pp sensemap sensestat framedb ontomap =
     putStrLn "=================================================================================================\n\n\n\n"
 
 
-main :: IO ()
-main = do
+main0 :: IO ()
+main0 = do
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-
-
-  -- ws <- loadStatistics (cfg^.cfg_statistics)
-
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
     pp <- prepare (def & (tokenizer .~ True)
@@ -284,3 +316,146 @@ main = do
                        . (constituency .~ True)
                   )
     queryProcess pp sensemap sensestat framedb ontomap
+
+
+
+--
+--
+-- wiki-ner test
+--
+--
+
+
+
+
+
+groupupheredir = "/scratch/groups/uphere"
+wikinerdir = groupupheredir </> "wiki-ner"
+
+listedCompanyFile = groupupheredir </> "enwiki/companies"
+newsFileTxt = wikinerdir </> "data/article.amazon_nike.txt"
+-- rawNewsFile3 = wikinerdir </> "data/article.amazon_nike.ptb"
+-- nerNewsFile3 = wikinerdir </> "data/article.amazon_nike.ner"
+reprFile     = EntityReprFile (wikinerdir </> "data/uid")
+orgItemFile  = ItemIDFile (wikinerdir </> "data/ne.org")
+personItemFile = ItemIDFile (wikinerdir </> "data/ne.person")
+brandItemFile  = ItemIDFile (wikinerdir </> "data/ne.brand")
+wordnetMappingFile = WordNetMappingFile (wikinerdir </> "data/page_id.wiki_id.wordnet.tsv")
+
+
+
+getOrgs :: EntityMention a -> Maybe (EntityMentionUID, ItemID)
+getOrgs (EL.Self muid (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
+getOrgs (EL.Cite muid _ (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
+getOrgs _ = Nothing
+
+
+getCompanySymbol :: Map ItemID Symbol -> (EntityMentionUID, ItemID) -> Maybe (EntityMentionUID , ItemID, Symbol)
+getCompanySymbol tikcerMap (mentionUID, itemID) = result
+  where
+    result = case M.lookup itemID tikcerMap of
+      Just symbol -> Just (mentionUID, itemID, symbol)
+      Nothing     -> Nothing  
+
+linkedMentionToTagPOS :: [Token] -> UIDCite EntityMentionUID (EL.EMInfo Text) -> Maybe (TagPos ())
+linkedMentionToTagPOS toks linked_mention = do
+  let IRange b e = (_info linked_mention)^._1
+      matched_toks = filter (\tok -> (tok^.token_tok_idx_range) `isInsideR` (b,e)) toks
+  guard ((not.null) matched_toks)
+  let cb = (head matched_toks)^.token_char_idx_range._1
+      ce = (last matched_toks)^.token_char_idx_range._2
+      tagpos = (cb+1,ce,())
+  return tagpos
+--   addTag 
+
+{-    
+  case lst of
+    [] -> Nothing
+    _ -> Just
+      
+      matched_sents = filter (\(rng,_) -> (b+1,e) `isInsideR` rng ) sents
+      toks = 
+  -- in print $ (linked_mention,filter (\tok -> isInsideR (tok^.token_tok_idx_range) (b,e)) toks)
+-}
+
+
+main :: IO ()
+main = do
+  file <- T.IO.readFile listedCompanyFile
+  txt <- T.IO.readFile newsFileTxt
+  -- input_raw <- T.IO.readFile rawNewsFile3
+  -- input <- T.IO.readFile nerNewsFile3
+  -- uid2tag <- fromFiles [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
+  -- wikiTable <- loadWETagger reprFile
+
+  -- wikiTable <- loadWETagger reprFile
+  emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
+
+  clspath <- getEnv "CLASSPATH"
+  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
+    pp <- prepare (def & (tokenizer .~ True)
+                       . (words2sentences .~ True)
+                       . (postagger .~ True)
+                       . (lemma .~ True)
+                       -- . (sutime .~ True)
+                       -- . (constituency .~ True)
+                       . (ner .~ True)
+                  )
+    -- queryProcess pp sensemap sensestat framedb ontomap
+    let doc = Document txt (fromGregorian 2017 4 17)
+    ann <- annotate pp doc
+    rdoc <- protobufDoc ann
+    case rdoc of
+      Left _ -> return ()
+      Right d -> do
+        let psents = d ^.. D.sentence . traverse
+            sentidxs = getSentenceOffsets psents
+            sents = map (addText txt) sentidxs 
+            unNER (NERSentence tokens) = tokens
+            neTokens = concatMap (unNER . sentToNER) psents
+            linked_mentions = emTagger neTokens
+            toks = concatMap (map snd . sentToTokens) psents
+            tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions
+            sents_tagged = map (addTag tags) sents
+        mapM_ (\(s,a) -> underlineText (s^._2) (s^._3) a) sents_tagged
+        -- print toks
+        -- mapM_ (print . 
+
+            
+{- 
+            text =  V.fromList (concatMap sentToWords sents) 
+            stanford_nefs = -- map parseStanfordNE (parseNEROutputStr input)
+
+        let 
+          lines = T.lines file
+          companies = map publicCompany lines
+          tickers  = map (\(_,_,_,symbol,_,itemID) -> (itemID, symbol)) companies
+          tickerMap = M.fromList tickers
+
+          named_entities =  filter (\x -> snd x == N.Org || snd x == N.Person) (getStanfordNEs stanford_nefs)
+          wiki_entities = namedEntityAnnotator wikiTable uid2tag stanford_nefs
+          wiki_named_entities = resolveNEs named_entities wiki_entities
+
+
+          mentions = buildEntityMentions text wiki_named_entities
+          linked_mentions = entityLinkings mentions
+
+          orgMentions = mapMaybe getOrgs linked_mentions
+          companyWithSymbols = mapMaybe (getCompanySymbol tickerMap) orgMentions
+
+        wordNetMapping <- loadWordNetMapping wordnetMappingFile  
+        let
+          wn = buildWordNetSynsetLookup wordNetMapping
+          synsets = map (lookupWordNet wn . entityUID) linked_mentions
+        --mapM_ print wiki_entities
+
+        print "Entity-linked named entities"
+        mapM_ print linked_mentions
+        mapM_ print synsets
+        print "Entity-linked organization entities"
+        mapM_ print orgMentions
+        print "Entity-linked public company entities"
+        mapM_ print companyWithSymbols
+  
+
+-}

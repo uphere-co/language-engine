@@ -81,6 +81,7 @@ Executable analyze
                        bytestring,
                        containers,
                        data-default,
+                       filepath,
                        haskeline,
                        jvm,
                        lens,
@@ -88,13 +89,17 @@ Executable analyze
                        protocol-buffers,
                        text,
                        unordered-containers,
+                       vector,
                        --
                        HCoreNLP,
                        HCoreNLP-Proto,
                        HFrameNet,
                        nlp-types,
+                       PropBank,
                        syntactic-analysis,
                        textview,
+                       time,
+                       wiki-ner,
                        --
                        OntoNotes
 
