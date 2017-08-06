@@ -28,6 +28,8 @@ import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 --
 import           NLP.Syntax.Type
+--
+import           Debug.Trace
 
 
 type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
@@ -172,7 +174,12 @@ findSiblings dir p x = iterateUntilM (p.current) dir x
 findPrevVerb :: BitreeZipperICP (Lemma ': as) -> Maybe (BitreeZipperICP (Lemma ': as))
 findPrevVerb z = do
     p <- parent z
-    (prevVerbInSiblings p <|> (parent p >>= prevVerbInSiblings))
+    ((prevVerbInSiblings p)
+     <|>
+     (do z1 <- parent p
+         guard (isChunkAs VP (current z1))
+         prevVerbInSiblings z1
+     ))
   where
     prevVerbInSiblings = findSiblings prev (\x -> case getIdxPOS x of {Nothing -> False; Just (_,pos) -> isVerb pos})
 
@@ -205,32 +212,37 @@ auxNegWords z is =
 
 tenseAspectVoiceAuxNeg :: BitreeZipperICP (Lemma ': as) -> Maybe (Tense,Aspect,Voice,AuxNegWords)
 tenseAspectVoiceAuxNeg z
-  | isPOSAs VBN (current z) = do
-      z1 <- findPrevVerb z
-      ((auxBe z1
-        (return (Past,Simple,Passive,auxNegWords z1 [getIdx z1,getIdx z]))
-        (findPrevVerb z1 >>= \z2 -> 
-          auxBe z2
-            (return (Past,Progressive,Passive,auxNegWords z2 (map getIdx [z2,z1,z])))
-            Nothing
-            (findPrevVerb z2 >>= \z3 -> do
-               t <- auxHave z3
-               return (t,PerfectProgressive,Passive,auxNegWords z3 (map getIdx [z3,z2,z1,z])))
-            (return (Present,Progressive,Passive,auxNegWords z2 ([getIdx z2,getIdx z1,getIdx z]))))
-        (do z2 <- findPrevVerb z1
-            t <- auxHave z2
-            return (t,Perfect,Passive,auxNegWords z2 (map getIdx [z2,z1,z])))
-        (return (Present,Simple,Passive,auxNegWords z1 [getIdx z1,getIdx z])))
-       <|>
-       (auxHave z1 >>= \t -> return (t,Perfect,Active,auxNegWords z1 (map getIdx [z1,z]))))
+  | isPOSAs VBN (current z) = 
+      case findPrevVerb z of
+        Nothing -> return (Present,Simple,Passive,auxNegWords z [getIdx z])
+        Just z1 -> do
+          ((auxBe z1
+            (return (Past,Simple,Passive,auxNegWords z1 [getIdx z1,getIdx z]))
+            (findPrevVerb z1 >>= \z2 -> 
+              auxBe z2
+                (return (Past,Progressive,Passive,auxNegWords z2 (map getIdx [z2,z1,z])))
+                Nothing
+                (findPrevVerb z2 >>= \z3 -> do
+                   t <- auxHave z3
+                   return (t,PerfectProgressive,Passive,auxNegWords z3 (map getIdx [z3,z2,z1,z])))
+                (return (Present,Progressive,Passive,auxNegWords z2 ([getIdx z2,getIdx z1,getIdx z]))))
+            (do z2 <- findPrevVerb z1
+                t <- auxHave z2
+                return (t,Perfect,Passive,auxNegWords z2 (map getIdx [z2,z1,z])))
+            (return (Present,Simple,Passive,auxNegWords z1 [getIdx z1,getIdx z])))
+           <|>
+           (auxHave z1 >>= \t -> return (t,Perfect,Active,auxNegWords z1 (map getIdx [z1,z]))))
   | isPOSAs VBG (current z) = do
-      z1 <- findPrevVerb z
-      auxBe z1 (return (Past,Progressive,Active,auxNegWords z1 [getIdx z1,getIdx z]))
-               Nothing
-               (do z2 <- findPrevVerb z1
-                   t <- auxHave z2
-                   return (t,PerfectProgressive,Active,auxNegWords z2 (map getIdx [z2,z1,z])))
-               (return (Present,Progressive,Active,auxNegWords z1 [getIdx z1,getIdx z]))
+      case findPrevVerb z of
+        Nothing -> return (Present,Progressive,Active,auxNegWords z [getIdx z])
+        Just z1 -> do
+          z1 <- findPrevVerb z
+          auxBe z1 (return (Past,Progressive,Active,auxNegWords z1 [getIdx z1,getIdx z]))
+                   Nothing
+                   (do z2 <- findPrevVerb z1
+                       t <- auxHave z2
+                       return (t,PerfectProgressive,Active,auxNegWords z2 (map getIdx [z2,z1,z])))
+                   (return (Present,Progressive,Active,auxNegWords z1 [getIdx z1,getIdx z]))
   | isPOSAs VBD (current z) = return (Past,Simple,Active,auxNegWords z [getIdx z])
   | otherwise               = return (Present,Simple,Active,auxNegWords z [getIdx z])
   where getIdx = fst . fromJust . getIdxPOS . current 
@@ -240,7 +252,7 @@ verbProperty :: BitreeZipperICP (Lemma ': as) -> Maybe VerbProperty
 verbProperty z = do
   i <- getLeafIndex (current z)
   lma <- ahead . getAnnot <$> getLeaf (current z)
-  -- pos <- posTag <$> getLeaf (current z)
+  {- trace (show (i,lma)) $ do -}
   (tns,asp,vo,(aux,neg,is)) <- tenseAspectVoiceAuxNeg z
   return (VerbProperty i lma tns asp vo aux neg is)
 
@@ -289,7 +301,7 @@ verbPropertyFromPennTree lemmamap pt =
 
 
       
-  in vps1 <> vps2 <> vps3
+  in {- trace (show identified_verbs1) $ -} vps1 <> vps2 <> vps3
 
 
 
