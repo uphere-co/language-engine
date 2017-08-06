@@ -117,7 +117,12 @@ underlineText (b0,_e0) txt lst = do
       tagged = map f lst
       ann = AnnotText (tagText tagged txt)
       xss = lineSplitAnnot Nothing 80 ann
-  sequence_ (concatMap (map (cutePrintAnnot isJust)) xss)
+      formatInt = T.pack . show
+      ls = do xs <- xss
+              x <- xs
+              underlineAnnotWithLabel (fmap formatInt) x
+      result = T.intercalate "\n" ls
+  T.IO.putStrLn result
 
 
 formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
