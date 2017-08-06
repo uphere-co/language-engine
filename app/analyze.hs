@@ -100,20 +100,9 @@ import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Type.SenseInventory
 
 
-{-
-convertToken_charIndex :: TK.Token -> Maybe Token
-convertToken_charIndex t = do
-  (b',e') <- (,) <$> t^.TK.beginChar <*> t^.TK.endChar
-  let (b,e) = (fromIntegral b',fromIntegral e')
-  w <- cutf8 <$> (t^.TK.originalText)
-  p <- identifyPOS . cutf8 <$> (t^.TK.pos)
-  l <- cutf8 <$> (t^.TK.lemma)
-  return (Token (b,e) w p l)
--}
 
 formatLemmaPOS :: Token -> String
 formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
-
 
 
 getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd)]
@@ -278,12 +267,18 @@ queryProcess :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
 queryProcess pp sensemap sensestat framedb ontomap =
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     let input = T.pack input'
-    sentStructure pp sensemap sensestat framedb ontomap input
+        (command,rest) = T.splitAt 3 input
+    case command of
+      ":l " -> do let fp = T.unpack rest
+                  txt <- T.IO.readFile fp
+                  sentStructure pp sensemap sensestat framedb ontomap txt
+      ":v " ->    sentStructure pp sensemap sensestat framedb ontomap rest
+      _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
 
-main0 :: IO ()
-main0 = do
+main :: IO ()
+main = do
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
@@ -309,8 +304,8 @@ main0 = do
 --
 
 
-main :: IO ()
-main = do
+main1 :: IO ()
+main1 = do
   file <- T.IO.readFile listedCompanyFile
   txt <- T.IO.readFile newsFileTxt
   emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
