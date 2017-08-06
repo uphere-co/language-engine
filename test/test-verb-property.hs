@@ -28,7 +28,7 @@ import           Test.Tasty
 
 
 -- | (Tense,Aspect,Voice,Maybe Text,Maybe Text) == (tense,aspect,voice,auxiliary,negation)
-ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24
+ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24,ex25
   :: (Text,Int,(Tense,Aspect,Voice,Maybe Text,Maybe Text),[(Int,(Lemma,Text))],PennTree,Dependency)
 ex1 = ( "He was fined $25,000."
       , 2
@@ -250,8 +250,18 @@ ex24 = ( "It isn't done."
        , Dependency 4 [(1,"It"),(2,"is"),(3,"n't"),(4,"done")] [((4,1),NSUBJPASS),((4,2),AUXPASS),((4,3),NEG)]
        )
 
+
+-- | Reduced relative clause.
+ex25 = ( "NASA enhances online scientific tool used by hundreds of scientists."
+       , 5
+       , (Present,Simple,Passive,Nothing,Nothing)
+       , [(0,("NASA","NASA")),(1,("enhance","enhances")),(2,("online","online")),(3,("scientific","scientific")),(4,("tool","tool")),(5,("use","used")),(6,("by","by")),(7,("hundred","hundreds")),(8,("of","of")),(9,("scientist","scientists")),(10,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","NASA")],PN "VP" [PL ("VBZ","enhances"),PN "NP" [PN "NP" [PL ("JJ","online"),PL ("JJ","scientific"),PL ("NN","tool")],PN "VP" [PL ("VBN","used"),PN "PP" [PL ("IN","by"),PN "NP" [PN "NP" [PL ("NNS","hundreds")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("NNS","scientists")]]]]]]],PL (".",".")]]
+       , Dependency 2 [(1,"NASA"),(2,"enhances"),(3,"online"),(4,"scientific"),(5,"tool"),(6,"used"),(7,"by"),(8,"hundreds"),(9,"of"),(10,"scientists")] [((2,1),NSUBJ),((2,5),DOBJ),((5,3),AMOD),((5,4),AMOD),((5,6),ACL),((6,8),NMOD),((8,7),CASE),((8,10),NMOD),((10,9),CASE)]
+       )
+
 testcases :: [(Text,Int,(Tense,Aspect,Voice,Maybe Text,Maybe Text),[(Int,(Lemma,Text))],PennTree,Dependency)]
-testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24]
+testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24,ex25]
 
 
 
