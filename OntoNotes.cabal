@@ -80,6 +80,7 @@ Executable analyze
   other-modules:
   build-depends:       base,
                        --
+                       boxes,
                        bytestring,
                        containers,
                        data-default,

@@ -34,6 +34,7 @@ import           Language.Java              as J
 import           System.Console.Haskeline
 import           System.FilePath
 import           System.Environment
+import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
 import           Text.ProtocolBuffers.Basic       (Utf8)
 import           Text.ProtocolBuffers.WireMessage (messageGet)
@@ -132,7 +133,7 @@ addSUTime sents tmxs =
 
 formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
 formatTimex (s,a) = do
-  underlineText (const "") (s^._2) (s^._3) a
+  T.IO.putStrLn (T.intercalate "\n" (underlineText (const "") (s^._2) (s^._3) a))
   T.IO.putStrLn "----------"
   print a
 
@@ -346,16 +347,10 @@ linkedMentionToTagPOS toks linked_mention = do
       ce = (last matched_toks)^.token_char_idx_range._2
       tagpos = (cb+1,ce,uid)
   return tagpos
---   addTag 
 
-{-    
-  case lst of
-    [] -> Nothing
-    _ -> Just
-      
-      matched_sents = filter (\(rng,_) -> (b+1,e) `isInsideR` rng ) sents
-      toks = 
-  -- in print $ (linked_mention,filter (\tok -> isInsideR (tok^.token_tok_idx_range) (b,e)) toks)
+{-
+formatTaggedSentences sents_tagged = 
+        mapM_ (\(s,a) -> underlineText (T.pack . show . EL._emuid) (s^._2) (s^._3) a) sents_tagged
 -}
 
 
@@ -391,7 +386,7 @@ main = do
             toks = concatMap (map snd . sentToTokens) psents
             tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions
             sents_tagged = map (addTag tags) sents
-        mapM_ (\(s,a) -> underlineText (T.pack . show . EL._emuid) (s^._2) (s^._3) a) sents_tagged
+        mapM_ (\(s,a) -> (T.IO.putStrLn . T.intercalate "\n") (underlineText (T.pack . show . EL._emuid) (s^._2) (s^._3) a)) sents_tagged
 
         mapM_ print linked_mentions
 

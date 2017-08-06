@@ -28,8 +28,8 @@ addTag lst i@(_,(b,e),_) = (i,filter check lst)
   where check (b',e',_) = b' >= b && e' <= e
 
 
-underlineText :: (a -> Text) -> BeginEnd -> Text -> [TagPos a] -> IO ()
-underlineText lblf (b0,_e0) txt taglst = do
+underlineText :: (a -> Text) -> BeginEnd -> Text -> [TagPos a] -> [Text]
+underlineText lblf (b0,_e0) txt taglst =
   let adjf (b,e,z) = (z,b-b0+1,e-b0+1)
       -- tagged = zipWith f [1..] lst
       ann = AnnotText (tagText (map adjf taglst) txt)
@@ -38,6 +38,7 @@ underlineText lblf (b0,_e0) txt taglst = do
       ls = do xs <- xss
               x <- xs
               underlineAnnotWithLabel (fmap lblf) x
-      result = T.intercalate "\n" ls
-  T.IO.putStrLn result
+  in ls
+  --     result = T.intercalate "\n" ls
+  -- T.IO.putStrLn result
 
