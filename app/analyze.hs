@@ -22,7 +22,7 @@ import           Data.Function                    (on)
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 -- import qualified Data.IntMap                as IM
-import           Data.List                        (intercalate,intersperse,mapAccumL,zip4)
+import           Data.List                        (intercalate,intersperse,mapAccumL,zip5)
 import           Data.Maybe
 import           Data.Map                         (Map)
 import qualified Data.Map                   as M
@@ -133,30 +133,46 @@ formatTimex (s,a) = do
 
 
 runParser :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+          -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
           -> Text
-          -> IO ([S.Sentence], [Maybe Sentence], [[Token]], [Maybe PennTree], [Dependency], Maybe [(SentItem, [TagPos (Maybe Utf8)])])
-runParser pp txt = do
+          -> IO ( [S.Sentence]
+                , [Maybe Sentence]
+                , [(SentIdx,BeginEnd,Text)]                  
+                , [[Token]]
+                , [Maybe PennTree]
+                , [Dependency]
+                , Maybe [(SentItem, [TagPos (Maybe Utf8)])]
+                , [UIDCite EntityMentionUID (EL.EMInfo Text)]
+                )
+runParser pp emTagger txt = do
   doc <- getDoc txt
   ann <- annotate pp doc
   pdoc <- getProtoDoc ann
   lbstr_sutime <- BL.fromStrict <$> serializeTimex ann
+  let psents = toListOf (D.sentence . traverse) pdoc
+      sentidxs = getSentenceOffsets psents
+      sentitems = map (addText txt) sentidxs
+  
   mtmx <- case fmap fst (messageGet lbstr_sutime) :: Either String T.ListTimex of
     Left _ -> return Nothing
     Right rsutime -> do
-      let psents = toListOf (D.sentence . traverse) pdoc
-          sentidxs = getSentenceOffsets psents
-          sents = map (addText txt) sentidxs
-          sentswithtmx = addSUTime sents rsutime
+      let sentswithtmx = addSUTime sentitems rsutime
       -- mapM_ formatResult sentswithtmx
       return (Just sentswithtmx)
-  let psents = getProtoSents pdoc
-      parsetrees = map (\x -> pure . decodeToPennTree =<< (x^.S.parseTree) ) psents
+  -- let psents = getProtoSents pdoc
+  let parsetrees = map (\x -> pure . decodeToPennTree =<< (x^.S.parseTree) ) psents
       sents = map (convertSentence pdoc) psents
       Right deps = mapM sentToDep psents
 
       tktokss = map (getTKTokens) psents
       tokss = map (mapMaybe convertToken) tktokss
-  return (psents,sents,tokss,parsetrees,deps,mtmx)
+
+      unNER (NERSentence tokens) = tokens
+      neTokens = concatMap (unNER . sentToNER) psents
+      linked_mentions_all = emTagger neTokens
+      linked_mentions_resolved
+        = filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all
+  return (psents,sents,sentitems,tokss,parsetrees,deps,mtmx,linked_mentions_resolved)
 
 
 getSenses :: Text -> HashMap Text Inventory -> HashMap (Text,Text) Int -> FrameDB -> HashMap Text [(Text,Text)]
@@ -211,28 +227,44 @@ formatSenses doesShowOtherSense lst
           else ""
 
 
+
+formatNER psents sentitems linked_mentions_resolved =
+  let toks = concatMap (map snd . sentToTokens) psents
+      tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
+      sents_tagged = map (addTag tags) sentitems
+      doc1 = formatTaggedSentences sents_tagged
+      doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
+  in hsep 10 left [doc1,doc2]
+
+
+
 sentStructure :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
               -> HashMap Text Inventory
               -> HashMap (Text,Text) Int
               -> FrameDB
               -> HashMap Text [(Text,Text)]
+              -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
               -> Text
               -> IO ()
-sentStructure pp sensemap sensestat framedb ontomap txt = do
-  (psents,sents,_tokss,mptrs,deps,mtmx) <- runParser pp txt
+sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
+  (psents,sents,sentitems,_tokss,mptrs,deps,mtmx,linked_mentions_resolved) <- runParser pp emTagger txt
   putStrLn "\n\n\n\n\n\n\n\n================================================================================================="
+  putStrLn "-- TimeTagger -----------------------------------------------------------------------------------"
   case mtmx of
     Nothing -> putStrLn "Time annotation not successful!"
     Just sentswithtmx -> mapM_ formatTimex sentswithtmx
-  putStrLn "-------------------------------------------------------------------------------------------------"
+  putStrLn "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
+  putStrLn (render (formatNER psents sentitems linked_mentions_resolved))
+  putStrLn "--------------------------------------------------------------------------------------------------"
+  putStrLn "-- Sentence analysis -----------------------------------------------------------------------------"
+  putStrLn "--------------------------------------------------------------------------------------------------"
 
-  flip mapM_ (zip4 psents sents mptrs deps) $ \(psent,_sent,mptr,_dep) -> do
+  flip mapM_ (zip5 ([0..] :: [Int]) psents sents mptrs deps) $ \(i,psent,_sent,mptr,_dep) -> do
     flip mapM_ mptr $ \ptr -> do
       let lemmamap = mkLemmaMap psent
           vps = verbPropertyFromPennTree lemmamap ptr
 
-      
-      putStrLn "--------------------------------------------------------------------------------------------------"
+      putStrLn (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
       T.IO.putStrLn (formatIndexTokensFromTree 0 ptr)
       
       putStrLn "--------------------------------------------------------------------------------------------------"
@@ -263,16 +295,17 @@ queryProcess :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> HashMap (Text,Text) Int
              -> FrameDB
              -> HashMap Text [(Text,Text)]
+             -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
              -> IO ()
-queryProcess pp sensemap sensestat framedb ontomap =
+queryProcess pp sensemap sensestat framedb ontomap emTagger =
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     let input = T.pack input'
         (command,rest) = T.splitAt 3 input
     case command of
-      ":l " -> do let fp = T.unpack rest
+      ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
-                  sentStructure pp sensemap sensestat framedb ontomap txt
-      ":v " ->    sentStructure pp sensemap sensestat framedb ontomap rest
+                  sentStructure pp sensemap sensestat framedb ontomap emTagger txt
+      ":v " ->    sentStructure pp sensemap sensestat framedb ontomap emTagger rest
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
@@ -284,6 +317,7 @@ main = do
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
+  emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]  
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
     pp <- prepare (def & (tokenizer .~ True)
@@ -292,8 +326,9 @@ main = do
                        . (lemma .~ True)
                        . (sutime .~ True)
                        . (constituency .~ True)
+                       . (ner .~ True)
                   )
-    queryProcess pp sensemap sensestat framedb ontomap
+    queryProcess pp sensemap sensestat framedb ontomap emTagger
 
 
 
@@ -304,10 +339,13 @@ main = do
 --
 
 
+-- loadWikiNER = do
+  -- companyfile <- T.IO.readFile listedCompanyFile
+
 main1 :: IO ()
 main1 = do
-  file <- T.IO.readFile listedCompanyFile
   txt <- T.IO.readFile newsFileTxt
+
   emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
 
   clspath <- getEnv "CLASSPATH"
