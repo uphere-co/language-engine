@@ -94,9 +94,11 @@ import qualified WikiEL                        as WEL
 --
 import           OntoNotes.App.Load
 import           OntoNotes.App.Util
+import           OntoNotes.App.WikiEL
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Type.SenseInventory
+
 
 {-
 convertToken_charIndex :: TK.Token -> Maybe Token
@@ -305,68 +307,6 @@ main0 = do
 -- wiki-ner test
 --
 --
-
-
-
-
-
-groupupheredir = "/scratch/groups/uphere"
-wikinerdir = groupupheredir </> "wiki-ner"
-
-listedCompanyFile = groupupheredir </> "enwiki/companies"
-newsFileTxt = wikinerdir </> "data/article.amazon_nike.txt"
--- rawNewsFile3 = wikinerdir </> "data/article.amazon_nike.ptb"
--- nerNewsFile3 = wikinerdir </> "data/article.amazon_nike.ner"
-reprFile     = EntityReprFile (wikinerdir </> "data/uid")
-orgItemFile  = ItemIDFile (wikinerdir </> "data/ne.org")
-personItemFile = ItemIDFile (wikinerdir </> "data/ne.person")
-brandItemFile  = ItemIDFile (wikinerdir </> "data/ne.brand")
-wordnetMappingFile = WordNetMappingFile (wikinerdir </> "data/page_id.wiki_id.wordnet.tsv")
-
-
-
-getOrgs :: EntityMention a -> Maybe (EntityMentionUID, ItemID)
-getOrgs (EL.Self muid (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
-getOrgs (EL.Cite muid _ (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
-getOrgs _ = Nothing
-
-
-getCompanySymbol :: Map ItemID Symbol -> (EntityMentionUID, ItemID) -> Maybe (EntityMentionUID , ItemID, Symbol)
-getCompanySymbol tikcerMap (mentionUID, itemID) = result
-  where
-    result = case M.lookup itemID tikcerMap of
-      Just symbol -> Just (mentionUID, itemID, symbol)
-      Nothing     -> Nothing  
-
-linkedMentionToTagPOS :: [Token]
-                      -> UIDCite EntityMentionUID (EL.EMInfo Text)
-                      -> Maybe (TagPos EntityMentionUID)
-linkedMentionToTagPOS toks linked_mention = do
-  let uid = EL._uid linked_mention
-      IRange b e = (_info linked_mention)^._1
-      matched_toks = filter (\tok -> (tok^.token_tok_idx_range) `isInsideR` (b,e)) toks
-  guard ((not.null) matched_toks)
-  let cb = (head matched_toks)^.token_char_idx_range._1
-      ce = (last matched_toks)^.token_char_idx_range._2
-      tagpos = (cb+1,ce,uid)
-  return tagpos
-
-
-formatTaggedSentences sents_tagged =
-  let txts = concatMap (\(s,a) -> underlineText (T.pack . show . EL._emuid) (s^._2) (s^._3) a) sents_tagged
-  in vcat top $ map (text . T.unpack) txts 
-
-formatPreNE tag = case resolvedUID tag of
-                    Left e -> "unresolved"
-                    Right i -> show i
-
-
-formatEMInfo :: EL.EMInfo Text -> String
-formatEMInfo em@(_,ws,tag) = printf "%-25s %-20s" (WEL.entityName em) (formatPreNE tag)
-
-
-formatLinkedMention Cite {..} = printf "%3d: (-> %3d) %s " (EL._emuid _uid) (EL._emuid _ref) (formatEMInfo _info)
-formatLinkedMention Self {..} = printf "%3d:          %s " (EL._emuid _uid)                  (formatEMInfo _info)
 
 
 main :: IO ()
