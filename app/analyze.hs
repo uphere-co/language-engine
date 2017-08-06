@@ -89,6 +89,7 @@ import qualified WikiEL                        as WEL
 
 --
 import           OntoNotes.App.Load
+import           OntoNotes.App.Util
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Type.SenseInventory
@@ -108,12 +109,6 @@ formatLemmaPOS :: Token -> String
 formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
 
 
-type SentIdx = Int
-type CharIdx = Int
-type BeginEnd = (CharIdx,CharIdx)
-type TagPos a = (CharIdx,CharIdx,a)
-type SentItem = (SentIdx,BeginEnd,Text)
-
 
 getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd)]
 getSentenceOffsets psents =
@@ -122,14 +117,6 @@ getSentenceOffsets psents =
         e = fromJust $ fromJust $ lastOf  (S.token . traverse . TK.endChar) s
     in (fromIntegral b+1,fromIntegral e)
 
-
-addText :: Text -> (SentIdx,BeginEnd) -> SentItem
-addText txt (n,(b,e)) = (n,(b,e),slice (b-1) e txt)
-
-
-addTag :: [TagPos a] -> SentItem -> (SentItem,[TagPos a])
-addTag lst i@(_,(b,e),_) = (i,filter check lst)
-  where check (b',e',_) = b' >= b && e' <= e
 
 
 addSUTime :: [SentItem] -> T.ListTimex
@@ -141,22 +128,6 @@ addSUTime sents tmxs =
             )
   in filter (not.null.(^._2)) $ map (addTag (map f (tmxs^..T.timexes.traverse))) sents
 
-
-
-underlineText :: BeginEnd -> Text -> [TagPos a] -> IO ()
-underlineText (b0,_e0) txt lst = do
-  let f n (b,e,_) = (n,b-b0+1,e-b0+1)
-      tagged = zipWith f [1..] lst
-      ann = AnnotText (tagText tagged txt)
-      xss = lineSplitAnnot Nothing 80 ann
-      formatInt = T.pack . show
-      ls = do xs <- xss
-              x <- xs
-              underlineAnnotWithLabel (fmap formatInt) x
-      result = T.intercalate "\n" ls
-  T.IO.putStrLn result
-  -- concatMap (\xs -> concatMap (underlineAnnotWithLabel (fmap formatInt) xs) xss 
-  -- (concatMap ()) xss)
 
 
 formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
