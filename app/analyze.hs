@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -15,12 +16,13 @@ import           Control.Monad.IO.Class           (liftIO)
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
+-- import           Data.Either.Extra                (isRight)
 import           Data.Foldable
 import           Data.Function                    (on)
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 -- import qualified Data.IntMap                as IM
-import           Data.List                        (intercalate,mapAccumL,zip4)
+import           Data.List                        (intercalate,intersperse,mapAccumL,zip4)
 import           Data.Maybe
 import           Data.Map                         (Map)
 import qualified Data.Map                   as M
@@ -395,12 +397,14 @@ main = do
             sents = map (addText txt) sentidxs 
             unNER (NERSentence tokens) = tokens
             neTokens = concatMap (unNER . sentToNER) psents
-            linked_mentions = emTagger neTokens
+            linked_mentions_all = emTagger neTokens
+            linked_mentions_resolved
+              = filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all
             toks = concatMap (map snd . sentToTokens) psents
-            tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions
+            tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
             sents_tagged = map (addTag tags) sents
             doc1 = formatTaggedSentences sents_tagged
-            doc2 = vcat top $ map (text.formatLinkedMention) linked_mentions
+            doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
             doc = hsep 10 left [doc1,doc2]
         putStrLn (render doc)
 
