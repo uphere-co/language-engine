@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
 
@@ -68,7 +69,7 @@ import           WikiEL                                       (loadEMtagger)
 import           WikiEL.CoreNLP                               (parseNEROutputStr)
 import           WikiEL.WikiEntityTagger                      (loadWETagger,wikiAnnotator)
 import           WikiEL.WikiEntityClass                       (fromFiles,getNEClass)
-import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,parseStanfordNE,namedEntityAnnotator)
+import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,parseStanfordNE,namedEntityAnnotator,resolvedUID)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
 import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),UIDCite(..),entityLinking,entityLinkings,buildEntityMentions,entityUID)
 import           WikiEL.ETL.LoadData
@@ -353,6 +354,17 @@ formatTaggedSentences sents_tagged =
   let txts = concatMap (\(s,a) -> underlineText (T.pack . show . EL._emuid) (s^._2) (s^._3) a) sents_tagged
   in vcat top $ map (text . T.unpack) txts 
 
+formatPreNE tag = case resolvedUID tag of
+                    Left e -> "unresolved"
+                    Right i -> show i
+
+
+formatEMInfo :: EL.EMInfo Text -> String
+formatEMInfo em@(_,ws,tag) = printf "%-25s %-20s" (WEL.entityName em) (formatPreNE tag)
+
+
+formatLinkedMention Cite {..} = printf "%3d: (-> %3d) %s " (EL._emuid _uid) (EL._emuid _ref) (formatEMInfo _info)
+formatLinkedMention Self {..} = printf "%3d:          %s " (EL._emuid _uid)                  (formatEMInfo _info)
 
 
 main :: IO ()
@@ -388,7 +400,7 @@ main = do
             tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions
             sents_tagged = map (addTag tags) sents
             doc1 = formatTaggedSentences sents_tagged
-            doc2 = vcat top $ map (text.show) linked_mentions
+            doc2 = vcat top $ map (text.formatLinkedMention) linked_mentions
             doc = hsep 10 left [doc1,doc2]
         putStrLn (render doc)
 
