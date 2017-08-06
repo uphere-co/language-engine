@@ -348,10 +348,11 @@ linkedMentionToTagPOS toks linked_mention = do
       tagpos = (cb+1,ce,uid)
   return tagpos
 
-{-
-formatTaggedSentences sents_tagged = 
-        mapM_ (\(s,a) -> underlineText (T.pack . show . EL._emuid) (s^._2) (s^._3) a) sents_tagged
--}
+
+formatTaggedSentences sents_tagged =
+  let txts = concatMap (\(s,a) -> underlineText (T.pack . show . EL._emuid) (s^._2) (s^._3) a) sents_tagged
+  in vcat top $ map (text . T.unpack) txts 
+
 
 
 main :: IO ()
@@ -386,45 +387,10 @@ main = do
             toks = concatMap (map snd . sentToTokens) psents
             tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions
             sents_tagged = map (addTag tags) sents
-        mapM_ (\(s,a) -> (T.IO.putStrLn . T.intercalate "\n") (underlineText (T.pack . show . EL._emuid) (s^._2) (s^._3) a)) sents_tagged
-
-        mapM_ print linked_mentions
-
-            
-{- 
-            text =  V.fromList (concatMap sentToWords sents) 
-            stanford_nefs = -- map parseStanfordNE (parseNEROutputStr input)
-
-        let 
-          lines = T.lines file
-          companies = map publicCompany lines
-          tickers  = map (\(_,_,_,symbol,_,itemID) -> (itemID, symbol)) companies
-          tickerMap = M.fromList tickers
-
-          named_entities =  filter (\x -> snd x == N.Org || snd x == N.Person) (getStanfordNEs stanford_nefs)
-          wiki_entities = namedEntityAnnotator wikiTable uid2tag stanford_nefs
-          wiki_named_entities = resolveNEs named_entities wiki_entities
+            doc1 = formatTaggedSentences sents_tagged
+            doc2 = vcat top $ map (text.show) linked_mentions
+            doc = hsep 10 left [doc1,doc2]
+        putStrLn (render doc)
 
 
-          mentions = buildEntityMentions text wiki_named_entities
-          linked_mentions = entityLinkings mentions
 
-          orgMentions = mapMaybe getOrgs linked_mentions
-          companyWithSymbols = mapMaybe (getCompanySymbol tickerMap) orgMentions
-
-        wordNetMapping <- loadWordNetMapping wordnetMappingFile  
-        let
-          wn = buildWordNetSynsetLookup wordNetMapping
-          synsets = map (lookupWordNet wn . entityUID) linked_mentions
-        --mapM_ print wiki_entities
-
-        print "Entity-linked named entities"
-        mapM_ print linked_mentions
-        mapM_ print synsets
-        print "Entity-linked organization entities"
-        mapM_ print orgMentions
-        print "Entity-linked public company entities"
-        mapM_ print companyWithSymbols
-  
-
--}
