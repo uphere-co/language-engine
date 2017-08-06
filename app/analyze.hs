@@ -132,7 +132,7 @@ addSUTime sents tmxs =
 
 formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
 formatTimex (s,a) = do
-  underlineText (s^._2) (s^._3) a
+  underlineText (const "") (s^._2) (s^._3) a
   T.IO.putStrLn "----------"
   print a
 
@@ -334,14 +334,17 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
       Just symbol -> Just (mentionUID, itemID, symbol)
       Nothing     -> Nothing  
 
-linkedMentionToTagPOS :: [Token] -> UIDCite EntityMentionUID (EL.EMInfo Text) -> Maybe (TagPos ())
+linkedMentionToTagPOS :: [Token]
+                      -> UIDCite EntityMentionUID (EL.EMInfo Text)
+                      -> Maybe (TagPos EntityMentionUID)
 linkedMentionToTagPOS toks linked_mention = do
-  let IRange b e = (_info linked_mention)^._1
+  let uid = EL._uid linked_mention
+      IRange b e = (_info linked_mention)^._1
       matched_toks = filter (\tok -> (tok^.token_tok_idx_range) `isInsideR` (b,e)) toks
   guard ((not.null) matched_toks)
   let cb = (head matched_toks)^.token_char_idx_range._1
       ce = (last matched_toks)^.token_char_idx_range._2
-      tagpos = (cb+1,ce,())
+      tagpos = (cb+1,ce,uid)
   return tagpos
 --   addTag 
 
@@ -360,12 +363,6 @@ main :: IO ()
 main = do
   file <- T.IO.readFile listedCompanyFile
   txt <- T.IO.readFile newsFileTxt
-  -- input_raw <- T.IO.readFile rawNewsFile3
-  -- input <- T.IO.readFile nerNewsFile3
-  -- uid2tag <- fromFiles [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
-  -- wikiTable <- loadWETagger reprFile
-
-  -- wikiTable <- loadWETagger reprFile
   emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
 
   clspath <- getEnv "CLASSPATH"
@@ -394,9 +391,9 @@ main = do
             toks = concatMap (map snd . sentToTokens) psents
             tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions
             sents_tagged = map (addTag tags) sents
-        mapM_ (\(s,a) -> underlineText (s^._2) (s^._3) a) sents_tagged
-        -- print toks
-        -- mapM_ (print . 
+        mapM_ (\(s,a) -> underlineText (T.pack . show . EL._emuid) (s^._2) (s^._3) a) sents_tagged
+
+        mapM_ print linked_mentions
 
             
 {- 

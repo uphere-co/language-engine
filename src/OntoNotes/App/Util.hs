@@ -28,16 +28,16 @@ addTag lst i@(_,(b,e),_) = (i,filter check lst)
   where check (b',e',_) = b' >= b && e' <= e
 
 
-underlineText :: BeginEnd -> Text -> [TagPos a] -> IO ()
-underlineText (b0,_e0) txt lst = do
-  let f n (b,e,_) = (n,b-b0+1,e-b0+1)
-      tagged = zipWith f [1..] lst
-      ann = AnnotText (tagText tagged txt)
+underlineText :: (a -> Text) -> BeginEnd -> Text -> [TagPos a] -> IO ()
+underlineText lblf (b0,_e0) txt taglst = do
+  let adjf (b,e,z) = (z,b-b0+1,e-b0+1)
+      -- tagged = zipWith f [1..] lst
+      ann = AnnotText (tagText (map adjf taglst) txt)
       xss = lineSplitAnnot Nothing 80 ann
-      formatInt = T.pack . show
+      -- formatInt = T.pack . show
       ls = do xs <- xss
               x <- xs
-              underlineAnnotWithLabel (fmap formatInt) x
+              underlineAnnotWithLabel (fmap lblf) x
       result = T.intercalate "\n" ls
   T.IO.putStrLn result
 
