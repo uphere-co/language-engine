@@ -12,7 +12,7 @@ module NLP.Syntax.Verb where
 import           Control.Applicative
 import           Control.Lens                                ((^.))
 import           Control.Monad
-import           Control.Monad.Loops                         (iterateUntilM,unfoldWhileM)
+import           Control.Monad.Loops                         (iterateUntilM)
 import           Data.Foldable                               (toList)
 import           Data.IntMap                                 (IntMap)
 import           Data.List                                   (sort)
@@ -28,8 +28,6 @@ import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 --
 import           NLP.Syntax.Type
---
-import           Debug.Trace
 
 
 type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
@@ -139,7 +137,7 @@ isPassive z
     in (b1 && b2) || (b1 && b3) || (b1 && b4)
 
 
-
+auxBe :: BitreeZipperICP (Lemma ': as) -> Maybe a -> Maybe a -> Maybe a -> Maybe a -> Maybe a
 auxBe z fd fg fn f =
    if | isLemmaAs "be" (current z) && isPOSAs VBD (current z) -> fd
       | isLemmaAs "be" (current z) && isPOSAs VBG (current z) -> fg
@@ -147,7 +145,7 @@ auxBe z fd fg fn f =
       | isLemmaAs "be" (current z)                            -> f
       | otherwise                                             -> Nothing  
 
-
+auxHave :: BitreeZipperICP (Lemma ': as) -> Maybe Tense
 auxHave z = 
   if | isLemmaAs "have" (current z) && isPOSAs VBD (current z) -> return Past
      | isLemmaAs "have" (current z)                            -> return Present
@@ -157,14 +155,18 @@ auxHave z =
 type AuxNegWords = (Maybe (Int,Lemma),Maybe (Int,Lemma),[Int])
 
 
+intLemma :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,Lemma)
 intLemma c = do
   i <- getLeafIndex (current c)
   l <- ahead . getAnnot <$> getLeaf (current c)
   return (i,l)                                  
 
-
-findSiblings dir pred x = iterateUntilM (pred.current) dir x
-
+findSiblings :: (Monad m) =>
+                (BitreeZipper c t -> m (BitreeZipper c t))
+             -> (Bitree c t -> Bool)
+             -> BitreeZipper c t
+             -> m (BitreeZipper c t)
+findSiblings dir p x = iterateUntilM (p.current) dir x
 
 
 findPrevVerb :: BitreeZipperICP (Lemma ': as) -> Maybe (BitreeZipperICP (Lemma ': as))
@@ -191,12 +193,16 @@ findNeg z = intLemma =<< (findNegInSiblings prev z <|> findNegInSiblings next z)
     findNegInSiblings dir = findSiblings dir (\x -> isPOSAs RB x && (isLemmaAs "not" x || isLemmaAs "n't" x))
 
 
+auxNegWords :: BitreeZipperICP (Lemma ': as)
+            -> [Int]
+            -> (Maybe (Int,Lemma), Maybe (Int,Lemma), [Int])
 auxNegWords z is =
   let (au,ne) = case findAux z of
                   Nothing -> (Nothing,findNeg z)
                   Just (c,il) -> (Just il,findNeg c)
   in (au,ne,sort (map fst (catMaybes [au,ne]) ++ is))
-       
+
+
 tenseAspectVoiceAuxNeg :: BitreeZipperICP (Lemma ': as) -> Maybe (Tense,Aspect,Voice,AuxNegWords)
 tenseAspectVoiceAuxNeg z
   | isPOSAs VBN (current z) = do
@@ -234,7 +240,7 @@ verbProperty :: BitreeZipperICP (Lemma ': as) -> Maybe VerbProperty
 verbProperty z = do
   i <- getLeafIndex (current z)
   lma <- ahead . getAnnot <$> getLeaf (current z)
-  pos <- posTag <$> getLeaf (current z)
+  -- pos <- posTag <$> getLeaf (current z)
   (tns,asp,vo,(aux,neg,is)) <- tenseAspectVoiceAuxNeg z
   return (VerbProperty i lma tns asp vo aux neg is)
 
@@ -394,6 +400,7 @@ copulativeVerbs =
 
 -- | modal verbs
 --   https://en.wikipedia.org/wiki/English_modal_verbs
+modalVerbs :: [ Text ]
 modalVerbs = [ "can"
              , "could"
              , "may"
@@ -405,14 +412,17 @@ modalVerbs = [ "can"
              , "must"
              ]
 
+semiModalVerbs :: [ Text ]
 semiModalVerbs = [ "ought"
                  , "dare"
                  , "need"
                  , "had_better"
                  , "used_to"
                  ]
-  
-nonModalAuxilary = [ "be_going_to"
-                   , "have_to"
-                   , "do"
-                   ]
+
+
+nonModalAuxiliary :: [ Text ]
+nonModalAuxiliary = [ "be_going_to"
+                    , "have_to"
+                    , "do"
+                    ]

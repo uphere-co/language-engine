@@ -34,16 +34,16 @@ formatVerbProperty vp = printf "%3d %-15s : %-35s  aux: %-7s neg: %-5s | %s"
 
 formatVerbArgs :: VerbArgs (Either (Range,STag) (Int,POSTag)) -> String
 formatVerbArgs va = printf "%10s %-20s %s"
-                      (maybe "" formatArg (va^.va_arg0))
+                      (maybe "" fmtArg (va^.va_arg0))
                       (T.intercalate " " (map (^._2) (va^.va_string)))
-                      ((intercalate " " . map (printf "%7s" . formatArg)) (va^.va_args))
+                      ((intercalate " " . map (printf "%7s" . fmtArg)) (va^.va_args))
   where
-    formatArg a = case a of
-                    Right (_  ,p)           -> show p
-                    Left  (_  ,(S_RT))      -> "ROOT"
-                    Left  (rng,(S_SBAR _))  -> "SBAR" ++ show rng
-                    Left  (rng,(S_CL c))    -> show c ++ show rng
-                    Left  (_  ,(S_VP _))    -> "VP"
-                    Left  (rng,(S_PP t))    -> "(PP " ++ show t ++ ")" ++ show rng
-                    Left  (rng,(S_OTHER t)) -> show t ++ show rng
+    fmtArg a = case a of
+                 Right (_  ,p)           -> show p
+                 Left  (_  ,(S_RT))      -> "ROOT"
+                 Left  (rng,(S_SBAR _))  -> "SBAR" ++ show rng
+                 Left  (rng,(S_CL c))    -> show c ++ show rng
+                 Left  (_  ,(S_VP _))    -> "VP"
+                 Left  (rng,(S_PP t))    -> "(PP " ++ show t ++ ")" ++ show rng
+                 Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
