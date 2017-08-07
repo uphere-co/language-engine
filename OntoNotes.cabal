@@ -24,6 +24,7 @@ library
                        OntoNotes.Mapping.FrameNet
                        OntoNotes.Parser.Sense
                        OntoNotes.Parser.SenseInventory
+                       OntoNotes.App.Analyze
                        OntoNotes.Type.ArgTable
                        OntoNotes.Type.Sense
                        OntoNotes.Type.SenseInventory
@@ -36,13 +37,18 @@ library
                        boxes,
                        bytestring,
                        containers,
+                       data-default,
                        directory,
                        directory-tree,
                        either,
                        filepath,
+                       jni,
                        hashable,
+                       haskeline,
                        jvm,
                        lens,
+                       monad-loops,
+                       protocol-buffers,
                        taggy-lens,
                        text,
                        time,
@@ -55,6 +61,7 @@ library
                        nlp-types,
                        PropBank,
                        syntactic-analysis,
+                       textview,
                        VerbNet
   hs-source-dirs:      src
   default-language:    Haskell2010
@@ -84,7 +91,6 @@ Executable analyze
                        haskeline,
                        jvm,
                        lens,
-                       monad-loops,
                        protocol-buffers,
                        text,
                        unordered-containers,
