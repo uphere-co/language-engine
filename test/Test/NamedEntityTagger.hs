@@ -327,7 +327,6 @@ main1 = do
     wn = buildWordNetSynsetLookup wordNetMapping
     synsets = map (lookupWordNet wn . entityUID) linked_mentions
   --mapM_ print wiki_entities
-  --{-
   print "Entity-linked named entities"
   mapM_ print linked_mentions
   mapM_ print synsets
@@ -335,9 +334,7 @@ main1 = do
   mapM_ print orgMentions
   print "Entity-linked public company entities"
   mapM_ print companyWithSymbols
-  --print tickerMap
-  --}
-
+  
 main2 = do
     propertyNames <- loadPropertyNames propertyNameFile
     wordNetMapping <- loadWordNetMapping wordnetMappingFile
