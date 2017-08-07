@@ -13,7 +13,7 @@ import           Control.Monad                  (guard)
 import           Data.Function                  (on)
 import qualified Data.IntMap             as IM
 import           Data.List                      (sortBy,zipWith4)
-import           Data.Maybe                     (mapMaybe)
+import           Data.Maybe                     (fromMaybe,mapMaybe)
 --
 import           Data.Attribute
 import           NLP.Syntax.Verb
@@ -115,7 +115,7 @@ calcInstanceFeature sentinfo input =
      
 featuresForInstance :: SentenceInfo -> MatchedInstance -> InstanceFeature
 featuresForInstance sentinfo inst = 
-  let predidx = findRelNode (inst^.mi_arguments)
+  let predidx = fromMaybe (error "No Rel Node") $ findRelNode (inst^.mi_arguments)
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
       arginputs = map argumentInputFromMatchedArgument
                 . filter ((/= Relation) . (^.ma_argument.arg_label))
@@ -126,7 +126,7 @@ featuresForInstance sentinfo inst =
 
 fakeFeaturesForInstance :: SentenceInfo -> MatchedInstance -> InstanceFeature
 fakeFeaturesForInstance sentinfo inst = 
-  let predidx = findRelNode (inst^.mi_arguments)
+  let predidx = fromMaybe (error "No Rel Node") $ findRelNode (inst^.mi_arguments)
       rolesetid = inst^.mi_instance.inst_lemma_roleset_id
       ipt = mkPennTreeIdx (sentinfo^.corenlp_tree)
       args = filter ((/= Relation) . (^.ma_argument.arg_label)) (inst^.mi_arguments)
