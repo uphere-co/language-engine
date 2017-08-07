@@ -29,6 +29,8 @@ import           WordNet.Query
 --
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
+import           OntoNotes.Type.Sense
+import           OntoNotes.Type.SenseInventory
 
 
 data Config = Config { _cfg_sense_inventory_file :: FilePath
