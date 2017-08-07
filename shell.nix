@@ -2,10 +2,13 @@
 , uphere-nix-overlay ? <uphere-nix-overlay>
 , HCoreNLP           ? <HCoreNLP>
 , HFrameNet          ? <HFrameNet>
+, HWordNet           ? <HWordNet>
 , nlp-types          ? <nlp-types>
 , PropBank           ? <PropBank>
+, syntactic-analysis ? <syntactic-analysis>
 , VerbNet            ? <VerbNet>
 , wiki-ner           ? <wiki-ner>
+, textview           ? <textview>
 }:
 
 with pkgs;
@@ -23,12 +26,15 @@ let
   config2 =
     self: super: {
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
-      "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
-      "HFrameNet" = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HFrameNet)) {};
-      "wiki-ner" = self.callPackage (import wiki-ner) {};
+      "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
+      "HFrameNet"      = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HFrameNet)) {};
+      "HWordNet"       = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HWordNet)) {};
+      "wiki-ner"  = self.callPackage (import wiki-ner) {};
     
       "nlp-types" = self.callPackage (import nlp-types) {};
       "PropBank" = self.callPackage (import PropBank) {};
+      "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
+      "textview" = self.callPackage (import textview) {};      
       "VerbNet" = self.callPackage (import VerbNet) {};
     };
   newHaskellPackages = haskellPackages.override {
@@ -38,8 +44,12 @@ let
 
   hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
             cabal-install
+            aeson
 
             attoparsec
+            bifunctors
+            bindings-DSL
+            
             boxes
             discrimination
             directory-tree
@@ -58,7 +68,10 @@ let
             p.HCoreNLP
             p.HCoreNLP-Proto
             p.HFrameNet
+            p.HWordNet
             p.nlp-types
+            p.syntactic-analysis
+            
             p.PropBank
             p.VerbNet
             p.wiki-ner

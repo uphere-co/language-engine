@@ -6,11 +6,9 @@ module Main where
 
 import           Control.Lens              hiding (para)
 import           Control.Monad
-import           Data.Binary
-import qualified Data.ByteString.Lazy.Char8 as BL
-import           Data.Either.Extra                (fromRight)
+import           Data.Either                      (rights)
 import           Data.Foldable
-import           Data.Function
+
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import qualified Data.IntMap                as IM
@@ -20,87 +18,28 @@ import           Data.Monoid
 import           Data.Text                        (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
-import qualified Data.Text.Lazy.IO          as T.L.IO
 import           Data.Text.Read                   (decimal)
-import           System.Directory
-import           System.Directory.Tree
-import           System.FilePath
 import           System.IO
 import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
-import           Text.Taggy.Lens
 --
 import           FrameNet.Query.LexUnit
 import           FrameNet.Type.Common (fr_frame)
 import           FrameNet.Type.LexUnit
-import           VerbNet.Parser.SemLink
-import           VerbNet.Type.SemLink
-import           OntoNotes.Parser.Sense
-import           OntoNotes.Parser.SenseInventory
+import           WordNet.Format
+import           WordNet.Query
+import           WordNet.Type
+import           WordNet.Type.POS
+--
+import           OntoNotes.App.Load
+import           OntoNotes.Corpus.Load
+import           OntoNotes.Type.SenseInventory
 
 
-data VorN = V | N deriving Eq
+data VorN = V | N
 
 
-data Config = Config { _cfg_sense_inventory_file :: FilePath
-                     , _cfg_semlink_file         :: FilePath
-                     , _cfg_statistics           :: FilePath
-                     , _cfg_wsj_directory        :: FilePath
-                     , _cfg_framenet_file        :: FilePath
-                     }
-
-makeLenses ''Config
-              
-cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
-             , _cfg_semlink_file = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
-             , _cfg_statistics = "run/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
-             , _cfg_wsj_directory = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-             , _cfg_framenet_file = "/home/wavewave/repo/srcp/HFrameNet/run/FrameNet_ListOfLexUnit.bin"
-             }
-  
-
-
-loadSenseInventory dir = do
-  cnts <- getDirectoryContents dir
-  let fs = sort (filter (\x -> takeExtensions x == ".xml") cnts)
-  flip traverse fs $ \f -> do
-    let fp = dir  </> f
-    txt <- T.L.IO.readFile fp
-    case txt ^? html . allNamed (only "inventory") of
-      Nothing -> error "nothing"
-      Just f -> case p_inventory f of
-                  Left err -> error err
-                  Right c  -> return c
-
-
-
-createVNFNDB :: VNFNMappingData -> HashMap (Text,Text) [Text]
-createVNFNDB semlink = 
-  let lst = map (\c-> ((c^.vnc_vnmember,c^.vnc_class),c^.vnc_fnframe)) (semlink^.vnfnmap_vnclslst)
-  in foldl' (\(!acc) (k,v) -> HM.insertWith (++) k [v] acc) HM.empty lst
-
-
-loadSemLink file = do
-  txt <- T.L.IO.readFile file
-  case txt ^? html . allNamed (only "verbnet-framenet_MappingData") of
-    Nothing -> error "nothing"
-    Just f -> case p_vnfnmappingdata f of
-                Left err -> error err
-                Right c -> return c
-  
-loadStatistics file = do
-  txt <- T.IO.readFile file
-  return $ map ((\(l:_:f:_) -> (l,f)) . T.words) (T.lines txt)
-
-
-loadFrameNet file = do
-  bstr <- BL.readFile file
-  let lst = decode bstr :: [LexUnit]
-      lexunitdb = foldl' insertLU emptyDB lst
-  return lexunitdb
-  
-
-
+verbnet :: HashMap (Text,Text) [Text] -> Text -> Text -> Box
 verbnet semlinkmap lma txt =
   let (_,cls') = T.breakOn "-" txt
   in if T.null cls'
@@ -113,15 +52,16 @@ verbnet semlinkmap lma txt =
                        else map (text.printf "%-30s") frms
                       )
 
+
 framesFromLU :: LexUnitDB -> Text -> [Text]
 framesFromLU ludb lma = do
   i <- fromMaybe [] (HM.lookup lma (ludb^.nameIDmap))
   l <- maybeToList (IM.lookup i (ludb^.lexunitDB))
   frm <- maybeToList (l^.lexunit_frameReference^.fr_frame)
   return frm
-  
 
 
+formatSenses :: Text -> VorN -> HashMap Text Inventory -> HashMap (Text,Text) [Text] -> HashMap (Text,Text) Int -> [Box]
 formatSenses lma vorn sensemap semlinkmap sensestat = do
   let lmav = lma <> case vorn of V -> "-v" ; N -> "-n"
   si <- maybeToList (HM.lookup lmav sensemap)
@@ -152,78 +92,91 @@ formatSenses lma vorn sensemap semlinkmap sensestat = do
   return (vcat left [(txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn),txt_detail])
 
 
+listWordNets :: WN -> [Text]
+listWordNets wn = T.splitOn "," (wn^.wn_contents)
+
+
+formatWordNet :: Text -> VorN -> HashMap Text Inventory -> HashMap (Text,Text) Int -> WordNetDB -> [Box]
+formatWordNet lma vorn sensemap sensestat wndb = do
+  let lmav = lma <> case vorn of V -> "-v" ; N -> "-n"
+  si <- maybeToList (HM.lookup lmav sensemap)
+  s <- si^.inventory_senses
+  let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
+      txt1 = text (printf "%2s.%-6s (%4d cases) |  " (s^.sense_group) (s^.sense_n) num )
+      mappings = s^.sense_mappings
+      wns = mappings^..mappings_wn.traverse
+      wndatas = do wn <- wns
+                   snumtxt <- listWordNets wn
+                   snum <- fst <$> rights [decimal snumtxt]
+                   let l = case wn^.wn_lemma of
+                             Nothing -> lma
+                             Just l' -> l'
+                       wnsense = l <> "." <> T.pack (show snum)
+                       dbdata = do
+                         (snum',soff') <- join . maybeToList $ (indexDB wndb POS_V) ^? at l . _Just . idx_synset_offset
+                         d <- maybeToList ((dataDB wndb POS_V) ^. at (unSynsetOffset soff'))
+                         return (snum',d)
+                   result <- maybeToList (find (\x -> x^._1 == SenseNumber snum) dbdata)
+                   return (wnsense,result)
+      txt_wn_senses = do (wnsense,(_,d)) <- wndatas
+                         let wnverbframes = show (d^..data_frames.traverse.to ((,)<$> view frame_f_num <*> view frame_w_num))
+                             restxt = printf "%-20s: %-45s | %25s | %-s  "
+                                        wnsense
+                                        (T.intercalate "," (map formatLI (d^.data_word_lex_id)))
+                                        wnverbframes
+                                        (d^.data_gloss)
+                         return (text restxt)
+      wn_frames = map head . group .  sort $ wndatas^..traverse._2._2.data_frames.traverse.frame_f_num
+      txt_wn_frames = text ("All frames: " ++ show wn_frames)
+      txt_wn = vcat left (txt_wn_senses ++ [txt_wn_frames])
+
+      txt_definition = map (text . T.unpack . T.strip) $ T.lines (s^.sense_name)
+      txt_commentary = map (text . T.unpack . T.strip) $ T.lines (fromMaybe "" (s^.sense_commentary))
+      txt_examples   = map (text . T.unpack . T.strip) $ T.lines (s^.sense_examples)
+      txt_detail = vcat left (txt_definition ++ txt_commentary ++ txt_examples)
+  return $ (txt1 <+> vcat left [txt_detail,txt_wn]) //
+           text "---------------------------------------------------------------------------------------------------------------"
+
+
 formatStat :: ((Text,Text),Int) -> String
 formatStat ((lma,sens),num) = printf "%20s.%-5s : %5d" lma sens num
 
 
-senseInstStatistics :: FilePath -> IO (HashMap (Text,Text) Int)
-senseInstStatistics basedir = do
-  dtr <- build basedir
-  let fps = sort (toList (dirTree dtr))
-      sfiles = filter (\x -> takeExtensions x == ".sense") fps
+listSenseDetail :: IO ()
+listSenseDetail = do
+  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
 
-  sinstss <- flip mapM sfiles $ \fp -> do
-    txt <- T.IO.readFile fp
-    -- print fp
-    let lst = T.lines txt
-        wss = map T.words lst
-    case traverse parseSenseInst wss of
-      Left err -> error err
-      Right lst -> return lst
-
-  let sinsts = concat sinstss
-      sinsts_verb = filter (\s-> T.last (s^.sinst_sense) == 'v') sinsts  
-      ks = map (\s -> ( T.init (T.init (s^.sinst_sense)) ,s^.sinst_sense_num)) sinsts_verb
-      acc = foldl' (\(!acc) k -> HM.insertWith (+) k 1 acc) HM.empty ks
-  -- mapM_ (putStrLn.formatStat) . sortBy (flip compare `on` snd) . HM.toList $ acc
-  return acc
-
-
-
-
-main :: IO ()
-main = do
-  ludb <- loadFrameNet (cfg^.cfg_framenet_file)
-   
-  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
-  semlink <- loadSemLink (cfg^.cfg_semlink_file)
-  let semlinkmap = createVNFNDB semlink
-
-  sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
-  let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-
-  ws <- loadStatistics (cfg^.cfg_statistics)
-
-  let merge :: [(Text,Text)] -> (Text,Int)
-      merge lst = let (lma,_) = head lst
-                  in case mapM (decimal.snd) lst of
-                       Left _     -> (lma,0)
-                       Right lst' -> (lma,sum (map fst lst'))
-
-      merged = sortBy (flip compare `on` snd) . map merge . groupBy ((==) `on` fst)
-             . sortBy (flip compare `on` fst)
-             . map (\(l,f)-> let (lma,_) = T.break (== '.') l in (lma,f))
-             $ ws
-
+  let merged = mergeStatPB2Lemma ws
   forM_ merged $ \(lma,f) -> do
-    T.IO.hPutStrLn stderr lma    
+    T.IO.hPutStrLn stderr lma
     let frms = framesFromLU ludb (lma <> ".v")
         doc = text (printf "%20s:%6d " lma f) //
               vcat top (formatSenses lma V sensemap semlinkmap sensestat )
-{- 
-    let findnonzero = do
-          si <- maybeToList (HM.lookup (lma <> "-v") sensemap)
-          s <- si^.inventory_senses
-          let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
-          guard (num > 0)
-          return (s^.sense_group, s^.sense_n, num)
-
-              
-    T.IO.putStrLn lma
-    mapM_ (\(g,n,num)->putStrLn (printf "%1s.%-6s" g n)) findnonzero
-    putStrLn ""
--}
     putStrLn "====================================================================================================================="
     putStrLn $ "From FrameNet Lexical Unit " ++ show (lma <> ".v") ++ ": " ++ show frms
     putStrLn (render doc)
 
+
+listSenseWordNet :: IO ()
+listSenseWordNet = do
+  (_ludb,sensestat,_semlinkmap,sensemap,ws,wndb) <- loadAllexceptPropBank
+
+  {- 
+  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
+  sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
+  let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
+
+  ws <- loadStatistics (cfg^.cfg_statistics) -}
+  let merged = mergeStatPB2Lemma ws
+
+  forM_ merged $ \(lma,f) -> do
+    T.IO.hPutStrLn stderr lma
+    let doc = text "=====================================================================================================================" //
+              text (printf "%20s:%6d " lma f) //
+              text "---------------------------------------------------------------------------------------------------------------" //
+              vcat top (formatWordNet lma V sensemap sensestat wndb)
+    putStrLn (render doc)
+
+
+main :: IO ()
+main = listSenseWordNet

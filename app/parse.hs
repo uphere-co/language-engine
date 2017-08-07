@@ -40,7 +40,8 @@ import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import           PropBank.Match
-
+--
+import           OntoNotes.App.Serializer
 
 getTerms :: PennTree -> [Text]
 getTerms = map snd . filter (\(t,_) -> t /= "-NONE-") . toList
@@ -66,36 +67,6 @@ filterNML (PN c xs) = concatMap filterNML xs
 filterNML (PL _) = []
 
 
-serializeLemma pp txts h_lemma = do
-  let docs = map (flip Document (fromGregorian 1990 1 1)) txts
-  anns <- traverse (annotate pp) docs
-  rdocs' <- traverse protobufDoc anns
-  let rdocs = sequenceA rdocs'
-  case rdocs of
-    Left err -> print err
-    Right ds -> do
-      let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
-          lmap= map (map (_2 %~ unLemma) . IM.toList . mkLemmaMap) sents
-      BL.hPutStrLn h_lemma (encode lmap)
-
-
-serializePennTreeDep pp txts (h_ud,h_tr)= do
-  let docs = map (flip Document (fromGregorian 1990 1 1)) txts
-  anns <- traverse (annotate pp) docs
-  rdocs' <- traverse protobufDoc anns
-  let rdocs = sequenceA rdocs'
-  case rdocs of
-    Left err -> print err
-    Right ds -> do
-      let sents = map (flip Seq.index 0 . (^. D.sentence)) ds
-          ntrs = map decodeToPennTree (mapMaybe (^.S.parseTree) sents)
-          edeps = mapM sentToDep sents
-      case edeps of
-        Left err -> print err
-        Right deps -> do
-          BL.hPutStrLn h_ud (encode deps)
-          BL.hPutStrLn h_tr (encode ntrs)
-
 
 process basedir pp = do
   dtr <- build basedir
@@ -115,10 +86,26 @@ process basedir pp = do
                 in T.intercalate " " (map (T.concat . map (snd.snd)) merged)
           let bname = takeBaseName f
           withFile (bname <.> "corenlp_lemma") WriteMode $ \h_lemma -> do
-            errorHandler h_err f (serializeLemma pp txts h_lemma)
+            errorHandler h_err f $ do
+              anns <- annotateTexts pp txts
+              rdocs' <- traverse protobufDoc anns
+              let rdocs = sequenceA rdocs'
+              mbstr <- serializeLemma rdocs
+              case mbstr of
+                Just bstr -> BL.hPutStrLn h_lemma bstr
+                Nothing -> return ()
           withFile (bname <.> "corenlp_udep") WriteMode $ \h_ud ->
             withFile (bname <.> "corenlp_ptree") WriteMode $ \h_tr ->
-              errorHandler h_err f (serializePennTreeDep pp txts (h_ud,h_tr))
+              errorHandler h_err f $ do 
+                anns <- annotateTexts pp txts
+                rdocs' <- traverse protobufDoc anns
+                let rdocs = sequenceA rdocs'
+                mbstr <- serializePennTreeDep rdocs
+                case mbstr of
+                  Just (bstr_deps,bstr_ntrs) -> do
+                    BL.hPutStrLn h_ud bstr_deps
+                    BL.hPutStrLn h_tr bstr_ntrs
+                  Nothing -> return ()
 
 
 main :: IO ()

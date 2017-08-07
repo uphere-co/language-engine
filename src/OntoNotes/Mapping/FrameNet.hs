@@ -1267,7 +1267,7 @@ mapFromONtoFN =
         ,("1.7.1", "Placing") -- "(Placing)")
         ,("1.7.2", "Getting")
         ,("1.7.3", "Becoming_aware")
-        ,("1.7.4", "Change_position_on_a_scale")  -- "Changing_position_on_a_scale - Cause_cahnge_of_position_on_a_scale")
+        ,("1.7.4", "Change_position_on_a_scale")  -- "Change_position_on_a_scale - Cause_change_of_position_on_a_scale")
         ,("1.7.6", "Choosing")
         ,("1.7.8", "Hit_or_miss")
         ,("1.7.10", "Personal_relationship")]) -- "(Personal_relationship <- date.v)")])
@@ -1750,6 +1750,356 @@ mapFromONtoFN =
     , ( "delay"
       , [("1.1", "Hindering")
         ,("1.2", "Change_event_time")])
+
+
+    , ( "treat"
+      , [("1.1", "Treating_and_mistreating")
+        ,("1.3", "Processing_materials")
+        ,("1.4", "Medical_intervention")])
+
+    , ( "survive"
+      , [("1.1", "Surviving")])
+
+    , ( "lie"
+      , [("1.1", "Being_located") -- "Posture || Being_located")
+        ,("1.2", "Prevarication")])
+
+    , ( "figure"
+      , [("1.1", "Reasoning")
+        ,("1.2", "Resolve_problem")
+        ,("1.3", "Function")])
+
+    , ( "count"
+      , [("1.1", "Categorization")  -- Categorization
+        ,("1.2", "Importance")
+        ,("1.3", "Categorization")
+        ,("1.4", "Reliance")])
+
+    , ( "bid"
+      , [("1.1", "Commerce_scenario")])  --  Commercial_scenario
+
+    , ( "advance"
+      , [("1.1", "Self_motion") -- "Self_motion || Cause_motion")
+        ,("1.2", "Change_position_on_a_scale")
+        ,("1.3", "Cause_to_make_progress")
+        ,("1.4", "Cause_to_make_progress") -- "(Cause_to_make_progress <- promote.v)")
+        ,("1.5", "Lending")
+        ,("1.6", "Change_event_time")])
+
+    , ( "test"
+      , [("1.1", "Examination") -- "Examination || Assessing")
+        ,("1.2", "Operational_testing")])
+
+    , ( "step"
+      , [("1.1", "Self_motion") -- "Self_motion || Transition_to_a_state")
+        ,("1.3", "Cause_motion")
+        ,("1.10", "Cause_change_of_position_on_a_scale") -- "Cause_change_position_on_a_scale || Cause_change_of_strength")
+        ,("1.11", "none")])
+
+    , ( "attribute"
+      , [("1.1", "Relating_concepts")]) -- "(Relating_concepts) || (Cognitive_connection)")])
+
+    , ( "walk"
+      , [("1.1", "Self_motion")
+        ,("1.4", "Quitting")])
+
+    , ( "steal"
+      , [("1.1", "Theft")
+        ,("1.2", "Self_motion")
+        ,("1.3", "Successful_action")])
+
+    , ( "investigate"
+      , [("1.1", "Scrutiny")]) -- "Research || Scrutiny || Criminal_investigation")])
+
+    , ( "enjoy"
+      , [("1.1", "Experiencer_focus")
+        ,("1.2", "Conferring_benefit")])
+
+    , ( "clear"
+      , [("1.1", "Emptying") -- "Emptying || Removing")
+        ,("1.2", "Improvement_or_decline")
+        ,("1.3", "Deciding")    -- (Deciding)
+        ,("1.4", "Evading")   -- (Evading)
+        ,("1.6", "Quitting_a_place")])
+
+    , ( "achieve"
+      , [("1.1", "Accomplishment")])
+
+    , ( "signal"
+      , [("1.1", "Gesture")
+        ,("1.2", "Sign")])
+
+    , ( "renew"
+      , [("1.1", "Activity_resume")
+        ,("1.2", "Improvement_or_decline")]) -- "(Cause_to_make_progress) || (Improvement_or_decline)")])
+
+    , ( "mature"
+      , [("1.1", "Ontogeny") -- "Ontogeny || Cause_to_make_progress")
+        ,("1.3", "Process_end")])
+
+    , ( "exclude"
+      , [("1.1", "Inclusion")]) -- "Inclusion || Preventing_or_letting")])
+
+    , ( "engage"
+      , [("1.1", "Participation")])
+
+    , ( "concentrate"
+      , [("1.1", "Perception_active") -- "Perception_active || (Attention)")])
+        ,("1.2", "Distributed_position")])
+
+    , ( "award"
+      , [("1.1", "Rewards_and_punishments")])
+
+    , ( "attend"
+      , [("1.1", "Attending")
+        ,("1.4", "Perception_active")])
+
+    , ( "surge"
+      , [("1.1", "Motion")
+        ,("1.2", "Change_position_on_a_scale")])
+
+    , ( "slip"
+      , [("1.1", "Self_motion")
+        ,("1.2", "Cause_motion") -- "Cause_motion || Motion")
+        ,("1.3", "Change_position_on_a_scale") -- "Change_position_on_a_scale || Improvement_or_decline")
+        ,("1.4", "Successful_action")])
+
+    , ( "shift"
+      , [("1.1", "Cause_change")
+        ,("1.2", "Self_motion")
+        ,("1.3", "Cause_change")])
+
+    , ( "shake"
+      , [("1.1", "Cause_motion") -- "Motion || Cause_motion")
+        ,("1.2", "Subversion") -- "Subversion <- undermine.v")
+        ,("1.3", "Gesture")
+        ,("1.4", "Removing")])
+
+    , ( "rely"
+      , [("1.1", "Reliance")])
+
+    , ( "execute"
+      , [("1.1", "Execution")
+        ,("1.2", "Execute_plan")])
+
+    , ( "cancel"
+      , [("1.1", "Activity_stop")
+        ,("1.2", "Activity_stop")])
+
+    , ( "sustain"
+      , [("1.1", "Retaining") -- "Support || Retaining")
+        ,("1.2", "Experiencer_focus")]) --  "Experiencer_focus <- suffer.v")])
+
+    , ( "remember"
+      , [("1.1", "Remembering_experience") -- "Remembering_experience || Remembering_information")
+        ,("1.2", "Memory")])
+
+    , ( "record"
+      , [("1.1", "Recording")
+        ,("1.2", "Evaluative_comparison")]) -- "(Evaluative_comparison <- measure.v)")])
+
+    , ( "project"
+      , [("1.1", "Communication")
+        ,("1.5", "Estimating")])
+
+    , ( "fund"
+      , [("1.1", "Funding")
+        ,("1.3", "none")])
+
+    , ( "expire"
+      , [("1.1", "Process_end")])
+
+    , ( "enable"
+      , [("1.1", "Preventing_or_letting")])
+
+    , ( "travel"
+      , [("1.1", "Travel")
+        ,("1.2", "Motion")])
+
+    , ( "transfer"
+      , [("1.1", "Transfer")
+        ,("1.2", "Transfer")
+        ,("1.3", "none")])
+
+    , ( "tie"
+      , [("1.1", "Attaching")
+        ,("1.2", "Make_cognitive_connection")
+        ,("1.3", "Competition")])
+
+    , ( "suppose"
+      , [("1.1", "Conditional_occurrence")
+        ,("1.2", "Opinion") -- "Opinion || (Likelihood)")
+        ,("1.6", "none")])
+
+    , ( "select"
+      , [("1.1", "Choosing")])
+
+    , ( "insure"
+      , [("1.1", "Commitment") -- "Commitment <- guarantee.v")
+        ,("1.2", "Commitment")])
+
+    , ( "halt"
+      , [("1.1", "Activity_stop")])
+
+    , ( "exercise"
+      , [("1.1", "Using")
+        ,("1.2", "Exercising")])
+
+    , ( "weaken"
+      , [("1.1", "Cause_change_of_strength")])
+
+    , ( "teach"
+      , [("1.1", "Education_teaching")])
+
+    , ( "review"
+      , [("1.1", "Scrutiny")
+        ,("1.2", "Assessing")])  -- "(Assessing)")])
+
+    , ( "manufacture"
+      , [("1.1", "Manufacturing")])
+
+    , ( "lack"
+      , [("1.1", "Have_as_requirement")]) -- "Have_as_requirement || Needing")])
+
+    , ( "double"
+      , [("1.1", "Change_position_on_a_scale")
+        ,("1.4", "Function")])
+
+    , ( "collapse"
+      , [("1.1", "Breaking_apart") -- "Breaking_apart || Cause_to_fragment")
+        ,("1.2", "Improvement_or_decline")])
+
+    , ( "address"
+      , [("1.1", "Speak_on_topic")
+        ,("1.4", "Topic")])
+
+    , ( "submit"
+      , [("1.2", "Submitting_documents")])
+
+    , ( "owe"
+      , [("1.1", "Borrowing")
+        ,("1.2", "Being_obligated")
+        ,("1.3", "Relating_concepts")])
+
+    , ( "import"
+      , [("1.1", "Importing")])
+
+    , ( "criticize"
+      , [("1.1", "Judgment_communication")])
+
+    , ( "appoint"
+      , [("1.1", "Appointing")])
+
+    , ( "vary"
+      , [("1.1", "Delimitation_of_diversity") -- "Diversity || Delimitation_of_diversity")
+        ,("1.2", "Diversity")])
+
+    , ( "state"
+      , [("1.1", "Statement")])
+
+    , ( "sound"
+      , [("1.1", "Give_impression")
+        ,("1.2", "Make_noise")])
+
+    , ( "solve"
+      , [("1.1", "Resolve_problem")
+        ,("1.2", "Resolve_problem")])
+
+    , ( "ship"
+      , [("1.1", "Sending")])
+
+    , ( "mention"
+      , [("1.1", "Mention")])
+
+    , ( "lay"
+      , [("1.1", "Placing")
+        ,("1.2", "Arranging") -- "Arranging || Activity_prepare")
+        ,("1.4", "Imposing_obligation") -- "Imposing_obligation || Judgment_communication")
+        ,("1.5.4", "Activity_stop")
+        ,("1.5.5", "Being_employed")
+        ,("1.5.7", "Using_resource")
+        ,("1.5.11", "idioms")
+        ,("1.5.12", "none")])
+
+    , ( "last"
+      , [("1.2", "Duration_relation")])
+
+    , ( "dump"
+      , [("1.1", "Cause_motion")
+        ,("1.2", "Removing")
+        ,("1.4", "none")])
+
+    , ( "divide"
+      , [("1.1", "Separating")
+        ,("1.3", "Be_in_agreement_on_assessment")])
+
+    , ( "convict"
+      , [("1.1", "Verdict")])
+
+    , ( "commit"
+      , [("1.1", "Committing_crime")
+        ,("1.2", "Commitment")])
+
+    , ( "approach"
+      , [("1.1", "Arriving")
+        ,("1.2", "Attempt_suasion")
+        ,("1.3", "Attempting_and_resolving_scenario")])
+
+    , ( "withdraw"
+      , [("1.1", "Quitting_a_place") -- "Quitting_a_place || Withdraw_from_participation || Activity_stop")
+        ,("1.2", "Removing")
+        ,("1.3", "Taking")])
+
+    , ( "target"
+      , [("1.1", "Aiming")])
+
+    , ( "rebound"
+      , [("1.2", "Recovery")])
+
+    , ( "react"
+      , [("1.1", "Response")])
+
+    , ( "question"
+      , [("1.1", "Questioning")
+        ,("1.2", "Certainty")])
+
+    , ( "mount"
+      , [("1.1", "Installing")
+        ,("1.2", "Change_position_on_a_scale")
+        ,("1.3", "Making_arrangements")
+        ,("1.4", "Placing")
+        ,("1.5", "Intentional_traversing")])
+
+    , ( "install"
+      , [("1.1", "Installing")])
+
+    , ( "dismiss"
+      , [("1.1", "Respond_to_proposal") -- "Respond_to_proposal || Judgment")
+        ,("1.2", "Activity_finish") -- "Activity_finish || Firing")
+        ,("1.3", "Activity_finish")])
+
+    , ( "challenge"
+      , [("1.1", "Compliance") -- "(Compliance)")
+        ,("1.2", "Competition")
+        ,("1.3", "Cause_to_perceive")]) -- "(Cause_to_perceive)")])
+
+    , ( "associate"
+      , [("1.1", "Make_cognitive_connection")
+        ,("1.2", "Forming_relationships")])
+
+    , ( "track"
+      , [("1.2", "Perception_active")
+        ,("1.3", "Traversing")
+        ,("1.4", "Locating")])
+
+    , ( "switch"
+      , [("1.1", "Replacing")
+        ,("1.2", "Replacing")
+        ,("1.3", "Change_operational_state")])
+
+    , ( "sue"
+      , [("1.1", "Judgment_communication")]) -- "(Judgment_communication)")])
+
     ]
 
 
