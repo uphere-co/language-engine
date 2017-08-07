@@ -51,9 +51,9 @@ import           NLP.Syntax.Clause
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
-import           Type
-import           Util.Doc
-import           View
+import           Text.Annotation.Type
+import           Text.Annotation.Util.Doc
+import           Text.Annotation.View
 --
 import           OntoNotes.App.Load
 import           OntoNotes.Corpus.Load
@@ -115,9 +115,14 @@ underlineText :: BeginEnd -> Text -> [TagPos a] -> IO ()
 underlineText (b0,_e0) txt lst = do
   let f (b,e,_) = ((),b-b0+1,e-b0+1)
       tagged = map f lst
-      ann = (AnnotText . map (\(t,m)-> (t,isJust m)) . tagText tagged) txt
-      xss = lineSplitAnnot 80 ann
-  sequence_ (concatMap (map cutePrintAnnot) xss)
+      ann = AnnotText (tagText tagged txt)
+      xss = lineSplitAnnot Nothing 80 ann
+      formatInt = T.pack . show
+      ls = do xs <- xss
+              x <- xs
+              underlineAnnotWithLabel (fmap formatInt) x
+      result = T.intercalate "\n" ls
+  T.IO.putStrLn result
 
 
 formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()

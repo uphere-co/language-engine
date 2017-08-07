@@ -231,7 +231,7 @@ mergePropSense :: PennTree -> [Instance] -> [SenseInstance] -> [(Int, Maybe Inst
 mergePropSense proptr insts senses =
   let nonelist = map fst . filter (isNone.fst.snd) . zip [0..] . toList . getADTPennTree 
       adj = adjustIndex (nonelist proptr)
-      lst = map (\x -> fromTuple (x^.sinst_token_id,x)) senses
+      lst = makeKeyAttrib (^.sinst_token_id) senses --  map (\x -> fromTuple (x^.sinst_token_id,x)) senses
   in map toTuple (joinAttrib (\x -> (either id id . adj) (x^.inst_predicate_id)) insts lst)
       
 
