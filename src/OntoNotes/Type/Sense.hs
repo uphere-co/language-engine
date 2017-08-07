@@ -4,7 +4,6 @@
 module OntoNotes.Type.Sense where
 
 import           Control.Lens
-import           Data.Monoid
 import           Data.Text            (Text)
 
 data SenseInstance = SenseInstance { _sinst_file :: Text

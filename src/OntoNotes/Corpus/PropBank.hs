@@ -8,12 +8,10 @@ import           Data.List
 import           Data.Maybe
 import           Data.Text                       (Text)
 import qualified Data.Text               as T
-import qualified Data.Text.IO            as T.IO
 import           Text.Printf
 --
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Type
-import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
 import           PropBank.Format
 import           PropBank.Match
@@ -37,7 +35,7 @@ mkNoOverlapSegments (x:xs) =
   let ys = sortBy (compare `on` fst) (x:xs)
       zs = zip ys (tail ys)
   in fmap (NoOverlapSegments . (head ys :))
-          (mapM (\((i,j),(i',j')) -> if j < i' then Just (i',j') else Nothing) zs)
+          (mapM (\((_i,j),(i',j')) -> if j < i' then Just (i',j') else Nothing) zs)
 
 
 newtype ContiguousSegments = ContiguousSegments [[Range]]
@@ -49,8 +47,8 @@ mkContiguousSegments :: NoOverlapSegments -> ContiguousSegments
 mkContiguousSegments (NoOverlapSegments xs) = ContiguousSegments (go [] [] xs)
   where go deck   acc []     = acc ++ [reverse deck]
         go []     acc (r:rs) = go [r] acc rs
-        go (z:zs) acc (r:rs) = let (i,j) = r
-                                   (i',j') = z
+        go (z:zs) acc (r:rs) = let ( i , _j ) = r
+                                   (_i',  j') = z
                                in if j'+1 == i
                                   then go (r:z:zs) acc          rs
                                   else go [r]      (acc ++ [reverse (z:zs)]) rs
@@ -84,14 +82,16 @@ matchVerbPropertyWithRelation verbprops clausetr minst = do
   return (vp,mva)
 
 
-     
+formatMatchedVerb :: MatchedInstance
+                  -> Maybe (VerbProperty, Maybe (VerbArgs (Either (Range,STag) (Int,POSTag))))
+                  -> String     
 formatMatchedVerb minst mvpmva =                  
   let inst = minst^.mi_instance
       args = filter (\a->a^.ma_argument.arg_label /= Relation) (minst^.mi_arguments)
       header_str = "*************\n"
                    ++ T.unpack (formatRoleSetID (inst^.inst_lemma_roleset_id))
       content_str
-        = flip (maybe "unmatched!\n") mvpmva $ \(vp,mva) ->
+        = flip (maybe "unmatched!\n") mvpmva $ \(_vp,mva) ->
             flip (maybe "argument unmatched!\n") mva $ \va -> 
               let vargs = maybeToList (va^.va_arg0) ++ va^.va_args
               in "relation matched\n" ++

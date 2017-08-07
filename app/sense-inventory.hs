@@ -8,7 +8,7 @@ import           Control.Lens              hiding (para)
 import           Control.Monad
 import           Data.Either                      (rights)
 import           Data.Foldable
-import           Data.Function
+
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import qualified Data.IntMap                as IM
@@ -19,8 +19,6 @@ import           Data.Text                        (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import           Data.Text.Read                   (decimal)
-import           System.Directory.Tree
-import           System.FilePath
 import           System.IO
 import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
@@ -35,12 +33,13 @@ import           WordNet.Type.POS
 --
 import           OntoNotes.App.Load
 import           OntoNotes.Corpus.Load
-import           OntoNotes.Parser.Sense
-import           OntoNotes.Parser.SenseInventory
 import           OntoNotes.Type.SenseInventory
+
 
 data VorN = V | N
 
+
+verbnet :: HashMap (Text,Text) [Text] -> Text -> Text -> Box
 verbnet semlinkmap lma txt =
   let (_,cls') = T.breakOn "-" txt
   in if T.null cls'
@@ -53,6 +52,7 @@ verbnet semlinkmap lma txt =
                        else map (text.printf "%-30s") frms
                       )
 
+
 framesFromLU :: LexUnitDB -> Text -> [Text]
 framesFromLU ludb lma = do
   i <- fromMaybe [] (HM.lookup lma (ludb^.nameIDmap))
@@ -61,7 +61,7 @@ framesFromLU ludb lma = do
   return frm
 
 
-
+formatSenses :: Text -> VorN -> HashMap Text Inventory -> HashMap (Text,Text) [Text] -> HashMap (Text,Text) Int -> [Box]
 formatSenses lma vorn sensemap semlinkmap sensestat = do
   let lmav = lma <> case vorn of V -> "-v" ; N -> "-n"
   si <- maybeToList (HM.lookup lmav sensemap)
@@ -92,12 +92,11 @@ formatSenses lma vorn sensemap semlinkmap sensestat = do
   return (vcat left [(txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn),txt_detail])
 
 
-
-
 listWordNets :: WN -> [Text]
 listWordNets wn = T.splitOn "," (wn^.wn_contents)
 
 
+formatWordNet :: Text -> VorN -> HashMap Text Inventory -> HashMap (Text,Text) Int -> WordNetDB -> [Box]
 formatWordNet lma vorn sensemap sensestat wndb = do
   let lmav = lma <> case vorn of V -> "-v" ; N -> "-n"
   si <- maybeToList (HM.lookup lmav sensemap)
@@ -114,12 +113,12 @@ formatWordNet lma vorn sensemap sensestat wndb = do
                              Just l' -> l'
                        wnsense = l <> "." <> T.pack (show snum)
                        dbdata = do
-                         (snum,soff) <- join . maybeToList $ (indexDB wndb POS_V) ^? at l . _Just . idx_synset_offset
-                         d <- maybeToList ((dataDB wndb POS_V) ^. at (unSynsetOffset soff))
-                         return (snum,d)
+                         (snum',soff') <- join . maybeToList $ (indexDB wndb POS_V) ^? at l . _Just . idx_synset_offset
+                         d <- maybeToList ((dataDB wndb POS_V) ^. at (unSynsetOffset soff'))
+                         return (snum',d)
                    result <- maybeToList (find (\x -> x^._1 == SenseNumber snum) dbdata)
                    return (wnsense,result)
-      txt_wn_senses = do (wnsense,wndata@(snum,d)) <- wndatas
+      txt_wn_senses = do (wnsense,(_,d)) <- wndatas
                          let wnverbframes = show (d^..data_frames.traverse.to ((,)<$> view frame_f_num <*> view frame_w_num))
                              restxt = printf "%-20s: %-45s | %25s | %-s  "
                                         wnsense
@@ -137,7 +136,6 @@ formatWordNet lma vorn sensemap sensestat wndb = do
       txt_detail = vcat left (txt_definition ++ txt_commentary ++ txt_examples)
   return $ (txt1 <+> vcat left [txt_detail,txt_wn]) //
            text "---------------------------------------------------------------------------------------------------------------"
-
 
 
 formatStat :: ((Text,Text),Int) -> String
@@ -159,17 +157,16 @@ listSenseDetail = do
     putStrLn (render doc)
 
 
-
-
 listSenseWordNet :: IO ()
 listSenseWordNet = do
-  (ludb,sensestat,semlinkmap,sensemap,ws,wndb) <- loadAllexceptPropBank
+  (_ludb,sensestat,_semlinkmap,sensemap,ws,wndb) <- loadAllexceptPropBank
 
+  {- 
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
 
-  ws <- loadStatistics (cfg^.cfg_statistics)
+  ws <- loadStatistics (cfg^.cfg_statistics) -}
   let merged = mergeStatPB2Lemma ws
 
   forM_ merged $ \(lma,f) -> do
@@ -181,5 +178,5 @@ listSenseWordNet = do
     putStrLn (render doc)
 
 
-
+main :: IO ()
 main = listSenseWordNet

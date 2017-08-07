@@ -16,21 +16,17 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import qualified Data.Text.Lazy.IO          as T.L.IO
 import           System.Directory
-import           System.Directory.Tree
 import           System.FilePath
 import           Text.Taggy.Lens
 --
 import           FrameNet.Query.LexUnit
-import           FrameNet.Type.Frame    hiding (LexUnit)  
 import           FrameNet.Type.LexUnit
 import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
 import           WordNet.Query
 --
 import           OntoNotes.Corpus.Load
-import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
-import           OntoNotes.Type.Sense
 import           OntoNotes.Type.SenseInventory
 
 
@@ -47,7 +43,7 @@ data Config = Config { _cfg_sense_inventory_file :: FilePath
 
 makeLenses ''Config
 
-              
+cfg :: Config              
 cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
              , _cfg_semlink_file         = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
              , _cfg_statistics           = "/scratch/wavewave/run/20170717/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
@@ -60,7 +56,7 @@ cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/da
              }
   
 
-
+loadSenseInventory :: FilePath -> IO [Inventory]
 loadSenseInventory dir = do
   cnts <- getDirectoryContents dir
   let fs = sort (filter (\x -> takeExtensions x == ".xml") cnts)
@@ -69,30 +65,34 @@ loadSenseInventory dir = do
     txt <- T.L.IO.readFile fp
     case txt ^? html . allNamed (only "inventory") of
       Nothing -> error "nothing"
-      Just f -> case p_inventory f of
-                  Left err -> error err
+      Just x -> case p_inventory x of
+                  Left e -> error e
                   Right c  -> return c
 
 
-loadSemLink file = do
-  txt <- T.L.IO.readFile file
+loadSemLink :: FilePath -> IO VNFNMappingData
+loadSemLink fp = do
+  txt <- T.L.IO.readFile fp
   case txt ^? html . allNamed (only "verbnet-framenet_MappingData") of
     Nothing -> error "nothing"
-    Just f -> case p_vnfnmappingdata f of
-                Left err -> error err
+    Just x -> case p_vnfnmappingdata x of
+                Left e -> error e
                 Right c -> return c
 
-  
-loadStatistics file = do
-  txt <- T.IO.readFile file
+
+loadStatistics :: FilePath -> IO [(Text,Text)]
+loadStatistics fp = do
+  txt <- T.IO.readFile fp
   return $ map ((\(l:_:f:_) -> (l,f)) . T.words) (T.lines txt)
 
 
-loadFrameNet file = do
-  bstr <- BL.readFile file
+loadFrameNet :: FilePath -> IO LexUnitDB
+loadFrameNet fp = do
+  bstr <- BL.readFile fp
   let lst = decode bstr :: [LexUnit]
       lexunitdb = foldl' insertLU emptyDB lst
   return lexunitdb
+
   
 createVNFNDB :: VNFNMappingData -> HashMap (Text,Text) [Text]
 createVNFNDB semlink = 
@@ -102,7 +102,7 @@ createVNFNDB semlink =
 
 
 
-
+loadAllexceptPropBank :: IO (LexUnitDB, HashMap (Text,Text) Int, HashMap (Text,Text) [Text], HashMap Text Inventory, [(Text,Text)], WordNetDB)
 loadAllexceptPropBank = do
   ludb <- loadFrameNet (cfg^.cfg_framenet_lubin)
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)

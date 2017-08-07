@@ -7,7 +7,7 @@ import           Control.Exception
 import           Control.Lens                hiding ((<.>))
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Either
-import           Data.Aeson
+import           Data.Aeson                  hiding (pairs)
 import qualified Data.Attoparsec.Text       as A
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Foldable
@@ -36,18 +36,21 @@ import           OntoNotes.Type.Sense
 
 
 readJSONList :: (FromJSON a) => FilePath -> EitherT String IO [a]
-readJSONList file = EitherT $ eitherDecode <$> liftIO (BL.readFile file)
+readJSONList f = EitherT $ eitherDecode <$> liftIO (BL.readFile f)
 
 
+readPropBank :: FilePath -> EitherT String IO [Instance]
 readPropBank propfile = liftIO $ parsePropWithFileField NoOmit <$> T.IO.readFile propfile
 
 
+readOrigPennTree :: FilePath -> EitherT String IO [PennTree]
 readOrigPennTree pennfile
   = hoistEither . A.parseOnly (A.many1 (A.skipSpace *> pnode))
     =<< liftIO (T.IO.readFile pennfile)
 
 
-prepare basedir = do
+prepareFilePaths :: FilePath -> IO ([FilePath],[FilePath])
+prepareFilePaths basedir = do
   dtr <- build basedir
   let fps = sort (toList (dirTree dtr))
       props = filter (\x -> takeExtensions x == ".prop") fps
@@ -58,7 +61,7 @@ prepare basedir = do
 loadMatchArticle :: FilePath -> FilePath -> String
                  -> EitherT String IO (Maybe [(Int,(((PennTree,Dependency,[(Int,Text)]),PennTree),[Instance]))])
 loadMatchArticle ptreedir basedir article = do
-  (props,trees) <- liftIO $ prepare basedir
+  (props,trees) <- liftIO $ prepareFilePaths basedir
   let findf = find (\f -> takeBaseName f == article)
   flip traverse ((,) <$> findf props <*> findf trees) $ \(fprop,ftree) -> do
     insts <- readPropBank fprop
@@ -75,11 +78,11 @@ loadMatchArticle ptreedir basedir article = do
     return (merge (^.inst_tree_id) pairs insts)
 
 
-
+errorHandler :: Handle -> String -> IO a -> IO ()
 errorHandler h_err msg action = do
   r <- try action
   case r of
-    Left (e :: SomeException) -> hPutStrLn h_err msg >> hFlush h_err
+    Left (_ :: SomeException) -> hPutStrLn h_err msg >> hFlush h_err
     _ -> return ()
 
 senseInstStatistics :: FilePath -> IO (HashMap (Text,Text) Int)
@@ -90,29 +93,27 @@ senseInstStatistics basedir = do
 
   sinstss <- flip mapM sfiles $ \fp -> do
     txt <- T.IO.readFile fp
-    -- print fp
     let lst = T.lines txt
         wss = map T.words lst
     case traverse parseSenseInst wss of
-      Left err -> error err
-      Right lst -> return lst
+      Left  e -> error e
+      Right r -> return r
 
   let sinsts = concat sinstss
       sinsts_verb = filter (\s-> T.last (s^.sinst_sense) == 'v') sinsts
       ks = map (\s -> ( T.init (T.init (s^.sinst_sense)) ,s^.sinst_sense_num)) sinsts_verb
-      acc = foldl' (\(!acc) k -> HM.insertWith (+) k 1 acc) HM.empty ks
-  -- mapM_ (putStrLn.formatStat) . sortBy (flip compare `on` snd) . HM.toList $ acc
-  return acc
+  return (foldl' (\(!acc) k -> HM.insertWith (+) k 1 acc) HM.empty ks)
+
 
 mergeStatPB2Lemma :: [(Text,Text)] -> [(Text,Int)]
 mergeStatPB2Lemma ws =
-  let merge :: [(Text,Text)] -> (Text,Int)
-      merge lst = let (lma,_) = head lst
+  let count :: [(Text,Text)] -> (Text,Int)
+      count lst = let (lma,_) = head lst
                   in case mapM (decimal.snd) lst of
                        Left _     -> (lma,0)
                        Right lst' -> (lma,sum (map fst lst'))
 
-  in sortBy (flip compare `on` snd) . map merge . groupBy ((==) `on` fst)
+  in sortBy (flip compare `on` snd) . map count . groupBy ((==) `on` fst)
      . sortBy (flip compare `on` fst)
      . map (\(l,f)-> let (lma,_) = T.break (== '.') l in (lma,f))
      $ ws

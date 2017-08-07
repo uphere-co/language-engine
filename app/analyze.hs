@@ -1,7 +1,8 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TupleSections     #-}
 
 module Main where
 
@@ -16,8 +17,8 @@ import           Data.Foldable
 import           Data.Function                    (on)
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
-import qualified Data.IntMap                as IM
-import           Data.List                        (intercalate,foldl',sort,zip4)
+-- import qualified Data.IntMap                as IM
+import           Data.List                        (intercalate,zip4)
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                        (Text)
@@ -26,9 +27,7 @@ import qualified Data.Text.IO               as T.IO
 
 import           Language.Java              as J
 import           System.Console.Haskeline
-import           System.Directory.Tree
 import           System.Environment
-import           System.FilePath
 import           Text.Printf
 import           Text.ProtocolBuffers.Basic       (Utf8)
 import           Text.ProtocolBuffers.WireMessage (messageGet)
@@ -57,11 +56,8 @@ import           Util.Doc
 import           View
 --
 import           OntoNotes.App.Load
-import           OntoNotes.Corpus.Load           hiding (prepare)
+import           OntoNotes.Corpus.Load
 import           OntoNotes.Mapping.FrameNet
-import           OntoNotes.Parser.Sense
-import           OntoNotes.Parser.SenseInventory
-import           OntoNotes.Type.Sense
 import           OntoNotes.Type.SenseInventory
 
 
@@ -74,6 +70,8 @@ convertToken_charIndex t = do
   l <- cutf8 <$> (t^.TK.lemma)
   return (Token (b,e) w p l)
 
+
+formatLemmaPOS :: Token -> String
 formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
 
 
@@ -124,19 +122,21 @@ underlineText (b0,_e0) txt lst = do
 
 formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
 formatTimex (s,a) = do
-  -- T.IO.putStrLn $ "Sentence " <> T.pack (show (s^._1))
   underlineText (s^._2) (s^._3) a
   T.IO.putStrLn "----------"
   print a
 
 
+runParser :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+          -> Text
+          -> IO ([S.Sentence], [Maybe Sentence], [[Token]], [Maybe PennTree], [Dependency], Maybe [(SentItem, [TagPos (Maybe Utf8)])])
 runParser pp txt = do
   doc <- getDoc txt
   ann <- annotate pp doc
   pdoc <- getProtoDoc ann
   lbstr_sutime <- BL.fromStrict <$> serializeTimex ann
   mtmx <- case fmap fst (messageGet lbstr_sutime) :: Either String T.ListTimex of
-    Left err -> return Nothing
+    Left _ -> return Nothing
     Right rsutime -> do
       let sentidxs = getSentenceOffsets pdoc
           sents = map (addText txt) sentidxs
@@ -153,7 +153,8 @@ runParser pp txt = do
   return (psents,sents,tokss,parsetrees,deps,mtmx)
 
 
-
+getSenses :: Text -> HashMap Text Inventory -> HashMap (Text,Text) Int -> FrameDB -> HashMap Text [(Text,Text)]
+          -> [(Text,Text,Int,Text,Text,Text,Text)]
 getSenses lma sensemap sensestat framedb ontomap = do
   let lmav = lma <> "-v"
   si <- maybeToList (HM.lookup lmav sensemap)
@@ -178,10 +179,13 @@ getSenses lma sensemap sensestat framedb ontomap = do
                 return (frtxt,fecoretxt,feperitxt)
   return (s^.sense_group,s^.sense_n,num,txt_def,txt_frame,txt_fecore,txt_feperi)
 
+
+chooseFrame :: [(Text,Text,Int,Text,Text,Text,Text)] -> Maybe (Text,Text,Int,Text,Text,Text,Text)
 chooseFrame [] = Nothing
 chooseFrame xs = Just (maximumBy (compare `on` (^._3)) xs)
 
 
+formatSense :: (Text,Text,Int,Text,Text,Text,Text) -> String
 formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) = 
   printf "%2s.%-6s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s " sgrp sn num txt_def txt_frame txt_fecore txt_feperi
 
@@ -200,8 +204,16 @@ formatSenses doesShowOtherSense lst
           then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense lst)
           else ""
 
+
+sentStructure :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+              -> HashMap Text Inventory
+              -> HashMap (Text,Text) Int
+              -> FrameDB
+              -> HashMap Text [(Text,Text)]
+              -> Text
+              -> IO ()
 sentStructure pp sensemap sensestat framedb ontomap txt = do
-  (psents,sents,tokss,mptrs,deps,mtmx) <- runParser pp txt
+  (psents,sents,_tokss,mptrs,deps,mtmx) <- runParser pp txt
   putStrLn "\n\n\n\n\n\n\n\n================================================================================================="
   -- T.IO.putStrLn txt
   case mtmx of
@@ -209,15 +221,15 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
     Just sentswithtmx -> mapM_ formatTimex sentswithtmx
   putStrLn "-------------------------------------------------------------------------------------------------"
 
-  flip mapM_ (zip4 psents sents mptrs deps) $ \(psent,sent,mptr,dep) -> do
+  flip mapM_ (zip4 psents sents mptrs deps) $ \(psent,_sent,mptr,_dep) -> do
     flip mapM_ mptr $ \ptr -> do
-      let tkns = zip [0..] (getTKTokens psent)
-          tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
+      -- let tkns = zip [0..] (getTKTokens psent)
+          -- tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
 
-      let itr = mkAnnotatable (mkPennTreeIdx ptr)
-          lmap= mkLemmaMap psent
-          iltr = lemmatize lmap itr
-          vps = verbPropertyFromPennTree lmap ptr
+      let -- itr = mkAnnotatable (mkPennTreeIdx ptr)
+          lemmamap = mkLemmaMap psent
+          -- iltr = lemmatize lmap itr
+          vps = verbPropertyFromPennTree lemmamap ptr
           -- idltr = depLevelTree dep iltr
           -- vtree = verbTree vps idltr
 
@@ -225,9 +237,9 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
       T.IO.putStrLn (formatIndexTokensFromTree 0 ptr)
       
       putStrLn "--------------------------------------------------------------------------------------------------"
-      let lmaposs = concatMap (filter (\t -> isVerb (t^.token_pos))) $ tokss
-          lmas = map (^.token_lemma) lmaposs
-      showClauseStructure lmap ptr
+      -- let lmaposs = concatMap (filter (\t -> isVerb (t^.token_pos))) $ tokss
+      --     lmas = map (^.token_lemma) lmaposs
+      showClauseStructure lemmamap ptr
       putStrLn "================================================================================================="
 
       forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
@@ -237,17 +249,20 @@ sentStructure pp sensemap sensestat framedb ontomap txt = do
         putStrLn "--------------------------------------------------------------------------------------------------"
 
 
-
-
-
-
-
-queryProcess pp sensemap sensestat framedb ontomap = do
+queryProcess :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+             -> HashMap Text Inventory
+             -> HashMap (Text,Text) Int
+             -> FrameDB
+             -> HashMap Text [(Text,Text)]
+             -> IO ()
+queryProcess pp sensemap sensestat framedb ontomap =
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     let input = T.pack input'
     sentStructure pp sensemap sensestat framedb ontomap input
     putStrLn "=================================================================================================\n\n\n\n"
 
+
+main :: IO ()
 main = do
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN

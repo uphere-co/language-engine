@@ -4,9 +4,9 @@
 module OntoNotes.Parser.SenseInventory where
 
 import           Control.Applicative
-import           Control.Lens       hiding (element,elements)
+import           Control.Lens       hiding (each,element,elements)
 import           Data.Text                 (Text)
-import qualified Data.Text         as T
+-- import qualified Data.Text         as T
 import           Data.Traversable          (traverse)
 import           Text.Taggy.Lens
 --
@@ -14,6 +14,7 @@ import           Text.Taggy.Lens.Util
 --
 import           OntoNotes.Type.SenseInventory
 
+p_list :: (Element -> Either String a) -> Text -> Text -> Element -> Either String [a]
 p_list p each group x = getOnly1 x group >>= \y -> traverse p (getOnly y each) 
 
 
