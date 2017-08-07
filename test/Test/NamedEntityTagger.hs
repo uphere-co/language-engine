@@ -25,6 +25,7 @@ import           WikiEL.ETL.LoadData
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
 import qualified NLP.Type.NamedEntity          as N
+import           NLP.Type.PennTreebankII    (POSTag(..))
 import qualified WikiEL.WikiEntityClass        as WC
 -- to be moved
 import           Data.Text.Encoding                    (encodeUtf8)
@@ -32,6 +33,7 @@ import           Data.Digest.XXHash                    (XXHash,xxHash')
 import qualified Data.Vector.Unboxed           as UV
 import           Data.Map                              (Map)
 import           Data.Maybe                            (mapMaybe)
+
 import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Wikipedia
 import           WikiEL.Type.WordNet
@@ -44,8 +46,10 @@ import qualified Data.Map                      as M
 import qualified WikiEL.EntityLinking          as EL
 import qualified WikiEL.Type.FileFormat        as F
 import qualified WikiEL                        as WEL
+import qualified WikiEL.EntityMentionPruning   as EMP
 
 import           Test.Data.Filename
+import qualified Test.Data.News3               as News3
 
 uid = itemID
 uids = fromList . map uid
@@ -266,6 +270,19 @@ testParsingWordNetSynsetFile = testCaseSteps "Test for mapping between Wikidata 
   eassertEqual r2 (Synset "dirty-case_like-this-one" "noun" 2)
 
 
+testEntityMentionRefinerPOS :: TestTree
+testEntityMentionRefinerPOS = testCaseSteps "Test for filtering entity mentions based on POS tags" $ \step -> do
+  assert (EMP.isEntityLinkableTag NNP)
+  assert ((not . EMP.isEntityLinkableTag) MD)
+  assert ((not . EMP.isEntityLinkableTag) PRP)
+  --assert (isEntityLinkableTag VBG)
+
+  let
+    texts = V.fromList [NNP,MD,MD, NNP,NNP]
+  assert (EMP.isEntityLinkable texts (IRange 0 1))
+  assert (EMP.isEntityLinkable texts (IRange 1 4))
+  assert (not (EMP.isEntityLinkable texts (IRange 1 3)))
+
 allTest :: TestTree
 allTest =
   testGroup
@@ -276,7 +293,9 @@ allTest =
     , testEntityMentionProperties
     , testRunWikiNER
     , testParsingData
-    , testParsingWordNetSynsetFile]    
+    , testParsingWordNetSynsetFile
+    , testEntityMentionRefinerPOS
+    ]    
 
 
 
@@ -302,21 +321,24 @@ wordHash = WordHash
 main1 = do
   tickerMap <- loadCompanySymbol listedCompanyFile
 
+  let 
+    input_pos = V.fromList (map fst News3.posTags)
   input_raw <- T.IO.readFile rawNewsFile3
   input <- T.IO.readFile nerNewsFile3
   uid2tag <- fromFiles [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
   wikiTable <- loadWETagger reprFile
 
-  let 
-    stanford_nefs = map parseStanfordNE (parseNEROutputStr input)
-    named_entities =  filter (\x -> snd x == N.Org || snd x == N.Person) (getStanfordNEs stanford_nefs)
-    wiki_entities = namedEntityAnnotator wikiTable uid2tag stanford_nefs
+  let
+    stanford_nefs  = map parseStanfordNE (parseNEROutputStr input)
+    named_entities = getStanfordNEs stanford_nefs -- filter (\x -> snd x == N.Org || snd x == N.Person) 
+    wiki_entities  = namedEntityAnnotator wikiTable uid2tag stanford_nefs
     wiki_named_entities = resolveNEs named_entities wiki_entities
 
     text = fromList (T.words input_raw)
     mentions = buildEntityMentions text wiki_named_entities
-    linked_mentions = entityLinkings mentions
+    all_linked_mentions = entityLinkings mentions
 
+    linked_mentions = EMP.filterEMbyPOS input_pos all_linked_mentions
     -- Company symbols
     orgMentions = mapMaybe getOrgs linked_mentions
     companyWithSymbols = mapMaybe (getCompanySymbol tickerMap) orgMentions
@@ -326,17 +348,21 @@ main1 = do
   let
     wn = buildWordNetSynsetLookup wordNetMapping
     synsets = map (lookupWordNet wn . entityUID) linked_mentions
-  --mapM_ print wiki_entities
+  mapM_ print named_entities
+  mapM_ print wiki_entities
   print "Entity-linked named entities"
+  -- mapM_ print all_linked_mentions  
   mapM_ print linked_mentions
   mapM_ print synsets
   print "Entity-linked organization entities"
   mapM_ print orgMentions
   print "Entity-linked public company entities"
   mapM_ print companyWithSymbols
+
+  
   
 main2 = do
-    propertyNames <- loadPropertyNames propertyNameFile
+    propertyNames  <- loadPropertyNames  propertyNameFile
     wordNetMapping <- loadWordNetMapping wordnetMappingFile
     let
       lookupWordNet key = M.lookup key (buildWordNetSynsetLookup wordNetMapping)
