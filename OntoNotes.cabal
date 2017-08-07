@@ -20,7 +20,7 @@ library
                        OntoNotes.Mapping.FrameNet
                        OntoNotes.Parser.Sense
                        OntoNotes.Parser.SenseInventory
-                       OntoNotes.Application.Analyze
+                       OntoNotes.App.Analyze
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10,
