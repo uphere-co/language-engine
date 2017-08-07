@@ -17,14 +17,15 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     OntoNotes
+                       OntoNotes.App.Analyze
                        OntoNotes.App.Load
                        OntoNotes.App.Serializer
+                       OntoNotes.App.Util
                        OntoNotes.Corpus.Load
                        OntoNotes.Corpus.PropBank
                        OntoNotes.Mapping.FrameNet
                        OntoNotes.Parser.Sense
                        OntoNotes.Parser.SenseInventory
-                       OntoNotes.App.Analyze
                        OntoNotes.Type.ArgTable
                        OntoNotes.Type.Sense
                        OntoNotes.Type.SenseInventory
@@ -53,6 +54,7 @@ library
                        text,
                        time,
                        unordered-containers,
+                       vector,
                        --
                        HCoreNLP,
                        HCoreNLP-Proto,
@@ -62,10 +64,11 @@ library
                        PropBank,
                        syntactic-analysis,
                        textview,
-                       VerbNet
+                       VerbNet,
+                       wiki-ner
   hs-source-dirs:      src
   default-language:    Haskell2010
-  ghc-options:         -O2 -Wall -Werror
+  ghc-options:         -O2 -Wall
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
@@ -85,22 +88,28 @@ Executable analyze
   other-modules:
   build-depends:       base,
                        --
+                       boxes,
                        bytestring,
                        containers,
                        data-default,
+                       filepath,
                        haskeline,
                        jvm,
                        lens,
                        protocol-buffers,
                        text,
                        unordered-containers,
+                       vector,
                        --
                        HCoreNLP,
                        HCoreNLP-Proto,
                        HFrameNet,
                        nlp-types,
+                       PropBank,
                        syntactic-analysis,
                        textview,
+                       time,
+                       wiki-ner,
                        --
                        OntoNotes
 
