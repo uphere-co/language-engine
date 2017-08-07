@@ -55,6 +55,7 @@ import           OntoNotes.App.Load           hiding (Config)
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
 import           OntoNotes.Parser.Sense
+import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.Sense
 import           OntoNotes.Type.SenseInventory
 --
@@ -77,59 +78,7 @@ maybeNumberedArgument (NumberedArgument n) = Just n
 maybeNumberedArgument _                    = Nothing
 
 
-data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
-                         , _tbl_arg0 :: Maybe Text
-                         , _tbl_arg1 :: Maybe Text
-                         , _tbl_arg2 :: Maybe Text
-                         , _tbl_arg3 :: Maybe Text
-                         , _tbl_arg4 :: Maybe Text
-                         , _tbl_file_sid_tid :: (FilePath,Int,Int)
-                         } 
 
-makeLenses ''ArgTable
-
-
-headPreposition :: [PennTreeIdx] -> Maybe Text
-headPreposition xs = getFirst (foldMap (First . f) xs)   
-  where f (PN _ _)        = Nothing
-        f (PL (_,(IN,t))) = Just t
-        f (PL (_,(TO,t))) = Just t
-        f (PL (_,(_,t)))  = Nothing        
-
-
-phraseNodeType (PN (_,c) xs) = case c of
-                                 PP   -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headPreposition xs)
-                                 WHNP -> "NP"
-                                 _     -> T.pack (show c)
-phraseNodeType (PL (_,(D_NONE,t))) = t
-phraseNodeType (PL (_,(p     ,t))) = case isNoun p of
-                                       Yes -> "NP"
-                                       _   -> "??" <> T.pack (show (p,t))
-
-
-mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> (FilePath,Int,Int) -> [Argument] -> ArgTable
-mkArgTable itr l2p (file,sid,tid) args  =
-    ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (findArg (== Relation)))
-             (phraseNodeType . adj <$> findArg (== NumberedArgument 0))
-             (phraseNodeType . adj <$> findArg (== NumberedArgument 1))
-             (phraseNodeType . adj <$> findArg (== NumberedArgument 2))
-             (phraseNodeType . adj <$> findArg (== NumberedArgument 3))
-             (phraseNodeType . adj <$> findArg (== NumberedArgument 4))
-             (file,sid,tid)
-  where
-    adj x@(PL (_,(D_NONE,t))) = let (trc,mlid) = identifyTrace t
-                                    mlnk = do lid <-mlid 
-                                              rng <- lookup lid l2p
-                                              matchR rng itr
-                                in case mlnk of
-                                     Nothing -> x
-                                     Just lnk -> lnk
-    adj x                     = x                     
-    findArg lcond = do a <- find (\a -> lcond (a^.arg_label)) args
-                       let ns = a^.arg_terminals
-                       case ns of
-                         n:_ -> snd <$> findNode n itr 
-                         _   -> Nothing
 
 
 formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
@@ -191,21 +140,19 @@ formatStatInst doesShowDetail sensedb imap ((sense,sense_num),count) =
 
 showStatInst :: Bool
              -> HashMap Text Inventory
-             -> [(Text,Int)] -- lemmastat
-             -> HashMap (Text,Text) Int -- sensestat
+             -> [(Text,Int)]                -- ^ lemmastat
+             -> HashMap (Text,Text) Int     -- ^ sensestat
              -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
  
              -> IO ()
 showStatInst doesShowDetail sensedb lemmastat sensestat classified_inst_map = do
   let lst = HM.toList classified_inst_map
-      -- stat = sortBy (flip compare `on` (^._2)) $ map (_2 %~ length) lst
   forM_ lemmastat $ \(lma,f) -> do
     let headstr = printf "%20s:%6d" lma f :: String
-        lmasensestat = -- sortBy (flip compare `on` (^._2))
-                       map (_2 %~ length) . filter (\((sense,_),_)->sense == lma <> "-v") 
+        lmasensestat = sortBy (compare `on` (^._1))
+                     . map (_2 %~ length)
+                     . filter (\((sense,_),_) -> sense == lma <> "-v") 
         strs = map (formatStatInst doesShowDetail sensedb classified_inst_map) (lmasensestat lst)
-    -- print lma
-    -- print (lmasensestat lst)
     putStrLn "\n\n\n\n\n*************************************************************"
     putStrLn "*************************************************************"
     putStrLn "****                                                     ****"
@@ -213,9 +160,7 @@ showStatInst doesShowDetail sensedb lemmastat sensestat classified_inst_map = do
     putStrLn "****                                                     ****"    
     putStrLn "*************************************************************"
     putStrLn "*************************************************************"
-    
     mapM_ putStrLn strs
-  -- mapM_ (putStrLn . ) stat
 
 
 
@@ -237,20 +182,6 @@ pOptions = ProgOption <$> switch (long "detail" <> short 'd' <> help "Whether to
 progOption :: ParserInfo ProgOption 
 progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant to verb subcategorization")
 
-{- 
-data Config = Config { _propframedir :: FilePath
-                     , _corenlpdir   :: FilePath
-                     , _basedir      :: FilePath
-                     }
-
-makeLenses ''Config
-         
-config = Config { _propframedir = "/home/wavewave/repo/srcc/propbank-frames/frames"
-                , _corenlpdir   = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
-                , _basedir      = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-                }
-
--}
 
 
 
@@ -271,7 +202,7 @@ main = do
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
-  let fps = sort (toList (dirTree dtr))
+  let fps = {- Prelude.take 2000 $ -} sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps
@@ -299,9 +230,6 @@ main = do
       insts_v = filter (\p->T.last (p^._4.inst_lemma_type) == 'v') flatMatchedPairs
       classified_inst_map = foldl' addfunc  HM.empty insts_v
           where addfunc acc x = HM.insertWith (++) (x^._5.to getSenseID) [x] acc
-
-  -- mapM_ (\x -> putStrLn "=======" >> print x) insts_v
-  -- print classified_inst_map
 
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   rolesetstat <- loadStatistics (cfg^.cfg_statistics)
