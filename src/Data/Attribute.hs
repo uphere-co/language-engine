@@ -20,6 +20,7 @@ module Data.Attribute
 , Elem(..)
 , getElem
 , AttribList(..)
+, makeKeyAttrib
 , joinAttrib
 , ToTuple (..)
 ) where
@@ -119,6 +120,11 @@ infixr 8 `acons`
 -- infixr 8 <&>
 
 anil = AttribNil
+
+
+
+makeKeyAttrib :: (a -> k) -> [a] -> [AttribList '[k,a]]
+makeKeyAttrib f xs = map (\x -> fromTuple (f x,x)) xs
 
 
 -- | join operation between two AttriLists.
