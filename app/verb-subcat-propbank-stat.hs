@@ -4,6 +4,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main where
 
@@ -33,6 +34,7 @@ import           System.FilePath
 import           System.IO
 import           Text.Printf
 --
+import           Data.Attribute
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
@@ -49,11 +51,18 @@ import           PropBank.Type.Match
 import           PropBank.Type.Prop
 import           PropBank.Util                       (merge)
 --
+import           OntoNotes.App.Load           hiding (Config)
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
+import           OntoNotes.Parser.Sense
+import           OntoNotes.Type.Sense
+import           OntoNotes.Type.SenseInventory
+--
+import           Debug.Trace
 
 
 type LemmaList = [(Int,Text)]
+
 
 lookupRoleset :: PredicateDB -> (Text,Text) -> Maybe Text
 lookupRoleset db (lma,sens) = do
@@ -62,9 +71,11 @@ lookupRoleset db (lma,sens) = do
   defn <- Data.List.lookup (lma <> "." <> sens) $ map (\r -> (r^.roleset_id,fromMaybe "" (r^.roleset_name))) rs
   return defn
 
+
 maybeNumberedArgument :: PropBankLabel -> Maybe Int
 maybeNumberedArgument (NumberedArgument n) = Just n
 maybeNumberedArgument _                    = Nothing
+
 
 data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
                          , _tbl_arg0 :: Maybe Text
@@ -72,7 +83,7 @@ data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
                          , _tbl_arg2 :: Maybe Text
                          , _tbl_arg3 :: Maybe Text
                          , _tbl_arg4 :: Maybe Text
-                         , _tbl_file_sentid :: (FilePath,Int)
+                         , _tbl_file_sid_tid :: (FilePath,Int,Int)
                          } 
 
 makeLenses ''ArgTable
@@ -96,16 +107,15 @@ phraseNodeType (PL (_,(p     ,t))) = case isNoun p of
                                        _   -> "??" <> T.pack (show (p,t))
 
 
-mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> (FilePath,Int) -> [Argument] -> ArgTable
-mkArgTable itr l2p (file,sentid) args  =
+mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> (FilePath,Int,Int) -> [Argument] -> ArgTable
+mkArgTable itr l2p (file,sid,tid) args  =
     ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (findArg (== Relation)))
              (phraseNodeType . adj <$> findArg (== NumberedArgument 0))
              (phraseNodeType . adj <$> findArg (== NumberedArgument 1))
              (phraseNodeType . adj <$> findArg (== NumberedArgument 2))
              (phraseNodeType . adj <$> findArg (== NumberedArgument 3))
              (phraseNodeType . adj <$> findArg (== NumberedArgument 4))
-             (file,sentid)
-             -- (T.pack . show <$> findArg (\case LinkArgument _ -> True ; _ -> False))
+             (file,sid,tid)
   where
     adj x@(PL (_,(D_NONE,t))) = let (trc,mlid) = identifyTrace t
                                     mlnk = do lid <-mlid 
@@ -121,7 +131,8 @@ mkArgTable itr l2p (file,sentid) args  =
                          n:_ -> snd <$> findNode n itr 
                          _   -> Nothing
 
-formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d" --    link: %-10s
+
+formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
                               (fromMaybe "" (tbl^.tbl_rel))
                               (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
                               (fromMaybe "" (tbl^.tbl_arg0))
@@ -129,14 +140,15 @@ formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   a
                               (fromMaybe "" (tbl^.tbl_arg2))
                               (fromMaybe "" (tbl^.tbl_arg3))
                               (fromMaybe "" (tbl^.tbl_arg4))
-                              (tbl^.tbl_file_sentid._1)
-                              (tbl^.tbl_file_sentid._2)
+                              (tbl^.tbl_file_sid_tid._1)
+                              (tbl^.tbl_file_sid_tid._2)
+                              (tbl^.tbl_file_sid_tid._3)
 
 
 formatInst :: Bool  -- ^ show detail?
-           -> ((FilePath,Int),(PennTree,LemmaList),PennTree,Instance)
+           -> ((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)
            -> String
-formatInst doesShowDetail (filesentid,corenlp,proptr,inst) =
+formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,sense) =
   let args = inst^.inst_arguments
       lmap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
       coretr = corenlp^._1
@@ -147,7 +159,7 @@ formatInst doesShowDetail (filesentid,corenlp,proptr,inst) =
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
-      argtable = mkArgTable iproptr l2p filesentid args
+      argtable = mkArgTable iproptr l2p filesidtid args
       mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
   in 
      (if doesShowDetail
@@ -162,24 +174,48 @@ formatInst doesShowDetail (filesentid,corenlp,proptr,inst) =
      
 
 formatStatInst :: Bool           -- ^ show detail?
-               -> PredicateDB
-               -> HashMap RoleSetID [((FilePath,Int),(PennTree,LemmaList),PennTree,Instance)]
-               -> (RoleSetID,Int)
+               -> HashMap Text Inventory
+               -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
+               -> ((Text,Text),Int)
                -> String
-formatStatInst doesShowDetail db imap (rid,num) =
-  let mdefn = lookupRoleset db rid
-      minsts = HM.lookup rid imap
-  in
-     "\n\n\n============================================================================\n"
-     ++ printf "%20s : %5d : %s\n" (formatRoleSetID rid) num  (fromMaybe "" mdefn)
+formatStatInst doesShowDetail sensedb imap ((sense,sense_num),count) =
+  let mdefn = do inv <- HM.lookup sense sensedb
+                 (^.sense_name) <$> find (\s->s^.sense_n == sense_num) (inv^.inventory_senses)
+      minsts = HM.lookup (sense,sense_num) imap
+  in 
+     "\n============================================================================\n"
+     ++ printf "%20s : %6d :  %s\n" (sense <> "." <> sense_num) count (fromMaybe "" mdefn)
      ++ "============================================================================\n"
      ++ (intercalate "\n" . map (formatInst doesShowDetail) . concat . maybeToList) minsts
 
+
+showStatInst :: Bool
+             -> HashMap Text Inventory
+             -> [(Text,Int)] -- lemmastat
+             -> HashMap (Text,Text) Int -- sensestat
+             -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
  
-showStatInst doesShowDetail preddb classified_inst_map = do
+             -> IO ()
+showStatInst doesShowDetail sensedb lemmastat sensestat classified_inst_map = do
   let lst = HM.toList classified_inst_map
-      stat = sortBy (flip compare `on` (^._2)) $ map (_2 %~ length) lst
-  mapM_ (putStrLn . formatStatInst doesShowDetail preddb classified_inst_map) stat
+      -- stat = sortBy (flip compare `on` (^._2)) $ map (_2 %~ length) lst
+  forM_ lemmastat $ \(lma,f) -> do
+    let headstr = printf "%20s:%6d" lma f :: String
+        lmasensestat = -- sortBy (flip compare `on` (^._2))
+                       map (_2 %~ length) . filter (\((sense,_),_)->sense == lma <> "-v") 
+        strs = map (formatStatInst doesShowDetail sensedb classified_inst_map) (lmasensestat lst)
+    -- print lma
+    -- print (lmasensestat lst)
+    putStrLn "\n\n\n\n\n*************************************************************"
+    putStrLn "*************************************************************"
+    putStrLn "****                                                     ****"
+    putStrLn (printf "****             %27s             ****" headstr)
+    putStrLn "****                                                     ****"    
+    putStrLn "*************************************************************"
+    putStrLn "*************************************************************"
+    
+    mapM_ putStrLn strs
+  -- mapM_ (putStrLn . ) stat
 
 
 
@@ -187,9 +223,7 @@ showError (Left err) = print err
 showError (Right _) = return ()
 
 
-
-
-
+readSenseInsts sensefile = fmap (rights . map parseSenseInst . map T.words . T.lines) (T.IO.readFile sensefile)
 
 
 
@@ -203,34 +237,77 @@ pOptions = ProgOption <$> switch (long "detail" <> short 'd' <> help "Whether to
 progOption :: ParserInfo ProgOption 
 progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant to verb subcategorization")
 
+{- 
+data Config = Config { _propframedir :: FilePath
+                     , _corenlpdir   :: FilePath
+                     , _basedir      :: FilePath
+                     }
 
+makeLenses ''Config
+         
+config = Config { _propframedir = "/home/wavewave/repo/srcc/propbank-frames/frames"
+                , _corenlpdir   = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
+                , _basedir      = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
+                }
+
+-}
+
+
+
+-- need parse tree to adjust index (deleting none and hyphen)
+mergePropSense proptr insts senses =
+  let nonelist = map fst . filter (isNone.fst.snd) . zip [0..] . toList . getADTPennTree 
+      adj = adjustIndex (nonelist proptr)
+      lst = map (\x -> fromTuple (x^.sinst_token_id,x)) senses
+  in map toTuple (joinAttrib (\x -> (either id id . adj) (x^.inst_predicate_id)) insts lst)
+      
 
 main = do
   opt <- execParser progOption
   
-  let propframedir = "/home/wavewave/repo/srcc/propbank-frames/frames" 
-  propdb <- constructFrameDB propframedir
+  propdb <- constructFrameDB (cfg^.cfg_propbank_framedir)
   let preddb = constructPredicateDB propdb
 
-  let corenlpdir = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
-      basedir = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-
-  dtr <- build basedir
+  sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
+  
+  dtr <- build (cfg^.cfg_wsj_directory)
   let fps = sort (toList (dirTree dtr))
-      parsefiles = filter (\x -> takeExtensions x == ".prop") fps
+      parsefiles = filter (\x -> takeExtensions x == ".parse") fps
+      propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
+      sensefiles = filter (\x -> takeExtensions x == ".sense") fps
+      lst = map (\x -> fromTuple (takeBaseName x,x)) parsefiles
+      joiner = joinAttrib takeBaseName 
+     
+      lst' = mapMaybe (\(i,mf1,mf2,f3) -> (i,,,) <$> mf1 <*> mf2 <*> pure f3)
+           . map toTuple $ sensefiles `joiner` (propfiles `joiner` lst)
       
-  parsedpairs <- fmap (concat . catMaybes) $ do
-    flip traverse parsefiles $ \f -> do
-      let article  = takeBaseName f
+  matchedpairs <- fmap (concat . catMaybes) $ do
+    flip traverse lst' $ \(article,sensefile,propfile,parsefile) -> do
       hPutStrLn stderr article
-      (o :: Maybe [(Int,(_,_))]) <- join . eitherToMaybe <$> runEitherT (loadMatchArticle corenlpdir basedir article)
-      return . fmap (map (_1 %~ \i -> (article,i))) $ o
+      (mprops :: Maybe [(Int,(_,_))])
+        <- join . eitherToMaybe <$>
+             runEitherT (loadMatchArticle (cfg^.cfg_wsj_corenlp_directory) (cfg^.cfg_wsj_directory) article)
+      senses <- readSenseInsts sensefile
+      let match (i,r) = let ss = filter (\s -> s^.sinst_sentence_id == i) senses
+                        in ((article,i),(r,ss))
+      return . fmap (map match) $ mprops
       
-  let flatParsedPairs = do (filesentid,(((coretr,_,corelma),proptr),insts)) <- parsedpairs
-                           inst <- insts
-                           return (filesentid,(coretr,corelma),proptr,inst)
-  let insts_v = filter (\p->T.last (p^._4.inst_lemma_type) == 'v') flatParsedPairs
+  let flatMatchedPairs = do ((f,sid),((((coretr,_,corelma),proptr),insts),senses)) <- matchedpairs
+                            (tid,minst,sense) <- mergePropSense proptr insts senses
+                            inst <- maybeToList minst
+                            return ((f,sid,tid),(coretr,corelma),proptr,inst,sense)
+      insts_v = filter (\p->T.last (p^._4.inst_lemma_type) == 'v') flatMatchedPairs
       classified_inst_map = foldl' addfunc  HM.empty insts_v
-          where addfunc acc x = HM.insertWith (++) (x^._4.inst_lemma_roleset_id) [x] acc
-  showStatInst (showDetail opt) preddb classified_inst_map
- 
+          where addfunc acc x = HM.insertWith (++) (x^._5.to getSenseID) [x] acc
+
+  -- mapM_ (\x -> putStrLn "=======" >> print x) insts_v
+  -- print classified_inst_map
+
+  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
+  rolesetstat <- loadStatistics (cfg^.cfg_statistics)
+  let lemmastat = mergeStatPB2Lemma rolesetstat
+  
+  showStatInst (showDetail opt) sensedb lemmastat sensestat classified_inst_map
+
+
+

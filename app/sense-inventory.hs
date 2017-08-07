@@ -33,10 +33,11 @@ import           WordNet.Query
 import           WordNet.Type
 import           WordNet.Type.POS
 --
+import           OntoNotes.App.Load
+import           OntoNotes.Corpus.Load
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
-import           OntoNotes.App.Load
-
+import           OntoNotes.Type.SenseInventory
 
 data VorN = V | N
 
@@ -145,7 +146,7 @@ formatStat ((lma,sens),num) = printf "%20s.%-5s : %5d" lma sens num
 
 listSenseDetail :: IO ()
 listSenseDetail = do
-  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAll
+  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
 
   let merged = mergeStatPB2Lemma ws
   forM_ merged $ \(lma,f) -> do
@@ -158,23 +159,11 @@ listSenseDetail = do
     putStrLn (render doc)
 
 
-mergeStatPB2Lemma ws =
-  let merge :: [(Text,Text)] -> (Text,Int)
-      merge lst = let (lma,_) = head lst
-                  in case mapM (decimal.snd) lst of
-                       Left _     -> (lma,0)
-                       Right lst' -> (lma,sum (map fst lst'))
-
-  in sortBy (flip compare `on` snd) . map merge . groupBy ((==) `on` fst)
-     . sortBy (flip compare `on` fst)
-     . map (\(l,f)-> let (lma,_) = T.break (== '.') l in (lma,f))
-     $ ws
-
 
 
 listSenseWordNet :: IO ()
 listSenseWordNet = do
-  (ludb,sensestat,semlinkmap,sensemap,ws,wndb) <- loadAll
+  (ludb,sensestat,semlinkmap,sensemap,ws,wndb) <- loadAllexceptPropBank
 
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)

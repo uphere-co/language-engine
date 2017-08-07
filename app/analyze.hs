@@ -46,23 +46,23 @@ import           CoreNLP.Simple.Type.Simplified
 import           CoreNLP.Simple.Util
 import           FrameNet.Query.Frame
 import           FrameNet.Type.Common
-import           FrameNet.Type.Frame hiding (LexUnit)
+import           FrameNet.Type.Frame             hiding (LexUnit)
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
--- import           SRL.Feature
--- import           SRL.Feature.Dependency
 import           Type
 import           Util.Doc
 import           View
 --
+import           OntoNotes.App.Load
+import           OntoNotes.Corpus.Load           hiding (prepare)
 import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
-import           OntoNotes.Mapping.FrameNet
-import           OntoNotes.App.Load
+import           OntoNotes.Type.Sense
+import           OntoNotes.Type.SenseInventory
 
 
 convertToken_charIndex :: TK.Token -> Maybe Token
@@ -255,7 +255,8 @@ main = do
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
 
-  ws <- loadStatistics (cfg^.cfg_statistics)
+
+  -- ws <- loadStatistics (cfg^.cfg_statistics)
 
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do

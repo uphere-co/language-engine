@@ -44,11 +44,13 @@ import           WordNet.Query
 import           WordNet.Type
 import           WordNet.Type.POS
 --
-import           OntoNotes.Parser.Sense
-import           OntoNotes.Parser.SenseInventory
 import           OntoNotes.App.Load
 import           OntoNotes.App.Serializer
-
+import           OntoNotes.Corpus.Load      hiding (prepare)
+import           OntoNotes.Parser.Sense
+import           OntoNotes.Parser.SenseInventory
+import           OntoNotes.Type.Sense
+import           OntoNotes.Type.SenseInventory
 
 
 framesFromLU :: LexUnitDB -> Text -> [Text]
@@ -84,12 +86,13 @@ mergeStatPB2Lemma ws =
      . map (\(l,f)-> let (lma,_) = T.break (== '.') l in (lma,f))
      $ ws
 
+{- 
 errorHandler h_err msg action = do
   r <- try action
   case r of
     Left (e :: SomeException) -> hPutStrLn h_err msg >> hFlush h_err
     _ -> return ()
-
+-}
 
 text_buy1
   = [ "The family bought a new car."
@@ -139,7 +142,7 @@ text_round8
 
 
 listSenseExample basedir pp = do
-  (_ludb,sensestat,_semlinkmap,sensemap,ws,_wndb) <- loadAll
+  (_ludb,sensestat,_semlinkmap,sensemap,ws,_wndb) <- loadAllexceptPropBank
 
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)

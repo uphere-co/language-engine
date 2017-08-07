@@ -27,6 +27,7 @@ import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
 import           WordNet.Query
 --
+import           OntoNotes.Corpus.Load
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Parser.SenseInventory
 import           OntoNotes.Type.Sense
@@ -40,6 +41,8 @@ data Config = Config { _cfg_sense_inventory_file :: FilePath
                      , _cfg_framenet_lubin       :: FilePath
                      , _cfg_framenet_framedir    :: FilePath
                      , _cfg_wordnet_dict         :: FilePath
+                     , _cfg_propbank_framedir    :: FilePath
+                     , _cfg_wsj_corenlp_directory :: FilePath
                      }
 
 makeLenses ''Config
@@ -52,6 +55,8 @@ cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/da
              , _cfg_framenet_lubin       = "/scratch/wavewave/run/20170717/FrameNet_ListOfLexUnit.bin"
              , _cfg_framenet_framedir    = "/scratch/wavewave/FrameNet/1.7/fndata/fndata-1.7/frame"
              , _cfg_wordnet_dict         = "/scratch/wavewave/wordnet/WordNet-3.0/dict"
+             , _cfg_propbank_framedir    = "/home/wavewave/repo/srcc/propbank-frames/frames"
+             , _cfg_wsj_corenlp_directory = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
              }
   
 
@@ -96,31 +101,9 @@ createVNFNDB semlink =
 
 
 
-senseInstStatistics :: FilePath -> IO (HashMap (Text,Text) Int)
-senseInstStatistics basedir = do
-  dtr <- build basedir
-  let fps = sort (toList (dirTree dtr))
-      sfiles = filter (\x -> takeExtensions x == ".sense") fps
-
-  sinstss <- flip mapM sfiles $ \fp -> do
-    txt <- T.IO.readFile fp
-    -- print fp
-    let lst = T.lines txt
-        wss = map T.words lst
-    case traverse parseSenseInst wss of
-      Left err -> error err
-      Right lst -> return lst
-
-  let sinsts = concat sinstss
-      sinsts_verb = filter (\s-> T.last (s^.sinst_sense) == 'v') sinsts  
-      ks = map (\s -> ( T.init (T.init (s^.sinst_sense)) ,s^.sinst_sense_num)) sinsts_verb
-      acc = foldl' (\(!acc) k -> HM.insertWith (+) k 1 acc) HM.empty ks
-  -- mapM_ (putStrLn.formatStat) . sortBy (flip compare `on` snd) . HM.toList $ acc
-  return acc
 
 
-
-loadAll = do
+loadAllexceptPropBank = do
   ludb <- loadFrameNet (cfg^.cfg_framenet_lubin)
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   semlink <- loadSemLink (cfg^.cfg_semlink_file)
