@@ -14,7 +14,7 @@ module NLP.Type.PennTreebankII
 , RelationTag(..)
 , AnchorTag(..)
 , TernaryLogic(..)
-, isNone, isVerb, isNoun
+, isNone, isVerb, isNoun, isAdverb, isWHword
 , linkIDChunk
 , identifyPOS, identifyChunk, identifyTrace
 , Bitree(..), LinkID(..)
@@ -154,6 +154,13 @@ isWHword WRB      = True
 isWHword _        = False
 
 
+isAdverb :: POSTag -> Bool
+isAdverb RB  = True
+isAdverb RBR = True
+isAdverb RBS = True
+isAdverb RP  = True
+isAdverb WRB = True
+isAdverb _   = False
 
 data ChunkTag = ROOT
               | NP        -- ^ noun phrase
