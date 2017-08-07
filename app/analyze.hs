@@ -133,7 +133,6 @@ addSUTime sents tmxs =
   in filter (not.null.(^._2)) $ map (addTag (map f (tmxs^..T.timexes.traverse))) sents
 
 
-
 formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
 formatTimex (s,a) = do
   T.IO.putStrLn (T.intercalate "\n" (underlineText (const "") (s^._2) (s^._3) a))
