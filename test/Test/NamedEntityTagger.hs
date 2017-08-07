@@ -287,6 +287,7 @@ getOrgs (EL.Cite muid _ (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
 getOrgs _ = Nothing
 
 
+
 getCompanySymbol :: Map ItemID Symbol -> (EntityMentionUID, ItemID) -> Maybe (EntityMentionUID , ItemID, Symbol)
 getCompanySymbol tikcerMap (mentionUID, itemID) = result
   where
@@ -299,7 +300,7 @@ newtype WordHash = WordHash { _hash :: XXHash}
 wordHash = WordHash
 
 main1 = do
-  file <- T.IO.readFile listedCompanyFile
+  tickerMap <- loadCompanySymbol listedCompanyFile
 
   input_raw <- T.IO.readFile rawNewsFile3
   input <- T.IO.readFile nerNewsFile3
@@ -307,11 +308,6 @@ main1 = do
   wikiTable <- loadWETagger reprFile
 
   let 
-    lines = T.lines file
-    companies = map publicCompany lines
-    tickers  = map (\(_,_,_,symbol,_,itemID) -> (itemID, symbol)) companies
-    tickerMap = M.fromList tickers
-
     stanford_nefs = map parseStanfordNE (parseNEROutputStr input)
     named_entities =  filter (\x -> snd x == N.Org || snd x == N.Person) (getStanfordNEs stanford_nefs)
     wiki_entities = namedEntityAnnotator wikiTable uid2tag stanford_nefs
