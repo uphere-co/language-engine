@@ -10,3 +10,8 @@ data Synset = Synset { _repr :: Text
                      }
             deriving (Eq,Show)
 
+data SynsetY = SynsetY { _name :: Text
+                       , _id  :: Int
+                       }
+            deriving (Eq,Show)
+

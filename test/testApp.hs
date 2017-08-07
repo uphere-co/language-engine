@@ -11,7 +11,8 @@ import           Data.Either                           (rights)
 
 import           WikiEL.ETL.RDF
 import           WikiEL.ETL.Util
-
+import           WikiEL.ETL.Parser                     (wordnetSynsetYAGO)
+import           WikiEL.Type.WordNet                   (SynsetY)
 
 hasWikiAlias :: Either a YagoRdfTriple -> Maybe (YagoObject, YagoObject)
 hasWikiAlias (Right (_,ts,tv@(YagoVerb v),to@(YagoWikiAlias _))) | v =="redirectedFrom" = Just (ts, to)
@@ -20,6 +21,13 @@ hasWikiAlias _ = Nothing
 isWordNet :: Either a YagoRdfTriple -> Bool
 isWordNet (Right (_,ts,tv,to@(YagoWordnet _))) = True
 isWordNet _ = False
+
+taxonomyWordNet :: Either a YagoRdfTriple -> Maybe (SynsetY, SynsetY)
+taxonomyWordNet (Right (_,YagoWordnet sub,YagoRDFSprop p,YagoWordnet super))|p == "subClassOf" = Just (x, y)
+  where
+    x = wordnetSynsetYAGO sub
+    y = wordnetSynsetYAGO super
+taxonomyWordNet _ = Nothing
 
 wikicatOfWordNetT :: Either a YagoRdfTriple -> Maybe Text
 wikicatOfWordNetT (Right (_,ts@(YagoWikicat cat),tv,to@(YagoWordnet synset)) ) = x
@@ -34,9 +42,12 @@ yago prevPartialBlock block = do
     aliases = map (hasWikiAlias.readlineYAGO) lines
     synsets = filter (isWordNet.readlineYAGO) lines
     typedCats = mapMaybe (wikicatOfWordNetT.readlineYAGO) lines
+
+    taxons = mapMaybe (taxonomyWordNet.readlineYAGO) lines
   --mapM_ print (rights aliases)
   --mapM_ T.IO.putStrLn synsets
-  mapM_ T.IO.putStrLn typedCats
+  --mapM_ T.IO.putStrLn typedCats
+  mapM_ print taxons
   return partialBlock
 
 
@@ -59,4 +70,4 @@ main2 = readBlocks stdin wikidata (initState, "")
 
 
 main :: IO ()
-main = main2
+main = main1
