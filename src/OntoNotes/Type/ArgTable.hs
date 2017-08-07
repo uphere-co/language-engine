@@ -1,14 +1,18 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module OntoNotes.Type.ArgTable where
 
 import           Control.Lens
+import           Data.Hashable
 import           Data.Foldable
 import           Data.List
 import           Data.Monoid
 import           Data.Text                    (Text)
 import qualified Data.Text               as T
+import           GHC.Generics
 --
 import           NLP.Type.PennTreebankII
 import           PropBank.Match
@@ -22,9 +26,32 @@ data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
                          , _tbl_arg3 :: Maybe Text
                          , _tbl_arg4 :: Maybe Text
                          , _tbl_file_sid_tid :: (FilePath,Int,Int)
-                         } 
+                         }
+                deriving (Show)
 
 makeLenses ''ArgTable
+
+data ArgPattern = ArgPattern { -- _patt_lemma :: Text
+                             -- ,
+                               _patt_arg0 :: Maybe Text
+                             , _patt_arg1 :: Maybe Text
+                             , _patt_arg2 :: Maybe Text
+                             , _patt_arg3 :: Maybe Text
+                             , _patt_arg4 :: Maybe Text
+                             }
+                deriving (Show,Eq,Ord,Generic)
+
+makeLenses ''ArgPattern
+
+instance Hashable ArgPattern
+
+mkArgPattern :: ArgTable -> ArgPattern
+mkArgPattern ArgTable {..} = ArgPattern { _patt_arg0 = _tbl_arg0
+                                        , _patt_arg1 = _tbl_arg1
+                                        , _patt_arg2 = _tbl_arg2
+                                        , _patt_arg3 = _tbl_arg3
+                                        , _patt_arg4 = _tbl_arg4
+                                        }
 
 
 -- | https://en.wiktionary.org/wiki/Category:English_prepositions

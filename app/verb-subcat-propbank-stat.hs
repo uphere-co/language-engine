@@ -17,6 +17,7 @@ import qualified Data.Attoparsec.Text       as A
 import           Data.Either.Extra
 import           Data.Foldable
 import           Data.Function                      (on)
+import           Data.Hashable
 import           Data.HashMap.Strict                (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import qualified Data.IntMap                as IM
@@ -80,6 +81,13 @@ maybeNumberedArgument _                    = Nothing
 
 
 
+formatArgPatt patt = printf "arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s"
+                       (fromMaybe "" (patt^.patt_arg0))
+                       (fromMaybe "" (patt^.patt_arg1))
+                       (fromMaybe "" (patt^.patt_arg2))
+                       (fromMaybe "" (patt^.patt_arg3))
+                       (fromMaybe "" (patt^.patt_arg4))
+
 
 formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
                               (fromMaybe "" (tbl^.tbl_rel))
@@ -122,20 +130,68 @@ formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,sense) =
      ++ formatArgTable mvpmva argtable
      
 
-formatStatInst :: Bool           -- ^ show detail?
-               -> HashMap Text Inventory
-               -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
-               -> ((Text,Text),Int)
-               -> String
-formatStatInst doesShowDetail sensedb imap ((sense,sense_num),count) =
+formatStatInst doesShowDetail ((sense,sense_num),count) (mdefn,insts) = --- sensedb imap  =
+  "\n============================================================================\n"
+  ++ printf "%20s : %6d :  %s\n" (sense <> "." <> sense_num) count (fromMaybe "" mdefn)
+  ++ "============================================================================\n"
+  ++ (intercalate "\n" . map (formatInst doesShowDetail)) insts
+
+
+printHeader (lma,f) = do
+  let headstr = printf "%20s:%6d" lma f :: String
+  putStrLn "\n\n\n\n\n*************************************************************"
+  putStrLn "*************************************************************"
+  putStrLn "****                                                     ****"
+  putStrLn (printf "****             %27s             ****" headstr)
+  putStrLn "****                                                     ****"    
+  putStrLn "*************************************************************"
+  putStrLn "*************************************************************"
+
+
+getDefInst :: HashMap Text Inventory
+           -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
+           -> (Text,Text)
+           -> (Maybe Text, [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)])
+getDefInst sensedb imap (sense,sense_num) =
   let mdefn = do inv <- HM.lookup sense sensedb
                  (^.sense_name) <$> find (\s->s^.sense_n == sense_num) (inv^.inventory_senses)
-      minsts = HM.lookup (sense,sense_num) imap
-  in 
-     "\n============================================================================\n"
-     ++ printf "%20s : %6d :  %s\n" (sense <> "." <> sense_num) count (fromMaybe "" mdefn)
-     ++ "============================================================================\n"
-     ++ (intercalate "\n" . map (formatInst doesShowDetail) . concat . maybeToList) minsts
+      insts = fromMaybe [] (HM.lookup (sense,sense_num) imap)
+  in (mdefn,insts)
+
+
+filterSenseByLemma lma = sortBy (compare `on` (^._1))
+                       . map (_2 %~ length)
+                       . filter (\((sense,_),_) -> sense == lma <> "-v") 
+
+
+showStat :: HashMap Text Inventory
+         -> [(Text,Int)]                -- ^ lemmastat
+         -> HashMap (Text,Text) Int     -- ^ sensestat
+         -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
+         -> IO ()
+showStat sensedb lemmastat sensestat classified_inst_map = do
+  let lst = HM.toList classified_inst_map
+  forM_ lemmastat $ \(lma,f) -> do
+    printHeader (lma,f)
+    -- let lst' = filterSenseByLemma lma lst
+    forM_ (filterSenseByLemma lma lst) $ \((sense,sense_num),count) -> do
+      let (mdefn,insts) = getDefInst sensedb classified_inst_map (sense,sense_num)
+          statmap = foldl' addfunc HM.empty insts
+            where addfunc acc (filesidtid,_,proptr,inst,sense) =
+                    let args = inst^.inst_arguments
+                        iproptr = mkPennTreeIdx proptr
+                        l2p = linkID2PhraseNode proptr
+                        argtable = mkArgTable iproptr l2p filesidtid args
+                        argpatt = mkArgPattern argtable
+                    in HM.alter (\case Nothing -> Just 1 ; Just n -> Just (n+1)) argpatt acc
+          statlst = (sortBy (flip compare `on` snd) . HM.toList) statmap
+          senseheader = "\n============================================================================\n"
+                        ++ printf "%20s : %6d :  %s\n" (sense <> "." <> sense_num) count (fromMaybe "" mdefn)
+                        ++ "============================================================================\n"
+      putStrLn senseheader
+      forM_ statlst $ \(patt :: ArgPattern,n :: Int) -> do
+        let str1 = formatArgPatt patt :: String
+        putStrLn (printf "%s     #count: %5d" str1 n)
 
 
 showStatInst :: Bool
@@ -143,24 +199,16 @@ showStatInst :: Bool
              -> [(Text,Int)]                -- ^ lemmastat
              -> HashMap (Text,Text) Int     -- ^ sensestat
              -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
- 
              -> IO ()
 showStatInst doesShowDetail sensedb lemmastat sensestat classified_inst_map = do
   let lst = HM.toList classified_inst_map
   forM_ lemmastat $ \(lma,f) -> do
-    let headstr = printf "%20s:%6d" lma f :: String
-        lmasensestat = sortBy (compare `on` (^._1))
-                     . map (_2 %~ length)
-                     . filter (\((sense,_),_) -> sense == lma <> "-v") 
-        strs = map (formatStatInst doesShowDetail sensedb classified_inst_map) (lmasensestat lst)
-    putStrLn "\n\n\n\n\n*************************************************************"
-    putStrLn "*************************************************************"
-    putStrLn "****                                                     ****"
-    putStrLn (printf "****             %27s             ****" headstr)
-    putStrLn "****                                                     ****"    
-    putStrLn "*************************************************************"
-    putStrLn "*************************************************************"
-    mapM_ putStrLn strs
+    printHeader (lma,f)
+    forM_ (filterSenseByLemma lma lst) $ \x -> do
+      let definsts = getDefInst sensedb classified_inst_map (fst x)
+          str = formatStatInst doesShowDetail x definsts
+      putStrLn str
+
 
 
 
@@ -174,10 +222,12 @@ readSenseInsts sensefile = fmap (rights . map parseSenseInst . map T.words . T.l
 
 
 data ProgOption = ProgOption { showDetail :: Bool
+                             , statOnly :: Bool
                              } deriving Show
 
 pOptions :: Parser ProgOption
 pOptions = ProgOption <$> switch (long "detail" <> short 'd' <> help "Whether to show detail")
+                      <*> switch (long "stat" <> short 's' <> help "Calculate statistics")
 
 progOption :: ParserInfo ProgOption 
 progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant to verb subcategorization")
@@ -202,7 +252,7 @@ main = do
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
-  let fps = {- Prelude.take 2000 $ -} sort (toList (dirTree dtr))
+  let fps = {- Prelude.take 200 $ -} sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps
@@ -234,8 +284,10 @@ main = do
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   rolesetstat <- loadStatistics (cfg^.cfg_statistics)
   let lemmastat = mergeStatPB2Lemma rolesetstat
-  
-  showStatInst (showDetail opt) sensedb lemmastat sensestat classified_inst_map
+
+  if (statOnly opt)
+    then showStat sensedb lemmastat sensestat classified_inst_map 
+    else showStatInst (showDetail opt) sensedb lemmastat sensestat classified_inst_map
 
 
 
