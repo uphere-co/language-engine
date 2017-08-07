@@ -21,6 +21,7 @@ library
                        OntoNotes.App.Load
                        OntoNotes.App.Serializer
                        OntoNotes.App.Util
+                       OntoNotes.App.WikiEL
                        OntoNotes.Corpus.Load
                        OntoNotes.Corpus.PropBank
                        OntoNotes.Mapping.FrameNet
