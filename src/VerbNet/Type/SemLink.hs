@@ -82,7 +82,7 @@ makeLenses ''PBVNArgMap
 
 
 data PBVN = PBVN { _pbvn_lemma :: Text
-                 , _pbvn_argmap :: PBVNArgMap
+                 , _pbvn_argmap :: [PBVNArgMap]
                  }
           deriving Show
 

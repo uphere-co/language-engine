@@ -69,7 +69,7 @@ p_pbvn_argmap x = PBVNArgMap <$> x .: "pb-roleset"
 
 p_pbvn :: Element -> Parser PBVN
 p_pbvn x = PBVN <$> x .: "lemma"
-                <*> (p_pbvn_argmap =<< getOnly1 x "argmap")
+                <*> traverse p_pbvn_argmap (getOnly x "argmap")
 
 
 p_pbvnmap :: Element -> Parser PBVNMap
