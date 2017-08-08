@@ -22,6 +22,18 @@ data VNFN = VNFN { _vnc_class :: Text
 makeLenses ''VNFN
 
 
+data VNFNMap = VNFNMap { _vnfnmap_vnfns :: [VNFN]
+                       , _vnfnmap_date :: Text
+                       }
+             deriving Show
+
+makeLenses ''VNFNMap
+
+
+---------------------------------------
+-- VerbNet <-> FrameNet Role Mapping --
+---------------------------------------
+
 data VNFNRole = VNFNRole { _vnfnrole_fnrole :: Text
                          , _vnfnrole_vnrole :: Text
                          }
@@ -45,17 +57,6 @@ data VNFNRoleMap = VNFNRoleMap { _vnfnrolemap_vnfnroles :: [VNFNRoleInstance]
                  deriving Show
 
 makeLenses ''VNFNRoleMap
-
-
-data VNFNMap = VNFNMap { _vnfnmap_vnfns :: [VNFN]
-                       , _vnfnmap_date :: Text
-                       , _vnfnmap_rolemap :: VNFNRoleMap
-                       }
-             deriving Show
-
-makeLenses ''VNFNMap
-
-
 
 
 

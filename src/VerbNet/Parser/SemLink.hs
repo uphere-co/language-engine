@@ -30,10 +30,27 @@ p_vnfn x = VNFN <$> x .: "class"
 
 
 p_vnfnmap :: Element -> Parser VNFNMap
-p_vnfnmap x = VNFNMap <$> mapM p_vnfn (getOnly x "vncls")
+p_vnfnmap x = VNFNMap <$> traverse p_vnfn (getOnly x "vncls")
                       <*> x .: "date"
-                      <*> undefined
 
+
+---------------------------------------
+-- VerbNet <-> FrameNet Role Mapping --
+---------------------------------------
+
+p_vnfnrole :: Element -> Parser VNFNRole
+p_vnfnrole x = VNFNRole <$> x .: "fnrole" <*> x .: "vnrole"
+
+
+p_vnfnroleinst :: Element -> Parser VNFNRoleInstance
+p_vnfnroleinst x = VNFNRoleInstance <$> x .: "class"
+                                    <*> x .: "fnframe"
+                                    <*> p_list p_vnfnrole "role" "roles" x
+
+
+p_vnfnrolemap :: Element -> Parser VNFNRoleMap
+p_vnfnrolemap x = VNFNRoleMap <$> traverse p_vnfnroleinst (getOnly x "vncls")
+                              <*> x .: "date"
 
 --------------------------
 -- VerbNet <-> PropBank --
