@@ -24,10 +24,10 @@ mapFromONtoFN =
         ,("1.4", "Statement")
         ,("1.5", "Spelling_and_pronouncing")
         ,("1.6", "none")])
-      
+
     , ( "have"
       , [("1.1", "Possession")
-        ,("1.2", "copula") -- "(copula)")  
+        ,("1.2", "copula") -- "(copula)")
         ,("1.3", "Being_employed")
         ,("1.4", "Undergoing")  --  || Perception_experience")
         ,("1.5", "Personal_relationship")
@@ -65,7 +65,7 @@ mapFromONtoFN =
         ,("1.12", "Soaking_up") --  "(Soaking_up)")
         ,("1.14.1", "idioms")
         ,("1.15", "none")])
-    
+
     , ( "get"
       , [("1.1", "Getting") -- "Getting || Grasp")
         ,("1.2", "Medical_conditions")
@@ -176,7 +176,7 @@ mapFromONtoFN =
         ,("1.3", "Deserving")   -- (Deserving)
         ,("1.4", "Intentionally_act")  -- (Intentionally_act)
         ,("1.5", "none")])
-      
+
     , ( "see"
       , [("1.1", "Perception_experience")
         ,("1.2", "Grasp")
@@ -208,7 +208,7 @@ mapFromONtoFN =
     , ( "continue"
       , [("1.1", "Process_continue")  -- Process_continue, Activity_ongoing
         ,("1.2", "Statement")])  -- Statement, Activity_ongoing
-      
+
     , ( "think"
       , [("1.1", "Opinion")
         ,("1.2", "Cogitation")
@@ -616,7 +616,7 @@ mapFromONtoFN =
     , ( "operate"
       , [("1.1", "Being_in_operation")
         ,("1.2", "Operating_a_system")])
-      
+
     , ( "feel"
       , [("1.1", "Feeling") -- ("Feeling || Perception_active || Perception_experience")
         ,("1.3", "Opinion")])
@@ -673,7 +673,7 @@ mapFromONtoFN =
       , [("1.1", "Sending")
         ,("1.2", "Causation")
         ,("1.3", "Causation")])
-    
+
     , ( "play"
       , [("1.1", "Activity") -- "                          (Activity?)")
         ,("1.2", "Competition")
@@ -714,7 +714,7 @@ mapFromONtoFN =
         ,("1.5", "Conduct")
         ,("1.6", "Emotion_directed") -- "(Emotion_directed <- mad.a)")
         ,("1.8", "Activity_ongoing")]) -- "(Activity_ongoing)")])
-        
+
     , ( "pass"
       , [("1.1", "Passing")
         ,("1.2", "Success_or_failure")
@@ -2100,6 +2100,309 @@ mapFromONtoFN =
     , ( "sue"
       , [("1.1", "Judgment_communication")]) -- "(Judgment_communication)")])
 
+    , ( "shoot"
+      , [("1.1", "Hit_target") --  "Hit_target || Shoot_projectiles")
+        ,("1.2", "Motion")
+        ,("1.3", "Intentionally_create")])  -- (Intentionally_create)
+
+    , ( "preserve"
+      , [("1.1", "Preserving")
+        ,("1.2", "Protecting")])
+
+    , ( "plead"
+      , [("1.1", "Request")
+        ,("1.3", "Entering_of_plea")
+        ,("1.4", "none")])
+
+    , ( "enact"
+      , [("1.1", "Change_operational_state")])  -- (Change_operational_state)
+
+    , ( "dominate"
+      , [("1.1", "Dominate_situation")]) -- "Dominate_situation || Being_in_control || Dominate_competitor")])
+
+    , ( "attach"
+      , [("1.1", "Attaching")
+        ,("1.2", "Emotion_active" )])  -- "(Emotion_active) || (Experiencer_focus)")])
+
+    , ( "appeal"
+      , [("1.1", "Appeal")
+        ,("1.2", "Request")
+        ,("1.3", "Cause_emotion")])
+
+    , ( "wonder"
+      , [("1.1", "Cogitation")])
+
+    , ( "struggle"
+      , [("1.1", "Hostile_encounter")
+        ,("1.2", "Seeking_to_achieve")])
+
+    , ( "stabilize"
+      , [("1.1", "Cause_fluidic_motion") -- "(Cause_fluidic_motion) || (Cause_motion) || (Cause_change)")
+        ,("1.2", "Change_operational_state")]) -- "(Change_operational_state) || (Cause_motion) || (Cause_change)")])
+
+    , ( "shut"
+      , [("1.1", "Closure")
+        ,("1.2", "Supply")
+        ,("1.4", "Inclusion") -- "Inclusion <- exclude.v")
+        ,("1.5", "Activity_stop") -- "Activity_stop || Cause_to_end")
+        ,("1.6", "Activity_stop")])
+
+    , ( "roll"
+      , [("1.1", "Motion") -- "Motion || Cause_motion || Moving_in_place")
+        ,("1.2", "Placing") -- "Placing || Path_shape")
+        ,("1.7", "Activity_start") --  "(Activity_start)")
+        ,("1.10", "Activity_resume")]) -- "(Activity_resume)")])
+
+    , ( "restructure"
+      , [("1.1", "Reforming_a_system")])
+
+    , ( "process"
+      , [("1.1", "Processing_materials")
+        ,("1.3", "Intentionally_affect")  -- "(Intentionally_affect)")
+        ,("1.4", "Grasp")]) -- "(Grasp)")])
+
+    , ( "oversee"
+      , [("1.1", "Being_in_control")])
+
+    , ( "experience"
+      , [("1.1", "Undergoing")]) -- "Undergoing || Perception_experience || Feeling")])
+
+    , ( "arrive"
+      , [("1.1", "Arriving")])
+
+    , ( "widen"
+      , [("1.1", "Cause_expansion")])
+
+    , ( "strengthen"
+      , [("1.1", "Cause_change_of_strength")
+        ,("1.2", "Cause_change_of_strength")])
+
+    , ( "rush"
+      , [("1.1", "Self_motion")
+        ,("1.2", "Self_motion")]) -- "Self_motion || (Change_operational_state)")])
+
+    , ( "revive"
+      , [("1.1", "Cause_to_resume")])
+
+    , ( "revise"
+      , [("1.1", "Cause_change")])
+
+    , ( "register"
+      , [("1.1", "Becoming_a_member") -- "Becoming_a_member || Recording")
+        ,("1.2", "Becoming_aware")
+        ,("1.3", "Assessing")])
+
+    , ( "persuade"
+      , [("1.1", "Suasion")])
+
+    , ( "grant"
+      , [("1.1", "Deny_or_grant_permission")])
+
+    , ( "consist"
+      , [("1.1", "Partitive") -- "(Partitive) || (Being_in_category)")
+        ,("1.2", "Partitive")]) -- "(Partitive)")])
+
+    , ( "collect"
+      , [("1.1", "Gathering_up")
+        ,("1.2", "Commerce_collect")])
+
+    , ( "beat"
+      , [("1.1", "Beat_opponent")
+        ,("1.2", "Cause_motion") -- "Cause_move_in_place || Cause_to_make_noise")
+        ,("1.3", "Cause_harm")
+        ,("1.11.3", "Cause_motion")
+        ,("1.11.9", "none")])
+
+    , ( "assert"
+      , [("1.1", "Statement")
+        ,("1.2", "Claim_ownership")
+        ,("1.3", "Statement")])
+
+    , ( "unveil"
+      , [("1.1", "Reveal_secret")]) -- "Reveal_secret || Evidence")])
+
+    , ( "survey"
+      , [("1.1", "Scrutiny")
+        ,("1.2", "Assessing") -- "Assessment || Scrutiny")
+        ,("1.3", "Assessing")]) -- "(Assessment)")])
+
+    , ( "spur"
+      , [("1.1", "Subjective_influence")])
+
+    , ( "seize"
+      , [("1.1", "Taking")
+        ,("1.2", "Getting") -- "(Getting) || (Using) || (Perception_active)")
+        ,("1.3", "Taking_captive")
+        ,("1.5", "Activity_stop")])
+
+    , ( "reopen"
+      , [("1.1", "Activity_resume")])
+
+    , ( "regulate"
+      , [("1.2", "Control")])
+
+    , ( "proceed"
+      , [("1.1", "Cause_to_continue")
+        ,("1.3", "Cause_to_continue")])
+
+    , ( "narrow"
+      , [("1.1", "Limiting")
+        ,("1.2", "Cause_expansion")])
+
+    , ( "lift"
+      , [("1.1", "Cause_change_of_position_on_a_scale") -- "Cause_change_of_position_on_a_scale || Placing")
+        ,("1.3", "Removing")
+        ,("1.6", "Experiencer_obj")
+        ,("1.7", "Removing")])
+
+    , ( "invite"
+      , [("1.2", "Request")
+        ,("1.3", "Suasion")])
+
+    , ( "fuel"
+      , [("1.1", "Supply")
+        ,("1.2", "Cause_to_start")])
+
+    , ( "fix"
+      , [("1.1", "Resolve_problem")
+        ,("1.3", "Deciding")
+        ,("1.4", "Activity_prepare")])
+
+    , ( "fine"
+      , [("1.1", "Fining")])
+
+    , ( "cast"
+      , [("1.1", "Cause_motion") -- "Cause_motion || Body_movement")
+        ,("1.2", "Create_physical_artwork")
+        ,("1.3", "Performers_and_roles")
+        ,("1.4", "Choosing")
+        ,("1.5", "Motion")])
+
+    , ( "bar"
+      , [("1.1", "Preventing_or_letting")
+        ,("1.2", "Preventing_or_letting")])
+
+    , ( "veto"
+      , [("1.1", "Preventing_or_letting")]) -- "Preventing_or_letting || Respond_to_proposal || Agree_or_refuse_to_act")])
+
+    , ( "testify"
+      , [("1.1", "Speak_on_topic") -- "(Speak_on_topic) || (Communication) || (Statement)")
+        ,("1.2", "Evidence")])
+
+    , ( "stress"
+      , [("1.1", "Emphasizing")])
+
+    , ( "request"
+      , [("1.1", "Request")])
+
+    , ( "merge"
+      , [("1.1", "Amalgamation") -- "Amalgamation || Cause_to_amalgamate")
+        ,("1.2", "Amalgamation")])
+
+    , ( "justify"
+      , [("1.1", "Justifying")
+        ,("1.2", "Justifying")])
+
+    , ( "destroy"
+      , [("1.1", "Destroying")
+        ,("1.2", "Beat_opponent")])
+
+    , ( "curb"
+      , [("1.1", "Control")])
+
+    , ( "calculate"
+      , [("1.1", "Assessing") -- "(Assessing) || (Evaluative Comparison)")
+        ,("1.2", "Judgment") -- "Judgment || Assessing")
+        ,("1.3", "Purpose")])
+
+    , ( "arrange"
+      , [("1.1", "Arranging")
+        ,("1.2", "Making_arrangements")
+        ,("1.3", "Intentionally_create")])
+
+    , ( "accompany"
+      , [("1.1", "Cotheme")
+        ,("1.2", "Partitive") -- "(Partitive) || (Rest)")
+        ,("1.3", "Performers_and_roles")])
+
+    , ( "specialize"
+      , [("1.1", "Expertise")])
+
+    , ( "repeat"
+      , [("1.1", "Event_instance")
+        ,("1.2", "Intentionally_act")]) -- "(Intentionally_act)")])
+
+    , ( "rally"
+      , [("1.1", "Gathering_up")
+        ,("1.2", "Recovery")]) -- "Recovery || (Transition_to_state)")])
+
+    , ( "prohibit"
+      , [("1.1", "Prohibiting_or_licensing")])
+
+    , ( "knock"
+      , [("1.1", "Impact")
+        ,("1.2", "Make_noise")
+        ,("1.5", "Cause_harm")  -- (Cause_harm)
+        ,("1.6", "Impact")   -- (Impact)
+        ,("1.8", "Cause_change_of_position_on_a_scale")
+        ,("1.9", "Theft")])
+
+    , ( "gather"
+      , [("1.1", "Gathering_up")
+        ,("1.2", "Assemble")
+        ,("1.3", "Cause_change_of_position_on_a_scale")])
+
+    , ( "eat"
+      , [("1.1", "Ingestion")
+        ,("1.3", "Subversion") -- "Subversion || Rotting")
+        ,("1.4", "Responsibility")]) -- "(Responsbility)")])
+
+    , ( "bolster"
+      , [("1.1", "Supporting")
+        ,("1.2", "Placing")])
+
+    , ( "average"
+      , [("1.1", "Amounting_to")])
+
+    , ( "assist"
+      , [("1.1", "Assistance")
+        ,("1.2", "Assistance")])
+
+    , ( "tumble"
+      , [("1.1", "Change_position_on_a_scale")])
+
+    , ( "stick"
+      , [("1.1", "Being_attached" ) -- "Being_attached || Attaching")
+        ,("1.2", "Attaching")
+        ,("1.3", "Activity_ongoing")
+        ,("1.4", "Causation")]) -- "(Causation)")])
+
+    , ( "resist"
+      , [("1.1", "Repel")
+        ,("1.2", "Respond_to_proposal")])
+
+    , ( "plummet"
+      , [("1.1", "Motion_directional")]) -- "Motion_directional || Change_position_on_a_scale")])
+
+    , ( "listen"
+      , [("1.1", "Perception_active")])
+
+    , ( "lend"
+      , [("1.1", "Cause_change") --  "(Cause_change) || (Transition_to_a_quality)")
+        ,("1.2", "Lending")
+        ,("1.3", "Suitability")
+        ,("1.4", "Assistance")])
+
+    , ( "forget"
+      , [("1.1", "Remembering_information") -- "Remembering_information || Rememberging_to_do || Remembering_experience || Memory")
+        ,("1.3", "Cause_to_perceive")]) -- "(Cause_to_perceive) || (Activity_end)")])
+
+    , ( "enhance"
+      , [("1.1", "Improvement_or_decline")])
+
+    , ( "clean"
+      , [("1.1", "Removing") -- "Removing || Improvement_or_decline")
+        ,("1.5.6", "Arranging")
+        ,("1.5.8", "Improvement_or_decline")])
+
     ]
-
-
