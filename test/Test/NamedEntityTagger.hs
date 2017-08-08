@@ -305,18 +305,13 @@ getOrgs (EL.Self muid (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
 getOrgs (EL.Cite muid _ (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
 getOrgs _ = Nothing
 
-
-
 getCompanySymbol :: Map ItemID Symbol -> (EntityMentionUID, ItemID) -> Maybe (EntityMentionUID , ItemID, Symbol)
 getCompanySymbol tikcerMap (mentionUID, itemID) = result
   where
     result = case M.lookup itemID tikcerMap of
       Just symbol -> Just (mentionUID, itemID, symbol)
-      Nothing     -> Nothing  
+      Nothing     -> Nothing
 
-newtype WordHash = WordHash { _hash :: XXHash}
-                 deriving (Show, Eq, Ord)
-wordHash = WordHash
 
 main1 = do
   -- For loading ticker symbol data.
