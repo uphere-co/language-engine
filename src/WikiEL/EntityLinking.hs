@@ -46,6 +46,10 @@ entityUID m = resolvedUID tag
   where
     (_,_,tag) = _info m
 
+entityIRange :: EntityMention a -> IRange
+entityIRange (Cite _ _ (range, _, _)) = range
+entityIRange (Self _   (range, _, _)) = range
+
 mentionedEntityName :: EntityMention Text -> Text
 mentionedEntityName em = entityName (_info em)
 

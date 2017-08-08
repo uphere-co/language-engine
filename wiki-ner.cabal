@@ -29,6 +29,7 @@ library
                      , WikiEL.ETL.RDF
                      , WikiEL.ETL.Util
                      , WikiEL.EntityLinking
+                     , WikiEL.EntityMentionPruning
                      , WikiEL.Misc
                      , WikiEL.WikiEntityTagger
                      , WikiEL.NamedEntity
@@ -70,6 +71,7 @@ test-suite test
   type: exitcode-stdio-1.0
   hs-source-dirs: test, src
   other-modules:       Test.Data.Filename
+                     , Test.Data.News3
                      , Test.NamedEntityTagger
                      , Test.WikiEntityTagger
                      , Test.CoreNLPEntity
