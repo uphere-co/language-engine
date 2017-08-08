@@ -193,7 +193,7 @@ getSenses lma sensemap sensestat framedb ontomap = do
               _ -> do
                 frame <- HM.lookup frtxt (framedb^.frameDB)
                 let fes = frame^..frame_FE.traverse
-                    corefes = filter (\fe -> fe^.fe_coreType == Core) fes
+                    corefes = filter (\fe -> fe^.fe_coreType == Core || fe^.fe_coreType == CoreUnexpressed) fes
                     perifes = filter (\fe -> fe^.fe_coreType == Peripheral) fes
                     fecoretxt = T.intercalate ", " (map (^.fe_name) corefes)
                     feperitxt = T.intercalate ", " (map (^.fe_name) perifes)
@@ -248,13 +248,13 @@ sentStructure :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
 sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
   (psents,sents,sentitems,_tokss,mptrs,deps,mtmx,linked_mentions_resolved) <- runParser pp emTagger txt
   putStrLn "\n\n\n\n\n\n\n\n================================================================================================="
-  putStrLn "-- TimeTagger -----------------------------------------------------------------------------------"
+  putStrLn "\n\n-- TimeTagger -----------------------------------------------------------------------------------"
   case mtmx of
     Nothing -> putStrLn "Time annotation not successful!"
     Just sentswithtmx -> mapM_ formatTimex sentswithtmx
-  putStrLn "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
+  putStrLn "\n\n-- WikiNamedEntityTagger ------------------------------------------------------------------------"
   putStrLn (render (formatNER psents sentitems linked_mentions_resolved))
-  putStrLn "--------------------------------------------------------------------------------------------------"
+  putStrLn "\n\n--------------------------------------------------------------------------------------------------"
   putStrLn "-- Sentence analysis -----------------------------------------------------------------------------"
   putStrLn "--------------------------------------------------------------------------------------------------"
 
@@ -263,7 +263,7 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
       let lemmamap = mkLemmaMap psent
           vps = verbPropertyFromPennTree lemmamap ptr
 
-      putStrLn (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
+      putStrLn (printf "\n\n-- Sentence %3d ----------------------------------------------------------------------------------" i)
       T.IO.putStrLn (formatIndexTokensFromTree 0 ptr)
       
       putStrLn "--------------------------------------------------------------------------------------------------"
@@ -330,53 +330,4 @@ runAnalysis = do
     queryProcess pp sensemap sensestat framedb ontomap emTagger
 
 
-
---
---
--- wiki-ner test
---
---
-
-
--- loadWikiNER = do
-  -- companyfile <- T.IO.readFile listedCompanyFile
-
-main1 :: IO ()
-main1 = do
-  txt <- T.IO.readFile newsFileTxt
-
-  emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
-
-  clspath <- getEnv "CLASSPATH"
-  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
-    pp <- prepare (def & (tokenizer .~ True)
-                       . (words2sentences .~ True)
-                       . (postagger .~ True)
-                       . (lemma .~ True)
-                       -- . (sutime .~ True)
-                       -- . (constituency .~ True)
-                       . (ner .~ True)
-                  )
-    -- queryProcess pp sensemap sensestat framedb ontomap
-    let doc = Document txt (fromGregorian 2017 4 17)
-    ann <- annotate pp doc
-    rdoc <- protobufDoc ann
-    case rdoc of
-      Left _ -> return ()
-      Right d -> do
-        let psents = d ^.. D.sentence . traverse
-            sentidxs = getSentenceOffsets psents
-            sents = map (addText txt) sentidxs 
-            unNER (NERSentence tokens) = tokens
-            neTokens = concatMap (unNER . sentToNER) psents
-            linked_mentions_all = emTagger neTokens
-            linked_mentions_resolved
-              = filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all
-            toks = concatMap (map snd . sentToTokens) psents
-            tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
-            sents_tagged = map (addTag tags) sents
-            doc1 = formatTaggedSentences sents_tagged
-            doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
-            doc = hsep 10 left [doc1,doc2]
-        putStrLn (render doc)
 
