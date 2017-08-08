@@ -21,6 +21,7 @@ import           Assert                                (assert,massertEqual,eass
 import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Wikipedia
 import           WikiEL.Type.FileFormat
+import           WikiEL.Type.WordNet
 import           WikiEL.Type.RDF.Wikidata
 import           WikiEL.Type.RDF.Yago
 import           WikiEL.ETL.Parser
@@ -76,6 +77,7 @@ instance Show YagoID where
 
 
 
+
 testYagoRdfObjects :: TestTree
 testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
   eassertEqual (parseOnly parserVerbToken "rdf:type")  (Right (YagoRDFverb "type"))
@@ -95,6 +97,9 @@ testYagoRdfObjects = testCaseSteps "YAGO objects in RDF dumps." $ \step -> do
   eassertEqual (parseOnly parserNounToken "\"Fred Hechinger\"")  (Right (YagoTextValue "Fred Hechinger"))
   eassertEqual (parseOnly parserNounToken "<http://www.example.com/>")  (Right (YagoURL "http://www.example.com/"))
   eassertEqual (parseOnly parserNounToken "<http://en.wikipedia.org/wiki/Donald_Trump%2C_Jr.>")  (Right (YagoURL "http://en.wikipedia.org/wiki/Donald_Trump%2C_Jr."))
+
+  eassertEqual (wordnetSynsetYAGO "organization_108008335") (SynsetY "organization" 108008335)
+  eassertEqual (wordnetSynsetYAGO "test_organization_108008335") (SynsetY "test_organization" 108008335)
 
 testYagoTaxonomyTSVrows :: TestTree
 testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, yagoTaxonomy.tsv" $ \step -> do

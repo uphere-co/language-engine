@@ -57,9 +57,10 @@ data PreNE = UnresolvedUID NEClass
            deriving(Show, Eq)
 
 resolvedUID :: PreNE -> Either String ItemID
-resolvedUID (Resolved (id,_))     = Right id
-resolvedUID (UnresolvedUID _) = Left "Unknown ItemID"
-resolvedUID _                 = Left "Ambiguous ItemID"
+resolvedUID (Resolved (id,_)) = Right id
+resolvedUID (UnresolvedUID _) = Left "Unresolved ItemID"
+resolvedUID (AmbiguousUID _)  = Left "Ambiguous ItemID"
+resolvedUID (UnresolvedClass _) = Left "Unresolved named entity class"
 
 resolveNEClass :: NEClass -> Vector (ItemID, ItemClass) -> PreNE
 resolveNEClass stag xs = g matchedUIDs

@@ -98,6 +98,16 @@ parseItemID = parseOnly parserWikidataItemID
 parsePageID :: Text -> Either String PageID
 parsePageID = parseOnly parserWikipediaPageID 
 
+parserWordNetSynsetYAGO :: Parser SynsetY
+parserWordNetSynsetYAGO = do
+  tokens  <-  takeWhile1 (/= '_') `sepBy` string "_"
+  let
+    f acc (x:[a]) = (reverse (x:acc), a)
+    f acc (x:xs)    = f (x:acc) xs
+    (words, idxStr) = f [] tokens
+    Right idx = parseOnly decimal idxStr
+  return (SynsetY (T.intercalate "_" words) idx)
+
 parserWordNetSynset :: Parser Synset
 parserWordNetSynset = do
   string "synset-"
@@ -133,6 +143,9 @@ pageID = getParseResult parserWikipediaPageID
 
 wordnetSynset :: Text -> Synset
 wordnetSynset = getParseResult parserWordNetSynset
+
+wordnetSynsetYAGO :: Text -> SynsetY
+wordnetSynsetYAGO = getParseResult parserWordNetSynsetYAGO
 
 subclassRelation :: Text -> SubclassRelationRow
 subclassRelation = getParseResult parserSubclassRelation
