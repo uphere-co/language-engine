@@ -32,6 +32,7 @@ p_vnfn x = VNFN <$> x .: "class"
 p_vnfnmap :: Element -> Parser VNFNMap
 p_vnfnmap x = VNFNMap <$> mapM p_vnfn (getOnly x "vncls")
                       <*> x .: "date"
+                      <*> undefined
 
 
 --------------------------

@@ -22,12 +22,41 @@ data VNFN = VNFN { _vnc_class :: Text
 makeLenses ''VNFN
 
 
+data VNFNRole = VNFNRole { _vnfnrole_fnrole :: Text
+                         , _vnfnrole_vnrole :: Text
+                         }
+              deriving Show
+
+makeLenses ''VNFNRole
+
+
+data VNFNRoleInstance = VNFNRoleInstance { _vnfnroleinst_class   :: Text
+                                         , _vnfnroleinst_fnframe :: Text
+                                         , _vnfnroleinst_roles   :: [VNFNRole]
+                                         }
+                      deriving Show
+
+makeLenses ''VNFNRoleInstance
+
+
+data VNFNRoleMap = VNFNRoleMap { _vnfnrolemap_vnfnroles :: [VNFNRoleInstance]
+                               , _vnfnrolemap_date      :: Text
+                               }
+                 deriving Show
+
+makeLenses ''VNFNRoleMap
+
+
 data VNFNMap = VNFNMap { _vnfnmap_vnfns :: [VNFN]
                        , _vnfnmap_date :: Text
+                       , _vnfnmap_rolemap :: VNFNRoleMap
                        }
              deriving Show
 
 makeLenses ''VNFNMap
+
+
+
 
 
 --------------------------
@@ -39,7 +68,7 @@ data PBVNRole = PBVNRole { _pbvnrole_pbarg   :: Text
                          }
               deriving Show
 
-makeLenses ''PBVNRole                       
+makeLenses ''PBVNRole
 
 
 data PBVNArgMap = PBVNArgMap { _pbvnarg_pbroleset :: Text
@@ -56,7 +85,7 @@ data PBVN = PBVN { _pbvn_lemma :: Text
                  }
           deriving Show
 
-makeLenses ''PBVN                   
+makeLenses ''PBVN
 
 
 data PBVNMap = PBVNMap { _pbvnmap_predicates :: [PBVN] }
