@@ -287,6 +287,7 @@ getOrgs (EL.Cite muid _ (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
 getOrgs _ = Nothing
 
 
+
 getCompanySymbol :: Map ItemID Symbol -> (EntityMentionUID, ItemID) -> Maybe (EntityMentionUID , ItemID, Symbol)
 getCompanySymbol tikcerMap (mentionUID, itemID) = result
   where
@@ -299,7 +300,7 @@ newtype WordHash = WordHash { _hash :: XXHash}
 wordHash = WordHash
 
 main1 = do
-  file <- T.IO.readFile listedCompanyFile
+  tickerMap <- loadCompanySymbol listedCompanyFile
 
   input_raw <- T.IO.readFile rawNewsFile3
   input <- T.IO.readFile nerNewsFile3
@@ -307,11 +308,6 @@ main1 = do
   wikiTable <- loadWETagger reprFile
 
   let 
-    lines = T.lines file
-    companies = map publicCompany lines
-    tickers  = map (\(_,_,_,symbol,_,itemID) -> (itemID, symbol)) companies
-    tickerMap = M.fromList tickers
-
     stanford_nefs = map parseStanfordNE (parseNEROutputStr input)
     named_entities =  filter (\x -> snd x == N.Org || snd x == N.Person) (getStanfordNEs stanford_nefs)
     wiki_entities = namedEntityAnnotator wikiTable uid2tag stanford_nefs
@@ -331,7 +327,6 @@ main1 = do
     wn = buildWordNetSynsetLookup wordNetMapping
     synsets = map (lookupWordNet wn . entityUID) linked_mentions
   --mapM_ print wiki_entities
-  --{-
   print "Entity-linked named entities"
   mapM_ print linked_mentions
   mapM_ print synsets
@@ -339,9 +334,7 @@ main1 = do
   mapM_ print orgMentions
   print "Entity-linked public company entities"
   mapM_ print companyWithSymbols
-  --print tickerMap
-  --}
-
+  
 main2 = do
     propertyNames <- loadPropertyNames propertyNameFile
     wordNetMapping <- loadWordNetMapping wordnetMappingFile
