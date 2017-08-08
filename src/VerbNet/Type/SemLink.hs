@@ -91,3 +91,5 @@ makeLenses ''PBVN
 
 data PBVNMap = PBVNMap { _pbvnmap_predicates :: [PBVN] }
              deriving Show
+
+makeLenses ''PBVNMap
