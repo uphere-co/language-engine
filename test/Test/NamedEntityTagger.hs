@@ -319,9 +319,11 @@ newtype WordHash = WordHash { _hash :: XXHash}
 wordHash = WordHash
 
 main1 = do
+  -- For loading ticker symbol data.
   tickerMap <- loadCompanySymbol listedCompanyFile
 
-  let 
+  let
+    -- Load data for entity mention pruner. Input is a list of PoS tags of the input text.
     input_pos = V.fromList (map fst News3.posTags)
   input_raw <- T.IO.readFile rawNewsFile3
   input <- T.IO.readFile nerNewsFile3
@@ -338,14 +340,16 @@ main1 = do
     mentions = buildEntityMentions text wiki_named_entities
     all_linked_mentions = entityLinkings mentions
 
+    -- Pruning (linked) entity mentions.
     linked_mentions = EMP.filterEMbyPOS input_pos all_linked_mentions
-    -- Company symbols
+    -- Company ticker symbol lookup.
     orgMentions = mapMaybe getOrgs linked_mentions
     companyWithSymbols = mapMaybe (getCompanySymbol tickerMap) orgMentions
 
-  -- WordNet synsets
-  wordNetMapping <- loadWordNetMapping wordnetMappingFile  
+  -- For loading WordNet synsets data.
+  wordNetMapping <- loadWordNetMapping wordnetMappingFile
   let
+    -- WordNet synset lookup.
     wn = buildWordNetSynsetLookup wordNetMapping
     synsets = map (lookupWordNet wn . entityUID) linked_mentions
   mapM_ print named_entities
