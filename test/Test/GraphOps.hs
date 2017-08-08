@@ -20,12 +20,14 @@ orderingByFrom,orderingByTo :: Ord a => (a,a) -> (a,a) -> Ordering
 orderingByFrom (lf,lt) (rf,rt) = compare lf rf
 orderingByTo   (lf,lt) (rf,rt) = compare lt rt
 
-neighbor :: (UV.Unbox a, Ord a) => VS.Comparison (a,a) -> UV.Vector (a,a) -> a -> UV.Vector (a,a)
-neighbor comp edges node= runST $ do
-  mvec <- UV.unsafeThaw edges
-  (beg, end) <- binarySearchLRBy comp mvec (node,node)
-  return (UV.slice beg (end-beg) edges)
-
+neighbor :: (UV.Unbox a, Ord a) => UV.Vector (a,a) -> VS.Comparison (a,a) -> a -> UV.Vector (a,a)
+neighbor nodes comp node = f sorted comp node
+  where
+    sorted = UV.modify (sortBy comp) nodes
+    f edges comp node= runST $ do
+      mvec <- UV.unsafeThaw edges
+      (beg, end) <- binarySearchLRBy comp mvec (node,node)
+      return (UV.slice beg (end-beg) edges)
 
 testNeighborNodes :: TestTree
 testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected graph" $ \step -> do
@@ -37,17 +39,15 @@ testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected gra
                             ] :: [(Int32, Int32)])
     undirected = UV.concatMap (\(x,y) -> UV.fromList [(x,y),(y,x)]) directed
 
-    dfl = UV.modify (sortBy orderingByFrom) directed
-    dfr = UV.modify (sortBy orderingByTo)   directed
-    ufl = UV.modify (sortBy orderingByFrom) undirected
-    ufr = UV.modify (sortBy orderingByTo)   undirected
-
-  print dfl
-  print dfr
-  print ufl
-  print ufr
-  eassertEqual (neighbor orderingByFrom dfl 1) (UV.fromList [(1,2),(1,3),(1,5),(1,6)])
-  eassertEqual (neighbor orderingByTo   dfr 1) (UV.fromList [(4,1),(9,1),(8,1),(10,1)])
+  let
+    dNeighborForward  = neighbor directed orderingByFrom
+    dNeighborBackward = neighbor directed orderingByTo
+    uNeighborForward  = neighbor undirected orderingByFrom
+    uNeighborBackward = neighbor undirected orderingByTo
+  eassertEqual (dNeighborForward  1) (UV.fromList [(1,2),(1,3),(1,5),(1,6)])
+  eassertEqual (dNeighborBackward 1) (UV.fromList [(4,1),(9,1),(8,1),(10,1)])
+  eassertEqual (uNeighborBackward 4) (UV.fromList [(3,4),(1,4),(2,4)])
+  eassertEqual (uNeighborForward  4) (UV.fromList [(4,1),(4,2),(4,3)])
 
 
 ff :: TestTree
