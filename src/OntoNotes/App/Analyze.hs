@@ -1,11 +1,12 @@
-{-# LANGUAGE BangPatterns      #-}
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TupleSections       #-}
 
 module OntoNotes.App.Analyze where
 
@@ -303,52 +304,68 @@ queryProcess pp sensemap sensestat framedb ontomap emTagger =
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
                   sentStructure pp sensemap sensestat framedb ontomap emTagger txt
-      ":v " ->    sentStructure pp sensemap sensestat framedb ontomap emTagger rest
+      ":v " ->    do
+        sentStructure pp sensemap sensestat framedb ontomap emTagger rest
+        getSentStructure pp sensemap sensestat framedb ontomap emTagger rest >>= mapM_ T.IO.putStrLn
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
 
 
--- getAnalysis :: IO ()
+getSentStructure :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+                 -> HashMap Text Inventory
+                 -> HashMap (Text, Text) Int
+                 -> FrameDB
+                 -> HashMap Text [(Text, Text)]
+                 -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
+                 -> Text
+                 -> IO [Text]
 getSentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
   (psents,sents,sentitems,_tokss,mptrs,deps,mtmx,linked_mentions_resolved) <- runParser pp emTagger txt
-  
 
-  let log x = writer (x,[x])
-  let aa = execWriter $ do
-        log "\n\n\n\n\n\n\n\n================================================================================================="
-        log "-- TimeTagger -----------------------------------------------------------------------------------"
-        case mtmx of
-          Nothing -> log "Time annotation not successful!"
-          Just sentswithtmx -> fmap (\xs -> T.unpack $ T.intercalate "\n" xs) $ flip mapM (concat $ map getFormatTimex sentswithtmx) $ \x -> do
-            log (T.unpack x)
-        log "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
-        log (render (formatNER psents sentitems linked_mentions_resolved))
-        log "--------------------------------------------------------------------------------------------------"
-        log "-- Sentence analysis -----------------------------------------------------------------------------"
-        log "--------------------------------------------------------------------------------------------------"
+  let line1 = [ "\n\n\n\n\n\n\n\n================================================================================================="
+              , "-- TimeTagger -----------------------------------------------------------------------------------" ]
 
-        flip mapM_ (zip5 ([0..] :: [Int]) psents sents mptrs deps) $ \(i,psent,_sent,mptr,_dep) -> do
-          flip mapM_ mptr $ \ptr -> do
-            let lemmamap = mkLemmaMap psent
-                vps = verbPropertyFromPennTree lemmamap ptr
+  let line2 = case mtmx of
+                Nothing -> ["Time annotation not successful!"]
+                Just sentswithtmx -> concat $ map getFormatTimex sentswithtmx
 
-            log (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
-            log $ T.unpack (formatIndexTokensFromTree 0 ptr)
-      
-            log "--------------------------------------------------------------------------------------------------"
-            -- showClauseStructure lemmamap ptr
-            log "================================================================================================="
+  let line3 = [ "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
+              , T.pack (render (formatNER psents sentitems linked_mentions_resolved))
+              , "--------------------------------------------------------------------------------------------------"
+              , "-- Sentence analysis -----------------------------------------------------------------------------"
+              , "--------------------------------------------------------------------------------------------------" ]
+              
+  mlines <- flip mapM (zip5 ([0..] :: [Int]) psents sents mptrs deps) $ \(i,psent,_sent,mptr,_dep) -> do
+    flip mapM mptr $ \ptr -> do
+      let lemmamap = mkLemmaMap psent
+          vps = verbPropertyFromPennTree lemmamap ptr
 
-            forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
-              log (printf "Verb: %-20s" lma)
-              let senses = getSenses lma sensemap sensestat framedb ontomap
-              -- (log . formatSenses False) senses
-              log "--------------------------------------------------------------------------------------------------"
-  print aa
+      let subline1 = concat [ [T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)]
+                     , [(formatIndexTokensFromTree 0 ptr)]
+                     , ["--------------------------------------------------------------------------------------------------"]
+                     , getClauseStructure lemmamap ptr
+                     , ["================================================================================================="] ] 
+
+      subline2 <- forM (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
+        let senses = getSenses lma sensemap sensestat framedb ontomap
+        let ssubline1 = [ T.pack (printf "Verb: %-20s" lma)
+                        , T.pack $ (formatSenses False) senses
+                        , "--------------------------------------------------------------------------------------------------" ]
+        return ssubline1
+      return (subline1, subline2)
+  let line4 = concat $ map f mlines
+        where f mxs = case mxs of
+                        Nothing       -> [""]
+                        Just (xs,yss) -> xs ++ (concat yss)
+
+  return $ line1 ++ line2 ++ line3 ++ line4
+
+
   
 runAnalysis :: IO ()
 runAnalysis = do
+  let cfg = cfgG
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)

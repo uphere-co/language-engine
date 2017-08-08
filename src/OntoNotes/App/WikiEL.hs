@@ -41,10 +41,25 @@ import qualified WikiEL                        as WEL
 import           OntoNotes.App.Util                   (TagPos(..),underlineText)
 
 
-groupupheredir = "/scratch/groups/uphere"
+groupupheredir' = "/scratch/groups/uphere"
+wikinerdir' = groupupheredir </> "wiki-ner"
+
+listedCompanyFile' = groupupheredir </> "enwiki/companies"
+newsFileTxt' = wikinerdir </> "data/article.amazon_nike.txt"
+-- rawNewsFile3 = wikinerdir </> "data/article.amazon_nike.ptb"
+-- nerNewsFile3 = wikinerdir </> "data/article.amazon_nike.ner"
+reprFile'     = EntityReprFile (wikinerdir </> "data/uid")
+orgItemFile'  = ItemIDFile (wikinerdir </> "data/ne.org")
+personItemFile' = ItemIDFile (wikinerdir </> "data/ne.person")
+brandItemFile'  = ItemIDFile (wikinerdir </> "data/ne.brand")
+wordnetMappingFile' = WordNetMappingFile (wikinerdir </> "data/page_id.wiki_id.wordnet.tsv")
+
+
+
+groupupheredir = "/data/groups/uphere/data/Wiki"
 wikinerdir = groupupheredir </> "wiki-ner"
 
-listedCompanyFile = groupupheredir </> "enwiki/companies"
+listedCompanyFile = groupupheredir </> "companies"
 newsFileTxt = wikinerdir </> "data/article.amazon_nike.txt"
 -- rawNewsFile3 = wikinerdir </> "data/article.amazon_nike.ptb"
 -- nerNewsFile3 = wikinerdir </> "data/article.amazon_nike.ner"
@@ -53,8 +68,6 @@ orgItemFile  = ItemIDFile (wikinerdir </> "data/ne.org")
 personItemFile = ItemIDFile (wikinerdir </> "data/ne.person")
 brandItemFile  = ItemIDFile (wikinerdir </> "data/ne.brand")
 wordnetMappingFile = WordNetMappingFile (wikinerdir </> "data/page_id.wiki_id.wordnet.tsv")
-
-
  
 getOrgs :: EntityMention a -> Maybe (EntityMentionUID, ItemID)
 getOrgs (EL.Self muid (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
