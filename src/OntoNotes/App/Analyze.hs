@@ -193,7 +193,7 @@ getSenses lma sensemap sensestat framedb ontomap = do
               _ -> do
                 frame <- HM.lookup frtxt (framedb^.frameDB)
                 let fes = frame^..frame_FE.traverse
-                    corefes = filter (\fe -> fe^.fe_coreType == Core) fes
+                    corefes = filter (\fe -> fe^.fe_coreType == Core || fe^.fe_coreType == CoreUnexpressed) fes
                     perifes = filter (\fe -> fe^.fe_coreType == Peripheral) fes
                     fecoretxt = T.intercalate ", " (map (^.fe_name) corefes)
                     feperitxt = T.intercalate ", " (map (^.fe_name) perifes)
