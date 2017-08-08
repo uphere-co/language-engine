@@ -13,6 +13,7 @@ import           Control.Lens          hiding (Level)
 import           Control.Monad
 import           Control.Monad.Loops
 import           Control.Monad.IO.Class           (liftIO)
+-- import           Control.Monad.Writer.Lazy
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
@@ -123,13 +124,11 @@ addSUTime sents tmxs =
             )
   in filter (not.null.(^._2)) $ map (addTag (map f (tmxs^..T.timexes.traverse))) sents
 
+getFormatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> [Text]
+getFormatTimex (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["----------"] ++ [T.pack (show a)]
 
-formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
-formatTimex (s,a) = do
-  T.IO.putStrLn (T.intercalate "\n" (underlineText (const "") (s^._2) (s^._3) a))
-  T.IO.putStrLn "----------"
-  print a
-
+showFormatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
+showFormatTimex (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex (s,a)))
 
 runParser :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
@@ -251,7 +250,7 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
   putStrLn "-- TimeTagger -----------------------------------------------------------------------------------"
   case mtmx of
     Nothing -> putStrLn "Time annotation not successful!"
-    Just sentswithtmx -> mapM_ formatTimex sentswithtmx
+    Just sentswithtmx -> mapM_ showFormatTimex sentswithtmx
   putStrLn "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
   putStrLn (render (formatNER psents sentitems linked_mentions_resolved))
   putStrLn "--------------------------------------------------------------------------------------------------"
@@ -309,6 +308,45 @@ queryProcess pp sensemap sensestat framedb ontomap emTagger =
     putStrLn "=================================================================================================\n\n\n\n"
 
 
+
+-- getAnalysis :: IO ()
+getSentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
+  (psents,sents,sentitems,_tokss,mptrs,deps,mtmx,linked_mentions_resolved) <- runParser pp emTagger txt
+  
+
+  let log x = writer (x,[x])
+  let aa = execWriter $ do
+        log "\n\n\n\n\n\n\n\n================================================================================================="
+        log "-- TimeTagger -----------------------------------------------------------------------------------"
+        case mtmx of
+          Nothing -> log "Time annotation not successful!"
+          Just sentswithtmx -> fmap (\xs -> T.unpack $ T.intercalate "\n" xs) $ flip mapM (concat $ map getFormatTimex sentswithtmx) $ \x -> do
+            log (T.unpack x)
+        log "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
+        log (render (formatNER psents sentitems linked_mentions_resolved))
+        log "--------------------------------------------------------------------------------------------------"
+        log "-- Sentence analysis -----------------------------------------------------------------------------"
+        log "--------------------------------------------------------------------------------------------------"
+
+        flip mapM_ (zip5 ([0..] :: [Int]) psents sents mptrs deps) $ \(i,psent,_sent,mptr,_dep) -> do
+          flip mapM_ mptr $ \ptr -> do
+            let lemmamap = mkLemmaMap psent
+                vps = verbPropertyFromPennTree lemmamap ptr
+
+            log (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
+            log $ T.unpack (formatIndexTokensFromTree 0 ptr)
+      
+            log "--------------------------------------------------------------------------------------------------"
+            -- showClauseStructure lemmamap ptr
+            log "================================================================================================="
+
+            forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
+              log (printf "Verb: %-20s" lma)
+              let senses = getSenses lma sensemap sensestat framedb ontomap
+              -- (log . formatSenses False) senses
+              log "--------------------------------------------------------------------------------------------------"
+  print aa
+  
 runAnalysis :: IO ()
 runAnalysis = do
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
@@ -380,3 +418,26 @@ main1 = do
             doc = hsep 10 left [doc1,doc2]
         putStrLn (render doc)
 
+loadJVM = do
+  pp <- prepare (def & (tokenizer .~ True)
+                     . (words2sentences .~ True)
+                     . (postagger .~ True)
+                     . (lemma .~ True)
+                     . (sutime .~ True)
+                     . (constituency .~ True)
+                     . (ner .~ True)
+                )
+  return pp
+
+cfgG :: Config              
+cfgG = Config { _cfg_sense_inventory_file  = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
+              , _cfg_semlink_file          = "/data/groups/uphere/data/NLP/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
+              , _cfg_statistics            = "/data/groups/uphere/data/NLP/run/20170717/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
+              , _cfg_wsj_directory         = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
+              , _cfg_framenet_lubin        = "/data/groups/uphere/data/NLP/run/FrameNet_ListOfLexUnit.bin"
+              , _cfg_framenet_framedir     = "/data/groups/uphere/data/NLP/FrameNet/1.7/fndata/fndata-1.7/frame" 
+              , _cfg_wordnet_dict          = "/data/groups/uphere/data/NLP/dict"
+              , _cfg_propbank_framedir     = "/data/groups/uphere/data/NLP/frames"
+              , _cfg_wsj_corenlp_directory = "/data/groups/uphere/data/NLP/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
+              }
+  

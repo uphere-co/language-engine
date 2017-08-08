@@ -50,6 +50,7 @@ library
                        jvm,
                        lens,
                        monad-loops,
+                       mtl,
                        protocol-buffers,
                        taggy-lens,
                        text,
