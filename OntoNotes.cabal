@@ -161,6 +161,7 @@ Executable role-mapping-utility
                        boxes,
                        containers,
                        extra,
+                       haskeline,
                        lens,
                        taggy-lens,
                        text,
@@ -169,6 +170,7 @@ Executable role-mapping-utility
                        --
                        HFrameNet,
                        HWordNet,
+                       PropBank,
                        VerbNet,
                        --
                        OntoNotes

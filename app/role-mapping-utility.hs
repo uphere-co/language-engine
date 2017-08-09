@@ -27,6 +27,7 @@ import qualified Data.Text.Lazy.IO          as T.L.IO
 import           Data.Text.Read                   (decimal)
 import           System.Console.Haskeline
 import           System.Console.Haskeline.MonadException
+import           System.Environment
 import           System.IO
 import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
@@ -173,6 +174,9 @@ reformatInput o txt = let ws = T.words txt
                                                  Nothing -> w
                                  
 
+formatResult (i,(lma,sid),frm,txt) = printf "%d\t%s\t%s\t%s\t%s\n" i lma sid frm txt
+  
+
 prompt = do
   (result,olst) <- lift get
   case olst of
@@ -185,24 +189,26 @@ prompt = do
         Just x -> do
           let r1 = reformatInput o (T.pack x)
           liftIO $ T.IO.putStrLn r1
-          let nresult = result ++ [(problemID o,r1)]
-          liftIO $ writeFile "temp.txt" (show nresult)
+          let nresult = result ++ [(o^._1,problemID o,o^._2._3.frame_name,r1)]
+          liftIO $ writeFile "temp.txt" (concatMap formatResult nresult)
           lift (put (nresult,os))
           prompt
 
 
 
 main = do
+  args <- getArgs
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (preddb,rolesetdb) <- loadPropBankDB
   
   let flattened = createONFN sensemap framedb rolesetdb
-  let n = 0
-  let indexed = drop n $ take (n+100) $ zip [1..] flattened
-  r <- flip execStateT (([] :: [((Text,Text),Text)]),indexed) $ runInputT defaultSettings prompt
+  let n = read (args !! 0) :: Int
+  let indexed = drop (n-1) $ take (n+99) $ zip [1..] flattened
+  r <- flip execStateT (([] :: [(Int,(Text,Text),Text,Text)]),indexed) $ runInputT defaultSettings prompt
   print (fst r)
-  writeFile ("final" ++ show n ++ "-" ++ show (n+99) ++ ".txt") (show (fst r))
+  let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
+  writeFile "temp.txt" (concatMap formatResult (fst r))
     
     
 
