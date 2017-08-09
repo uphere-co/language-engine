@@ -66,10 +66,9 @@ nodesForward dEdges node cutoff = accumReachable accum cutoff dForwardEdges (UV.
     dForwardEdges = neighbor dEdges orderingByFrom
 
 accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> UV.Vector a -> V.Vector (UV.Vector a)
-accumPaths dfn path = UV.foldl' f accum (UV.map snd (dfn from))
+accumPaths dfn path = UV.foldl' f V.empty (UV.map snd (dfn from))
   where
     from = UV.last path
-    accum = V.empty
     f accum to = V.snoc accum (UV.snoc path to)   
 
 allPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> V.Vector (UV.Vector a)
