@@ -70,12 +70,12 @@ loadSenseInventory dir = do
                   Right c  -> return c
 
 
-loadSemLink :: FilePath -> IO VNFNMappingData
+loadSemLink :: FilePath -> IO VNFNMap
 loadSemLink fp = do
   txt <- T.L.IO.readFile fp
   case txt ^? html . allNamed (only "verbnet-framenet_MappingData") of
     Nothing -> error "nothing"
-    Just x -> case p_vnfnmappingdata x of
+    Just x -> case p_vnfnmap x of
                 Left e -> error e
                 Right c -> return c
 
@@ -94,9 +94,9 @@ loadFrameNet fp = do
   return lexunitdb
 
   
-createVNFNDB :: VNFNMappingData -> HashMap (Text,Text) [Text]
+createVNFNDB :: VNFNMap -> HashMap (Text,Text) [Text]
 createVNFNDB semlink = 
-  let lst = map (\c-> ((c^.vnc_vnmember,c^.vnc_class),c^.vnc_fnframe)) (semlink^.vnfnmap_vnclslst)
+  let lst = map (\c-> ((c^.vnc_vnmember,c^.vnc_class),c^.vnc_fnframe)) (semlink^.vnfnmap_vnfns)
   in foldl' (\(!acc) (k,v) -> HM.insertWith (++) k [v] acc) HM.empty lst
 
 

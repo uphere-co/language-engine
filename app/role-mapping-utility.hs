@@ -7,6 +7,7 @@ module Main where
 import           Control.Lens              hiding (para)
 import           Control.Monad
 import           Data.Either                      (rights)
+import           Data.Either.Extra                (maybeToEither)
 import           Data.Foldable
 
 import           Data.HashMap.Strict              (HashMap)
@@ -18,14 +19,19 @@ import           Data.Monoid
 import           Data.Text                        (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
+import qualified Data.Text.Lazy.IO          as T.L.IO
 import           Data.Text.Read                   (decimal)
 import           System.IO
 import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
+import           Text.Taggy.Lens
 --
+import           FrameNet.Query.Frame             (frameDB,loadFrameData)
 import           FrameNet.Query.LexUnit
-import           FrameNet.Type.Common (fr_frame)
+import           FrameNet.Type.Common             (fr_frame)
 import           FrameNet.Type.LexUnit
+import           VerbNet.Parser.SemLink
+import           VerbNet.Type.SemLink
 import           WordNet.Format
 import           WordNet.Query
 import           WordNet.Type
@@ -33,7 +39,9 @@ import           WordNet.Type.POS
 --
 import           OntoNotes.App.Load
 import           OntoNotes.Corpus.Load
+import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Type.SenseInventory
+
 
 
 verbnet :: HashMap (Text,Text) [Text] -> Text -> Text -> Box
@@ -175,5 +183,51 @@ listSenseWordNet = do
     putStrLn (render doc)
 
 
-main :: IO ()
-main = listSenseWordNet
+
+main' :: IO ()
+main' = do
+  let vnfnrole_file= "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VN-FNRoleMapping.txt"
+  let pbvn_file= "/scratch/wavewave/SemLink/1.2.2c/vn-pb/vnpbMappings"
+
+  vnfnrole_txt <- T.L.IO.readFile vnfnrole_file
+  pbvn_txt <- T.L.IO.readFile pbvn_file
+
+  let e = do 
+        vnfnrole_xml <- maybeToEither "xml parsing vnfnrole failed" (vnfnrole_txt ^? html . allNamed (only "verbnetRoles-framenetFEs_RoleMappingData"))
+        pbvn_xml     <- maybeToEither "xml parsing pbvn failed"     (pbvn_txt     ^? html . allNamed (only "pbvn-typemap"))
+        vnfnrole     <- p_vnfnrolemap vnfnrole_xml
+        pbvn         <- p_pbvnmap pbvn_xml
+        return (vnfnrole,pbvn)
+  case e of
+    Left err -> error err
+    Right (vnfnrole,pbvn) -> do
+      let vnfnmap = HM.fromList (vnfnrole^..vnfnrolemap_vnfnroles.traverse.to ((,) <$> (^.vnfnroleinst_class) <*> id))
+          pbvnmap = HM.fromList (pbvn^..pbvnmap_predicates.traverse.to ((,)<$> (^.pbvn_lemma) <*> id))
+      print (HM.lookup "40.3.2" vnfnmap)
+      let mrun01 = do pbvn <- HM.lookup "run" pbvnmap
+                      find (\a->a^.pbvnarg_pbroleset == "run.01") (pbvn^.pbvn_argmap)
+          mfn = HM.lookup "51.3.2" vnfnmap
+
+      print mrun01
+      print mfn
+
+main = do
+  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
+  framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
+  
+  let flattened = do
+        (lma, senses ) <- mapFromONtoFN
+        (sid,frtxt) <- senses
+        let g = T.head sid
+            n = T.drop 2 sid
+        let lmav = lma <> "-v"
+        si <- maybeToList (HM.lookup lmav sensemap)
+        osense <- maybeToList $
+                    find (\s -> T.head (s^.sense_group) == g && s^.sense_n == n)
+                         (si^.inventory_senses)
+        let frame = HM.lookup frtxt (framedb^.frameDB)
+          
+        return (lma,osense,frame)
+  let indexed = zip [1..] flattened
+  -- mapM_ print indexed
+  mapM_ print (filter ((== False) . (^._2._4)) indexed )
