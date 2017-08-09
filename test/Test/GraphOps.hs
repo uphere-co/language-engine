@@ -11,6 +11,7 @@ import           Control.Monad.ST                      (runST)
 
 import qualified Data.Vector.Algorithms.Search as VS
 import qualified Data.Vector.Unboxed           as UV
+import qualified Data.Vector                   as V
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy)
 
@@ -59,10 +60,22 @@ accumReachable accum cutoff dfn (frontiers,dist) = accumReachable (UV.concat [ns
     ns = UV.map (\x -> (x, dist+1)) nexts
 
 nodesForward :: (UV.Unbox a, Ord a) => UV.Vector (a,a) -> a -> Dist -> UV.Vector (a,Dist)
-nodesForward dEdges node cutoff = accumReachable accum cutoff dForwardNodes (UV.fromList [node],0)
+nodesForward dEdges node cutoff = accumReachable accum cutoff dForwardEdges (UV.fromList [node],0)
   where
     accum = UV.fromList [(node,0)]
-    dForwardNodes = neighbor dEdges orderingByFrom
+    dForwardEdges = neighbor dEdges orderingByFrom
+
+accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> UV.Vector a -> V.Vector (UV.Vector a)
+accumPaths dfn path = UV.foldl' f accum (UV.map snd (dfn from))
+  where
+    from = UV.last path
+    accum = V.empty
+    f accum to = V.snoc accum (UV.snoc path to)   
+
+allPaths dfn node cutoff = f 0 (V.singleton (UV.singleton node))
+  where
+    f dist paths | dist==cutoff = paths
+    f dist paths = f (dist+1) (V.concatMap (accumPaths dfn) paths)
 
 newtype NodeID = NodeID Int64
              deriving (Show,Ord,Eq)
@@ -82,19 +95,38 @@ testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected gra
                                ] :: [Edge])
     undirected = UV.concatMap (\(x,y) -> UV.fromList [(x,y),(y,x)]) directed
 
-    dForwardNodes  = neighbor directed orderingByFrom
-    dBackwardNodes = neighbor directed orderingByTo
-    uForwardNeighbor  = neighbor undirected orderingByFrom
-    uBackwardNeighbor = neighbor undirected orderingByTo
+    dForwardEdges  = neighbor directed orderingByFrom
+    dBackwardEdges = neighbor directed orderingByTo
+    uForwardEdges  = neighbor undirected orderingByFrom
+    uBackwardEdges = neighbor undirected orderingByTo
 
-  eassertEqual (dForwardNodes  1) (UV.fromList [(1,2),(1,3),(1,5),(1,6)])
-  eassertEqual (dBackwardNodes 1) (UV.fromList [(4,1),(9,1),(8,1),(10,1)])
-  eassertEqual (uBackwardNeighbor 4) (UV.fromList [(3,4),(2,4),(1,4)])
-  eassertEqual (uForwardNeighbor  4) (UV.fromList [(4,2),(4,1),(4,3)])
+  eassertEqual (dForwardEdges  1) (UV.fromList [(1,2),(1,3),(1,5),(1,6)])
+  eassertEqual (dBackwardEdges 1) (UV.fromList [(4,1),(9,1),(8,1),(10,1)])
+  eassertEqual (uBackwardEdges 4) (UV.fromList [(3,4),(2,4),(1,4)])
+  eassertEqual (uForwardEdges  4) (UV.fromList [(4,2),(4,1),(4,3)])
 
   eassertEqual (nodesForward directed 10 2) (UV.fromList [(2,2),(3,2),(5,2),(6,2),(11,2),(1,1),(8,1),(9,1),(10,0)])
   eassertEqual (nodesForward directed 10 3) (UV.fromList [(4,3),(7,3),(2,2),(3,2),(5,2),(6,2),(11,2),(1,1),(8,1),(9,1),(10,0)])
   eassertEqual (nodesForward directed 3  3) (UV.fromList [(2,3),(5,3),(6,3),(1,2),(4,1),(3,0)])
+
+testAllPaths :: TestTree
+testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pair of nodes" $ \step -> do
+  let
+    e from to = (NodeID from, NodeID to)
+    directed = vectorizeEdges ([ e 1 2, e 1 3, e 2 4, e 3 4, e 4 1
+                               , e 1 5, e 5 6, e 5 7, e 1 6
+                               , e 9 1, e 8 1, e 10 9,e 10 8,e 10 1
+                               , e 8 11,e 11 3
+                               ] :: [Edge])
+    dForwardEdges  = neighbor directed orderingByFrom
+
+  print $ accumPaths dForwardEdges (UV.fromList [10,8])
+  let
+    paths = accumPaths dForwardEdges (UV.fromList [10])
+  print paths
+  print $ V.concatMap (accumPaths dForwardEdges) paths
+  print $ allPaths dForwardEdges 10 2
+  print $ allPaths dForwardEdges 10 3
 
 
 testUtilsForShortedPath :: TestTree
@@ -110,8 +142,9 @@ testUtilsForShortedPath = testCaseSteps "Test helper functions for shorted path"
   eassertEqual (UV.filter (isIn nodes . fst) (UV.fromList aa)) (UV.fromList bb)
   let
     vs = UV.fromList ([6,1,11,3,1,2,6,2,9,7] :: [Int32])
-    uvs = UV.fromList ([1,2,3,6,7,9,11] :: [Int32])
+    uvs = UV.fromList ([1,2,3,6,7,9,11] :: [Int32])    
   eassertEqual (unique vs) uvs
+
 
 allTest :: TestTree
 allTest =
@@ -119,4 +152,5 @@ allTest =
     "All graph operation unit tests"
     [ testNeighborNodes
     , testUtilsForShortedPath
-    ]    
+    , testAllPaths
+    ]
