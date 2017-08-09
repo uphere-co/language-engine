@@ -25,6 +25,19 @@ loadVNFN = do
                 Right c -> print c
 
 
+loadVNFNRole :: IO ()
+loadVNFNRole = do
+  let file= "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VN-FNRoleMapping.txt"
+
+  txt <- T.L.IO.readFile file
+  case txt ^? html . allNamed (only "verbnetRoles-framenetFEs_RoleMappingData") of
+    Nothing -> error "nothing"
+    Just f -> case p_vnfnrolemap f of
+                Left err -> error err
+                Right c -> print c
+
+
+
 loadPBVN :: IO ()
 loadPBVN = do
   let file= "/scratch/wavewave/SemLink/1.2.2c/vn-pb/vnpbMappings"
