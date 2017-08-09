@@ -47,7 +47,8 @@ unique vs = UV.foldl' f UV.empty sorted
     f accum v | UV.last accum == v = accum
     f accum v = UV.snoc accum v
 
-accumReachable :: (UV.Unbox a, Ord a) => UV.Vector (a,Int32) -> Int32 -> (a -> UV.Vector (a,a)) -> (UV.Vector a, Int32) ->  UV.Vector (a,Int32)
+type Dist = Int32
+accumReachable :: (UV.Unbox a, Ord a) => UV.Vector (a,Dist) -> Dist -> (a -> UV.Vector (a,a)) -> (UV.Vector a, Dist) ->  UV.Vector (a,Dist)
 accumReachable accum cutoff dfn (frontiers,dist) | cutoff==dist = accum
 accumReachable accum cutoff dfn (frontiers,dist) = accumReachable (UV.concat [ns, accum]) cutoff dfn (nexts, dist+1)
   where
@@ -57,29 +58,35 @@ accumReachable accum cutoff dfn (frontiers,dist) = accumReachable (UV.concat [ns
     nexts = unique news
     ns = UV.map (\x -> (x, dist+1)) nexts
 
-nodesForward :: (UV.Unbox a, Ord a) => UV.Vector (a,a) -> a -> Int32 -> UV.Vector (a,Int32)
+nodesForward :: (UV.Unbox a, Ord a) => UV.Vector (a,a) -> a -> Dist -> UV.Vector (a,Dist)
 nodesForward dEdges node cutoff = accumReachable accum cutoff dForwardNodes (UV.fromList [node],0)
   where
     accum = UV.fromList [(node,0)]
     dForwardNodes = neighbor dEdges orderingByFrom
 
+newtype NodeID = NodeID Int64
+             deriving (Show,Ord,Eq)
+type Edge = (NodeID, NodeID)
+
+vectorizeEdges :: [Edge] -> UV.Vector (Int64, Int64)
+vectorizeEdges edges = UV.fromList (map (\(NodeID from, NodeID to) -> (from,to)) edges)
+
 testNeighborNodes :: TestTree
 testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected graph" $ \step -> do
   let
-    -- (from,to)
-    directed = UV.fromList ([(1,2),(1,3),(2,4),(3,4),(4,1)
-                            ,(1,5),(5,6),(5,7),(1,6)
-                            ,(9,1),(8,1),(10,9),(10,8),(10,1)
-                            ,(8,11),(11,3)
-                            ] :: [(Int32, Int32)])
+    e from to = (NodeID from, NodeID to)
+    directed = vectorizeEdges ([ e 1 2, e 1 3, e 2 4, e 3 4, e 4 1
+                               , e 1 5, e 5 6, e 5 7, e 1 6
+                               , e 9 1, e 8 1, e 10 9,e 10 8,e 10 1
+                               , e 8 11,e 11 3
+                               ] :: [Edge])
     undirected = UV.concatMap (\(x,y) -> UV.fromList [(x,y),(y,x)]) directed
-    empty = UV.fromList ([]::[(Int32,Int32)])
 
-  let
     dForwardNodes  = neighbor directed orderingByFrom
     dBackwardNodes = neighbor directed orderingByTo
     uForwardNeighbor  = neighbor undirected orderingByFrom
     uBackwardNeighbor = neighbor undirected orderingByTo
+
   eassertEqual (dForwardNodes  1) (UV.fromList [(1,2),(1,3),(1,5),(1,6)])
   eassertEqual (dBackwardNodes 1) (UV.fromList [(4,1),(9,1),(8,1),(10,1)])
   eassertEqual (uBackwardNeighbor 4) (UV.fromList [(3,4),(2,4),(1,4)])
@@ -106,15 +113,10 @@ testUtilsForShortedPath = testCaseSteps "Test helper functions for shorted path"
     uvs = UV.fromList ([1,2,3,6,7,9,11] :: [Int32])
   eassertEqual (unique vs) uvs
 
-fff :: TestTree
-fff = testCaseSteps "ff" $ \step -> do
-  print "a"
-
 allTest :: TestTree
 allTest =
   testGroup
     "All graph operation unit tests"
     [ testNeighborNodes
     , testUtilsForShortedPath
-    , fff
     ]    
