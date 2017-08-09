@@ -72,6 +72,7 @@ accumPaths dfn path = UV.foldl' f accum (UV.map snd (dfn from))
     accum = V.empty
     f accum to = V.snoc accum (UV.snoc path to)   
 
+allPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> V.Vector (UV.Vector a)
 allPaths dfn node cutoff = f 0 (V.singleton (UV.singleton node))
   where
     f dist paths | dist==cutoff = paths
