@@ -146,6 +146,7 @@ showProblem (i,(lma,osense,frame,pbs)) = do
   let sid = osense^.sense_group <> "." <> osense^.sense_n
   liftIO $ putStrLn "========================================================================================================="  
   liftIO $ putStrLn (printf "%d th item: %s %s" i lma sid)
+  liftIO $ putStrLn (printf "definition: %s\n%s" (osense^.sense_name) (osense^.sense_examples))
   let fes = numberedFEs frame
   liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------"
   liftIO $ putStrLn (printf "%s" (frame^.frame_name))
@@ -157,7 +158,6 @@ showProblem (i,(lma,osense,frame,pbs)) = do
   liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------"
   
 
--- askEach input = 
 
 reformatInput o txt = let ws = T.words txt
                       in T.intercalate " " $ map f ws
@@ -196,42 +196,15 @@ main = do
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (preddb,rolesetdb) <- loadPropBankDB
-  -- print (HM.lookup "examine.01" (rolesetdb^.rolesetDB))
   
-  let flattened = createONFN sensemap framedb rolesetdb 
-  let indexed = zip [1..] flattened
-        
-{- 
-    
-    print (i,lma,sid,fes_ordered_txts)
-    mapM_ (putStrLn . formatPBRoles) pbroles
-  -- mapM_ print (filter ((== False) . (^._2._4)) indexed )
--}
+  let flattened = createONFN sensemap framedb rolesetdb
+  let n = 0
+  let indexed = drop n $ take (n+100) $ zip [1..] flattened
   r <- flip execStateT (([] :: [((Text,Text),Text)]),indexed) $ runInputT defaultSettings prompt
   print (fst r)
-  writeFile "final.txt" (show (fst r))
---     minput <- getInputLine "? "
+  writeFile ("final" ++ show n ++ "-" ++ show (n+99) ++ ".txt") (show (fst r))
     
     
 
 
 
-{- 
-  whileJust_ (getInputLine "? ") $ \input' -> liftIO $ do
-  forM_ (take 20 indexed) $ \(i,(lma,osense,frame,pbroles)) -> do
-    let fes = frame^..frame_FE.traverse
-        corefes = filter (\fe -> fe^.fe_coreType == Core || fe^.fe_coreType == CoreUnexpressed) fes
-        perifes = filter (\fe -> fe^.fe_coreType == Peripheral) fes
-        extrafes = filter (\fe -> fe^.fe_coreType == ExtraThematic) fes
-        fes_ordered = corefes ++ perifes ++ extrafes
-        fes_ordered_txts = zip [1..] . map (^.fe_name) $ fes_ordered
-
-        sid = osense^.sense_group <> osense^.sense_n
-        -- proptxts = map (rs^..roleset_roles.roles_role.traverse.to ((,) <$> ^.role_n, ) propbanks
-        
-
-    
-    print (i,lma,sid,fes_ordered_txts)
-    mapM_ (putStrLn . formatPBRoles) pbroles
-  -- mapM_ print (filter ((== False) . (^._2._4)) indexed )
--}
