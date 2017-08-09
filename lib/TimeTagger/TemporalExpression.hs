@@ -26,6 +26,8 @@ import           CoreNLP.Simple.Type.Simplified
 import           CoreNLP.Simple.Util
 import           Text.TaggedText
 
+
+{-
 mkRangeVal st = zip3 (st ^.. T.timexes . traverse . T.characterOffsetBegin) (st ^.. T.timexes . traverse . T.characterOffsetEnd) (st ^.. T.timexes . traverse . T.timex . T.value) 
 
 -- findTemporalTokens :: [(Int32, Int32, Maybe Text.ProtocolBuffers.Basic.Utf8)] -> [[Token]] -> IO [(t3, [Int])]
@@ -48,3 +50,4 @@ getTemporalExp txt pp = do
       let range = mkRangeVal suetime_result
       result <- findTemporalTokens range tokss
       return $ map (\(v,xs) -> TagInfo {_taginfo_range = (head xs,last xs), _taginfo_metainfo = Just $ MetaInfo { _metainfo_info = fmap cutf8 v}, _taginfo_text = T.intercalate " " $ map (\x -> ((concat tokss) !! x) ^. token_text) xs}) result
+-}
