@@ -304,9 +304,8 @@ queryProcess pp sensemap sensestat framedb ontomap emTagger =
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
                   sentStructure pp sensemap sensestat framedb ontomap emTagger txt
-      ":v " ->    do
-        sentStructure pp sensemap sensestat framedb ontomap emTagger rest
-        getSentStructure pp sensemap sensestat framedb ontomap emTagger rest >>= mapM_ T.IO.putStrLn
+      ":v " ->    sentStructure pp sensemap sensestat framedb ontomap emTagger rest
+        -- getSentStructure pp sensemap sensestat framedb ontomap emTagger rest >>= mapM_ T.IO.putStrLn
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
@@ -384,6 +383,16 @@ runAnalysis = do
                   )
     queryProcess pp sensemap sensestat framedb ontomap emTagger
 
+getAnalysis input pp = do
+  let cfg = cfgG
+  framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
+  let ontomap = HM.fromList mapFromONtoFN
+  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
+  sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
+  let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
+  emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]  
+  getSentStructure pp sensemap sensestat framedb ontomap emTagger input
+    
 
 
 --
