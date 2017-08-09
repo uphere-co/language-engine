@@ -13,13 +13,25 @@ import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
 
 
-main :: IO ()
-main = do
+loadVNFN :: IO ()
+loadVNFN = do
   let file= "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
 
   txt <- T.L.IO.readFile file
   case txt ^? html . allNamed (only "verbnet-framenet_MappingData") of
     Nothing -> error "nothing"
-    Just f -> case p_vnfnmappingdata f of
+    Just f -> case p_vnfnmap f of
+                Left err -> error err
+                Right c -> print c
+
+
+loadPBVN :: IO ()
+loadPBVN = do
+  let file= "/scratch/wavewave/SemLink/1.2.2c/vn-pb/vnpbMappings"
+
+  txt <- T.L.IO.readFile file
+  case txt ^? html . allNamed (only "pbvn-typemap") of
+    Nothing -> error "nothing"
+    Just f -> case p_pbvnmap f of
                 Left err -> error err
                 Right c -> print c

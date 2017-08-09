@@ -17,13 +17,43 @@ import           Text.Taggy.Lens.Util
 import           VerbNet.Type.SemLink
 
 
-p_vnclass :: Element -> Parser VNClass
-p_vnclass x = VNClass <$> x .: "class"
-                      <*> x .: "vnmember"
-                      <*> x .: "fnframe"
-                      <*> x .: "fnlexent"
-                      <*> x .: "versionID"
+--------------------------
+-- VerbNet <-> FrameNet --
+--------------------------
 
-p_vnfnmappingdata :: Element -> Parser VNFNMappingData
-p_vnfnmappingdata x = VNFNMappingData <$> mapM p_vnclass (getOnly x "vncls")
-                                      <*> x .: "date"
+p_vnfn :: Element -> Parser VNFN
+p_vnfn x = VNFN <$> x .: "class"
+                <*> x .: "vnmember"
+                <*> x .: "fnframe"
+                <*> x .: "fnlexent"
+                <*> x .: "versionID"
+
+
+p_vnfnmap :: Element -> Parser VNFNMap
+p_vnfnmap x = VNFNMap <$> mapM p_vnfn (getOnly x "vncls")
+                      <*> x .: "date"
+
+
+--------------------------
+-- VerbNet <-> PropBank --
+--------------------------
+
+p_pbvn_role :: Element -> Parser PBVNRole
+p_pbvn_role x = PBVNRole <$> x .: "pb-arg"
+                         <*> x .: "vn-theta"
+                         
+
+p_pbvn_argmap :: Element -> Parser PBVNArgMap
+p_pbvn_argmap x = PBVNArgMap <$> x .: "pb-roleset"
+                             <*> x .: "vn-class"
+                             <*> traverse p_pbvn_role (getOnly x "role")
+
+
+p_pbvn :: Element -> Parser PBVN
+p_pbvn x = PBVN <$> x .: "lemma"
+                <*> traverse p_pbvn_argmap (getOnly x "argmap")
+
+
+p_pbvnmap :: Element -> Parser PBVNMap
+p_pbvnmap x = PBVNMap <$> traverse p_pbvn (getOnly x "predicate")
+
