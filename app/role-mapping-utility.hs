@@ -51,77 +51,7 @@ import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Type.SenseInventory
 
 
-
-verbnet :: HashMap (Text,Text) [Text] -> Text -> Text -> Box
-verbnet semlinkmap lma txt =
-  let (_,cls') = T.breakOn "-" txt
-  in if T.null cls'
-     then text (printf "%-43s" ("" :: String))
-     else let cls = T.tail cls'
-              frms = fromMaybe [] (HM.lookup (lma,cls) semlinkmap)
-          in text (printf "%-8s -> " cls) <+>
-             vcat top (if null frms
-                       then [text (printf "%-30s" ("":: String))]
-                       else map (text.printf "%-30s") frms
-                      )
-
 {- 
-framesFromLU :: LexUnitDB -> Text -> [Text]
-framesFromLU ludb lma = do
-  i <- fromMaybe [] (HM.lookup lma (ludb^.nameIDmap))
-  l <- maybeToList (IM.lookup i (ludb^.lexunitDB))
-  frm <- maybeToList (l^.lexunit_frameReference^.fr_frame)
-  return frm
--}
-
-formatSenses :: Text -> VorN -> HashMap Text Inventory -> HashMap (Text,Text) [Text] -> HashMap (Text,Text) Int -> [Box]
-formatSenses lma vorn sensemap semlinkmap sensestat = do
-  let lmav = lma <> case vorn of V -> "-v" ; N -> "-n"
-  si <- maybeToList (HM.lookup lmav sensemap)
-  s <- si^.inventory_senses
-  let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
-      txt1 = text (printf "%2s.%-6s (%4d cases) |  " (s^.sense_group) (s^.sense_n) num )
-      mappings = s^.sense_mappings
-      txt_pb = vcat top $ let lst = T.splitOn "," (mappings^.mappings_pb)
-                          in if null lst
-                             then [text (printf "%-20s" ("" :: String))]
-                             else map (text.printf "%-20s") lst
-      txt_fn = vcat top $ let lst = maybe [] (T.splitOn ",") (mappings^.mappings_fn)
-                          in if null lst
-                             then [text (printf "%-30s" ("" :: String))]
-                             else map (text.printf "%-30s") lst
-      txt_wn = vcat top $ let lst = map (text.printf "%-30s") (catMaybes (mappings^..mappings_wn.traverse.wn_lemma))
-                          in if null lst then [text (printf "%-30s" ("" :: String))] else lst
-      txt_vn = case vorn of
-                 V -> vcat top $ let lst = maybe [] (map (verbnet semlinkmap lma) . T.splitOn ",") (mappings^.mappings_vn)
-                                 in if null lst
-                                    then [text (printf "%-43s" ("" :: String))]
-                                    else lst --  map (text.printf "%-20s") lst
-                 N -> vcat top [text (printf "%-42s" ("" :: String))]
-      txt_definition = text ("definition: " ++ T.unpack (s^.sense_name))
-      txt_commentary = text (T.unpack (fromMaybe "" (s^.sense_commentary)))
-      txt_examples   = text (T.unpack (s^.sense_examples))
-      txt_detail = vcat left [txt_definition,txt_commentary,txt_examples]
-  return (vcat left [(txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn),txt_detail])
-
-
-
-
-
-listSenseDetail :: IO ()
-listSenseDetail = do
-  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
-
-  let merged = mergeStatPB2Lemma ws
-  forM_ merged $ \(lma,f) -> do
-    T.IO.hPutStrLn stderr lma
-    -- let frms = framesFromLU ludb (lma <> ".v")
-    let doc = text (printf "%20s:%6d " lma f) //
-              vcat top (formatSenses lma V sensemap semlinkmap sensestat )
-    putStrLn (render doc)
-
-
-
 main' :: IO ()
 main' = do
   let vnfnrole_file= "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VN-FNRoleMapping.txt"
@@ -148,7 +78,7 @@ main' = do
 
       print mrun01
       print mfn
-
+-}
 
 extractPBRoles pb =
   pb^..roleset_roles.roles_role.traverse.to ((,) <$> (^.role_n) <*> (^.role_descr))
