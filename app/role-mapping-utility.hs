@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Main where
@@ -196,7 +197,7 @@ prompt = do
 
 
 
-main = do
+main' = do
   args <- getArgs
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
@@ -210,7 +211,28 @@ main = do
   let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
   writeFile "temp.txt" (concatMap formatResult (fst r))
     
-    
+deriving instance Read Voice
+
+parseWithNullCheck :: (Text -> a) -> Text -> Maybe a
+parseWithNullCheck f w = if w == "null" then Nothing else Just (f w)
+
+parseSubcat :: [Text] -> (Text,Text,Maybe Voice,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Int)
+parseSubcat ws@[lma,sense,mvoice,marg0,marg1,marg2,marg3,marg4,count] =
+  ( lma ,sense
+  , parseWithNullCheck (read . T.unpack) mvoice
+  , parseWithNullCheck id marg0
+  , parseWithNullCheck id marg1
+  , parseWithNullCheck id marg2
+  , parseWithNullCheck id marg3
+  , parseWithNullCheck id marg4
+  , either (error ("error: " ++ show ws)) fst (decimal count)
+  )
+
+main = do
+  let verbsubcatfile = "/scratch/wavewave/run/20170809/verbsubcat_propbank_ontonotes_statsummary.tsv"
+  txt <- T.IO.readFile verbsubcatfile
+  let subcats = map parseSubcat . map T.words . T.lines $ txt
+  mapM_ print subcats
 
 
 
