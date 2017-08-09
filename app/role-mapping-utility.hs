@@ -14,6 +14,7 @@ import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.State.Strict
 import           Data.Either                      (rights)
 import           Data.Either.Extra                (maybeToEither)
+import           Data.Function                    (on)
 import           Data.Foldable
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
@@ -37,10 +38,11 @@ import           Text.Taggy.Lens
 import           FrameNet.Query.Frame             (frameDB,loadFrameData)
 import           FrameNet.Type.Common             (CoreType(..),fr_frame)
 import           FrameNet.Type.Frame
+import           NLP.Syntax.Type
 import           PropBank.Query                   (constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB
                                                   )
-import           PropBank.Type.Frame
+import           PropBank.Type.Frame       hiding (Voice)
 import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
 import           WordNet.Format
@@ -51,6 +53,7 @@ import           WordNet.Type.POS
 import           OntoNotes.App.Load
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Mapping.FrameNet
+import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.SenseInventory
 
 
@@ -197,20 +200,7 @@ prompt = do
 
 
 
-main' = do
-  args <- getArgs
-  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
-  framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
-  (preddb,rolesetdb) <- loadPropBankDB
-  
-  let flattened = createONFN sensemap framedb rolesetdb
-  let n = read (args !! 0) :: Int
-  let indexed = drop (n-1) $ take (n+99) $ zip [1..] flattened
-  r <- flip execStateT (([] :: [(Int,(Text,Text),Text,Text)]),indexed) $ runInputT defaultSettings prompt
-  print (fst r)
-  let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
-  writeFile "temp.txt" (concatMap formatResult (fst r))
-    
+
 deriving instance Read Voice
 
 parseWithNullCheck :: (Text -> a) -> Text -> Maybe a
@@ -228,11 +218,35 @@ parseSubcat ws@[lma,sense,mvoice,marg0,marg1,marg2,marg3,marg4,count] =
   , either (error ("error: " ++ show ws)) fst (decimal count)
   )
 
-main = do
+loadVerbSubcat = do
   let verbsubcatfile = "/scratch/wavewave/run/20170809/verbsubcat_propbank_ontonotes_statsummary.tsv"
   txt <- T.IO.readFile verbsubcatfile
-  let subcats = map parseSubcat . map T.words . T.lines $ txt
+  let getLemmaSense x = (x^._1,x^._2)
+      getArgTable x = ArgPattern (x^._3) (x^._4) (x^._5) (x^._6) (x^._7) (x^._8)
+  let subcats = map (\xs  -> (getLemmaSense (head xs),map (\x->(getArgTable x,x^._9)) xs)) .  groupBy ((==) `on` getLemmaSense) . map parseSubcat . map T.words . T.lines $ txt
+  -- mapM_ print subcats
+  return subcats
+
+
+main = do
+  subcats <- loadVerbSubcat
   mapM_ print subcats
 
+main' = do
+
+  args <- getArgs
+  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
+  framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
+  (preddb,rolesetdb) <- loadPropBankDB
+
+  
+  let flattened = createONFN sensemap framedb rolesetdb
+  let n = read (args !! 0) :: Int
+  let indexed = drop (n-1) $ take (n+99) $ zip [1..] flattened
+  r <- flip execStateT (([] :: [(Int,(Text,Text),Text,Text)]),indexed) $ runInputT defaultSettings prompt
+  print (fst r)
+  let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
+  writeFile "temp.txt" (concatMap formatResult (fst r))
+    
 
 
