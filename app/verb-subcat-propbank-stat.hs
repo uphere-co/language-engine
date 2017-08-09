@@ -69,15 +69,6 @@ maybeNumberedArgument _                    = Nothing
 
 
 
-formatArgPatt :: ArgPattern -> String
-formatArgPatt patt = printf "voice:%-15s arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s"
-                       (maybe "unidentified" show (patt^.patt_voice))
-                       (fromMaybe "" (patt^.patt_arg0))
-                       (fromMaybe "" (patt^.patt_arg1))
-                       (fromMaybe "" (patt^.patt_arg2))
-                       (fromMaybe "" (patt^.patt_arg3))
-                       (fromMaybe "" (patt^.patt_arg4))
-
 
 formatArgTable :: Maybe (VerbProperty,_) -> ArgTable -> String
 formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
