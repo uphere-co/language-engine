@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -83,6 +84,9 @@ main' = do
 extractPBRoles pb =
   pb^..roleset_roles.roles_role.traverse.to ((,) <$> (^.role_n) <*> (^.role_descr))
 
+extractPBExamples pb = pb^..roleset_example.traverse.example_text
+
+
 createONFN sensemap framedb rolesetdb = do 
   (lma, senses ) <- mapFromONtoFN
   (sid,frtxt) <- senses
@@ -96,8 +100,8 @@ createONFN sensemap framedb rolesetdb = do
   frame <- maybeToList $ HM.lookup frtxt (framedb^.frameDB)
   let pbids = T.splitOn "," (osense^.sense_mappings.mappings_pb)
       pbs = mapMaybe (\pb -> HM.lookup pb (rolesetdb^.rolesetDB)) pbids
-      pbroles = map (\pb -> (pb^.roleset_id,extractPBRoles pb)) pbs
-  return (lma,osense,frame,pbroles)
+      -- pbroles = map (\pb -> (pb^.roleset_id,pb^.roleset_name,extractPBRoles pb)) pbs
+  return (lma,osense,frame,pbs)
 
 
 loadPropBankDB = do
@@ -106,7 +110,12 @@ loadPropBankDB = do
   return (preddb,rolesetdb)
 
 
-formatPBRoles (rid,roles) = T.unpack rid ++ "\n" ++ intercalate "\n" rolestrs ++ "\n-----------"
+formatPBInfos (rid,mname,examples,roles) = printf "%-20s: %s\n" rid (fromMaybe "" mname)
+                                           ++ intercalate "\n" rolestrs
+                                           ++ "\n-----------\n"
+                                           ++ T.unpack (T.intercalate "\n" examples)
+                                           ++ "\n-----------"
+                                           
   where
     rolestrs = flip map roles $ \(n,mdesc) -> printf "arg%1s: %s" n (fromMaybe "" mdesc)
 
@@ -118,11 +127,7 @@ numberedFEs frame =
       icorefes = zip [0..] corefes
       iperifes = zip [length corefes..] perifes
       iextrafes = zip [length corefes+length perifes..] extrafes
-      -- fes_ordered = corefes ++ perifes ++ extrafes
-      -- fes_ordered_txts = zip [1..] . map (^.fe_name) $ fes_ordered
-  in (icorefes,iperifes,iextrafes) --  fes_ordered_txts
-        -- sid = osense^.sense_group <> osense^.sense_n
-
+  in (icorefes,iperifes,iextrafes)
 
 
 
@@ -131,20 +136,45 @@ formatFEs (icorefes,iperifes,iextrafes) = formatf icorefes ++ " | " ++ formatf i
   where formatf fes = intercalate ", " (map (\(i,fe) -> printf "%2d-%s" (i :: Int) (fe^.fe_name)) fes)
 
 
+problemID (i,(lma,osense,frame,pbs)) = let sid = osense^.sense_group <> "." <> osense^.sense_n
+                                       in (lma,sid)
+
+
+
 showProblem :: (Int,_) -> InputT (StateT _ IO) ()
-showProblem (i,(lma,osense,frame,pbroles)) = do
+showProblem (i,(lma,osense,frame,pbs)) = do
   let sid = osense^.sense_group <> "." <> osense^.sense_n
   liftIO $ putStrLn "========================================================================================================="  
   liftIO $ putStrLn (printf "%d th item: %s %s" i lma sid)
   let fes = numberedFEs frame
-  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------"  
+  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------"
+  liftIO $ putStrLn (printf "%s" (frame^.frame_name))
   liftIO $ putStrLn (formatFEs fes)
   liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------"
-  mapM_ (liftIO . putStrLn . formatPBRoles) pbroles
+  let pbinfos = map (\pb -> (pb^.roleset_id,pb^.roleset_name,extractPBExamples pb,extractPBRoles pb)) pbs
+
+  mapM_ (liftIO . putStrLn . formatPBInfos) pbinfos
   liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------"
+  
+
+-- askEach input = 
+
+reformatInput o txt = let ws = T.words txt
+                      in T.intercalate " " $ map f ws
+  where fes0 = numberedFEs (o^._2._3) 
+        fes = fes0^._1 ++ fes0^._2 ++ fes0^._3
+
+        f w = let xs = T.splitOn ":" w
+              in case xs of
+                   (x:y:[]) -> case decimal y of
+                                 Left _ -> w
+                                 Right (n,_) -> case find ((== n) . (^._1)) fes of
+                                                 Just (_,fe) -> x <> ":" <> fe^.fe_name
+                                                 Nothing -> w
+                                 
 
 prompt = do
-  (rlst,olst) <- lift get
+  (result,olst) <- lift get
   case olst of
     [] -> return ()
     o:os -> do
@@ -153,7 +183,11 @@ prompt = do
       case m of
         Nothing -> return ()
         Just x -> do
-          lift (put (rlst,os))
+          let r1 = reformatInput o (T.pack x)
+          liftIO $ T.IO.putStrLn r1
+          let nresult = result ++ [(problemID o,r1)]
+          liftIO $ writeFile "temp.txt" (show nresult)
+          lift (put (nresult,os))
           prompt
 
 
@@ -173,8 +207,9 @@ main = do
     mapM_ (putStrLn . formatPBRoles) pbroles
   -- mapM_ print (filter ((== False) . (^._2._4)) indexed )
 -}
-  r <- flip runStateT (([] :: [Int]),indexed) $ runInputT defaultSettings prompt
-  print r
+  r <- flip execStateT (([] :: [((Text,Text),Text)]),indexed) $ runInputT defaultSettings prompt
+  print (fst r)
+  writeFile "final.txt" (show (fst r))
 --     minput <- getInputLine "? "
     
     
