@@ -2405,4 +2405,234 @@ mapFromONtoFN =
         ,("1.5.6", "Arranging")
         ,("1.5.8", "Improvement_or_decline")])
 
+    , ( "care"
+      , [("1.1", "Experiencer_focus")                      -- (Experiencer_focus)
+        ,("1.2", "Assistance") -- (Assistance) || (Medical_intervention)
+        ,("1.3", "Desiring")])
+
+    , ( "cap"
+      , [("1.2", "Limiting")
+        ,("1.4", "Activity_finish")])
+
+    , ( "afford"
+      , [("1.1", "Tolerating")
+        ,("1.2", "Tolerating")       -- (Tolerating) || (Supply)
+        ,("1.3", "Supply")])
+
+    , ( "absorb"
+      , [("1.1", "Soaking_up")
+        ,("1.2", "Grasp")
+        ,("1.3", "Amalgamation")
+        ,("1.4", "Experiencer_obj")
+        ,("1.5", "Impact")])
+
+    , ( "repair"
+      , [("1.1", "Resolve_problem")])
+
+    , ( "pour"
+      , [("1.1", "Fluidic_motion")
+        ,("1.2", "Mass_motion")    -- Mass_motion || Fluidic_motion
+        ,("1.3", "Using_resource")]) -- Using_resource || Supply
+
+    , ( "lease"
+      , [("1.1", "Renting")
+        ,("1.2", "Renting_out")])
+
+    , ( "imply"
+      , [("1.1", "Evidence")
+        ,("1.2", "Communication")])
+
+    , ( "found"
+      , [("1.1", "Intentionally_create")])
+
+    , ( "feed"
+      , [("1.1", "Ingestion")
+        ,("1.2", "Supply")
+        ,("1.3", "Capacity")
+        ,("1.5", "Ingestion")
+        ,("1.6", "Path_shape")
+        ,("1.8", "Emotion_directed")])
+
+    , ( "define"
+      , [("1.1", "Communicate_categorization")
+        ,("1.2", "Categorization")])
+
+    , ( "belong"
+      , [("1.1", "Possession")
+        ,("1.2", "Membership")])
+
+    , ( "alter"
+      , [("1.1", "Cause_change")])
+
+    , ( "weigh"
+      , [("1.1", "Dimension")
+        ,("1.3", "Assessing")
+        ,("1.4", "Importance")
+        ,("1.7", "Participation")])
+
+    , ( "surround"
+      , [("1.1", "Surrounding")])
+
+    , ( "strip"
+      , [("1.1", "Removing")      -- Removing || Taking || Emptying
+        ,("1.3", "Wearing")])
+
+    , ( "split"
+      , [("1.1", "Separating")
+        ,("1.2", "Breaking_apart")
+        ,("1.3", "Personal_relationship")
+        ,("1.4", "Departing")])
+
+    , ( "speed"
+      , [("1.1", "Cause_change_of_position_on_a_scale")
+        ,("1.2", "Cause_change_of_position_on_a_scale")])
+
+    , ( "regard"
+      , [("1.1", "Categorization")
+        ,("1.3", "Topic")])
+
+    , ( "organize"
+      , [("1.1", "Intentionally_create")
+        ,("1.2", "Making_arrangements")])
+
+    , ( "locate"
+      , [("1.1", "Locating")
+        ,("1.2", "Being_located")])
+
+    , ( "interpret"
+      , [("1.1", "Categorization")])
+
+    , ( "inform"
+      , [("1.1", "Telling")])
+
+    , ( "forecast"
+      , [("1.1", "Predicting")])
+
+    , ( "export"
+      , [("1.1", "Exporting")])
+
+    , ( "demonstrate"
+      , [("1.1", "Evidence")                  -- Evidence || Reasoning
+        ,("1.2", "Cause_to_perceive")
+        ,("1.3", "Protest")])
+
+    , ( "convince"
+      , [("1.1", "Suasion")])
+
+    , ( "amount"
+      , [("1.1", "Amounting_to")
+        ,("1.2", "Being_in_category")])
+
+    , ( "air"
+      , [("1.2", "Publishing")])                -- Publishing
+
+    , ( "transform"
+      , [("1.1", "Cause_change")   -- Cause_change || Undergo_transformation
+        ,("1.4", "Cause_change")])
+
+    , ( "sponsor"
+      , [("1.1", "Funding")])
+
+    , ( "slide"
+      , [("1.1", "Motion")
+        ,("1.2", "Motion")
+        ,("1.3", "Change_position_on_a_scale")
+        ,("1.4", "Process_continue")])
+
+    , ( "secure"
+      , [("1.1", "Getting")])
+
+    , ( "satisfy"
+      , [("1.1", "Satisfying")])
+
+    , ( "pose"
+      , [("1.1", "Topic")
+        ,("1.3", "Posing_as")])
+
+    , ( "love"
+      , [("1.1", "Experiencer_focus")
+        ,("1.2", "Likelihood")])        -- (Likelihood)
+
+    , ( "illustrate"
+      , [("1.1", "Cause_to_perceive")
+        ,("1.2", "Evidence")])
+
+    , ( "fire"
+      , [("1.1", "Use_firearm")
+        ,("1.2", "Firing")
+        ,("1.7", "none")])
+
+    , ( "escape"
+      , [("1.1", "Escaping")
+        ,("1.2", "Avoiding")
+        ,("1.4", "Remembering_information")
+        ,("1.6", "none")])
+
+    , ( "display"
+      , [("1.1", "Cause_to_perceive")
+        ,("1.2", "Cause_to_perceive")])
+
+    , ( "discourage"
+      , [("1.1", "Experiencer_obj")
+        ,("1.2", "Attempt_suasion")])
+
+    , ( "underlie"
+      , [("1.1", "Causation")])
+
+    , ( "suspect"
+      , [("1.1", "Awareness")
+        ,("1.2", "Suspicion")])
+
+    , ( "squeeze"
+      , [("1.1", "Manipulation")
+        ,("1.2", "Cause_to_move_in_place")
+        ,("1.3", "Cause_to_move_in_place")            -- (Cause_to_move_in_place)
+        ,("1.5", "Inclusion")])
+
+    , ( "specify"
+      , [("1.1", "Statement")])
+
+    , ( "slash"
+      , [("1.2", "Cause_change_of_position_on_a_scale")])
+
+    , ( "reverse"
+      , [("1.1", "Change_direction")
+        ,("1.2", "Deciding")                         -- (Decision)
+        ,("1.3", "Cause_change")])
+
+    , ( "qualify"
+      , [("1.1", "Meet_specifications")])
+
+    , ( "prevail"
+      , [("1.1", "Dominate_situation")
+        ,("1.2", "Existence")])
+
+    , ( "postpone"
+      , [("1.1", "Change_event_time")])
+
+    , ( "influence"
+      , [("1.1", "Objective_influence")])   -- Objective_influence || Subjective_influence
+
+    , ( "hang"
+      , [("1.1", "Placing")
+        ,("1.4", "Existence")              -- (Existence)
+        ,("1.5", "Reliance")
+        ,("1.6", "Waiting")
+        ,("1.7", "Personal_relationship")])  -- (Personal_relationship) || (Experiencer_focus)
+
+    , ( "free"
+      , [("1.1", "Breaking_out_captive")
+        ,("1.2", "Removing")
+        ,("1.3", "Capacity")])
+
+    , ( "examine"
+      , [("1.1", "Scrutiny")
+        ,("1.2", "Inspecting")
+        ,("1.3", "Examination")])
+
+    , ( "date"
+      , [("1.1", "Personal_relationship")
+        ,("1.2", "Sign")
+        ,("1.3", "Origin")])
+
     ]
