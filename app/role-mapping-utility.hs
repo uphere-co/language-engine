@@ -1,15 +1,18 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
 import           Control.Lens              hiding (para)
 import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.State.Strict
 import           Data.Either                      (rights)
 import           Data.Either.Extra                (maybeToEither)
 import           Data.Foldable
-
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import qualified Data.IntMap                as IM
@@ -21,15 +24,20 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import qualified Data.Text.Lazy.IO          as T.L.IO
 import           Data.Text.Read                   (decimal)
+import           System.Console.Haskeline
+import           System.Console.Haskeline.MonadException
 import           System.IO
 import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
 import           Text.Taggy.Lens
 --
 import           FrameNet.Query.Frame             (frameDB,loadFrameData)
-import           FrameNet.Query.LexUnit
-import           FrameNet.Type.Common             (fr_frame)
-import           FrameNet.Type.LexUnit
+import           FrameNet.Type.Common             (CoreType(..),fr_frame)
+import           FrameNet.Type.Frame
+import           PropBank.Query                   (constructPredicateDB, constructFrameDB
+                                                  ,constructRoleSetDB, rolesetDB
+                                                  )
+import           PropBank.Type.Frame
 import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
 import           WordNet.Format
@@ -57,14 +65,14 @@ verbnet semlinkmap lma txt =
                        else map (text.printf "%-30s") frms
                       )
 
-
+{- 
 framesFromLU :: LexUnitDB -> Text -> [Text]
 framesFromLU ludb lma = do
   i <- fromMaybe [] (HM.lookup lma (ludb^.nameIDmap))
   l <- maybeToList (IM.lookup i (ludb^.lexunitDB))
   frm <- maybeToList (l^.lexunit_frameReference^.fr_frame)
   return frm
-
+-}
 
 formatSenses :: Text -> VorN -> HashMap Text Inventory -> HashMap (Text,Text) [Text] -> HashMap (Text,Text) Int -> [Box]
 formatSenses lma vorn sensemap semlinkmap sensestat = do
@@ -97,54 +105,7 @@ formatSenses lma vorn sensemap semlinkmap sensestat = do
   return (vcat left [(txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn),txt_detail])
 
 
-listWordNets :: WN -> [Text]
-listWordNets wn = T.splitOn "," (wn^.wn_contents)
 
-
-formatWordNet :: Text -> VorN -> HashMap Text Inventory -> HashMap (Text,Text) Int -> WordNetDB -> [Box]
-formatWordNet lma vorn sensemap sensestat wndb = do
-  let lmav = lma <> case vorn of V -> "-v" ; N -> "-n"
-  si <- maybeToList (HM.lookup lmav sensemap)
-  s <- si^.inventory_senses
-  let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
-      txt1 = text (printf "%2s.%-6s (%4d cases) |  " (s^.sense_group) (s^.sense_n) num )
-      mappings = s^.sense_mappings
-      wns = mappings^..mappings_wn.traverse
-      wndatas = do wn <- wns
-                   snumtxt <- listWordNets wn
-                   snum <- fst <$> rights [decimal snumtxt]
-                   let l = case wn^.wn_lemma of
-                             Nothing -> lma
-                             Just l' -> l'
-                       wnsense = l <> "." <> T.pack (show snum)
-                       dbdata = do
-                         (snum',soff') <- join . maybeToList $ (indexDB wndb POS_V) ^? at l . _Just . idx_synset_offset
-                         d <- maybeToList ((dataDB wndb POS_V) ^. at (unSynsetOffset soff'))
-                         return (snum',d)
-                   result <- maybeToList (find (\x -> x^._1 == SenseNumber snum) dbdata)
-                   return (wnsense,result)
-      txt_wn_senses = do (wnsense,(_,d)) <- wndatas
-                         let wnverbframes = show (d^..data_frames.traverse.to ((,)<$> view frame_f_num <*> view frame_w_num))
-                             restxt = printf "%-20s: %-45s | %25s | %-s  "
-                                        wnsense
-                                        (T.intercalate "," (map formatLI (d^.data_word_lex_id)))
-                                        wnverbframes
-                                        (d^.data_gloss)
-                         return (text restxt)
-      wn_frames = map head . group .  sort $ wndatas^..traverse._2._2.data_frames.traverse.frame_f_num
-      txt_wn_frames = text ("All frames: " ++ show wn_frames)
-      txt_wn = vcat left (txt_wn_senses ++ [txt_wn_frames])
-
-      txt_definition = map (text . T.unpack . T.strip) $ T.lines (s^.sense_name)
-      txt_commentary = map (text . T.unpack . T.strip) $ T.lines (fromMaybe "" (s^.sense_commentary))
-      txt_examples   = map (text . T.unpack . T.strip) $ T.lines (s^.sense_examples)
-      txt_detail = vcat left (txt_definition ++ txt_commentary ++ txt_examples)
-  return $ (txt1 <+> vcat left [txt_detail,txt_wn]) //
-           text "---------------------------------------------------------------------------------------------------------------"
-
-
-formatStat :: ((Text,Text),Int) -> String
-formatStat ((lma,sens),num) = printf "%20s.%-5s : %5d" lma sens num
 
 
 listSenseDetail :: IO ()
@@ -154,32 +115,9 @@ listSenseDetail = do
   let merged = mergeStatPB2Lemma ws
   forM_ merged $ \(lma,f) -> do
     T.IO.hPutStrLn stderr lma
-    let frms = framesFromLU ludb (lma <> ".v")
-        doc = text (printf "%20s:%6d " lma f) //
+    -- let frms = framesFromLU ludb (lma <> ".v")
+    let doc = text (printf "%20s:%6d " lma f) //
               vcat top (formatSenses lma V sensemap semlinkmap sensestat )
-    putStrLn "====================================================================================================================="
-    putStrLn $ "From FrameNet Lexical Unit " ++ show (lma <> ".v") ++ ": " ++ show frms
-    putStrLn (render doc)
-
-
-listSenseWordNet :: IO ()
-listSenseWordNet = do
-  (_ludb,sensestat,_semlinkmap,sensemap,ws,wndb) <- loadAllexceptPropBank
-
-  {- 
-  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
-  sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
-  let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-
-  ws <- loadStatistics (cfg^.cfg_statistics) -}
-  let merged = mergeStatPB2Lemma ws
-
-  forM_ merged $ \(lma,f) -> do
-    T.IO.hPutStrLn stderr lma
-    let doc = text "=====================================================================================================================" //
-              text (printf "%20s:%6d " lma f) //
-              text "---------------------------------------------------------------------------------------------------------------" //
-              vcat top (formatWordNet lma V sensemap sensestat wndb)
     putStrLn (render doc)
 
 
@@ -211,23 +149,124 @@ main' = do
       print mrun01
       print mfn
 
+
+extractPBRoles pb =
+  pb^..roleset_roles.roles_role.traverse.to ((,) <$> (^.role_n) <*> (^.role_descr))
+
+createONFN sensemap framedb rolesetdb = do 
+  (lma, senses ) <- mapFromONtoFN
+  (sid,frtxt) <- senses
+  let g = T.head sid
+      n = T.drop 2 sid
+  let lmav = lma <> "-v"
+  si <- maybeToList (HM.lookup lmav sensemap)
+  osense <- maybeToList $
+              find (\s -> T.head (s^.sense_group) == g && s^.sense_n == n)
+                   (si^.inventory_senses)
+  frame <- maybeToList $ HM.lookup frtxt (framedb^.frameDB)
+  let pbids = T.splitOn "," (osense^.sense_mappings.mappings_pb)
+      pbs = mapMaybe (\pb -> HM.lookup pb (rolesetdb^.rolesetDB)) pbids
+      pbroles = map (\pb -> (pb^.roleset_id,extractPBRoles pb)) pbs
+  return (lma,osense,frame,pbroles)
+
+
+loadPropBankDB = do
+  preddb <- constructPredicateDB <$> constructFrameDB (cfg^.cfg_propbank_framedir)
+  let rolesetdb = constructRoleSetDB preddb 
+  return (preddb,rolesetdb)
+
+
+formatPBRoles (rid,roles) = T.unpack rid ++ "\n" ++ intercalate "\n" rolestrs ++ "\n-----------"
+  where
+    rolestrs = flip map roles $ \(n,mdesc) -> printf "arg%1s: %s" n (fromMaybe "" mdesc)
+
+numberedFEs frame = 
+  let fes = frame^..frame_FE.traverse
+      corefes = filter (\fe -> fe^.fe_coreType == Core || fe^.fe_coreType == CoreUnexpressed) fes
+      perifes = filter (\fe -> fe^.fe_coreType == Peripheral) fes
+      extrafes = filter (\fe -> fe^.fe_coreType == ExtraThematic) fes
+      icorefes = zip [0..] corefes
+      iperifes = zip [length corefes..] perifes
+      iextrafes = zip [length corefes+length perifes..] extrafes
+      -- fes_ordered = corefes ++ perifes ++ extrafes
+      -- fes_ordered_txts = zip [1..] . map (^.fe_name) $ fes_ordered
+  in (icorefes,iperifes,iextrafes) --  fes_ordered_txts
+        -- sid = osense^.sense_group <> osense^.sense_n
+
+
+
+
+
+formatFEs (icorefes,iperifes,iextrafes) = formatf icorefes ++ " | " ++ formatf iperifes ++ " | " ++ formatf iextrafes
+  where formatf fes = intercalate ", " (map (\(i,fe) -> printf "%2d-%s" (i :: Int) (fe^.fe_name)) fes)
+
+
+showProblem :: (Int,_) -> InputT (StateT _ IO) ()
+showProblem (i,(lma,osense,frame,pbroles)) = do
+  let sid = osense^.sense_group <> "." <> osense^.sense_n
+  liftIO $ putStrLn "========================================================================================================="  
+  liftIO $ putStrLn (printf "%d th item: %s %s" i lma sid)
+  let fes = numberedFEs frame
+  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------"  
+  liftIO $ putStrLn (formatFEs fes)
+  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------"
+  mapM_ (liftIO . putStrLn . formatPBRoles) pbroles
+  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------"
+
+prompt = do
+  (rlst,olst) <- lift get
+  case olst of
+    [] -> return ()
+    o:os -> do
+      showProblem o
+      m <- getInputLine "? "
+      case m of
+        Nothing -> return ()
+        Just x -> do
+          lift (put (rlst,os))
+          prompt
+
+
+
 main = do
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
+  (preddb,rolesetdb) <- loadPropBankDB
+  -- print (HM.lookup "examine.01" (rolesetdb^.rolesetDB))
   
-  let flattened = do
-        (lma, senses ) <- mapFromONtoFN
-        (sid,frtxt) <- senses
-        let g = T.head sid
-            n = T.drop 2 sid
-        let lmav = lma <> "-v"
-        si <- maybeToList (HM.lookup lmav sensemap)
-        osense <- maybeToList $
-                    find (\s -> T.head (s^.sense_group) == g && s^.sense_n == n)
-                         (si^.inventory_senses)
-        let frame = HM.lookup frtxt (framedb^.frameDB)
-          
-        return (lma,osense,frame)
+  let flattened = createONFN sensemap framedb rolesetdb 
   let indexed = zip [1..] flattened
-  -- mapM_ print indexed
-  mapM_ print (filter ((== False) . (^._2._4)) indexed )
+        
+{- 
+    
+    print (i,lma,sid,fes_ordered_txts)
+    mapM_ (putStrLn . formatPBRoles) pbroles
+  -- mapM_ print (filter ((== False) . (^._2._4)) indexed )
+-}
+  r <- flip runStateT (([] :: [Int]),indexed) $ runInputT defaultSettings prompt
+  print r
+--     minput <- getInputLine "? "
+    
+    
+
+
+
+{- 
+  whileJust_ (getInputLine "? ") $ \input' -> liftIO $ do
+  forM_ (take 20 indexed) $ \(i,(lma,osense,frame,pbroles)) -> do
+    let fes = frame^..frame_FE.traverse
+        corefes = filter (\fe -> fe^.fe_coreType == Core || fe^.fe_coreType == CoreUnexpressed) fes
+        perifes = filter (\fe -> fe^.fe_coreType == Peripheral) fes
+        extrafes = filter (\fe -> fe^.fe_coreType == ExtraThematic) fes
+        fes_ordered = corefes ++ perifes ++ extrafes
+        fes_ordered_txts = zip [1..] . map (^.fe_name) $ fes_ordered
+
+        sid = osense^.sense_group <> osense^.sense_n
+        -- proptxts = map (rs^..roleset_roles.roles_role.traverse.to ((,) <$> ^.role_n, ) propbanks
+        
+
+    
+    print (i,lma,sid,fes_ordered_txts)
+    mapM_ (putStrLn . formatPBRoles) pbroles
+  -- mapM_ print (filter ((== False) . (^._2._4)) indexed )
+-}

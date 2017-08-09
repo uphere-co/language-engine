@@ -164,6 +164,7 @@ Executable role-mapping-utility
                        lens,
                        taggy-lens,
                        text,
+                       transformers,
                        unordered-containers,
                        --
                        HFrameNet,
