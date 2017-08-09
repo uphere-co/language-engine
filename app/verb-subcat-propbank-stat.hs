@@ -70,7 +70,8 @@ maybeNumberedArgument _                    = Nothing
 
 
 formatArgPatt :: ArgPattern -> String
-formatArgPatt patt = printf "arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s"
+formatArgPatt patt = printf "voice:%-15s arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s"
+                       (maybe "unidentified" show (patt^.patt_voice))
                        (fromMaybe "" (patt^.patt_arg0))
                        (fromMaybe "" (patt^.patt_arg1))
                        (fromMaybe "" (patt^.patt_arg2))
@@ -159,34 +160,58 @@ countSenseForLemma lma = sortBy (compare `on` (^._1))
                            . filter (\((sense,_),_) -> sense == lma <> "-v") 
 
 
-showStat :: HashMap Text Inventory
+showStat :: Bool                        -- ^ is tab separated format
+         -> HashMap Text Inventory
          -> [(Text,Int)]                -- ^ lemmastat
          -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
          -> IO ()
-showStat sensedb lemmastat classified_inst_map = do
+showStat isTSV sensedb lemmastat classified_inst_map = do
   let lst = HM.toList classified_inst_map
   forM_ lemmastat $ \(lma,f) -> do
-    printHeader (lma,f)
+    when (not isTSV) $ printHeader (lma,f)
     -- let lst' = filterSenseByLemma lma lst
     forM_ (countSenseForLemma lma lst) $ \((sense,sense_num),count) -> do
       let (mdefn,insts) = getDefInst sensedb classified_inst_map (sense,sense_num)
           statmap = foldl' addfunc HM.empty insts
-            where addfunc acc (filesidtid,_,proptr,inst,_sense) =
+            where addfunc acc (filesidtid,corenlp,proptr,inst,_sense) =
                     let args = inst^.inst_arguments
                         iproptr = mkPennTreeIdx proptr
                         l2p = linkID2PhraseNode proptr
+                        coretr = corenlp^._1
+                        minst = MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (coretr,proptr) inst }
+                        
+                        lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
+                        verbprops = verbPropertyFromPennTree lemmamap coretr 
+                        
+                        clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
+                        mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
+                        mvoice = do (vp,_) <- mvpmva
+                                    return (vp^.vp_voice)
                         argtable = mkArgTable iproptr l2p filesidtid args
-                        argpatt = mkArgPattern argtable
+                        argpatt = mkArgPattern mvoice argtable
                     in HM.alter (\case Nothing -> Just 1 ; Just n -> Just (n+1)) argpatt acc
           statlst = (sortBy (flip compare `on` snd) . HM.toList) statmap
           senseheader = "\n============================================================================\n"
                         ++ printf "%20s : %6d :  %s\n" (sense <> "." <> sense_num) count (fromMaybe "" mdefn)
                         ++ "============================================================================\n"
-      putStrLn senseheader
-      forM_ statlst $ \(patt :: ArgPattern,n :: Int) -> do
-        let str1 = formatArgPatt patt :: String
-        putStrLn (printf "%s     #count: %5d" str1 n)
-
+      if (not isTSV)
+        then do
+          putStrLn senseheader
+          forM_ statlst $ \(patt :: ArgPattern,n :: Int) -> do
+            let str1 = formatArgPatt patt :: String
+            putStrLn (printf "%s     #count: %5d" str1 n)
+        else do
+          forM_ statlst $ \(patt :: ArgPattern, n :: Int) -> do
+            putStrLn $ printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d"
+                         sense
+                         sense_num
+                         (maybe "null" show (patt^.patt_voice)) 
+                         (fromMaybe "null" (patt^.patt_arg0))
+                         (fromMaybe "null" (patt^.patt_arg1))
+                         (fromMaybe "null" (patt^.patt_arg2))
+                         (fromMaybe "null" (patt^.patt_arg3))
+                         (fromMaybe "null" (patt^.patt_arg4))
+                         n
 
 showStatInst :: Bool
              -> HashMap Text Inventory
@@ -211,21 +236,6 @@ showError (Right _) = return ()
 readSenseInsts :: FilePath -> IO [SenseInstance]
 readSenseInsts sensefile = fmap (rights . map parseSenseInst . map T.words . T.lines) (T.IO.readFile sensefile)
 
-
-
-
-data ProgOption = ProgOption { showDetail :: Bool
-                             , statOnly :: Bool
-                             } deriving Show
-
-pOptions :: Parser ProgOption
-pOptions = ProgOption <$> switch (long "detail" <> short 'd' <> help "Whether to show detail")
-                      <*> switch (long "stat" <> short 's' <> help "Calculate statistics")
-
-progOption :: ParserInfo ProgOption 
-progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant to verb subcategorization")
-
-
 -- need parse tree to adjust index (deleting none and hyphen)
 mergePropSense :: PennTree -> [Instance] -> [SenseInstance] -> [(Int, Maybe Instance, SenseInstance)]
 mergePropSense proptr insts senses =
@@ -234,6 +244,21 @@ mergePropSense proptr insts senses =
       lst = makeKeyAttrib (^.sinst_token_id) senses --  map (\x -> fromTuple (x^.sinst_token_id,x)) senses
   in map toTuple (joinAttrib (\x -> (either id id . adj) (x^.inst_predicate_id)) insts lst)
       
+
+
+
+data ProgOption = ProgOption { showDetail :: Bool
+                             , statOnly   :: Bool
+                             , tsvFormat  :: Bool
+                             } deriving Show
+
+pOptions :: Parser ProgOption
+pOptions = ProgOption <$> switch (long "detail" <> short 'd' <> help "Whether to show detail")
+                      <*> switch (long "stat" <> short 's' <> help "Calculate statistics")
+                      <*> switch (long "tsv" <> short 't' <> help "tsv format")
+
+progOption :: ParserInfo ProgOption 
+progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant to verb subcategorization")
 
 
 main :: IO ()
@@ -280,7 +305,7 @@ main = do
   let lemmastat = mergeStatPB2Lemma rolesetstat
 
   if (statOnly opt)
-    then showStat sensedb lemmastat classified_inst_map 
+    then showStat (tsvFormat opt) sensedb lemmastat classified_inst_map 
     else showStatInst (showDetail opt) sensedb lemmastat classified_inst_map
 
 

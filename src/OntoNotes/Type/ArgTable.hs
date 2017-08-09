@@ -1,7 +1,8 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell    #-}
 
 module OntoNotes.Type.ArgTable where
 
@@ -13,6 +14,7 @@ import           Data.Text                    (Text)
 import qualified Data.Text               as T
 import           GHC.Generics
 --
+import           NLP.Syntax.Type
 import           NLP.Type.PennTreebankII
 import           PropBank.Match
 import           PropBank.Type.Prop
@@ -30,7 +32,14 @@ data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
 
 makeLenses ''ArgTable
 
-data ArgPattern = ArgPattern { _patt_arg0 :: Maybe Text
+-- orphan instance! I will move it to syntactic-analysis soon
+deriving instance Generic Voice
+
+instance Hashable Voice
+
+
+data ArgPattern = ArgPattern { _patt_voice :: Maybe Voice
+                             , _patt_arg0 :: Maybe Text
                              , _patt_arg1 :: Maybe Text
                              , _patt_arg2 :: Maybe Text
                              , _patt_arg3 :: Maybe Text
@@ -40,15 +49,19 @@ data ArgPattern = ArgPattern { _patt_arg0 :: Maybe Text
 
 makeLenses ''ArgPattern
 
+
 instance Hashable ArgPattern
 
-mkArgPattern :: ArgTable -> ArgPattern
-mkArgPattern ArgTable {..} = ArgPattern { _patt_arg0 = _tbl_arg0
-                                        , _patt_arg1 = _tbl_arg1
-                                        , _patt_arg2 = _tbl_arg2
-                                        , _patt_arg3 = _tbl_arg3
-                                        , _patt_arg4 = _tbl_arg4
-                                        }
+
+
+mkArgPattern :: Maybe Voice -> ArgTable -> ArgPattern
+mkArgPattern mvoice ArgTable {..} = ArgPattern { _patt_voice = mvoice
+                                               , _patt_arg0 = _tbl_arg0
+                                               , _patt_arg1 = _tbl_arg1
+                                               , _patt_arg2 = _tbl_arg2
+                                               , _patt_arg3 = _tbl_arg3
+                                               , _patt_arg4 = _tbl_arg4
+                                               }
 
 
 -- | https://en.wiktionary.org/wiki/Category:English_prepositions
