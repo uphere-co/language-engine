@@ -1,11 +1,12 @@
-{-# LANGUAGE BangPatterns      #-}
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TupleSections       #-}
 
 module OntoNotes.App.Analyze where
 
@@ -13,6 +14,7 @@ import           Control.Lens          hiding (Level)
 import           Control.Monad
 import           Control.Monad.Loops
 import           Control.Monad.IO.Class           (liftIO)
+-- import           Control.Monad.Writer.Lazy
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
@@ -123,13 +125,11 @@ addSUTime sents tmxs =
             )
   in filter (not.null.(^._2)) $ map (addTag (map f (tmxs^..T.timexes.traverse))) sents
 
+getFormatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> [Text]
+getFormatTimex (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["----------"] ++ [T.pack (show a)]
 
-formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
-formatTimex (s,a) = do
-  T.IO.putStrLn (T.intercalate "\n" (underlineText (const "") (s^._2) (s^._3) a))
-  T.IO.putStrLn "----------"
-  print a
-
+showFormatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
+showFormatTimex (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex (s,a)))
 
 runParser :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
@@ -251,8 +251,8 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
   putStrLn "\n\n-- TimeTagger -----------------------------------------------------------------------------------"
   case mtmx of
     Nothing -> putStrLn "Time annotation not successful!"
-    Just sentswithtmx -> mapM_ formatTimex sentswithtmx
-  putStrLn "\n\n-- WikiNamedEntityTagger ------------------------------------------------------------------------"
+    Just sentswithtmx -> mapM_ showFormatTimex sentswithtmx
+  putStrLn "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
   putStrLn (render (formatNER psents sentitems linked_mentions_resolved))
   putStrLn "\n\n--------------------------------------------------------------------------------------------------"
   putStrLn "-- Sentence analysis -----------------------------------------------------------------------------"
@@ -305,12 +305,66 @@ queryProcess pp sensemap sensestat framedb ontomap emTagger =
                   txt <- T.IO.readFile fp
                   sentStructure pp sensemap sensestat framedb ontomap emTagger txt
       ":v " ->    sentStructure pp sensemap sensestat framedb ontomap emTagger rest
+        -- getSentStructure pp sensemap sensestat framedb ontomap emTagger rest >>= mapM_ T.IO.putStrLn
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
 
+
+getSentStructure :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+                 -> HashMap Text Inventory
+                 -> HashMap (Text, Text) Int
+                 -> FrameDB
+                 -> HashMap Text [(Text, Text)]
+                 -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
+                 -> Text
+                 -> IO [Text]
+getSentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
+  (psents,sents,sentitems,_tokss,mptrs,deps,mtmx,linked_mentions_resolved) <- runParser pp emTagger txt
+
+  let line1 = [ "\n\n\n\n\n\n\n\n================================================================================================="
+              , "-- TimeTagger -----------------------------------------------------------------------------------" ]
+
+  let line2 = case mtmx of
+                Nothing -> ["Time annotation not successful!"]
+                Just sentswithtmx -> concat $ map getFormatTimex sentswithtmx
+
+  let line3 = [ "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
+              , T.pack (render (formatNER psents sentitems linked_mentions_resolved))
+              , "--------------------------------------------------------------------------------------------------"
+              , "-- Sentence analysis -----------------------------------------------------------------------------"
+              , "--------------------------------------------------------------------------------------------------" ]
+              
+  mlines <- flip mapM (zip5 ([0..] :: [Int]) psents sents mptrs deps) $ \(i,psent,_sent,mptr,_dep) -> do
+    flip mapM mptr $ \ptr -> do
+      let lemmamap = mkLemmaMap psent
+          vps = verbPropertyFromPennTree lemmamap ptr
+
+      let subline1 = concat [ [T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)]
+                     , [(formatIndexTokensFromTree 0 ptr)]
+                     , ["--------------------------------------------------------------------------------------------------"]
+                     , getClauseStructure lemmamap ptr
+                     , ["================================================================================================="] ] 
+
+      subline2 <- forM (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
+        let senses = getSenses lma sensemap sensestat framedb ontomap
+        let ssubline1 = [ T.pack (printf "Verb: %-20s" lma)
+                        , T.pack $ (formatSenses False) senses
+                        , "--------------------------------------------------------------------------------------------------" ]
+        return ssubline1
+      return (subline1, subline2)
+  let line4 = concat $ map f mlines
+        where f mxs = case mxs of
+                        Nothing       -> [""]
+                        Just (xs,yss) -> xs ++ (concat yss)
+
+  return $ line1 ++ line2 ++ line3 ++ line4
+
+
+  
 runAnalysis :: IO ()
 runAnalysis = do
+  let cfg = cfgG
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
@@ -329,5 +383,85 @@ runAnalysis = do
                   )
     queryProcess pp sensemap sensestat framedb ontomap emTagger
 
+getAnalysis input pp = do
+  let cfg = cfgG
+  framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
+  let ontomap = HM.fromList mapFromONtoFN
+  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
+  sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
+  let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
+  emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]  
+  getSentStructure pp sensemap sensestat framedb ontomap emTagger input
+    
+
+--
+--
+-- wiki-ner test
+--
+--
 
 
+-- loadWikiNER = do
+  -- companyfile <- T.IO.readFile listedCompanyFile
+
+main1 :: IO ()
+main1 = do
+  txt <- T.IO.readFile newsFileTxt
+
+  emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
+
+  clspath <- getEnv "CLASSPATH"
+  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
+    pp <- prepare (def & (tokenizer .~ True)
+                       . (words2sentences .~ True)
+                       . (postagger .~ True)
+                       . (lemma .~ True)
+                       -- . (sutime .~ True)
+                       -- . (constituency .~ True)
+                       . (ner .~ True)
+                  )
+    -- queryProcess pp sensemap sensestat framedb ontomap
+    let doc = Document txt (fromGregorian 2017 4 17)
+    ann <- annotate pp doc
+    rdoc <- protobufDoc ann
+    case rdoc of
+      Left _ -> return ()
+      Right d -> do
+        let psents = d ^.. D.sentence . traverse
+            sentidxs = getSentenceOffsets psents
+            sents = map (addText txt) sentidxs 
+            unNER (NERSentence tokens) = tokens
+            neTokens = concatMap (unNER . sentToNER) psents
+            linked_mentions_all = emTagger neTokens
+            linked_mentions_resolved
+              = filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all
+            toks = concatMap (map snd . sentToTokens) psents
+            tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
+            sents_tagged = map (addTag tags) sents
+            doc1 = formatTaggedSentences sents_tagged
+            doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
+            doc = hsep 10 left [doc1,doc2]
+        putStrLn (render doc)
+
+loadJVM = do
+  pp <- prepare (def & (tokenizer .~ True)
+                     . (words2sentences .~ True)
+                     . (postagger .~ True)
+                     . (lemma .~ True)
+                     . (sutime .~ True)
+                     . (constituency .~ True)
+                     . (ner .~ True)
+                )
+  return pp
+
+cfgG :: Config              
+cfgG = Config { _cfg_sense_inventory_file  = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
+              , _cfg_semlink_file          = "/data/groups/uphere/data/NLP/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
+              , _cfg_statistics            = "/data/groups/uphere/data/NLP/run/20170717/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
+              , _cfg_wsj_directory         = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
+              , _cfg_framenet_lubin        = "/data/groups/uphere/data/NLP/run/FrameNet_ListOfLexUnit.bin"
+              , _cfg_framenet_framedir     = "/data/groups/uphere/data/NLP/FrameNet/1.7/fndata/fndata-1.7/frame" 
+              , _cfg_wordnet_dict          = "/data/groups/uphere/data/NLP/dict"
+              , _cfg_propbank_framedir     = "/data/groups/uphere/data/NLP/frames"
+              , _cfg_wsj_corenlp_directory = "/data/groups/uphere/data/NLP/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
+              }
