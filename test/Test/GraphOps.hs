@@ -94,6 +94,7 @@ nodesBackward dEdges node cutoff = accumReachable from accum cutoff dBackwardEdg
     dBackwardEdges = neighbor dEdges to
 
 {-
+-- Vector versions
 accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> UV.Vector a -> V.Vector (UV.Vector a)
 accumPaths fn path = UV.foldl' f V.empty (UV.map snd (fn from))
   where
@@ -107,21 +108,21 @@ allPaths fn node cutoff = f 0 (V.singleton (UV.singleton node))
     f dist paths = f (dist+1) (V.concatMap (accumPaths fn) paths)
 -}
 
---accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> UV.Vector a -> B.Bundle UV.Vector a
+accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> UV.Vector a -> B.Bundle UV.Vector (UV.Vector a)
 accumPaths fn path = UV.foldl' f B.empty (UV.map snd (fn from))
   where
     from = UV.last path
     f accum to = B.snoc accum (UV.snoc path to)
 
 -- all paths of length `cutoff`, starting from the input `node`
---allPathsOf :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> V.Vector (UV.Vector a)
+allPathsOf :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> B.Bundle UV.Vector (UV.Vector a)
 allPathsOf fn node cutoff = f 0 (B.singleton (UV.singleton node))
   where
     f dist paths | dist==cutoff = paths
     f dist paths = f (dist+1) (B.concatMap (accumPaths fn) paths)
 
 -- all paths of length UPTO `cutoff`, starting from the input `node`
---allPathsUpto :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> B.Bundle UV.Vector a
+allPathsUpto :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> B.Bundle UV.Vector (UV.Vector a)
 allPathsUpto fn node cutoff = f B.empty 0 (B.singleton (UV.singleton node))
   where
     f accum dist paths | dist==cutoff = accum B.++ paths
@@ -169,8 +170,6 @@ testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected gra
   eassertEqual (nodesBackward undirected 8 2) (UV.fromList [(2,2),(3,2),(4,2),(5,2),(6,2),(9,2),(1,1),(10,1),(11,1),(8,0)])
   eassertEqual (nodesBackward undirected 1 1) (UV.fromList [(2,1),(3,1),(4,1),(5,1),(6,1),(8,1),(9,1),(10,1),(1,0)])
 
-u :: [[Int64]] -> [UV.Vector Int64]
-u = map UV.fromList
 
 testAllPaths :: TestTree
 testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pair of nodes" $ \step -> do
@@ -182,7 +181,8 @@ testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pai
                                , e 8 11,e 11 3
                                ] :: [Edge])
     dForwardEdges  = neighbor directed from
-    
+
+    u = map UV.fromList :: [[Int64]] -> [UV.Vector Int64]
   eassertEqual (u [[8,1],[8,11]]) (B.toList (accumPaths dForwardEdges (UV.fromList [8])))
   eassertEqual (u [[8,8,1],[8,8,11]]) (B.toList (accumPaths dForwardEdges (UV.fromList [8,8]))) --Nonsense input. Just for testing
   eassertEqual (u [[10,9],[10,8],[10,1]]) (B.toList (accumPaths dForwardEdges (UV.fromList [10])))
@@ -208,7 +208,7 @@ testUtilsForShortedPath = testCaseSteps "Test helper functions for shorted path"
   eassertEqual (UV.filter (isIn nodes . fst) (UV.fromList aa)) (UV.fromList bb)
   let
     vs = UV.fromList ([6,1,11,3,1,2,6,2,9,7] :: [Int32])
-    uvs = UV.fromList ([1,2,3,6,7,9,11] :: [Int32])    
+    uvs = UV.fromList ([1,2,3,6,7,9,11] :: [Int32])
   eassertEqual (unique vs) uvs
 
 
