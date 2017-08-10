@@ -164,6 +164,7 @@ Executable role-mapping-utility
                        extra,
                        haskeline,
                        lens,
+                       split,
                        taggy-lens,
                        text,
                        transformers,
