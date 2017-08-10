@@ -182,6 +182,12 @@ cutOutLevel0 (PN (rng,(p,lvl)) xs) =
 
 showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
 showClauseStructure lemmamap ptree  = do
+  let x:xs = getClauseStructure lemmamap ptree
+  T.IO.putStrLn x
+  flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
+
+getClauseStructure :: IntMap Lemma -> PennTree -> [Text]
+getClauseStructure lemmamap ptree =
   let vps  = verbPropertyFromPennTree lemmamap ptree
       tr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
       tr' = bimap (\(_rng,x)->f x) g (cutOutLevel0 tr)
@@ -193,12 +199,6 @@ showClauseStructure lemmamap ptree  = do
               f (S_RT  ,l)    = "ROOT" <> ":" <> T.pack (show l)
               g (Left x)      = T.pack (show x)
               g (Right x)     = T.pack (show x)
-
-  T.IO.putStrLn (formatBitree id tr')
-  let rngs = clauseRanges tr
-  flip mapM_ vps $ \vp -> do
-    putStrLn $ printf "%-50s | Clause %7s:  %s"
-                 (formatVerbProperty vp)
-                 (maybe "" show (clauseForVerb rngs vp))
-                 (maybe "" formatVerbArgs (getVerbArgs tr vp))
-
+      rngs = clauseRanges tr
+      xs = flip map vps $ \vp -> T.pack $ printf "%-50s | Clause %7s:  %s" (formatVerbProperty vp) (maybe "" show (clauseForVerb rngs vp)) (maybe "" formatVerbArgs (getVerbArgs tr vp))
+  in [formatBitree id tr'] ++ xs
