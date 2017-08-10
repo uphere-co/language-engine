@@ -13,6 +13,7 @@ import qualified Data.Vector.Algorithms.Search as VS
 import qualified Data.Vector.Unboxed           as UV
 import qualified Data.Vector.Generic           as GV
 import qualified Data.Vector                   as V
+import qualified Data.Vector.Fusion.Bundle     as B
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy)
 
@@ -92,18 +93,41 @@ nodesBackward dEdges node cutoff = accumReachable from accum cutoff dBackwardEdg
     accum = UV.fromList [(node,0)]
     dBackwardEdges = neighbor dEdges to
 
+{-
 accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> UV.Vector a -> V.Vector (UV.Vector a)
 accumPaths fn path = UV.foldl' f V.empty (UV.map snd (fn from))
   where
     from = UV.last path
-    f accum to = V.snoc accum (UV.snoc path to)   
+    f accum to = V.snoc accum (UV.snoc path to)
 
--- all paths of length `cutoff`, starting from the input `node`
 allPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> V.Vector (UV.Vector a)
 allPaths fn node cutoff = f 0 (V.singleton (UV.singleton node))
   where
     f dist paths | dist==cutoff = paths
     f dist paths = f (dist+1) (V.concatMap (accumPaths fn) paths)
+-}
+
+--accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> UV.Vector a -> B.Bundle UV.Vector a
+accumPaths fn path = UV.foldl' f B.empty (UV.map snd (fn from))
+  where
+    from = UV.last path
+    f accum to = B.snoc accum (UV.snoc path to)
+
+-- all paths of length `cutoff`, starting from the input `node`
+--allPathsOf :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> V.Vector (UV.Vector a)
+allPathsOf fn node cutoff = f 0 (B.singleton (UV.singleton node))
+  where
+    f dist paths | dist==cutoff = paths
+    f dist paths = f (dist+1) (B.concatMap (accumPaths fn) paths)
+
+-- all paths of length UPTO `cutoff`, starting from the input `node`
+--allPathsUpto :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> B.Bundle UV.Vector a
+allPathsUpto fn node cutoff = f B.empty 0 (B.singleton (UV.singleton node))
+  where
+    f accum dist paths | dist==cutoff = accum B.++ paths
+    f accum dist paths = f (accum B.++ paths) (dist+1) nexts
+      where
+        nexts = B.concatMap (accumPaths fn) paths
 
 newtype NodeID = NodeID Int64
              deriving (Show,Ord,Eq)
@@ -157,14 +181,25 @@ testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pai
                                ] :: [Edge])
     dForwardEdges  = neighbor directed from
 
-  print $ accumPaths dForwardEdges (UV.fromList [10,8])
+  print $ B.toList (accumPaths dForwardEdges (UV.fromList [10,8]))
   let
     paths = accumPaths dForwardEdges (UV.fromList [10])
-  print paths
-  print $ V.concatMap (accumPaths dForwardEdges) paths
-  print $ allPaths dForwardEdges 10 2
-  print $ allPaths dForwardEdges 10 3
-  print $ GV.length (allPaths dForwardEdges 10 3)
+  --print paths
+  --print $ B.concatMap (accumPaths dForwardEdges) paths
+  --mapM_ print $ allPaths dForwardEdges 10 2
+  print "------------------------------"
+  --mapM_ print $ allPaths dForwardEdges 10 3
+  print "------------------------------"
+  let
+    tmp = allPathsOf dForwardEdges 10 3
+    tmp2 = allPathsUpto dForwardEdges 10 3
+  print (B.toList tmp)
+  print "------------------------------"
+  print (B.toList tmp2)
+  print "------------------------------"
+  B.mapM_ print (B.slice 1 5 tmp)
+
+
 
 
 testUtilsForShortedPath :: TestTree
