@@ -169,6 +169,8 @@ testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected gra
   eassertEqual (nodesBackward undirected 8 2) (UV.fromList [(2,2),(3,2),(4,2),(5,2),(6,2),(9,2),(1,1),(10,1),(11,1),(8,0)])
   eassertEqual (nodesBackward undirected 1 1) (UV.fromList [(2,1),(3,1),(4,1),(5,1),(6,1),(8,1),(9,1),(10,1),(1,0)])
 
+u :: [[Int64]] -> [UV.Vector Int64]
+u = map UV.fromList
 
 testAllPaths :: TestTree
 testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pair of nodes" $ \step -> do
@@ -180,24 +182,15 @@ testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pai
                                , e 8 11,e 11 3
                                ] :: [Edge])
     dForwardEdges  = neighbor directed from
-
-  print $ B.toList (accumPaths dForwardEdges (UV.fromList [10,8]))
-  let
-    paths = accumPaths dForwardEdges (UV.fromList [10])
-  --print paths
-  --print $ B.concatMap (accumPaths dForwardEdges) paths
-  --mapM_ print $ allPaths dForwardEdges 10 2
-  print "------------------------------"
-  --mapM_ print $ allPaths dForwardEdges 10 3
-  print "------------------------------"
+    
+  eassertEqual (u [[8,1],[8,11]]) (B.toList (accumPaths dForwardEdges (UV.fromList [8])))
+  eassertEqual (u [[8,8,1],[8,8,11]]) (B.toList (accumPaths dForwardEdges (UV.fromList [8,8]))) --Nonsense input. Just for testing
+  eassertEqual (u [[10,9],[10,8],[10,1]]) (B.toList (accumPaths dForwardEdges (UV.fromList [10])))
   let
     tmp = allPathsOf dForwardEdges 10 3
     tmp2 = allPathsUpto dForwardEdges 10 3
-  print (B.toList tmp)
-  print "------------------------------"
-  print (B.toList tmp2)
-  print "------------------------------"
-  B.mapM_ print (B.slice 1 5 tmp)
+  eassertEqual (B.toList tmp)  (u [[10,9,1,2],[10,9,1,3],[10,9,1,5],[10,9,1,6],[10,8,1,2],[10,8,1,3],[10,8,1,5],[10,8,1,6],[10,8,11,3],[10,1,2,4],[10,1,3,4],[10,1,5,6],[10,1,5,7]])
+  eassertEqual (B.toList tmp2) (u [[10],[10,9],[10,8],[10,1],[10,9,1],[10,8,1],[10,8,11],[10,1,2],[10,1,3],[10,1,5],[10,1,6],[10,9,1,2],[10,9,1,3],[10,9,1,5],[10,9,1,6],[10,8,1,2],[10,8,1,3],[10,8,1,5],[10,8,1,6],[10,8,11,3],[10,1,2,4],[10,1,3,4],[10,1,5,6],[10,1,5,7]])
 
 
 
