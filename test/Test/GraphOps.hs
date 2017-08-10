@@ -16,25 +16,6 @@ import qualified Data.Vector                   as V
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy)
 
 
-
-orderingByFrom,orderingByTo :: Ord a => (a,a) -> (a,a) -> Ordering
-orderingByFrom (lf,lt) (rf,rt) = compare lf rf
-orderingByTo   (lf,lt) (rf,rt) = compare lt rt
-
-{-
-  returns edges inward/outward the input node, depends on `comp` operator
-  comp : defines ordering between edges. If it orders by from side of edges,
-         `neighbor` returns edges starting from the input node.
--}
-neighbor :: (UV.Unbox a, Ord a) => UV.Vector (a,a) -> VS.Comparison (a,a) -> a -> UV.Vector (a,a)
-neighbor edges comp node = f sorted comp node
-  where
-    sorted = UV.modify (sortBy comp) edges
-    f es comp node= runST $ do
-      mvec <- UV.unsafeThaw es
-      (beg, end) <- binarySearchLRBy comp mvec (node,node)
-      return (UV.slice beg (end-beg) es)
-
 isIn :: (UV.Unbox a, Ord a) => UV.Vector a -> a -> Bool
 isIn vals = f sorted
   where
@@ -55,6 +36,33 @@ unique vs = UV.foldl' f UV.empty sorted
 
 type Dist = Int32
 
+
+
+from,to :: (a,a) -> a
+from (x,_) = x
+to   (_,x) = x
+
+edgeOrdering :: Ord a => ((a,a)->a) -> (a,a) -> (a,a) -> Ordering
+edgeOrdering direction left right = compare (direction left) (direction right)
+orderingByFrom,orderingByTo :: Ord a => (a,a) -> (a,a) -> Ordering
+orderingByFrom = edgeOrdering from
+orderingByTo   = edgeOrdering to
+
+{-
+  returns edges inward/outward the input node, depends on `comp` operator
+  comp : defines ordering between edges. If it orders by from side of edges,
+         `neighbor` returns edges starting from the input node.
+-}
+neighbor :: (UV.Unbox a, Ord a) => UV.Vector (a,a) -> ((a,a)->a) -> a -> UV.Vector (a,a)
+neighbor edges direction = f sorted comp
+  where
+    comp = edgeOrdering direction
+    sorted = UV.modify (sortBy comp) edges
+    f es comp node= runST $ do
+      mvec <- UV.unsafeThaw es
+      (beg, end) <- binarySearchLRBy comp mvec (node,node)
+      return (UV.slice beg (end-beg) es)
+
 {-
 fn :: a -> UV.Vector (a,a)
 In this module, `fn` arguments denote partialy evaluated `neighbor` functions. 
@@ -62,22 +70,26 @@ It returns edges connedted to the input node of type `a`.
 Direction of the edge is determined by the `comp` argument of the `neighbor`
 -}
 
-accumReachable :: (UV.Unbox a, Ord a) => UV.Vector (a,Dist) -> Dist -> (a -> UV.Vector (a,a)) -> (UV.Vector a, Dist) ->  UV.Vector (a,Dist)
-accumReachable accum cutoff fn (frontiers,dist) | cutoff==dist = accum
-accumReachable accum cutoff fn (frontiers,dist) = accumReachable (UV.concat [ns, accum]) cutoff fn (nexts, dist+1)
+accumReachable :: (UV.Unbox a, Ord a) => ((a,a)->a) -> UV.Vector (a,Dist) -> Dist -> (a -> UV.Vector (a,a)) -> (UV.Vector a, Dist) ->  UV.Vector (a,Dist)
+accumReachable destNode accum cutoff fn (frontiers,dist) | cutoff==dist = accum
+accumReachable destNode accum cutoff fn (frontiers,dist) = accumReachable destNode (UV.concat [ns, accum]) cutoff fn (nexts, dist+1)
   where
-    f fn node = UV.map snd (fn node)
+    f fn node = UV.map destNode (fn node) -- get nodes, instead of edges
     reachable = UV.concatMap (f fn) frontiers -- edges connedted to the frontier nodes
     news = UV.filter (not . isIn (UV.map fst accum)) reachable -- `reachable` edges that are not already visited
     nexts = unique news -- remove duplicated edges in `news`
     ns = UV.map (\x -> (x, dist+1)) nexts -- new frontier nodes
 
--- returns nodes of forward distance up to `cutoff` starting from the input `node` in a directed graph `dEdges`
-nodesForward :: (UV.Unbox a, Ord a) => UV.Vector (a,a) -> a -> Dist -> UV.Vector (a,Dist)
-nodesForward dEdges node cutoff = accumReachable accum cutoff dForwardEdges (UV.fromList [node],0)
+-- returns nodes of forward/backward distance up to `cutoff` starting from the input `node` in a directed graph `dEdges`
+nodesForward,nodesBackward :: (UV.Unbox a, Ord a) => UV.Vector (a,a) -> a -> Dist -> UV.Vector (a,Dist)
+nodesForward dEdges node cutoff  = accumReachable to accum cutoff dForwardEdges (UV.fromList [node],0)
   where
     accum = UV.fromList [(node,0)]
-    dForwardEdges = neighbor dEdges orderingByFrom
+    dForwardEdges = neighbor dEdges from
+nodesBackward dEdges node cutoff = accumReachable from accum cutoff dBackwardEdges (UV.fromList [node],0)
+  where
+    accum = UV.fromList [(node,0)]
+    dBackwardEdges = neighbor dEdges to
 
 accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> UV.Vector a -> V.Vector (UV.Vector a)
 accumPaths fn path = UV.foldl' f V.empty (UV.map snd (fn from))
@@ -110,10 +122,10 @@ testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected gra
                                ] :: [Edge])
     undirected = UV.concatMap (\(x,y) -> UV.fromList [(x,y),(y,x)]) directed
 
-    dForwardEdges  = neighbor directed orderingByFrom
-    dBackwardEdges = neighbor directed orderingByTo
-    uForwardEdges  = neighbor undirected orderingByFrom
-    uBackwardEdges = neighbor undirected orderingByTo
+    dForwardEdges  = neighbor directed from
+    dBackwardEdges = neighbor directed to
+    uForwardEdges  = neighbor undirected from
+    uBackwardEdges = neighbor undirected to
 
   eassertEqual (dForwardEdges  1) (UV.fromList [(1,2),(1,3),(1,5),(1,6)])
   eassertEqual (dBackwardEdges 1) (UV.fromList [(4,1),(9,1),(8,1),(10,1)])
@@ -123,6 +135,10 @@ testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected gra
   eassertEqual (nodesForward directed 10 2) (UV.fromList [(2,2),(3,2),(5,2),(6,2),(11,2),(1,1),(8,1),(9,1),(10,0)])
   eassertEqual (nodesForward directed 10 3) (UV.fromList [(4,3),(7,3),(2,2),(3,2),(5,2),(6,2),(11,2),(1,1),(8,1),(9,1),(10,0)])
   eassertEqual (nodesForward directed 3  3) (UV.fromList [(2,3),(5,3),(6,3),(1,2),(4,1),(3,0)])
+  eassertEqual (nodesBackward directed 10 5) (UV.fromList [(10,0)])
+  eassertEqual (nodesBackward directed 1 1) (UV.fromList [(4,1),(8,1),(9,1),(10,1),(1,0)])
+  eassertEqual (nodesBackward directed 1 3) (UV.fromList [(11,3),(2,2),(3,2),(4,1),(8,1),(9,1),(10,1),(1,0)])
+
 
 testAllPaths :: TestTree
 testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pair of nodes" $ \step -> do
@@ -133,7 +149,7 @@ testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pai
                                , e 9 1, e 8 1, e 10 9,e 10 8,e 10 1
                                , e 8 11,e 11 3
                                ] :: [Edge])
-    dForwardEdges  = neighbor directed orderingByFrom
+    dForwardEdges  = neighbor directed from
 
   print $ accumPaths dForwardEdges (UV.fromList [10,8])
   let
