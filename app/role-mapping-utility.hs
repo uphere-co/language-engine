@@ -8,6 +8,7 @@
 
 module Main where
 
+import           Control.Applicative
 import           Control.Lens              hiding (para)
 import           Control.Monad
 import           Control.Monad.IO.Class
@@ -28,6 +29,7 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import qualified Data.Text.Lazy.IO          as T.L.IO
 import           Data.Text.Read                   (decimal)
+import qualified Options.Applicative        as O
 import           System.Console.Haskeline
 import           System.Console.Haskeline.MonadException
 import           System.Environment
@@ -43,7 +45,7 @@ import           NLP.Syntax.Type
 import           PropBank.Query                   (constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB
                                                   )
-import           PropBank.Type.Frame       hiding (Voice)
+import           PropBank.Type.Frame       hiding (Voice,ProgOption)
 import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
 import           WordNet.Format
@@ -237,28 +239,42 @@ loadVerbSubcat = do
   return subcats
 
 
-main = do
-  -- mapM_ print subcats
 
-  args <- getArgs
+data ProgOption = ProgOption { progCommand :: String
+                             , startNum :: Maybe Int
+                             } deriving Show
+
+
+pOptions :: O.Parser ProgOption
+pOptions = ProgOption <$> O.strArgument (O.help "program command show or tag")
+                      <*> optional (O.argument O.auto (O.help "starting number"))
+
+progOption :: O.ParserInfo ProgOption 
+progOption = O.info pOptions (O.fullDesc <> O.progDesc "role mapping utility program")
+
+
+main = do
+  opt <- O.execParser progOption
+  
+  -- args <- getArgs
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (preddb,rolesetdb) <- loadPropBankDB
   subcats <- loadVerbSubcat
 
-  
   let flattened = createONFN subcats sensemap framedb rolesetdb 
-  let n = read (args !! 0) :: Int
   let indexed = zip [1..] flattened
 
-  -- mapM_ print indexed
-  print (length indexed)
-
-  let indexed_being_processed = (drop (n-1) . take (n+99)) indexed
-  r <- flip execStateT (([] :: [(Int,(Text,Text),Text,Text)]),indexed_being_processed) $ runInputT defaultSettings prompt
-  print (fst r)
-  let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
-  writeFile filename (concatMap formatResult (fst r))
-  
+  case progCommand opt of
+    "tag" -> do
+      let n = fromMaybe 0 (startNum opt)
+          indexed_being_processed = (drop (n-1) . take (n+99)) indexed
+      r <- flip execStateT (([] :: [(Int,(Text,Text),Text,Text)]),indexed_being_processed) $ runInputT defaultSettings prompt
+      print (fst r)
+      let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
+      writeFile filename (concatMap formatResult (fst r))
+    "show" -> do
+      print indexed
+    cmd -> putStrLn (cmd ++ " cannot be processed")
 
 
