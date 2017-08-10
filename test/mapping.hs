@@ -10,6 +10,7 @@ import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.App.Load
 
 
+main :: IO ()
 main = do
   fdb <- loadFrameData (cfg^.cfg_framenet_framedir)
 

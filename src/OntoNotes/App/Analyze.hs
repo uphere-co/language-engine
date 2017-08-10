@@ -193,7 +193,7 @@ getSenses lma sensemap sensestat framedb ontomap = do
               _ -> do
                 frame <- HM.lookup frtxt (framedb^.frameDB)
                 let fes = frame^..frame_FE.traverse
-                    corefes = filter (\fe -> fe^.fe_coreType == Core) fes
+                    corefes = filter (\fe -> fe^.fe_coreType == Core || fe^.fe_coreType == CoreUnexpressed) fes
                     perifes = filter (\fe -> fe^.fe_coreType == Peripheral) fes
                     fecoretxt = T.intercalate ", " (map (^.fe_name) corefes)
                     feperitxt = T.intercalate ", " (map (^.fe_name) perifes)
@@ -248,13 +248,13 @@ sentStructure :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
 sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
   (psents,sents,sentitems,_tokss,mptrs,deps,mtmx,linked_mentions_resolved) <- runParser pp emTagger txt
   putStrLn "\n\n\n\n\n\n\n\n================================================================================================="
-  putStrLn "-- TimeTagger -----------------------------------------------------------------------------------"
+  putStrLn "\n\n-- TimeTagger -----------------------------------------------------------------------------------"
   case mtmx of
     Nothing -> putStrLn "Time annotation not successful!"
     Just sentswithtmx -> mapM_ showFormatTimex sentswithtmx
   putStrLn "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
   putStrLn (render (formatNER psents sentitems linked_mentions_resolved))
-  putStrLn "--------------------------------------------------------------------------------------------------"
+  putStrLn "\n\n--------------------------------------------------------------------------------------------------"
   putStrLn "-- Sentence analysis -----------------------------------------------------------------------------"
   putStrLn "--------------------------------------------------------------------------------------------------"
 
@@ -263,7 +263,7 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
       let lemmamap = mkLemmaMap psent
           vps = verbPropertyFromPennTree lemmamap ptr
 
-      putStrLn (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
+      putStrLn (printf "\n\n-- Sentence %3d ----------------------------------------------------------------------------------" i)
       T.IO.putStrLn (formatIndexTokensFromTree 0 ptr)
       
       putStrLn "--------------------------------------------------------------------------------------------------"
@@ -398,7 +398,6 @@ getAnalysis input config pp = do
   getSentStructure pp sensemap sensestat framedb ontomap emTagger input
     
 
-
 --
 --
 -- wiki-ner test
@@ -470,4 +469,3 @@ cfgG = Config { _cfg_sense_inventory_file  = "/data/groups/uphere/data/NLP/LDC/o
               , _cfg_propbank_framedir     = "/data/groups/uphere/data/NLP/frames"
               , _cfg_wsj_corenlp_directory = "/data/groups/uphere/data/NLP/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
               }
-  
