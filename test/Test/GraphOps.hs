@@ -11,6 +11,7 @@ import           Control.Monad.ST                      (runST)
 
 import qualified Data.Vector.Algorithms.Search as VS
 import qualified Data.Vector.Unboxed           as UV
+import qualified Data.Vector.Generic           as GV
 import qualified Data.Vector                   as V
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy)
@@ -71,10 +72,10 @@ Direction of the edge is determined by the `comp` argument of the `neighbor`
 -}
 
 accumReachable :: (UV.Unbox a, Ord a) => ((a,a)->a) -> UV.Vector (a,Dist) -> Dist -> (a -> UV.Vector (a,a)) -> (UV.Vector a, Dist) ->  UV.Vector (a,Dist)
-accumReachable destNode accum cutoff fn (frontiers,dist) | cutoff==dist = accum
-accumReachable destNode accum cutoff fn (frontiers,dist) = accumReachable destNode (UV.concat [ns, accum]) cutoff fn (nexts, dist+1)
+accumReachable fDestNode accum cutoff fn (frontiers,dist) | cutoff==dist = accum
+accumReachable fDestNode accum cutoff fn (frontiers,dist) = accumReachable fDestNode (UV.concat [ns, accum]) cutoff fn (nexts, dist+1)
   where
-    f fn node = UV.map destNode (fn node) -- get nodes, instead of edges
+    f fn node = UV.map fDestNode (fn node) -- get nodes, instead of edges
     reachable = UV.concatMap (f fn) frontiers -- edges connedted to the frontier nodes
     news = UV.filter (not . isIn (UV.map fst accum)) reachable -- `reachable` edges that are not already visited
     nexts = unique news -- remove duplicated edges in `news`
@@ -163,6 +164,7 @@ testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pai
   print $ V.concatMap (accumPaths dForwardEdges) paths
   print $ allPaths dForwardEdges 10 2
   print $ allPaths dForwardEdges 10 3
+  print $ GV.length (allPaths dForwardEdges 10 3)
 
 
 testUtilsForShortedPath :: TestTree
