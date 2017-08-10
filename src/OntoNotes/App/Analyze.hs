@@ -322,7 +322,7 @@ getSentStructure :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
 getSentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
   (psents,sents,sentitems,_tokss,mptrs,deps,mtmx,linked_mentions_resolved) <- runParser pp emTagger txt
 
-  let line1 = [ "\n\n\n\n\n\n\n\n================================================================================================="
+  let line1 = [ "================================================================================================="
               , "-- TimeTagger -----------------------------------------------------------------------------------" ]
 
   let line2 = case mtmx of
@@ -383,7 +383,7 @@ runAnalysis = do
                   )
     queryProcess pp sensemap sensestat framedb ontomap emTagger
 
-getAnalysis input pp = do
+loadConfig = do
   let cfg = cfgG
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
@@ -391,6 +391,10 @@ getAnalysis input pp = do
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
   emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]  
+  return (sensemap,sensestat,framedb,ontomap,emTagger)
+
+getAnalysis input config pp = do
+  let (sensemap,sensestat,framedb,ontomap,emTagger) = config
   getSentStructure pp sensemap sensestat framedb ontomap emTagger input
     
 
