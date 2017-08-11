@@ -128,6 +128,10 @@ addEdge foo@(Foo edges names) (from,to) = foo'
     edge = (H.wordHash from, H.wordHash to)
     foo' = Foo (UV.snoc edges edge) (tryAdd (tryAdd names from) to)
 
+showPath :: HashInvs -> UV.Vector H.WordHash -> [Maybe Text]
+showPath invs = UV.foldl' f []
+  where
+    f accum hash = M.lookup hash invs : accum
 
 loadInterlinks :: (Foo,Text) -> Text -> IO (Foo,Text)
 loadInterlinks (prevState, prevPartialBlock) block = do
@@ -141,14 +145,21 @@ loadInterlinks (prevState, prevPartialBlock) block = do
 
 main1 = readBlocks stdin yago ""
 main2 = readBlocks stdin wikidata (initState, "")
+
+{-
+For preparing test data:
+$ lbzcat yago/yago3_entire_tsv.bz2 | grep "<linksTo>" > yago/wikilinks
+$ time cat yago/wikilinks | runhaskell -i./src/ test/testApp.hs > enwiki/interlinks
+real	60m40.005s
+-}
 main3 = do
   (foo@(Foo edges names),_) <- readBlocks2 stdin loadInterlinks (initFoo, "")
   let
     dForwardEdges  = G.neighbor edges G.from
-    tmp = G.allPathsUpto dForwardEdges 1079244021 1
+    tmp = G.allPathsUpto dForwardEdges 1079244021 3
   --printFoo foo
   --print "=================================="
-  --mapM_ print (B.toList tmp)
+  mapM_ (print . showPath names) (B.toList tmp)
   print $ dForwardEdges 1079244021
   print $ dForwardEdges (H.wordHash "Diemelsee")
 
