@@ -86,7 +86,7 @@ Executable analyze
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
-                       -threaded                       
+                       -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:
   build-depends:       base,
@@ -125,7 +125,7 @@ Executable argument
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
-                       -threaded                       
+                       -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:
   build-depends:       base,
@@ -155,7 +155,7 @@ Executable role-mapping-utility
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
-                       -threaded                       
+                       -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:
   build-depends:       base,
@@ -165,6 +165,7 @@ Executable role-mapping-utility
                        extra,
                        haskeline,
                        lens,
+                       optparse-applicative,
                        split,
                        taggy-lens,
                        text,
@@ -174,6 +175,7 @@ Executable role-mapping-utility
                        HFrameNet,
                        HWordNet,
                        PropBank,
+                       syntactic-analysis,
                        VerbNet,
                        --
                        OntoNotes
@@ -188,7 +190,7 @@ Executable sense-inventory
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
-                       -threaded                       
+                       -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:
   build-depends:       base,
@@ -214,7 +216,7 @@ Executable verb-subcat-propbank-stat
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
                        -fno-warn-partial-type-signatures
-                       -threaded                       
+                       -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:
   build-depends:       base,

@@ -45,6 +45,7 @@ import           PropBank.Type.Prop
 import           OntoNotes.App.Load           hiding (Config)
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
+import           OntoNotes.Format
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.Sense
