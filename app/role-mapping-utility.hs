@@ -2,6 +2,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Main where
@@ -13,6 +15,7 @@ import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.State.Strict
 import           Data.Either                      (rights)
 import           Data.Either.Extra                (maybeToEither)
+import           Data.Function                    (on)
 import           Data.Foldable
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
@@ -36,10 +39,11 @@ import           Text.Taggy.Lens
 import           FrameNet.Query.Frame             (frameDB,loadFrameData)
 import           FrameNet.Type.Common             (CoreType(..),fr_frame)
 import           FrameNet.Type.Frame
+import           NLP.Syntax.Type
 import           PropBank.Query                   (constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB
                                                   )
-import           PropBank.Type.Frame
+import           PropBank.Type.Frame       hiding (Voice)
 import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
 import           WordNet.Format
@@ -49,7 +53,9 @@ import           WordNet.Type.POS
 --
 import           OntoNotes.App.Load
 import           OntoNotes.Corpus.Load
+import           OntoNotes.Format
 import           OntoNotes.Mapping.FrameNet
+import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.SenseInventory
 
 
@@ -88,12 +94,14 @@ extractPBRoles pb =
 extractPBExamples pb = pb^..roleset_example.traverse.example_text
 
 
-createONFN sensemap framedb rolesetdb = do 
+createONFN subcats sensemap framedb rolesetdb = do 
   (lma, senses ) <- mapFromONtoFN
   (sid,frtxt) <- senses
   let g = T.head sid
       n = T.drop 2 sid
   let lmav = lma <> "-v"
+  subcat <- maybeToList (find (\c -> c^._1 == (lmav,n)) subcats)
+  
   si <- maybeToList (HM.lookup lmav sensemap)
   osense <- maybeToList $
               find (\s -> T.head (s^.sense_group) == g && s^.sense_n == n)
@@ -102,7 +110,7 @@ createONFN sensemap framedb rolesetdb = do
   let pbids = T.splitOn "," (osense^.sense_mappings.mappings_pb)
       pbs = mapMaybe (\pb -> HM.lookup pb (rolesetdb^.rolesetDB)) pbids
       -- pbroles = map (\pb -> (pb^.roleset_id,pb^.roleset_name,extractPBRoles pb)) pbs
-  return (lma,osense,frame,pbs)
+  return (lma,osense,frame,pbs,subcat)
 
 
 loadPropBankDB = do
@@ -137,26 +145,31 @@ formatFEs (icorefes,iperifes,iextrafes) = formatf icorefes ++ " | " ++ formatf i
   where formatf fes = intercalate ", " (map (\(i,fe) -> printf "%2d-%s" (i :: Int) (fe^.fe_name)) fes)
 
 
-problemID (i,(lma,osense,frame,pbs)) = let sid = osense^.sense_group <> "." <> osense^.sense_n
-                                       in (lma,sid)
+problemID (i,(lma,osense,frame,pbs,_)) = let sid = osense^.sense_group <> "." <> osense^.sense_n
+                                         in (lma,sid)
 
 
 
 showProblem :: (Int,_) -> InputT (StateT _ IO) ()
-showProblem (i,(lma,osense,frame,pbs)) = do
+showProblem (i,(lma,osense,frame,pbs,subcat)) = do
   let sid = osense^.sense_group <> "." <> osense^.sense_n
   liftIO $ putStrLn "========================================================================================================="  
   liftIO $ putStrLn (printf "%d th item: %s %s" i lma sid)
   liftIO $ putStrLn (printf "definition: %s\n%s" (osense^.sense_name) (osense^.sense_examples))
   let fes = numberedFEs frame
-  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------"
+  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------\n"
   liftIO $ putStrLn (printf "%s" (frame^.frame_name))
   liftIO $ putStrLn (formatFEs fes)
-  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------"
-  let pbinfos = map (\pb -> (pb^.roleset_id,pb^.roleset_name,extractPBExamples pb,extractPBRoles pb)) pbs
+  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------\n"
 
+  forM_ (Prelude.take 10 (subcat^._2)) $ \(patt :: ArgPattern,n :: Int) -> do
+    let str1 = formatArgPatt patt :: String
+    liftIO $ putStrLn (printf "%s     #count: %5d" str1 n)
+
+  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------\n"
+  let pbinfos = map (\pb -> (pb^.roleset_id,pb^.roleset_name,extractPBExamples pb,extractPBRoles pb)) pbs
   mapM_ (liftIO . putStrLn . formatPBInfos) pbinfos
-  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------"
+  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------\n"
   
 
 
@@ -196,21 +209,56 @@ prompt = do
 
 
 
+
+deriving instance Read Voice
+
+parseWithNullCheck :: (Text -> a) -> Text -> Maybe a
+parseWithNullCheck f w = if w == "null" then Nothing else Just (f w)
+
+parseSubcat :: [Text] -> (Text,Text,Maybe Voice,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Int)
+parseSubcat ws@[lma,sense,mvoice,marg0,marg1,marg2,marg3,marg4,count] =
+  ( lma ,sense
+  , parseWithNullCheck (read . T.unpack) mvoice
+  , parseWithNullCheck id marg0
+  , parseWithNullCheck id marg1
+  , parseWithNullCheck id marg2
+  , parseWithNullCheck id marg3
+  , parseWithNullCheck id marg4
+  , either (error ("error: " ++ show ws)) fst (decimal count)
+  )
+
+loadVerbSubcat = do
+  let verbsubcatfile = "/scratch/wavewave/run/20170809/verbsubcat_propbank_ontonotes_statsummary.tsv"
+  txt <- T.IO.readFile verbsubcatfile
+  let getLemmaSense x = (x^._1,x^._2)
+      getArgTable x = ArgPattern (x^._3) (x^._4) (x^._5) (x^._6) (x^._7) (x^._8)
+  let subcats = map (\xs  -> (getLemmaSense (head xs),map (\x->(getArgTable x,x^._9)) xs)) .  groupBy ((==) `on` getLemmaSense) . map parseSubcat . map T.words . T.lines $ txt
+  -- mapM_ print subcats
+  return subcats
+
+
 main = do
+  -- mapM_ print subcats
+
   args <- getArgs
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (preddb,rolesetdb) <- loadPropBankDB
+  subcats <- loadVerbSubcat
+
   
-  let flattened = createONFN sensemap framedb rolesetdb
+  let flattened = createONFN subcats sensemap framedb rolesetdb 
   let n = read (args !! 0) :: Int
-  let indexed = drop (n-1) $ take (n+99) $ zip [1..] flattened
-  r <- flip execStateT (([] :: [(Int,(Text,Text),Text,Text)]),indexed) $ runInputT defaultSettings prompt
+  let indexed = zip [1..] flattened
+
+  -- mapM_ print indexed
+  print (length indexed)
+
+  let indexed_being_processed = (drop (n-1) . take (n+99)) indexed
+  r <- flip execStateT (([] :: [(Int,(Text,Text),Text,Text)]),indexed_being_processed) $ runInputT defaultSettings prompt
   print (fst r)
   let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
-  writeFile "temp.txt" (concatMap formatResult (fst r))
-    
-    
-
+  writeFile filename (concatMap formatResult (fst r))
+  
 
 
