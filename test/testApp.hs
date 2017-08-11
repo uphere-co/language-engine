@@ -157,9 +157,10 @@ main3 = do
   let
     dForwardEdges  = G.neighbor edges G.from
     tmp = G.allPathsUpto dForwardEdges 1079244021 3
-  --printFoo foo
+    tmp2 = G.allPathsUpto dForwardEdges (H.wordHash "Diemelsee") 3
   --print "=================================="
   mapM_ (print . showPath names) (B.toList tmp)
+  mapM_ (print . showPath names) (B.toList tmp2)
   print $ dForwardEdges 1079244021
   print $ dForwardEdges (H.wordHash "Diemelsee")
 
