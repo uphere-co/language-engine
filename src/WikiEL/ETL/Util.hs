@@ -26,4 +26,3 @@ readBlocks2 handle fBlock state = do
   else do
     next <- fBlock state chunk
     readBlocks2 handle fBlock next
-    

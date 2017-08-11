@@ -139,3 +139,4 @@ allPathsUpto fn node cutoff = f B.empty 0 (B.singleton (UV.singleton node))
     f accum dist paths = f (accum B.++ paths) (dist+1) nexts
       where
         nexts = B.concatMap (accumPaths fn) paths
+

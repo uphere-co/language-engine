@@ -3,11 +3,13 @@
 module Test.RDFDumpETL where
 
 import           Data.Text                             (Text)
-import           Data.Maybe                            (mapMaybe)
+import           Data.Maybe                            (mapMaybe,catMaybes)
 import           System.IO                             (stdin,stdout)
+import           Control.Arrow                         ((***))
+import           Data.Either                           (rights)
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
-import           Data.Either                           (rights)
+
 import           WikiEL.ETL.RDF
 import           WikiEL.ETL.Util
 import           WikiEL.ETL.Parser                     (wordnetSynsetYAGO)
@@ -98,7 +100,12 @@ wikidata (prevState, prevPartialBlock) block = do
   mapM_ print ts
   return (state,partialBlock)
   --mapM_ T.IO.putStrLn rs
-  
+
+
+main1 = readBlocks stdin yago ""
+main2 = readBlocks stdin wikidata (initState, "")
+
+
 
 type HashInvs =  M.Map H.WordHash Text
 data Foo = Foo { _edges :: UV.Vector (H.WordHash, H.WordHash)
@@ -111,7 +118,7 @@ initFoo = Foo UV.empty M.empty
 printFoo foo@(Foo edges names) = do
   let 
     lookup key = M.lookup key names
-  mapM_ (print . (\(x,y) -> (lookup x, lookup y))) (UV.toList edges)
+  mapM_ (print . (lookup *** lookup)) (UV.toList edges)
   print names
 
 tryAdd :: HashInvs -> Text -> HashInvs
@@ -122,14 +129,24 @@ parseInterlinks line = (from, to)
   where
     [from,to] = T.words line
 
+-- UV.snoc is very inefficient for large Foo
 addEdge :: Foo -> (Text,Text) -> Foo
 addEdge foo@(Foo edges names) (from,to) = foo'
   where
     edge = (H.wordHash from, H.wordHash to)
     foo' = Foo (UV.snoc edges edge) (tryAdd (tryAdd names from) to)
 
-showPath :: HashInvs -> UV.Vector H.WordHash -> [Maybe Text]
-showPath invs = UV.foldl' f []
+loadEdges :: [Text] -> Foo
+loadEdges lines  = Foo edges names
+  where
+    es = map parseInterlinks lines
+    edges = UV.fromList (map (H.wordHash *** H.wordHash) es)
+    f accum (from, to) = tryAdd (tryAdd accum from) to
+    names = foldl' f M.empty es
+
+
+showPath :: HashInvs -> UV.Vector H.WordHash -> [ Text]
+showPath invs path = catMaybes (UV.foldl' f [] path)
   where
     f accum hash = M.lookup hash invs : accum
 
@@ -143,8 +160,14 @@ loadInterlinks (prevState, prevPartialBlock) block = do
   --mapM_ print edges
   return (state,partialBlock)
 
-main1 = readBlocks stdin yago ""
-main2 = readBlocks stdin wikidata (initState, "")
+
+foo :: FilePath -> IO Foo
+foo filepath = do
+  content <- T.IO.readFile filepath
+  let
+    lines = T.lines content
+    state = loadEdges lines
+  return state
 
 {-
 For preparing test data:
@@ -152,19 +175,41 @@ $ lbzcat yago/yago3_entire_tsv.bz2 | grep "<linksTo>" > yago/wikilinks
 $ time cat yago/wikilinks | runhaskell -i./src/ test/testApp.hs > enwiki/interlinks
 real	60m40.005s
 -}
-main3 = do
-  (foo@(Foo edges names),_) <- readBlocks2 stdin loadInterlinks (initFoo, "")
+
+{-
+import Foreign.Store
+cc <- foo "cc"
+store <- newStore cc
+store
+
+Just store <- lookupStore 0 :: IO (Maybe (Store Foo))
+cc <- readStore store
+
+M.size (_names cc)
+UV.length (_edges cc)
+-}
+
+test1 :: Foo -> IO ()
+test1 foo@(Foo edges names) = do
   let
     dForwardEdges  = G.neighbor edges G.from
     tmp = G.allPathsUpto dForwardEdges 1079244021 3
     tmp2 = G.allPathsUpto dForwardEdges (H.wordHash "Diemelsee") 3
   --print "=================================="
-  mapM_ (print . showPath names) (B.toList tmp)
-  mapM_ (print . showPath names) (B.toList tmp2)
+  print $ UV.length edges
+  print $ M.size names
+  print $ B.length tmp
+  print $ B.length tmp2
+  --mapM_ (print . showPath names) (B.toList tmp)
+  --mapM_ (print . showPath names) (B.toList tmp2)
   print $ dForwardEdges 1079244021
-  print $ dForwardEdges (H.wordHash "Diemelsee")
+  print $ dForwardEdges (H.wordHash "Germany")
 
+main3 = do
+  --cc <- foo "bb"
+  cc <- foo "enwiki/interlinks"
+  test1 cc
 
 main :: IO ()
-main = main3
+main = main1
 
