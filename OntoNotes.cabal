@@ -146,6 +146,38 @@ Executable argument
                        OntoNotes
 
 
+Executable role-mapping-utility
+  Main-is:             role-mapping-utility.hs
+  hs-source-dirs:      app
+  default-language:    Haskell2010
+  ghc-options:         -O2 -Wall
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+                       -threaded                       
+  ghc-prof-options:    -caf-all -auto-all
+  other-modules:
+  build-depends:       base,
+                       --
+                       boxes,
+                       containers,
+                       extra,
+                       haskeline,
+                       lens,
+                       taggy-lens,
+                       text,
+                       transformers,
+                       unordered-containers,
+                       --
+                       HFrameNet,
+                       HWordNet,
+                       PropBank,
+                       VerbNet,
+                       --
+                       OntoNotes
+
+
+
 Executable sense-inventory
   Main-is:             sense-inventory.hs
   hs-source-dirs:      app

@@ -36,9 +36,6 @@ import           OntoNotes.Corpus.Load
 import           OntoNotes.Type.SenseInventory
 
 
-data VorN = V | N
-
-
 verbnet :: HashMap (Text,Text) [Text] -> Text -> Text -> Box
 verbnet semlinkmap lma txt =
   let (_,cls') = T.breakOn "-" txt
