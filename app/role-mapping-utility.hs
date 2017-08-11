@@ -8,6 +8,7 @@
 
 module Main where
 
+import           Control.Applicative
 import           Control.Lens              hiding (para)
 import           Control.Monad
 import           Control.Monad.IO.Class
@@ -21,6 +22,7 @@ import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import qualified Data.IntMap                as IM
 import           Data.List
+import qualified Data.List.Split            as L.S
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                        (Text)
@@ -28,6 +30,7 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import qualified Data.Text.Lazy.IO          as T.L.IO
 import           Data.Text.Read                   (decimal)
+import qualified Options.Applicative        as O
 import           System.Console.Haskeline
 import           System.Console.Haskeline.MonadException
 import           System.Environment
@@ -43,7 +46,7 @@ import           NLP.Syntax.Type
 import           PropBank.Query                   (constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB
                                                   )
-import           PropBank.Type.Frame       hiding (Voice)
+import           PropBank.Type.Frame       hiding (Voice,ProgOption)
 import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
 import           WordNet.Format
@@ -149,28 +152,33 @@ problemID (i,(lma,osense,frame,pbs,_)) = let sid = osense^.sense_group <> "." <>
                                          in (lma,sid)
 
 
-
-showProblem :: (Int,_) -> InputT (StateT _ IO) ()
-showProblem (i,(lma,osense,frame,pbs,subcat)) = do
+formatProblem :: (Int,_) -> (String,String,String,String,String)
+formatProblem (i,(lma,osense,frame,pbs,subcat)) =
   let sid = osense^.sense_group <> "." <> osense^.sense_n
-  liftIO $ putStrLn "========================================================================================================="  
-  liftIO $ putStrLn (printf "%d th item: %s %s" i lma sid)
-  liftIO $ putStrLn (printf "definition: %s\n%s" (osense^.sense_name) (osense^.sense_examples))
-  let fes = numberedFEs frame
-  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------\n"
-  liftIO $ putStrLn (printf "%s" (frame^.frame_name))
-  liftIO $ putStrLn (formatFEs fes)
-  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------\n"
+      headstr = printf "%d th item: %s %s" i lma sid
+      sensestr = printf "definition: %s\n%s" (osense^.sense_name) (osense^.sense_examples)      
+      fes = numberedFEs frame
+      framestr = printf "%s" (frame^.frame_name) ++ "\n" ++ formatFEs fes
+      argpattstr = intercalate "\n" $ flip map (Prelude.take 10 (subcat^._2)) $ \(patt :: ArgPattern,n :: Int) ->
+                     printf "%s     #count: %5d" (formatArgPatt patt) n 
+      pbinfos = map (\pb -> (pb^.roleset_id,pb^.roleset_name,extractPBExamples pb,extractPBRoles pb)) pbs
+      pbinfostr = intercalate "\n" $ map formatPBInfos pbinfos
+  in (headstr,sensestr,framestr,argpattstr,pbinfostr)
 
-  forM_ (Prelude.take 10 (subcat^._2)) $ \(patt :: ArgPattern,n :: Int) -> do
-    let str1 = formatArgPatt patt :: String
-    liftIO $ putStrLn (printf "%s     #count: %5d" str1 n)
 
-  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------\n"
-  let pbinfos = map (\pb -> (pb^.roleset_id,pb^.roleset_name,extractPBExamples pb,extractPBRoles pb)) pbs
-  mapM_ (liftIO . putStrLn . formatPBInfos) pbinfos
-  liftIO $ putStrLn "---------------------------------------------------------------------------------------------------------\n"
-  
+showProblem :: (Int,_) -> IO ()
+showProblem prob = do
+  let (headstr,sensestr,framestr,argpattstr,pbinfostr) = formatProblem prob
+  putStrLn "========================================================================================================="  
+  putStrLn headstr
+  putStrLn sensestr
+  putStrLn "---------------------------------------------------------------------------------------------------------\n"
+  putStrLn framestr
+  putStrLn "---------------------------------------------------------------------------------------------------------\n"
+  putStrLn argpattstr
+  putStrLn "---------------------------------------------------------------------------------------------------------\n"
+  putStrLn pbinfostr
+  putStrLn "---------------------------------------------------------------------------------------------------------\n"
 
 
 reformatInput o txt = let ws = T.words txt
@@ -195,7 +203,7 @@ prompt = do
   case olst of
     [] -> return ()
     o:os -> do
-      showProblem o
+      liftIO $ showProblem o
       m <- getInputLine "? "
       case m of
         Nothing -> return ()
@@ -236,29 +244,82 @@ loadVerbSubcat = do
   -- mapM_ print subcats
   return subcats
 
+parseRoleMap (i:lma:sense:frame:rest) = let lst = map (\w -> let x:y:_ = T.splitOn ":" w in (x,y)) rest
+                                        in ((lma,sense),lst)
+
+
+loadRoleMap = do
+  let rolemapfile = "/home/wavewave/repo/srcp/OntoNotes/mapping/final.txt"
+  txt <- T.IO.readFile rolemapfile
+  let getLemmaSense x = (x^._1,x^._2)
+      getArgTable x = ArgPattern (x^._3) (x^._4) (x^._5) (x^._6) (x^._7) (x^._8)
+  let rolemap = map parseRoleMap . map T.words . T.lines $ txt
+  return rolemap
+
+{- 
+    subcats = map (\xs  -> (getLemmaSense (head xs),map (\x->(getArgTable x,x^._9)) xs)) .  groupBy ((==) `on` getLemmaSense) . map parseSubcat . 
+  -- mapM_ print subcats
+  return subcats
+  -}
+
+
+data ProgOption = ProgOption { progCommand :: String
+                             , startNum :: Maybe Int
+                             } deriving Show
+
+
+pOptions :: O.Parser ProgOption
+pOptions = ProgOption <$> O.strArgument (O.help "program command show or tag")
+                      <*> optional (O.argument O.auto (O.help "starting number"))
+
+progOption :: O.ParserInfo ProgOption 
+progOption = O.info pOptions (O.fullDesc <> O.progDesc "role mapping utility program")
+
 
 main = do
-  -- mapM_ print subcats
-
-  args <- getArgs
+  opt <- O.execParser progOption
+  
+  -- args <- getArgs
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (preddb,rolesetdb) <- loadPropBankDB
   subcats <- loadVerbSubcat
+  rolemap <- loadRoleMap
 
-  
   let flattened = createONFN subcats sensemap framedb rolesetdb 
-  let n = read (args !! 0) :: Int
   let indexed = zip [1..] flattened
 
-  -- mapM_ print indexed
-  print (length indexed)
-
-  let indexed_being_processed = (drop (n-1) . take (n+99)) indexed
-  r <- flip execStateT (([] :: [(Int,(Text,Text),Text,Text)]),indexed_being_processed) $ runInputT defaultSettings prompt
-  print (fst r)
-  let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
-  writeFile filename (concatMap formatResult (fst r))
-  
+  case progCommand opt of
+    "tag" -> do
+      let n = fromMaybe 0 (startNum opt)
+          indexed_being_processed = (drop (n-1) . take (n+99)) indexed
+      r <- flip execStateT (([] :: [(Int,(Text,Text),Text,Text)]),indexed_being_processed) $ runInputT defaultSettings prompt
+      print (fst r)
+      let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
+      writeFile filename (concatMap formatResult (fst r))
+    "show" -> do
+      flip mapM_ indexed $ \prob -> do
+        let (headstr,sensestr,framestr,argpattstr,pbinfostr) = formatProblem prob
+        case find (\rm -> let rmid = rm^._1 in rmid == problemID prob) rolemap of
+          Nothing -> return ()
+          Just rm -> do
+            let argmap = rm^._2
+            putStrLn "\n\n\n========================================================================================================="  
+            putStrLn headstr
+            putStrLn sensestr
+            putStrLn "---------------------------------------------------------------------------------------------------------"
+            putStrLn framestr
+            putStrLn "---------------------------------------------------------------------------------------------------------"
+            putStrLn $ printf "                      arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s"
+                              (fromMaybe "" (lookup "arg0" argmap))
+                              (fromMaybe "" (lookup "arg1" argmap))
+                              (fromMaybe "" (lookup "arg2" argmap))
+                              (fromMaybe "" (lookup "arg3" argmap))
+                              (fromMaybe "" (lookup "arg4" argmap))
+            putStrLn "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+            putStrLn argpattstr
+            putStrLn "========================================================================================================="  
+        -- mapM_ showProblem indexed
+    cmd -> putStrLn (cmd ++ " cannot be processed")
 
 
