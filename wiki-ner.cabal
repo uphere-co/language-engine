@@ -44,6 +44,8 @@ library
                      , WikiEL.Type.RDF.Wikidata
                      , WikiEL.Type.RDF.Yago
                      , WikiEL.BinarySearch
+                     , WikiEL.Util.Hash                     
+
   other-extensions:    OverloadedStrings
                      , GeneralizedNewtypeDeriving
                      , FlexibleContexts
