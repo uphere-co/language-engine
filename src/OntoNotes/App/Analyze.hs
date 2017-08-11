@@ -101,35 +101,45 @@ import           OntoNotes.Corpus.Load
 import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Type.SenseInventory
 
-
-
-formatLemmaPOS :: Token -> String
-formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
-
-
-getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd)]
-getSentenceOffsets psents =
-  zip ([1..] :: [Int]) $ flip map psents $ \s ->
-    let b = fromJust $ fromJust $ firstOf (S.token . traverse . TK.beginChar) s
-        e = fromJust $ fromJust $ lastOf  (S.token . traverse . TK.endChar) s
-    in (fromIntegral b+1,fromIntegral e)
-
-
-
-addSUTime :: [SentItem] -> T.ListTimex
-          -> [(SentItem,[TagPos (Maybe Utf8)])]
-addSUTime sents tmxs =
-  let f t = ( fromIntegral (t^.T.characterOffsetBegin) + 1
-            , fromIntegral (t^.T.characterOffsetEnd)
-            , t^. T.timex . Tmx.value
-            )
-  in filter (not.null.(^._2)) $ map (addTag (map f (tmxs^..T.timexes.traverse))) sents
-
 getFormatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> [Text]
 getFormatTimex (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["----------"] ++ [T.pack (show a)]
 
 showFormatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
 showFormatTimex (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex (s,a)))
+
+chooseFrame :: [(Text,Text,Int,Text,Text,Text,Text)] -> Maybe (Text,Text,Int,Text,Text,Text,Text)
+chooseFrame [] = Nothing
+chooseFrame xs = Just (maximumBy (compare `on` (^._3)) xs)
+
+formatLemmaPOS :: Token -> String
+formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
+
+formatSense :: (Text,Text,Int,Text,Text,Text,Text) -> String
+formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) = 
+  printf "%2s.%-6s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s " sgrp sn num txt_def txt_frame txt_fecore txt_feperi
+
+
+formatSenses :: Bool  -- ^ doesShowOtherSense
+             -> [(Text,Text,Int,Text,Text,Text,Text)]
+             -> String
+formatSenses doesShowOtherSense lst
+  = let t = chooseFrame lst
+    in "Top frame: "
+       ++ printf " %-20s | %-40s      ------      %-30s\n"
+            (fromMaybe "" (t^?_Just._5))
+            (fromMaybe "" (t^?_Just._6))
+            (fromMaybe "" (t^?_Just._7))
+       ++ if doesShowOtherSense
+          then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense lst)
+          else ""
+
+formatNER psents sentitems linked_mentions_resolved =
+  let toks = concatMap (map snd . sentToTokens) psents
+      tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
+      sents_tagged = map (addTag tags) sentitems
+      doc1 = formatTaggedSentences sents_tagged
+      doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
+  in hsep 10 left [doc1,doc2]
 
 runParser :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
@@ -201,39 +211,6 @@ getSenses lma sensemap sensestat framedb ontomap = do
   return (s^.sense_group,s^.sense_n,num,txt_def,txt_frame,txt_fecore,txt_feperi)
 
 
-chooseFrame :: [(Text,Text,Int,Text,Text,Text,Text)] -> Maybe (Text,Text,Int,Text,Text,Text,Text)
-chooseFrame [] = Nothing
-chooseFrame xs = Just (maximumBy (compare `on` (^._3)) xs)
-
-
-formatSense :: (Text,Text,Int,Text,Text,Text,Text) -> String
-formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) = 
-  printf "%2s.%-6s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s " sgrp sn num txt_def txt_frame txt_fecore txt_feperi
-
-
-formatSenses :: Bool  -- ^ doesShowOtherSense
-             -> [(Text,Text,Int,Text,Text,Text,Text)]
-             -> String
-formatSenses doesShowOtherSense lst
-  = let t = chooseFrame lst
-    in "Top frame: "
-       ++ printf " %-20s | %-40s      ------      %-30s\n"
-            (fromMaybe "" (t^?_Just._5))
-            (fromMaybe "" (t^?_Just._6))
-            (fromMaybe "" (t^?_Just._7))
-       ++ if doesShowOtherSense
-          then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense lst)
-          else ""
-
-
-
-formatNER psents sentitems linked_mentions_resolved =
-  let toks = concatMap (map snd . sentToTokens) psents
-      tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
-      sents_tagged = map (addTag tags) sentitems
-      doc1 = formatTaggedSentences sents_tagged
-      doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
-  in hsep 10 left [doc1,doc2]
 
 
 
