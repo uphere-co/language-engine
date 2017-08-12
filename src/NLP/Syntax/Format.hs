@@ -57,7 +57,9 @@ formatVerbArgs va = printf "%10s %-20s %s"
 
 
 formatCP :: ComplementPhrase -> String
-formatCP cp = printf "%s\n%s\n%s\n"
+formatCP cp = printf "Complement Phrase: %s\n\
+                     \Tense Phrase     : %s\n\
+                     \Verb Phrase      : %s"
                 (maybe "null" show (getchunk =<< cp^.cp_governor))
                 (maybe "null" show (getchunk =<< cp^.cp_TP.tp_governor))
                 (maybe "null" show (getchunk (cp^.cp_TP.tp_VP)))

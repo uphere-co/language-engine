@@ -11,6 +11,7 @@ import           Control.Lens               hiding (levels)
 import           Control.Monad                     ((<=<))
 import qualified Data.IntMap                as IM
 import           Data.List                         (find)
+import           Data.Maybe                        (fromMaybe)
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
@@ -82,7 +83,10 @@ showTP (txt,i,lmatknlst,pt) = do
       -- T.IO.putStrLn (prettyPrint 0 pt)
       putStrLn "--------------------------------------------------------------"
       T.IO.putStrLn txt
-      print (vp^.vp_index,vp^.vp_lemma,vp^?vp_auxiliary._Just._2)
+      putStrLn (printf "Lemma: %2d-%-15s  Modal: %-15s"
+                  (vp^.vp_index)
+                  (vp^.vp_lemma.to unLemma)
+                  (fromMaybe "" (vp^?vp_auxiliary._Just._2._2.to unLemma)))
       let mcp = constructCP vp
       case mcp of
         Nothing -> putStrLn "not successful in constructing CP"
