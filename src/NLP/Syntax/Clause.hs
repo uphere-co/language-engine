@@ -19,8 +19,8 @@ import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 --
--- import           NLP.Syntax.Format
 import           NLP.Syntax.Type
+import           NLP.Syntax.Util
 import           NLP.Syntax.Verb
 
 
@@ -33,25 +33,26 @@ governorVP vp = case vp^.vp_words of
 governorPhraseOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
 governorPhraseOfVP vp = parent =<< governorVP vp
 
-{- 
-identifySubject :: (BitreeZipperICP '[Lemma], BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
-identifySubject (gp,vp) =
+ 
+identifySubject :: BitreeZipperICP '[Lemma] -> Maybe (BitreeZipperICP '[Lemma])
+identifySubject vp = findSiblings prev (isChunkAs NP) vp
   
--}
+
 
 constructCP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe ComplementPhrase
-constructCP vprop = do vp <- governorVP vprop
-                       tp' <- governorPhraseOfVP vprop
-                       tptag' <- N.convert <$> getchunk tp'
-                       case tptag' of
-                         N.CL s -> do
-                           cp' <- parent tp'
-                           cptag' <- N.convert <$> getchunk cp'
-                           case cptag' of
-                             N.CL _ -> return (CP (Just cp') (TP (Just tp') vp vprop))
-                             N.RT   -> return (CP (Just cp') (TP (Just tp') vp vprop))
-                             _      -> return (CP Nothing    (TP (Just tp') vp vprop))
-                         _ -> return (CP Nothing (TP Nothing vp vprop))
+constructCP vprop = do
+    vp <- governorVP vprop
+    tp' <- governorPhraseOfVP vprop
+    tptag' <- N.convert <$> getchunk tp'
+    case tptag' of
+      N.CL s -> do
+        cp' <- parent tp'
+        cptag' <- N.convert <$> getchunk cp'
+        case cptag' of
+          N.CL _ -> return (CP (Just cp') (TP (Just tp') (identifySubject vp) vp vprop))
+          N.RT   -> return (CP (Just cp') (TP (Just tp') (identifySubject vp) vp vprop))
+          _      -> return (CP Nothing    (TP (Just tp') (identifySubject vp) vp vprop))
+      _ -> return (CP Nothing (TP Nothing Nothing vp vprop))                      -- reduced relative clause
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
