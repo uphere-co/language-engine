@@ -20,6 +20,7 @@ library
   exposed-modules:     NLP.Syntax.Clause
                        NLP.Syntax.Format
                        NLP.Syntax.Type
+                       NLP.Syntax.Util
                        NLP.Syntax.Verb
                        NLP.Syntax.Verb.Old
   -- other-modules:

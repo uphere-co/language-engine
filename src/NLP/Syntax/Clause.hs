@@ -33,7 +33,11 @@ governorVP vp = case vp^.vp_words of
 governorPhraseOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
 governorPhraseOfVP vp = parent =<< governorVP vp
 
-
+{- 
+identifySubject :: (BitreeZipperICP '[Lemma], BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+identifySubject (gp,vp) =
+  
+-}
 
 constructCP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe ComplementPhrase
 constructCP vprop = do vp <- governorVP vprop
