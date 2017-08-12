@@ -143,6 +143,7 @@ findAux z = do
   guard (isChunkAs VP (current p))
   c <- child1 p
   if | isPOSAs MD (current c)     -> (c,) <$> intLemma c
+     | isPOSAs TO (current c)     -> (c,) <$> intLemma c  
      | isLemmaAs "do" (current c) -> (c,) <$> intLemma c
      | otherwise                  -> findAux p
 

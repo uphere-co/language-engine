@@ -34,6 +34,20 @@ governorPhraseOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZi
 governorPhraseOfVP vp = parent =<< governorVP vp
 
 
+
+constructTP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe TensePhrase
+constructTP vp = do gvp <- governorVP vp
+                    gp' <- governorPhraseOfVP vp
+                    gptag' <- N.convert <$> getchunk gp'
+                    let gp = case gptag' of
+                               N.CL s -> Just gp'
+                               _      -> Nothing
+                    return (TensePhrase gp gvp vp)
+{-                    case N.convert gptag of
+                      N.CL s ->  -}
+  where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
+
+
 currentlevel :: Bitree (Range,(STag,Int)) t -> Int
 currentlevel (PN (_,(_,l)) _) = l
 currentlevel (PL _ )          = 0

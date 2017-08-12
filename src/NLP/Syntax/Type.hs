@@ -42,14 +42,14 @@ data VerbProperty w = VerbProperty { _vp_index  :: Int
 
 makeLenses ''VerbProperty                           
 
-{-
-data TensePhrase = TensePhrase { _tp_verbProperty :: VerbProperty
-                               , _tp_verbPhrase :: BitreeZipperICP (Lemma ': [])
+
+data TensePhrase = TensePhrase { _tp_governor     :: Maybe (BitreeZipperICP '[Lemma])
+                               , _tp_VP           :: BitreeZipperICP '[Lemma]
+                               , _tp_verbProperty :: VerbProperty (BitreeZipperICP '[Lemma])
                                }
-                 deriving (Show)
 
 makeLenses ''TensePhrase
--}
+
 
 data VerbArgs a = VerbArgs { _va_string :: [(POSTag,Text)]
                            , _va_arg0 :: Maybe a
