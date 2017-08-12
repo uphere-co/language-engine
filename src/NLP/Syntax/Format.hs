@@ -29,7 +29,7 @@ formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
         toTree (PL x)    = Tr.Node x []
         
 
-formatVerbProperty :: VerbProperty -> String
+formatVerbProperty :: VerbProperty Int -> String
 formatVerbProperty vp = printf "%3d %-15s : %-35s  aux: %-7s neg: %-5s | %s"
                           (vp^.vp_index) (vp^.vp_lemma.to unLemma)
                           (show (vp^.vp_tense) ++ "." ++ show (vp^.vp_aspect) ++ "." ++ show (vp^.vp_voice))
@@ -53,12 +53,11 @@ formatVerbArgs va = printf "%10s %-20s %s"
                  Left  (rng,(S_PP t))    -> "(PP " ++ show t ++ ")" ++ show rng
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
-formatClauseStructure -- :: IntMap Lemma
-                      -- -> PennTree
-                      :: [VerbProperty]
+
+formatClauseStructure :: [VerbProperty Int]
                       -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
                       -> [Text]
-formatClauseStructure {- lemmamap ptree -} vps clausetr =
+formatClauseStructure vps clausetr =
   let tr' = bimap (\(_rng,x)->f x) g (cutOutLevel0 clausetr)
         where f (S_CL c,l)    = T.pack (show c) <> ":" <> T.pack (show l)
               f (S_SBAR zs,l) = "SBAR:" <> T.pack (show zs) <> "," <> T.pack (show l)

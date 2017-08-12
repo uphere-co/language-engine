@@ -49,7 +49,7 @@ promoteNPPP x = [x]
 
 
 
-clauseStructure :: [VerbProperty]
+clauseStructure :: [VerbProperty Int]
                 -> PennTreeIdxG N.CombinedTag (POSTag,Text)
                 -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
 clauseStructure _vps (PL (i,pt)) = PL (Right (i,pt))
@@ -119,7 +119,7 @@ clauseRanges tr = bifoldMap f (const []) tr
         f _                = []
 
 
-clauseForVerb :: [Range] -> VerbProperty -> Maybe Range
+clauseForVerb :: [Range] -> VerbProperty Int -> Maybe Range
 clauseForVerb allrngs vp = case rngs of
                              [] -> Nothing
                              _  -> Just (minimumBy (compare `on` (\(b,e) -> e-b)) rngs)
@@ -162,7 +162,7 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
 
 
 getVerbArgs :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-            -> VerbProperty
+            -> VerbProperty Int
             -> Maybe (VerbArgs (Either (Range,STag) (Int,POSTag)))
 getVerbArgs tr vp = verbArgs <$> findVerb (vp^.vp_index) tr
 
