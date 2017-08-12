@@ -53,12 +53,12 @@ formatVerbArgs va = printf "%10s %-20s %s"
                  Left  (rng,(S_PP t))    -> "(PP " ++ show t ++ ")" ++ show rng
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
-formatClauseStructure :: IntMap Lemma
+formatClauseStructure -- :: IntMap Lemma
                       -- -> PennTree
-                      -> [VerbProperty]
+                      :: [VerbProperty]
                       -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
                       -> [Text]
-formatClauseStructure lemmamap {- ptree -} vps clausetr =
+formatClauseStructure {- lemmamap ptree -} vps clausetr =
   let tr' = bimap (\(_rng,x)->f x) g (cutOutLevel0 clausetr)
         where f (S_CL c,l)    = T.pack (show c) <> ":" <> T.pack (show l)
               f (S_SBAR zs,l) = "SBAR:" <> T.pack (show zs) <> "," <> T.pack (show l)
@@ -77,7 +77,7 @@ showClauseStructure lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
   
-      x:xs = formatClauseStructure lemmamap vps clausetr
+      x:xs = formatClauseStructure vps clausetr
   T.IO.putStrLn x
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
 
