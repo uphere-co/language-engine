@@ -24,6 +24,16 @@ import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 
 
+governorVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+governorVP vp = case vp^.vp_words of
+                  []  -> Nothing
+                  z:_ -> parent (fst z)
+
+
+governorPhraseOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+governorPhraseOfVP vp = parent =<< governorVP vp
+
+
 currentlevel :: Bitree (Range,(STag,Int)) t -> Int
 currentlevel (PN (_,(_,l)) _) = l
 currentlevel (PL _ )          = 0
