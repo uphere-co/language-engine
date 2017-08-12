@@ -11,7 +11,6 @@ import           Data.List                       (minimumBy)
 import           Data.Monoid
 import           Data.Text                       (Text)
 import qualified Data.Text               as T
-import qualified Data.Text.IO            as T.IO
 import           Text.Printf
 --
 import           Data.Bitree
@@ -19,7 +18,7 @@ import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 --
-import           NLP.Syntax.Format
+-- import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 
@@ -180,25 +179,3 @@ cutOutLevel0 (PN (rng,(p,lvl)) xs) =
   else PN (rng,(p,lvl)) (map cutOutLevel0 xs)
 
 
-showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
-showClauseStructure lemmamap ptree  = do
-  let x:xs = getClauseStructure lemmamap ptree
-  T.IO.putStrLn x
-  flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
-
-getClauseStructure :: IntMap Lemma -> PennTree -> [Text]
-getClauseStructure lemmamap ptree =
-  let vps  = verbPropertyFromPennTree lemmamap ptree
-      tr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      tr' = bimap (\(_rng,x)->f x) g (cutOutLevel0 tr)
-        where f (S_CL c,l)    = T.pack (show c) <> ":" <> T.pack (show l)
-              f (S_SBAR zs,l) = "SBAR:" <> T.pack (show zs) <> "," <> T.pack (show l)
-              f (S_VP zs,l)   = "VP:" <> T.pack (show zs) <> "," <> T.pack (show l)
-              f (S_PP p,_l)   = "PP:" <> T.pack (show p)
-              f (S_OTHER p,l) = T.pack (show p) <> ":" <> T.pack (show l)
-              f (S_RT  ,l)    = "ROOT" <> ":" <> T.pack (show l)
-              g (Left x)      = T.pack (show x)
-              g (Right x)     = T.pack (show x)
-      rngs = clauseRanges tr
-      xs = flip map vps $ \vp -> T.pack $ printf "%-50s | Clause %7s:  %s" (formatVerbProperty vp) (maybe "" show (clauseForVerb rngs vp)) (maybe "" formatVerbArgs (getVerbArgs tr vp))
-  in [formatBitree id tr'] ++ xs
