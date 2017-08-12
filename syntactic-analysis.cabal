@@ -21,6 +21,7 @@ library
                        NLP.Syntax.Format
                        NLP.Syntax.Type
                        NLP.Syntax.Verb
+                       NLP.Syntax.Verb.Old
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.9 && <4.10,
