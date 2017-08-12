@@ -17,6 +17,7 @@ import qualified Data.Text.IO               as T.IO
 --
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
+import           NLP.Syntax.Format
 import           NLP.Type.PennTreebankII
 
 
