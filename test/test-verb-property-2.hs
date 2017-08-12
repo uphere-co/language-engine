@@ -8,6 +8,7 @@
 module Main where
 
 import           Control.Lens               hiding (levels)
+import           Control.Monad                     ((<=<))
 import qualified Data.IntMap                as IM
 import           Data.List                         (find)
 import           Data.Text                         (Text)
@@ -15,7 +16,8 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 --
 import           CoreNLP.Simple.Type.Simplified
---
+import           Data.Bitree
+import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Format
 import           NLP.Syntax.Type
@@ -47,7 +49,7 @@ ex25 = ( "NASA enhances online scientific tool used by hundreds of scientists."
        )
 
 
-mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty Int]
+mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty (BitreeZipperICP '[Lemma])]
 mkVPS lmatknlst pt =
   let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
   in verbPropertyFromPennTree lemmamap pt
@@ -62,7 +64,13 @@ showVP (txt,i,lmatknlst,pt) = do
     Nothing -> error "nothing"
     Just vp -> do
       T.IO.putStrLn (prettyPrint 0 pt)
-      print vp
+      case (vp^.vp_words) of
+        [] -> error "nothing2"
+        z:_ ->
+          let tag = (bimap (chunkTag.snd) (posTag.snd) . getRoot . current) <$>
+                      ((parent <=< parent) (fst z))
+          in print tag
+
 
 
 main :: IO ()
