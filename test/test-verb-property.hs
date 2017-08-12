@@ -265,7 +265,7 @@ testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,
 
 
 
-mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty]
+mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty (BitreeZipperICP '[Lemma])]
 mkVPS lmatknlst pt =
   let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
   in verbPropertyFromPennTree lemmamap pt
@@ -275,14 +275,14 @@ checkVP :: (Text,Int,(Tense,Aspect,Voice,Maybe Text,Maybe Text),[(Int,(Lemma,Tex
 checkVP (_txt,i,expresult,lmatknlst,pt,_dep) =
   let vps = mkVPS lmatknlst pt
   in case find (\vp -> vp^.vp_index == i) vps of
-       Just vp -> expresult == (vp^.vp_tense,vp^.vp_aspect,vp^.vp_voice,vp^?vp_auxiliary._Just._2.to unLemma,vp^?vp_negation._Just._2.to unLemma)
+       Just vp -> expresult == (vp^.vp_tense,vp^.vp_aspect,vp^.vp_voice,vp^?vp_auxiliary._Just._2._2.to unLemma,vp^?vp_negation._Just._2._2.to unLemma)
        _       -> False 
 
 
 unitTestsVerbProperty :: TestTree
 unitTestsVerbProperty = testGroup "verb property" . flip map testcases $ \c ->
   testCase (T.unpack (c^._1) ++ show (c^._3)) $
-    (checkVP c == True) @? (show (mkVPS (c^._4) (c^._5)) ++ "\n" ++ T.unpack (prettyPrint 0 (c^._5)))
+    (checkVP c == True) @? (show ((mkVPS (c^._4) (c^._5))^..traverse.vp_lemma)  ++ "\n" ++ T.unpack (prettyPrint 0 (c^._5)))
  
 
 unitTests :: TestTree

@@ -34,9 +34,9 @@ data VerbProperty w = VerbProperty { _vp_index  :: Int
                                    , _vp_tense  :: Tense
                                    , _vp_aspect :: Aspect
                                    , _vp_voice  :: Voice
-                                   , _vp_auxiliary :: Maybe (Int,Lemma)
-                                   , _vp_negation :: Maybe (Int,Lemma)
-                                   , _vp_words  :: [w] --  BitreeZipperICP (Lemma ': '[]) -- [Int]
+                                   , _vp_auxiliary :: Maybe (w,(Int,Lemma))
+                                   , _vp_negation :: Maybe (w,(Int,Lemma))
+                                   , _vp_words  :: [(w,(Int,Lemma))]
                                    }
                     deriving (Show)
 

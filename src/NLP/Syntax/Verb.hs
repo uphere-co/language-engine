@@ -12,12 +12,13 @@
 module NLP.Syntax.Verb where
 
 import           Control.Applicative
-import           Control.Lens                                ((^.))
+import           Control.Lens                                ((^.),(^..),_1,_2)
 import           Control.Monad
 import           Control.Monad.Loops                         (iterateUntilM)
 import           Data.Foldable                               (toList)
+import           Data.Function                               (on)
 import           Data.IntMap                                 (IntMap)
-import           Data.List                                   (sort)
+import           Data.List                                   (sortBy)
 import           Data.Text                                   (Text)
 import           Data.Maybe
 import           Data.Monoid
@@ -51,12 +52,13 @@ getLeafIndex (PL (i,_)) = Just i
 getLeafIndex _          = Nothing
 
 
-isLemmaAs :: Lemma -> BitreeICP (Lemma ': as) -> Bool
-isLemmaAs lma (PL (_,x)) = ahead (getAnnot x) == lma
-isLemmaAs _   _          = False
+isLemmaAs :: (GetIntLemma tag) => Lemma -> BitreeICP tag -> Bool -- BitreeICP (Lemma ': as) -> Bool
+-- isLemmaAs lma (PL (_,x)) = fst intLemma -- ahead (getAnnot x) == lma
+-- isLemmaAs _   _          = False
+isLemmaAs lma c = maybe False ((==lma).snd) (intLemma0 c)
 
 
-isPOSAs :: POSTag -> BitreeICP as -> Bool
+isPOSAs :: POSTag -> BitreeICP tag -> Bool -- POSTag -> BitreeICP as -> Bool
 isPOSAs pos (PL (_,x)) = posTag x == pos
 isPOSAs _   _          = False
 
@@ -94,11 +96,12 @@ auxHave z =
      | otherwise                                               -> Nothing
 
 
-type AuxNegWords = (Maybe (Int,Lemma),Maybe (Int,Lemma),[Int])
+type AuxNegWords w = (Maybe (w,(Int,Lemma)),Maybe (w,(Int,Lemma)),[(w,(Int,Lemma))])
 
 
-class GetIntLemma w where
-  intLemma :: BitreeZipperICP w -> Maybe (Int,Lemma)
+class GetIntLemma tag where
+  intLemma :: BitreeZipperICP tag -> Maybe (Int,Lemma)
+  intLemma0 :: BitreeICP tag -> Maybe (Int,Lemma)
 
 instance GetIntLemma (Lemma ': as) where
   intLemma :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,Lemma)
@@ -106,6 +109,14 @@ instance GetIntLemma (Lemma ': as) where
     i <- getLeafIndex (current c)
     l <- ahead . getAnnot <$> getLeaf (current c)
     return (i,l)                                  
+
+  intLemma0 :: BitreeICP (Lemma ': as) -> Maybe (Int,Lemma)
+  intLemma0 c = do
+    i <- getLeafIndex c
+    l <- ahead . getAnnot <$> getLeaf c
+    return (i,l)                                  
+
+
 
 
 findSiblings :: (Monad m) =>
@@ -129,7 +140,9 @@ findPrevVerb z = do
     prevVerbInSiblings = findSiblings prev (\x -> case getIdxPOS x of {Nothing -> False; Just (_,pos) -> isVerb pos})
 
 
-findAux :: BitreeZipperICP (Lemma ': as) -> Maybe (BitreeZipperICP (Lemma ': as), (Int,Lemma))
+findAux :: (GetIntLemma tag) =>
+           BitreeZipperICP tag
+        -> Maybe (BitreeZipperICP tag, (Int,Lemma))
 findAux z = do
   p <- parent z
   guard (isChunkAs VP (current p))
@@ -139,25 +152,35 @@ findAux z = do
      | otherwise                  -> findAux p
 
 
-findNeg :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,Lemma)
-findNeg z = intLemma =<< (findNegInSiblings prev z <|> findNegInSiblings next z)
+findNeg :: (GetIntLemma tag) => 
+           BitreeZipperICP tag
+        -> Maybe (BitreeZipperICP tag, (Int,Lemma))
+findNeg z = (\z'->(z',) <$> intLemma z') =<< (findNegInSiblings prev z <|> findNegInSiblings next z)
   where
     findNegInSiblings dir = findSiblings dir (\x -> isPOSAs RB x && (isLemmaAs "not" x || isLemmaAs "n't" x))
 
 
-auxNegWords :: BitreeZipperICP (Lemma ': as)
-            -> [BitreeZipperICP (Lemma ': as)]
-            -> (Maybe (Int,Lemma), Maybe (Int,Lemma), [Int])
+auxNegWords
+  :: (GetIntLemma tag) =>
+     BitreeZipperICP tag
+  -> [BitreeZipperICP tag]
+  -> AuxNegWords (BitreeZipperICP tag)
+--  (Maybe (BitreeZipperICP tag,(Int,Lemma)), Maybe (BitreeZipperICP tag,(Int,Lemma)), [(BitreeZipperICP tag,(Int,Lemma))])
 auxNegWords z zs =
-  let getIdx = fst . fromJust . getIdxPOS . current
-      is = map getIdx zs
+  let -- getIdx = fst . fromJust . getIdxPOS . current
+      -- zis:: Double
+      zis = map (\z'->(z',)<$>intLemma z') zs
       (au,ne) = case findAux z of
                   Nothing -> (Nothing,findNeg z)
-                  Just (c,il) -> (Just il,findNeg c)
-  in (au,ne,sort (map fst (catMaybes [au,ne]) ++ is))
+                  Just (c,il) -> (Just (c,il),findNeg c)
+
+      ws = sortBy (compare `on` (^._2._1)) (catMaybes ([au,ne] ++ zis))
+  in (au,ne,ws)
 
 
-tenseAspectVoiceAuxNeg :: BitreeZipperICP (Lemma ': as) -> Maybe (Tense,Aspect,Voice,AuxNegWords)
+tenseAspectVoiceAuxNeg
+  :: BitreeZipperICP '[Lemma]
+  -> Maybe (Tense,Aspect,Voice,AuxNegWords (BitreeZipperICP '[Lemma]))
 tenseAspectVoiceAuxNeg z
   | isPOSAs VBN (current z) = 
       case findPrevVerb z of
@@ -195,7 +218,7 @@ tenseAspectVoiceAuxNeg z
 {-  where getIdx = fst . fromJust . getIdxPOS . current 
 -}
 
-verbProperty :: BitreeZipperICP (Lemma ': as) -> Maybe (VerbProperty Int)
+verbProperty :: BitreeZipperICP '[Lemma] -> Maybe (VerbProperty (BitreeZipperICP '[Lemma]))
 verbProperty z = do
   i <- getLeafIndex (current z)
   lma <- ahead . getAnnot <$> getLeaf (current z)
@@ -205,7 +228,7 @@ verbProperty z = do
 
 
 
-verbPropertyFromPennTree :: IntMap Lemma -> PennTree -> [VerbProperty Int]
+verbPropertyFromPennTree :: IntMap Lemma -> PennTree -> [VerbProperty (BitreeZipperICP '[Lemma])]
 verbPropertyFromPennTree lemmamap pt = 
   let lemmapt = lemmatize lemmamap (mkAnnotatable (mkPennTreeIdx pt))
       phase1 z = case getRoot (current z) of
@@ -215,7 +238,7 @@ verbPropertyFromPennTree lemmamap pt =
                        else Nothing
                   _ -> Nothing 
       vps1 = mapMaybe phase1 (toList (mkBitreeZipper [] lemmapt))
-      identified_verbs1 = concatMap (\vp -> vp^.vp_words) vps1
+      identified_verbs1 = concatMap (\vp -> vp^..(vp_words.traverse._2._1)) vps1
       
       phase2 z = case getRoot (current z) of
                   Right (i,ALeaf (pos,_) annot)
@@ -224,7 +247,7 @@ verbPropertyFromPennTree lemmamap pt =
                        else Nothing
                   _ -> Nothing
       vps2 = mapMaybe phase2 (toList (mkBitreeZipper [] lemmapt))
-      identified_verbs2 = concatMap (\vp -> vp^.vp_words) vps2
+      identified_verbs2 = concatMap (\vp -> vp^..(vp_words.traverse._2._1)) vps2
 
       phase3 z = case getRoot (current z) of
                   Right (i,ALeaf (pos,_) _annot)
@@ -234,9 +257,7 @@ verbPropertyFromPennTree lemmamap pt =
                   _ -> Nothing
       vps3 = mapMaybe phase3 (toList (mkBitreeZipper [] lemmapt))
 
-
-      
-  in {- trace (show identified_verbs1) $ -} vps1 <> vps2 <> vps3
+  in vps1 <> vps2 <> vps3
 
 
 
