@@ -52,13 +52,11 @@ getLeafIndex (PL (i,_)) = Just i
 getLeafIndex _          = Nothing
 
 
-isLemmaAs :: (GetIntLemma tag) => Lemma -> BitreeICP tag -> Bool -- BitreeICP (Lemma ': as) -> Bool
--- isLemmaAs lma (PL (_,x)) = fst intLemma -- ahead (getAnnot x) == lma
--- isLemmaAs _   _          = False
+isLemmaAs :: (GetIntLemma tag) => Lemma -> BitreeICP tag -> Bool
 isLemmaAs lma c = maybe False ((==lma).snd) (intLemma0 c)
 
 
-isPOSAs :: POSTag -> BitreeICP tag -> Bool -- POSTag -> BitreeICP as -> Bool
+isPOSAs :: POSTag -> BitreeICP tag -> Bool
 isPOSAs pos (PL (_,x)) = posTag x == pos
 isPOSAs _   _          = False
 
@@ -66,7 +64,6 @@ isPOSAs _   _          = False
 isChunkAs :: ChunkTag -> BitreeICP as -> Bool
 isChunkAs chk (PN (_,x) _) = chunkTag x == chk
 isChunkAs _   _            = False
-
 
 
 isVBN :: BitreeZipperICP a -> Bool
@@ -117,8 +114,6 @@ instance GetIntLemma (Lemma ': as) where
     return (i,l)                                  
 
 
-
-
 findSiblings :: (Monad m) =>
                 (BitreeZipper c t -> m (BitreeZipper c t))
              -> (Bitree c t -> Bool)
@@ -165,11 +160,8 @@ auxNegWords
      BitreeZipperICP tag
   -> [BitreeZipperICP tag]
   -> AuxNegWords (BitreeZipperICP tag)
---  (Maybe (BitreeZipperICP tag,(Int,Lemma)), Maybe (BitreeZipperICP tag,(Int,Lemma)), [(BitreeZipperICP tag,(Int,Lemma))])
 auxNegWords z zs =
-  let -- getIdx = fst . fromJust . getIdxPOS . current
-      -- zis:: Double
-      zis = map (\z'->(z',)<$>intLemma z') zs
+  let zis = map (\z'->(z',)<$>intLemma z') zs
       (au,ne) = case findAux z of
                   Nothing -> (Nothing,findNeg z)
                   Just (c,il) -> (Just (c,il),findNeg c)
@@ -215,8 +207,7 @@ tenseAspectVoiceAuxNeg z
                    (return (Present,Progressive,Active,auxNegWords z1 [z1,z]))
   | isPOSAs VBD (current z) = return (Past,Simple,Active,auxNegWords z [z])
   | otherwise               = return (Present,Simple,Active,auxNegWords z [z])
-{-  where getIdx = fst . fromJust . getIdxPOS . current 
--}
+
 
 verbProperty :: BitreeZipperICP '[Lemma] -> Maybe (VerbProperty (BitreeZipperICP '[Lemma]))
 verbProperty z = do
@@ -224,8 +215,6 @@ verbProperty z = do
   lma <- ahead . getAnnot <$> getLeaf (current z)
   (tns,asp,vo,(aux,neg,is)) <- tenseAspectVoiceAuxNeg z
   return (VerbProperty i lma tns asp vo aux neg is)
-
-
 
 
 verbPropertyFromPennTree :: IntMap Lemma -> PennTree -> [VerbProperty (BitreeZipperICP '[Lemma])]
