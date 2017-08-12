@@ -14,16 +14,13 @@ import           Control.Lens          hiding (Level)
 import           Control.Monad
 import           Control.Monad.Loops
 import           Control.Monad.IO.Class           (liftIO)
--- import           Control.Monad.Writer.Lazy
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Default
--- import           Data.Either.Extra                (isRight)
 import           Data.Foldable
 import           Data.Function                    (on)
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
--- import qualified Data.IntMap                as IM
 import           Data.List                        (intercalate,intersperse,mapAccumL,zip5)
 import           Data.Maybe
 import           Data.Map                         (Map)
@@ -60,9 +57,11 @@ import           FrameNet.Type.Common
 import           FrameNet.Type.Frame             hiding (LexUnit)
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
+import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
+import           NLP.Type.PennTreebankII.Separated     as N
 import           PropBank.Util
 import           Text.Annotation.Type
 import           Text.Annotation.Util.Doc
@@ -339,11 +338,12 @@ getSentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
     flip mapM mptr $ \ptr -> do
       let lemmamap = mkLemmaMap psent
           vps = verbPropertyFromPennTree lemmamap ptr
+          clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptr))
 
       let subline1 = concat [ [T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)]
                      , [(formatIndexTokensFromTree 0 ptr)]
                      , ["--------------------------------------------------------------------------------------------------"]
-                     , getClauseStructure lemmamap ptr
+                     , formatClauseStructure vps clausetr
                      , ["================================================================================================="] ] 
 
       subline2 <- forM (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do

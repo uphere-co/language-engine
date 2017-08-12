@@ -22,6 +22,7 @@ import           System.IO
 --
 import           CoreNLP.Simple.Type.Simplified
 import           NLP.Syntax.Clause
+import           NLP.Syntax.Format
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
