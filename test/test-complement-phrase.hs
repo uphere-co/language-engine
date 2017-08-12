@@ -80,33 +80,17 @@ showTP (txt,i,lmatknlst,pt) = do
   case find (\vp -> vp^.vp_index == i) vps of
     Nothing -> error "nothing"
     Just vp -> do
-      -- T.IO.putStrLn (prettyPrint 0 pt)
       putStrLn "--------------------------------------------------------------"
       T.IO.putStrLn txt
-      putStrLn (printf "Lemma: %2d-%-15s  Modal: %-15s"
+      T.IO.putStrLn (prettyPrint 0 pt)
+      putStrLn (printf "\nTesting Lemma: %2d-%-15s\nModal: %-15s"
                   (vp^.vp_index)
                   (vp^.vp_lemma.to unLemma)
-                  (fromMaybe "" (vp^?vp_auxiliary._Just._2._2.to unLemma)))
+                  (fromMaybe "null" (vp^?vp_auxiliary._Just._2._2.to unLemma)))
       let mcp = constructCP vp
       case mcp of
         Nothing -> putStrLn "not successful in constructing CP"
         Just cp -> putStrLn (formatCP cp)
-{-          let getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
-          putStrLn $ printf "TP governor: %s" (show (getchunk =<< tp^.tp_governor))
-          putStrLn $ printf "VP : %s" (show (getchunk (tp^.tp_VP))) -}
-      {- 
-      let gettag = bimap (chunkTag.snd) (posTag.snd) . getRoot . current
-      print (fmap gettag (governorVP vp))
-      let mgp = governorPhraseOfVP vp      
-      case mgp of
-        Nothing -> putStrLn "no governor?"
-        Just gp -> do
-          let Left gptag = gettag gp
-          print gptag
-          case N.convert gptag of
-            N.CL s -> print (fmap gettag (parent gp))
-            _ -> return ()
-      -}
 
 
 main :: IO ()
