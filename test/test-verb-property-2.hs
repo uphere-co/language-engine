@@ -83,13 +83,13 @@ showTP (txt,i,lmatknlst,pt) = do
       putStrLn "--------------------------------------------------------------"
       T.IO.putStrLn txt
       print (vp^.vp_index,vp^.vp_lemma,vp^?vp_auxiliary._Just._2)
-      let mtp = constructTP vp
-      case mtp of
-        Nothing -> putStrLn "not successful in constructing TP"
-        Just tp -> do
-          let getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
+      let mcp = constructCP vp
+      case mcp of
+        Nothing -> putStrLn "not successful in constructing CP"
+        Just cp -> putStrLn (formatCP cp)
+{-          let getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
           putStrLn $ printf "TP governor: %s" (show (getchunk =<< tp^.tp_governor))
-          putStrLn $ printf "VP : %s" (show (getchunk (tp^.tp_VP)))
+          putStrLn $ printf "VP : %s" (show (getchunk (tp^.tp_VP))) -}
       {- 
       let gettag = bimap (chunkTag.snd) (posTag.snd) . getRoot . current
       print (fmap gettag (governorVP vp))

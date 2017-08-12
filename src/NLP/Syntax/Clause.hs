@@ -35,16 +35,19 @@ governorPhraseOfVP vp = parent =<< governorVP vp
 
 
 
-constructTP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe TensePhrase
-constructTP vp = do gvp <- governorVP vp
-                    gp' <- governorPhraseOfVP vp
-                    gptag' <- N.convert <$> getchunk gp'
-                    let gp = case gptag' of
-                               N.CL s -> Just gp'
-                               _      -> Nothing
-                    return (TensePhrase gp gvp vp)
-{-                    case N.convert gptag of
-                      N.CL s ->  -}
+constructCP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe ComplementPhrase
+constructCP vprop = do vp <- governorVP vprop
+                       tp' <- governorPhraseOfVP vprop
+                       tptag' <- N.convert <$> getchunk tp'
+                       case tptag' of
+                         N.CL s -> do
+                           cp' <- parent tp'
+                           cptag' <- N.convert <$> getchunk cp'
+                           case cptag' of
+                             N.CL _ -> return (CP (Just cp') (TP (Just tp') vp vprop))
+                             N.RT   -> return (CP (Just cp') (TP (Just tp') vp vprop))
+                             _      -> return (CP Nothing    (TP (Just tp') vp vprop))
+                         _ -> return (CP Nothing (TP Nothing vp vprop))
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
