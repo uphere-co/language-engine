@@ -244,23 +244,6 @@ loadVerbSubcat = do
   -- mapM_ print subcats
   return subcats
 
-parseRoleMap (i:lma:sense:frame:rest) = let lst = map (\w -> let x:y:_ = T.splitOn ":" w in (x,y)) rest
-                                        in ((lma,sense),lst)
-
-
-loadRoleMap = do
-  let rolemapfile = "/home/wavewave/repo/srcp/OntoNotes/mapping/final.txt"
-  txt <- T.IO.readFile rolemapfile
-  let getLemmaSense x = (x^._1,x^._2)
-      getArgTable x = ArgPattern (x^._3) (x^._4) (x^._5) (x^._6) (x^._7) (x^._8)
-  let rolemap = map parseRoleMap . map T.words . T.lines $ txt
-  return rolemap
-
-{- 
-    subcats = map (\xs  -> (getLemmaSense (head xs),map (\x->(getArgTable x,x^._9)) xs)) .  groupBy ((==) `on` getLemmaSense) . map parseSubcat . 
-  -- mapM_ print subcats
-  return subcats
-  -}
 
 
 data ProgOption = ProgOption { progCommand :: String
@@ -284,7 +267,8 @@ main = do
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (preddb,rolesetdb) <- loadPropBankDB
   subcats <- loadVerbSubcat
-  rolemap <- loadRoleMap
+  let rolemapfile = "/home/wavewave/repo/srcp/OntoNotes/mapping/final.txt"  
+  rolemap <- loadRoleMap rolemapfile
 
   let flattened = createONFN subcats sensemap framedb rolesetdb 
   let indexed = zip [1..] flattened
