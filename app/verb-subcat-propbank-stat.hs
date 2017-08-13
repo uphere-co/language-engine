@@ -72,8 +72,8 @@ maybeNumberedArgument _                    = Nothing
 
 formatArgMap isStat argmap = 
   (if isStat
-     then printf " %-20s         " (fromMaybe "frame" (lookup "frame" argmap))
-     else printf " %-20s " (fromMaybe "frame" (lookup "frame" argmap)))
+     then printf " %-20s " (fromMaybe "frame" (lookup "frame" argmap))
+     else printf " %-20s         " (fromMaybe "frame" (lookup "frame" argmap)))
   ++ printf "arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s\n"
        (fromMaybe "" (lookup "arg0" argmap))
        (fromMaybe "" (lookup "arg1" argmap))
@@ -288,7 +288,7 @@ main = do
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
-  let fps = {- Prelude.take 200 $ -} sort (toList (dirTree dtr))
+  let fps = Prelude.take 200 $ sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps
