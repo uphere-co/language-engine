@@ -49,10 +49,14 @@ constructCP vprop = do
         cp' <- parent tp'
         cptag' <- N.convert <$> getchunk cp'
         case cptag' of
-          N.CL _ -> return (CP (Just cp') (TP (Just tp') (identifySubject vp) vp vprop))
-          N.RT   -> return (CP (Just cp') (TP (Just tp') (identifySubject vp) vp vprop))
-          _      -> return (CP Nothing    (TP (Just tp') (identifySubject vp) vp vprop))
-      _ -> return (CP Nothing (TP Nothing Nothing vp vprop))                      -- reduced relative clause
+          N.CL _ -> return $ CP (Just cp')
+                                (prev tp')
+                                (TP (Just tp') (identifySubject vp) vp vprop)
+          N.RT   -> return $ CP (Just cp')
+                                Nothing
+                                (TP (Just tp') (identifySubject vp) vp vprop)
+          _      -> return (CP Nothing Nothing (TP (Just tp') (identifySubject vp) vp vprop))
+      _ -> return (CP Nothing Nothing (TP Nothing Nothing vp vprop))                      -- reduced relative clause
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
