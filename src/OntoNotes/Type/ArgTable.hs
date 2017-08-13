@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RecordWildCards    #-}
@@ -19,13 +20,24 @@ import           NLP.Type.PennTreebankII
 import           PropBank.Match
 import           PropBank.Type.Prop
 
+data ATNode a = SimpleNode { _atnode_orig :: a }
+              | LinkedNode { _atnode_orig  :: a
+                           , _atnode_link  :: a } 
+              deriving (Show,Functor)
+
+
+
+-- now i can experiment flexibly with linked node
+chooseATNode (SimpleNode x) = x
+-- chooseATNode (LinkedNode x y) = y
+chooseATNode (LinkedNode x y) = x
                  
 data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
-                         , _tbl_arg0 :: Maybe Text
-                         , _tbl_arg1 :: Maybe Text
-                         , _tbl_arg2 :: Maybe Text
-                         , _tbl_arg3 :: Maybe Text
-                         , _tbl_arg4 :: Maybe Text
+                         , _tbl_arg0 :: Maybe (ATNode Text)
+                         , _tbl_arg1 :: Maybe (ATNode Text)
+                         , _tbl_arg2 :: Maybe (ATNode Text)
+                         , _tbl_arg3 :: Maybe (ATNode Text)
+                         , _tbl_arg4 :: Maybe (ATNode Text)
                          , _tbl_file_sid_tid :: (FilePath,Int,Int)
                          }
                 deriving (Show)
@@ -56,11 +68,11 @@ instance Hashable ArgPattern
 
 mkArgPattern :: Maybe Voice -> ArgTable -> ArgPattern
 mkArgPattern mvoice ArgTable {..} = ArgPattern { _patt_voice = mvoice
-                                               , _patt_arg0 = _tbl_arg0
-                                               , _patt_arg1 = _tbl_arg1
-                                               , _patt_arg2 = _tbl_arg2
-                                               , _patt_arg3 = _tbl_arg3
-                                               , _patt_arg4 = _tbl_arg4
+                                               , _patt_arg0 = fmap chooseATNode _tbl_arg0
+                                               , _patt_arg1 = fmap chooseATNode _tbl_arg1
+                                               , _patt_arg2 = fmap chooseATNode _tbl_arg2
+                                               , _patt_arg3 = fmap chooseATNode _tbl_arg3
+                                               , _patt_arg4 = fmap chooseATNode _tbl_arg4
                                                }
 
 
@@ -103,11 +115,11 @@ phraseNodeType (PL (_,(p     ,t))) = case isNoun p of
 mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> (FilePath,Int,Int) -> [Argument] -> ArgTable
 mkArgTable itr l2p (file,sid,tid) args  =
     ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (findArg (== Relation)))
-             (phraseNodeType . adj <$> findArg (== NumberedArgument 0))
-             (phraseNodeType . adj <$> findArg (== NumberedArgument 1))
-             (phraseNodeType . adj <$> findArg (== NumberedArgument 2))
-             (phraseNodeType . adj <$> findArg (== NumberedArgument 3))
-             (phraseNodeType . adj <$> findArg (== NumberedArgument 4))
+             (fmap phraseNodeType . adj <$> findArg (== NumberedArgument 0))
+             (fmap phraseNodeType . adj <$> findArg (== NumberedArgument 1))
+             (fmap phraseNodeType . adj <$> findArg (== NumberedArgument 2))
+             (fmap phraseNodeType . adj <$> findArg (== NumberedArgument 3))
+             (fmap phraseNodeType . adj <$> findArg (== NumberedArgument 4))
              (file,sid,tid)
   where
     adj x@(PL (_,(D_NONE,t))) = let (_trc,mlid) = identifyTrace t
@@ -115,9 +127,9 @@ mkArgTable itr l2p (file,sid,tid) args  =
                                               rng <- lookup lid l2p
                                               matchR rng itr
                                 in case mlnk of
-                                     Nothing -> x
-                                     Just lnk -> lnk
-    adj x                     = x                     
+                                     Nothing -> SimpleNode x
+                                     Just lnk -> LinkedNode x lnk
+    adj x                     = SimpleNode x
     findArg lcond = do a <- find (\a -> lcond (a^.arg_label)) args
                        let ns = a^.arg_terminals
                        case ns of

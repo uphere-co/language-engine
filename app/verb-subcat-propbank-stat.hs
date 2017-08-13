@@ -87,11 +87,11 @@ formatArgTable :: Maybe (VerbProperty (BitreeZipperICP '[Lemma]),_) -> ArgTable 
 formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
                               (fromMaybe "" (tbl^.tbl_rel))
                               (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
-                              (fromMaybe "" (tbl^.tbl_arg0))
-                              (fromMaybe "" (tbl^.tbl_arg1))
-                              (fromMaybe "" (tbl^.tbl_arg2))
-                              (fromMaybe "" (tbl^.tbl_arg3))
-                              (fromMaybe "" (tbl^.tbl_arg4))
+                              (fromMaybe "" (tbl^.tbl_arg0.to (fmap chooseATNode)))
+                              (fromMaybe "" (tbl^.tbl_arg1.to (fmap chooseATNode)))
+                              (fromMaybe "" (tbl^.tbl_arg2.to (fmap chooseATNode)))
+                              (fromMaybe "" (tbl^.tbl_arg3.to (fmap chooseATNode)))
+                              (fromMaybe "" (tbl^.tbl_arg4.to (fmap chooseATNode)))
                               (tbl^.tbl_file_sid_tid._1)
                               (tbl^.tbl_file_sid_tid._2)
                               (tbl^.tbl_file_sid_tid._3)
@@ -241,12 +241,13 @@ showStatInst :: Bool
              -> IO ()
 showStatInst doesShowDetail rolemap sensedb lemmastat classified_inst_map = do
   let lst = HM.toList classified_inst_map
-  forM_ lemmastat $ \(lma,f) -> do
-    printHeader (lma,f)
-    forM_ (countSenseForLemma lma lst) $ \x -> do
-      let definsts = getDefInst sensedb classified_inst_map (fst x)
-          str = formatStatInst doesShowDetail rolemap lma x definsts
-      putStrLn str
+  forM_ lemmastat $ \(lma,freq) -> do
+    when (freq /= 0) $ do
+      printHeader (lma,freq)
+      forM_ (countSenseForLemma lma lst) $ \x -> do
+        let definsts = getDefInst sensedb classified_inst_map (fst x)
+            str = formatStatInst doesShowDetail rolemap lma x definsts
+        putStrLn str
 
 
 showError :: Either String a -> IO ()
