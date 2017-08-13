@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -32,15 +33,15 @@ chooseATNode (SimpleNode x) = x
 -- chooseATNode (LinkedNode x y) = y
 chooseATNode (LinkedNode x y) = x
                  
-data ArgTable = ArgTable { _tbl_rel  :: Maybe Text
-                         , _tbl_arg0 :: Maybe (ATNode Text)
-                         , _tbl_arg1 :: Maybe (ATNode Text)
-                         , _tbl_arg2 :: Maybe (ATNode Text)
-                         , _tbl_arg3 :: Maybe (ATNode Text)
-                         , _tbl_arg4 :: Maybe (ATNode Text)
-                         , _tbl_file_sid_tid :: (FilePath,Int,Int)
-                         }
-                deriving (Show)
+data ArgTable a = ArgTable { _tbl_rel  :: Maybe Text
+                           , _tbl_arg0 :: Maybe (ATNode a)
+                           , _tbl_arg1 :: Maybe (ATNode a)
+                           , _tbl_arg2 :: Maybe (ATNode a)
+                           , _tbl_arg3 :: Maybe (ATNode a)
+                           , _tbl_arg4 :: Maybe (ATNode a)
+                           , _tbl_file_sid_tid :: (FilePath,Int,Int)
+                           }
+                  deriving (Show)
 
 makeLenses ''ArgTable
 
@@ -50,23 +51,23 @@ deriving instance Generic Voice
 instance Hashable Voice
 
 
-data ArgPattern = ArgPattern { _patt_voice :: Maybe Voice
-                             , _patt_arg0 :: Maybe Text
-                             , _patt_arg1 :: Maybe Text
-                             , _patt_arg2 :: Maybe Text
-                             , _patt_arg3 :: Maybe Text
-                             , _patt_arg4 :: Maybe Text
-                             }
-                deriving (Show,Eq,Ord,Generic)
+data ArgPattern a = ArgPattern { _patt_voice :: Maybe Voice
+                               , _patt_arg0 :: Maybe a
+                               , _patt_arg1 :: Maybe a
+                               , _patt_arg2 :: Maybe a
+                               , _patt_arg3 :: Maybe a
+                               , _patt_arg4 :: Maybe a
+                               }
+                  deriving (Show,Eq,Ord,Generic)
 
 makeLenses ''ArgPattern
 
 
-instance Hashable ArgPattern
+instance Hashable (ArgPattern Text)
 
 
 
-mkArgPattern :: Maybe Voice -> ArgTable -> ArgPattern
+mkArgPattern :: Maybe Voice -> ArgTable a -> ArgPattern a
 mkArgPattern mvoice ArgTable {..} = ArgPattern { _patt_voice = mvoice
                                                , _patt_arg0 = fmap chooseATNode _tbl_arg0
                                                , _patt_arg1 = fmap chooseATNode _tbl_arg1
@@ -112,7 +113,7 @@ phraseNodeType (PL (_,(p     ,t))) = case isNoun p of
                                        _   -> "??" <> T.pack (show (p,t))
 
 
-mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> (FilePath,Int,Int) -> [Argument] -> ArgTable
+mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> (FilePath,Int,Int) -> [Argument] -> ArgTable Text
 mkArgTable itr l2p (file,sid,tid) args  =
     ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (findArg (== Relation)))
              (fmap phraseNodeType . adj <$> findArg (== NumberedArgument 0))

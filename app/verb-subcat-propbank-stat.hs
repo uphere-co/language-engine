@@ -83,7 +83,7 @@ formatArgMap isStat argmap =
   ++ "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
 
 
-formatArgTable :: Maybe (VerbProperty (BitreeZipperICP '[Lemma]),_) -> ArgTable -> String
+formatArgTable :: Maybe (VerbProperty (BitreeZipperICP '[Lemma]),_) -> ArgTable Text -> String
 formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
                               (fromMaybe "" (tbl^.tbl_rel))
                               (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
@@ -217,11 +217,11 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
           putStrLn senseheader
           let margmap = getArgMapFromRoleMap (lma,sense_num) rolemap 
           traverse_ (putStrLn . formatArgMap True) margmap
-          forM_ statlst $ \(patt :: ArgPattern,n :: Int) -> do
+          forM_ statlst $ \(patt,n :: Int) -> do
             let str1 = formatArgPatt patt :: String
             putStrLn (printf "%s     #count: %5d" str1 n)
         else do
-          forM_ statlst $ \(patt :: ArgPattern, n :: Int) -> do
+          forM_ statlst $ \(patt, n :: Int) -> do
             putStrLn $ printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d"
                          sense
                          sense_num
