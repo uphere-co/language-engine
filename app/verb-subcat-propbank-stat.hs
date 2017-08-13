@@ -70,14 +70,17 @@ maybeNumberedArgument (NumberedArgument n) = Just n
 maybeNumberedArgument _                    = Nothing
 
 
-formatArgMap argmap = 
-  printf "                              arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s\n"
-    (fromMaybe "" (lookup "arg0" argmap))
-    (fromMaybe "" (lookup "arg1" argmap))
-    (fromMaybe "" (lookup "arg2" argmap))
-    (fromMaybe "" (lookup "arg3" argmap))
-    (fromMaybe "" (lookup "arg4" argmap))
-  ++ "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
+formatArgMap isStat argmap = 
+  (if isStat
+     then printf " %-20s         " (fromMaybe "frame" (lookup "frame" argmap))
+     else printf " %-20s " (fromMaybe "frame" (lookup "frame" argmap)))
+  ++ printf "arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s\n"
+       (fromMaybe "" (lookup "arg0" argmap))
+       (fromMaybe "" (lookup "arg1" argmap))
+       (fromMaybe "" (lookup "arg2" argmap))
+       (fromMaybe "" (lookup "arg3" argmap))
+       (fromMaybe "" (lookup "arg4" argmap))
+  ++ "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
 
 
 formatArgTable :: Maybe (VerbProperty (BitreeZipperICP '[Lemma]),_) -> ArgTable -> String
@@ -138,11 +141,10 @@ formatStatInst :: Bool
 formatStatInst doesShowDetail rolemap lma ((sense,sense_num),count) (mdefn,insts) =
   let sensetxt = (sense <> "." <> sense_num)
       margmap = getArgMapFromRoleMap (lma,sense_num) rolemap
-  in "\n" ++ show (lma,sensetxt)
-     ++ "\n============================================================================\n"
+  in "\n============================================================================\n"
      ++ printf "%20s : %6d :  %s\n" sensetxt  count (fromMaybe "" mdefn)
      ++ "============================================================================\n"
-     ++ maybe "" formatArgMap margmap 
+     ++ maybe "" (formatArgMap False) margmap 
      ++ (intercalate "\n" . map (formatInst doesShowDetail margmap)) insts
 
 
@@ -214,7 +216,7 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
         then do
           putStrLn senseheader
           let margmap = getArgMapFromRoleMap (lma,sense_num) rolemap 
-          traverse_ (putStrLn . formatArgMap) margmap
+          traverse_ (putStrLn . formatArgMap True) margmap
           forM_ statlst $ \(patt :: ArgPattern,n :: Int) -> do
             let str1 = formatArgPatt patt :: String
             putStrLn (printf "%s     #count: %5d" str1 n)
@@ -286,7 +288,7 @@ main = do
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
-  let fps = Prelude.take 200 $ sort (toList (dirTree dtr))
+  let fps = {- Prelude.take 200 $ -} sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps

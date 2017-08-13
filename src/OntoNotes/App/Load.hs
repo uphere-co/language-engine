@@ -102,7 +102,7 @@ createVNFNDB semlink =
 
 
 parseRoleMap (i:lma:sense:frame:rest) = let lst = map (\w -> let x:y:_ = T.splitOn ":" w in (x,y)) rest
-                                        in ((lma,sense),lst)
+                                        in ((lma,sense),("frame",frame):lst)
 
 
 loadRoleMap rolemapfile = do
