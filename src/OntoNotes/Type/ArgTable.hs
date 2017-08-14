@@ -127,36 +127,31 @@ zipperArgTable itr tbl = tbl { _tbl_arg0 = replacef (_tbl_arg0 tbl)
                              , _tbl_arg1 = replacef (_tbl_arg1 tbl)
                              , _tbl_arg2 = replacef (_tbl_arg2 tbl)
                              , _tbl_arg3 = replacef (_tbl_arg3 tbl)
-                             , _tbl_arg4 = replacef (_tbl_arg4 tbl) }
-{-                             . (tbl_arg1 %~ replacef)
-                             . (tbl_arg2 %~ replacef)
-                             . (tbl_arg3 %~ replacef)
-                             . (tbl_arg4 %~ replacef)
-
--}
-
-
+                             , _tbl_arg4 = replacef (_tbl_arg4 tbl)
+                             }
   where
         zpr = mkBitreeZipper [] itr
         leaves = getLeaves zpr
         nodes = getNodes zpr
-        findf :: Either Range Int -> Maybe (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) 
-        findf (Left rng) = find (\z -> fmap (^._1) (getRoot (current z)) == Left rng) nodes
-        findf (Right i)  = find (\z -> fmap (^._1) (getRoot (current z)) == Right i) leaves
+        findf :: Either Range Int -> Maybe (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text)))
+        findf (Left rng) = find (\z -> case getRoot (current z) of Left (rng',_) -> rng==rng' ; _ -> False) nodes
+        findf (Right i)  = find (\z -> case getRoot (current z) of Right (i',_) -> i == i'; _ -> False) leaves
         findf' :: ATNode (Either Range Int) -> Maybe (ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))))
         findf' (SimpleNode e) = SimpleNode <$> findf e
         findf' (LinkedNode e1 e2) = LinkedNode <$> findf e1 <*> findf e2
-        replacef = join . traverse (fmap findf')
+        replacef :: Maybe (ATNode (Either Range Int))
+                 -> Maybe (ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))))
+        replacef = join . fmap findf'
 
 
-mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> (FilePath,Int,Int) -> [Argument] -> ArgTable (ATNode (Either Range Int)) -- Text
+mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> (FilePath,Int,Int) -> [Argument] -> ArgTable (ATNode (Either Range Int))
 mkArgTable itr l2p (file,sid,tid) args  =
     ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (findArg (== Relation)))
-             ({- fmap phraseNodeType . -} adj <$> findArg (== NumberedArgument 0))
-             ({- fmap phraseNodeType . -} adj <$> findArg (== NumberedArgument 1))
-             ({- fmap phraseNodeType . -} adj <$> findArg (== NumberedArgument 2))
-             ({- fmap phraseNodeType . -} adj <$> findArg (== NumberedArgument 3))
-             ({- fmap phraseNodeType . -} adj <$> findArg (== NumberedArgument 4))
+             (adj <$> findArg (== NumberedArgument 0))
+             (adj <$> findArg (== NumberedArgument 1))
+             (adj <$> findArg (== NumberedArgument 2))
+             (adj <$> findArg (== NumberedArgument 3))
+             (adj <$> findArg (== NumberedArgument 4))
              (file,sid,tid)
   where
     adj x@(PL (i,(D_NONE,t))) = let (_trc,mlid) = identifyTrace t
@@ -165,12 +160,11 @@ mkArgTable itr l2p (file,sid,tid) args  =
                                               return rng
                                               -- matchR rng itr
                                 in case mlnk of
-                                     Nothing -> SimpleNode (either fst fst (getRoot x))
-                                     Just lnk -> LinkedNode (either fst fst (getRoot x)) lnk
-    adj x                     = SimpleNode (either fst fst (getRoot x))
+                                     Nothing -> SimpleNode (bimap fst fst (getRoot x))
+                                     Just lnk -> LinkedNode (bimap fst fst (getRoot x)) (Left lnk)
+    adj x                     = SimpleNode (bimap fst fst (getRoot x))
     findArg lcond = do a <- find (\a -> lcond (a^.arg_label)) args
                        let ns = a^.arg_terminals
                        case ns of
                          n:_ -> snd <$> findNode n itr 
                          _   -> Nothing
-

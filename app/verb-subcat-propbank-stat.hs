@@ -31,6 +31,7 @@ import           System.IO
 import           Text.Printf
 --
 import           Data.Attribute
+import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Type
@@ -87,11 +88,11 @@ formatArgTable :: Maybe (VerbProperty (BitreeZipperICP '[Lemma]),_) -> ArgTable 
 formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
                               (fromMaybe "" (tbl^.tbl_rel))
                               (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
-                              (fromMaybe "" (tbl^.tbl_arg0.to (fmap chooseATNode)))
-                              (fromMaybe "" (tbl^.tbl_arg1.to (fmap chooseATNode)))
-                              (fromMaybe "" (tbl^.tbl_arg2.to (fmap chooseATNode)))
-                              (fromMaybe "" (tbl^.tbl_arg3.to (fmap chooseATNode)))
-                              (fromMaybe "" (tbl^.tbl_arg4.to (fmap chooseATNode)))
+                              (fromMaybe "" (tbl^.tbl_arg0))
+                              (fromMaybe "" (tbl^.tbl_arg1))
+                              (fromMaybe "" (tbl^.tbl_arg2))
+                              (fromMaybe "" (tbl^.tbl_arg3))
+                              (fromMaybe "" (tbl^.tbl_arg4))
                               (tbl^.tbl_file_sid_tid._1)
                               (tbl^.tbl_file_sid_tid._2)
                               (tbl^.tbl_file_sid_tid._3)
@@ -113,12 +114,11 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
       l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
       argtable0 = mkArgTable iproptr l2p filesidtid args
-      argtable1 = zipperArgTable iproptr
-      argtable = argtable1 & (tbl_arg0 %~ fmap (phraseNodeType . current))
-                           . (tbl_arg1 %~ fmap (phraseNodeType . current))
-                           . (tbl_arg2 %~ fmap (phraseNodeType . current))
-                           . (tbl_arg3 %~ fmap (phraseNodeType . current))
-                           . (tbl_arg4 %~ fmap (phraseNodeType . current))
+      argtable1 = zipperArgTable iproptr argtable0
+      argtable :: ArgTable Text
+      argtable = fmap f argtable1
+        where f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> Text
+              f = chooseATNode . fmap (phraseNodeType . current)
       mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
   in 
      (if doesShowDetail
@@ -210,7 +210,10 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                         mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
                         mvoice = do (vp,_) <- mvpmva
                                     return (vp^.vp_voice)
-                        argtable = mkArgTable iproptr l2p filesidtid args
+                        argtable0 = mkArgTable iproptr l2p filesidtid args
+                        argtable1 = zipperArgTable iproptr argtable0
+                        argtable = fmap f argtable1
+                          where f = fmap (phraseNodeType . current)
                         argpatt = mkArgPattern mvoice argtable
                     in HM.alter (\case Nothing -> Just 1 ; Just n -> Just (n+1)) argpatt acc
           statlst = (sortBy (flip compare `on` snd) . HM.toList) statmap
