@@ -43,21 +43,21 @@ data VerbProperty w = VerbProperty { _vp_index  :: Int
 makeLenses ''VerbProperty                           
 
 
-data TensePhrase = TP { _tp_governor     :: Maybe (BitreeZipperICP '[Lemma])
-                      , _tp_DP           :: Maybe (BitreeZipperICP '[Lemma])
-                      , _tp_VP           :: BitreeZipperICP '[Lemma]
-                      , _tp_verbProperty :: VerbProperty (BitreeZipperICP '[Lemma])
-                      }
+data TP = TP { _tp_dominator    :: Maybe (BitreeZipperICP '[Lemma])
+             , _tp_DP           :: Maybe (BitreeZipperICP '[Lemma])
+             , _tp_VP           :: BitreeZipperICP '[Lemma]
+             , _tp_verbProperty :: VerbProperty (BitreeZipperICP '[Lemma])
+             }
 
-makeLenses ''TensePhrase
+makeLenses ''TP
 
 
-data ComplementPhrase = CP { _cp_governor       :: Maybe (BitreeZipperICP '[Lemma])
-                           , _cp_complementizer :: Maybe (BitreeZipperICP '[Lemma])
-                           , _cp_TP             :: TensePhrase
-                           }
+data CP = CP { _cp_dominator      :: Maybe (BitreeZipperICP '[Lemma])
+             , _cp_complementizer :: Maybe (BitreeZipperICP '[Lemma])
+             , _cp_TP             :: TP
+             }
 
-makeLenses ''ComplementPhrase
+makeLenses ''CP
 
 
 data VerbArgs a = VerbArgs { _va_string :: [(POSTag,Text)]

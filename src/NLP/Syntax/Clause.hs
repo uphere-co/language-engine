@@ -39,7 +39,7 @@ identifySubject vp = findSiblings prev (isChunkAs NP) vp
   
 
 
-constructCP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe ComplementPhrase
+constructCP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe CP
 constructCP vprop = do
     vp <- governorVP vprop
     tp' <- governorPhraseOfVP vprop
