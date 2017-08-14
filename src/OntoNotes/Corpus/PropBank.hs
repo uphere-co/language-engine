@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module OntoNotes.Corpus.PropBank where
@@ -71,10 +72,10 @@ toMatchResult xs     = MergeMatch xs
 
 
 
-matchVerbPropertyWithRelation :: [VerbProperty]
+matchVerbPropertyWithRelation :: [VerbProperty (BitreeZipperICP '[Lemma])]
                               -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
                               -> MatchedInstance
-                              -> Maybe (VerbProperty,Maybe (VerbArgs (Either (Range,STag) (Int,POSTag))))
+                              -> Maybe (VerbProperty (BitreeZipperICP '[Lemma]),Maybe (VerbArgs (Either (Range,STag) (Int,POSTag))))
 matchVerbPropertyWithRelation verbprops clausetr minst = do
   relidx <- findRelNode (minst^.mi_arguments)
   vp <- find (\vp->vp^.vp_index==relidx) verbprops
@@ -83,7 +84,7 @@ matchVerbPropertyWithRelation verbprops clausetr minst = do
 
 
 formatMatchedVerb :: MatchedInstance
-                  -> Maybe (VerbProperty, Maybe (VerbArgs (Either (Range,STag) (Int,POSTag))))
+                  -> Maybe (VerbProperty (BitreeZipperICP '[Lemma]), Maybe (VerbArgs (Either (Range,STag) (Int,POSTag))))
                   -> String     
 formatMatchedVerb minst mvpmva =                  
   let inst = minst^.mi_instance
@@ -103,9 +104,6 @@ formatMatchedVerb minst mvpmva =
                            (arg^.ma_argument.arg_label.to pbLabelText)              
                            (show (zip ns (map (toMatchResult . contiguousMatch (mkContiguousSegments nosegs)) ns))))
   in header_str ++ "\n" ++ content_str
-                    
-
-
 
 
 
