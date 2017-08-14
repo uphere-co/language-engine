@@ -118,7 +118,7 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
       argtable :: ArgTable Text
       argtable = fmap f argtable1
         where f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> Text
-              f = chooseATNode . fmap (phraseNodeType . current)
+              f = chooseATNode . fmap phraseNodeType
       mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
   in 
      (if doesShowDetail
@@ -208,13 +208,13 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                         
                         clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
                         mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
-                        mvoice = do (vp,_) <- mvpmva
-                                    return (vp^.vp_voice)
+                        mtp = do (vp,_) <- mvpmva
+                                 (constructCP vp^?_Just.cp_TP)
                         argtable0 = mkArgTable iproptr l2p filesidtid args
                         argtable1 = zipperArgTable iproptr argtable0
                         argtable = fmap f argtable1
-                          where f = fmap (phraseNodeType . current)
-                        argpatt = mkArgPattern mvoice argtable
+                          where f = fmap phraseNodeType
+                        argpatt = mkArgPattern mtp argtable
                     in HM.alter (\case Nothing -> Just 1 ; Just n -> Just (n+1)) argpatt acc
           statlst = (sortBy (flip compare `on` snd) . HM.toList) statmap
           sensetxt = sense <> "." <> sense_num          
