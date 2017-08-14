@@ -3,18 +3,24 @@
 module NLP.Syntax.Format where
 
 import           Control.Lens
+import           Data.IntMap                   (IntMap)
 import           Data.List                     (intercalate)
 import           Data.Maybe
+import           Data.Monoid                   ((<>))
 import           Data.Text                     (Text)
 import qualified Data.Text               as T
+import qualified Data.Text.IO            as T.IO
 import           Data.Tree               as Tr
 import           Text.Printf
 --
 import           Data.Bitree
 import           NLP.Type.PennTreebankII
+import qualified NLP.Type.PennTreebankII.Separated as N
 import           Text.Format.Tree
 --
+import           NLP.Syntax.Clause
 import           NLP.Syntax.Type
+import           NLP.Syntax.Verb
 
 
 formatBitree :: (a -> Text) ->  Bitree a a -> Text
@@ -46,4 +52,32 @@ formatVerbArgs va = printf "%10s %-20s %s"
                  Left  (_  ,(S_VP _))    -> "VP"
                  Left  (rng,(S_PP t))    -> "(PP " ++ show t ++ ")" ++ show rng
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
+
+formatClauseStructure -- :: IntMap Lemma
+                      -- -> PennTree
+                      :: [VerbProperty]
+                      -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+                      -> [Text]
+formatClauseStructure {- lemmamap ptree -} vps clausetr =
+  let tr' = bimap (\(_rng,x)->f x) g (cutOutLevel0 clausetr)
+        where f (S_CL c,l)    = T.pack (show c) <> ":" <> T.pack (show l)
+              f (S_SBAR zs,l) = "SBAR:" <> T.pack (show zs) <> "," <> T.pack (show l)
+              f (S_VP zs,l)   = "VP:" <> T.pack (show zs) <> "," <> T.pack (show l)
+              f (S_PP p,_l)   = "PP:" <> T.pack (show p)
+              f (S_OTHER p,l) = T.pack (show p) <> ":" <> T.pack (show l)
+              f (S_RT  ,l)    = "ROOT" <> ":" <> T.pack (show l)
+              g (Left x)      = T.pack (show x)
+              g (Right x)     = T.pack (show x)
+      rngs = clauseRanges clausetr
+      xs = flip map vps $ \vp -> T.pack $ printf "%-50s | Clause %7s:  %s" (formatVerbProperty vp) (maybe "" show (clauseForVerb rngs vp)) (maybe "" formatVerbArgs (getVerbArgs clausetr vp))
+  in [formatBitree id tr'] ++ xs
+
+showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
+showClauseStructure lemmamap ptree  = do
+  let vps  = verbPropertyFromPennTree lemmamap ptree
+      clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
+  
+      x:xs = formatClauseStructure vps clausetr
+  T.IO.putStrLn x
+  flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
 
