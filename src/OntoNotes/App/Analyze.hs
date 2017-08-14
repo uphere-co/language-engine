@@ -254,6 +254,47 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
         putStrLn "--------------------------------------------------------------------------------------------------"
 
 
+
+
+
+sentStructure' sensemap sensestat framedb ontomap emTagger loaded = do
+  let (psents,sents,sentitems,_tokss,mptrs,deps,mtmx) = loaded
+  putStrLn "\n\n\n\n\n\n\n\n================================================================================================="
+  putStrLn "\n\n-- TimeTagger -----------------------------------------------------------------------------------"
+{-
+  case mtmx of
+    Nothing -> putStrLn "Time annotation not successful!"
+    Just sentswithtmx -> mapM_ showFormatTimex sentswithtmx
+-}
+  putStrLn "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
+--   putStrLn (render (formatNER psents sentitems linked_mentions_resolved))
+  putStrLn "\n\n--------------------------------------------------------------------------------------------------"
+  putStrLn "-- Sentence analysis -----------------------------------------------------------------------------"
+  putStrLn "--------------------------------------------------------------------------------------------------"
+
+  flip mapM_ (zip5 ([0..] :: [Int]) psents sents mptrs deps) $ \(i,psent,_sent,mptr,_dep) -> do
+    flip mapM_ mptr $ \ptr -> do
+      let lemmamap = mkLemmaMap' psent
+          vps = verbPropertyFromPennTree lemmamap ptr
+
+      putStrLn (printf "\n\n-- Sentence %3d ----------------------------------------------------------------------------------" i)
+      T.IO.putStrLn (formatIndexTokensFromTree 0 ptr)
+      
+      putStrLn "--------------------------------------------------------------------------------------------------"
+      showClauseStructure lemmamap ptr
+      putStrLn "================================================================================================="
+
+      forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
+        putStrLn (printf "Verb: %-20s" lma)
+        let senses = getSenses lma sensemap sensestat framedb ontomap
+        (putStrLn . formatSenses False) senses
+        putStrLn "--------------------------------------------------------------------------------------------------"
+
+
+
+
+
+
 -- -- abandoned code to simplify the resultant text.
       -- let tkns = zip [0..] (getTKTokens psent)
       -- tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
