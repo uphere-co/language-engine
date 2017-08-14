@@ -112,7 +112,13 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
-      argtable = mkArgTable iproptr l2p filesidtid args
+      argtable0 = mkArgTable iproptr l2p filesidtid args
+      argtable1 = zipperArgTable iproptr
+      argtable = argtable1 & (tbl_arg0 %~ fmap (phraseNodeType . current))
+                           . (tbl_arg1 %~ fmap (phraseNodeType . current))
+                           . (tbl_arg2 %~ fmap (phraseNodeType . current))
+                           . (tbl_arg3 %~ fmap (phraseNodeType . current))
+                           . (tbl_arg4 %~ fmap (phraseNodeType . current))
       mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
   in 
      (if doesShowDetail

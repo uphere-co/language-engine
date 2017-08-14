@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveFoldable     #-}
 {-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DeriveTraversable  #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RecordWildCards    #-}
@@ -9,13 +11,17 @@
 module OntoNotes.Type.ArgTable where
 
 import           Control.Lens
+import           Control.Monad                (join)
 import           Data.Hashable
 import           Data.Foldable
 import           Data.Monoid
 import           Data.Text                    (Text)
 import qualified Data.Text               as T
+import           Data.Traversable
 import           GHC.Generics
 --
+import           Data.Bitree
+import           Data.BitreeZipper
 import           NLP.Syntax.Type
 import           NLP.Type.PennTreebankII
 import           PropBank.Match
@@ -24,7 +30,7 @@ import           PropBank.Type.Prop
 data ATNode a = SimpleNode { _atnode_orig :: a }
               | LinkedNode { _atnode_orig  :: a
                            , _atnode_link  :: a } 
-              deriving (Show,Functor)
+              deriving (Show,Functor,Foldable,Traversable)
 
 
 
@@ -33,15 +39,15 @@ chooseATNode (SimpleNode x) = x
 -- chooseATNode (LinkedNode x y) = y
 chooseATNode (LinkedNode x y) = x
                  
-data ArgTable a = ArgTable { _tbl_rel  :: Maybe Text
-                           , _tbl_arg0 :: Maybe (ATNode a)
-                           , _tbl_arg1 :: Maybe (ATNode a)
-                           , _tbl_arg2 :: Maybe (ATNode a)
-                           , _tbl_arg3 :: Maybe (ATNode a)
-                           , _tbl_arg4 :: Maybe (ATNode a)
+data ArgTable b = ArgTable { _tbl_rel  :: Maybe Text
+                           , _tbl_arg0 :: Maybe b
+                           , _tbl_arg1 :: Maybe b
+                           , _tbl_arg2 :: Maybe b
+                           , _tbl_arg3 :: Maybe b
+                           , _tbl_arg4 :: Maybe b
                            , _tbl_file_sid_tid :: (FilePath,Int,Int)
                            }
-                  deriving (Show)
+                  deriving (Show,Functor,Foldable,Traversable)
 
 makeLenses ''ArgTable
 
@@ -58,7 +64,7 @@ data ArgPattern a = ArgPattern { _patt_voice :: Maybe Voice
                                , _patt_arg3 :: Maybe a
                                , _patt_arg4 :: Maybe a
                                }
-                  deriving (Show,Eq,Ord,Generic)
+                  deriving (Show,Eq,Ord,Generic,Functor,Foldable,Traversable)
 
 makeLenses ''ArgPattern
 
@@ -67,7 +73,7 @@ instance Hashable (ArgPattern Text)
 
 
 
-mkArgPattern :: Maybe Voice -> ArgTable a -> ArgPattern a
+mkArgPattern :: Maybe Voice -> ArgTable (ATNode a) -> ArgPattern a
 mkArgPattern mvoice ArgTable {..} = ArgPattern { _patt_voice = mvoice
                                                , _patt_arg0 = fmap chooseATNode _tbl_arg0
                                                , _patt_arg1 = fmap chooseATNode _tbl_arg1
@@ -113,24 +119,55 @@ phraseNodeType (PL (_,(p     ,t))) = case isNoun p of
                                        _   -> "??" <> T.pack (show (p,t))
 
 
-mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> (FilePath,Int,Int) -> [Argument] -> ArgTable Text
+
+zipperArgTable :: PennTreeIdx
+               -> ArgTable (ATNode (Either Range Int))
+               -> ArgTable (ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))))
+zipperArgTable itr tbl = tbl { _tbl_arg0 = replacef (_tbl_arg0 tbl)
+                             , _tbl_arg1 = replacef (_tbl_arg1 tbl)
+                             , _tbl_arg2 = replacef (_tbl_arg2 tbl)
+                             , _tbl_arg3 = replacef (_tbl_arg3 tbl)
+                             , _tbl_arg4 = replacef (_tbl_arg4 tbl) }
+{-                             . (tbl_arg1 %~ replacef)
+                             . (tbl_arg2 %~ replacef)
+                             . (tbl_arg3 %~ replacef)
+                             . (tbl_arg4 %~ replacef)
+
+-}
+
+
+  where
+        zpr = mkBitreeZipper [] itr
+        leaves = getLeaves zpr
+        nodes = getNodes zpr
+        findf :: Either Range Int -> Maybe (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) 
+        findf (Left rng) = find (\z -> fmap (^._1) (getRoot (current z)) == Left rng) nodes
+        findf (Right i)  = find (\z -> fmap (^._1) (getRoot (current z)) == Right i) leaves
+        findf' :: ATNode (Either Range Int) -> Maybe (ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))))
+        findf' (SimpleNode e) = SimpleNode <$> findf e
+        findf' (LinkedNode e1 e2) = LinkedNode <$> findf e1 <*> findf e2
+        replacef = join . traverse (fmap findf')
+
+
+mkArgTable :: PennTreeIdx -> [(LinkID,Range)] -> (FilePath,Int,Int) -> [Argument] -> ArgTable (ATNode (Either Range Int)) -- Text
 mkArgTable itr l2p (file,sid,tid) args  =
     ArgTable (T.intercalate " " . map (^._2._2) . toList <$> (findArg (== Relation)))
-             (fmap phraseNodeType . adj <$> findArg (== NumberedArgument 0))
-             (fmap phraseNodeType . adj <$> findArg (== NumberedArgument 1))
-             (fmap phraseNodeType . adj <$> findArg (== NumberedArgument 2))
-             (fmap phraseNodeType . adj <$> findArg (== NumberedArgument 3))
-             (fmap phraseNodeType . adj <$> findArg (== NumberedArgument 4))
+             ({- fmap phraseNodeType . -} adj <$> findArg (== NumberedArgument 0))
+             ({- fmap phraseNodeType . -} adj <$> findArg (== NumberedArgument 1))
+             ({- fmap phraseNodeType . -} adj <$> findArg (== NumberedArgument 2))
+             ({- fmap phraseNodeType . -} adj <$> findArg (== NumberedArgument 3))
+             ({- fmap phraseNodeType . -} adj <$> findArg (== NumberedArgument 4))
              (file,sid,tid)
   where
-    adj x@(PL (_,(D_NONE,t))) = let (_trc,mlid) = identifyTrace t
+    adj x@(PL (i,(D_NONE,t))) = let (_trc,mlid) = identifyTrace t
                                     mlnk = do lid <-mlid 
                                               rng <- lookup lid l2p
-                                              matchR rng itr
+                                              return rng
+                                              -- matchR rng itr
                                 in case mlnk of
-                                     Nothing -> SimpleNode x
-                                     Just lnk -> LinkedNode x lnk
-    adj x                     = SimpleNode x
+                                     Nothing -> SimpleNode (either fst fst (getRoot x))
+                                     Just lnk -> LinkedNode (either fst fst (getRoot x)) lnk
+    adj x                     = SimpleNode (either fst fst (getRoot x))
     findArg lcond = do a <- find (\a -> lcond (a^.arg_label)) args
                        let ns = a^.arg_terminals
                        case ns of
