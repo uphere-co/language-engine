@@ -18,9 +18,11 @@ import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmati
 import           Data.Attribute                              (ahead)
 import           Data.Bitree
 import           Data.BitreeZipper
-import           NLP.Syntax.Type
-import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
+--
+import           NLP.Syntax.Type
+import           NLP.Syntax.Util
+import           NLP.Syntax.Verb
 
 
 withCopula :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,POSTag)

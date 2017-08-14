@@ -44,6 +44,7 @@ makeLenses ''VerbProperty
 
 
 data TensePhrase = TP { _tp_governor     :: Maybe (BitreeZipperICP '[Lemma])
+                      , _tp_DP           :: Maybe (BitreeZipperICP '[Lemma])
                       , _tp_VP           :: BitreeZipperICP '[Lemma]
                       , _tp_verbProperty :: VerbProperty (BitreeZipperICP '[Lemma])
                       }

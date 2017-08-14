@@ -4,6 +4,7 @@
 module NLP.Syntax.Format where
 
 import           Control.Lens
+import           Data.Foldable                 (toList)
 import           Data.IntMap                   (IntMap)
 import           Data.List                     (intercalate)
 import           Data.Maybe
@@ -57,14 +58,21 @@ formatVerbArgs va = printf "%10s %-20s %s"
 
 
 formatCP :: ComplementPhrase -> String
-formatCP cp = printf "Complement Phrase: %s\n\
-                     \Tense Phrase     : %s\n\
-                     \Verb Phrase      : %s"
+formatCP cp = printf "Complement Phrase: %-4s  %s\n\
+                     \Tense Phrase     : %-4s  %s\n\
+                     \Determiner Phrase: %-4s  %s\n\
+                     \Verb Phrase      : %-4s  %s"
                 (maybe "null" show (getchunk =<< cp^.cp_governor))
+                (maybe "" (show . gettoken) (cp^.cp_governor))
                 (maybe "null" show (getchunk =<< cp^.cp_TP.tp_governor))
+                (maybe "" (show . gettoken) (cp^.cp_TP.tp_governor))
+                (maybe "null" show (getchunk =<< cp^.cp_TP.tp_DP))
+                (maybe "" (show . gettoken) (cp^.cp_TP.tp_DP))                
                 (maybe "null" show (getchunk (cp^.cp_TP.tp_VP)))
-  where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
+                ((show . gettoken) (cp^.cp_TP.tp_VP))
 
+  where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
+        gettoken = map (tokenWord.snd) . toList . current
 
 
 formatClauseStructure :: [VerbProperty a]
