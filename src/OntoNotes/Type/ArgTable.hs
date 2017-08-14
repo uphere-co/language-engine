@@ -83,6 +83,8 @@ mkArgPattern mtp ArgTable {..} = ArgPattern { _patt_voice = mtp^?_Just.tp_verbPr
                                             }
 
 
+
+
 -- | https://en.wiktionary.org/wiki/Category:English_prepositions
 -- listOfPrepositions = [ ""
 --                      ] 
@@ -102,25 +104,30 @@ headAdverb xs = getLast (foldMap (Last . f) xs)
         f (PL (_,(pos,t))) = if isAdverb pos then Just (T.toLower t) else Nothing
 
 
-phraseNodeType :: BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text)) -> Text
-phraseNodeType z = case current z of
-                     PN (_,c) xs       -> case c of
-                                              PP   -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headPreposition xs)
-                                              ADVP -> case headAdverb xs of
-                                                        Just t -> T.pack (show c) <> "-" <> t
-                                                        Nothing -> case headPreposition xs of
-                                                                     Just t -> "PP-" <> t
-                                                                     Nothing -> "??ADVP"
-                                              PRT  -> "PP" <> maybe "" (\t -> "-" <> t) (headAdverb xs)
-                                              WHNP -> "NP"
-                                              _     -> T.pack (show c)
-                     PL (_,(D_NONE,t)) -> case parent z of
-                                            Nothing -> "??"<>t
-                                            Just z' -> phraseNodeType z'
-                     PL (_,(p     ,t)) -> case isNoun p of
-                                            Yes -> "NP"
-                                            _   -> "??" <> T.pack (show (p,t))
-
+phraseNodeType :: Maybe TP -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text)) -> Text
+phraseNodeType mtp z
+  = let rng = getRange (current z)
+        subj = maybe "" (\b -> if b then "-SBJ" else "") $ do tp <- mtp
+                                                              dp <- tp^.tp_DP
+                                                              return (getRange (current dp) == rng)
+        phrase = case current z of
+                   PN (_,c) xs       -> case c of
+                                          PP   -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headPreposition xs)
+                                          ADVP -> case headAdverb xs of
+                                                    Just t -> T.pack (show c) <> "-" <> t
+                                                    Nothing -> case headPreposition xs of
+                                                                 Just t -> "PP-" <> t
+                                                                 Nothing -> "??ADVP"
+                                          PRT  -> "PP" <> maybe "" (\t -> "-" <> t) (headAdverb xs)
+                                          WHNP -> "NP"
+                                          _     -> T.pack (show c)
+                   PL (_,(D_NONE,t)) -> case parent z of
+                                          Nothing -> "??"<>t
+                                          Just z' -> phraseNodeType mtp z'
+                   PL (_,(p     ,t)) -> case isNoun p of
+                                          Yes -> "NP"
+                                          _   -> "??" <> T.pack (show (p,t))
+    in phrase <> subj
 
 
 zipperArgTable :: PennTreeIdx

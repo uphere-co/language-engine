@@ -113,13 +113,15 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
+      mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
+      mtp = do (vp,_) <- mvpmva
+               (constructCP vp^?_Just.cp_TP)
       argtable0 = mkArgTable iproptr l2p filesidtid args
       argtable1 = zipperArgTable iproptr argtable0
       argtable :: ArgTable Text
       argtable = fmap f argtable1
         where f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> Text
-              f = chooseATNode . fmap phraseNodeType
-      mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
+              f = phraseNodeType mtp . chooseATNode
   in 
      (if doesShowDetail
        then "\n================================================================\n" ++
@@ -212,8 +214,12 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                                  (constructCP vp^?_Just.cp_TP)
                         argtable0 = mkArgTable iproptr l2p filesidtid args
                         argtable1 = zipperArgTable iproptr argtable0
+                        -- argtable :: ArgTable Text
                         argtable = fmap f argtable1
-                          where f = fmap phraseNodeType
+                          where -- f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> Text
+                                f = fmap (phraseNodeType mtp) --  . chooseATNode
+                        
+                        --   where f = fmap phraseNodeType
                         argpatt = mkArgPattern mtp argtable
                     in HM.alter (\case Nothing -> Just 1 ; Just n -> Just (n+1)) argpatt acc
           statlst = (sortBy (flip compare `on` snd) . HM.toList) statmap
