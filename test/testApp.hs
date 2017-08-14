@@ -17,6 +17,9 @@ import           WikiEL.Type.WordNet                   (SynsetY)
 
 import           WikiEL.ETL.RDF.Yago
 
+import           Data.Word                             (Word32)
+import           Foreign.Store
+
 -- For Wiki interlinks
 --import           Data.Text                             (Text)
 import           Data.List                             (foldl')
@@ -150,6 +153,7 @@ showPath invs path = catMaybes (UV.foldl' f [] path)
   where
     f accum hash = M.lookup hash invs : accum
 
+-- loadInterlinks is uselessly slow for now.
 loadInterlinks :: (Foo,Text) -> Text -> IO (Foo,Text)
 loadInterlinks (prevState, prevPartialBlock) block = do
   let
@@ -176,19 +180,6 @@ $ time cat yago/wikilinks | runhaskell -i./src/ test/testApp.hs > enwiki/interli
 real	60m40.005s
 -}
 
-{-
-import Foreign.Store
-cc <- foo "cc"
-store <- newStore cc
-store
-
-Just store <- lookupStore 0 :: IO (Maybe (Store Foo))
-cc <- readStore store
-
-M.size (_names cc)
-UV.length (_edges cc)
--}
-
 test1 :: Foo -> IO ()
 test1 foo@(Foo edges names) = do
   let
@@ -196,8 +187,6 @@ test1 foo@(Foo edges names) = do
     tmp = G.allPathsUpto dForwardEdges 1079244021 3
     tmp2 = G.allPathsUpto dForwardEdges (H.wordHash "Diemelsee") 3
   --print "=================================="
-  print $ UV.length edges
-  print $ M.size names
   print $ B.length tmp
   print $ B.length tmp2
   --mapM_ (print . showPath names) (B.toList tmp)
@@ -205,10 +194,19 @@ test1 foo@(Foo edges names) = do
   print $ dForwardEdges 1079244021
   print $ dForwardEdges (H.wordHash "Germany")
 
-main3 = do
-  --cc <- foo "bb"
-  cc <- foo "enwiki/interlinks"
-  test1 cc
+main3init = do
+  cc@(Foo edges names) <- foo "enwiki/interlinks"
+  print $ UV.length edges
+  print $ M.size names
+  store <- newStore cc
+  print store
+
+main3 :: Word32 -> IO ()
+main3 idx = do
+  Just store <- lookupStore idx :: IO (Maybe (Store Foo))
+  cc@(Foo edges names) <- readStore store
+  print $ UV.length edges
+  print $ M.size names  
 
 main :: IO ()
 main = main1
