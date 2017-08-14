@@ -59,11 +59,14 @@ formatVerbArgs va = printf "%10s %-20s %s"
 
 formatCP :: ComplementPhrase -> String
 formatCP cp = printf "Complement Phrase: %-4s  %s\n\
+                     \Complementizer   : %-4s  %s\n\
                      \Tense Phrase     : %-4s  %s\n\
                      \Determiner Phrase: %-4s  %s\n\
                      \Verb Phrase      : %-4s  %s"
                 (maybe "null" show (getchunk =<< cp^.cp_governor))
                 (maybe "" (show . gettoken) (cp^.cp_governor))
+                (maybe "null" formatposchunk (fmap getposchunk (cp^.cp_complementizer)))
+                (maybe "" (show . gettoken) (cp^.cp_complementizer))
                 (maybe "null" show (getchunk =<< cp^.cp_TP.tp_governor))
                 (maybe "" (show . gettoken) (cp^.cp_TP.tp_governor))
                 (maybe "null" show (getchunk =<< cp^.cp_TP.tp_DP))
@@ -73,7 +76,9 @@ formatCP cp = printf "Complement Phrase: %-4s  %s\n\
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
-
+        getposchunk = bimap (chunkTag . snd) (posTag . snd) . getRoot . current
+        formatposchunk (Left c) = show c
+        formatposchunk (Right p) = "(" ++ show p ++ ")"
 
 formatClauseStructure :: [VerbProperty a]
                       -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))

@@ -52,8 +52,9 @@ data TensePhrase = TP { _tp_governor     :: Maybe (BitreeZipperICP '[Lemma])
 makeLenses ''TensePhrase
 
 
-data ComplementPhrase = CP { _cp_governor :: Maybe (BitreeZipperICP '[Lemma])
-                           , _cp_TP       :: TensePhrase
+data ComplementPhrase = CP { _cp_governor       :: Maybe (BitreeZipperICP '[Lemma])
+                           , _cp_complementizer :: Maybe (BitreeZipperICP '[Lemma])
+                           , _cp_TP             :: TensePhrase
                            }
 
 makeLenses ''ComplementPhrase
