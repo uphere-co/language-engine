@@ -50,6 +50,19 @@ getRoot (PL x)   = Right x
 getRoot (PN x _) = Left x
 
 
+getLeaves :: Bitree n l -> [l]
+getLeaves (PN _ xs) = concatMap getLeaves xs
+getLeaves (PL x) = [x]
+
+
+getNodes :: Bitree n l -> [n]
+getNodes (PN x xs) = x:(concatMap getNodes xs)
+getNodes (PL _) = []
+
+
+
+
+
 -- | duplicate of comonad is dual to join of monad, i.e. duplicate :: w a -> w (w a)
 --   In Bitree case, we can make a tree where each node is the subtree at the node point using duplicate 
 duplicate :: Bitree c a -> Bitree (Bitree c a) (Bitree c a)
