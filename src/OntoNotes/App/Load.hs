@@ -101,6 +101,24 @@ createVNFNDB semlink =
 
 
 
+parseRoleMap (i:lma:sense:frame:rest) = let lst = map (\w -> let x:y:_ = T.splitOn ":" w in (x,y)) rest
+                                        in ((lma,sense),("frame",frame):lst)
+
+
+loadRoleMap rolemapfile = do
+  txt <- T.IO.readFile rolemapfile
+  -- let getLemmaSense x = (x^._1,x^._2)
+  --    getArgTable x = ArgPattern (x^._3) (x^._4) (x^._5) (x^._6) (x^._7) (x^._8)
+  let rolemap = map parseRoleMap . map T.words . T.lines $ txt
+  return rolemap
+
+{- 
+    subcats = map (\xs  -> (getLemmaSense (head xs),map (\x->(getArgTable x,x^._9)) xs)) .  groupBy ((==) `on` getLemmaSense) . map parseSubcat . 
+  -- mapM_ print subcats
+  return subcats
+  -}
+
+
 
 loadAllexceptPropBank :: IO (LexUnitDB, HashMap (Text,Text) Int, HashMap (Text,Text) [Text], HashMap Text Inventory, [(Text,Text)], WordNetDB)
 loadAllexceptPropBank = do

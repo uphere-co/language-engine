@@ -70,6 +70,17 @@ maybeNumberedArgument (NumberedArgument n) = Just n
 maybeNumberedArgument _                    = Nothing
 
 
+formatArgMap isStat argmap = 
+  (if isStat
+     then printf " %-20s " (fromMaybe "frame" (lookup "frame" argmap))
+     else printf " %-20s         " (fromMaybe "frame" (lookup "frame" argmap)))
+  ++ printf "arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s\n"
+       (fromMaybe "" (lookup "arg0" argmap))
+       (fromMaybe "" (lookup "arg1" argmap))
+       (fromMaybe "" (lookup "arg2" argmap))
+       (fromMaybe "" (lookup "arg3" argmap))
+       (fromMaybe "" (lookup "arg4" argmap))
+  ++ "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
 
 
 formatArgTable :: Maybe (VerbProperty (BitreeZipperICP '[Lemma]),_) -> ArgTable -> String
@@ -87,9 +98,10 @@ formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   a
 
 
 formatInst :: Bool  -- ^ show detail?
+           -> Maybe [(Text,Text)] 
            -> ((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)
            -> String
-formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,_sense) =
+formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
   let args = inst^.inst_arguments
       lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
       coretr = corenlp^._1
@@ -112,16 +124,28 @@ formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,_sense) =
        else ""
      )
      ++ formatArgTable mvpmva argtable
-     
 
-formatStatInst :: Bool -> ((Text,Text),Int)
+
+getArgMapFromRoleMap (lma,sense_num) rolemap = (^._2) <$> find f rolemap
+  where f rm = if lma == "hold" && sense_num == "5"       -- this is an ad hoc treatment for group 2
+               then rm^._1 == (lma,"2." <> sense_num) 
+               else rm^._1 == (lma,"1." <> sense_num)
+
+
+formatStatInst :: Bool
+               -> [((Text,Text),[(Text,Text)])]
+               -> Text
+               -> ((Text,Text),Int)
                -> (Maybe Text, [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)])
                -> String
-formatStatInst doesShowDetail ((sense,sense_num),count) (mdefn,insts) = 
-  "\n============================================================================\n"
-  ++ printf "%20s : %6d :  %s\n" (sense <> "." <> sense_num) count (fromMaybe "" mdefn)
-  ++ "============================================================================\n"
-  ++ (intercalate "\n" . map (formatInst doesShowDetail)) insts
+formatStatInst doesShowDetail rolemap lma ((sense,sense_num),count) (mdefn,insts) =
+  let sensetxt = (sense <> "." <> sense_num)
+      margmap = getArgMapFromRoleMap (lma,sense_num) rolemap
+  in "\n============================================================================\n"
+     ++ printf "%20s : %6d :  %s\n" sensetxt  count (fromMaybe "" mdefn)
+     ++ "============================================================================\n"
+     ++ maybe "" (formatArgMap False) margmap 
+     ++ (intercalate "\n" . map (formatInst doesShowDetail margmap)) insts
 
 
 printHeader :: (Text,Int) -> IO ()
@@ -154,15 +178,15 @@ countSenseForLemma lma = sortBy (compare `on` (^._1))
 
 
 showStat :: Bool                        -- ^ is tab separated format
+         -> [((Text,Text),[(Text,Text)])] 
          -> HashMap Text Inventory
          -> [(Text,Int)]                -- ^ lemmastat
          -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
          -> IO ()
-showStat isTSV sensedb lemmastat classified_inst_map = do
+showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
   let lst = HM.toList classified_inst_map
   forM_ lemmastat $ \(lma,f) -> do
     when (not isTSV) $ printHeader (lma,f)
-    -- let lst' = filterSenseByLemma lma lst
     forM_ (countSenseForLemma lma lst) $ \((sense,sense_num),count) -> do
       let (mdefn,insts) = getDefInst sensedb classified_inst_map (sense,sense_num)
           statmap = foldl' addfunc HM.empty insts
@@ -184,12 +208,15 @@ showStat isTSV sensedb lemmastat classified_inst_map = do
                         argpatt = mkArgPattern mvoice argtable
                     in HM.alter (\case Nothing -> Just 1 ; Just n -> Just (n+1)) argpatt acc
           statlst = (sortBy (flip compare `on` snd) . HM.toList) statmap
+          sensetxt = sense <> "." <> sense_num          
           senseheader = "\n============================================================================\n"
-                        ++ printf "%20s : %6d :  %s\n" (sense <> "." <> sense_num) count (fromMaybe "" mdefn)
+                        ++ printf "%20s : %6d :  %s\n" sensetxt count (fromMaybe "" mdefn)
                         ++ "============================================================================\n"
       if (not isTSV)
         then do
           putStrLn senseheader
+          let margmap = getArgMapFromRoleMap (lma,sense_num) rolemap 
+          traverse_ (putStrLn . formatArgMap True) margmap
           forM_ statlst $ \(patt :: ArgPattern,n :: Int) -> do
             let str1 = formatArgPatt patt :: String
             putStrLn (printf "%s     #count: %5d" str1 n)
@@ -207,17 +234,18 @@ showStat isTSV sensedb lemmastat classified_inst_map = do
                          n
 
 showStatInst :: Bool
+             -> [((Text,Text),[(Text,Text)])] 
              -> HashMap Text Inventory
              -> [(Text,Int)]                -- ^ lemmastat
              -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
              -> IO ()
-showStatInst doesShowDetail sensedb lemmastat classified_inst_map = do
+showStatInst doesShowDetail rolemap sensedb lemmastat classified_inst_map = do
   let lst = HM.toList classified_inst_map
   forM_ lemmastat $ \(lma,f) -> do
     printHeader (lma,f)
     forM_ (countSenseForLemma lma lst) $ \x -> do
       let definsts = getDefInst sensedb classified_inst_map (fst x)
-          str = formatStatInst doesShowDetail x definsts
+          str = formatStatInst doesShowDetail rolemap lma x definsts
       putStrLn str
 
 
@@ -257,14 +285,10 @@ progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant t
 main :: IO ()
 main = do
   opt <- execParser progOption
-  
-  -- propdb <- constructFrameDB (cfg^.cfg_propbank_framedir)
-  -- let preddb = constructPredicateDB propdb
-
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
-  let fps = {- Prelude.take 200 $ -} sort (toList (dirTree dtr))
+  let fps = Prelude.take 200 $ sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps
@@ -296,10 +320,12 @@ main = do
   -- sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   rolesetstat <- loadStatistics (cfg^.cfg_statistics)
   let lemmastat = mergeStatPB2Lemma rolesetstat
-
+  let rolemapfile = "/home/wavewave/repo/srcp/OntoNotes/mapping/final.txt"
+  rolemap <- loadRoleMap rolemapfile
+  
   if (statOnly opt)
-    then showStat (tsvFormat opt) sensedb lemmastat classified_inst_map 
-    else showStatInst (showDetail opt) sensedb lemmastat classified_inst_map
+    then showStat (tsvFormat opt) rolemap sensedb lemmastat classified_inst_map 
+    else showStatInst (showDetail opt) rolemap sensedb lemmastat classified_inst_map
 
 
 
