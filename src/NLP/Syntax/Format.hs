@@ -15,6 +15,7 @@ import           Data.Tree               as Tr
 import           Text.Printf
 --
 import           Data.Bitree
+import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           Text.Format.Tree
@@ -53,6 +54,17 @@ formatVerbArgs va = printf "%10s %-20s %s"
                  Left  (_  ,(S_VP _))    -> "VP"
                  Left  (rng,(S_PP t))    -> "(PP " ++ show t ++ ")" ++ show rng
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
+
+
+formatCP :: ComplementPhrase -> String
+formatCP cp = printf "Complement Phrase: %s\n\
+                     \Tense Phrase     : %s\n\
+                     \Verb Phrase      : %s"
+                (maybe "null" show (getchunk =<< cp^.cp_governor))
+                (maybe "null" show (getchunk =<< cp^.cp_TP.tp_governor))
+                (maybe "null" show (getchunk (cp^.cp_TP.tp_VP)))
+  where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
+
 
 
 formatClauseStructure :: [VerbProperty a]

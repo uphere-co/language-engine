@@ -24,6 +24,33 @@ import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 
 
+governorVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+governorVP vp = case vp^.vp_words of
+                  []  -> Nothing
+                  z:_ -> parent (fst z)
+
+
+governorPhraseOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+governorPhraseOfVP vp = parent =<< governorVP vp
+
+
+
+constructCP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe ComplementPhrase
+constructCP vprop = do vp <- governorVP vprop
+                       tp' <- governorPhraseOfVP vprop
+                       tptag' <- N.convert <$> getchunk tp'
+                       case tptag' of
+                         N.CL s -> do
+                           cp' <- parent tp'
+                           cptag' <- N.convert <$> getchunk cp'
+                           case cptag' of
+                             N.CL _ -> return (CP (Just cp') (TP (Just tp') vp vprop))
+                             N.RT   -> return (CP (Just cp') (TP (Just tp') vp vprop))
+                             _      -> return (CP Nothing    (TP (Just tp') vp vprop))
+                         _ -> return (CP Nothing (TP Nothing vp vprop))
+  where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
+
+
 currentlevel :: Bitree (Range,(STag,Int)) t -> Int
 currentlevel (PN (_,(_,l)) _) = l
 currentlevel (PL _ )          = 0
