@@ -28,6 +28,7 @@ let
               split
               lens
               raw-strings-qq
+              foreign-store
               p.nlp-types
             ]);
 in stdenv.mkDerivation {

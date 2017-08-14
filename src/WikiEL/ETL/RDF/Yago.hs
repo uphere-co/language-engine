@@ -104,8 +104,7 @@ parserRDF3colRowInTSV = do
   ssep
   obj  <- parserNounToken
   ssep
-  return (nullID,subj, verb, obj)
-
+  return (nullID, subj, verb, obj)
 
 parserRDFrowInTSV = choice [ parserRDF4colRowInTSV
                            , parserRDF3colRowInTSV]

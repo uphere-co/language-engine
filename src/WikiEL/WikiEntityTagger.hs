@@ -2,7 +2,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
-module WikiEL.WikiEntityTagger where
+
+module WikiEL.WikiEntityTagger 
+  ( module WikiEL.WikiEntityTagger
+  , WikiEL.Util.Hash.WordHash
+  ) where
 
 import           Data.Maybe                            (fromJust, isNothing)
 import           Data.List                             (inits, transpose)
@@ -13,24 +17,21 @@ import           Data.Vector                           (Vector,backpermute,findI
                                                        ,slice,fromList,toList,unsafeThaw,modify)
 import           Data.Vector.Unboxed                   ((!))
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
-import           Data.Text.Encoding                    (encodeUtf8)
-import           Data.Digest.XXHash                    (XXHash,xxHash')
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 import qualified Data.Vector                   as V
 import qualified Data.Vector.Algorithms.Search as VS
 import qualified Data.Vector.Unboxed           as UV
 
-
-import qualified WikiEL.Type.Wikidata         as Wiki
+import           WikiEL.Util.Hash                      (WordHash,wordHash)
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           WikiEL.Type.FileFormat                (EntityReprFile,EntityReprRow(..))
 import           WikiEL.ETL.LoadData                   (loadEntityReprs)
 import           WikiEL.Misc                           (IRange(..))
 import           Assert                                (massertEqual,eassertEqual)
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
+import qualified WikiEL.Type.Wikidata         as Wiki
 
-type WordHash = XXHash
 type WordsHash = UV.Vector WordHash
 
 ithElementOrdering :: Int -> WordsHash -> WordsHash -> Ordering
@@ -75,7 +76,7 @@ greedyAnnotation :: Vector WordsHash -> WordsHash -> [(IRange, Vector Int)]
 greedyAnnotation entities text = greedyAnnotationImpl entities text 0 []
 
 wordsHash :: [Text] -> WordsHash
-wordsHash words = UV.fromList (map (xxHash' . encodeUtf8) words)
+wordsHash words = UV.fromList (map wordHash words)
 
 nameWordsHash :: Wiki.ItemRepr -> WordsHash
 nameWordsHash (Wiki.ItemRepr name) = wordsHash (T.words name)
