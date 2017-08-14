@@ -1,12 +1,21 @@
+{-# LANGUAGE DataKinds       #-}
+{-# LANGUAGE KindSignatures  #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeOperators   #-}
 
 module NLP.Syntax.Type where
 
 import           Control.Lens
 import           Data.Text                   (Text)
 --
+import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
+
+
+type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
+
+type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
 
 
 data Tense = Present | Past
@@ -20,18 +29,27 @@ data Voice = Active | Passive
 data Aspect = Simple | Progressive | Perfect | PerfectProgressive
            deriving (Show,Eq,Ord,Enum,Bounded)
 
-data VerbProperty = VerbProperty { _vp_index  :: Int
-                                 , _vp_lemma  :: Lemma
-                                 , _vp_tense  :: Tense
-                                 , _vp_aspect :: Aspect
-                                 , _vp_voice  :: Voice
-                                 , _vp_auxiliary :: Maybe (Int,Lemma)
-                                 , _vp_negation :: Maybe (Int,Lemma)
-                                 , _vp_words  :: [Int]
-                                 }
-                  deriving (Show)
+data VerbProperty w = VerbProperty { _vp_index  :: Int
+                                   , _vp_lemma  :: Lemma
+                                   , _vp_tense  :: Tense
+                                   , _vp_aspect :: Aspect
+                                   , _vp_voice  :: Voice
+                                   , _vp_auxiliary :: Maybe (w,(Int,Lemma))
+                                   , _vp_negation :: Maybe (w,(Int,Lemma))
+                                   , _vp_words  :: [(w,(Int,Lemma))]
+                                   }
+                    deriving (Show)
 
 makeLenses ''VerbProperty                           
+
+{-
+data TensePhrase = TensePhrase { _tp_verbProperty :: VerbProperty
+                               , _tp_verbPhrase :: BitreeZipperICP (Lemma ': [])
+                               }
+                 deriving (Show)
+
+makeLenses ''TensePhrase
+-}
 
 data VerbArgs a = VerbArgs { _va_string :: [(POSTag,Text)]
                            , _va_arg0 :: Maybe a
@@ -40,6 +58,14 @@ data VerbArgs a = VerbArgs { _va_string :: [(POSTag,Text)]
               deriving Show
 
 makeLenses ''VerbArgs                       
+
+
+
+
+
+
+
+
 
 data SBARType = SB_Word (POSTag,Text)
               | SB_WH   N.PhraseTag

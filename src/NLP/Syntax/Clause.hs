@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module NLP.Syntax.Clause where
@@ -49,7 +50,7 @@ promoteNPPP x = [x]
 
 
 
-clauseStructure :: [VerbProperty]
+clauseStructure :: [VerbProperty a]
                 -> PennTreeIdxG N.CombinedTag (POSTag,Text)
                 -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
 clauseStructure _vps (PL (i,pt)) = PL (Right (i,pt))
@@ -119,12 +120,12 @@ clauseRanges tr = bifoldMap f (const []) tr
         f _                = []
 
 
-clauseForVerb :: [Range] -> VerbProperty -> Maybe Range
+clauseForVerb :: [Range] -> VerbProperty a -> Maybe Range
 clauseForVerb allrngs vp = case rngs of
                              [] -> Nothing
                              _  -> Just (minimumBy (compare `on` (\(b,e) -> e-b)) rngs)
   where i `isIn` (b,e) = b <= i && i <= e  
-        rngs = filter (\rng -> getAll (mconcat (map (\i -> All (i `isIn` rng)) (vp^.vp_words)))) allrngs
+        rngs = filter (\rng -> getAll (mconcat (map (\i -> All (i `isIn` rng)) (vp^..vp_words.traverse._2._1)))) allrngs
 
 
 verbArgs :: BitreeZipper (Range,(STag,Int))
@@ -162,7 +163,7 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
 
 
 getVerbArgs :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-            -> VerbProperty
+            -> VerbProperty a
             -> Maybe (VerbArgs (Either (Range,STag) (Int,POSTag)))
 getVerbArgs tr vp = verbArgs <$> findVerb (vp^.vp_index) tr
 

@@ -1,21 +1,24 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs      #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE MultiWayIf        #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module NLP.Syntax.Verb where
 
 import           Control.Applicative
-import           Control.Lens                                ((^.))
+import           Control.Lens                                ((^.),(^..),_1,_2)
 import           Control.Monad
 import           Control.Monad.Loops                         (iterateUntilM)
 import           Data.Foldable                               (toList)
+import           Data.Function                               (on)
 import           Data.IntMap                                 (IntMap)
-import           Data.List                                   (sort)
+import           Data.List                                   (sortBy)
 import           Data.Text                                   (Text)
 import           Data.Maybe
 import           Data.Monoid
@@ -32,9 +35,6 @@ import           NLP.Syntax.Type
 import           Debug.Trace
 
 
-type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
-
-type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
 
 
 phraseType :: PennTreeIdxG c (p,a) -> (Range,Either c p)
@@ -52,12 +52,11 @@ getLeafIndex (PL (i,_)) = Just i
 getLeafIndex _          = Nothing
 
 
-isLemmaAs :: Lemma -> BitreeICP (Lemma ': as) -> Bool
-isLemmaAs lma (PL (_,x)) = ahead (getAnnot x) == lma
-isLemmaAs _   _          = False
+isLemmaAs :: (GetIntLemma tag) => Lemma -> BitreeICP tag -> Bool
+isLemmaAs lma c = maybe False ((==lma).snd) (intLemma0 c)
 
 
-isPOSAs :: POSTag -> BitreeICP as -> Bool
+isPOSAs :: POSTag -> BitreeICP tag -> Bool
 isPOSAs pos (PL (_,x)) = posTag x == pos
 isPOSAs _   _          = False
 
@@ -65,7 +64,6 @@ isPOSAs _   _          = False
 isChunkAs :: ChunkTag -> BitreeICP as -> Bool
 isChunkAs chk (PN (_,x) _) = chunkTag x == chk
 isChunkAs _   _            = False
-
 
 
 isVBN :: BitreeZipperICP a -> Bool
@@ -78,12 +76,6 @@ isVBG z = isPOSAs VBG (current z)
 
 getIdxPOS :: BitreeICP a -> Maybe (Int,POSTag)
 getIdxPOS w = (,) <$> getLeafIndex w <*> fmap posTag (getLeaf w)
-
-
-          
-
-
-
 
 
 auxBe :: BitreeZipperICP (Lemma ': as) -> Maybe a -> Maybe a -> Maybe a -> Maybe a -> Maybe a
@@ -101,14 +93,26 @@ auxHave z =
      | otherwise                                               -> Nothing
 
 
-type AuxNegWords = (Maybe (Int,Lemma),Maybe (Int,Lemma),[Int])
+type AuxNegWords w = (Maybe (w,(Int,Lemma)),Maybe (w,(Int,Lemma)),[(w,(Int,Lemma))])
 
 
-intLemma :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,Lemma)
-intLemma c = do
-  i <- getLeafIndex (current c)
-  l <- ahead . getAnnot <$> getLeaf (current c)
-  return (i,l)                                  
+class GetIntLemma tag where
+  intLemma :: BitreeZipperICP tag -> Maybe (Int,Lemma)
+  intLemma0 :: BitreeICP tag -> Maybe (Int,Lemma)
+
+instance GetIntLemma (Lemma ': as) where
+  intLemma :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,Lemma)
+  intLemma c = do
+    i <- getLeafIndex (current c)
+    l <- ahead . getAnnot <$> getLeaf (current c)
+    return (i,l)                                  
+
+  intLemma0 :: BitreeICP (Lemma ': as) -> Maybe (Int,Lemma)
+  intLemma0 c = do
+    i <- getLeafIndex c
+    l <- ahead . getAnnot <$> getLeaf c
+    return (i,l)                                  
+
 
 findSiblings :: (Monad m) =>
                 (BitreeZipper c t -> m (BitreeZipper c t))
@@ -131,7 +135,9 @@ findPrevVerb z = do
     prevVerbInSiblings = findSiblings prev (\x -> case getIdxPOS x of {Nothing -> False; Just (_,pos) -> isVerb pos})
 
 
-findAux :: BitreeZipperICP (Lemma ': as) -> Maybe (BitreeZipperICP (Lemma ': as), (Int,Lemma))
+findAux :: (GetIntLemma tag) =>
+           BitreeZipperICP tag
+        -> Maybe (BitreeZipperICP tag, (Int,Lemma))
 findAux z = do
   p <- parent z
   guard (isChunkAs VP (current p))
@@ -141,61 +147,69 @@ findAux z = do
      | otherwise                  -> findAux p
 
 
-findNeg :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,Lemma)
-findNeg z = intLemma =<< (findNegInSiblings prev z <|> findNegInSiblings next z)
+findNeg :: (GetIntLemma tag) => 
+           BitreeZipperICP tag
+        -> Maybe (BitreeZipperICP tag, (Int,Lemma))
+findNeg z = (\z'->(z',) <$> intLemma z') =<< (findNegInSiblings prev z <|> findNegInSiblings next z)
   where
     findNegInSiblings dir = findSiblings dir (\x -> isPOSAs RB x && (isLemmaAs "not" x || isLemmaAs "n't" x))
 
 
-auxNegWords :: BitreeZipperICP (Lemma ': as)
-            -> [Int]
-            -> (Maybe (Int,Lemma), Maybe (Int,Lemma), [Int])
-auxNegWords z is =
-  let (au,ne) = case findAux z of
+auxNegWords
+  :: (GetIntLemma tag) =>
+     BitreeZipperICP tag
+  -> [BitreeZipperICP tag]
+  -> AuxNegWords (BitreeZipperICP tag)
+auxNegWords z zs =
+  let zis = map (\z'->(z',)<$>intLemma z') zs
+      (au,ne) = case findAux z of
                   Nothing -> (Nothing,findNeg z)
-                  Just (c,il) -> (Just il,findNeg c)
-  in (au,ne,sort (map fst (catMaybes [au,ne]) ++ is))
+                  Just (c,il) -> (Just (c,il),findNeg c)
+
+      ws = sortBy (compare `on` (^._2._1)) (catMaybes ([au,ne] ++ zis))
+  in (au,ne,ws)
 
 
-tenseAspectVoiceAuxNeg :: BitreeZipperICP (Lemma ': as) -> Maybe (Tense,Aspect,Voice,AuxNegWords)
+tenseAspectVoiceAuxNeg
+  :: BitreeZipperICP '[Lemma]
+  -> Maybe (Tense,Aspect,Voice,AuxNegWords (BitreeZipperICP '[Lemma]))
 tenseAspectVoiceAuxNeg z
   | isPOSAs VBN (current z) = 
       case findPrevVerb z of
-        Nothing -> return (Present,Simple,Passive,auxNegWords z [getIdx z])
+        Nothing -> return (Present,Simple,Passive,auxNegWords z [z])
         Just z1 -> do
           ((auxBe z1
-            (return (Past,Simple,Passive,auxNegWords z1 [getIdx z1,getIdx z]))
+            (return (Past,Simple,Passive,auxNegWords z1 [z1,z]))
             (findPrevVerb z1 >>= \z2 -> 
               auxBe z2
-                (return (Past,Progressive,Passive,auxNegWords z2 (map getIdx [z2,z1,z])))
+                (return (Past,Progressive,Passive,auxNegWords z2 [z2,z1,z]))
                 Nothing
                 (findPrevVerb z2 >>= \z3 -> do
                    t <- auxHave z3
-                   return (t,PerfectProgressive,Passive,auxNegWords z3 (map getIdx [z3,z2,z1,z])))
-                (return (Present,Progressive,Passive,auxNegWords z2 ([getIdx z2,getIdx z1,getIdx z]))))
+                   return (t,PerfectProgressive,Passive,auxNegWords z3 [z3,z2,z1,z]))
+                (return (Present,Progressive,Passive,auxNegWords z2 [z2,z1,z])))
             (do z2 <- findPrevVerb z1
                 t <- auxHave z2
-                return (t,Perfect,Passive,auxNegWords z2 (map getIdx [z2,z1,z])))
-            (return (Present,Simple,Passive,auxNegWords z1 [getIdx z1,getIdx z])))
+                return (t,Perfect,Passive,auxNegWords z2 [z2,z1,z]))
+            (return (Present,Simple,Passive,auxNegWords z1 [z1,z])))
            <|>
-           (auxHave z1 >>= \t -> return (t,Perfect,Active,auxNegWords z1 (map getIdx [z1,z]))))
+           (auxHave z1 >>= \t -> return (t,Perfect,Active,auxNegWords z1 [z1,z])))
   | isPOSAs VBG (current z) = do
       case findPrevVerb z of
-        Nothing -> return (Present,Progressive,Active,auxNegWords z [getIdx z])
+        Nothing -> return (Present,Progressive,Active,auxNegWords z [z])
         Just z1 -> do
           z1 <- findPrevVerb z
-          auxBe z1 (return (Past,Progressive,Active,auxNegWords z1 [getIdx z1,getIdx z]))
+          auxBe z1 (return (Past,Progressive,Active,auxNegWords z1 [z1,z]))
                    Nothing
                    (do z2 <- findPrevVerb z1
                        t <- auxHave z2
-                       return (t,PerfectProgressive,Active,auxNegWords z2 (map getIdx [z2,z1,z])))
-                   (return (Present,Progressive,Active,auxNegWords z1 [getIdx z1,getIdx z]))
-  | isPOSAs VBD (current z) = return (Past,Simple,Active,auxNegWords z [getIdx z])
-  | otherwise               = return (Present,Simple,Active,auxNegWords z [getIdx z])
-  where getIdx = fst . fromJust . getIdxPOS . current 
+                       return (t,PerfectProgressive,Active,auxNegWords z2 [z2,z1,z]))
+                   (return (Present,Progressive,Active,auxNegWords z1 [z1,z]))
+  | isPOSAs VBD (current z) = return (Past,Simple,Active,auxNegWords z [z])
+  | otherwise               = return (Present,Simple,Active,auxNegWords z [z])
 
 
-verbProperty :: BitreeZipperICP (Lemma ': as) -> Maybe VerbProperty
+verbProperty :: BitreeZipperICP '[Lemma] -> Maybe (VerbProperty (BitreeZipperICP '[Lemma]))
 verbProperty z = do
   i <- getLeafIndex (current z)
   lma <- ahead . getAnnot <$> getLeaf (current z)
@@ -203,9 +217,7 @@ verbProperty z = do
   return (VerbProperty i lma tns asp vo aux neg is)
 
 
-
-
-verbPropertyFromPennTree :: IntMap Lemma -> PennTree -> [VerbProperty]
+verbPropertyFromPennTree :: IntMap Lemma -> PennTree -> [VerbProperty (BitreeZipperICP '[Lemma])]
 verbPropertyFromPennTree lemmamap pt = 
   let lemmapt = lemmatize lemmamap (mkAnnotatable (mkPennTreeIdx pt))
       phase1 z = case getRoot (current z) of
@@ -215,7 +227,7 @@ verbPropertyFromPennTree lemmamap pt =
                        else Nothing
                   _ -> Nothing 
       vps1 = mapMaybe phase1 (toList (mkBitreeZipper [] lemmapt))
-      identified_verbs1 = concatMap (\vp -> vp^.vp_words) vps1
+      identified_verbs1 = concatMap (\vp -> vp^..(vp_words.traverse._2._1)) vps1
       
       phase2 z = case getRoot (current z) of
                   Right (i,ALeaf (pos,_) annot)
@@ -224,7 +236,7 @@ verbPropertyFromPennTree lemmamap pt =
                        else Nothing
                   _ -> Nothing
       vps2 = mapMaybe phase2 (toList (mkBitreeZipper [] lemmapt))
-      identified_verbs2 = concatMap (\vp -> vp^.vp_words) vps2
+      identified_verbs2 = concatMap (\vp -> vp^..(vp_words.traverse._2._1)) vps2
 
       phase3 z = case getRoot (current z) of
                   Right (i,ALeaf (pos,_) _annot)
@@ -234,9 +246,7 @@ verbPropertyFromPennTree lemmamap pt =
                   _ -> Nothing
       vps3 = mapMaybe phase3 (toList (mkBitreeZipper [] lemmapt))
 
-
-      
-  in {- trace (show identified_verbs1) $ -} vps1 <> vps2 <> vps3
+  in vps1 <> vps2 <> vps3
 
 
 
