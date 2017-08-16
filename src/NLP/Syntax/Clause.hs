@@ -32,12 +32,21 @@ maximalProjectionVP vp = listToMaybe (vp^.vp_words) >>= parent . fst
 parentOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
 parentOfVP vp = parent =<< maximalProjectionVP vp
 
- 
+{-
+headVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+headVP vp = getLast (mconcat (map (Last . Just) (vp^.vp_words)))
+-}
+
+{-
+sisterDPofVHead :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe [BitreeZipperICP '[Lemma]]
+sisterDPofVHead vp = headVP vp
+-}
+  
 identifySubject :: N.ClauseTag -> BitreeZipperICP '[Lemma] -> Maybe (BitreeZipperICP '[Lemma])
 identifySubject tag vp =
   case tag of
-    N.SINV -> findSiblings next (isChunkAs NP) vp
-    _      -> findSiblings prev (isChunkAs NP) vp
+    N.SINV -> firstSiblingBy next (isChunkAs NP) vp
+    _      -> firstSiblingBy prev (isChunkAs NP) vp
 
 
 constructCP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe CP

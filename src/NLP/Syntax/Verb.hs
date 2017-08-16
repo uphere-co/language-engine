@@ -60,7 +60,7 @@ findPrevVerb z = do
          prevVerbInSiblings z1
      ))
   where
-    prevVerbInSiblings = findSiblings prev (\x -> case getIdxPOS x of {Nothing -> False; Just (_,pos) -> isVerb pos})
+    prevVerbInSiblings = firstSiblingBy prev (\x -> case getIdxPOS x of {Nothing -> False; Just (_,pos) -> isVerb pos})
 
 
 findAux :: (GetIntLemma tag) =>
@@ -82,7 +82,7 @@ findNeg :: (GetIntLemma tag) =>
         -> Maybe (BitreeZipperICP tag, (Int,Lemma))
 findNeg z = (\z'->(z',) <$> intLemma z') =<< (findNegInSiblings prev z <|> findNegInSiblings next z)
   where
-    findNegInSiblings dir = findSiblings dir (\x -> isPOSAs RB x && (isLemmaAs "not" x || isLemmaAs "n't" x))
+    findNegInSiblings dir = firstSiblingBy dir (\x -> isPOSAs RB x && (isLemmaAs "not" x || isLemmaAs "n't" x))
 
 
 auxNegWords

@@ -83,9 +83,19 @@ getIdxPOS w = (,) <$> getLeafIndex w <*> fmap posTag (getLeaf w)
 
 
 
-findSiblings :: (Monad m) =>
-                (BitreeZipper c t -> m (BitreeZipper c t))
-             -> (Bitree c t -> Bool)
-             -> BitreeZipper c t
-             -> m (BitreeZipper c t)
-findSiblings dir p x = iterateUntilM (p.current) dir x
+firstSiblingBy :: (Monad m) =>
+                  (BitreeZipper c t -> m (BitreeZipper c t))
+               -> (Bitree c t -> Bool)
+               -> BitreeZipper c t
+               -> m (BitreeZipper c t)
+firstSiblingBy dir p x = iterateUntilM (p.current) dir x
+
+
+{-
+siblingsBy :: (Monad m) =>
+                  (BitreeZipper c t -> m (BitreeZipper c t))
+               -> (Bitree c t -> Bool)
+               -> BitreeZipper c t
+               -> m (BitreeZipper c t)
+siblingsBy dir p x = iterateUntilM (p.current) dir x
+-}
