@@ -34,6 +34,7 @@ import           Data.Attribute
 import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
+import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
@@ -123,7 +124,8 @@ formatInst :: Bool  -- ^ show detail?
            -> ((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)
            -> String
 formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
-  let args = inst^.inst_arguments
+  let 
+      args = inst^.inst_arguments
       lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
       -- coretr = corenlp^._1
       coretr = proptr  -- this is an extreme solution
@@ -152,14 +154,14 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
       argtable = fmap f argtable1
         where f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> Text
               f = phraseNodeType mtp . chooseATNode
-  in -- (show (fmap unLemma lemmamap) ++ "\n" ++ show (fmap unLemma nlemmamap) ++ "\n\n") -- show minst
-     -- show (verbprops^..traverse.vp_words.traverse._2)
-      (if doesShowDetail
-       then "\n================================================================\n" ++
+  in (if doesShowDetail
+       then "\n\n\n================================================================\n" ++
             T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
             "\n"                                                                   ++
             "\n================================================================\n" ++
             formatMatchedVerb minst mvpmva ++ "\n"
+            ++ T.unpack (prettyPrint 0 proptr) ++ "\n"
+            ++ intercalate "\n" (map formatVerbProperty verbprops) ++ "\n"
        else ""
      )
      ++ formatArgTable mvpmva argtable
@@ -336,7 +338,7 @@ main = do
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
-  let fps = {- Prelude.take 200 $ -} sort (toList (dirTree dtr))
+  let fps = {- filter (\f -> takeBaseName f == "wsj_2347") $ -} Prelude.take 200 $ sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps
