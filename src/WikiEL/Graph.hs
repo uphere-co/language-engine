@@ -156,7 +156,7 @@ allPathsUpto fn node cutoff = f B.empty 0 (B.singleton (UV.singleton node))
         nexts = B.concatMap (accumPaths fn) paths
 
 
-
+accumIf :: (t -> t -> Ordering) -> [(t, t)] -> [t] -> [t] -> [(t, t)]
 accumIf comp accum [] _ = accum
 accumIf comp accum _ [] = accum
 accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == EQ = accumIf comp ((l,r):accum) ls rs
@@ -164,7 +164,6 @@ accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == LT = accumIf comp accum ls 
 accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == GT = accumIf comp accum lb rs
 
 neighborOverlap :: (UV.Unbox a, Ord a) => UV.Vector (a,Dist) -> UV.Vector (a,Dist) -> [((a,Dist),(a,Dist))]
---neighborOverlap dists1 dists2 = f [] (GV.stream lhs) (GV.stream rhs)
 neighborOverlap dists1 dists2 = accumIf compFst [] (UV.toList lhs) (UV.toList rhs)
   where
     compFst (ln,_) (rn,_) = compare ln rn
