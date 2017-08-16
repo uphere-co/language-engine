@@ -9,6 +9,7 @@ import           Data.Either                     (partitionEithers)
 import           Data.Function                   (on)
 import           Data.IntMap                     (IntMap)
 import           Data.List                       (minimumBy)
+import           Data.Maybe                      (listToMaybe)
 import           Data.Monoid
 import           Data.Text                       (Text)
 import qualified Data.Text               as T
@@ -24,14 +25,12 @@ import           NLP.Syntax.Util
 import           NLP.Syntax.Verb
 
 
-governorVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
-governorVP vp = case vp^.vp_words of
-                  []  -> Nothing
-                  z:_ -> parent (fst z)
+maximalProjectionVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+maximalProjectionVP vp = listToMaybe (vp^.vp_words) >>= parent . fst
 
 
-governorPhraseOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
-governorPhraseOfVP vp = parent =<< governorVP vp
+parentOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+parentOfVP vp = parent =<< maximalProjectionVP vp
 
  
 identifySubject :: N.ClauseTag -> BitreeZipperICP '[Lemma] -> Maybe (BitreeZipperICP '[Lemma])
@@ -43,8 +42,8 @@ identifySubject tag vp =
 
 constructCP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe CP
 constructCP vprop = do
-    vp <- governorVP vprop
-    tp' <- governorPhraseOfVP vprop
+    vp <- maximalProjectionVP vprop
+    tp' <- parentOfVP vprop
     tptag' <- N.convert <$> getchunk tp'
     case tptag' of
       N.CL s -> do
