@@ -67,15 +67,13 @@ testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pai
     dForwardEdges  = neighbor (sortEdges From directed)
     u = map UV.fromList :: [[Int64]] -> [UV.Vector Int64]
 
-  eassertEqual (u [[8,1],[8,11]]) (B.toList (accumPaths dForwardEdges (UV.fromList [8])))
-  eassertEqual (u [[8,8,1],[8,8,11]]) (B.toList (accumPaths dForwardEdges (UV.fromList [8,8]))) --Nonsense input. Just for testing
-  eassertEqual (u [[10,9],[10,8],[10,1]]) (B.toList (accumPaths dForwardEdges (UV.fromList [10])))
-  let
-    tmp = allPathsOf dForwardEdges 10 3
-    tmp2 = allPathsUpto dForwardEdges 10 3
-  eassertEqual (B.toList tmp)  (u [[10,9,1,2],[10,9,1,3],[10,9,1,5],[10,9,1,6],[10,8,1,2],[10,8,1,3],[10,8,1,5],[10,8,1,6],[10,8,11,3],[10,1,2,4],[10,1,3,4],[10,1,5,6],[10,1,5,7]])
-  eassertEqual (B.toList tmp2) (u [[10],[10,9],[10,8],[10,1],[10,9,1],[10,8,1],[10,8,11],[10,1,2],[10,1,3],[10,1,5],[10,1,6],[10,9,1,2],[10,9,1,3],[10,9,1,5],[10,9,1,6],[10,8,1,2],[10,8,1,3],[10,8,1,5],[10,8,1,6],[10,8,11,3],[10,1,2,4],[10,1,3,4],[10,1,5,6],[10,1,5,7]])
-  print $ B.toList (allPathsUpto dForwardEdges 1 5)
+  eassertEqual (u [[8,11],[8,1]])  (accumPaths dForwardEdges (UV.fromList [8]))
+  eassertEqual (u [[8,8,11],[8,8,1]]) (accumPaths dForwardEdges (UV.fromList [8,8])) --Nonsense input. Just for testing
+  eassertEqual (u [[10,1],[10,8],[10,9]]) (accumPaths dForwardEdges (UV.fromList [10]))
+  eassertEqual (allPathsOf dForwardEdges 10 3)  (u [[10,1,5,7],[10,1,5,6],[10,1,3,4],[10,1,2,4],[10,8,11,3],[10,8,1,6],[10,8,1,5],[10,8,1,3],[10,8,1,2],[10,9,1,6],[10,9,1,5],[10,9,1,3],[10,9,1,2]])
+  eassertEqual (allPathsUpto dForwardEdges 10 3) (u [[10],[10,1],[10,8],[10,9],[10,1,6],[10,1,5],[10,1,3],[10,1,2],[10,8,11],[10,8,1],[10,9,1],[10,1,5,7],[10,1,5,6],[10,1,3,4],[10,1,2,4],[10,8,11,3],[10,8,1,6],[10,8,1,5],[10,8,1,3],[10,8,1,2],[10,9,1,6],[10,9,1,5],[10,9,1,3],[10,9,1,2]])
+  
+  print $ allPathsUpto dForwardEdges 1 5
 
 
 
