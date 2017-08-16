@@ -134,7 +134,28 @@ tenseAspectVoiceAuxNeg z
                        t <- auxHave z2
                        return (t,PerfectProgressive,Active,auxNegWords z2 [z2,z1,z]))
                    (return (Present,Progressive,Active,auxNegWords z1 [z1,z]))
-  | isPOSAs VBD (current z) = return (Past,Simple,Active,auxNegWords z [z])
+  | isPOSAs VBD (current z) =    -- Penn Treebank POS Tagging often tags participles with past tense verbs.
+      case findPrevVerb z of
+        Nothing -> return (Past,Simple,Active,auxNegWords z [z])
+        Just z1 -> do
+          ((auxBe z1
+            (return (Past,Simple,Passive,auxNegWords z1 [z1,z]))
+            (findPrevVerb z1 >>= \z2 -> 
+              auxBe z2
+                (return (Past,Progressive,Passive,auxNegWords z2 [z2,z1,z]))
+                Nothing
+                (findPrevVerb z2 >>= \z3 -> do
+                   t <- auxHave z3
+                   return (t,PerfectProgressive,Passive,auxNegWords z3 [z3,z2,z1,z]))
+                (return (Present,Progressive,Passive,auxNegWords z2 [z2,z1,z])))
+            (do z2 <- findPrevVerb z1
+                t <- auxHave z2
+                return (t,Perfect,Passive,auxNegWords z2 [z2,z1,z]))
+            (return (Present,Simple,Passive,auxNegWords z1 [z1,z])))
+           <|>
+           (auxHave z1 >>= \t -> return (t,Perfect,Active,auxNegWords z1 [z1,z])))
+
+    -- return (Past,Simple,Active,auxNegWords z [z])
   | otherwise               = return (Present,Simple,Active,auxNegWords z [z])
 
 
