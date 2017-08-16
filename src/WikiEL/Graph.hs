@@ -9,6 +9,7 @@ import           Control.Monad.ST                      (runST)
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy)
 
+import qualified Data.List as L
 
 isIn :: (UV.Unbox a, Ord a) => UV.Vector a -> a -> Bool
 isIn vals = f sorted
@@ -156,24 +157,23 @@ allPathsUpto fn node cutoff = f B.empty 0 (B.singleton (UV.singleton node))
 
 
 
+accumIf comp accum [] _ = accum
+accumIf comp accum _ [] = accum
+accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == EQ = accumIf comp ((l,r):accum) ls rs
+accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == LT = accumIf comp accum ls rb
+accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == GT = accumIf comp accum lb rs
+
 neighborOverlap :: (UV.Unbox a, Ord a) => UV.Vector (a,Dist) -> UV.Vector (a,Dist) -> [((a,Dist),(a,Dist))]
 --neighborOverlap dists1 dists2 = f [] (GV.stream lhs) (GV.stream rhs)
-neighborOverlap dists1 dists2 = f [] (UV.toList lhs) (UV.toList rhs)
+neighborOverlap dists1 dists2 = accumIf compFst [] (UV.toList lhs) (UV.toList rhs)
   where
-    comp (ln,_) (rn,_) = compare ln rn
-    lhs = UV.modify (sortBy comp) dists1
-    rhs = UV.modify (sortBy comp) dists2
-    --{-
-    f accum [] _ = accum
-    f accum _ [] = accum
-    f accum lb@(l:ls) rb@(r:rs) | comp l r == EQ = f ((l,r):accum) ls rs
-    f accum lb@(l:ls) rb@(r:rs) | comp l r == LT = f accum ls rb
-    f accum lb@(l:ls) rb@(r:rs) | comp l r == GT = f accum lb rs
-    ---}
-    {- Hopelessly slow. 
-    f accum lb rb | B.null lb || B.null rb = accum
-    f accum lb rb | comp (B.head lb) (B.head rb) == EQ = f ((B.head lb, B.head rb):accum) (B.tail lb) (B.tail rb)
-    f accum lb rb | comp (B.head lb) (B.head rb) == LT = f accum (B.tail lb) rb
-    f accum lb rb | comp (B.head lb) (B.head rb) == GT = f accum lb (B.tail rb)
-    -}
+    compFst (ln,_) (rn,_) = compare ln rn
+    lhs = UV.modify (sortBy compFst) dists1
+    rhs = UV.modify (sortBy compFst) dists2
 
+destOverlap :: (UV.Unbox a, Ord a) => B.Bundle UV.Vector (UV.Vector a) -> B.Bundle UV.Vector (UV.Vector a) -> [(UV.Vector a,UV.Vector a)]
+destOverlap left right = accumIf compLast [] ls rs
+  where
+    compLast l r = compare (UV.last l) (UV.last r)
+    ls = L.sortBy compLast (B.toList left)
+    rs = L.sortBy compLast (B.toList right)
