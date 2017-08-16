@@ -33,10 +33,10 @@ testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected gra
                                ] :: [Edge])
     undirected = UV.concatMap (\(x,y) -> UV.fromList [(x,y),(y,x)]) directed
 
-    dForwardEdges  = neighbor directed from
-    dBackwardEdges = neighbor directed to
-    uForwardEdges  = neighbor undirected from
-    uBackwardEdges = neighbor undirected to
+    dForwardEdges  = neighbor (sortEdges From directed)
+    dBackwardEdges = neighbor (sortEdges To   directed)
+    uForwardEdges  = neighbor (sortEdges From undirected)
+    uBackwardEdges = neighbor (sortEdges To   undirected)
 
   eassertEqual (dForwardEdges  1) (UV.fromList [(1,2),(1,3),(1,5),(1,6)])
   eassertEqual (dBackwardEdges 1) (UV.fromList [(4,1),(9,1),(8,1),(10,1)])
@@ -65,7 +65,7 @@ testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pai
                                , e 9 1, e 8 1, e 10 9,e 10 8,e 10 1
                                , e 8 11,e 11 3
                                ] :: [Edge])
-    dForwardEdges  = neighbor directed from
+    dForwardEdges  = neighbor (sortEdges From directed)
 
     u = map UV.fromList :: [[Int64]] -> [UV.Vector Int64]
   eassertEqual (u [[8,1],[8,11]]) (B.toList (accumPaths dForwardEdges (UV.fromList [8])))

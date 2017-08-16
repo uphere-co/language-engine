@@ -47,33 +47,42 @@ instance Edg (Int32,Int32) where
   f  (x,_) = x
   t  (_,x) = x
 -}
+data Direction = From | To
+               deriving (Show, Eq)
 
+data SortedEdges e = Sorted Direction e
+
+getNode :: Ord a => Direction -> (a,a) -> a 
+getNode From (x,_) = x
+getNode To   (_,x) = x
 from,to :: Ord a => (a,a) -> a
-from (x,_) = x
-to   (_,x) = x
+from = getNode From
+to   = getNode To
 
---edgeOrdering :: Ord n => (e->n) -> e -> e -> Ordering
-edgeOrdering :: Ord a => ((a,a)->a) -> (a,a) -> (a,a) -> Ordering
-edgeOrdering direction left right = compare (direction left) (direction right)
---orderingByFrom,orderingByTo :: e -> e -> Ordering
 orderingByFrom,orderingByTo :: Ord a => (a,a) -> (a,a) -> Ordering
-orderingByFrom = edgeOrdering from
-orderingByTo   = edgeOrdering to
+orderingByFrom left@(lf, _) right@(rf, _) = compare lf rf
+orderingByTo   left@(_ ,lt) right@(_ ,rt) = compare lt rt
+
+edgeOrdering :: Ord a => Direction -> (a,a) -> (a,a) -> Ordering
+edgeOrdering From = orderingByFrom
+edgeOrdering To   = orderingByTo
+
+sortEdges :: (UV.Unbox a, Ord a) => Direction -> UV.Vector (a,a) -> (Direction, UV.Vector (a,a))
+sortEdges From edges = (From, UV.modify (sortBy orderingByFrom) edges)
+sortEdges To   edges = (To, UV.modify (sortBy orderingByTo)   edges)
 
 {-
-  returns edges inward/outward the input node, depends on `comp` operator
-  comp : defines ordering between edges. If it orders by from side of edges,
+  returns edges inward/outward the input node, depends on `direction`(ordering) of the sorted edges
+  direction : defines ordering between edges. If it orders by from side of edges,
          `neighbor` returns edges starting from the input node.
 -}
-neighbor :: (UV.Unbox a, Ord a) => UV.Vector (a,a) -> ((a,a)->a) -> a -> UV.Vector (a,a)
-neighbor edges direction = f sorted comp
-  where
+neighbor :: (UV.Unbox a, Ord a) => (Direction, UV.Vector (a,a)) -> a -> UV.Vector (a,a)
+neighbor (direction,sorted) node = runST $ do
+  let
     comp = edgeOrdering direction
-    sorted = UV.modify (sortBy comp) edges
-    f es comp node= runST $ do
-      mvec <- UV.unsafeThaw es
-      (beg, end) <- binarySearchLRBy comp mvec (node,node)
-      return (UV.slice beg (end-beg) es)
+  mvec <- UV.unsafeThaw sorted
+  (beg, end) <- binarySearchLRBy comp mvec (node,node)
+  return (UV.slice beg (end-beg) sorted)
 
 {-
 fn :: a -> UV.Vector (a,a)
@@ -97,11 +106,11 @@ nodesForward,nodesBackward :: (UV.Unbox a, Ord a) => UV.Vector (a,a) -> a -> Dis
 nodesForward dEdges node cutoff  = accumReachable to accum cutoff dForwardEdges (UV.fromList [node],0)
   where
     accum = UV.fromList [(node,0)]
-    dForwardEdges = neighbor dEdges from
+    dForwardEdges  = neighbor (sortEdges From dEdges)
 nodesBackward dEdges node cutoff = accumReachable from accum cutoff dBackwardEdges (UV.fromList [node],0)
   where
     accum = UV.fromList [(node,0)]
-    dBackwardEdges = neighbor dEdges to
+    dBackwardEdges = neighbor (sortEdges To dEdges)
 
 {-
 -- Vector versions

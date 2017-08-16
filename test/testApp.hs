@@ -30,6 +30,8 @@ import qualified WikiEL.Util.Hash              as H
 import qualified WikiEL.Graph                  as G
 
 
+
+
 hasWikiAlias :: Either a YagoRdfTriple -> Maybe (YagoObject, YagoObject)
 hasWikiAlias (Right (_,ts,tv@(YagoVerb v),to@(YagoWikiAlias _))) | v =="redirectedFrom" = Just (ts, to)
 hasWikiAlias _ = Nothing
@@ -180,33 +182,73 @@ $ time cat yago/wikilinks | runhaskell -i./src/ test/testApp.hs > enwiki/interli
 real	60m40.005s
 -}
 
-test1 :: Foo -> IO ()
-test1 foo@(Foo edges names) = do
+
+
+{--------remove this
+edgeOrdering :: Ord a => ((a,a)->a) -> (a,a) -> (a,a) -> Ordering
+edgeOrdering direction left right = compare (direction left) (direction right)
+
+fff, ttt :: Ord a => (a,a)->a
+fff  (x,_) = x
+ttt  (_,x) = x
+
+tt,ff :: Ord a => (a,a) -> (a,a) -> Ordering
+ff = edgeOrdering fff
+tt = edgeOrdering ttt
+
+-- 17s for 1M vs 12s for sortEdges
+sortEdges2 G.From edges = (G.From, UV.modify (sortBy ff) edges)
+sortEdges2 G.To   edges = (G.To,   UV.modify (sortBy tt) edges)
+-}
+
+
+test1 :: (G.Direction, UV.Vector (H.WordHash, H.WordHash)) -> HashInvs -> IO ()
+test1 sorted@(d,edges) names = do
   let
-    dForwardEdges  = G.neighbor edges G.from
-    tmp = G.allPathsUpto dForwardEdges 1079244021 3
-    tmp2 = G.allPathsUpto dForwardEdges (H.wordHash "Diemelsee") 3
-  --print "=================================="
+    dEdges  = G.neighbor sorted
+    tmp = G.allPathsUpto dEdges 1079244021 3
+    tmp2 = G.allPathsUpto dEdges (H.wordHash "Diemelsee") 3
+    --tmp3 = G.allPathsUpto dEdges (H.wordHash "Sundar_Pichai") 3
+    tmp3 = G.allPathsUpto dEdges (H.wordHash "Larry_Page") 3
+      --print "=================================="
   print $ B.length tmp
   print $ B.length tmp2
+  print $ B.length tmp3
   --mapM_ (print . showPath names) (B.toList tmp)
   --mapM_ (print . showPath names) (B.toList tmp2)
-  print $ dForwardEdges 1079244021
-  print $ dForwardEdges (H.wordHash "Germany")
+  mapM_ (print . showPath names) (take 100 (B.toList tmp3))
+  --print $ dEdges 1079244021
+  --print $ dEdges (H.wordHash "Germany")
 
 main3init = do
-  cc@(Foo edges names) <- foo "enwiki/interlinks"
+  cc@(Foo edges names) <- foo "enwiki/interlinks" -- ~16min to sort
+  let
+    sorted = G.sortEdges G.From  edges  
+  --cc@(Foo edges names) <- foo "bb"
   print $ UV.length edges
   print $ M.size names
   store <- newStore cc
+  store2 <- newStore sorted
   print store
 
-main3 :: Word32 -> IO ()
-main3 idx = do
+{-
+idx=2
+idx2=1
+Just store <- lookupStore idx :: IO (Maybe (Store Foo))
+Just store2 <- lookupStore idx2 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
+cc@(Foo edges names) <- readStore store
+sorted@(d,es) <- readStore store2
+test1 sorted names
+-}
+main3 :: Word32 -> Word32 -> IO ()
+main3 idx idx2 = do
   Just store <- lookupStore idx :: IO (Maybe (Store Foo))
+  Just store2 <- lookupStore idx2 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
   cc@(Foo edges names) <- readStore store
+  sorted@(d,es) <- readStore store2
   print $ UV.length edges
   print $ M.size names  
+  print $ UV.length es
 
 main :: IO ()
 main = main1
