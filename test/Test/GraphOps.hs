@@ -15,6 +15,8 @@ import qualified Data.Vector.Fusion.Bundle     as B
 import           WikiEL.Graph
 
 
+
+
 newtype NodeID = NodeID Int64
              deriving (Show,Ord,Eq)
 type Edge = (NodeID, NodeID)
@@ -54,7 +56,10 @@ testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected gra
   eassertEqual (nodesBackward undirected 8 2) (nodesForward undirected 8 2)
   eassertEqual (nodesBackward undirected 8 2) (UV.fromList [(2,2),(3,2),(4,2),(5,2),(6,2),(9,2),(1,1),(10,1),(11,1),(8,0)])
   eassertEqual (nodesBackward undirected 1 1) (UV.fromList [(2,1),(3,1),(4,1),(5,1),(6,1),(8,1),(9,1),(10,1),(1,0)])
-
+  
+  eassertEqual (neighborOverlap (nodesForward directed 3 2) (nodesForward directed 10 2)) [((3,0),(3,2)),((1,2),(1,1))]
+  eassertEqual (neighborOverlap (nodesBackward directed 7 1) (nodesForward directed 10 2)) [((5,1),(5,2))]
+  
 
 testAllPaths :: TestTree
 testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pair of nodes" $ \step -> do

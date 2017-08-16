@@ -3,6 +3,7 @@ module WikiEL.Graph where
 import           Data.Int                              (Int32, Int64)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
 import qualified Data.Vector.Unboxed           as UV
+import qualified Data.Vector.Generic           as GV
 import qualified Data.Vector.Fusion.Bundle     as B
 import           Control.Monad.ST                      (runST)
 
@@ -51,6 +52,10 @@ data Direction = From | To
                deriving (Show, Eq)
 
 data SortedEdges e = Sorted Direction e
+
+inverse :: Direction -> Direction
+inverse From = To
+inverse To = From
 
 getNode :: Ord a => Direction -> (a,a) -> a 
 getNode From (x,_) = x
@@ -148,4 +153,27 @@ allPathsUpto fn node cutoff = f B.empty 0 (B.singleton (UV.singleton node))
     f accum dist paths = f (accum B.++ paths) (dist+1) nexts
       where
         nexts = B.concatMap (accumPaths fn) paths
+
+
+
+neighborOverlap :: (UV.Unbox a, Ord a) => UV.Vector (a,Dist) -> UV.Vector (a,Dist) -> [((a,Dist),(a,Dist))]
+--neighborOverlap dists1 dists2 = f [] (GV.stream lhs) (GV.stream rhs)
+neighborOverlap dists1 dists2 = f [] (UV.toList lhs) (UV.toList rhs)
+  where
+    comp (ln,_) (rn,_) = compare ln rn
+    lhs = UV.modify (sortBy comp) dists1
+    rhs = UV.modify (sortBy comp) dists2
+    --{-
+    f accum [] _ = accum
+    f accum _ [] = accum
+    f accum lb@(l:ls) rb@(r:rs) | comp l r == EQ = f ((l,r):accum) ls rs
+    f accum lb@(l:ls) rb@(r:rs) | comp l r == LT = f accum ls rb
+    f accum lb@(l:ls) rb@(r:rs) | comp l r == GT = f accum lb rs
+    ---}
+    {- Hopelessly slow. 
+    f accum lb rb | B.null lb || B.null rb = accum
+    f accum lb rb | comp (B.head lb) (B.head rb) == EQ = f ((B.head lb, B.head rb):accum) (B.tail lb) (B.tail rb)
+    f accum lb rb | comp (B.head lb) (B.head rb) == LT = f accum (B.tail lb) rb
+    f accum lb rb | comp (B.head lb) (B.head rb) == GT = f accum lb (B.tail rb)
+    -}
 
