@@ -24,6 +24,7 @@ library
                        OntoNotes.App.WikiEL
                        OntoNotes.Corpus.Load
                        OntoNotes.Corpus.PropBank
+                       OntoNotes.Format
                        OntoNotes.Mapping.FrameNet
                        OntoNotes.Parser.Sense
                        OntoNotes.Parser.SenseInventory
@@ -85,7 +86,7 @@ Executable analyze
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
-                       -threaded                       
+                       -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:
   build-depends:       base,
@@ -124,7 +125,7 @@ Executable argument
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
-                       -threaded                       
+                       -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:
   build-depends:       base,
@@ -146,6 +147,41 @@ Executable argument
                        OntoNotes
 
 
+Executable role-mapping-utility
+  Main-is:             role-mapping-utility.hs
+  hs-source-dirs:      app
+  default-language:    Haskell2010
+  ghc-options:         -O2 -Wall
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+                       -threaded
+  ghc-prof-options:    -caf-all -auto-all
+  other-modules:
+  build-depends:       base,
+                       --
+                       boxes,
+                       containers,
+                       extra,
+                       haskeline,
+                       lens,
+                       optparse-applicative,
+                       split,
+                       taggy-lens,
+                       text,
+                       transformers,
+                       unordered-containers,
+                       --
+                       HFrameNet,
+                       HWordNet,
+                       PropBank,
+                       syntactic-analysis,
+                       VerbNet,
+                       --
+                       OntoNotes
+
+
+
 Executable sense-inventory
   Main-is:             sense-inventory.hs
   hs-source-dirs:      app
@@ -154,7 +190,7 @@ Executable sense-inventory
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
-                       -threaded                       
+                       -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:
   build-depends:       base,
@@ -180,7 +216,7 @@ Executable verb-subcat-propbank-stat
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
                        -fno-warn-partial-type-signatures
-                       -threaded                       
+                       -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:
   build-depends:       base,

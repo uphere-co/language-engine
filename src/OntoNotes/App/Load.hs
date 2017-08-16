@@ -70,12 +70,12 @@ loadSenseInventory dir = do
                   Right c  -> return c
 
 
-loadSemLink :: FilePath -> IO VNFNMappingData
+loadSemLink :: FilePath -> IO VNFNMap
 loadSemLink fp = do
   txt <- T.L.IO.readFile fp
   case txt ^? html . allNamed (only "verbnet-framenet_MappingData") of
     Nothing -> error "nothing"
-    Just x -> case p_vnfnmappingdata x of
+    Just x -> case p_vnfnmap x of
                 Left e -> error e
                 Right c -> return c
 
@@ -94,11 +94,29 @@ loadFrameNet fp = do
   return lexunitdb
 
   
-createVNFNDB :: VNFNMappingData -> HashMap (Text,Text) [Text]
+createVNFNDB :: VNFNMap -> HashMap (Text,Text) [Text]
 createVNFNDB semlink = 
-  let lst = map (\c-> ((c^.vnc_vnmember,c^.vnc_class),c^.vnc_fnframe)) (semlink^.vnfnmap_vnclslst)
+  let lst = map (\c-> ((c^.vnc_vnmember,c^.vnc_class),c^.vnc_fnframe)) (semlink^.vnfnmap_vnfns)
   in foldl' (\(!acc) (k,v) -> HM.insertWith (++) k [v] acc) HM.empty lst
 
+
+
+parseRoleMap (i:lma:sense:frame:rest) = let lst = map (\w -> let x:y:_ = T.splitOn ":" w in (x,y)) rest
+                                        in ((lma,sense),("frame",frame):lst)
+
+
+loadRoleMap rolemapfile = do
+  txt <- T.IO.readFile rolemapfile
+  -- let getLemmaSense x = (x^._1,x^._2)
+  --    getArgTable x = ArgPattern (x^._3) (x^._4) (x^._5) (x^._6) (x^._7) (x^._8)
+  let rolemap = map parseRoleMap . map T.words . T.lines $ txt
+  return rolemap
+
+{- 
+    subcats = map (\xs  -> (getLemmaSense (head xs),map (\x->(getArgTable x,x^._9)) xs)) .  groupBy ((==) `on` getLemmaSense) . map parseSubcat . 
+  -- mapM_ print subcats
+  return subcats
+  -}
 
 
 
