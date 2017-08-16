@@ -238,6 +238,12 @@ main3init = do
   print store
 
 {-
+-- Script for testing in REPL
+showPath :: HashInvs -> UV.Vector H.WordHash -> [ Text]
+showPath invs path = catMaybes (UV.foldl' f [] path)
+  where
+    f accum hash = M.lookup hash invs : accum
+
 idx=2
 idx2=1
 Just store <- lookupStore idx :: IO (Maybe (Store Foo))
@@ -248,7 +254,7 @@ sorted@(d,es) <- readStore store2
 
 hash word = H.wordHash (T.pack word)
 fNode node cutoff = G.accumReachable G.to (UV.fromList [(node,0)]) cutoff (G.neighbor sorted) (UV.fromList [node],0)
-t1 = fNode (hash "Larry_Page") 3
+t1 = fNode (hash "Larry_Page") 2
 t2 = fNode (hash "Steve_Jobs") 2
 UV.length t1
 UV.length t2
@@ -258,10 +264,11 @@ length a
 aa = map (\((lh,ld),(rh,rd)) -> (M.lookup lh names, ld, rd)) a
 mapM_ print (filter (\(_,ld,rd) -> ld<3 && rd<2) aa)
 
-showPath :: HashInvs -> UV.Vector H.WordHash -> [ Text]
-showPath invs path = catMaybes (UV.foldl' f [] path)
-  where
-    f accum hash = M.lookup hash invs : accum
+pNode node cutoff = G.allPathsUpto (G.neighbor sorted) (hash node) cutoff
+
+paths = G.destOverlap (pNode "Larry_Page" 2) (pNode "Steve_Jobs" 2)
+mapM_ print (map (\(x,y)-> (reverse (showPath names y)) ++ tail (showPath names x)) paths)
+
 -}
 main3 :: Word32 -> Word32 -> IO ()
 main3 idx idx2 = do

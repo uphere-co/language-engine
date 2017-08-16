@@ -15,8 +15,6 @@ import qualified Data.Vector.Fusion.Bundle     as B
 import           WikiEL.Graph
 
 
-
-
 newtype NodeID = NodeID Int64
              deriving (Show,Ord,Eq)
 type Edge = (NodeID, NodeID)
@@ -24,17 +22,18 @@ type Edge = (NodeID, NodeID)
 vectorizeEdges :: [Edge] -> UV.Vector (Int64, Int64)
 vectorizeEdges edges = UV.fromList (map (\(NodeID from, NodeID to) -> (from,to)) edges)
 
+
+directed = vectorizeEdges ([ e 1 2, e 1 3, e 2 4, e 3 4, e 4 1
+                            , e 1 5, e 5 6, e 5 7, e 1 6
+                            , e 9 1, e 8 1, e 10 9,e 10 8,e 10 1
+                            , e 8 11,e 11 3
+                            ] :: [Edge])
+  where e from to = (NodeID from, NodeID to)
+undirected = UV.concatMap (\(x,y) -> UV.fromList [(x,y),(y,x)]) directed
+
 testNeighborNodes :: TestTree
 testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected graph" $ \step -> do
   let
-    e from to = (NodeID from, NodeID to)
-    directed = vectorizeEdges ([ e 1 2, e 1 3, e 2 4, e 3 4, e 4 1
-                               , e 1 5, e 5 6, e 5 7, e 1 6
-                               , e 9 1, e 8 1, e 10 9,e 10 8,e 10 1
-                               , e 8 11,e 11 3
-                               ] :: [Edge])
-    undirected = UV.concatMap (\(x,y) -> UV.fromList [(x,y),(y,x)]) directed
-
     dForwardEdges  = neighbor (sortEdges From directed)
     dBackwardEdges = neighbor (sortEdges To   directed)
     uForwardEdges  = neighbor (sortEdges From undirected)
@@ -61,18 +60,13 @@ testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected gra
   eassertEqual (neighborOverlap (nodesBackward directed 7 1) (nodesForward directed 10 2)) [((5,1),(5,2))]
   
 
+
 testAllPaths :: TestTree
 testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pair of nodes" $ \step -> do
-  let
-    e from to = (NodeID from, NodeID to)
-    directed = vectorizeEdges ([ e 1 2, e 1 3, e 2 4, e 3 4, e 4 1
-                               , e 1 5, e 5 6, e 5 7, e 1 6
-                               , e 9 1, e 8 1, e 10 9,e 10 8,e 10 1
-                               , e 8 11,e 11 3
-                               ] :: [Edge])
+  let   
     dForwardEdges  = neighbor (sortEdges From directed)
-
     u = map UV.fromList :: [[Int64]] -> [UV.Vector Int64]
+
   eassertEqual (u [[8,1],[8,11]]) (B.toList (accumPaths dForwardEdges (UV.fromList [8])))
   eassertEqual (u [[8,8,1],[8,8,11]]) (B.toList (accumPaths dForwardEdges (UV.fromList [8,8]))) --Nonsense input. Just for testing
   eassertEqual (u [[10,9],[10,8],[10,1]]) (B.toList (accumPaths dForwardEdges (UV.fromList [10])))
@@ -85,9 +79,25 @@ testAllPaths = testCaseSteps "Get all paths within distance cutoff between a pai
 
 
 
+    --ls = UV.modify sort left
+    --rs = UV.modify sort right
 
-testUtilsForShortedPath :: TestTree
-testUtilsForShortedPath = testCaseSteps "Test helper functions for shorted path" $ \step -> do
+testPathsOverlap :: TestTree
+testPathsOverlap = testCaseSteps "Overlap between a two set of paths" $ \step -> do
+  let   
+    dForwardEdges  = neighbor (sortEdges From directed)
+    u = map UV.fromList :: [[Int64]] -> [UV.Vector Int64]
+    x1 = destOverlap (allPathsUpto dForwardEdges 10 1) (allPathsUpto dForwardEdges 4 1)
+    x2 = destOverlap (allPathsUpto dForwardEdges 10 2) (allPathsUpto dForwardEdges 4 2)
+  
+  eassertEqual x1 (zip (u [[10,1]]) (u [[4,1]]))
+  eassertEqual x2 (zip (u [[10,1,6],[10,1,5],[10,1,3],[10,1,2],[10,1]]) (u [[4,1,6],[4,1,5],[4,1,3],[4,1,2],[4,1]]))
+  --eassertEqual x [([10,1,6],[4,1,6]),([10,1,5],[4,1,5]),([10,1,3],[4,1,3]),([10,1,2],[4,1,2]),([10,1],[4,1])]
+   -- where x = destOverlap (allPathsUpto dForwardEdges 10 1) (allPathsUpto dForwardEdges 4 1)
+
+
+testUtilsForShortestPath :: TestTree
+testUtilsForShortestPath = testCaseSteps "Test helper functions for shorted path" $ \step -> do
   let
     nodes = UV.fromList ([1,3,6,2,9,7] :: [Int32])
   assert (UV.all (isIn nodes) nodes)
@@ -108,6 +118,7 @@ allTest =
   testGroup
     "All graph operation unit tests"
     [ testNeighborNodes
-    , testUtilsForShortedPath
+    , testUtilsForShortestPath
     , testAllPaths
+    , testPathsOverlap
     ]
