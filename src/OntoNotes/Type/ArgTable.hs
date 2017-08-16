@@ -119,15 +119,15 @@ phraseNodeType mtp z
                                                                  Just t -> "PP-" <> t
                                                                  Nothing -> "??ADVP"
                                           PRT  -> "PP" <> maybe "" (\t -> "-" <> t) (headAdverb xs)
-                                          WHNP -> "NP"
-                                          _     -> T.pack (show c)
+                                          WHNP -> "NP" <> subj
+                                          _     -> T.pack (show c) <> subj
                    PL (_,(D_NONE,t)) -> case parent z of
-                                          Nothing -> "??"<>t
+                                          Nothing -> "??"<> t
                                           Just z' -> phraseNodeType mtp z'
                    PL (_,(p     ,t)) -> case isNoun p of
-                                          Yes -> "NP"
+                                          Yes -> "NP" <> subj
                                           _   -> "??" <> T.pack (show (p,t))
-    in phrase <> subj
+    in phrase
 
 
 zipperArgTable :: PennTreeIdx
