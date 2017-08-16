@@ -9,7 +9,7 @@ module Main where
 
 import           Control.Lens               hiding (levels)
 import qualified Data.IntMap                as IM
-import           Data.List                         (find)
+import           Data.List                         (find, intercalate)
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
@@ -282,7 +282,7 @@ checkVP (_txt,i,expresult,lmatknlst,pt,_dep) =
 unitTestsVerbProperty :: TestTree
 unitTestsVerbProperty = testGroup "verb property" . flip map testcases $ \c ->
   testCase (T.unpack (c^._1) ++ show (c^._3)) $
-    (checkVP c == True) @? (show ((mkVPS (c^._4) (c^._5))^..traverse.vp_lemma)  ++ "\n" ++ T.unpack (prettyPrint 0 (c^._5)))
+    (checkVP c == True) @? (intercalate "\n" ((mkVPS (c^._4) (c^._5))^..traverse.to formatVerbProperty)  ++ "\n" ++ T.unpack (prettyPrint 0 (c^._5)))
  
 
 unitTests :: TestTree

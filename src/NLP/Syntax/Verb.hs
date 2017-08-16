@@ -136,7 +136,7 @@ tenseAspectVoiceAuxNeg z
                    (return (Present,Progressive,Active,auxNegWords z1 [z1,z]))
   | isPOSAs VBD (current z) =    -- Penn Treebank POS Tagging often tags participles with past tense verbs.
       case findPrevVerb z of
-        Nothing -> return (Present,Simple,Passive,auxNegWords z [z])
+        Nothing -> return (Past,Simple,Active,auxNegWords z [z])
         Just z1 -> do
           ((auxBe z1
             (return (Past,Simple,Passive,auxNegWords z1 [z1,z]))
