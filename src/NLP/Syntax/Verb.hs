@@ -12,7 +12,7 @@
 module NLP.Syntax.Verb where
 
 import           Control.Applicative
-import           Control.Lens                                ((^.),(^..),_1,_2)
+import           Control.Lens                                ((^.),(^..),(^?),_1,_2,_Just)
 import           Control.Monad
 import           Control.Monad.Loops                         (iterateUntilM)
 import           Data.Foldable                               (toList)
@@ -64,16 +64,17 @@ findPrevVerb z = do
 
 
 findAux :: (GetIntLemma tag) =>
-           BitreeZipperICP tag
+           Lemma
+        -> BitreeZipperICP tag
         -> Maybe (BitreeZipperICP tag, (Int,Lemma))
-findAux z = do
+findAux lma z = do
   p <- parent z
   guard (isChunkAs VP (current p))
   c <- child1 p
   if | isPOSAs MD (current c)     -> (c,) <$> intLemma c
      | isPOSAs TO (current c)     -> (c,) <$> intLemma c  
-     | isLemmaAs "do" (current c) -> (c,) <$> intLemma c
-     | otherwise                  -> findAux p
+     | isLemmaAs "do" (current c) && unLemma lma /= "do" -> (c,) <$> intLemma c
+     | otherwise                  -> findAux lma p
 
 
 findNeg :: (GetIntLemma tag) => 
@@ -86,12 +87,13 @@ findNeg z = (\z'->(z',) <$> intLemma z') =<< (findNegInSiblings prev z <|> findN
 
 auxNegWords
   :: (GetIntLemma tag) =>
-     BitreeZipperICP tag
+     Lemma   
+  -> BitreeZipperICP tag
   -> [BitreeZipperICP tag]
   -> AuxNegWords (BitreeZipperICP tag)
-auxNegWords z zs =
+auxNegWords lma z zs =
   let zis = map (\z'->(z',)<$>intLemma z') zs
-      (au,ne) = case findAux z of
+      (au,ne) = case findAux lma z of
                   Nothing -> (Nothing,findNeg z)
                   Just (c,il) -> (Just (c,il),findNeg c)
 
@@ -102,61 +104,74 @@ auxNegWords z zs =
 tenseAspectVoiceAuxNeg
   :: BitreeZipperICP '[Lemma]
   -> Maybe (Tense,Aspect,Voice,AuxNegWords (BitreeZipperICP '[Lemma]))
-tenseAspectVoiceAuxNeg z
-  | isPOSAs VBN (current z) = 
-      case findPrevVerb z of
-        Nothing -> return (Present,Simple,Passive,auxNegWords z [z])
-        Just z1 -> do
-          ((auxBe z1
-            (return (Past,Simple,Passive,auxNegWords z1 [z1,z]))
-            (findPrevVerb z1 >>= \z2 -> 
-              auxBe z2
-                (return (Past,Progressive,Passive,auxNegWords z2 [z2,z1,z]))
-                Nothing
-                (findPrevVerb z2 >>= \z3 -> do
-                   t <- auxHave z3
-                   return (t,PerfectProgressive,Passive,auxNegWords z3 [z3,z2,z1,z]))
-                (return (Present,Progressive,Passive,auxNegWords z2 [z2,z1,z])))
-            (do z2 <- findPrevVerb z1
-                t <- auxHave z2
-                return (t,Perfect,Passive,auxNegWords z2 [z2,z1,z]))
-            (return (Present,Simple,Passive,auxNegWords z1 [z1,z])))
-           <|>
-           (auxHave z1 >>= \t -> return (t,Perfect,Active,auxNegWords z1 [z1,z])))
-  | isPOSAs VBG (current z) = do
-      case findPrevVerb z of
-        Nothing -> return (Present,Progressive,Active,auxNegWords z [z])
-        Just z1 -> do
-          z1 <- findPrevVerb z
-          auxBe z1 (return (Past,Progressive,Active,auxNegWords z1 [z1,z]))
-                   Nothing
-                   (do z2 <- findPrevVerb z1
-                       t <- auxHave z2
-                       return (t,PerfectProgressive,Active,auxNegWords z2 [z2,z1,z]))
-                   (return (Present,Progressive,Active,auxNegWords z1 [z1,z]))
-  | isPOSAs VBD (current z) =    -- Penn Treebank POS Tagging often tags participles with past tense verbs.
-      case findPrevVerb z of
-        Nothing -> return (Past,Simple,Active,auxNegWords z [z])
-        Just z1 -> do
-          ((auxBe z1
-            (return (Past,Simple,Passive,auxNegWords z1 [z1,z]))
-            (findPrevVerb z1 >>= \z2 -> 
-              auxBe z2
-                (return (Past,Progressive,Passive,auxNegWords z2 [z2,z1,z]))
-                Nothing
-                (findPrevVerb z2 >>= \z3 -> do
-                   t <- auxHave z3
-                   return (t,PerfectProgressive,Passive,auxNegWords z3 [z3,z2,z1,z]))
-                (return (Present,Progressive,Passive,auxNegWords z2 [z2,z1,z])))
-            (do z2 <- findPrevVerb z1
-                t <- auxHave z2
-                return (t,Perfect,Passive,auxNegWords z2 [z2,z1,z]))
-            (return (Present,Simple,Passive,auxNegWords z1 [z1,z])))
-           <|>
-           (auxHave z1 >>= \t -> return (t,Perfect,Active,auxNegWords z1 [z1,z])))
-  | otherwise               = return (Present,Simple,Active,auxNegWords z [z])
+tenseAspectVoiceAuxNeg z = do
+    lma <- (intLemma z)^?_Just._2
+    if | isPOSAs VBN (current z) -> vbn lma
+       | isPOSAs VBG (current z) -> vbg lma
+
+       | isPOSAs VBD (current z) -> vbd lma -- Penn Treebank POS Tagging often tags participles with past tense verbs.
+
+       | otherwise               -> oth lma
+
+ where
+  vbn lma =
+          case findPrevVerb z of
+            Nothing -> return (Present,Simple,Passive,auxNegWords lma z [z])
+            Just z1 -> do
+              ((auxBe z1
+                (return (Past,Simple,Passive,auxNegWords lma z1 [z1,z]))
+                (findPrevVerb z1 >>= \z2 -> 
+                  auxBe z2
+                    (return (Past,Progressive,Passive,auxNegWords lma z2 [z2,z1,z]))
+                    Nothing
+                    (findPrevVerb z2 >>= \z3 -> do
+                       t <- auxHave z3
+                       return (t,PerfectProgressive,Passive,auxNegWords lma z3 [z3,z2,z1,z]))
+                    (return (Present,Progressive,Passive,auxNegWords lma z2 [z2,z1,z])))
+                (do z2 <- findPrevVerb z1
+                    t <- auxHave z2
+                    return (t,Perfect,Passive,auxNegWords lma z2 [z2,z1,z]))
+                (return (Present,Simple,Passive,auxNegWords lma z1 [z1,z])))
+               <|>
+               (auxHave z1 >>= \t -> return (t,Perfect,Active,auxNegWords lma z1 [z1,z])))
+
+  vbg lma = 
+          case findPrevVerb z of
+            Nothing -> return (Present,Progressive,Active,auxNegWords lma z [z])
+            Just z1 -> do
+              z1 <- findPrevVerb z
+              auxBe z1 (return (Past,Progressive,Active,auxNegWords lma z1 [z1,z]))
+                       Nothing
+                       (do z2 <- findPrevVerb z1
+                           t <- auxHave z2
+                           return (t,PerfectProgressive,Active,auxNegWords lma z2 [z2,z1,z]))
+                       (return (Present,Progressive,Active,auxNegWords lma z1 [z1,z]))
+
+  vbd lma =
+          case findPrevVerb z of
+            Nothing -> return (Past,Simple,Active,auxNegWords lma z [z])
+            Just z1 -> do
+              ((auxBe z1
+                (return (Past,Simple,Passive,auxNegWords lma z1 [z1,z]))
+                (findPrevVerb z1 >>= \z2 -> 
+                  auxBe z2
+                    (return (Past,Progressive,Passive,auxNegWords lma z2 [z2,z1,z]))
+                    Nothing
+                    (findPrevVerb z2 >>= \z3 -> do
+                       t <- auxHave z3
+                       return (t,PerfectProgressive,Passive,auxNegWords lma z3 [z3,z2,z1,z]))
+                    (return (Present,Progressive,Passive,auxNegWords lma z2 [z2,z1,z])))
+                (do z2 <- findPrevVerb z1
+                    t <- auxHave z2
+                    return (t,Perfect,Passive,auxNegWords lma z2 [z2,z1,z]))
+                (return (Present,Simple,Passive,auxNegWords lma z1 [z1,z])))
+               <|>
+               (auxHave z1 >>= \t -> return (t,Perfect,Active,auxNegWords lma z1 [z1,z])))
 
 
+  oth lma = return (Present,Simple,Active,auxNegWords lma z [z])
+
+  
 verbProperty :: BitreeZipperICP '[Lemma] -> Maybe (VerbProperty (BitreeZipperICP '[Lemma]))
 verbProperty z = do
   i <- getLeafIndex (current z)

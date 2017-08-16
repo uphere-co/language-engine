@@ -271,8 +271,17 @@ ex26 = ( "I have something to do now."
        , Dependency 2 [(1,"I"),(2,"have"),(3,"something"),(4,"to"),(5,"do"),(6,"now")] [((2,1),NSUBJ),((2,3),DOBJ),((3,5),ACL),((5,4),MARK),((5,6),ADVMOD)]
        )
 
+ex27 = ( "I have something to have now."
+       , 4  
+       , (Present,Simple,Active,Just "to",Nothing)
+       , [(0,("I","I")),(1,("have","have")),(2,("something","something")),(3,("to","to")),(4,("have","have")),(5,("now","now")),(6,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","have"),PN "NP" [PL ("NN","something"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","have"),PN "ADVP" [PL ("RB","now")]]]]]],PL (".",".")]]
+       , Dependency 2 [(1,"I"),(2,"have"),(3,"something"),(4,"to"),(5,"have"),(6,"now")] [((2,1),NSUBJ),((2,3),DOBJ),((3,5),ACL),((5,4),MARK),((5,6),ADVMOD)]
+       )
+
+
 testcases :: [(Text,Int,(Tense,Aspect,Voice,Maybe Text,Maybe Text),[(Int,(Lemma,Text))],PennTree,Dependency)]
-testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24,ex25,ex26]
+testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24,ex25,ex26,ex27]
 
 
 
