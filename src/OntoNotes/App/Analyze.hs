@@ -107,6 +107,15 @@ getFormatTimex (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["-------
 showFormatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
 showFormatTimex (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex (s,a)))
 
+getFormatTimex' :: (SentItem,[TagPos (Maybe Text)]) -> [Text]
+getFormatTimex' (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["----------"] ++ [T.pack (show a)]
+
+showFormatTimex' :: (SentItem,[TagPos (Maybe Text)]) -> IO ()
+showFormatTimex' (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex' (s,a)))
+
+
+
+
 chooseFrame :: [(Text,Text,Int,Text,Text,Text,Text)] -> Maybe (Text,Text,Int,Text,Text,Text,Text)
 chooseFrame [] = Nothing
 chooseFrame xs = Just (maximumBy (compare `on` (^._3)) xs)
@@ -140,6 +149,15 @@ formatNER psents sentitems linked_mentions_resolved =
       doc1 = formatTaggedSentences sents_tagged
       doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
   in hsep 10 left [doc1,doc2]
+
+formatNER' psents sentitems linked_mentions_resolved =
+  let toks = concatMap (map snd . sentToTokens') psents
+      tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
+      sents_tagged = map (addTag tags) sentitems
+      doc1 = formatTaggedSentences sents_tagged
+      doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
+  in hsep 10 left [doc1,doc2]
+
 
 runParser :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
@@ -258,16 +276,25 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
 
 
 sentStructure' sensemap sensestat framedb ontomap emTagger loaded = do
-  let (psents,sents,sentitems,_tokss,mptrs,deps,mtmx) = loaded
+  let (all,sents,sentitems,_tokss,mptrs,deps,mtmx) = loaded
+  let psents = map (\(xs,_,_,_) -> xs) all
+      mtokens = map (\(_,xs,_,_) -> xs) all
+      mws = map (\(_,_,xs,_) -> xs) all
+      mns = map (\(_,_,_,xs) -> xs) all
+  let unNER (NERSentence tokens) = tokens
+      neTokens = concat $ map (\(x,y) -> (unNER $ sentToNER' x y)) (zip mws mns) 
+      linked_mentions_all = emTagger neTokens
+      linked_mentions_resolved
+        = filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all
+
+
   putStrLn "\n\n\n\n\n\n\n\n================================================================================================="
   putStrLn "\n\n-- TimeTagger -----------------------------------------------------------------------------------"
-{-
   case mtmx of
     Nothing -> putStrLn "Time annotation not successful!"
-    Just sentswithtmx -> mapM_ showFormatTimex sentswithtmx
--}
+    Just sentswithtmx -> mapM_ showFormatTimex' sentswithtmx
   putStrLn "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
---   putStrLn (render (formatNER psents sentitems linked_mentions_resolved))
+  putStrLn (render (formatNER' mtokens sentitems linked_mentions_resolved))
   putStrLn "\n\n--------------------------------------------------------------------------------------------------"
   putStrLn "-- Sentence analysis -----------------------------------------------------------------------------"
   putStrLn "--------------------------------------------------------------------------------------------------"
