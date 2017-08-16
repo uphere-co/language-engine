@@ -9,7 +9,7 @@ import           Data.Either                     (partitionEithers)
 import           Data.Function                   (on)
 import           Data.IntMap                     (IntMap)
 import           Data.List                       (minimumBy)
-import           Data.Maybe                      (listToMaybe)
+import           Data.Maybe                      (listToMaybe,maybeToList)
 import           Data.Monoid
 import           Data.Text                       (Text)
 import qualified Data.Text               as T
@@ -32,15 +32,25 @@ maximalProjectionVP vp = listToMaybe (vp^.vp_words) >>= parent . fst
 parentOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
 parentOfVP vp = parent =<< maximalProjectionVP vp
 
-{-
-headVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
-headVP vp = getLast (mconcat (map (Last . Just) (vp^.vp_words)))
--}
 
-{-
-sisterDPofVHead :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe [BitreeZipperICP '[Lemma]]
-sisterDPofVHead vp = headVP vp
--}
+headVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
+
+
+complementDPofVerb :: VerbProperty (BitreeZipperICP '[Lemma]) -> [BitreeZipperICP '[Lemma]]
+complementDPofVerb vp = do v <- maybeToList (headVP vp)
+                           siblingsBy next checkNP v 
+  where
+    tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
+    checkNP z = case tag z of
+                  Left NP -> True
+                  Left _  -> False
+                  Right p -> case isNoun p of
+                               Yes -> True
+                               _   -> False
+
+
+    
   
 identifySubject :: N.ClauseTag -> BitreeZipperICP '[Lemma] -> Maybe (BitreeZipperICP '[Lemma])
 identifySubject tag vp =
