@@ -82,3 +82,5 @@ convert O.WHADVP = PH WHADVP
 convert O.WHNP   = PH WHNP
 convert O.WHPP   = PH WHPP
 convert O.X      = PH X
+--
+convert O.NML    = PH ADJP   -- this is not clear yet.
