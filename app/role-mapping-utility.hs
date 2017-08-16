@@ -159,8 +159,8 @@ formatProblem (i,(lma,osense,frame,pbs,subcat)) =
       sensestr = printf "definition: %s\n%s" (osense^.sense_name) (osense^.sense_examples)      
       fes = numberedFEs frame
       framestr = printf "%s" (frame^.frame_name) ++ "\n" ++ formatFEs fes
-      argpattstr = intercalate "\n" $ flip map (Prelude.take 10 (subcat^._2)) $ \(patt :: ArgPattern,n :: Int) ->
-                     printf "%s     #count: %5d" (formatArgPatt patt) n 
+      argpattstr = intercalate "\n" $ flip map (Prelude.take 10 (subcat^._2)) $ \(patt,n) ->
+                     printf "%s     #count: %5d" (formatArgPatt patt) (n :: Int)
       pbinfos = map (\pb -> (pb^.roleset_id,pb^.roleset_name,extractPBExamples pb,extractPBRoles pb)) pbs
       pbinfostr = intercalate "\n" $ map formatPBInfos pbinfos
   in (headstr,sensestr,framestr,argpattstr,pbinfostr)

@@ -31,6 +31,7 @@ import           System.IO
 import           Text.Printf
 --
 import           Data.Attribute
+import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Type
@@ -83,7 +84,7 @@ formatArgMap isStat argmap =
   ++ "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
 
 
-formatArgTable :: Maybe (VerbProperty (BitreeZipperICP '[Lemma]),_) -> ArgTable -> String
+formatArgTable :: Maybe (VerbProperty (BitreeZipperICP '[Lemma]),_) -> ArgTable Text -> String
 formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
                               (fromMaybe "" (tbl^.tbl_rel))
                               (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
@@ -112,7 +113,12 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
-      argtable = mkArgTable iproptr l2p filesidtid args
+      argtable0 = mkArgTable iproptr l2p filesidtid args
+      argtable1 = zipperArgTable iproptr argtable0
+      argtable :: ArgTable Text
+      argtable = fmap f argtable1
+        where f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> Text
+              f = chooseATNode . fmap (phraseNodeType . current)
       mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
   in 
      (if doesShowDetail
@@ -204,7 +210,10 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                         mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
                         mvoice = do (vp,_) <- mvpmva
                                     return (vp^.vp_voice)
-                        argtable = mkArgTable iproptr l2p filesidtid args
+                        argtable0 = mkArgTable iproptr l2p filesidtid args
+                        argtable1 = zipperArgTable iproptr argtable0
+                        argtable = fmap f argtable1
+                          where f = fmap (phraseNodeType . current)
                         argpatt = mkArgPattern mvoice argtable
                     in HM.alter (\case Nothing -> Just 1 ; Just n -> Just (n+1)) argpatt acc
           statlst = (sortBy (flip compare `on` snd) . HM.toList) statmap
@@ -217,11 +226,11 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
           putStrLn senseheader
           let margmap = getArgMapFromRoleMap (lma,sense_num) rolemap 
           traverse_ (putStrLn . formatArgMap True) margmap
-          forM_ statlst $ \(patt :: ArgPattern,n :: Int) -> do
+          forM_ statlst $ \(patt,n :: Int) -> do
             let str1 = formatArgPatt patt :: String
             putStrLn (printf "%s     #count: %5d" str1 n)
         else do
-          forM_ statlst $ \(patt :: ArgPattern, n :: Int) -> do
+          forM_ statlst $ \(patt, n :: Int) -> do
             putStrLn $ printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d"
                          sense
                          sense_num
@@ -241,12 +250,13 @@ showStatInst :: Bool
              -> IO ()
 showStatInst doesShowDetail rolemap sensedb lemmastat classified_inst_map = do
   let lst = HM.toList classified_inst_map
-  forM_ lemmastat $ \(lma,f) -> do
-    printHeader (lma,f)
-    forM_ (countSenseForLemma lma lst) $ \x -> do
-      let definsts = getDefInst sensedb classified_inst_map (fst x)
-          str = formatStatInst doesShowDetail rolemap lma x definsts
-      putStrLn str
+  forM_ lemmastat $ \(lma,freq) -> do
+    when (freq /= 0) $ do
+      printHeader (lma,freq)
+      forM_ (countSenseForLemma lma lst) $ \x -> do
+        let definsts = getDefInst sensedb classified_inst_map (fst x)
+            str = formatStatInst doesShowDetail rolemap lma x definsts
+        putStrLn str
 
 
 showError :: Either String a -> IO ()
