@@ -119,6 +119,18 @@ dummyMatch tr0 inst
 
     }
 
+
+adjustedLemmaMap lemmamap proptr = IM.fromList
+                                 . map replacef
+                                 . map (\x->(x^._1,Lemma (x^._2._2)))
+                                 . toList
+                                 . mkIndexedTree $ proptr
+  where
+    replacef (i,l0) = fromMaybe (i,l0) $ do j <- eitherToMaybe (adjustIndexFromTree proptr i)
+                                            l <- IM.lookup j lemmamap
+                                            return (i,l)
+
+
 formatInst :: Bool  -- ^ show detail?
            -> Maybe [(Text,Text)] 
            -> ((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)
@@ -129,18 +141,8 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
       lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
       -- coretr = corenlp^._1
       coretr = proptr  -- this is an extreme solution
-      
-      -- minst = MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (coretr,proptr) inst }
       minst = dummyMatch proptr inst
-      nlemmamap = IM.fromList
-                . map replacef
-                . map (\x->(x^._1,Lemma (x^._2._2)))
-                . toList
-                . mkIndexedTree $ proptr
-        where
-          replacef (i,l0) = fromMaybe (i,l0) $ do j <- eitherToMaybe (adjustIndexFromTree proptr i)
-                                                  l <- IM.lookup j lemmamap
-                                                  return (i,l)
+      nlemmamap = adjustedLemmaMap lemmamap proptr
       verbprops = verbPropertyFromPennTree nlemmamap proptr  -- lemmamap coretr 
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       l2p = linkID2PhraseNode proptr
@@ -237,12 +239,14 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                         l2p = linkID2PhraseNode proptr
                         -- coretr = corenlp^._1
                         coretr = proptr -- this is an extreme solution
-                        minst = MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (coretr,proptr) inst }
+                        -- minst = MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (coretr,proptr) inst }
+                        minst = dummyMatch proptr inst
                         
                         lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
-                        verbprops = verbPropertyFromPennTree lemmamap coretr 
+                        nlemmamap = adjustedLemmaMap lemmamap proptr
+                        verbprops = verbPropertyFromPennTree nlemmamap proptr -- coretr 
                         
-                        clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
+                        clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr {- coretr -}))
                         mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
                         mtp = do (vp,_) <- mvpmva
                                  (constructCP vp^?_Just.cp_TP)
@@ -338,7 +342,7 @@ main = do
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
-  let fps = {- filter (\f -> takeBaseName f == "wsj_2347") $ -} Prelude.take 200 $ sort (toList (dirTree dtr))
+  let fps = {- filter (\f -> takeBaseName f == "wsj_2347") $ -} {- Prelude.take 200 $ -} sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps
