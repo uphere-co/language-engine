@@ -34,9 +34,11 @@ governorPhraseOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZi
 governorPhraseOfVP vp = parent =<< governorVP vp
 
  
-identifySubject :: BitreeZipperICP '[Lemma] -> Maybe (BitreeZipperICP '[Lemma])
-identifySubject vp = findSiblings prev (isChunkAs NP) vp
-  
+identifySubject :: N.ClauseTag -> BitreeZipperICP '[Lemma] -> Maybe (BitreeZipperICP '[Lemma])
+identifySubject tag vp =
+  case tag of
+    N.SINV -> findSiblings next (isChunkAs NP) vp
+    _      -> findSiblings prev (isChunkAs NP) vp
 
 
 constructCP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe CP
@@ -51,11 +53,11 @@ constructCP vprop = do
         case cptag' of
           N.CL _ -> return $ CP (Just cp')
                                 (prev tp')
-                                (TP (Just tp') (identifySubject vp) vp vprop)
+                                (TP (Just tp') (identifySubject s vp) vp vprop)
           N.RT   -> return $ CP (Just cp')
                                 Nothing
-                                (TP (Just tp') (identifySubject vp) vp vprop)
-          _      -> return (CP Nothing Nothing (TP (Just tp') (identifySubject vp) vp vprop))
+                                (TP (Just tp') (identifySubject s vp) vp vprop)
+          _      -> return (CP Nothing Nothing (TP (Just tp') (identifySubject s vp) vp vprop))
       _ -> return (CP Nothing Nothing (TP Nothing Nothing vp vprop))                      -- reduced relative clause
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 

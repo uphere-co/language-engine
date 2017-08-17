@@ -154,8 +154,6 @@ tenseAspectVoiceAuxNeg z
             (return (Present,Simple,Passive,auxNegWords z1 [z1,z])))
            <|>
            (auxHave z1 >>= \t -> return (t,Perfect,Active,auxNegWords z1 [z1,z])))
-
-    -- return (Past,Simple,Active,auxNegWords z [z])
   | otherwise               = return (Present,Simple,Active,auxNegWords z [z])
 
 
