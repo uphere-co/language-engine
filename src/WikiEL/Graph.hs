@@ -3,11 +3,13 @@ module WikiEL.Graph where
 import           Data.Int                              (Int32, Int64)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
 import qualified Data.Vector.Unboxed           as UV
+import qualified Data.Vector.Generic           as GV
 import qualified Data.Vector.Fusion.Bundle     as B
 import           Control.Monad.ST                      (runST)
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy)
 
+import qualified Data.List as L
 
 isIn :: (UV.Unbox a, Ord a) => UV.Vector a -> a -> Bool
 isIn vals = f sorted
@@ -51,6 +53,10 @@ data Direction = From | To
                deriving (Show, Eq)
 
 data SortedEdges e = Sorted Direction e
+
+inverse :: Direction -> Direction
+inverse From = To
+inverse To = From
 
 getNode :: Ord a => Direction -> (a,a) -> a 
 getNode From (x,_) = x
@@ -149,3 +155,24 @@ allPathsUpto fn node cutoff = f B.empty 0 (B.singleton (UV.singleton node))
       where
         nexts = B.concatMap (accumPaths fn) paths
 
+
+accumIf :: (t -> t -> Ordering) -> [(t, t)] -> [t] -> [t] -> [(t, t)]
+accumIf comp accum [] _ = accum
+accumIf comp accum _ [] = accum
+accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == EQ = accumIf comp ((l,r):accum) ls rs
+accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == LT = accumIf comp accum ls rb
+accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == GT = accumIf comp accum lb rs
+
+neighborOverlap :: (UV.Unbox a, Ord a) => UV.Vector (a,Dist) -> UV.Vector (a,Dist) -> [((a,Dist),(a,Dist))]
+neighborOverlap dists1 dists2 = accumIf compFst [] (UV.toList lhs) (UV.toList rhs)
+  where
+    compFst (ln,_) (rn,_) = compare ln rn
+    lhs = UV.modify (sortBy compFst) dists1
+    rhs = UV.modify (sortBy compFst) dists2
+
+destOverlap :: (UV.Unbox a, Ord a) => B.Bundle UV.Vector (UV.Vector a) -> B.Bundle UV.Vector (UV.Vector a) -> [(UV.Vector a,UV.Vector a)]
+destOverlap left right = accumIf compLast [] ls rs
+  where
+    compLast l r = compare (UV.last l) (UV.last r)
+    ls = L.sortBy compLast (B.toList left)
+    rs = L.sortBy compLast (B.toList right)

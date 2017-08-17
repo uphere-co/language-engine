@@ -210,13 +210,19 @@ test1 sorted@(d,edges) names = do
     tmp2 = G.allPathsUpto dEdges (H.wordHash "Diemelsee") 3
     --tmp3 = G.allPathsUpto dEdges (H.wordHash "Sundar_Pichai") 3
     tmp3 = G.allPathsUpto dEdges (H.wordHash "Larry_Page") 3
+    
+    fNode node cutoff = G.accumReachable G.to (UV.fromList [(node,0)]) cutoff (G.neighbor sorted) (UV.fromList [node],0)
+    t1 = fNode (H.wordHash "Larry_Page") 3
+    t2 = fNode (H.wordHash "Steve_Jobs") 3
+
       --print "=================================="
-  print $ B.length tmp
-  print $ B.length tmp2
-  print $ B.length tmp3
+  mapM_ print (G.neighborOverlap t1 t2)
+  -- print $ B.length tmp
+  -- print $ B.length tmp2
+  -- print $ B.length tmp3
   --mapM_ (print . showPath names) (B.toList tmp)
   --mapM_ (print . showPath names) (B.toList tmp2)
-  mapM_ (print . showPath names) (take 100 (B.toList tmp3))
+  -- mapM_ (print . showPath names) (take 100 (B.toList tmp3))
   --print $ dEdges 1079244021
   --print $ dEdges (H.wordHash "Germany")
 
@@ -232,13 +238,37 @@ main3init = do
   print store
 
 {-
+-- Script for testing in REPL
+showPath :: HashInvs -> UV.Vector H.WordHash -> [ Text]
+showPath invs path = catMaybes (UV.foldl' f [] path)
+  where
+    f accum hash = M.lookup hash invs : accum
+
 idx=2
 idx2=1
 Just store <- lookupStore idx :: IO (Maybe (Store Foo))
 Just store2 <- lookupStore idx2 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
 cc@(Foo edges names) <- readStore store
 sorted@(d,es) <- readStore store2
-test1 sorted names
+--test1 sorted names
+
+hash word = H.wordHash (T.pack word)
+fNode node cutoff = G.accumReachable G.to (UV.fromList [(node,0)]) cutoff (G.neighbor sorted) (UV.fromList [node],0)
+t1 = fNode (hash "Larry_Page") 2
+t2 = fNode (hash "Steve_Jobs") 2
+UV.length t1
+UV.length t2
+a = G.neighborOverlap t1 t2
+length a
+
+aa = map (\((lh,ld),(rh,rd)) -> (M.lookup lh names, ld, rd)) a
+mapM_ print (filter (\(_,ld,rd) -> ld<3 && rd<2) aa)
+
+pNode node cutoff = G.allPathsUpto (G.neighbor sorted) (hash node) cutoff
+
+paths = G.destOverlap (pNode "Larry_Page" 2) (pNode "Steve_Jobs" 2)
+mapM_ print (map (\(x,y)-> (reverse (showPath names y)) ++ tail (showPath names x)) paths)
+
 -}
 main3 :: Word32 -> Word32 -> IO ()
 main3 idx idx2 = do
