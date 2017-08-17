@@ -71,8 +71,8 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
                 (maybe "" (show . gettoken) (cp^.cp_TP.tp_maximal_projection))
                 (maybe "null" show (getchunk =<< cp^.cp_TP.tp_DP))
                 (maybe "" (show . gettoken) (cp^.cp_TP.tp_DP))                
-                (maybe "null" show (getchunk (cp^.cp_TP.tp_VP)))
-                ((show . gettoken) (cp^.cp_TP.tp_VP))
+                (maybe "null" show (getchunk (cp^.cp_TP.tp_VP.vp_maximal_projection)))
+                ((show . gettoken) (cp^.cp_TP.tp_VP.vp_maximal_projection))
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current

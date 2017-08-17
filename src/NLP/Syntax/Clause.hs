@@ -59,24 +59,28 @@ identifySubject tag vp =
     _      -> firstSiblingBy prev (isChunkAs NP) vp
 
 
+-- | Constructing CP umbrella and all of its ingrediant.
+--
 constructCP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe CP
 constructCP vprop = do
     vp <- maximalProjectionVP vprop
     tp' <- parentOfVP vprop
     tptag' <- N.convert <$> getchunk tp'
+    let verbp0 = VerbP vp vprop []
     case tptag' of
       N.CL s -> do
         cp' <- parent tp'
         cptag' <- N.convert <$> getchunk cp'
+        let subj = identifySubject s vp
         case cptag' of
           N.CL _ -> return $ CP (Just cp')
                                 (prev tp')
-                                (TP (Just tp') (identifySubject s vp) vp vprop)
+                                (TP (Just tp') subj verbp0)
           N.RT   -> return $ CP (Just cp')
                                 Nothing
-                                (TP (Just tp') (identifySubject s vp) vp vprop)
-          _      -> return (CP Nothing Nothing (TP (Just tp') (identifySubject s vp) vp vprop))
-      _ -> return (CP Nothing Nothing (TP Nothing Nothing vp vprop))                      -- reduced relative clause
+                                (TP (Just tp') subj verbp0)
+          _      -> return (CP Nothing Nothing (TP (Just tp') subj verbp0))  -- somewhat problematic case?
+      _ -> return (CP Nothing Nothing (TP Nothing Nothing verbp0))           -- reduced relative clause
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
