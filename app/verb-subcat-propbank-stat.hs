@@ -34,6 +34,7 @@ import           Data.Attribute
 import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
+import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
@@ -53,6 +54,7 @@ import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.Sense
 import           OntoNotes.Type.SenseInventory
 --
+import           Debug.Trace
 
 
 type LemmaList = [(Int,Text)]
@@ -98,35 +100,70 @@ formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   a
                               (tbl^.tbl_file_sid_tid._3)
 
 
+dummyMatch tr0 inst
+  = let tr = getADTPennTree tr0
+        itr = mkIndexedTree tr
+    in
+    MatchedInstance
+  
+    { _mi_instance = inst
+    , _mi_arguments
+        = do a <- inst^.inst_arguments
+             return MatchedArgument { _ma_argument = a
+                                    , _ma_nodes = do n <- a^.arg_terminals
+                                                     nd <- maybeToList (findNode n itr)
+                                                     let rng = (termRange . snd) nd
+                                                         zs = maximalEmbeddedRange itr rng
+                                                     return MatchedArgNode { _mn_node = (rng,n), _mn_trees = zs }
+                                    }
+
+    }
+
+
+adjustedLemmaMap lemmamap proptr = IM.fromList
+                                 . map replacef
+                                 . map (\x->(x^._1,Lemma (x^._2._2)))
+                                 . toList
+                                 . mkIndexedTree $ proptr
+  where
+    replacef (i,l0) = fromMaybe (i,l0) $ do j <- eitherToMaybe (adjustIndexFromTree proptr i)
+                                            l <- IM.lookup j lemmamap
+                                            return (i,l)
+
+
 formatInst :: Bool  -- ^ show detail?
            -> Maybe [(Text,Text)] 
            -> ((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)
            -> String
 formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
-  let args = inst^.inst_arguments
+  let 
+      args = inst^.inst_arguments
       lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
-      coretr = corenlp^._1
-      
-      minst = MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (coretr,proptr) inst }
-      
-      verbprops = verbPropertyFromPennTree lemmamap coretr 
+      -- coretr = corenlp^._1
+      coretr = proptr  -- this is an extreme solution
+      minst = dummyMatch proptr inst
+      nlemmamap = adjustedLemmaMap lemmamap proptr
+      verbprops = verbPropertyFromPennTree nlemmamap proptr  -- lemmamap coretr 
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
+      mvpmva =  matchVerbPropertyWithRelation verbprops clausetr minst
+      mtp = do (vp,_) <- mvpmva
+               (constructCP vp^?_Just.cp_TP)
       argtable0 = mkArgTable iproptr l2p filesidtid args
       argtable1 = zipperArgTable iproptr argtable0
       argtable :: ArgTable Text
       argtable = fmap f argtable1
         where f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> Text
-              f = chooseATNode . fmap (phraseNodeType . current)
-      mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
-  in 
-     (if doesShowDetail
-       then "\n================================================================\n" ++
+              f = phraseNodeType mtp . chooseATNode
+  in (if doesShowDetail
+       then "\n\n\n================================================================\n" ++
             T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
             "\n"                                                                   ++
             "\n================================================================\n" ++
             formatMatchedVerb minst mvpmva ++ "\n"
+            ++ T.unpack (prettyPrint 0 proptr) ++ "\n"
+            ++ intercalate "\n" (map formatVerbProperty verbprops) ++ "\n"
        else ""
      )
      ++ formatArgTable mvpmva argtable
@@ -200,21 +237,28 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                     let args = inst^.inst_arguments
                         iproptr = mkPennTreeIdx proptr
                         l2p = linkID2PhraseNode proptr
-                        coretr = corenlp^._1
-                        minst = MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (coretr,proptr) inst }
+                        -- coretr = corenlp^._1
+                        coretr = proptr -- this is an extreme solution
+                        -- minst = MatchedInstance { _mi_instance = inst, _mi_arguments = matchArgs (coretr,proptr) inst }
+                        minst = dummyMatch proptr inst
                         
                         lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
-                        verbprops = verbPropertyFromPennTree lemmamap coretr 
+                        nlemmamap = adjustedLemmaMap lemmamap proptr
+                        verbprops = verbPropertyFromPennTree nlemmamap proptr -- coretr 
                         
-                        clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
+                        clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr {- coretr -}))
                         mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
-                        mvoice = do (vp,_) <- mvpmva
-                                    return (vp^.vp_voice)
+                        mtp = do (vp,_) <- mvpmva
+                                 (constructCP vp^?_Just.cp_TP)
                         argtable0 = mkArgTable iproptr l2p filesidtid args
                         argtable1 = zipperArgTable iproptr argtable0
+                        -- argtable :: ArgTable Text
                         argtable = fmap f argtable1
-                          where f = fmap (phraseNodeType . current)
-                        argpatt = mkArgPattern mvoice argtable
+                          where -- f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> Text
+                                f = fmap (phraseNodeType mtp) --  . chooseATNode
+                        
+                        --   where f = fmap phraseNodeType
+                        argpatt = mkArgPattern mtp argtable
                     in HM.alter (\case Nothing -> Just 1 ; Just n -> Just (n+1)) argpatt acc
           statlst = (sortBy (flip compare `on` snd) . HM.toList) statmap
           sensetxt = sense <> "." <> sense_num          
@@ -298,7 +342,7 @@ main = do
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
-  let fps = Prelude.take 200 $ sort (toList (dirTree dtr))
+  let fps = {- filter (\f -> takeBaseName f == "wsj_2347") $ -} {- Prelude.take 200 $ -} sort (toList (dirTree dtr))
       parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps
