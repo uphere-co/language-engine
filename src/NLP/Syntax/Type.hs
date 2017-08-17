@@ -43,18 +43,18 @@ data VerbProperty w = VerbProperty { _vp_index  :: Int
 makeLenses ''VerbProperty                           
 
 
-data TP = TP { _tp_dominator    :: Maybe (BitreeZipperICP '[Lemma])
-             , _tp_DP           :: Maybe (BitreeZipperICP '[Lemma])
-             , _tp_VP           :: BitreeZipperICP '[Lemma]
-             , _tp_verbProperty :: VerbProperty (BitreeZipperICP '[Lemma])
+data TP = TP { _tp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
+             , _tp_DP                 :: Maybe (BitreeZipperICP '[Lemma])
+             , _tp_VP                 :: BitreeZipperICP '[Lemma]
+             , _tp_verbProperty       :: VerbProperty (BitreeZipperICP '[Lemma])
              }
 
 makeLenses ''TP
 
 
-data CP = CP { _cp_dominator      :: Maybe (BitreeZipperICP '[Lemma])
-             , _cp_complementizer :: Maybe (BitreeZipperICP '[Lemma])
-             , _cp_TP             :: TP
+data CP = CP { _cp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
+             , _cp_complementizer     :: Maybe (BitreeZipperICP '[Lemma])
+             , _cp_TP                 :: TP
              }
 
 makeLenses ''CP

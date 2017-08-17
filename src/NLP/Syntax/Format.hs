@@ -63,12 +63,12 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
                      \Tense Phrase         : %-4s  %s\n\
                      \Determiner Phrase    : %-4s  %s\n\
                      \Verb Phrase          : %-4s  %s"
-                (maybe "null" show (getchunk =<< cp^.cp_dominator))
-                (maybe "" (show . gettoken) (cp^.cp_dominator))
+                (maybe "null" show (getchunk =<< cp^.cp_maximal_projection))
+                (maybe "" (show . gettoken) (cp^.cp_maximal_projection))
                 (maybe "null" formatposchunk (fmap getposchunk (cp^.cp_complementizer)))
                 (maybe "" (show . gettoken) (cp^.cp_complementizer))
-                (maybe "null" show (getchunk =<< cp^.cp_TP.tp_dominator))
-                (maybe "" (show . gettoken) (cp^.cp_TP.tp_dominator))
+                (maybe "null" show (getchunk =<< cp^.cp_TP.tp_maximal_projection))
+                (maybe "" (show . gettoken) (cp^.cp_TP.tp_maximal_projection))
                 (maybe "null" show (getchunk =<< cp^.cp_TP.tp_DP))
                 (maybe "" (show . gettoken) (cp^.cp_TP.tp_DP))                
                 (maybe "null" show (getchunk (cp^.cp_TP.tp_VP)))
