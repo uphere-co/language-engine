@@ -7,9 +7,12 @@ module WikiEL
   , module WikiEL.WordNet
   , EL.entityName
   , EL.mentionedEntityName  
+  , EMP.filterEMbyPOS
   ) where
 
 import qualified WikiEL.EntityLinking               as EL
+import qualified WikiEL.EntityMentionPruning        as EMP
+
 import           Data.Text                                    (Text)  
 import           Data.Vector                                  (fromList)
 import           NLP.Type.NamedEntity                         (NamedEntityClass,NamedEntityFrag(..))

@@ -335,7 +335,7 @@ main1 = do
     mentions = buildEntityMentions text wiki_named_entities
     all_linked_mentions = entityLinkings mentions
 
-    -- Pruning (linked) entity mentions.
+    -- Pruning (linked) entity mentions. 
     linked_mentions = EMP.filterEMbyPOS input_pos all_linked_mentions
     -- Company ticker symbol lookup.
     orgMentions = mapMaybe getOrgs linked_mentions
