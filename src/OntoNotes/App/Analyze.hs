@@ -155,9 +155,7 @@ runParser pp emTagger txt = do
     Left _ -> return Nothing
     Right rsutime -> do
       let sentswithtmx = addSUTime sentitems rsutime
-      -- mapM_ formatResult sentswithtmx
       return (Just sentswithtmx)
-  -- let psents = getProtoSents pdoc
   let parsetrees = map (\x -> pure . decodeToPennTree =<< (x^.S.parseTree) ) psents
       sents = map (convertSentence pdoc) psents
       Right deps = mapM sentToDep psents
@@ -276,17 +274,6 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
         putStrLn "--------------------------------------------------------------------------------------------------"
 
 
--- -- abandoned code to simplify the resultant text.
-      -- let tkns = zip [0..] (getTKTokens psent)
-      -- tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
-      -- itr = mkAnnotatable (mkPennTreeIdx ptr)
-      -- iltr = lemmatize lmap itr
-      -- idltr = depLevelTree dep iltr
-      -- vtree = verbTree vps idltr
-      -- let lmaposs = concatMap (filter (\t -> isVerb (t^.token_pos))) $ tokss
-      --     lmas = map (^.token_lemma) lmaposs
-
-
 
 queryProcess :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> HashMap Text Inventory
@@ -304,7 +291,6 @@ queryProcess pp sensemap sensestat framedb ontomap emTagger =
                   txt <- T.IO.readFile fp
                   sentStructure pp sensemap sensestat framedb ontomap emTagger txt
       ":v " ->    sentStructure pp sensemap sensestat framedb ontomap emTagger rest
-        -- getSentStructure pp sensemap sensestat framedb ontomap emTagger rest >>= mapM_ T.IO.putStrLn
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
@@ -404,10 +390,7 @@ getAnalysis input config pp = do
 --
 --
 
-
--- loadWikiNER = do
-  -- companyfile <- T.IO.readFile listedCompanyFile
-
+{- 
 main1 :: IO ()
 main1 = do
   txt <- T.IO.readFile newsFileTxt
@@ -420,11 +403,8 @@ main1 = do
                        . (words2sentences .~ True)
                        . (postagger .~ True)
                        . (lemma .~ True)
-                       -- . (sutime .~ True)
-                       -- . (constituency .~ True)
                        . (ner .~ True)
                   )
-    -- queryProcess pp sensemap sensestat framedb ontomap
     let doc = Document txt (fromGregorian 2017 4 17)
     ann <- annotate pp doc
     rdoc <- protobufDoc ann
@@ -446,6 +426,7 @@ main1 = do
             doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
             doc = hsep 10 left [doc1,doc2]
         putStrLn (render doc)
+-}
 
 loadJVM = do
   pp <- prepare (def & (tokenizer .~ True)

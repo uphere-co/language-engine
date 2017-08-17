@@ -349,15 +349,10 @@ process (statonly,tsv,showdetail) sensedb fps = do
       classified_inst_map = foldl' addfunc  HM.empty insts_v
           where addfunc acc x = HM.insertWith (++) (x^._5.to getSenseID) [x] acc
 
-  -- sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   rolesetstat <- loadStatistics (cfg^.cfg_statistics)
   let lemmastat = mergeStatPB2Lemma rolesetstat
-  let rolemapfile = "/home/wavewave/repo/srcp/OntoNotes/mapping/final.txt"
-  rolemap <- loadRoleMap rolemapfile
+  rolemap <- loadRoleMap
   
-  if statonly -- (statOnly opt)
-    then showStat tsv {- (tsvFormat opt) -} rolemap sensedb lemmastat classified_inst_map 
-    else showStatInst showdetail {- (showDetail opt) -} rolemap sensedb lemmastat classified_inst_map
-
-
-
+  if statonly
+    then showStat tsv rolemap sensedb lemmastat classified_inst_map 
+    else showStatInst showdetail rolemap sensedb lemmastat classified_inst_map
