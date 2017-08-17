@@ -21,6 +21,7 @@ library
                        OntoNotes.App.Load
                        OntoNotes.App.Serializer
                        OntoNotes.App.Util
+                       OntoNotes.App.VerbSubcat
                        OntoNotes.App.WikiEL
                        OntoNotes.Corpus.Load
                        OntoNotes.Corpus.PropBank
@@ -44,6 +45,7 @@ library
                        directory,
                        directory-tree,
                        either,
+                       extra,
                        filepath,
                        jni,
                        hashable,
