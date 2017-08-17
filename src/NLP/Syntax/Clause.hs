@@ -37,17 +37,18 @@ headVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Le
 headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 
-complementDPofVerb :: VerbProperty (BitreeZipperICP '[Lemma]) -> [BitreeZipperICP '[Lemma]]
-complementDPofVerb vp = do v <- maybeToList (headVP vp)
-                           siblingsBy next checkNP v 
+complementsOfVerb :: VerbProperty (BitreeZipperICP '[Lemma]) -> [BitreeZipperICP '[Lemma]]
+complementsOfVerb vp = do v <- maybeToList (headVP vp)
+                          siblingsBy next checkNPSBAR v 
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
-    checkNP z = case tag z of
-                  Left NP -> True
-                  Left _  -> False
-                  Right p -> case isNoun p of
-                               Yes -> True
-                               _   -> False
+    checkNPSBAR z = case tag z of
+                      Left NP -> True
+                      Left SBAR -> True
+                      Left _  -> False
+                      Right p -> case isNoun p of
+                                   Yes -> True
+                                   _   -> False
 
 
     
@@ -66,7 +67,7 @@ constructCP vprop = do
     vp <- maximalProjectionVP vprop
     tp' <- parentOfVP vprop
     tptag' <- N.convert <$> getchunk tp'
-    let verbp0 = VerbP vp vprop []
+    let verbp = VerbP vp vprop (complementsOfVerb vprop)
     case tptag' of
       N.CL s -> do
         cp' <- parent tp'
@@ -75,12 +76,12 @@ constructCP vprop = do
         case cptag' of
           N.CL _ -> return $ CP (Just cp')
                                 (prev tp')
-                                (TP (Just tp') subj verbp0)
+                                (TP (Just tp') subj verbp)
           N.RT   -> return $ CP (Just cp')
                                 Nothing
-                                (TP (Just tp') subj verbp0)
-          _      -> return (CP Nothing Nothing (TP (Just tp') subj verbp0))  -- somewhat problematic case?
-      _ -> return (CP Nothing Nothing (TP Nothing Nothing verbp0))           -- reduced relative clause
+                                (TP (Just tp') subj verbp)
+          _      -> return (CP Nothing Nothing (TP (Just tp') subj verbp))  -- somewhat problematic case?
+      _ -> return (CP Nothing Nothing (TP Nothing Nothing verbp))           -- reduced relative clause
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
