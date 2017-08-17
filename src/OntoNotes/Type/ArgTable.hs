@@ -74,7 +74,7 @@ instance Hashable (ArgPattern Text)
 
 
 mkArgPattern :: Maybe TP -> ArgTable (ATNode a) -> ArgPattern a
-mkArgPattern mtp ArgTable {..} = ArgPattern { _patt_voice = mtp^?_Just.tp_verbProperty.vp_voice
+mkArgPattern mtp ArgTable {..} = ArgPattern { _patt_voice = mtp^?_Just.tp_VP.vp_verbProperty.vp_voice
                                             , _patt_arg0 = fmap chooseATNode _tbl_arg0
                                             , _patt_arg1 = fmap chooseATNode _tbl_arg1
                                             , _patt_arg2 = fmap chooseATNode _tbl_arg2
