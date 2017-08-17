@@ -42,6 +42,6 @@ main = do
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
-  let fps = {- filter (\f -> takeBaseName f == "wsj_2446") . -} Prelude.take 200 $ sort (toList (dirTree dtr))
+  let fps = {- filter (\f -> takeBaseName f == "wsj_2446") . -} Prelude.take 1000 $ sort (toList (dirTree dtr))
   process (statOnly opt,tsvFormat opt,showDetail opt) sensedb fps
 

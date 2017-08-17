@@ -107,9 +107,19 @@ headAdverb xs = getLast (foldMap (Last . f) xs)
 phraseNodeType :: Maybe TP -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text)) -> Text
 phraseNodeType mtp z
   = let rng = getRange (current z)
-        subj = maybe "" (\b -> if b then "-SBJ" else "") $ do tp <- mtp
-                                                              dp <- tp^.tp_DP
-                                                              return (getRange (current dp) == rng)
+        subj = do tp <- mtp
+                  dp <- tp^.tp_DP
+                  return (getRange (current dp) == rng)
+        obj  = do tp <- mtp
+                  let os = zip [1..] (tp^.tp_VP.vp_complements)
+                  m <- find (\o -> getRange (current (o^._2)) == rng) os
+                  return (m^._1) 
+        grel = case subj of
+                 Just True -> "-SBJ"
+                 _ -> case obj of
+                        Just n -> "-" <> T.pack (show n)
+                        _ -> ""
+                                                              
         phrase = case current z of
                    PN (_,c) xs       -> case c of
                                           PP   -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headPreposition xs)
@@ -119,13 +129,13 @@ phraseNodeType mtp z
                                                                  Just t -> "PP-" <> t
                                                                  Nothing -> "??ADVP"
                                           PRT  -> "PP" <> maybe "" (\t -> "-" <> t) (headAdverb xs)
-                                          WHNP -> "NP" <> subj
-                                          _     -> T.pack (show c) <> subj
+                                          WHNP -> "NP" <> grel
+                                          _     -> T.pack (show c) <> grel
                    PL (_,(D_NONE,t)) -> case parent z of
                                           Nothing -> "??"<> t
                                           Just z' -> phraseNodeType mtp z'
                    PL (_,(p     ,t)) -> case isNoun p of
-                                          Yes -> "NP" <> subj
+                                          Yes -> "NP" <> grel
                                           _   -> "??" <> T.pack (show (p,t))
     in phrase
 
