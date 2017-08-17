@@ -113,8 +113,6 @@ showFormatTimex' :: (SentItem,[TagPos (Maybe Text)]) -> IO ()
 showFormatTimex' (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex' (s,a)))
 
 
-
-
 chooseFrame :: [(Text,Text,Int,Text,Text,Text,Text)] -> Maybe (Text,Text,Int,Text,Text,Text,Text)
 chooseFrame [] = Nothing
 chooseFrame xs = Just (maximumBy (compare `on` (^._3)) xs)
@@ -141,6 +139,7 @@ formatSenses doesShowOtherSense lst
           then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense lst)
           else ""
 
+formatNER :: [S.Sentence] -> [SentItem] -> [UIDCite EntityMentionUID (EL.EMInfo Text)] -> Box
 formatNER psents sentitems linked_mentions_resolved =
   let toks = concatMap (map snd . sentToTokens) psents
       tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
@@ -149,6 +148,7 @@ formatNER psents sentitems linked_mentions_resolved =
       doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
   in hsep 10 left [doc1,doc2]
 
+formatNER' :: [[Maybe Token]] -> [SentItem] -> [UIDCite EntityMentionUID (EL.EMInfo Text)] -> Box
 formatNER' psents sentitems linked_mentions_resolved =
   let toks = concatMap (map snd . sentToTokens') psents
       tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
@@ -162,7 +162,7 @@ runParser :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
           -> Text
           -> IO ( [S.Sentence]
-                , [Maybe Sentence]
+                , [Maybe SentenceIndex]
                 , [(SentIdx,BeginEnd,Text)]                  
                 , [[Token]]
                 , [Maybe PennTree]
@@ -273,13 +273,19 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
 
 
 
-
+sentStructure' :: HashMap Text Inventory
+               -> HashMap (Text, Text) Int
+               -> FrameDB
+               -> HashMap Text [(Text, Text)]
+               -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
+               -> ([Sentence], [Maybe SentenceIndex], [SentItem], [[Token]], [Maybe PennTree], [Dependency], Maybe [ (SentItem, [TagPos (Maybe Text)]) ] )
+               -> IO ()
 sentStructure' sensemap sensestat framedb ontomap emTagger loaded = do
   let (all,sents,sentitems,_tokss,mptrs,deps,mtmx) = loaded
-  let psents = map (\(xs,_,_,_) -> xs) all
-      mtokens = map (\(_,xs,_,_) -> xs) all
-      mws = map (\(_,_,xs,_) -> xs) all
-      mns = map (\(_,_,_,xs) -> xs) all
+  let psents = map (^. sentenceLemma) all 
+      mtokens = map (^. sentenceToken) all
+      mws = map (^. sentenceWord) all
+      mns = map (^. sentenceNER) all
   let unNER (NERSentence tokens) = tokens
       neTokens = concat $ map (\(x,y) -> (unNER $ sentToNER' x y)) (zip mws mns) 
       linked_mentions_all = emTagger neTokens
