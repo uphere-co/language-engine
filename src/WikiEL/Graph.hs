@@ -156,27 +156,32 @@ allPathsUpto fn node cutoff = f [] 0 [UV.singleton node]
       where
         nexts = L.concatMap (accumPaths fn) paths
 
-
-accumIf :: (t -> t -> Ordering) -> [(t, t)] -> [t] -> [t] -> [(t, t)]
-accumIf comp accum [] _ = accum
-accumIf comp accum _ [] = accum
-accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == EQ = accumIf comp ((l,r):accum) ls rs
-accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == LT = accumIf comp accum ls rb
-accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == GT = accumIf comp accum lb rs
+partition2 :: (a->a->Ordering) -> [a] -> [a] -> ([a],[a],[a],[a])
+partition2 comp ls rs = f [] [] [] [] (V.toList sortedL) (V.toList sortedR)
+  where
+    sortedL = GV.modify (sortBy comp) (V.fromList ls)
+    sortedR = GV.modify (sortBy comp) (V.fromList rs)
+    f ul ml ur mr ls@(l:lt) rs@(r:rt) | comp l r == EQ = f ul (l:ml) ur (r:mr) lt rt
+    f ul ml ur mr ls@(l:lt) rs@(r:rt) | comp l r == LT = f (l:ul) ml ur mr lt rs
+    f ul ml ur mr ls@(l:lt) rs@(r:rt) | comp l r == GT = f ul ml (r:ur) mr ls rt
+    f ul ml ur mr [] rs = (ul,ml,rs++ur,mr)
+    f ul ml ur mr ls []  = (ls++ul,ml,ur,mr)
 
 neighborOverlap :: (UV.Unbox a, Ord a) => UV.Vector (a,Dist) -> UV.Vector (a,Dist) -> [((a,Dist),(a,Dist))]
-neighborOverlap dists1 dists2 = accumIf compFst [] (UV.toList lhs) (UV.toList rhs)
+neighborOverlap dists1 dists2 = zip ml mr
   where
     compFst (ln,_) (rn,_) = compare ln rn
     lhs = UV.modify (sortBy compFst) dists1
     rhs = UV.modify (sortBy compFst) dists2
+    (ul,ml, ur,mr) = partition2 compFst (UV.toList lhs) (UV.toList rhs)
 
 destOverlap :: (UV.Unbox a, Ord a) => [UV.Vector a] -> [UV.Vector a] -> [(UV.Vector a,UV.Vector a)]
-destOverlap left right = accumIf compLast [] (V.toList ls) (V.toList rs)
+destOverlap left right = zip ml mr
   where
     compLast l r = compare (UV.last l) (UV.last r)
     ls = GV.modify (sortBy compLast) (V.fromList left)
     rs = GV.modify (sortBy compLast) (V.fromList right)
+    (ul,ml, ur,mr) = partition2 compLast (V.toList ls) (V.toList rs)
     --ls = L.sortBy compLast (B.toList left)
     --rs = L.sortBy compLast (B.toList right)
 
