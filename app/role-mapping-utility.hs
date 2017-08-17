@@ -236,7 +236,7 @@ parseSubcat ws@[lma,sense,mvoice,marg0,marg1,marg2,marg3,marg4,count] =
   )
 
 loadVerbSubcat = do
-  let verbsubcatfile = "/scratch/wavewave/run/20170809/verbsubcat_propbank_ontonotes_statsummary.tsv"
+  let verbsubcatfile = "/scratch/wavewave/run/20170816/verbsubcat_propbank_ontonotes_statonly.tsv"
   txt <- T.IO.readFile verbsubcatfile
   let getLemmaSense x = (x^._1,x^._2)
       getArgTable x = ArgPattern (x^._3) (x^._4) (x^._5) (x^._6) (x^._7) (x^._8)
