@@ -282,10 +282,10 @@ sentStructure' :: HashMap Text Inventory
                -> IO ()
 sentStructure' sensemap sensestat framedb ontomap emTagger loaded = do
   let (all,sents,sentitems,_tokss,mptrs,deps,mtmx) = loaded
-  let psents = map (^. sentenceLemma) all 
-      mtokens = map (^. sentenceToken) all
-      mws = map (^. sentenceWord) all
-      mns = map (^. sentenceNER) all
+  let psents = all ^.. traverse . sentenceLemma
+      mtokens = all ^.. traverse . sentenceToken
+      mws = all ^.. traverse . sentenceWord
+      mns = all ^.. traverse . sentenceNER
   let unNER (NERSentence tokens) = tokens
       neTokens = concat $ map (\(x,y) -> (unNER $ sentToNER' x y)) (zip mws mns) 
       linked_mentions_all = emTagger neTokens
