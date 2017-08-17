@@ -260,12 +260,7 @@ main = do
             putStrLn "---------------------------------------------------------------------------------------------------------"
             putStrLn framestr
             putStrLn "---------------------------------------------------------------------------------------------------------"
-            putStrLn $ printf "                      arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s"
-                              (fromMaybe "" (lookup "arg0" argmap))
-                              (fromMaybe "" (lookup "arg1" argmap))
-                              (fromMaybe "" (lookup "arg2" argmap))
-                              (fromMaybe "" (lookup "arg3" argmap))
-                              (fromMaybe "" (lookup "arg4" argmap))
+            putStrLn $ formatRoleMap argmap
             putStrLn "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
             putStrLn argpattstr
             putStrLn "========================================================================================================="  
