@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module WikiEL.Graph where
 
 import           Data.Int                              (Int32, Int64)
@@ -138,7 +140,7 @@ accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> UV.Vector a -> [U
 accumPaths fn path = UV.foldl' f [] (UV.map snd (fn from))
   where
     from = UV.last path
-    f accum to = UV.snoc path to : accum
+    f !accum !to = UV.snoc path to : accum
 
 -- all paths of length `cutoff`, starting from the input `node`
 allPathsOf :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> [UV.Vector a]
@@ -179,3 +181,4 @@ destOverlap left right = accumIf compLast [] (V.toList ls) (V.toList rs)
     rs = GV.modify (sortBy compLast) (V.fromList right)
     --ls = L.sortBy compLast (B.toList left)
     --rs = L.sortBy compLast (B.toList right)
+

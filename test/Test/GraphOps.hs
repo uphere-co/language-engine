@@ -16,7 +16,7 @@ import           WikiEL.Graph
 
 
 newtype NodeID = NodeID Int64
-             deriving (Show,Ord,Eq)
+               deriving (Show,Ord,Eq)
 type Edge = (NodeID, NodeID)
 
 vectorizeEdges :: [Edge] -> UV.Vector (Int64, Int64)
