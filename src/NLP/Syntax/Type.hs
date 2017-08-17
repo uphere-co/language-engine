@@ -58,8 +58,7 @@ makeLenses ''VerbP
 --
 data TP = TP { _tp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
              , _tp_DP                 :: Maybe (BitreeZipperICP '[Lemma])
-             , _tp_VP                 :: VerbP -- BitreeZipperICP '[Lemma]
-             -- , _tp_verbProperty       :: VerbProperty (BitreeZipperICP '[Lemma])
+             , _tp_VP                 :: VerbP
              }
 
 makeLenses ''TP
