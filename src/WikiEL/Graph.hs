@@ -1,10 +1,12 @@
+{-# LANGUAGE BangPatterns #-}
+
 module WikiEL.Graph where
 
 import           Data.Int                              (Int32, Int64)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
 import qualified Data.Vector.Unboxed           as UV
+import qualified Data.Vector                   as V
 import qualified Data.Vector.Generic           as GV
-import qualified Data.Vector.Fusion.Bundle     as B
 import           Control.Monad.ST                      (runST)
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy)
@@ -133,27 +135,28 @@ allPaths fn node cutoff = f 0 (V.singleton (UV.singleton node))
     f dist paths = f (dist+1) (V.concatMap (accumPaths fn) paths)
 -}
 
-accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> UV.Vector a -> B.Bundle UV.Vector (UV.Vector a)
-accumPaths fn path = UV.foldl' f B.empty (UV.map snd (fn from))
+-- TODO:rename. It assumes forward direction.
+accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> UV.Vector a -> [UV.Vector a]
+accumPaths fn path = UV.foldl' f [] (UV.map snd (fn from))
   where
     from = UV.last path
-    f accum to = B.snoc accum (UV.snoc path to)
+    f !accum !to = UV.snoc path to : accum
 
 -- all paths of length `cutoff`, starting from the input `node`
-allPathsOf :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> B.Bundle UV.Vector (UV.Vector a)
-allPathsOf fn node cutoff = f 0 (B.singleton (UV.singleton node))
+allPathsOf :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> [UV.Vector a]
+allPathsOf fn node cutoff = f 0 [UV.singleton node]
   where
     f dist paths | dist==cutoff = paths
-    f dist paths = f (dist+1) (B.concatMap (accumPaths fn) paths)
+    f dist paths = f (dist+1) (L.concatMap (accumPaths fn) paths)
 
 -- all paths of length UPTO `cutoff`, starting from the input `node`
-allPathsUpto :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> B.Bundle UV.Vector (UV.Vector a)
-allPathsUpto fn node cutoff = f B.empty 0 (B.singleton (UV.singleton node))
+allPathsUpto :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> [UV.Vector a]
+allPathsUpto fn node cutoff = f [] 0 [UV.singleton node]
   where
-    f accum dist paths | dist==cutoff = accum B.++ paths
-    f accum dist paths = f (accum B.++ paths) (dist+1) nexts
+    f accum dist paths | dist==cutoff = accum ++ paths
+    f accum dist paths = f (accum ++ paths) (dist+1) nexts
       where
-        nexts = B.concatMap (accumPaths fn) paths
+        nexts = L.concatMap (accumPaths fn) paths
 
 
 accumIf :: (t -> t -> Ordering) -> [(t, t)] -> [t] -> [t] -> [(t, t)]
@@ -170,9 +173,12 @@ neighborOverlap dists1 dists2 = accumIf compFst [] (UV.toList lhs) (UV.toList rh
     lhs = UV.modify (sortBy compFst) dists1
     rhs = UV.modify (sortBy compFst) dists2
 
-destOverlap :: (UV.Unbox a, Ord a) => B.Bundle UV.Vector (UV.Vector a) -> B.Bundle UV.Vector (UV.Vector a) -> [(UV.Vector a,UV.Vector a)]
-destOverlap left right = accumIf compLast [] ls rs
+destOverlap :: (UV.Unbox a, Ord a) => [UV.Vector a] -> [UV.Vector a] -> [(UV.Vector a,UV.Vector a)]
+destOverlap left right = accumIf compLast [] (V.toList ls) (V.toList rs)
   where
     compLast l r = compare (UV.last l) (UV.last r)
-    ls = L.sortBy compLast (B.toList left)
-    rs = L.sortBy compLast (B.toList right)
+    ls = GV.modify (sortBy compLast) (V.fromList left)
+    rs = GV.modify (sortBy compLast) (V.fromList right)
+    --ls = L.sortBy compLast (B.toList left)
+    --rs = L.sortBy compLast (B.toList right)
+
