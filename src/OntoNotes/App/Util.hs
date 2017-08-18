@@ -24,10 +24,15 @@ import           Text.Annotation.Util.Doc
 import           Text.Annotation.View
 
 type SentIdx = Int
+
 type CharIdx = Int
+
 type BeginEnd = (CharIdx,CharIdx)
+
 type TagPos a = (CharIdx,CharIdx,a)
+
 type SentItem = (SentIdx,BeginEnd,Text)
+
 
 addText :: Text -> (SentIdx,BeginEnd) -> SentItem
 addText txt (n,(b,e)) = (n,(b,e),slice (b-1) e txt)

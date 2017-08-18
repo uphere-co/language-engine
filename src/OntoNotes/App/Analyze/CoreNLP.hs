@@ -21,7 +21,7 @@ import           CoreNLP.Simple                               (annotate,serializ
 import           CoreNLP.Simple.Convert                       (convertPsent,convertSentence,convertToken
                                                               ,decodeToPennTree
                                                               ,sentToDep,sentToNER)
-import           CoreNLP.Simple.Type.Simplified               (NERSentence(..),Token,Dependency,SentenceIndex)
+import           CoreNLP.Simple.Type.Simplified               (NERSentence(..),Token,Dependency,Sentence,SentenceIndex)
 import           CoreNLP.Simple.Util                          (getDoc,getProtoDoc,getTKTokens)
 import qualified NLP.Type.NamedEntity                  as N
 import           NLP.Type.PennTreebankII                      (PennTree)
@@ -56,14 +56,13 @@ getSentenceOffsets psents =
 runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
           -> Text
-          -> IO ( [S.Sentence]
+          -> IO ( [Sentence]
                 , [Maybe SentenceIndex] -- [Maybe Sentence]
-                , [(SentIdx,BeginEnd,Text)]                  
+                , [SentItem]                  
                 , [[Token]]
                 , [Maybe PennTree]
                 , [Dependency]
                 , Maybe [(SentItem, [TagPos (Maybe Text)])]
-                , [UIDCite EntityMentionUID (EL.EMInfo Text)]
                 )
 runParser pp emTagger txt = do
   doc <- getDoc txt
@@ -86,11 +85,14 @@ runParser pp emTagger txt = do
 
       tktokss = map (getTKTokens) psents
       tokss = map (mapMaybe convertToken) tktokss
-
-      unNER (NERSentence tokens) = tokens
-      neTokens = concatMap (unNER . sentToNER) psents
+      
+      -- unNER (NERSentence tokens) = tokens
+      -- neTokens = concatMap (unNER . sentToNER) psents
       loaded = (sents,sentidxs,sentitems,tokss,parsetrees,deps,mtmx)
+
+      {-
       linked_mentions_all = getWikiResolvedMentions loaded emTagger  -- emTagger neTokens
       linked_mentions_resolved
         = filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all
-  return (psents,sentidxs,sentitems,tokss,parsetrees,deps,mtmx,linked_mentions_resolved)
+      -}
+  return loaded -- ((map convertPsent psents),sentidxs,sentitems,tokss,parsetrees,deps,mtmx,linked_mentions_resolved)

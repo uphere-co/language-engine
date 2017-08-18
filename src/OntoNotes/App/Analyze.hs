@@ -25,6 +25,7 @@ import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention(..))
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass)
 --
+import           OntoNotes.App.Analyze.CoreNLP           (runParser)
 import           OntoNotes.App.Analyze.SentenceStructure (getSentStructure,sentStructure)
 import           OntoNotes.App.Load           (Config(..),cfg,cfgG,cfg_framenet_framedir
                                               ,cfg_rolemap_file
@@ -58,8 +59,10 @@ queryProcess pp sensemap sensestat framedb ontomap emTagger rolemap subcats =
     case command of
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
-                  sentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats txt
-      ":v " ->    sentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats rest
+                  loaded <- runParser pp emTagger txt
+                  sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
+      ":v " -> do loaded <- runParser pp emTagger rest
+                  sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
