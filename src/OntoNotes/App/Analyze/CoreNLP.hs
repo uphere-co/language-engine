@@ -54,7 +54,6 @@ getSentenceOffsets psents =
 
 
 runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
-          -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
           -> Text
           -> IO ( [Sentence]
                 , [Maybe SentenceIndex] -- [Maybe Sentence]
@@ -64,7 +63,7 @@ runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
                 , [Dependency]
                 , Maybe [(SentItem, [TagPos (Maybe Text)])]
                 )
-runParser pp emTagger txt = do
+runParser pp txt = do
   doc <- getDoc txt
   ann <- annotate pp doc
   pdoc <- getProtoDoc ann
@@ -82,17 +81,8 @@ runParser pp emTagger txt = do
       sentidxs = map (convertSentence pdoc) psents
       sents = map (convertPsent) psents
       Right deps = mapM sentToDep psents
-
       tktokss = map (getTKTokens) psents
       tokss = map (mapMaybe convertToken) tktokss
-      
-      -- unNER (NERSentence tokens) = tokens
-      -- neTokens = concatMap (unNER . sentToNER) psents
       loaded = (sents,sentidxs,sentitems,tokss,parsetrees,deps,mtmx)
 
-      {-
-      linked_mentions_all = getWikiResolvedMentions loaded emTagger  -- emTagger neTokens
-      linked_mentions_resolved
-        = filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all
-      -}
-  return loaded -- ((map convertPsent psents),sentidxs,sentitems,tokss,parsetrees,deps,mtmx,linked_mentions_resolved)
+  return loaded

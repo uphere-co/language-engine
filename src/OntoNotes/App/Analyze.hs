@@ -59,18 +59,12 @@ queryProcess pp sensemap sensestat framedb ontomap emTagger rolemap subcats =
     case command of
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
-                  loaded <- runParser pp emTagger txt
-                  showSentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
-      ":v " -> do loaded <- runParser pp emTagger rest
-                  showSentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
+                  runParser pp txt >>= showSentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats
+      ":v " ->    runParser pp rest >>= showSentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
 
-
-
-
-  
 runAnalysis :: Config -> IO ()
 runAnalysis cfg = do
   subcats <- loadVerbSubcat (cfg^.cfg_verb_subcat_file)
@@ -80,7 +74,7 @@ runAnalysis cfg = do
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-  emTagger <- loadEMtagger reprFile [(orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)]  
+  emTagger <- loadEMtagger reprFile [(orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)]
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
     pp <- prepare (def & (tokenizer .~ True)
@@ -110,7 +104,7 @@ loadConfig = do
 getAnalysis input config =
   let (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats) = config
   in sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats  input
-    
+
 
 loadJVM = do
   pp <- prepare (def & (tokenizer .~ True)
@@ -122,4 +116,3 @@ loadJVM = do
                      . (ner .~ True)
                 )
   return pp
-
