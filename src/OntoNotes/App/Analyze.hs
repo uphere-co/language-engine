@@ -26,7 +26,7 @@ import           WikiEL.EntityLinking         (EntityMention(..))
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass)
 --
 import           OntoNotes.App.Analyze.SentenceStructure (getSentStructure,sentStructure)
-import           OntoNotes.App.Load           (Config(..),cfg,cfg_framenet_framedir
+import           OntoNotes.App.Load           (Config(..),cfg,cfgG,cfg_framenet_framedir
                                               ,cfg_rolemap_file
                                               ,cfg_sense_inventory_file
                                               ,cfg_verb_subcat_file
@@ -68,9 +68,8 @@ queryProcess pp sensemap sensestat framedb ontomap emTagger rolemap subcats =
 
 
   
-runAnalysis :: IO ()
-runAnalysis = do
-  -- let cfg = cfgG -- for the time being
+runAnalysis :: Config -> IO ()
+runAnalysis cfg = do
   subcats <- loadVerbSubcat (cfg^.cfg_verb_subcat_file)
   rolemap <- loadRoleMap (cfg^.cfg_rolemap_file)
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
@@ -110,50 +109,6 @@ getAnalysis input config pp = do
   getSentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats  input
     
 
---
---
--- wiki-ner test
---
---
-
-{- 
-main1 :: IO ()
-main1 = do
-  txt <- T.IO.readFile newsFileTxt
-
-  emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
-
-  clspath <- getEnv "CLASSPATH"
-  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
-    pp <- prepare (def & (tokenizer .~ True)
-                       . (words2sentences .~ True)
-                       . (postagger .~ True)
-                       . (lemma .~ True)
-                       . (ner .~ True)
-                  )
-    let doc = Document txt (fromGregorian 2017 4 17)
-    ann <- annotate pp doc
-    rdoc <- protobufDoc ann
-    case rdoc of
-      Left _ -> return ()
-      Right d -> do
-        let psents = d ^.. D.sentence . traverse
-            sentidxs = getSentenceOffsets psents
-            sents = map (addText txt) sentidxs 
-            unNER (NERSentence tokens) = tokens
-            neTokens = concatMap (unNER . sentToNER) psents
-            linked_mentions_all = emTagger neTokens
-            linked_mentions_resolved
-              = filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all
-            toks = concatMap (map snd . sentToTokens) psents
-            tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
-            sents_tagged = map (addTag tags) sents
-            doc1 = formatTaggedSentences sents_tagged
-            doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
-            doc = hsep 10 left [doc1,doc2]
-        putStrLn (render doc)
--}
-
 loadJVM = do
   pp <- prepare (def & (tokenizer .~ True)
                      . (words2sentences .~ True)
@@ -165,16 +120,3 @@ loadJVM = do
                 )
   return pp
 
-cfgG :: Config              
-cfgG = Config { _cfg_sense_inventory_file  = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
-              , _cfg_semlink_file          = "/data/groups/uphere/data/NLP/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
-              , _cfg_statistics            = "/data/groups/uphere/data/NLP/run/20170717/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
-              , _cfg_wsj_directory         = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-              , _cfg_framenet_lubin        = "/data/groups/uphere/data/NLP/run/FrameNet_ListOfLexUnit.bin"
-              , _cfg_framenet_framedir     = "/data/groups/uphere/data/NLP/FrameNet/1.7/fndata/fndata-1.7/frame" 
-              , _cfg_wordnet_dict          = "/data/groups/uphere/data/NLP/dict"
-              , _cfg_propbank_framedir     = "/data/groups/uphere/data/NLP/frames"
-              , _cfg_wsj_corenlp_directory = "/data/groups/uphere/data/NLP/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
-              , _cfg_rolemap_file          = "/home/modori/repo/src/OntoNotes/mapping/final.txt"
-              , _cfg_verb_subcat_file      = "/data/groups/uphere/data/NLP/run/20170817/verbsubcat_propbank_ontonotes_statonly.tsv"
-              }
