@@ -39,8 +39,8 @@ classify "PERCENT"      = Just Percent  --only for 7 class
 classify "NUMBER"       = Just MiscNum    --Why HCoreNLP gives this? Ignore it for now.
 classify "ORDINAL"      = Just MiscNum    --Why HCoreNLP gives this? Ignore it for now.
 classify "DURATION"     = Just MiscNum    --Why HCoreNLP gives this? Ignore it for now.
-classify "SET"          = Just Other
 classify "O"            = Just Other
+classify "SET"          = Just Misc
 classify _              = Nothing
 
 parseStr :: Text -> Text -> NamedEntityFrag
