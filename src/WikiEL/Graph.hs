@@ -22,7 +22,8 @@ isIn vals = f sorted
       (beg,end) <- binarySearchLR mvec x
       return ((end-beg)/=0)
 
--- NOTE: ordering is not preserved.
+-- NOTE: for all of unique, intersection*, union* functions, 
+--       ordering is NOT preserved.
 unique :: (UV.Unbox a, Ord a) => UV.Vector a -> UV.Vector a
 unique vs = UV.foldl' f UV.empty sorted
   where
@@ -30,6 +31,50 @@ unique vs = UV.foldl' f UV.empty sorted
     f accum v | UV.null accum = UV.singleton v
     f accum v | UV.last accum == v = accum
     f accum v = UV.snoc accum v
+
+intersectionVec :: (UV.Unbox a, Ord a) => UV.Vector a -> UV.Vector a -> UV.Vector a
+intersectionVec lv rv = iv
+  where
+    (iv,_) = UV.unstablePartition (isIn lv) rv
+
+intersectionVecBy :: (UV.Unbox a, Ord a) => (b->a) -> [b] -> [b] -> [b]
+intersectionVecBy hash lv rv = iv
+  where
+    lvec = UV.fromList (map hash lv)
+    f x = isIn lvec (hash x)
+    (iv,_) = L.partition f rv
+
+
+unionVec :: (UV.Unbox a, Ord a) => UV.Vector a -> UV.Vector a -> UV.Vector a
+unionVec lv rv = uv UV.++ lv
+  where
+    (_, uv) = UV.unstablePartition (isIn lv) rv
+
+unionVecBy :: (UV.Unbox a, Ord a) => (b->a) -> [b] -> [b] -> [b]
+unionVecBy hash lv rv = uv ++ lv
+  where
+    lvec = UV.fromList (map hash lv)
+    f x = isIn lvec (hash x)
+    (_, uv) = L.partition f rv
+
+
+intersection :: (UV.Unbox a, Ord a) => [UV.Vector a] -> UV.Vector a
+intersection [] = UV.empty
+intersection vs@(v:vt) = L.foldl' intersectionVec v vt
+
+intersectionBy :: (UV.Unbox a, Ord a) => (b->a) -> [[b]] -> [b]
+intersectionBy hash [] = []
+intersectionBy hash vs@(v:vt) = L.foldl' (intersectionVecBy hash) v vt
+
+
+union :: (UV.Unbox a, Ord a) => [UV.Vector a] -> UV.Vector a
+union [] = UV.empty
+union vs@(v:vt) = L.foldl' unionVec v vt
+
+unionBy :: (UV.Unbox a, Ord a) => (b->a) -> [[b]] -> [b]
+unionBy hash [] = []
+unionBy hash vs@(v:vt) = L.foldl' (unionVecBy hash) v vt
+
 
 type Dist = Int32
 
@@ -185,3 +230,15 @@ destOverlap left right = zip ml mr
     --ls = L.sortBy compLast (B.toList left)
     --rs = L.sortBy compLast (B.toList right)
 
+
+{-
+    f ls rs accum (ld,rd) = f restsLrests restsRrests accum (ld+1,rd+1)
+      where
+        newPathsL = L.concatMap (accumPaths fn) ls
+        newPathsR = L.concatMap (accumPaths fn) rs
+
+        ff x y = (x, y)
+        (attachedL, newPathsLrests, rsRests) = attach ff newPathsL rs
+        (attachedR, newPathsRrests, lsRests) = attach ff newPathsR ls
+        (attachedNew, restsLrests, restsRrests) = attach ff restsL restsR
+-}
