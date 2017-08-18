@@ -115,9 +115,9 @@ parseRoleMap (i:lma:sense:frame:rest) = let lst = map (\w -> let x:y:_ = T.split
                                         in ((lma,sense),("frame",frame):lst)
 
 
-loadRoleMap :: IO [((Text,Text), [(Text,Text)])]
-loadRoleMap = do
-  txt <- T.IO.readFile (cfg^.cfg_rolemap_file)
+loadRoleMap :: FilePath -> IO [((Text,Text), [(Text,Text)])]
+loadRoleMap fp = do
+  txt <- T.IO.readFile fp
   let rolemap = map parseRoleMap . map T.words . T.lines $ txt
   return rolemap
 
@@ -142,9 +142,9 @@ parseSubcat ws@[lma,sense,mvoice,marg0,marg1,marg2,marg3,marg4,count] =
   )
 
 
-loadVerbSubcat :: IO [((Text,Text),[(ArgPattern Text,Int)])]
-loadVerbSubcat = do
-  txt <- T.IO.readFile (cfg^.cfg_verb_subcat_file)
+loadVerbSubcat :: FilePath -> IO [((Text,Text),[(ArgPattern Text,Int)])]
+loadVerbSubcat fp = do
+  txt <- T.IO.readFile fp
   let getLemmaSense x = (x^._1,x^._2)
       getArgTable x = ArgPattern (x^._3) (x^._4) (x^._5) (x^._6) (x^._7) (x^._8)
   let subcats = map (\xs  -> (getLemmaSense (head xs),map (\x->(getArgTable x,x^._9)) xs)) .  groupBy ((==) `on` getLemmaSense) . map parseSubcat . map T.words . T.lines $ txt
