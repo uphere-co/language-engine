@@ -351,7 +351,7 @@ process (statonly,tsv,showdetail) sensedb fps = do
 
   rolesetstat <- loadStatistics (cfg^.cfg_statistics)
   let lemmastat = mergeStatPB2Lemma rolesetstat
-  rolemap <- loadRoleMap
+  rolemap <- loadRoleMap (cfg^.cfg_rolemap_file)
   
   if statonly
     then showStat tsv rolemap sensedb lemmastat classified_inst_map 

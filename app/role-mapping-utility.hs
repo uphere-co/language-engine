@@ -233,8 +233,8 @@ main = do
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (preddb,rolesetdb) <- loadPropBankDB
-  subcats <- loadVerbSubcat
-  rolemap <- loadRoleMap
+  subcats <- loadVerbSubcat (cfg^.cfg_verb_subcat_file)
+  rolemap <- loadRoleMap (cfg^.cfg_rolemap_file)
 
   let flattened = createONFN subcats sensemap framedb rolesetdb 
   let indexed = zip [1..] flattened

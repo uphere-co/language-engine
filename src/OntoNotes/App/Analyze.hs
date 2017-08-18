@@ -428,8 +428,8 @@ getSentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats 
 runAnalysis :: IO ()
 runAnalysis = do
   -- let cfg = cfgG -- for the time being
-  subcats <- loadVerbSubcat
-  rolemap <- loadRoleMap
+  subcats <- loadVerbSubcat (cfg^.cfg_verb_subcat_file)
+  rolemap <- loadRoleMap (cfg^.cfg_rolemap_file)
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
@@ -456,14 +456,14 @@ loadConfig = do
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-  emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]  
-  return (sensemap,sensestat,framedb,ontomap,emTagger)
+  emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
+  rolemap <- loadRoleMap (cfg^.cfg_rolemap_file)
+  subcats <- loadVerbSubcat (cfg^.cfg_verb_subcat_file)
+  return (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats)
 
 
 getAnalysis input config pp = do
-  subcats <- loadVerbSubcat
-  rolemap <- loadRoleMap  
-  let (sensemap,sensestat,framedb,ontomap,emTagger) = config
+  let (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats) = config
   getSentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats  input
     
 
@@ -532,4 +532,6 @@ cfgG = Config { _cfg_sense_inventory_file  = "/data/groups/uphere/data/NLP/LDC/o
               , _cfg_wordnet_dict          = "/data/groups/uphere/data/NLP/dict"
               , _cfg_propbank_framedir     = "/data/groups/uphere/data/NLP/frames"
               , _cfg_wsj_corenlp_directory = "/data/groups/uphere/data/NLP/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
+              , _cfg_rolemap_file          = "/home/modori/repo/src/OntoNotes/mapping/final.txt"
+              , _cfg_verb_subcat_file      = "/data/groups/uphere/data/NLP/run/20170817/verbsubcat_propbank_ontonotes_statonly.tsv"
               }
