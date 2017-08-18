@@ -91,6 +91,7 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
 
 
 
+{-
 formatNER psents sentitems linked_mentions_resolved =
   let toks = concatMap (map snd . sentToTokens) psents
       tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
@@ -98,12 +99,12 @@ formatNER psents sentitems linked_mentions_resolved =
       doc1 = formatTaggedSentences sents_tagged
       doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
   in hsep 10 left [doc1,doc2]
+-}
 
 
-      
-formatNER' :: [[Maybe Token]] -> [SentItem] -> [UIDCite EntityMentionUID (EMInfo Text)] -> Box
-formatNER' psents sentitems linked_mentions_resolved =
-  let toks = concatMap (map snd . sentToTokens') psents
+formatNER :: [[Maybe Token]] -> [SentItem] -> [UIDCite EntityMentionUID (EMInfo Text)] -> Box
+formatNER mtokenss sentitems linked_mentions_resolved =
+  let toks = concatMap (map snd . sentToTokens') mtokenss
       tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
       sents_tagged = map (addTag tags) sentitems
       doc1 = formatTaggedSentences sents_tagged
