@@ -26,7 +26,7 @@ import           WikiEL.EntityLinking         (EntityMention(..))
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass)
 --
 import           OntoNotes.App.Analyze.CoreNLP           (runParser)
-import           OntoNotes.App.Analyze.SentenceStructure (getSentStructure,sentStructure)
+import           OntoNotes.App.Analyze.SentenceStructure (sentStructure,showSentStructure)
 import           OntoNotes.App.Load           (Config(..),cfg,cfgG,cfg_framenet_framedir
                                               ,cfg_rolemap_file
                                               ,cfg_sense_inventory_file
@@ -60,9 +60,9 @@ queryProcess pp sensemap sensestat framedb ontomap emTagger rolemap subcats =
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
                   loaded <- runParser pp emTagger txt
-                  sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
+                  showSentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
       ":v " -> do loaded <- runParser pp emTagger rest
-                  sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
+                  showSentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
@@ -107,9 +107,9 @@ loadConfig = do
   return (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats)
 
 
-getAnalysis input config pp = do
+getAnalysis input config =
   let (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats) = config
-  getSentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats  input
+  in sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats  input
     
 
 loadJVM = do

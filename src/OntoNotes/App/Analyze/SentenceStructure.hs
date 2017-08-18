@@ -36,7 +36,7 @@ import           NLP.Type.PennTreebankII                   (Lemma(..),mkPennTree
 import qualified NLP.Type.PennTreebankII.Separated as PS
 import           WikiEL.EntityLinking                      (EntityMentionUID,EntityMention(..),UIDCite(..)
                                                            ,entityLinking,entityLinkings,buildEntityMentions,entityUID)
-import           WikiEL.WikiNamedEntityTagger              (PreNE(..))                 
+import           WikiEL.WikiNamedEntityTagger              (PreNE(..))
 --
 import           OntoNotes.App.Analyze.CoreNLP             (runParser)
 import           OntoNotes.App.Analyze.Format              (formatSenses,formatTimex
@@ -109,7 +109,7 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats txt
 
       putStrLn (printf "\n\n-- Sentence %3d ----------------------------------------------------------------------------------" i)
       T.IO.putStrLn (formatIndexTokensFromTree 0 ptr)
-      
+
       putStrLn "--------------------------------------------------------------------------------------------------"
       showClauseStructure lemmamap ptr
       putStrLn "================================================================================================="
@@ -126,6 +126,7 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats txt
 
 -}
 
+{-
 sentStructure :: HashMap Text Inventory
               -> HashMap (Text, Text) Int
               -> FrameDB
@@ -142,7 +143,7 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
       mws = sents ^.. traverse . sentenceWord
       mns = sents ^.. traverse . sentenceNER
   let unNER (NERSentence tokens) = tokens
-      neTokens = concat $ map (\(x,y) -> (unNER $ sentToNER' x y)) (zip mws mns) 
+      neTokens = concat $ map (\(x,y) -> (unNER $ sentToNER' x y)) (zip mws mns)
       linked_mentions_all = emTagger neTokens
       linked_mentions_resolved
         = filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all
@@ -166,7 +167,7 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
 
       putStrLn (printf "\n\n-- Sentence %3d ----------------------------------------------------------------------------------" i)
       T.IO.putStrLn (formatIndexTokensFromTree 0 ptr)
-      
+
       putStrLn "--------------------------------------------------------------------------------------------------"
       showClauseStructure lemmamap ptr
       putStrLn "================================================================================================="
@@ -176,33 +177,46 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
         let senses = getSenses lma sensemap sensestat framedb ontomap
         (putStrLn . formatSenses False rolemap subcats lma) senses
         putStrLn "--------------------------------------------------------------------------------------------------"
+-}
+showSentStructure :: HashMap Text Inventory
+                  -> HashMap (Text, Text) Int
+                  -> FrameDB
+                  -> HashMap Text [(Text, Text)]
+                  -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
+                  -> [((Text,Text), [(Text,Text)])]
+                  -> [((Text,Text),[(ArgPattern Text,Int)])]
+                  -> ( [Sentence]
+                     , [Maybe SentenceIndex]
+                     , [SentItem]
+                     , [[Token]]
+                     , [Maybe PennTree]
+                     , [Dependency]
+                     , Maybe [(SentItem, [TagPos (Maybe Text)])]
+                     )
+               -> IO ()
+showSentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded = do
+  let txts = sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
+  mapM_ T.IO.putStrLn txts
 
-
-
-
-
-
-
-getSentStructure :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
-                 -> HashMap Text Inventory
-                 -> HashMap (Text, Text) Int
-                 -> FrameDB
-                 -> HashMap Text [(Text, Text)]
-                 -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
-                 -> [((Text,Text), [(Text,Text)])]
-                 -> [((Text,Text),[(ArgPattern Text,Int)])]
-                 -> ( [Sentence]
-                    , [Maybe SentenceIndex] -- [Maybe Sentence]
-                    , [SentItem]                  
-                    , [[Token]]
-                    , [Maybe PennTree]
-                    , [Dependency]
-                    , Maybe [(SentItem, [TagPos (Maybe Text)])]
-                    )
-                 -> [Text]
-getSentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats loaded = 
+sentStructure :: HashMap Text Inventory
+              -> HashMap (Text, Text) Int
+              -> FrameDB
+              -> HashMap Text [(Text, Text)]
+              -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
+              -> [((Text,Text), [(Text,Text)])]
+              -> [((Text,Text),[(ArgPattern Text,Int)])]
+              -> ( [Sentence]
+                 , [Maybe SentenceIndex]
+                 , [SentItem]
+                 , [[Token]]
+                 , [Maybe PennTree]
+                 , [Dependency]
+                 , Maybe [(SentItem, [TagPos (Maybe Text)])]
+                 )
+              -> [Text]
+sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded =
   let (sents,sentidxs,sentitems,_tokss,mptrs,deps,mtmx) = loaded
-      lmass = sents ^.. traverse . sentenceLemma 
+      lmass = sents ^.. traverse . sentenceLemma
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = getWikiResolvedMentions loaded emTagger
       line1 = [ "================================================================================================="
@@ -216,8 +230,8 @@ getSentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats 
               , "--------------------------------------------------------------------------------------------------"
               , "-- Sentence analysis -----------------------------------------------------------------------------"
               , "--------------------------------------------------------------------------------------------------" ]
-              
-      mlines = flip map (zip3 ([0..] :: [Int]) lmass mptrs) $ \(i,lmas,mptr) -> 
+
+      mlines = flip map (zip3 ([0..] :: [Int]) lmass mptrs) $ \(i,lmas,mptr) ->
                  flip fmap mptr $ \ptr ->
                    let lemmamap = mkLemmaMap' lmas
                        vps = verbPropertyFromPennTree lemmamap ptr
@@ -227,13 +241,18 @@ getSentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats 
                                          , [(formatIndexTokensFromTree 0 ptr)]
                                          , ["--------------------------------------------------------------------------------------------------"]
                                          , formatClauseStructure vps clausetr
-                                         , ["================================================================================================="] ] 
+                                         , ["================================================================================================="] ]
 
-                       subline2 = flip map (vps^..traverse.vp_lemma.to unLemma) $ \lma ->
-                                    let senses = getSenses lma sensemap sensestat framedb ontomap
+                       subline2 = flip map (vps^..traverse) $ \vp ->
+                                    let mcp = constructCP vp
+                                        lma = vp^.vp_lemma.to unLemma
+                                        senses = getSenses lma sensemap sensestat framedb ontomap
                                         ssubline1 = [ T.pack (printf "Verb: %-20s" lma)
                                                     , T.pack $ (formatSenses False rolemap subcats lma) senses
-                                                    , "--------------------------------------------------------------------------------------------------" ]
+                                                    , "--------------------------------------------------------------------------------------------------"
+                                                    , T.pack $ (maybe "cannot identify CP" formatCP mcp)
+                                                    , "--------------------------------------------------------------------------------------------------"
+                                                    ]
                                     in ssubline1
                    in (subline1, subline2)
       line4 = concatMap f mlines
