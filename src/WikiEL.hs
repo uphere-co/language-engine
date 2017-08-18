@@ -44,3 +44,5 @@ loadEMtagger wikiNameFile uid2tagFiles = do
   let
     emTagger = extractEntityMentions wikiTable uid2tag
   return emTagger
+
+-- TODO:privide filter to drop unresolved entity mentions

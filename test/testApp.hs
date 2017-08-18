@@ -211,7 +211,7 @@ test1 sorted@(d,edges) names = do
     --tmp3 = G.allPathsUpto dEdges (H.wordHash "Sundar_Pichai") 3
     tmp3 = G.allPathsUpto dEdges (H.wordHash "Larry_Page") 3
     
-    fNode node cutoff = G.accumReachable G.to (UV.fromList [(node,0)]) cutoff (G.neighbor sorted) (UV.fromList [node],0)
+    fNode node cutoff = G.accumReachable (UV.fromList [(node,0)]) cutoff (G.neighbor sorted) (UV.fromList [node],0)
     t1 = fNode (H.wordHash "Larry_Page") 3
     t2 = fNode (H.wordHash "Steve_Jobs") 3
 
@@ -253,7 +253,7 @@ sorted@(d,es) <- readStore store2
 --test1 sorted names
 
 hash word = H.wordHash (T.pack word)
-fNode node cutoff = G.accumReachable G.to (UV.fromList [(node,0)]) cutoff (G.neighbor sorted) (UV.fromList [node],0)
+fNode node cutoff = G.accumReachable (UV.fromList [(node,0)]) cutoff (G.neighbor sorted) (UV.fromList [node],0)
 t1 = fNode (hash "Larry_Page") 2
 t2 = fNode (hash "Steve_Jobs") 2
 UV.length t1
@@ -266,9 +266,10 @@ mapM_ print (filter (\(_,ld,rd) -> ld<3 && rd<2) aa)
 
 pNode node cutoff = G.allPathsUpto (G.neighbor sorted) (hash node) cutoff
 
-paths = G.destOverlap (pNode "Larry_Page" 2) (pNode "Steve_Jobs" 2)
-mapM_ print (map (\(x,y)-> (reverse (showPath names y)) ++ tail (showPath names x)) paths)
-
+--paths = G.destOverlap (pNode "Larry_Page" 2) (pNode "Steve_Jobs" 2)
+dfe = G.neighbor sorted
+paths = G.destOverlapUpto dfe 2 (hash "Larry_Page") (hash "Steve_Jobs")
+showPaths paths = mapM_ print (map (\(x,y)-> (reverse (showPath names y)) ++ tail (showPath names x)) paths)
 -}
 main3 :: Word32 -> Word32 -> IO ()
 main3 idx idx2 = do

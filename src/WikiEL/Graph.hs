@@ -14,15 +14,16 @@ import           WikiEL.BinarySearch                   (binarySearchLR,binarySea
 import qualified Data.List as L
 
 isIn :: (UV.Unbox a, Ord a) => UV.Vector a -> a -> Bool
-isIn vals = f sorted
+isIn vals = f
   where
     sorted = UV.modify sort vals
-    f vs x = runST $ do
-      mvec <- UV.unsafeThaw vs
+    f x = runST $ do
+      mvec <- UV.unsafeThaw sorted
       (beg,end) <- binarySearchLR mvec x
       return ((end-beg)/=0)
 
--- NOTE: ordering is not preserved.
+-- NOTE: for all of unique, intersection*, union* functions, 
+--       ordering is NOT preserved.
 unique :: (UV.Unbox a, Ord a) => UV.Vector a -> UV.Vector a
 unique vs = UV.foldl' f UV.empty sorted
   where
@@ -30,6 +31,41 @@ unique vs = UV.foldl' f UV.empty sorted
     f accum v | UV.null accum = UV.singleton v
     f accum v | UV.last accum == v = accum
     f accum v = UV.snoc accum v
+
+intersectionVec, unionVec :: (UV.Unbox a, Ord a) => UV.Vector a -> UV.Vector a -> UV.Vector a
+intersectionVec lv rv = fst (UV.unstablePartition (isIn lv) rv)
+unionVec        lv rv = lv UV.++ snd (UV.unstablePartition (isIn lv) rv)
+
+intersectionVecBy :: (UV.Unbox a, Ord a) => (b->a) -> [b] -> [b] -> [b]
+intersectionVecBy hash lv rv = fst (L.partition f rv)
+  where
+    lvec = UV.fromList (map hash lv)
+    f x = isIn lvec (hash x)
+
+unionVecBy :: (UV.Unbox a, Ord a) => (b->a) -> [b] -> [b] -> [b]
+unionVecBy hash lv rv = lv ++ snd (L.partition f rv)
+  where
+    lvec = UV.fromList (map hash lv)
+    f x = isIn lvec (hash x)
+
+
+intersection :: (UV.Unbox a, Ord a) => [UV.Vector a] -> UV.Vector a
+intersection [] = UV.empty
+intersection vs@(v:vt) = L.foldl' intersectionVec v vt
+
+intersectionBy :: (UV.Unbox a, Ord a) => (b->a) -> [[b]] -> [b]
+intersectionBy hash [] = []
+intersectionBy hash vs@(v:vt) = L.foldl' (intersectionVecBy hash) v vt
+
+
+union :: (UV.Unbox a, Ord a) => [UV.Vector a] -> UV.Vector a
+union [] = UV.empty
+union vs@(v:vt) = L.foldl' unionVec v vt
+
+unionBy :: (UV.Unbox a, Ord a) => (b->a) -> [[b]] -> [b]
+unionBy hash [] = []
+unionBy hash vs@(v:vt) = L.foldl' (unionVecBy hash) v vt
+
 
 type Dist = Int32
 
@@ -156,27 +192,63 @@ allPathsUpto fn node cutoff = f [] 0 [UV.singleton node]
       where
         nexts = L.concatMap (accumPaths fn) paths
 
-
-accumIf :: (t -> t -> Ordering) -> [(t, t)] -> [t] -> [t] -> [(t, t)]
-accumIf comp accum [] _ = accum
-accumIf comp accum _ [] = accum
-accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == EQ = accumIf comp ((l,r):accum) ls rs
-accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == LT = accumIf comp accum ls rb
-accumIf comp accum lb@(l:ls) rb@(r:rs) | comp l r == GT = accumIf comp accum lb rs
+partition2 :: (a->a->Ordering) -> [a] -> [a] -> ([a],[a],[a],[a])
+partition2 comp ls rs = f [] [] [] [] (V.toList sortedL) (V.toList sortedR)
+  where
+    sortedL = GV.modify (sortBy comp) (V.fromList ls)
+    sortedR = GV.modify (sortBy comp) (V.fromList rs)
+    -- ul : unmatched left
+    -- ml : matched left
+    -- ur : unmatched right
+    -- mr : matched right
+    f ul ml ur mr ls@(l:lt) rs@(r:rt) | comp l r == EQ = f ul (l:ml) ur (r:mr) lt rt
+    f ul ml ur mr ls@(l:lt) rs@(r:rt) | comp l r == LT = f (l:ul) ml ur mr lt rs
+    f ul ml ur mr ls@(l:lt) rs@(r:rt) | comp l r == GT = f ul ml (r:ur) mr ls rt
+    f ul ml ur mr [] rs = (ul,ml,rs++ur,mr)
+    f ul ml ur mr ls []  = (ls++ul,ml,ur,mr)
 
 neighborOverlap :: (UV.Unbox a, Ord a) => UV.Vector (a,Dist) -> UV.Vector (a,Dist) -> [((a,Dist),(a,Dist))]
-neighborOverlap dists1 dists2 = accumIf compFst [] (UV.toList lhs) (UV.toList rhs)
+neighborOverlap dists1 dists2 = zip ml mr
   where
     compFst (ln,_) (rn,_) = compare ln rn
     lhs = UV.modify (sortBy compFst) dists1
     rhs = UV.modify (sortBy compFst) dists2
+    (ul,ml, ur,mr) = partition2 compFst (UV.toList lhs) (UV.toList rhs)
 
 destOverlap :: (UV.Unbox a, Ord a) => [UV.Vector a] -> [UV.Vector a] -> [(UV.Vector a,UV.Vector a)]
-destOverlap left right = accumIf compLast [] (V.toList ls) (V.toList rs)
+destOverlap left right = zip ml mr
   where
     compLast l r = compare (UV.last l) (UV.last r)
     ls = GV.modify (sortBy compLast) (V.fromList left)
     rs = GV.modify (sortBy compLast) (V.fromList right)
+    (ul,ml, ur,mr) = partition2 compLast (V.toList ls) (V.toList rs)
     --ls = L.sortBy compLast (B.toList left)
     --rs = L.sortBy compLast (B.toList right)
+
+
+destOverlapUpto :: (UV.Unbox a, Ord a) => (a -> UV.Vector a) -> Dist -> a -> a -> [(UV.Vector a,UV.Vector a)]
+destOverlapUpto fn halfDist nodeL nodeR = f [] [] [UV.singleton nodeL] [UV.singleton nodeR] [] 0
+  where
+    -- ls, rs : remaining (unmatched) paths
+    -- lfs, rfs : frontier paths
+    f ls rs lfs rfs accum d | d == halfDist = accum
+    f ls rs lfs rfs accum d = f ls' rs' lfs' rfs' (matched ++ accum) (d+1)
+      where
+        hash = UV.last
+        comp l r = compare (hash l) (hash r)
+        newPathsL = L.concatMap (accumPaths fn) lfs
+        newPathsR = L.concatMap (accumPaths fn) rfs
+        (ul1,ml1, ur1,mr1) = partition2 comp newPathsL newPathsR
+        (ul2,ml2, ur2,mr2) = partition2 comp (ls++lfs) newPathsR
+        (ul3,ml3, ur3,mr3) = partition2 comp newPathsL (rs++rfs)
+        matched = zip (L.concat [ml1,ml2,ml3]) (L.concat [mr1,mr2,mr3])
+        -- Note that
+        -- newPathsR == unionVecBy hash mr1 mr2 ++ intersectionVecBy hash ur1 ur2
+        -- newPathsL == unionVecBy hash ml1 ml3 ++ intersectionVecBy hash ul1 ul3
+        -- ls++lfs   == ul2 + ml2
+        -- rs++rfs   == ur3 + mr3
+        ls' = ls++lfs ++ unionVecBy hash ul1 ul3
+        rs' = rs++rfs ++ unionVecBy hash ur1 ur2
+        lfs' = intersectionVecBy hash ul1 ul3
+        rfs' = intersectionVecBy hash ur1 ur2
 
