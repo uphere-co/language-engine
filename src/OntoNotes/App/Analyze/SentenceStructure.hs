@@ -199,47 +199,46 @@ getSentStructure :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline"
                     , [Dependency]
                     , Maybe [(SentItem, [TagPos (Maybe Text)])]
                     )
-                 -> IO [Text]
-getSentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats loaded = do
+                 -> [Text]
+getSentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats loaded = 
   let (sents,sentidxs,sentitems,_tokss,mptrs,deps,mtmx) = loaded
-  let lmass = sents ^.. traverse . sentenceLemma 
+      lmass = sents ^.. traverse . sentenceLemma 
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = getWikiResolvedMentions loaded emTagger
-  let line1 = [ "================================================================================================="
+      line1 = [ "================================================================================================="
               , "-- TimeTagger -----------------------------------------------------------------------------------" ]
-
-  let line2 = case mtmx of
+      line2 = case mtmx of
                 Nothing -> ["Time annotation not successful!"]
                 Just sentswithtmx -> concat $ map formatTimex sentswithtmx
 
-  let line3 = [ "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
+      line3 = [ "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
               , T.pack (render (formatNER mtokenss sentitems linked_mentions_resolved))
               , "--------------------------------------------------------------------------------------------------"
               , "-- Sentence analysis -----------------------------------------------------------------------------"
               , "--------------------------------------------------------------------------------------------------" ]
               
-  mlines <- flip mapM (zip3 ([0..] :: [Int]) lmass mptrs) $ \(i,lmas,mptr) -> do
-    flip mapM mptr $ \ptr -> do
-      let lemmamap = mkLemmaMap' lmas
-          vps = verbPropertyFromPennTree lemmamap ptr
-          clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
+      mlines = flip map (zip3 ([0..] :: [Int]) lmass mptrs) $ \(i,lmas,mptr) -> 
+                 flip fmap mptr $ \ptr ->
+                   let lemmamap = mkLemmaMap' lmas
+                       vps = verbPropertyFromPennTree lemmamap ptr
+                       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
 
-      let subline1 = concat [ [T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)]
-                     , [(formatIndexTokensFromTree 0 ptr)]
-                     , ["--------------------------------------------------------------------------------------------------"]
-                     , formatClauseStructure vps clausetr
-                     , ["================================================================================================="] ] 
+                       subline1 = concat [ [T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)]
+                                         , [(formatIndexTokensFromTree 0 ptr)]
+                                         , ["--------------------------------------------------------------------------------------------------"]
+                                         , formatClauseStructure vps clausetr
+                                         , ["================================================================================================="] ] 
 
-      subline2 <- forM (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
-        let senses = getSenses lma sensemap sensestat framedb ontomap
-        let ssubline1 = [ T.pack (printf "Verb: %-20s" lma)
-                        , T.pack $ (formatSenses False rolemap subcats lma) senses
-                        , "--------------------------------------------------------------------------------------------------" ]
-        return ssubline1
-      return (subline1, subline2)
-  let line4 = concat $ map f mlines
+                       subline2 = flip map (vps^..traverse.vp_lemma.to unLemma) $ \lma ->
+                                    let senses = getSenses lma sensemap sensestat framedb ontomap
+                                        ssubline1 = [ T.pack (printf "Verb: %-20s" lma)
+                                                    , T.pack $ (formatSenses False rolemap subcats lma) senses
+                                                    , "--------------------------------------------------------------------------------------------------" ]
+                                    in ssubline1
+                   in (subline1, subline2)
+      line4 = concatMap f mlines
         where f mxs = case mxs of
                         Nothing       -> [""]
                         Just (xs,yss) -> xs ++ (concat yss)
 
-  return $ line1 ++ line2 ++ line3 ++ line4
+  in line1 ++ line2 ++ line3 ++ line4
