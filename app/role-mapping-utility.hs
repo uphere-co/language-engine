@@ -3,7 +3,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Main where
@@ -216,36 +215,6 @@ prompt = do
           prompt
 
 
-
-
-deriving instance Read Voice
-
-parseWithNullCheck :: (Text -> a) -> Text -> Maybe a
-parseWithNullCheck f w = if w == "null" then Nothing else Just (f w)
-
-parseSubcat :: [Text] -> (Text,Text,Maybe Voice,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Int)
-parseSubcat ws@[lma,sense,mvoice,marg0,marg1,marg2,marg3,marg4,count] =
-  ( lma ,sense
-  , parseWithNullCheck (read . T.unpack) mvoice
-  , parseWithNullCheck id marg0
-  , parseWithNullCheck id marg1
-  , parseWithNullCheck id marg2
-  , parseWithNullCheck id marg3
-  , parseWithNullCheck id marg4
-  , either (error ("error: " ++ show ws)) fst (decimal count)
-  )
-
-loadVerbSubcat = do
-  let verbsubcatfile = "/scratch/wavewave/run/20170816/verbsubcat_propbank_ontonotes_statonly.tsv"
-  txt <- T.IO.readFile verbsubcatfile
-  let getLemmaSense x = (x^._1,x^._2)
-      getArgTable x = ArgPattern (x^._3) (x^._4) (x^._5) (x^._6) (x^._7) (x^._8)
-  let subcats = map (\xs  -> (getLemmaSense (head xs),map (\x->(getArgTable x,x^._9)) xs)) .  groupBy ((==) `on` getLemmaSense) . map parseSubcat . map T.words . T.lines $ txt
-  -- mapM_ print subcats
-  return subcats
-
-
-
 data ProgOption = ProgOption { progCommand :: String
                              , startNum :: Maybe Int
                              } deriving Show
@@ -261,14 +230,11 @@ progOption = O.info pOptions (O.fullDesc <> O.progDesc "role mapping utility pro
 
 main = do
   opt <- O.execParser progOption
-  
-  -- args <- getArgs
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (preddb,rolesetdb) <- loadPropBankDB
   subcats <- loadVerbSubcat
-  let rolemapfile = "/home/wavewave/repo/srcp/OntoNotes/mapping/final.txt"  
-  rolemap <- loadRoleMap rolemapfile
+  rolemap <- loadRoleMap
 
   let flattened = createONFN subcats sensemap framedb rolesetdb 
   let indexed = zip [1..] flattened
@@ -294,12 +260,7 @@ main = do
             putStrLn "---------------------------------------------------------------------------------------------------------"
             putStrLn framestr
             putStrLn "---------------------------------------------------------------------------------------------------------"
-            putStrLn $ printf "                      arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s"
-                              (fromMaybe "" (lookup "arg0" argmap))
-                              (fromMaybe "" (lookup "arg1" argmap))
-                              (fromMaybe "" (lookup "arg2" argmap))
-                              (fromMaybe "" (lookup "arg3" argmap))
-                              (fromMaybe "" (lookup "arg4" argmap))
+            putStrLn $ formatRoleMap argmap
             putStrLn "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
             putStrLn argpattstr
             putStrLn "========================================================================================================="  
