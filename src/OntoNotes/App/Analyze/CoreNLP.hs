@@ -20,7 +20,7 @@ import qualified CoreNLP.Proto.HCoreNLPProto.TimexWithOffset as T
 import           CoreNLP.Simple                               (annotate,serializeTimex)
 import           CoreNLP.Simple.Convert                       (convertSentence,convertToken,decodeToPennTree
                                                               ,sentToDep,sentToNER)
-import           CoreNLP.Simple.Type.Simplified               (NERSentence(..),Token,Dependency,Sentence)
+import           CoreNLP.Simple.Type.Simplified               (NERSentence(..),Token,Dependency,SentenceIndex)
 import           CoreNLP.Simple.Util                          (getDoc,getProtoDoc,getTKTokens)
 import qualified NLP.Type.NamedEntity                  as N
 import           NLP.Type.PennTreebankII                      (PennTree)
@@ -55,7 +55,7 @@ runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
           -> Text
           -> IO ( [S.Sentence]
-                , [Maybe Sentence]
+                , [Maybe SentenceIndex] -- [Maybe Sentence]
                 , [(SentIdx,BeginEnd,Text)]                  
                 , [[Token]]
                 , [Maybe PennTree]

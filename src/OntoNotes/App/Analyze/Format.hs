@@ -10,12 +10,13 @@ import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
 import qualified Data.Text                       as T
 import qualified Data.Text.IO                    as T.IO 
-import           Text.PrettyPrint.Boxes                  (left,hsep,text,top,vcat)
+import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat)
 import           Text.Printf                             (printf)
 import           Text.ProtocolBuffers.Basic              (Utf8)
 --
-import           CoreNLP.Simple.Convert                  (sentToTokens)
+import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
 import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,token_pos)
+import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID)
 --
 import           OntoNotes.App.Util                      (TagPos,SentItem,addTag,underlineText)
 import           OntoNotes.App.WikiEL                    (formatLinkedMention,formatTaggedSentences,linkedMentionToTagPOS)
@@ -39,6 +40,17 @@ formatTimex (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["----------
 
 showTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
 showTimex (s,a) = T.IO.putStrLn (T.intercalate "\n" (formatTimex (s,a)))
+
+
+
+getFormatTimex' :: (SentItem,[TagPos (Maybe Text)]) -> [Text]
+getFormatTimex' (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["----------"] ++ [T.pack (show a)]
+
+showFormatTimex' :: (SentItem,[TagPos (Maybe Text)]) -> IO ()
+showFormatTimex' (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex' (s,a)))
+
+
+
 
 formatSense :: (Text,Text,Int,Text,Text,Text,Text) -> String
 formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) = 
@@ -81,3 +93,12 @@ formatNER psents sentitems linked_mentions_resolved =
 
 
       
+formatNER' :: [[Maybe Token]] -> [SentItem] -> [UIDCite EntityMentionUID (EMInfo Text)] -> Box
+formatNER' psents sentitems linked_mentions_resolved =
+  let toks = concatMap (map snd . sentToTokens') psents
+      tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
+      sents_tagged = map (addTag tags) sentitems
+      doc1 = formatTaggedSentences sents_tagged
+      doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
+  in hsep 10 left [doc1,doc2]
+

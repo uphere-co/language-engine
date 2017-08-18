@@ -19,11 +19,14 @@ import qualified Language.Java                     as J
 import           Text.PrettyPrint.Boxes                    (render)
 import           Text.Printf                               (printf)
 --
-import           CoreNLP.Simple.Convert                    (mkLemmaMap)
+import           CoreNLP.Simple.Convert                    (mkLemmaMap,mkLemmaMap',sentToNER')
+import           CoreNLP.Simple.Type.Simplified            (NERSentence(..),Token,Dependency,Sentence,SentenceIndex
+                                                           ,sentenceNER,sentenceWord,sentenceToken,sentenceLemma)
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
 import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
 import           NLP.Printer.PennTreebankII                (formatIndexTokensFromTree)
+import           NLP.Type.PennTreebankII                   (PennTree)
 import           NLP.Syntax.Clause                         (clauseStructure)
 import           NLP.Syntax.Format                         (formatClauseStructure,showClauseStructure)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
@@ -33,9 +36,14 @@ import           NLP.Type.PennTreebankII                   (Lemma(..),mkPennTree
 import qualified NLP.Type.PennTreebankII.Separated as PS
 import           WikiEL.EntityLinking                      (EntityMentionUID,EntityMention(..),UIDCite(..)
                                                            ,entityLinking,entityLinkings,buildEntityMentions,entityUID)
+import           WikiEL.WikiNamedEntityTagger              (PreNE(..))                 
 --
 import           OntoNotes.App.Analyze.CoreNLP             (runParser)
-import           OntoNotes.App.Analyze.Format              (formatSenses,formatTimex,formatNER,showTimex)
+import           OntoNotes.App.Analyze.Format              (formatSenses,formatTimex
+                                                           ,formatNER,formatNER'
+                                                           ,showTimex,showFormatTimex'
+                                                           )
+import           OntoNotes.App.Util                        (SentItem,TagPos)
 import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.SenseInventory
 
@@ -111,6 +119,62 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats txt
         let senses = getSenses lma sensemap sensestat framedb ontomap
         (putStrLn . formatSenses False rolemap subcats lma) senses
         putStrLn "--------------------------------------------------------------------------------------------------"
+
+
+
+sentStructure' :: HashMap Text Inventory
+               -> HashMap (Text, Text) Int
+               -> FrameDB
+               -> HashMap Text [(Text, Text)]
+               -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
+               -> [((Text,Text), [(Text,Text)])]
+               -> [((Text,Text),[(ArgPattern Text,Int)])]
+               -> ([Sentence], [Maybe SentenceIndex], [SentItem], [[Token]], [Maybe PennTree], [Dependency], Maybe [ (SentItem, [TagPos (Maybe Text)]) ] )
+               -> IO ()
+sentStructure' sensemap sensestat framedb ontomap emTagger rolemap subcats loaded = do
+  let (all,sents,sentitems,_tokss,mptrs,deps,mtmx) = loaded
+  let psents = all ^.. traverse . sentenceLemma
+      mtokens = all ^.. traverse . sentenceToken
+      mws = all ^.. traverse . sentenceWord
+      mns = all ^.. traverse . sentenceNER
+  let unNER (NERSentence tokens) = tokens
+      neTokens = concat $ map (\(x,y) -> (unNER $ sentToNER' x y)) (zip mws mns) 
+      linked_mentions_all = emTagger neTokens
+      linked_mentions_resolved
+        = filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all
+
+
+  putStrLn "\n\n\n\n\n\n\n\n================================================================================================="
+  putStrLn "\n\n-- TimeTagger -----------------------------------------------------------------------------------"
+  case mtmx of
+    Nothing -> putStrLn "Time annotation not successful!"
+    Just sentswithtmx -> mapM_ showFormatTimex' sentswithtmx
+  putStrLn "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
+  putStrLn (render (formatNER' mtokens sentitems linked_mentions_resolved))
+  putStrLn "\n\n--------------------------------------------------------------------------------------------------"
+  putStrLn "-- Sentence analysis -----------------------------------------------------------------------------"
+  putStrLn "--------------------------------------------------------------------------------------------------"
+
+  flip mapM_ (zip5 ([0..] :: [Int]) psents sents mptrs deps) $ \(i,psent,_sent,mptr,_dep) -> do
+    flip mapM_ mptr $ \ptr -> do
+      let lemmamap = mkLemmaMap' psent
+          vps = verbPropertyFromPennTree lemmamap ptr
+
+      putStrLn (printf "\n\n-- Sentence %3d ----------------------------------------------------------------------------------" i)
+      T.IO.putStrLn (formatIndexTokensFromTree 0 ptr)
+      
+      putStrLn "--------------------------------------------------------------------------------------------------"
+      showClauseStructure lemmamap ptr
+      putStrLn "================================================================================================="
+
+      forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
+        putStrLn (printf "Verb: %-20s" lma)
+        let senses = getSenses lma sensemap sensestat framedb ontomap
+        (putStrLn . formatSenses False rolemap subcats lma) senses
+        putStrLn "--------------------------------------------------------------------------------------------------"
+
+
+
 
 
 
