@@ -269,7 +269,7 @@ pNode node cutoff = G.allPathsUpto (G.neighbor sorted) (hash node) cutoff
 --paths = G.destOverlap (pNode "Larry_Page" 2) (pNode "Steve_Jobs" 2)
 dfe = G.neighbor sorted
 paths = G.destOverlapUpto dfe 2 (hash "Larry_Page") (hash "Steve_Jobs")
-mapM_ print (map (\(x,y)-> (reverse (showPath names y)) ++ tail (showPath names x)) paths)
+showPaths paths = mapM_ print (map (\(x,y)-> (reverse (showPath names y)) ++ tail (showPath names x)) paths)
 -}
 main3 :: Word32 -> Word32 -> IO ()
 main3 idx idx2 = do

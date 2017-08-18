@@ -14,11 +14,11 @@ import           WikiEL.BinarySearch                   (binarySearchLR,binarySea
 import qualified Data.List as L
 
 isIn :: (UV.Unbox a, Ord a) => UV.Vector a -> a -> Bool
-isIn vals = f sorted
+isIn vals = f
   where
     sorted = UV.modify sort vals
-    f vs x = runST $ do
-      mvec <- UV.unsafeThaw vs
+    f x = runST $ do
+      mvec <- UV.unsafeThaw sorted
       (beg,end) <- binarySearchLR mvec x
       return ((end-beg)/=0)
 
@@ -32,30 +32,21 @@ unique vs = UV.foldl' f UV.empty sorted
     f accum v | UV.last accum == v = accum
     f accum v = UV.snoc accum v
 
-intersectionVec :: (UV.Unbox a, Ord a) => UV.Vector a -> UV.Vector a -> UV.Vector a
-intersectionVec lv rv = iv
-  where
-    (iv,_) = UV.unstablePartition (isIn lv) rv
+intersectionVec, unionVec :: (UV.Unbox a, Ord a) => UV.Vector a -> UV.Vector a -> UV.Vector a
+intersectionVec lv rv = fst (UV.unstablePartition (isIn lv) rv)
+unionVec        lv rv = lv UV.++ snd (UV.unstablePartition (isIn lv) rv)
 
 intersectionVecBy :: (UV.Unbox a, Ord a) => (b->a) -> [b] -> [b] -> [b]
-intersectionVecBy hash lv rv = iv
+intersectionVecBy hash lv rv = fst (L.partition f rv)
   where
     lvec = UV.fromList (map hash lv)
     f x = isIn lvec (hash x)
-    (iv,_) = L.partition f rv
-
-
-unionVec :: (UV.Unbox a, Ord a) => UV.Vector a -> UV.Vector a -> UV.Vector a
-unionVec lv rv = uv UV.++ lv
-  where
-    (_, uv) = UV.unstablePartition (isIn lv) rv
 
 unionVecBy :: (UV.Unbox a, Ord a) => (b->a) -> [b] -> [b] -> [b]
-unionVecBy hash lv rv = uv ++ lv
+unionVecBy hash lv rv = lv ++ snd (L.partition f rv)
   where
     lvec = UV.fromList (map hash lv)
     f x = isIn lvec (hash x)
-    (_, uv) = L.partition f rv
 
 
 intersection :: (UV.Unbox a, Ord a) => [UV.Vector a] -> UV.Vector a
@@ -206,6 +197,10 @@ partition2 comp ls rs = f [] [] [] [] (V.toList sortedL) (V.toList sortedR)
   where
     sortedL = GV.modify (sortBy comp) (V.fromList ls)
     sortedR = GV.modify (sortBy comp) (V.fromList rs)
+    -- ul : unmatched left
+    -- ml : matched left
+    -- ur : unmatched right
+    -- mr : matched right
     f ul ml ur mr ls@(l:lt) rs@(r:rt) | comp l r == EQ = f ul (l:ml) ur (r:mr) lt rt
     f ul ml ur mr ls@(l:lt) rs@(r:rt) | comp l r == LT = f (l:ul) ml ur mr lt rs
     f ul ml ur mr ls@(l:lt) rs@(r:rt) | comp l r == GT = f ul ml (r:ur) mr ls rt

@@ -136,7 +136,7 @@ testUtilsForShortestPath = testCaseSteps "Test helper functions for shorted path
     vs1 = uv [1,3,6,2,9,7] 
     vs2 = uv [1,11,11,6,9,5,7]
   eassertEqual (intersection [vs1, vs2]) (uv [1,6,9,7])
-  eassertEqual (union [vs1, vs2]) (uv [5,11,11,1,3,6,2,9,7])
+  eassertEqual (union [vs1, vs2]) (uv [1,3,6,2,9,7,5,11,11])
   
 
 allTest :: TestTree
