@@ -2395,7 +2395,7 @@ mapFromONtoFN =
 
     , ( "forget"
       , [("1.1", "Remembering_information") -- "Remembering_information || Rememberging_to_do || Remembering_experience || Memory")
-        ,("1.3", "Cause_to_perceive")]) -- "(Cause_to_perceive) || (Activity_end)")])
+        ,("1.3", "Cause_to_perceive")]) -- "(Cause_to_perceive) || (Activity_finish)")])
 
     , ( "enhance"
       , [("1.1", "Improvement_or_decline")])
@@ -2634,5 +2634,129 @@ mapFromONtoFN =
       , [("1.1", "Personal_relationship")
         ,("1.2", "Sign")
         ,("1.3", "Origin")])
+
+    , ( "cross"
+      , [("1.1", "Path_shape")
+        ,("1.7", "Removing")])
+
+    , ( "authorize"
+      , [("1.1", "Deny_or_grant_permission")
+        ,("1.2", "Deny_or_grant_permission")])
+
+    , ( "assess"
+      , [("1.1", "Assessing")])
+
+    , ( "top"
+      , [("1.1", "Surpassing")
+        ,("1.2", "Occupy_rank")
+        ,("1.3", "Locative_relation")
+        ,("1.5", "Activity_finish")])
+
+    , ( "spark"
+      , [("1.1", "Cause_to_start")])
+
+    , ( "scramble"
+      , [("1.1", "Self_motion")])
+
+    , ( "interview"
+      , [("1.1", "Questioning")])   -- (Questioning)
+
+    , ( "hide"
+      , [("1.1", "Hiding_objects")])  -- Hiding_object || Eclipse
+
+    , ( "govern"
+      , [("1.1", "Leadership")
+        ,("1.2", "Control")])
+
+    , ( "flee"
+      , [("1.1", "Fleeing")])
+
+    , ( "drag"
+      , [("1.1", "Cause_motion")
+        ,("1.2", "Activity_ongoing")
+        ,("1.6", "Damaging")])
+
+    , ( "doubt"
+      , [("1.1", "Certainty")
+        ,("1.2", "Trust")])
+
+    , ( "donate"
+      , [("1.1", "Giving")])
+
+    , ( "connect"
+      , [("1.1", "Attaching")
+        ,("1.4", "Contacting")])
+
+    , ( "arise"
+      , [("1.1", "Coming_to_be")
+        ,("1.3", "Posture")])
+
+    , ( "wish"
+      , [("1.1", "Desiring")
+        ,("1.2", "Desiring")
+        ,("1.3", "Communication_manner")])  -- (Communication_manner)
+
+    , ( "welcome"
+      , [("1.1", "Respond_to_proposal")
+        ,("1.2", "Communication_manner")]) -- (Communicaiion_manner)
+
+    , ( "trim"
+      , [("1.2", "Cause_change_of_position_on_a_scale")])
+
+    , ( "stage"
+      , [("1.1", "Arranging")
+        ,("1.2", "Arranging")])
+
+    , ( "reveal"
+      , [("1.1", "Evidence")
+        ,("1.2", "Reveal_secret")])
+
+    , ( "reinforce"
+      , [("1.1", "Cause_change_of_strength")])
+
+    , ( "redeem"
+      , [("1.1", "Meet_specifications")  -- (Meet_specifications)
+        ,("1.2", "Exchange")])
+
+    , ( "print"
+      , [("1.1", "Text_creation")])
+
+    , ( "overcome"
+      , [("1.1", "Resolve_problem")])  -- Resolve_problem || Conquering || Beat_opponent
+
+    , ( "notify"
+      , [("1.1", "Telling")])
+
+    , ( "judge"
+      , [("1.1", "Legal_rulings")
+        ,("1.2", "Assessing")])
+
+    , ( "flow"
+      , [("1.1", "Fluidic_motion")
+        ,("1.2", "Abundance")
+        ,("1.4", "Causation")])
+
+    , ( "expose"
+      , [("1.1", "Change_accessibility")   -- (Change_accessibility)
+        ,("1.2", "Reveal_secret")])   -- (Revealing_secret) || (Change_accessibllity)
+
+    , ( "endorse"
+      , [("1.1", "Deny_or_grant_permission")
+        ,("1.2", "Attempt_suasion")])   -- (Attempt_suasion)
+
+    , ( "disappear"
+      , [("1.1", "Ceasing_to_be")])
+
+    , ( "direct"
+      , [("1.1", "Leadership")  -- (Leadership) || (Behind_the_scenes) || (Control)
+        ,("1.2", "Aiming")])
+
+    , ( "diminish"
+      , [("1.1", "Cause_change_of_position_on_a_scale")])
+
+    , ( "correct"
+      , [("1.1", "Resolve_problem")
+        ,("1.2", "Resolve_problem")])
+
 
     ]

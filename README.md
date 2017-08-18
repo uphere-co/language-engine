@@ -22,6 +22,18 @@ $ nix-shell
 $ runhaskell app/statistics.hs
 ```
 
+
+Role Mapping Utility
+--------------------
+To create mapping from N-th element (N is a number)
+```
+$ .cabal-sandbox/bin/role-mapping-utility tag N
+```
+To show role mapping until now
+```
+$ .cabal-sandbox/bin/role-mapping-utility show
+```
+
 -----
 
 [1] OntoNotes project homepage: http://ontonotes.github.io/

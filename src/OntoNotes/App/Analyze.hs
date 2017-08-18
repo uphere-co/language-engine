@@ -97,7 +97,9 @@ import           OntoNotes.App.Load
 import           OntoNotes.App.Util
 import           OntoNotes.App.WikiEL
 import           OntoNotes.Corpus.Load
+import           OntoNotes.Format
 import           OntoNotes.Mapping.FrameNet
+import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.SenseInventory
 
 getFormatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> [Text]
@@ -112,41 +114,8 @@ getFormatTimex' (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["------
 showFormatTimex' :: (SentItem,[TagPos (Maybe Text)]) -> IO ()
 showFormatTimex' (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex' (s,a)))
 
-
-chooseFrame :: [(Text,Text,Int,Text,Text,Text,Text)] -> Maybe (Text,Text,Int,Text,Text,Text,Text)
-chooseFrame [] = Nothing
-chooseFrame xs = Just (maximumBy (compare `on` (^._3)) xs)
-
 formatLemmaPOS :: Token -> String
 formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
-
-formatSense :: (Text,Text,Int,Text,Text,Text,Text) -> String
-formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) = 
-  printf "%2s.%-6s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s " sgrp sn num txt_def txt_frame txt_fecore txt_feperi
-
-
-formatSenses :: Bool  -- ^ doesShowOtherSense
-             -> [(Text,Text,Int,Text,Text,Text,Text)]
-             -> String
-formatSenses doesShowOtherSense lst
-  = let t = chooseFrame lst
-    in "Top frame: "
-       ++ printf " %-20s | %-40s      ------      %-30s\n"
-            (fromMaybe "" (t^?_Just._5))
-            (fromMaybe "" (t^?_Just._6))
-            (fromMaybe "" (t^?_Just._7))
-       ++ if doesShowOtherSense
-          then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense lst)
-          else ""
-
-formatNER :: [S.Sentence] -> [SentItem] -> [UIDCite EntityMentionUID (EL.EMInfo Text)] -> Box
-formatNER psents sentitems linked_mentions_resolved =
-  let toks = concatMap (map snd . sentToTokens) psents
-      tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
-      sents_tagged = map (addTag tags) sentitems
-      doc1 = formatTaggedSentences sents_tagged
-      doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
-  in hsep 10 left [doc1,doc2]
 
 formatNER' :: [[Maybe Token]] -> [SentItem] -> [UIDCite EntityMentionUID (EL.EMInfo Text)] -> Box
 formatNER' psents sentitems linked_mentions_resolved =
@@ -183,9 +152,7 @@ runParser pp emTagger txt = do
     Left _ -> return Nothing
     Right rsutime -> do
       let sentswithtmx = addSUTime sentitems rsutime
-      -- mapM_ formatResult sentswithtmx
       return (Just sentswithtmx)
-  -- let psents = getProtoSents pdoc
   let parsetrees = map (\x -> pure . decodeToPennTree =<< (x^.S.parseTree) ) psents
       sents = map (convertSentence pdoc) psents
       Right deps = mapM sentToDep psents
@@ -228,7 +195,49 @@ getSenses lma sensemap sensestat framedb ontomap = do
   return (s^.sense_group,s^.sense_n,num,txt_def,txt_frame,txt_fecore,txt_feperi)
 
 
+chooseFrame :: [(Text,Text,Int,Text,Text,Text,Text)] -> Maybe (Text,Text,Int,Text,Text,Text,Text)
+chooseFrame [] = Nothing
+chooseFrame xs = Just (maximumBy (compare `on` (^._3)) xs)
 
+
+formatSense :: (Text,Text,Int,Text,Text,Text,Text) -> String
+formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) = 
+  printf "%2s.%-6s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s " sgrp sn num txt_def txt_frame txt_fecore txt_feperi
+
+
+formatSenses :: Bool  -- ^ doesShowOtherSense
+             -> [((Text,Text), [(Text,Text)])]
+             -> [((Text,Text),[(ArgPattern Text,Int)])]
+             -> Text
+             -> [(Text,Text,Int,Text,Text,Text,Text)]
+             -> String
+formatSenses doesShowOtherSense rolemap subcats lma lst 
+  = let t = chooseFrame lst
+    in "Top frame: "
+       ++ printf " %-20s | %-40s      ------      %-30s\n"
+            (fromMaybe "" (t^?_Just._5))
+            (fromMaybe "" (t^?_Just._6))
+            (fromMaybe "" (t^?_Just._7))
+       ++ "--------------------------------------------------------------------------------------------------\n"            
+       ++ maybe "" (formatRoleMap . (^._2))
+            (do t1 <- t^?_Just._1
+                t2 <- t^?_Just._2
+                let sid = (lma, t1<>"."<>t2)
+                find (\rm -> rm^._1 == sid) rolemap)
+       ++ "\n--------------------------------------------------------------------------------------------------\n"       
+       ++ if doesShowOtherSense
+          then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense lst)
+          else ""
+
+
+
+formatNER psents sentitems linked_mentions_resolved =
+  let toks = concatMap (map snd . sentToTokens) psents
+      tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
+      sents_tagged = map (addTag tags) sentitems
+      doc1 = formatTaggedSentences sents_tagged
+      doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
+  in hsep 10 left [doc1,doc2]
 
 
 sentStructure :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
@@ -237,9 +246,11 @@ sentStructure :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
               -> FrameDB
               -> HashMap Text [(Text,Text)]
               -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
+              -> [((Text,Text), [(Text,Text)])]
+              -> [((Text,Text),[(ArgPattern Text,Int)])]
               -> Text
               -> IO ()
-sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
+sentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats txt = do
   (psents,sents,sentitems,_tokss,mptrs,deps,mtmx,linked_mentions_resolved) <- runParser pp emTagger txt
   putStrLn "\n\n\n\n\n\n\n\n================================================================================================="
   putStrLn "\n\n-- TimeTagger -----------------------------------------------------------------------------------"
@@ -267,10 +278,8 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
       forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
         putStrLn (printf "Verb: %-20s" lma)
         let senses = getSenses lma sensemap sensestat framedb ontomap
-        (putStrLn . formatSenses False) senses
+        (putStrLn . formatSenses False rolemap subcats lma) senses
         putStrLn "--------------------------------------------------------------------------------------------------"
-
-
 
 
 sentStructure' :: HashMap Text Inventory
@@ -337,25 +346,24 @@ sentStructure' sensemap sensestat framedb ontomap emTagger loaded = do
       -- let lmaposs = concatMap (filter (\t -> isVerb (t^.token_pos))) $ tokss
       --     lmas = map (^.token_lemma) lmaposs
 
-
-
 queryProcess :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> HashMap Text Inventory
              -> HashMap (Text,Text) Int
              -> FrameDB
              -> HashMap Text [(Text,Text)]
              -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
+             -> [((Text,Text), [(Text,Text)])]
+             -> [((Text,Text),[(ArgPattern Text,Int)])]
              -> IO ()
-queryProcess pp sensemap sensestat framedb ontomap emTagger =
+queryProcess pp sensemap sensestat framedb ontomap emTagger rolemap subcats =
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     let input = T.pack input'
         (command,rest) = T.splitAt 3 input
     case command of
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
-                  sentStructure pp sensemap sensestat framedb ontomap emTagger txt
-      ":v " ->    sentStructure pp sensemap sensestat framedb ontomap emTagger rest
-        -- getSentStructure pp sensemap sensestat framedb ontomap emTagger rest >>= mapM_ T.IO.putStrLn
+                  sentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats txt
+      ":v " ->    sentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats rest
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
@@ -367,9 +375,11 @@ getSentStructure :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
                  -> FrameDB
                  -> HashMap Text [(Text, Text)]
                  -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
+                 -> [((Text,Text), [(Text,Text)])]
+                 -> [((Text,Text),[(ArgPattern Text,Int)])]
                  -> Text
                  -> IO [Text]
-getSentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
+getSentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats txt = do
   (psents,sents,sentitems,_tokss,mptrs,deps,mtmx,linked_mentions_resolved) <- runParser pp emTagger txt
 
   let line1 = [ "================================================================================================="
@@ -400,7 +410,7 @@ getSentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
       subline2 <- forM (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
         let senses = getSenses lma sensemap sensestat framedb ontomap
         let ssubline1 = [ T.pack (printf "Verb: %-20s" lma)
-                        , T.pack $ (formatSenses False) senses
+                        , T.pack $ (formatSenses False rolemap subcats lma) senses
                         , "--------------------------------------------------------------------------------------------------" ]
         return ssubline1
       return (subline1, subline2)
@@ -415,7 +425,9 @@ getSentStructure pp sensemap sensestat framedb ontomap emTagger txt = do
   
 runAnalysis :: IO ()
 runAnalysis = do
-  let cfg = cfgG
+  -- let cfg = cfgG -- for the time being
+  subcats <- loadVerbSubcat
+  rolemap <- loadRoleMap
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
@@ -432,7 +444,8 @@ runAnalysis = do
                        . (constituency .~ True)
                        . (ner .~ True)
                   )
-    queryProcess pp sensemap sensestat framedb ontomap emTagger
+    queryProcess pp sensemap sensestat framedb ontomap emTagger rolemap subcats
+
 
 loadConfig = do
   let cfg = cfgG
@@ -444,9 +457,12 @@ loadConfig = do
   emTagger <- loadEMtagger reprFile [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]  
   return (sensemap,sensestat,framedb,ontomap,emTagger)
 
+
 getAnalysis input config pp = do
+  subcats <- loadVerbSubcat
+  rolemap <- loadRoleMap  
   let (sensemap,sensestat,framedb,ontomap,emTagger) = config
-  getSentStructure pp sensemap sensestat framedb ontomap emTagger input
+  getSentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats  input
     
 
 --
@@ -455,10 +471,7 @@ getAnalysis input config pp = do
 --
 --
 
-
--- loadWikiNER = do
-  -- companyfile <- T.IO.readFile listedCompanyFile
-
+{- 
 main1 :: IO ()
 main1 = do
   txt <- T.IO.readFile newsFileTxt
@@ -471,11 +484,8 @@ main1 = do
                        . (words2sentences .~ True)
                        . (postagger .~ True)
                        . (lemma .~ True)
-                       -- . (sutime .~ True)
-                       -- . (constituency .~ True)
                        . (ner .~ True)
                   )
-    -- queryProcess pp sensemap sensestat framedb ontomap
     let doc = Document txt (fromGregorian 2017 4 17)
     ann <- annotate pp doc
     rdoc <- protobufDoc ann
@@ -497,6 +507,7 @@ main1 = do
             doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
             doc = hsep 10 left [doc1,doc2]
         putStrLn (render doc)
+-}
 
 loadJVM = do
   pp <- prepare (def & (tokenizer .~ True)
