@@ -9,6 +9,7 @@ import           Data.Either                     (partitionEithers)
 import           Data.Function                   (on)
 import           Data.IntMap                     (IntMap)
 import           Data.List                       (minimumBy)
+import           Data.Maybe                      (listToMaybe,maybeToList)
 import           Data.Monoid
 import           Data.Text                       (Text)
 import qualified Data.Text               as T
@@ -24,41 +25,63 @@ import           NLP.Syntax.Util
 import           NLP.Syntax.Verb
 
 
-governorVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
-governorVP vp = case vp^.vp_words of
-                  []  -> Nothing
-                  z:_ -> parent (fst z)
+maximalProjectionVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+maximalProjectionVP vp = listToMaybe (vp^.vp_words) >>= parent . fst
 
 
-governorPhraseOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
-governorPhraseOfVP vp = parent =<< governorVP vp
+parentOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+parentOfVP vp = parent =<< maximalProjectionVP vp
 
- 
+
+headVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
+
+
+complementsOfVerb :: VerbProperty (BitreeZipperICP '[Lemma]) -> [BitreeZipperICP '[Lemma]]
+complementsOfVerb vp = do v <- maybeToList (headVP vp)
+                          siblingsBy next checkNPSBAR v 
+  where
+    tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
+    checkNPSBAR z = case tag z of
+                      Left NP -> True
+                      Left SBAR -> True
+                      Left _  -> False
+                      Right p -> case isNoun p of
+                                   Yes -> True
+                                   _   -> False
+
+
+    
+  
 identifySubject :: N.ClauseTag -> BitreeZipperICP '[Lemma] -> Maybe (BitreeZipperICP '[Lemma])
 identifySubject tag vp =
   case tag of
-    N.SINV -> findSiblings next (isChunkAs NP) vp
-    _      -> findSiblings prev (isChunkAs NP) vp
+    N.SINV -> firstSiblingBy next (isChunkAs NP) vp
+    _      -> firstSiblingBy prev (isChunkAs NP) vp
 
 
+-- | Constructing CP umbrella and all of its ingrediant.
+--
 constructCP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe CP
 constructCP vprop = do
-    vp <- governorVP vprop
-    tp' <- governorPhraseOfVP vprop
+    vp <- maximalProjectionVP vprop
+    tp' <- parentOfVP vprop
     tptag' <- N.convert <$> getchunk tp'
+    let verbp = VerbP vp vprop (complementsOfVerb vprop)
     case tptag' of
       N.CL s -> do
         cp' <- parent tp'
         cptag' <- N.convert <$> getchunk cp'
+        let subj = identifySubject s vp
         case cptag' of
           N.CL _ -> return $ CP (Just cp')
                                 (prev tp')
-                                (TP (Just tp') (identifySubject s vp) vp vprop)
+                                (TP (Just tp') subj verbp)
           N.RT   -> return $ CP (Just cp')
                                 Nothing
-                                (TP (Just tp') (identifySubject s vp) vp vprop)
-          _      -> return (CP Nothing Nothing (TP (Just tp') (identifySubject s vp) vp vprop))
-      _ -> return (CP Nothing Nothing (TP Nothing Nothing vp vprop))                      -- reduced relative clause
+                                (TP (Just tp') subj verbp)
+          _      -> return (CP Nothing Nothing (TP (Just tp') subj verbp))  -- somewhat problematic case?
+      _ -> return (CP Nothing Nothing (TP Nothing Nothing verbp))           -- reduced relative clause
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 

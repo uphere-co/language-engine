@@ -13,15 +13,15 @@ import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 
 
-type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
+type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
-type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
+type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 
 data Tense = Present | Past
            deriving (Show,Eq,Ord,Enum,Bounded)
 
-                    
+
 data Voice = Active | Passive
            deriving (Show,Eq,Ord,Enum,Bounded)
 
@@ -40,25 +40,45 @@ data VerbProperty w = VerbProperty { _vp_index  :: Int
                                    }
                     deriving (Show)
 
-makeLenses ''VerbProperty                           
+makeLenses ''VerbProperty
+
+-- | Projection of Verb Phrase following X-bar theory.
+--   The name VP is defined in NLP.Type.PennTreebankII, so I use VerbP.
+--
+data VerbP = VerbP { _vp_maximal_projection :: BitreeZipperICP '[Lemma]
+                   , _vp_verbProperty       :: VerbProperty (BitreeZipperICP '[Lemma])
+                   , _vp_complements        :: [BitreeZipperICP '[Lemma]]
+                   }
+
+makeLenses ''VerbP
 
 
-data TP = TP { _tp_dominator    :: Maybe (BitreeZipperICP '[Lemma])
-             , _tp_DP           :: Maybe (BitreeZipperICP '[Lemma])
-             , _tp_VP           :: BitreeZipperICP '[Lemma]
-             , _tp_verbProperty :: VerbProperty (BitreeZipperICP '[Lemma])
+-- | Projection of Tense Phrase following X-bar theory, which roughly
+--   corresponds to a sentence.
+--
+data TP = TP { _tp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
+             , _tp_DP                 :: Maybe (BitreeZipperICP '[Lemma])
+             , _tp_VP                 :: VerbP
              }
 
 makeLenses ''TP
 
-
-data CP = CP { _cp_dominator      :: Maybe (BitreeZipperICP '[Lemma])
-             , _cp_complementizer :: Maybe (BitreeZipperICP '[Lemma])
-             , _cp_TP             :: TP
+-- | Projection of Complementizer Phrase following X-bar theory
+--
+data CP = CP { _cp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
+             , _cp_complementizer     :: Maybe (BitreeZipperICP '[Lemma])
+             , _cp_TP                 :: TP
              }
 
 makeLenses ''CP
 
+
+
+---------------
+--           --
+-- Old types --
+--           --
+---------------
 
 data VerbArgs a = VerbArgs { _va_string :: [(POSTag,Text)]
                            , _va_arg0 :: Maybe a
@@ -66,7 +86,7 @@ data VerbArgs a = VerbArgs { _va_string :: [(POSTag,Text)]
                            }
               deriving Show
 
-makeLenses ''VerbArgs                       
+makeLenses ''VerbArgs
 
 
 
@@ -84,5 +104,3 @@ data STag = S_RT
           | S_PP Text
           | S_OTHER N.PhraseTag
           deriving Show
-
-

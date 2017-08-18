@@ -28,7 +28,7 @@ import           Test.Tasty
 
 
 -- | (Tense,Aspect,Voice,Maybe Text,Maybe Text) == (tense,aspect,voice,auxiliary,negation)
-ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24,ex25,ex26
+ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24,ex25,ex26,ex27
   :: (Text,Int,(Tense,Aspect,Voice,Maybe Text,Maybe Text),[(Int,(Lemma,Text))],PennTree,Dependency)
 ex1 = ( "He was fined $25,000."
       , 2
