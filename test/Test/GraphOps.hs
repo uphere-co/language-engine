@@ -39,10 +39,10 @@ testNeighborNodes = testCaseSteps "Get neighbor nodes in directed/undirected gra
     uForwardEdges  = neighbor (sortEdges From undirected)
     uBackwardEdges = neighbor (sortEdges To   undirected)
 
-  eassertEqual (dForwardEdges  1) (UV.fromList [(1,2),(1,3),(1,5),(1,6)])
-  eassertEqual (dBackwardEdges 1) (UV.fromList [(4,1),(9,1),(8,1),(10,1)])
-  eassertEqual (uBackwardEdges 4) (UV.fromList [(3,4),(2,4),(1,4)])
-  eassertEqual (uForwardEdges  4) (UV.fromList [(4,2),(4,1),(4,3)])
+  eassertEqual (dForwardEdges  1) (UV.fromList [2,3,5,6])
+  eassertEqual (dBackwardEdges 1) (UV.fromList [4,9,8,10])
+  eassertEqual (uBackwardEdges 4) (UV.fromList [3,2,1])
+  eassertEqual (uForwardEdges  4) (UV.fromList [2,1,3])
 
   eassertEqual (nodesForward directed 10 2) (UV.fromList [(2,2),(3,2),(5,2),(6,2),(11,2),(1,1),(8,1),(9,1),(10,0)])
   eassertEqual (nodesForward directed 10 3) (UV.fromList [(4,3),(7,3),(2,2),(3,2),(5,2),(6,2),(11,2),(1,1),(8,1),(9,1),(10,0)])

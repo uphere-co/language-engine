@@ -84,13 +84,14 @@ sortEdges To   edges = (To, UV.modify (sortBy orderingByTo)   edges)
   direction : defines ordering between edges. If it orders by from side of edges,
          `neighbor` returns edges starting from the input node.
 -}
-neighbor :: (UV.Unbox a, Ord a) => (Direction, UV.Vector (a,a)) -> a -> UV.Vector (a,a)
+neighbor :: (UV.Unbox a, Ord a) => (Direction, UV.Vector (a,a)) -> a -> UV.Vector a
 neighbor (direction,sorted) node = runST $ do
   let
     comp = edgeOrdering direction
+    destDirection = inverse direction
   mvec <- UV.unsafeThaw sorted
   (beg, end) <- binarySearchLRBy comp mvec (node,node)
-  return (UV.slice beg (end-beg) sorted)
+  return (UV.map (getNode destDirection) (UV.slice beg (end-beg) sorted))
 
 {-
 fn :: a -> UV.Vector (a,a)
@@ -99,23 +100,22 @@ It returns edges connedted to the input node of type `a`.
 Direction of the edge is determined by the `comp` argument of the `neighbor`
 -}
 
-accumReachable :: (UV.Unbox a, Ord a) => ((a,a)->a) -> UV.Vector (a,Dist) -> Dist -> (a -> UV.Vector (a,a)) -> (UV.Vector a, Dist) ->  UV.Vector (a,Dist)
-accumReachable fDestNode accum cutoff fn (frontiers,dist) | cutoff==dist = accum
-accumReachable fDestNode accum cutoff fn (frontiers,dist) = accumReachable fDestNode (UV.concat [ns, accum]) cutoff fn (nexts, dist+1)
+accumReachable :: (UV.Unbox a, Ord a) => UV.Vector (a,Dist) -> Dist -> (a -> UV.Vector a) -> (UV.Vector a, Dist) ->  UV.Vector (a,Dist)
+accumReachable accum cutoff fn (frontiers,dist) | cutoff==dist = accum
+accumReachable accum cutoff fn (frontiers,dist) = accumReachable (UV.concat [ns, accum]) cutoff fn (nexts, dist+1)
   where
-    f fn node = UV.map fDestNode (fn node) -- get nodes, instead of edges
-    reachable = UV.concatMap (f fn) frontiers -- edges connedted to the frontier nodes
+    reachable = UV.concatMap fn frontiers -- nodes one step away to the frontier nodes
     news = UV.filter (not . isIn (UV.map fst accum)) reachable -- `reachable` edges that are not already visited
     nexts = unique news -- remove duplicated edges in `news`
     ns = UV.map (\x -> (x, dist+1)) nexts -- new frontier nodes
 
 -- returns nodes of forward/backward distance up to `cutoff` starting from the input `node` in a directed graph `dEdges`
 nodesForward,nodesBackward :: (UV.Unbox a, Ord a) => UV.Vector (a,a) -> a -> Dist -> UV.Vector (a,Dist)
-nodesForward dEdges node cutoff  = accumReachable to accum cutoff dForwardEdges (UV.fromList [node],0)
+nodesForward dEdges node cutoff  = accumReachable accum cutoff dForwardEdges (UV.fromList [node],0)
   where
     accum = UV.fromList [(node,0)]
     dForwardEdges  = neighbor (sortEdges From dEdges)
-nodesBackward dEdges node cutoff = accumReachable from accum cutoff dBackwardEdges (UV.fromList [node],0)
+nodesBackward dEdges node cutoff = accumReachable accum cutoff dBackwardEdges (UV.fromList [node],0)
   where
     accum = UV.fromList [(node,0)]
     dBackwardEdges = neighbor (sortEdges To dEdges)
@@ -135,22 +135,20 @@ allPaths fn node cutoff = f 0 (V.singleton (UV.singleton node))
     f dist paths = f (dist+1) (V.concatMap (accumPaths fn) paths)
 -}
 
--- TODO:rename. It assumes forward direction.
-accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> UV.Vector a -> [UV.Vector a]
-accumPaths fn path = UV.foldl' f [] (UV.map snd (fn from))
+accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector a) -> UV.Vector a -> [UV.Vector a]
+accumPaths fn path = UV.foldl' f [] (fn (UV.last path))
   where
-    from = UV.last path
     f !accum !to = UV.snoc path to : accum
 
 -- all paths of length `cutoff`, starting from the input `node`
-allPathsOf :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> [UV.Vector a]
+allPathsOf :: (UV.Unbox a, Ord a) => (a -> UV.Vector a) -> a -> Dist -> [UV.Vector a]
 allPathsOf fn node cutoff = f 0 [UV.singleton node]
   where
     f dist paths | dist==cutoff = paths
     f dist paths = f (dist+1) (L.concatMap (accumPaths fn) paths)
 
 -- all paths of length UPTO `cutoff`, starting from the input `node`
-allPathsUpto :: (UV.Unbox a, Ord a) => (a -> UV.Vector (a,a)) -> a -> Dist -> [UV.Vector a]
+allPathsUpto :: (UV.Unbox a, Ord a) => (a -> UV.Vector a) -> a -> Dist -> [UV.Vector a]
 allPathsUpto fn node cutoff = f [] 0 [UV.singleton node]
   where
     f accum dist paths | dist==cutoff = accum ++ paths
