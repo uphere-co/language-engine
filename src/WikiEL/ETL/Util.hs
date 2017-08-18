@@ -3,6 +3,7 @@
 module WikiEL.ETL.Util 
   ( readBlocks
   , readBlocks2
+  , readlines
   ) where
 
 import           Data.Text                             (Text)
@@ -26,3 +27,10 @@ readBlocks2 handle fBlock state = do
   else do
     next <- fBlock state chunk
     readBlocks2 handle fBlock next
+
+readlines :: FilePath -> IO [Text]
+readlines filepath = do
+  content <- T.IO.readFile filepath
+  let
+    lines = T.lines content
+  return lines

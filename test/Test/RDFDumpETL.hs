@@ -22,13 +22,12 @@ import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Wikipedia
 import           WikiEL.Type.FileFormat
 import           WikiEL.Type.WordNet
-import           WikiEL.Type.RDF.Wikidata
-import           WikiEL.Type.RDF.Yago
 import           WikiEL.ETL.Parser
 import           WikiEL.ETL.LoadData
 import           WikiEL.ETL.RDF.Wikidata
 import           WikiEL.ETL.RDF.Yago
-import           WikiEL.ETL.LoadBinary
+import           WikiEL.ETL.RDF.Binary
+import           WikiEL.ETL.RDF
 --For testing
 import           Text.RawString.QQ
 
@@ -39,7 +38,6 @@ import           Control.Applicative                   ((<|>))
 -- 
 --import qualified Data.Vector.Generic.Mutable   as M
 --import qualified Data.Vector.Generic           as G
-import qualified Data.Either                     as E
 import qualified Data.Vector.Unboxed           as UV
 --import           Data.Vector.Generic.Mutable           (MVector)
 --import           Data.Vector.Generic                   (Vector)
@@ -160,7 +158,7 @@ testYagoBinaryStore = testCaseSteps "Binary (de)serialization for YAGO RDF tripl
     lines = ["<id_1kmo9y9_88c_1eoxwov>    <PowerVR>    rdf:type    <wikicat_Graphics_hardware_companies>   "
             ,"<id_13tyf46_88c_4gx1l8>\t<de/NEC_PowerVR_PCX>    rdf:type    <wikicat_Graphics_chips>    "
             ]
-    rows = E.rights (map (parseOnly parserRDFrowInTSV) lines)
+    rows = mapParsed readlineYAGO lines
     
   eassertEqual rows ((decodeYagoRDF . encode) rows)
           
