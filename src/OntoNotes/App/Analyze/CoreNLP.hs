@@ -18,7 +18,8 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Timex     as Tmx
 import qualified CoreNLP.Proto.HCoreNLPProto.ListTimex as T
 import qualified CoreNLP.Proto.HCoreNLPProto.TimexWithOffset as T
 import           CoreNLP.Simple                               (annotate,serializeTimex)
-import           CoreNLP.Simple.Convert                       (convertSentence,convertToken,decodeToPennTree
+import           CoreNLP.Simple.Convert                       (convertPsent,convertSentence,convertToken
+                                                              ,decodeToPennTree
                                                               ,sentToDep,sentToNER)
 import           CoreNLP.Simple.Type.Simplified               (NERSentence(..),Token,Dependency,SentenceIndex)
 import           CoreNLP.Simple.Util                          (getDoc,getProtoDoc,getTKTokens)
@@ -29,19 +30,20 @@ import           WikiEL.EntityLinking                         (EntityMentionUID,
                                                               ,entityLinking,entityLinkings,buildEntityMentions,entityUID)
 import qualified WikiEL.EntityLinking                  as EL
 --
-import           OntoNotes.App.Util                           (BeginEnd,TagPos,SentItem,SentIdx,addTag,addText,underlineText)
+import           OntoNotes.App.Util                           (BeginEnd,TagPos,SentItem,SentIdx
+                                                              ,addSUTime,addTag,addText,underlineText)
+import           OntoNotes.App.WikiEL                         (getWikiResolvedMentions)
 
-
-
+{- 
 addSUTime :: [SentItem] -> T.ListTimex
-          -> [(SentItem,[TagPos (Maybe Utf8)])]
+          -> [(SentItem,[TagPos (Maybe Text)])]
 addSUTime sents tmxs =
   let f t = ( fromIntegral (t^.T.characterOffsetBegin) + 1
             , fromIntegral (t^.T.characterOffsetEnd)
             , t^. T.timex . Tmx.value
             )
   in filter (not.null.(^._2)) $ map (addTag (map f (tmxs^..T.timexes.traverse))) sents
-
+-}
 
 getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd)]
 getSentenceOffsets psents =
@@ -60,7 +62,7 @@ runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
                 , [[Token]]
                 , [Maybe PennTree]
                 , [Dependency]
-                , Maybe [(SentItem, [TagPos (Maybe Utf8)])]
+                , Maybe [(SentItem, [TagPos (Maybe Text)])]
                 , [UIDCite EntityMentionUID (EL.EMInfo Text)]
                 )
 runParser pp emTagger txt = do
@@ -78,7 +80,8 @@ runParser pp emTagger txt = do
       let sentswithtmx = addSUTime sentitems rsutime
       return (Just sentswithtmx)
   let parsetrees = map (\x -> pure . decodeToPennTree =<< (x^.S.parseTree) ) psents
-      sents = map (convertSentence pdoc) psents
+      sentidxs = map (convertSentence pdoc) psents
+      sents = map (convertPsent) psents
       Right deps = mapM sentToDep psents
 
       tktokss = map (getTKTokens) psents
@@ -86,7 +89,8 @@ runParser pp emTagger txt = do
 
       unNER (NERSentence tokens) = tokens
       neTokens = concatMap (unNER . sentToNER) psents
-      linked_mentions_all = emTagger neTokens
+      loaded = (sents,sentidxs,sentitems,tokss,parsetrees,deps,mtmx)
+      linked_mentions_all = getWikiResolvedMentions loaded emTagger  -- emTagger neTokens
       linked_mentions_resolved
         = filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all
-  return (psents,sents,sentitems,tokss,parsetrees,deps,mtmx,linked_mentions_resolved)
+  return (psents,sentidxs,sentitems,tokss,parsetrees,deps,mtmx,linked_mentions_resolved)

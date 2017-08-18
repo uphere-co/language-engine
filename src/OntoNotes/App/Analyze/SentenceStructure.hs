@@ -27,8 +27,8 @@ import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
 import           NLP.Printer.PennTreebankII                (formatIndexTokensFromTree)
 import           NLP.Type.PennTreebankII                   (PennTree)
-import           NLP.Syntax.Clause                         (clauseStructure)
-import           NLP.Syntax.Format                         (formatClauseStructure,showClauseStructure)
+import           NLP.Syntax.Clause                         (clauseStructure,constructCP)
+import           NLP.Syntax.Format                         (formatCP,formatClauseStructure,showClauseStructure)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (vp_lemma)
 import qualified NLP.Type.NamedEntity              as N
@@ -114,10 +114,14 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats txt
       showClauseStructure lemmamap ptr
       putStrLn "================================================================================================="
 
-      forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
+      forM_ (vps^..traverse) $ \vp -> do
+        let mcp = constructCP vp
+        let lma = vp^.vp_lemma.to unLemma
         putStrLn (printf "Verb: %-20s" lma)
         let senses = getSenses lma sensemap sensestat framedb ontomap
         (putStrLn . formatSenses False rolemap subcats lma) senses
+        -- putStrLn "--------------------------------------------------------------------------------------------------"
+        putStrLn (maybe "cannot identify CP" formatCP mcp)
         putStrLn "--------------------------------------------------------------------------------------------------"
 
 

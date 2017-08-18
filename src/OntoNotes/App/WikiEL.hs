@@ -3,28 +3,34 @@
 
 module OntoNotes.App.WikiEL where
 
-import           Control.Lens                                 ((^.),_1,_2,_3)
+import           Control.Lens                                 ((^.),(^..),_1,_2,_3,_4)
 import           Control.Monad                                (guard)
 import           Data.Map                                     (Map)
 import qualified Data.Map                               as M
 import           Data.Text                                    (Text)
 import qualified Data.Text                              as T
+import qualified Data.Vector                            as V
 import           System.FilePath                              ((</>))
 import           Text.PrettyPrint.Boxes                       (text,top,vcat)
 import           Text.Printf                                  (printf)
 --
+import           CoreNLP.Simple.Convert                       (sentToNER')
 import           CoreNLP.Simple.Type.Simplified
+import           NLP.Type.NamedEntity                         (NamedEntityClass)
 import           WikiEL                                       (loadEMtagger)
 import           WikiEL.CoreNLP                               (parseNEROutputStr)
 import           WikiEL.WikiEntityTagger                      (loadWETagger,wikiAnnotator)
 import           WikiEL.WikiEntityClass                       (fromFiles,getNEClass)
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,parseStanfordNE,namedEntityAnnotator,resolvedUID)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
-import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),UIDCite(..),entityLinking,entityLinkings,buildEntityMentions,entityUID)
+import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),UIDCite(..)
+                                                              ,entityLinking,entityLinkings,buildEntityMentions,entityUID)
+import qualified WikiEL.EntityMentionPruning   as EMP
 import           WikiEL.ETL.LoadData
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
 import qualified NLP.Type.NamedEntity          as N
+import           NLP.Type.PennTreebankII                      (PennTree)
 import           PropBank.Util                                (isInsideR)
 import qualified WikiEL.WikiEntityClass        as WC
 import           WikiEL.Type.Wikidata
@@ -38,7 +44,7 @@ import qualified WikiEL.EntityLinking          as EL
 import qualified WikiEL.Type.FileFormat        as F
 import qualified WikiEL                        as WEL
 --
-import           OntoNotes.App.Util                   (TagPos(..),underlineText)
+import           OntoNotes.App.Util                   (SentItem,TagPos(..),underlineText)
 
 
 groupupheredir' = "/scratch/groups/uphere"
@@ -112,3 +118,32 @@ formatEMInfo em@(_,ws,tag) = printf "%-25s %-20s" (WEL.entityName em) (formatPre
 formatLinkedMention Cite {..} = printf "%3d: (-> %3d) %s " (EL._emuid _uid) (EL._emuid _ref) (formatEMInfo _info)
 formatLinkedMention Self {..} = printf "%3d:          %s " (EL._emuid _uid)                  (formatEMInfo _info)
 
+
+prepareNETokens all =
+  let mws = all ^.. traverse . sentenceWord
+      mns = all ^.. traverse . sentenceNER
+      unNER (NERSentence tokens) = tokens
+      neTokens = concat $ map (\(x,y) -> (unNER $ sentToNER' x y)) (zip mws mns)
+  in neTokens
+
+
+getWikiResolvedMentions :: ([Sentence], [Maybe SentenceIndex], [SentItem], [[Token]], [Maybe PennTree],
+                                   [Dependency], Maybe [(SentItem, [TagPos (Maybe Text)])])
+                        -> ([(Text,NamedEntityClass)] -> [EntityMention Text])
+                        -> [EntityMention Text]
+getWikiResolvedMentions loaded emTagger =
+  let tokens = loaded^._4
+      linked_mentions_all = getWikiAllMentions loaded emTagger
+      input_pos = V.fromList (map (^. token_pos) $ concat tokens)
+      linked_mentions_all_unfiltered = (EMP.filterEMbyPOS input_pos linked_mentions_all)
+  in filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all_unfiltered
+
+
+getWikiAllMentions :: ([Sentence], [Maybe SentenceIndex], [SentItem], [[Token]], [Maybe PennTree],
+                                   [Dependency], Maybe [(SentItem, [TagPos (Maybe Text)])])
+                   -> ([(Text,NamedEntityClass)] -> [EntityMention Text])
+                   -> [EntityMention Text]
+getWikiAllMentions loaded emTagger =
+  let neTokens = prepareNETokens (loaded^._1)
+      linked_mentions_all = emTagger neTokens
+  in linked_mentions_all
