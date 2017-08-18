@@ -40,6 +40,7 @@ classify "NUMBER"       = Just MiscNum    --Why HCoreNLP gives this? Ignore it f
 classify "ORDINAL"      = Just MiscNum    --Why HCoreNLP gives this? Ignore it for now.
 classify "DURATION"     = Just MiscNum    --Why HCoreNLP gives this? Ignore it for now.
 classify "O"            = Just Other
+classify "SET"          = Just Misc
 classify _              = Nothing
 
 parseStr :: Text -> Text -> NamedEntityFrag
