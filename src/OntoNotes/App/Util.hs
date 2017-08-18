@@ -17,6 +17,7 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
 import qualified CoreNLP.Proto.CoreNLPProtos.Timex     as Tmx
 import qualified CoreNLP.Proto.HCoreNLPProto.ListTimex as T
 import qualified CoreNLP.Proto.HCoreNLPProto.TimexWithOffset as T
+import           CoreNLP.Simple.Convert                           (cutf8)
 import           CoreNLP.Simple.Type.Simplified
 import           Text.Annotation.Type
 import           Text.Annotation.Util.Doc
@@ -57,13 +58,15 @@ getSentenceOffsets psents =
         e = fromJust $ fromJust $ lastOf  (S.token . traverse . TK.endChar) s
     in (fromIntegral b+1,fromIntegral e)
 
+
 addSUTime :: [SentItem] -> T.ListTimex
-          -> [(SentItem,[TagPos (Maybe Utf8)])]
+          -> [(SentItem,[TagPos (Maybe Text)])]
 addSUTime sents tmxs =
   let f t = ( fromIntegral (t^.T.characterOffsetBegin) + 1
             , fromIntegral (t^.T.characterOffsetEnd)
             , t^. T.timex . Tmx.value
             )
-  in filter (not.null.(^._2)) $ map (addTag (map f (tmxs^..T.timexes.traverse))) sents
+      cvt = map (\(x,xs) -> (x,map(\(i,j,z) -> (i,j,(fmap cutf8 z))) xs))
+  in (cvt . filter (not.null.(^._2)) . map (addTag (map f (tmxs^..T.timexes.traverse)))) sents
 
 

@@ -34,11 +34,11 @@ formatLemmaPOS :: Token -> String
 formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
 
 
-formatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> [Text]
+formatTimex :: (SentItem,[TagPos (Maybe Text)]) -> [Text]
 formatTimex (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["----------"] ++ [T.pack (show a)]
 
 
-showTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
+showTimex :: (SentItem,[TagPos (Maybe Text)]) -> IO ()
 showTimex (s,a) = T.IO.putStrLn (T.intercalate "\n" (formatTimex (s,a)))
 
 
