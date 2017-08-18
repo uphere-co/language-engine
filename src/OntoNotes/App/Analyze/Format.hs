@@ -2,8 +2,8 @@
 
 module OntoNotes.App.Analyze.Format where
 
-import           Control.Lens                            ((^.),(^?),_1,_2,_3,_5,_6,_7,_Just)
-import           Data.Function                           (on)
+import           Control.Lens                            ((^.),(^?),(%~),_1,_2,_3,_5,_6,_7,_Just)
+import           Data.Function                           ((&),on)
 import           Data.List                               (find,intercalate,intersperse,maximumBy)
 import           Data.Maybe                              (fromMaybe,mapMaybe)
 import           Data.Monoid                             ((<>))
@@ -20,7 +20,7 @@ import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,Ent
 --
 import           OntoNotes.App.Util                      (TagPos,SentItem,addTag,underlineText)
 import           OntoNotes.App.WikiEL                    (formatLinkedMention,formatTaggedSentences,linkedMentionToTagPOS)
-import           OntoNotes.Format                        (formatRoleMap)
+import           OntoNotes.Format                        (formatArgPatt,formatRoleMap)
 import           OntoNotes.Type.ArgTable
 
 
@@ -70,13 +70,21 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
             (fromMaybe "" (t^?_Just._5))
             (fromMaybe "" (t^?_Just._6))
             (fromMaybe "" (t^?_Just._7))
-       ++ "--------------------------------------------------------------------------------------------------\n"            
-       ++ maybe "" (formatRoleMap . (^._2))
+       ++ "--------------------------------------------------------------------------------------------------\n"                 -- ++ show subcats
+       ++ fromMaybe ""
             (do t1 <- t^?_Just._1
                 t2 <- t^?_Just._2
                 let sid = (lma, t1<>"."<>t2)
-                find (\rm -> rm^._1 == sid) rolemap)
-       ++ "\n--------------------------------------------------------------------------------------------------\n"       
+                rm <- find (\rm -> rm^._1 == sid) rolemap
+                let sid' = (lma<>"-v",t2)
+                    msubcat =find ((== sid') . (^._1)) subcats
+                let margpattstr = do
+                      subcat <- msubcat
+                      return $ intercalate "\n" $ flip map (Prelude.take 5 (subcat^._2)) $ \(patt,n) ->
+                                 printf "%s     #count: %5d" (formatArgPatt patt) (n :: Int)
+                return (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr)
+            )
+       ++ "\n--------------------------------------------------------------------------------------------------\n"
        ++ if doesShowOtherSense
           then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense lst)
           else ""
