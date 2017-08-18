@@ -287,9 +287,11 @@ sentStructure' :: HashMap Text Inventory
                -> FrameDB
                -> HashMap Text [(Text, Text)]
                -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
+               -> [((Text,Text), [(Text,Text)])]
+               -> [((Text,Text),[(ArgPattern Text,Int)])]
                -> ([Sentence], [Maybe SentenceIndex], [SentItem], [[Token]], [Maybe PennTree], [Dependency], Maybe [ (SentItem, [TagPos (Maybe Text)]) ] )
                -> IO ()
-sentStructure' sensemap sensestat framedb ontomap emTagger loaded = do
+sentStructure' sensemap sensestat framedb ontomap emTagger rolemap subcats loaded = do
   let (all,sents,sentitems,_tokss,mptrs,deps,mtmx) = loaded
   let psents = all ^.. traverse . sentenceLemma
       mtokens = all ^.. traverse . sentenceToken
@@ -328,7 +330,7 @@ sentStructure' sensemap sensestat framedb ontomap emTagger loaded = do
       forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
         putStrLn (printf "Verb: %-20s" lma)
         let senses = getSenses lma sensemap sensestat framedb ontomap
-        (putStrLn . formatSenses False) senses
+        (putStrLn . formatSenses False rolemap subcats lma) senses
         putStrLn "--------------------------------------------------------------------------------------------------"
 
 
