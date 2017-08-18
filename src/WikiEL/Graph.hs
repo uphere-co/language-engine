@@ -231,14 +231,29 @@ destOverlap left right = zip ml mr
     --rs = L.sortBy compLast (B.toList right)
 
 
-{-
-    f ls rs accum (ld,rd) = f restsLrests restsRrests accum (ld+1,rd+1)
+destOverlapUpto :: (UV.Unbox a, Ord a) => (a -> UV.Vector a) -> Dist -> a -> a -> [(UV.Vector a,UV.Vector a)]
+destOverlapUpto fn halfDist nodeL nodeR = f [] [] [UV.singleton nodeL] [UV.singleton nodeR] [] 0
+  where
+    -- ls, rs : remaining (unmatched) paths
+    -- lfs, rfs : frontier paths
+    f ls rs lfs rfs accum d | d == halfDist = accum
+    f ls rs lfs rfs accum d = f ls' rs' lfs' rfs' (matched ++ accum) (d+1)
       where
-        newPathsL = L.concatMap (accumPaths fn) ls
-        newPathsR = L.concatMap (accumPaths fn) rs
+        hash = UV.last
+        comp l r = compare (hash l) (hash r)
+        newPathsL = L.concatMap (accumPaths fn) lfs
+        newPathsR = L.concatMap (accumPaths fn) rfs
+        (ul1,ml1, ur1,mr1) = partition2 comp newPathsL newPathsR
+        (ul2,ml2, ur2,mr2) = partition2 comp (ls++lfs) newPathsR
+        (ul3,ml3, ur3,mr3) = partition2 comp newPathsL (rs++rfs)
+        matched = zip (L.concat [ml1,ml2,ml3]) (L.concat [mr1,mr2,mr3])
+        -- Note that
+        -- newPathsR == unionVecBy hash mr1 mr2 ++ intersectionVecBy hash ur1 ur2
+        -- newPathsL == unionVecBy hash ml1 ml3 ++ intersectionVecBy hash ul1 ul3
+        -- ls++lfs   == ul2 + ml2
+        -- rs++rfs   == ur3 + mr3
+        ls' = ls++lfs ++ unionVecBy hash ul1 ul3
+        rs' = rs++rfs ++ unionVecBy hash ur1 ur2
+        lfs' = intersectionVecBy hash ul1 ul3
+        rfs' = intersectionVecBy hash ur1 ur2
 
-        ff x y = (x, y)
-        (attachedL, newPathsLrests, rsRests) = attach ff newPathsL rs
-        (attachedR, newPathsRrests, lsRests) = attach ff newPathsR ls
-        (attachedNew, restsLrests, restsRrests) = attach ff restsL restsR
--}
