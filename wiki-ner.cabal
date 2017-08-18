@@ -27,6 +27,7 @@ library
                      , WikiEL.ETL.LoadData
                      , WikiEL.ETL.Parser
                      , WikiEL.ETL.RDF
+                     , WikiEL.ETL.LoadBinary
                      , WikiEL.ETL.Util
                      , WikiEL.EntityLinking
                      , WikiEL.EntityMentionPruning
@@ -56,6 +57,7 @@ library
                      , StandaloneDeriving
   build-depends:       base
                      , binary
+                     , bytestring
                      , tasty-hunit
                      , text
                      , primitive
@@ -90,6 +92,7 @@ test-suite test
                      , attoparsec
                      , xxhash
                      , binary
+                     , bytestring
                      , mwc-random
                      , raw-strings-qq
                      , tasty
