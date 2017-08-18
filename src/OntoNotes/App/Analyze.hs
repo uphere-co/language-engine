@@ -102,41 +102,36 @@ import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.SenseInventory
 
-
-
-formatLemmaPOS :: Token -> String
-formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
-
-
-getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd)]
-getSentenceOffsets psents =
-  zip ([1..] :: [Int]) $ flip map psents $ \s ->
-    let b = fromJust $ fromJust $ firstOf (S.token . traverse . TK.beginChar) s
-        e = fromJust $ fromJust $ lastOf  (S.token . traverse . TK.endChar) s
-    in (fromIntegral b+1,fromIntegral e)
-
-
-
-addSUTime :: [SentItem] -> T.ListTimex
-          -> [(SentItem,[TagPos (Maybe Utf8)])]
-addSUTime sents tmxs =
-  let f t = ( fromIntegral (t^.T.characterOffsetBegin) + 1
-            , fromIntegral (t^.T.characterOffsetEnd)
-            , t^. T.timex . Tmx.value
-            )
-  in filter (not.null.(^._2)) $ map (addTag (map f (tmxs^..T.timexes.traverse))) sents
-
 getFormatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> [Text]
 getFormatTimex (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["----------"] ++ [T.pack (show a)]
 
 showFormatTimex :: (SentItem,[TagPos (Maybe Utf8)]) -> IO ()
 showFormatTimex (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex (s,a)))
 
+getFormatTimex' :: (SentItem,[TagPos (Maybe Text)]) -> [Text]
+getFormatTimex' (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["----------"] ++ [T.pack (show a)]
+
+showFormatTimex' :: (SentItem,[TagPos (Maybe Text)]) -> IO ()
+showFormatTimex' (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex' (s,a)))
+
+formatLemmaPOS :: Token -> String
+formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
+
+formatNER' :: [[Maybe Token]] -> [SentItem] -> [UIDCite EntityMentionUID (EL.EMInfo Text)] -> Box
+formatNER' psents sentitems linked_mentions_resolved =
+  let toks = concatMap (map snd . sentToTokens') psents
+      tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
+      sents_tagged = map (addTag tags) sentitems
+      doc1 = formatTaggedSentences sents_tagged
+      doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
+  in hsep 10 left [doc1,doc2]
+
+
 runParser :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
           -> Text
           -> IO ( [S.Sentence]
-                , [Maybe Sentence]
+                , [Maybe SentenceIndex]
                 , [(SentIdx,BeginEnd,Text)]                  
                 , [[Token]]
                 , [Maybe PennTree]
@@ -245,7 +240,6 @@ formatNER psents sentitems linked_mentions_resolved =
   in hsep 10 left [doc1,doc2]
 
 
-
 sentStructure :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
               -> HashMap Text Inventory
               -> HashMap (Text,Text) Int
@@ -288,6 +282,71 @@ sentStructure pp sensemap sensestat framedb ontomap emTagger rolemap subcats txt
         putStrLn "--------------------------------------------------------------------------------------------------"
 
 
+sentStructure' :: HashMap Text Inventory
+               -> HashMap (Text, Text) Int
+               -> FrameDB
+               -> HashMap Text [(Text, Text)]
+               -> ([(Text,N.NamedEntityClass)] -> [EntityMention Text])
+               -> [((Text,Text), [(Text,Text)])]
+               -> [((Text,Text),[(ArgPattern Text,Int)])]
+               -> ([Sentence], [Maybe SentenceIndex], [SentItem], [[Token]], [Maybe PennTree], [Dependency], Maybe [ (SentItem, [TagPos (Maybe Text)]) ] )
+               -> IO ()
+sentStructure' sensemap sensestat framedb ontomap emTagger rolemap subcats loaded = do
+  let (all,sents,sentitems,_tokss,mptrs,deps,mtmx) = loaded
+  let psents = all ^.. traverse . sentenceLemma
+      mtokens = all ^.. traverse . sentenceToken
+      mws = all ^.. traverse . sentenceWord
+      mns = all ^.. traverse . sentenceNER
+  let unNER (NERSentence tokens) = tokens
+      neTokens = concat $ map (\(x,y) -> (unNER $ sentToNER' x y)) (zip mws mns) 
+      linked_mentions_all = emTagger neTokens
+      linked_mentions_resolved
+        = filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all
+
+
+  putStrLn "\n\n\n\n\n\n\n\n================================================================================================="
+  putStrLn "\n\n-- TimeTagger -----------------------------------------------------------------------------------"
+  case mtmx of
+    Nothing -> putStrLn "Time annotation not successful!"
+    Just sentswithtmx -> mapM_ showFormatTimex' sentswithtmx
+  putStrLn "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
+  putStrLn (render (formatNER' mtokens sentitems linked_mentions_resolved))
+  putStrLn "\n\n--------------------------------------------------------------------------------------------------"
+  putStrLn "-- Sentence analysis -----------------------------------------------------------------------------"
+  putStrLn "--------------------------------------------------------------------------------------------------"
+
+  flip mapM_ (zip5 ([0..] :: [Int]) psents sents mptrs deps) $ \(i,psent,_sent,mptr,_dep) -> do
+    flip mapM_ mptr $ \ptr -> do
+      let lemmamap = mkLemmaMap' psent
+          vps = verbPropertyFromPennTree lemmamap ptr
+
+      putStrLn (printf "\n\n-- Sentence %3d ----------------------------------------------------------------------------------" i)
+      T.IO.putStrLn (formatIndexTokensFromTree 0 ptr)
+      
+      putStrLn "--------------------------------------------------------------------------------------------------"
+      showClauseStructure lemmamap ptr
+      putStrLn "================================================================================================="
+
+      forM_ (vps^..traverse.vp_lemma.to unLemma) $ \lma -> do
+        putStrLn (printf "Verb: %-20s" lma)
+        let senses = getSenses lma sensemap sensestat framedb ontomap
+        (putStrLn . formatSenses False rolemap subcats lma) senses
+        putStrLn "--------------------------------------------------------------------------------------------------"
+
+
+
+
+
+
+-- -- abandoned code to simplify the resultant text.
+      -- let tkns = zip [0..] (getTKTokens psent)
+      -- tkmap = IM.fromList (mapMaybe (\tk -> (tk^._1,) <$> tk^._2.TK.word.to (fmap cutf8)) tkns)
+      -- itr = mkAnnotatable (mkPennTreeIdx ptr)
+      -- iltr = lemmatize lmap itr
+      -- idltr = depLevelTree dep iltr
+      -- vtree = verbTree vps idltr
+      -- let lmaposs = concatMap (filter (\t -> isVerb (t^.token_pos))) $ tokss
+      --     lmas = map (^.token_lemma) lmaposs
 
 queryProcess :: J ('Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> HashMap Text Inventory
