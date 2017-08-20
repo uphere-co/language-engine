@@ -80,7 +80,6 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
                 t2 <- t^?_Just._2
                 let sid = (lma,V, t1<>"."<>t2)
                 rm <- find (\rm -> rm^._1 == sid) rolemap
-                -- let sid' = (lma<>"-v",t2)
                 let msubcat =find ((== sid) . (^._1)) subcats
                 let margpattstr = do
                       subcat <- msubcat

@@ -75,25 +75,29 @@ toMatchResult xs     = MergeMatch xs
 matchVerbPropertyWithRelation :: [VerbProperty (BitreeZipperICP '[Lemma])]
                               -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
                               -> MatchedInstance
-                              -> Maybe (VerbProperty (BitreeZipperICP '[Lemma]),Maybe (VerbArgs (Either (Range,STag) (Int,POSTag))))
+                              -> Maybe (VerbProperty (BitreeZipperICP '[Lemma])
+                                       ,Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag))))
 matchVerbPropertyWithRelation verbprops clausetr minst = do
   relidx <- findRelNode (minst^.mi_arguments)
   vp <- find (\vp->vp^.vp_index==relidx) verbprops
-  let mva = getVerbArgs clausetr vp
-  return (vp,mva)
+  let mpa = findPAWS clausetr vp
+  return (vp,mpa)
 
+
+{-
 
 formatMatchedVerb :: MatchedInstance
-                  -> Maybe (VerbProperty (BitreeZipperICP '[Lemma]), Maybe (VerbArgs (Either (Range,STag) (Int,POSTag))))
+                  -> Maybe (VerbProperty (BitreeZipperICP '[Lemma])
+                           ,Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag))))
                   -> String     
-formatMatchedVerb minst mvpmva =                  
+formatMatchedVerb minst mvpmpa =                  
   let inst = minst^.mi_instance
       args = filter (\a->a^.ma_argument.arg_label /= Relation) (minst^.mi_arguments)
       header_str = "*************\n"
                    ++ T.unpack (formatRoleSetID (inst^.inst_lemma_roleset_id))
       content_str
-        = flip (maybe "unmatched!\n") mvpmva $ \(_vp,mva) ->
-            flip (maybe "argument unmatched!\n") mva $ \va -> 
+        = flip (maybe "unmatched!\n") mvpmpa $ \(_vp,mpa) ->
+            flip (maybe "argument unmatched!\n") mpa $ \pa -> 
               let vargs = maybeToList (va^.va_arg0) ++ va^.va_args
               in "relation matched\n" ++
                     (intercalate "\n" . flip map args $ \arg -> 
@@ -106,4 +110,4 @@ formatMatchedVerb minst mvpmva =
   in header_str ++ "\n" ++ content_str
 
 
-
+-}
