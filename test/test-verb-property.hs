@@ -16,6 +16,8 @@ import qualified Data.Text.IO               as T.IO
 --
 import           CoreNLP.Simple.Type.Simplified
 --
+import           Data.Bitree                       (getRoot)
+import           Data.BitreeZipper                 (current)
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Format
 import           NLP.Syntax.Type
@@ -303,7 +305,10 @@ unitTestsVerbProperty :: TestTree
 unitTestsVerbProperty =
   testGroup "verb property" . flip map testcases $ \c ->
     testCase (T.unpack (c^._1) ++ show (c^._3)) $
-      (checkVP c == True) @? (intercalate "\n" ((mkVPS (c^._4) (c^._5))^..traverse.to formatVerbProperty)  ++ "\n" ++ T.unpack (prettyPrint 0 (c^._5)))
+      (checkVP c == True) @? (intercalate "\n" ((mkVPS (c^._4) (c^._5))^..traverse.to (formatVerbProperty fmtfunc))  ++ "\n" ++ T.unpack (prettyPrint 0 (c^._5)))
+
+
+fmtfunc = either (const "") (tokenWord.snd) . getRoot . current
 
 
 unitTests :: TestTree
@@ -319,4 +324,4 @@ mainShow = do
   flip mapM_ testcases $ \c -> do
     putStrLn "--------------------------------------------------------------------------"
     T.IO.putStrLn (c^._1)
-    mapM_ (putStrLn.formatVerbProperty) (mkVPS (c^._4) (c^._5))
+    mapM_ (putStrLn.formatVerbProperty fmtfunc) (mkVPS (c^._4) (c^._5))
