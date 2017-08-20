@@ -21,14 +21,17 @@ import           NLP.Syntax.Format
 import           NLP.Type.PennTreebankII
 
 
-test1,test2,test3,test4,test5 :: (Text,[(Int,Text)],PennTree)
+
+
+test1, test6 :: (Text,[(Int,(Text,Text))],PennTree)
 test1 =
-  ( "The man, it seem, have a lichtenstein corporation, license in Libya and sheltered in the Bahamas."
-   , [(0,"the"),(1,"man"),(2,","),(3,"it"),(4,"seem"),(5,","),(6,"have"),(7,"a"),(8,"lichtenstein"),(9,"corporation"),(10,","),(11,"license"),(12,"in"),(13,"Libya"),(14,"and"),(15,"sheltered"),(16,"in"),(17,"the"),(18,"Bahamas"),(19,".")]    
+  ( "The man, it seems, have a lichtenstein corporation, license in Libya and sheltered in the Bahamas."
+   , [(0,("the","The")),(1,("man","man")),(2,(",",",")),(3,("it","it")),(4,("seem","seems")),(5,(",",",")),(6,("have","have")),(7,("a","a")),(8,("lichtenstein","lichtenstein")),(9,("corporation","corporation")),(10,(",",",")),(11,("license","licensed")),(12,("in","in")),(13,("Libya","Libya")),(14,("and","and")),(15,("sheltered","sheltered")),(16,("in","in")),(17,("the","the")),(18,("Bahamas","Bahamas")),(19,(".","."))]    
   , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","The"),PL ("NN","man")],PN "PRN" [PL (",",","),PN "S" [PN "NP" [PL ("PRP","it")],PN "VP" [PL ("VBZ","seems")]],PL (",",",")],PN "VP" [PL ("VBZ","has"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("NN","Lichtenstein"),PL ("NN","corporation")],PL (",",","),PN "VP" [PL ("VBN","licensed"),PN "PP" [PL ("IN","in"),PN "NP" [PN "NP" [PL ("NNP","Libya")],PL ("CC","and"),PN "NP" [PL ("JJ","sheltered")]]],PN "PP" [PL ("IN","in"),PN "NP" [PL ("DT","the"),PL ("NNPS","Bahamas")]]]]],PL (".",".")]]
   )
 
 
+test2,test3,test4,test5 :: (Text,[(Int,Text)],PennTree)
 test2 =
   ( "President Donald Trump said he's actively considering a breakup of giant Wall Street banks, giving a push to efforts to revive a Depression-era law separating consumer and investment banking."
   , [(0,"President"),(1,"Donald"),(2,"Trump"),(3,"say"),(4,"he"),(5,"be"),(6,"actively"),(7,"consider"),(8,"a"),(9,"breakup"),(10,"of"),(11,"giant"),(12,"Wall"),(13,"Street"),(14,"bank"),(15,","),(16,"give"),(17,"a"),(18,"push"),(19,"to"),(20,"effort"),(21,"to"),(22,"revive"),(23,"a"),(24,"depression-era"),(25,"law"),(26,"separate"),(27,"consumer"),(28,"and"),(29,"investment"),(30,"banking"),(31,".")]
@@ -59,14 +62,24 @@ test5 =
 
 
 
-process :: (Text,[(Int,Text)],PennTree) -> IO ()
+
+test6 =
+  ( "The product enables people to create a new kinds of arts, including electronic music."
+  , [(0,("the","The")),(1,("product","product")),(2,("enable","enables")),(3,("people","people")),(4,("to","to")),(5,("create","create")),(6,("a","a")),(7,("new","new")),(8,("kind","kinds")),(9,("of","of")),(10,("art","arts")),(11,(",",",")),(12,("include","including")),(13,("electronic","electronic")),(14,("music","music")),(15,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","The"),PL ("NN","product")],PN "VP" [PL ("VBZ","enables"),PN "S" [PN "NP" [PL ("NNS","people")],PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","create"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("JJ","new"),PL ("NNS","kinds")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("NNS","arts")]],PL (",",","),PN "PP" [PL ("VBG","including"),PN "NP" [PL ("JJ","electronic"),PL ("NN","music")]]]]]]],PL (".",".")]]
+  )
+
+
+
+
+process :: (Text,[(Int,(Text,Text))],PennTree) -> IO ()
 process (txt,lma,pt) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
   T.IO.putStrLn txt 
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
   T.IO.putStrLn  . T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList $ pt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
-  let lmap1 = IM.fromList (map (_2 %~ Lemma) lma)
+  let lmap1 = IM.fromList (map (_2 %~ (\x -> Lemma (x^._1)))  lma)
   showClauseStructure lmap1 pt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"  
   T.IO.putStrLn $ prettyPrint 0 pt
@@ -75,6 +88,6 @@ process (txt,lma,pt) = do
 
 main :: IO ()
 main =
-  mapM_ process [ test1, test2, test3, test4, test5 ]
+  mapM_ process [ test1, test6 ]
 
 
