@@ -41,12 +41,20 @@ formatVerbProperty vp = printf "%3d %-15s : %-35s  aux: %-7s neg: %-5s | %s"
                           (show (vp^..vp_words.traverse._2._1))
 
 
-formatVerbArgs :: VerbArgs (Either (Range,STag) (Int,POSTag)) -> String
-formatVerbArgs va = printf "%10s %-20s %s"
-                      (maybe "" fmtArg (va^.va_arg0))
-                      (T.intercalate " " (map (^._2) (va^.va_string)))
-                      ((intercalate " " . map (printf "%7s" . fmtArg)) (va^.va_args))
+formatPAWS :: PredArgWorkspace (Either (Range,STag) (Int,POSTag)) -> String
+formatPAWS pa = printf "      subject       : %s\n\
+                       \      arg candidates: %s\n\
+                       \      complements   : %s"
+                  -- (pa^.pa_CP.cp_TP.tp_VP.vp_verbProperty.to formatVerbProperty)
+                  (maybe "" (T.intercalate " " . gettoken) (pa^.pa_CP.cp_TP.tp_DP))                
+                   -- (maybe "" fmtArg (va^.va_arg0))
+                   -- (map (^._2) (va^.va_string)))
+                  ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
+                  ((intercalate " | " . map (T.unpack . T.intercalate " ". gettoken)) (pa^.pa_CP.cp_TP.tp_VP.vp_complements))
+                  
   where
+    gettoken = map (tokenWord.snd) . toList . current
+    
     fmtArg a = case a of
                  Right (_  ,p)           -> show p
                  Left  (_  ,(S_RT))      -> "ROOT"
@@ -82,7 +90,8 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
         formatposchunk (Left c) = show c
         formatposchunk (Right p) = "(" ++ show p ++ ")"
 
-formatClauseStructure :: [VerbProperty a]
+
+formatClauseStructure :: [VerbProperty (BitreeZipperICP '[Lemma])]
                       -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
                       -> [Text]
 formatClauseStructure vps clausetr =
@@ -96,7 +105,7 @@ formatClauseStructure vps clausetr =
               g (Left x)      = T.pack (show x)
               g (Right x)     = T.pack (show x)
       rngs = clauseRanges clausetr
-      xs = flip map vps $ \vp -> T.pack $ printf "%-50s | Clause %7s:  %s" (formatVerbProperty vp) (maybe "" show (clauseForVerb rngs vp)) (maybe "" formatVerbArgs (getVerbArgs clausetr vp))
+      xs = flip map vps $ \vp -> T.pack $ printf "%-50s | Clause %7s:\n%s" (formatVerbProperty vp) (maybe "" show (clauseForVerb rngs vp)) (maybe "" formatPAWS (findPAWS clausetr vp))
   in [formatBitree id tr'] ++ xs
 
 

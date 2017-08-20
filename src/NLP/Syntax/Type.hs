@@ -79,6 +79,23 @@ data CP = CP { _cp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
 makeLenses ''CP
 
 
+-- | workspace for predicate argument 
+--
+data PredArgWorkspace a = PAWS { _pa_CP :: CP
+                               , _pa_candidate_args :: [a]
+                               } 
+--                             deriving Show
+
+
+makeLenses ''PredArgWorkspace
+
+{-                         -- _va_string :: [(POSTag,Text)]
+                           , 
+                           -- , _va_arg0 :: Maybe a
+                           -- , _va_args :: [a]
+                           -}
+
+
 
 ---------------
 --           --
@@ -86,13 +103,6 @@ makeLenses ''CP
 --           --
 ---------------
 
-data VerbArgs a = VerbArgs { _va_string :: [(POSTag,Text)]
-                           , _va_arg0 :: Maybe a
-                           , _va_args :: [a]
-                           }
-              deriving Show
-
-makeLenses ''VerbArgs
 
 
 

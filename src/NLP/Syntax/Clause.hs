@@ -193,17 +193,17 @@ clauseForVerb allrngs vp = case rngs of
         rngs = filter (\rng -> getAll (mconcat (map (\i -> All (i `isIn` rng)) (vp^..vp_words.traverse._2._1)))) allrngs
 
 
-verbArgs :: BitreeZipper (Range,(STag,Int))
-                         (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-         -> VerbArgs (Either (Range,STag) (Int,POSTag))
-verbArgs z = let (zfirst,str) = go (z,[]) z
-             in VerbArgs { _va_string = str
-                         , _va_arg0 = extractArg <$> prev zfirst
-                         , _va_args = case child1 z of
-                                        Nothing -> []
-                                        Just z' ->
-                                          map extractArg (z':iterateMaybe next z')
-                         }
+--               -> VerbProperty (BitreeZipperICP '[Lemma])
+
+predicateArgWS :: CP 
+               -> BitreeZipper (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+               -> PredArgWorkspace (Either (Range,STag) (Int,POSTag))
+predicateArgWS cp z =
+  PAWS { _pa_CP = cp
+       , _pa_candidate_args = case child1 z of
+                                Nothing -> []
+                                Just z' -> map extractArg (z':iterateMaybe next z')
+       }
   where extractArg x = case getRoot (current x) of
                          Left (rng,(stag,_))         -> Left  (rng,stag)
                          Right (Left (rng,(stag,_))) -> Left  (rng,stag)
@@ -213,7 +213,15 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
           case f x of
             Nothing -> []
             Just x' -> x': iterateMaybe f x'
-        go (z0,acc) y = case getRoot (current y) of
+
+
+findPAWS :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+         -> VerbProperty (BitreeZipperICP '[Lemma])
+         -> Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag)))
+findPAWS tr vp = do cp <- constructCP vp
+                    predicateArgWS cp <$> findVerb (vp^.vp_index) tr
+            
+{-        go (z0,acc) y = case getRoot (current y) of
                           Left (_,(S_VP xs,_)) ->
                             let acc' = map snd xs ++ acc 
                             in case parent y of
@@ -227,10 +235,7 @@ verbArgs z = let (zfirst,str) = go (z,[]) z
                           _ -> (z0,acc)
 
 
-getVerbArgs :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-            -> VerbProperty a
-            -> Maybe (VerbArgs (Either (Range,STag) (Int,POSTag)))
-getVerbArgs tr vp = verbArgs <$> findVerb (vp^.vp_index) tr
+ -}
 
 
 cutOutLevel0 :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
