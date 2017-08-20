@@ -3,6 +3,7 @@
 , HCoreNLP           ? <HCoreNLP>
 , HFrameNet          ? <HFrameNet>
 , HWordNet           ? <HWordNet>
+, lexicon            ? <lexicon>
 , nlp-types          ? <nlp-types>
 , PropBank           ? <PropBank>
 , syntactic-analysis ? <syntactic-analysis>
@@ -29,13 +30,14 @@ let
       "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
       "HFrameNet"      = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HFrameNet)) {};
       "HWordNet"       = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HWordNet)) {};
-      "wiki-ner"  = self.callPackage (import wiki-ner) {};
-    
+      "lexicon"        = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "dist") lexicon)) {};
       "nlp-types" = self.callPackage (import nlp-types) {};
       "PropBank" = self.callPackage (import PropBank) {};
       "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
       "textview" = self.callPackage (import textview) {};      
       "VerbNet" = self.callPackage (import VerbNet) {};
+      "wiki-ner"  = self.callPackage (import wiki-ner) {};
+      
     };
   newHaskellPackages = haskellPackages.override {
     overrides = self: super: hsconfig self super // config2 self super;
@@ -69,6 +71,7 @@ let
             p.HCoreNLP-Proto
             p.HFrameNet
             p.HWordNet
+            p.lexicon
             p.nlp-types
             p.syntactic-analysis
             
