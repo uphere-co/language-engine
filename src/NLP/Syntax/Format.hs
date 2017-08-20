@@ -110,7 +110,7 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
 
 formatClauseStructure :: [VerbProperty (BitreeZipperICP '[Lemma])]
                       -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-                      -> [Text]
+                      -> Text
 formatClauseStructure vps clausetr =
   let tr' = bimap (\(_rng,x)->f x) g (cutOutLevel0 clausetr)
         where f (S_CL c,l)    = T.pack (show c) <> ":" <> T.pack (show l)
@@ -121,14 +121,19 @@ formatClauseStructure vps clausetr =
               f (S_RT  ,l)    = "ROOT" <> ":" <> T.pack (show l)
               g (Left x)      = T.pack (show x)
               g (Right x)     = T.pack (show x)
-      rngs = clauseRanges clausetr
+
+  in formatBitree id tr'
+
+formatVPwithPAWS :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+                 -> VerbProperty (BitreeZipperICP '[Lemma])
+                 -> Text
+formatVPwithPAWS clausetr vp =
+  let rngs = clauseRanges clausetr
       fmt = either (const "") (tokenWord.snd) . getRoot . current
-      xs = flip map vps $ \vp ->
-              T.pack $ printf "%7s:%-50s\n%s\n"
-                         (maybe "" show (clauseForVerb rngs vp))
-                         (formatVerbProperty fmt vp)
-                         (maybe "" formatPAWS (findPAWS clausetr vp))
-  in [formatBitree id tr'] ++ xs
+  in T.pack $ printf "%7s:%-50s\n%s\n"
+                (maybe "" show (clauseForVerb rngs vp))
+                (formatVerbProperty fmt vp)
+                (maybe "" formatPAWS (findPAWS clausetr vp))
 
 
 showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
@@ -136,7 +141,8 @@ showClauseStructure lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
   
-      x:xs = formatClauseStructure vps clausetr
+      x = formatClauseStructure vps clausetr
+      xs = map (formatVPwithPAWS clausetr) vps
   T.IO.putStrLn x
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
 
