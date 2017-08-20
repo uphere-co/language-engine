@@ -19,6 +19,7 @@ library
   exposed-modules:     Lexicon
                        Lexicon.Mapping.OntoNotesFrameNet
                        Lexicon.Mapping.Type
+                       Lexicon.Query
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10,
