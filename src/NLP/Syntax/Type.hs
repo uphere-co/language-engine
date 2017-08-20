@@ -23,7 +23,7 @@ data Tense = Present | Past
 
 
 data Voice = Active | Passive
-           deriving (Show,Eq,Ord,Enum,Bounded)
+           deriving (Show,Eq,Ord,Enum,Bounded,Read)
 
 
 data Aspect = Simple | Progressive | Perfect | PerfectProgressive
