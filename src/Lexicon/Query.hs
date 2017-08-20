@@ -40,27 +40,28 @@ parseWithNullCheck f w = if w == "null" then Nothing else Just (f w)
 
 parseRolePattInst
   :: (Read p) =>
-     [Text] -> (Text,Text,Maybe p,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Int)
-parseRolePattInst ws@[lma,sense,mvoice,marg0,marg1,marg2,marg3,marg4,count] =
-  ( lma ,sense
-  , parseWithNullCheck (read . T.unpack) mvoice
-  , parseWithNullCheck id marg0
-  , parseWithNullCheck id marg1
-  , parseWithNullCheck id marg2
-  , parseWithNullCheck id marg3
-  , parseWithNullCheck id marg4
-  , either (error ("error: " ++ show ws)) fst (decimal count)
-  )
-
+     [Text] -> (SenseID,Maybe p,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Int)
+parseRolePattInst ws@[lma',sense',mvoice,marg0,marg1,marg2,marg3,marg4,count] =
+    ( sid
+    , parseWithNullCheck (read . T.unpack) mvoice
+    , parseWithNullCheck id marg0
+    , parseWithNullCheck id marg1
+    , parseWithNullCheck id marg2
+    , parseWithNullCheck id marg3
+    , parseWithNullCheck id marg4
+    , either (error ("error: " ++ show ws)) fst (decimal count)
+    )
+  where lma = T.intercalate "-" . init . T.splitOn "-" $ lma'
+        sid = convertONIDtoSenseID lma sense'
 
 
 
 loadRolePattInsts :: (Read v,Hashable v) => FilePath -> IO [RolePattInstance v]
 loadRolePattInsts fp = do
   txt <- T.IO.readFile fp
-  let getLemmaSense x = (x^._1,V,x^._2)
-      getArgTable x = ArgPattern (x^._3) (x^._4) (x^._5) (x^._6) (x^._7) (x^._8)
-  return . map (\xs  -> (getLemmaSense (head xs),map (\x->(getArgTable x,x^._9)) xs))
+  let getLemmaSense x = x^._1
+      getArgTable x = ArgPattern (x^._2) (x^._3) (x^._4) (x^._5) (x^._6) (x^._7)
+  return . map (\xs  -> (getLemmaSense (head xs),map (\x->(getArgTable x,x^._8)) xs))
          . groupBy ((==) `on` getLemmaSense)
          . map parseRolePattInst
          . map T.words
