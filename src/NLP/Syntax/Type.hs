@@ -23,7 +23,9 @@ data Tense = Present | Past
 
 
 data Voice = Active | Passive
-           deriving (Show,Eq,Ord,Enum,Bounded,Read)
+           deriving (Show,Eq,Ord,Enum,Bounded,Read,Generic)
+
+instance Hashable Voice
 
 
 data Aspect = Simple | Progressive | Perfect | PerfectProgressive
