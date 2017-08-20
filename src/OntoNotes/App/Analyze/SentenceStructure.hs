@@ -153,9 +153,6 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
                                         ssubline1 = [ formatVPwithPAWS clausetr vp
                                                     , T.pack (printf "Verb: %-20s" lma)
                                                     , T.pack $ (formatSenses False rolemap subcats lma) senses
-                                                    -- , "--------------------------------------------------------------------------------------------------"
-                                                    -- , T.pack $ (maybe "cannot identify CP" formatCP mcp)
-                                                    -- , "--------------------------------------------------------------------------------------------------"
                                                     ]
                                     in ssubline1
                    in (subline1, subline2)

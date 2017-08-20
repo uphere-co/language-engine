@@ -10,7 +10,7 @@ import           Data.Maybe                              (fromMaybe,mapMaybe)
 import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
 import qualified Data.Text                       as T
-import qualified Data.Text.IO                    as T.IO 
+import qualified Data.Text.IO                    as T.IO
 import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat)
 import           Text.Printf                             (printf)
 import           Text.ProtocolBuffers.Basic              (Utf8)
@@ -19,7 +19,8 @@ import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTok
 import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,token_pos)
 import           Lexicon.Mapping.Type                    (ArgPattern(..),type RoleInstance
                                                          ,type RolePattInstance,VorN(..))
-import           NLP.Syntax.Type                         (Voice)                 
+import           Lexicon.Query                           (cutHistogram)
+import           NLP.Syntax.Type                         (Voice)
 import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID)
 --
 import           OntoNotes.App.Util                      (TagPos,SentItem,addTag,underlineText)
@@ -57,7 +58,7 @@ showFormatTimex' (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex' (s,a
 
 
 formatSense :: (Text,Text,Int,Text,Text,Text,Text) -> String
-formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) = 
+formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) =
   printf "%2s.%-6s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s " sgrp sn num txt_def txt_frame txt_fecore txt_feperi
 
 
@@ -67,14 +68,14 @@ formatSenses :: Bool  -- ^ doesShowOtherSense
              -> Text
              -> [(Text,Text,Int,Text,Text,Text,Text)]
              -> String
-formatSenses doesShowOtherSense rolemap subcats lma lst 
+formatSenses doesShowOtherSense rolemap subcats lma lst
   = let t = chooseFrame lst
     in "Top frame: "
        ++ printf " %-20s | %-40s      ------      %-30s\n"
             (fromMaybe "" (t^?_Just._5))
             (fromMaybe "" (t^?_Just._6))
             (fromMaybe "" (t^?_Just._7))
-       ++ "--------------------------------------------------------------------------------------------------\n"                 -- ++ show subcats
+       ++ "--------------------------------------------------------------------------------------------------\n"
        ++ fromMaybe ""
             (do t1 <- t^?_Just._1
                 t2 <- t^?_Just._2
@@ -82,8 +83,9 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
                 rm <- find (\rm -> rm^._1 == sid) rolemap
                 let msubcat =find ((== sid) . (^._1)) subcats
                 let margpattstr = do
-                      subcat <- msubcat
-                      return $ intercalate "\n" $ flip map (Prelude.take 5 (subcat^._2)) $ \(patt,n) ->
+                      (sid,insts) <- msubcat
+                      let subcat = (sid,cutHistogram 0.9 insts)
+                      return $ intercalate "\n" $ flip map {- (Prelude.take 5 (subcat^._2)) -} (subcat^._2) $ \(patt,n) ->
                                  printf "%s     #count: %5d" (formatArgPatt patt) (n :: Int)
                 return (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr)
             )
@@ -94,17 +96,6 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
 
 
 
-{-
-formatNER psents sentitems linked_mentions_resolved =
-  let toks = concatMap (map snd . sentToTokens) psents
-      tags = mapMaybe (linkedMentionToTagPOS toks) linked_mentions_resolved
-      sents_tagged = map (addTag tags) sentitems
-      doc1 = formatTaggedSentences sents_tagged
-      doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
-  in hsep 10 left [doc1,doc2]
--}
-
-
 formatNER :: [[Maybe Token]] -> [SentItem] -> [UIDCite EntityMentionUID (EMInfo Text)] -> Box
 formatNER mtokenss sentitems linked_mentions_resolved =
   let toks = concatMap (map snd . sentToTokens') mtokenss
@@ -113,4 +104,3 @@ formatNER mtokenss sentitems linked_mentions_resolved =
       doc1 = formatTaggedSentences sents_tagged
       doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
   in hsep 10 left [doc1,doc2]
-

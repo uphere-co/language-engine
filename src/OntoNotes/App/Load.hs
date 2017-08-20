@@ -63,7 +63,7 @@ cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/da
              , _cfg_propbank_framedir    = "/home/wavewave/repo/srcc/propbank-frames/frames"
              , _cfg_wsj_corenlp_directory = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
              , _cfg_rolemap_file         = "/home/wavewave/repo/srcp/OntoNotes/mapping/final.txt"
-             , _cfg_verb_subcat_file     = "/scratch/wavewave/run/20170817/verbsubcat_propbank_ontonotes_statonly.tsv"
+             , _cfg_verb_subcat_file     = "/scratch/wavewave/run/20170820/verbsubcat_propbank_ontonotes_statonly.tsv"
              }
 
 -- | This is the global config.
