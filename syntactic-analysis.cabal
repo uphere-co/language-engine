@@ -36,6 +36,7 @@ library
                        --
                        HCoreNLP,
                        HCoreNLP-Proto,
+                       lexicon,
                        nlp-types,
                        PropBank,
                        textview

@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module NLP.Syntax.Argument where
 
-import           Control.Lens                 ((^.),_1,_2)
+import           Control.Lens                 ((^.),(^?),_1,_2,_Just)
 import           Control.Monad                (join)
 import           Data.Bifunctor               (bimap)
 import           Data.Foldable                (toList)
@@ -23,7 +24,10 @@ import           PropBank.Match               (findNode)
 import           PropBank.Type.Prop           (Argument(..),PropBankLabel(..)
                                               ,arg_label,arg_terminals)
 --
+import           Lexicon.Mapping.Type
+--
 import           NLP.Syntax.Type
+
 
 headPreposition :: [PennTreeIdx] -> Maybe Text
 headPreposition xs = getFirst (foldMap (First . f) xs)   
@@ -123,3 +127,15 @@ mkArgTable itr l2p (file,sid,tid) args  =
                        case ns of
                          n:_ -> snd <$> findNode n itr 
                          _   -> Nothing
+
+
+mkArgPattern :: Maybe TP -> ArgTable (ATNode a) -> ArgPattern Voice a
+mkArgPattern mtp ArgTable {..} =
+  ArgPattern { _patt_property = mtp^?_Just.tp_VP.vp_verbProperty.vp_voice
+             , _patt_arg0 = fmap chooseATNode _tbl_arg0
+             , _patt_arg1 = fmap chooseATNode _tbl_arg1
+             , _patt_arg2 = fmap chooseATNode _tbl_arg2
+             , _patt_arg3 = fmap chooseATNode _tbl_arg3
+             , _patt_arg4 = fmap chooseATNode _tbl_arg4
+             }
+

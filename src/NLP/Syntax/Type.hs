@@ -1,9 +1,5 @@
 {-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveFoldable    #-}
-{-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures    #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -82,63 +78,6 @@ data CP = CP { _cp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
 
 makeLenses ''CP
 
-
------------------------------
--- ArgTable and ArgPattern --
------------------------------
-
-
-
--- | ArgTable node that allows simple or linked node
--- 
-data ATNode a = SimpleNode { _atnode_orig :: a }
-              | LinkedNode { _atnode_orig  :: a
-                           , _atnode_link  :: a } 
-              deriving (Show,Functor,Foldable,Traversable)
-
-
-
--- now i can experiment flexibly with linked node
-chooseATNode (SimpleNode x) = x
-chooseATNode (LinkedNode x y) = x
-                 
-data ArgTable b = ArgTable { _tbl_rel  :: Maybe Text
-                           , _tbl_arg0 :: Maybe b
-                           , _tbl_arg1 :: Maybe b
-                           , _tbl_arg2 :: Maybe b
-                           , _tbl_arg3 :: Maybe b
-                           , _tbl_arg4 :: Maybe b
-                           , _tbl_file_sid_tid :: (FilePath,Int,Int)
-                           }
-                  deriving (Show,Functor,Foldable,Traversable)
-
-makeLenses ''ArgTable
-
-
-
-data ArgPattern a = ArgPattern { _patt_voice :: Maybe Voice
-                               , _patt_arg0 :: Maybe a
-                               , _patt_arg1 :: Maybe a
-                               , _patt_arg2 :: Maybe a
-                               , _patt_arg3 :: Maybe a
-                               , _patt_arg4 :: Maybe a
-                               }
-                  deriving (Show,Eq,Ord,Generic,Functor,Foldable,Traversable)
-
-makeLenses ''ArgPattern
-
-
-instance Hashable (ArgPattern Text)
-
-
-mkArgPattern :: Maybe TP -> ArgTable (ATNode a) -> ArgPattern a
-mkArgPattern mtp ArgTable {..} = ArgPattern { _patt_voice = mtp^?_Just.tp_VP.vp_verbProperty.vp_voice
-                                            , _patt_arg0 = fmap chooseATNode _tbl_arg0
-                                            , _patt_arg1 = fmap chooseATNode _tbl_arg1
-                                            , _patt_arg2 = fmap chooseATNode _tbl_arg2
-                                            , _patt_arg3 = fmap chooseATNode _tbl_arg3
-                                            , _patt_arg4 = fmap chooseATNode _tbl_arg4
-                                            }
 
 
 ---------------
