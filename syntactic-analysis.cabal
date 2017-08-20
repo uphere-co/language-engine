@@ -17,7 +17,8 @@ cabal-version:       >=1.10
 
 
 library
-  exposed-modules:     NLP.Syntax.Clause
+  exposed-modules:     NLP.Syntax.Argument
+                       NLP.Syntax.Clause
                        NLP.Syntax.Format
                        NLP.Syntax.Type
                        NLP.Syntax.Util
@@ -28,6 +29,7 @@ library
   build-depends:       base >=4.9 && <4.10,
                        bifunctors,
                        containers,
+                       hashable,
                        lens,
                        monad-loops,
                        text,
@@ -35,6 +37,7 @@ library
                        HCoreNLP,
                        HCoreNLP-Proto,
                        nlp-types,
+                       PropBank,
                        textview
 
   hs-source-dirs:      src

@@ -1,6 +1,8 @@
 { mkDerivation, base, bifunctors, containers, HCoreNLP
-, HCoreNLP-Proto, lens, monad-loops, nlp-types, stdenv, tasty
-, tasty-hunit, text, textview
+, HCoreNLP-Proto, lens, monad-loops, nlp-types
+, PropBank, stdenv
+, text, textview
+, tasty, tasty-hunit
 }:
 mkDerivation {
   pname = "syntactic-analysis";
@@ -8,7 +10,7 @@ mkDerivation {
   src = ./.;
   libraryHaskellDepends = [
     base bifunctors containers HCoreNLP HCoreNLP-Proto lens monad-loops
-    nlp-types text textview
+    nlp-types PropBank text textview
   ];
   testHaskellDepends = [
     base containers HCoreNLP lens nlp-types tasty tasty-hunit text
