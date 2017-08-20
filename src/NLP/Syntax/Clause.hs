@@ -38,8 +38,7 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 
 complementsOfVerb :: VerbProperty (BitreeZipperICP '[Lemma]) -> [BitreeZipperICP '[Lemma]]
-complementsOfVerb vp = do v <- maybeToList (headVP vp)
-                          siblingsBy next checkNPSBAR v 
+complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkNPSBAR z = case tag z of
@@ -105,12 +104,14 @@ promoteToVP (PN (_,(S_OTHER N.PRT,_)) (PL (Right (i,(p,t))):_)) = Left (i,(p,t))
 promoteToVP x@(PN _ _)            = Right x
 
 
-promoteNPPP :: Bitree (Range,(STag,Int)) t -> [Bitree (Range,(STag,Int)) t]
-promoteNPPP x@(PN (_rng,(S_OTHER N.NP,_lvl)) [x1,x2]) =
+promote_PP_CP_from_NP :: Bitree (Range,(STag,Int)) t -> [Bitree (Range,(STag,Int)) t]
+promote_PP_CP_from_NP x@(PN (_rng,(S_OTHER N.NP,_lvl)) [x1,x2]) =
   case (getRoot x1, getRoot x2) of
-    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_PP _,_))) ->  [x1,x2]
+    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_PP _,_)))   ->  [x1,x2]
+    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_SBAR _,_))) ->  [x1,x2]
+    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_CL _,_)))   ->  [x1,x2]        
     _ -> [x]
-promoteNPPP x = [x]
+promote_PP_CP_from_NP x = [x]
 
 
 
@@ -121,7 +122,7 @@ clauseStructure _vps (PL (i,pt)) = PL (Right (i,pt))
 clauseStructure vps  (PN (rng,tag) xs)
   = let ys = map (clauseStructure vps) xs
         (verbs,nonverbs0)= partitionEithers (map promoteToVP ys)
-        nonverbs = concatMap promoteNPPP nonverbs0
+        nonverbs = concatMap promote_PP_CP_from_NP nonverbs0
         lvl = maximum (map currentlevel ys) :: Int
     in case tag of
          N.CL c -> case c of

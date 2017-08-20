@@ -127,6 +127,7 @@ testcases = [ main_finite_1
             ]
             
 
+
 mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty (BitreeZipperICP '[Lemma])]
 mkVPS lmatknlst pt =
   let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
@@ -135,7 +136,14 @@ mkVPS lmatknlst pt =
 
 formatTP :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> [String]
 formatTP (txt,i,_,lmatknlst,pt) =
-  case find (\vp -> vp^.vp_index == i) (mkVPS lmatknlst pt) of
+  let
+      lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
+      vps = mkVPS lmatknlst pt
+      ipt = mkPennTreeIdx pt
+      clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id ipt)
+      cltxts = formatClauseStructure vps clausetr
+  in
+  case find (\vp -> vp^.vp_index == i) vps of
     Nothing -> [ "nothing"]
     Just vp -> [ "--------------------------------------------------------------"
                , T.unpack txt
@@ -147,6 +155,7 @@ formatTP (txt,i,_,lmatknlst,pt) =
                ] ++ case constructCP vp of
                       Nothing -> ["not successful in constructing CP"]
                       Just cp -> [formatCP cp]
+                 ++ map T.unpack cltxts
 
 
 showTP = mapM_ putStrLn . formatTP
