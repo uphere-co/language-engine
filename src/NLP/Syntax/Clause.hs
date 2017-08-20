@@ -43,12 +43,15 @@ complementsOfVerb vp = do v <- maybeToList (headVP vp)
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkNPSBAR z = case tag z of
-                      Left NP -> True
-                      Left SBAR -> True
-                      Left _  -> False
-                      Right p -> case isNoun p of
-                                   Yes -> True
-                                   _   -> False
+                      Left NP    -> True
+                      Left SBAR  -> True
+                      Left S     -> True
+                      Left SBARQ -> True
+                      Left SQ    -> True
+                      Left _     -> False
+                      Right p    -> case isNoun p of
+                                      Yes -> True
+                                      _   -> False
 
 
     
