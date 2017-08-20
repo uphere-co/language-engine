@@ -187,6 +187,7 @@ Executable sense-inventory
                        --
                        HFrameNet,
                        HWordNet,
+                       lexicon,
                        --
                        OntoNotes
 

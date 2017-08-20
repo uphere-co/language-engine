@@ -32,7 +32,9 @@ import           Text.Printf
 import           Data.Attribute
 import           Data.BitreeZipper
 import           Lexicon.Mapping.Type
+import           Lexicon.Query
 import           NLP.Printer.PennTreebankII
+import           NLP.Syntax.Argument
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
 import           NLP.Syntax.Type
@@ -50,7 +52,7 @@ import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
 import           OntoNotes.Format
 import           OntoNotes.Parser.Sense
-import           OntoNotes.Type.ArgTable
+-- import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.Sense
 import           OntoNotes.Type.SenseInventory
 --
@@ -169,14 +171,17 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
      ++ formatArgTable mvpmva argtable
 
 
-getArgMapFromRoleMap (lma,sense_num) rolemap = (^._2) <$> find f rolemap
-  where f rm = if lma == "hold" && sense_num == "5"       -- this is an ad hoc treatment for group 2
+getArgMapFromRoleMap (lma,sense_num) rolemap =
+  (^._2) <$> find (\rm -> convertONIDtoSenseID lma sense_num == rm^._1) rolemap
+{-   where f rm = if lma == "hold" && sense_num == "5"       -- this is an ad hoc treatment for group 2
                then rm^._1 == (lma,"2." <> sense_num) 
                else rm^._1 == (lma,"1." <> sense_num)
 
+-}
+
 
 formatStatInst :: Bool
-               -> [((Text,Text),[(Text,Text)])]
+               -> [RoleInstance]
                -> Text
                -> ((Text,Text),Int)
                -> (Maybe Text, [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)])
@@ -221,7 +226,7 @@ countSenseForLemma lma = sortBy (compare `on` (^._1))
 
 
 showStat :: Bool                        -- ^ is tab separated format
-         -> [((Text,Text),[(Text,Text)])] 
+         -> [RoleInstance] 
          -> HashMap Text Inventory
          -> [(Text,Int)]                -- ^ lemmastat
          -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
@@ -278,7 +283,7 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
             putStrLn $ printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d"
                          sense
                          sense_num
-                         (maybe "null" show (patt^.patt_voice)) 
+                         (maybe "null" show (patt^.patt_property)) 
                          (fromMaybe "null" (patt^.patt_arg0))
                          (fromMaybe "null" (patt^.patt_arg1))
                          (fromMaybe "null" (patt^.patt_arg2))
@@ -287,7 +292,7 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                          n
 
 showStatInst :: Bool
-             -> [((Text,Text),[(Text,Text)])] 
+             -> [RoleInstance] 
              -> HashMap Text Inventory
              -> [(Text,Int)]                -- ^ lemmastat
              -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
@@ -352,7 +357,7 @@ process (statonly,tsv,showdetail) sensedb fps = do
 
   rolesetstat <- loadStatistics (cfg^.cfg_statistics)
   let lemmastat = mergeStatPB2Lemma rolesetstat
-  rolemap <- loadRoleMap (cfg^.cfg_rolemap_file)
+  rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
   
   if statonly
     then showStat tsv rolemap sensedb lemmastat classified_inst_map 

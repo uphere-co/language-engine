@@ -42,7 +42,8 @@ import           FrameNet.Query.Frame             (frameDB,loadFrameData)
 import           FrameNet.Type.Common             (CoreType(..),fr_frame)
 import           FrameNet.Type.Frame
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
-import           Lexicon.Mapping.Type             (loadRoleMap)
+import           Lexicon.Query
+import           Lexicon.Mapping.Type             (VorN(..))
 import           NLP.Syntax.Type
 import           PropBank.Query                   (constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB
@@ -59,7 +60,7 @@ import           OntoNotes.App.Load
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Format
 -- import           OntoNotes.Mapping.FrameNet
-import           OntoNotes.Type.ArgTable
+-- import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.SenseInventory
 
 
@@ -76,7 +77,7 @@ createONFN subcats sensemap framedb rolesetdb = do
   let g = T.head sid
       n = T.drop 2 sid
   let lmav = lma <> "-v"
-  subcat <- maybeToList (find (\c -> c^._1 == (lmav,n)) subcats)
+  subcat <- maybeToList (find (\c -> c^._1 == (lma,V,sid)) subcats)
   
   si <- maybeToList (HM.lookup lmav sensemap)
   osense <- maybeToList $
@@ -122,7 +123,7 @@ formatFEs (icorefes,iperifes,iextrafes) = formatf icorefes ++ " | " ++ formatf i
 
 
 problemID (i,(lma,osense,frame,pbs,_)) = let sid = osense^.sense_group <> "." <> osense^.sense_n
-                                         in (lma,sid)
+                                         in (lma,V,sid)
 
 
 formatProblem :: (Int,_) -> (String,String,String,String,String)
@@ -168,7 +169,7 @@ reformatInput o txt = let ws = T.words txt
                                                  Nothing -> w
                                  
 
-formatResult (i,(lma,sid),frm,txt) = printf "%d\t%s\t%s\t%s\t%s\n" i lma sid frm txt
+formatResult (i,(lma,_,sid),frm,txt) = printf "%d\t%s\t%s\t%s\t%s\n" i lma sid frm txt
   
 
 prompt = do
@@ -207,8 +208,8 @@ main = do
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (preddb,rolesetdb) <- loadPropBankDB
-  subcats <- loadVerbSubcat (cfg^.cfg_verb_subcat_file)
-  rolemap <- loadRoleMap (cfg^.cfg_rolemap_file)
+  subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
+  rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
 
   let flattened = createONFN subcats sensemap framedb rolesetdb 
   let indexed = zip [1..] flattened
@@ -217,7 +218,7 @@ main = do
     "tag" -> do
       let n = fromMaybe 0 (startNum opt)
           indexed_being_processed = (drop (n-1) . take (n+99)) indexed
-      r <- flip execStateT (([] :: [(Int,(Text,Text),Text,Text)]),indexed_being_processed) $ runInputT defaultSettings prompt
+      r <- flip execStateT (([] :: [(Int,(Text,VorN,Text),Text,Text)]),indexed_being_processed) $ runInputT defaultSettings prompt
       print (fst r)
       let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
       writeFile filename (concatMap formatResult (fst r))
