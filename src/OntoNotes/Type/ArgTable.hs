@@ -52,9 +52,9 @@ data ArgTable b = ArgTable { _tbl_rel  :: Maybe Text
 makeLenses ''ArgTable
 
 -- orphan instance! I will move it to syntactic-analysis soon
-deriving instance Generic Voice
+-- deriving instance Generic Voice
 
-instance Hashable Voice
+-- instance Hashable Voice
 
 
 data ArgPattern a = ArgPattern { _patt_voice :: Maybe Voice

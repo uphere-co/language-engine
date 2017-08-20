@@ -21,6 +21,7 @@ import           CoreNLP.Simple               (prepare)
 import           CoreNLP.Simple.Type          (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
 import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
+import           Lexicon.Mapping.Type         (loadRoleMap)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention(..))
@@ -33,7 +34,7 @@ import           OntoNotes.App.Load           (Config(..),cfg,cfgG,cfg_framenet_
                                               ,cfg_sense_inventory_file
                                               ,cfg_verb_subcat_file
                                               ,cfg_wsj_directory
-                                              ,loadSenseInventory,loadRoleMap,loadVerbSubcat
+                                              ,loadSenseInventory,loadVerbSubcat
                                               )
 import           OntoNotes.App.WikiEL         (brandItemFile,orgItemFile,personItemFile,reprFile)
 import           OntoNotes.Corpus.Load        (senseInstStatistics)

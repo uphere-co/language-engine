@@ -42,6 +42,7 @@ import           FrameNet.Query.Frame             (frameDB,loadFrameData)
 import           FrameNet.Type.Common             (CoreType(..),fr_frame)
 import           FrameNet.Type.Frame
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
+import           Lexicon.Mapping.Type             (loadRoleMap)
 import           NLP.Syntax.Type
 import           PropBank.Query                   (constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB

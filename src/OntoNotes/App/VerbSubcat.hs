@@ -31,6 +31,7 @@ import           Text.Printf
 --
 import           Data.Attribute
 import           Data.BitreeZipper
+import           Lexicon.Mapping.Type
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
