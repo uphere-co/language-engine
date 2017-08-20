@@ -49,15 +49,15 @@ formatVoice Active  = "Actv"
 formatVoice Passive = "Pass"
 
 
-formatVerbProperty :: VerbProperty a -> String
-formatVerbProperty vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
-                          (vp^.vp_index) (vp^.vp_lemma.to unLemma)
-                          (formatTense  (vp^.vp_tense)  <> "." <>
-                           formatAspect (vp^.vp_aspect) <> "." <>
-                           formatVoice  (vp^.vp_voice))
-                          (fromMaybe "" (vp^?vp_auxiliary._Just._2._2.to unLemma))
-                          (fromMaybe "" (vp^?vp_negation._Just._2._2.to unLemma))
-                          (T.intercalate " " (vp^..vp_words.traverse._2._2.to unLemma))
+formatVerbProperty :: (a -> Text) -> VerbProperty a -> String
+formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
+                            (vp^.vp_index) (vp^.vp_lemma.to unLemma)
+                            (formatTense  (vp^.vp_tense)  <> "." <>
+                             formatAspect (vp^.vp_aspect) <> "." <>
+                             formatVoice  (vp^.vp_voice))
+                            (fromMaybe "" (vp^?vp_auxiliary._Just._2._2.to unLemma))
+                            (fromMaybe "" (vp^?vp_negation._Just._2._2.to unLemma))
+                            (T.intercalate " " (vp^..vp_words.traverse.to (f.fst))) -- _2._2.to unLemma))
                           -- ()
 
 
@@ -65,10 +65,7 @@ formatPAWS :: PredArgWorkspace (Either (Range,STag) (Int,POSTag)) -> String
 formatPAWS pa = printf "              subject       : %s\n\
                        \              arg candidates: %s\n\
                        \              complements   : %s"
-                  -- (pa^.pa_CP.cp_TP.tp_VP.vp_verbProperty.to formatVerbProperty)
                   (maybe "" (T.intercalate " " . gettoken) (pa^.pa_CP.cp_TP.tp_DP))                
-                   -- (maybe "" fmtArg (va^.va_arg0))
-                   -- (map (^._2) (va^.va_string)))
                   ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
                   ((intercalate " | " . map (T.unpack . T.intercalate " ". gettoken)) (pa^.pa_CP.cp_TP.tp_VP.vp_complements))
                   
@@ -125,7 +122,12 @@ formatClauseStructure vps clausetr =
               g (Left x)      = T.pack (show x)
               g (Right x)     = T.pack (show x)
       rngs = clauseRanges clausetr
-      xs = flip map vps $ \vp -> T.pack $ printf "%7s:%-50s\n%s" (maybe "" show (clauseForVerb rngs vp)) (formatVerbProperty vp)  (maybe "" formatPAWS (findPAWS clausetr vp))
+      fmt = either (const "") (tokenWord.snd) . getRoot . current
+      xs = flip map vps $ \vp ->
+              T.pack $ printf "%7s:%-50s\n%s\n"
+                         (maybe "" show (clauseForVerb rngs vp))
+                         (formatVerbProperty fmt vp)
+                         (maybe "" formatPAWS (findPAWS clausetr vp))
   in [formatBitree id tr'] ++ xs
 
 
