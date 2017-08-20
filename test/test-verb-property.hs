@@ -42,7 +42,7 @@ ex1 = ( "He was fined $25,000."
 ex2 = ( "He will be fined $25,000."
       , 3
       , (Present,Simple,Passive, Just "will",Nothing)
-      , [(0,("he","He")),(1,("will","will")),(2,("be","be")),(3,("fine","fined")),(4,("$","$")),(5,("25,000","25,000")),(6,(".","."))]       
+      , [(0,("he","He")),(1,("will","will")),(2,("be","be")),(3,("fine","fined")),(4,("$","$")),(5,("25,000","25,000")),(6,(".","."))]
       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","He")],PN "VP" [PL ("MD","will"),PN "VP" [PL ("VB","be"),PN "VP" [PL ("VBN","fined"),PN "NP" [PL ("$","$"),PL ("CD","25,000")]]]],PL (".",".")]]
       , Dependency 4 [(1,"He"),(2,"will"),(3,"be"),(4,"fined"),(5,"$"),(6,"25,000")] [((4,1),NSUBJPASS),((4,2),AUX),((4,3),AUXPASS),((4,6),DOBJ),((6,5),DEP)]
       )
@@ -67,11 +67,11 @@ ex4 = ( "The move had been widely expected."
       , Dependency 6 [(1,"The"),(2,"move"),(3,"had"),(4,"been"),(5,"widely"),(6,"expected")] [((2,1),DET),((6,2),NSUBJPASS),((6,3),AUX),((6,4),AUXPASS),((6,5),ADVMOD)]
       )
 
-  
+
 ex5 = ( "I am floating."
       , 2
       , (Present,Progressive,Active,Nothing,Nothing)
-      , [(0,("I","I")),(1,("be","am")),(2,("float","floating")),(3,(".","."))]        
+      , [(0,("I","I")),(1,("be","am")),(2,("float","floating")),(3,(".","."))]
       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","am"),PN "VP" [PL ("VBG","floating")]],PL (".",".")]]
       , Dependency 3 [(1,"I"),(2,"am"),(3,"floating")] [((3,1),NSUBJ),((3,2),AUX)]
       )
@@ -99,14 +99,14 @@ ex7 = ( "We eat lunch."
 ex8 = ( "We are eating lunch."
       , 2
       , (Present,Progressive,Active,Nothing,Nothing)
-      , [(0,("we","We")),(1,("be","are")),(2,("eat","eating")),(3,("lunch","lunch")),(4,(".","."))]       
+      , [(0,("we","We")),(1,("be","are")),(2,("eat","eating")),(3,("lunch","lunch")),(4,(".","."))]
       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","We")],PN "VP" [PL ("VBP","are"),PN "VP" [PL ("VBG","eating"),PN "NP" [PL ("NN","lunch")]]],PL (".",".")]]
       , Dependency 3 [(1,"We"),(2,"are"),(3,"eating"),(4,"lunch")] [((3,1),NSUBJ),((3,2),AUX),((3,4),DOBJ)]
       )
 
 
 ex9 = ( "We are not eating lunch right now."
-      , 3 
+      , 3
       , (Present,Progressive,Active,Nothing,Just "not")
       , [(0,("we","We")),(1,("be","are")),(2,("not","not")),(3,("eat","eating")),(4,("lunch","lunch")),(5,("right","right")),(6,("now","now")),(7,(".","."))]
       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","We")],PN "VP" [PL ("VBP","are"),PL ("RB","not"),PN "VP" [PL ("VBG","eating"),PN "NP" [PL ("NN","lunch")],PN "ADVP" [PL ("RB","right"),PL ("RB","now")]]],PL (".",".")]]
@@ -115,7 +115,7 @@ ex9 = ( "We are not eating lunch right now."
 
 
 ex10 = ( "It's not done yet."
-       , 3  
+       , 3
        , (Present,Simple,Passive,Nothing,Just "not")
        , [(0,("it","It")),(1,("be","'s")),(2,("not","not")),(3,("do","done")),(4,("yet","yet")),(5,(".","."))]
        , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","It")],PN "VP" [PL ("VBZ","'s"),PL ("RB","not"),PN "VP" [PL ("VBN","done"),PN "ADVP" [PL ("RB","yet")]]],PL (".",".")]]
@@ -136,9 +136,9 @@ ex11 = ( "It's done."
 ex12 = ( "It's rarely noted."
        , 3
        , (Present,Simple,Passive,Nothing,Nothing)
-       , [(0,("it","It")),(1,("be","'s")),(2,("rarely","rarely")),(3,("note","noted")),(4,(".","."))] 
+       , [(0,("it","It")),(1,("be","'s")),(2,("rarely","rarely")),(3,("note","noted")),(4,(".","."))]
        , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","It")],PN "VP" [PL ("VBZ","'s"),PN "ADVP" [PL ("RB","rarely")],PN "VP" [PL ("VBN","noted")]],PL (".",".")]]
-       , Dependency 4 [(1,"It"),(2,"'s"),(3,"rarely"),(4,"noted")] [((4,1),NSUBJPASS),((4,2),AUXPASS),((4,3),ADVMOD)] 
+       , Dependency 4 [(1,"It"),(2,"'s"),(3,"rarely"),(4,"noted")] [((4,1),NSUBJPASS),((4,2),AUXPASS),((4,3),ADVMOD)]
        )
 
 
@@ -146,7 +146,7 @@ ex12 = ( "It's rarely noted."
 ex13 = ( "I have been watching TV."
        , 3
        , (Present,PerfectProgressive,Active,Nothing,Nothing)
-       , [(0,("I","I")),(1,("have","have")),(2,("be","been")),(3,("watch","watching")),(4,("tv","TV")),(5,(".","."))]         
+       , [(0,("I","I")),(1,("have","have")),(2,("be","been")),(3,("watch","watching")),(4,("tv","TV")),(5,(".","."))]
        , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","have"),PN "VP" [PL ("VBN","been"),PN "VP" [PL ("VBG","watching"),PN "NP" [PL ("NN","TV")]]]],PL (".",".")]]
        , Dependency 4 [(1,"I"),(2,"have"),(3,"been"),(4,"watching"),(5,"TV")] [((4,1),NSUBJ),((4,2),AUX),((4,3),AUX),((4,5),DOBJ)]
        )
@@ -164,7 +164,7 @@ ex14 = ( "The book had not been noticed."
 ex15 = ( "I have done the job."
        , 2
        , (Present,Perfect,Active,Nothing,Nothing)
-       , [(0,("I","I")),(1,("have","have")),(2,("do","done")),(3,("the","the")),(4,("job","job")),(5,(".","."))]         
+       , [(0,("I","I")),(1,("have","have")),(2,("do","done")),(3,("the","the")),(4,("job","job")),(5,(".","."))]
        , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","have"),PN "VP" [PL ("VBN","done"),PN "NP" [PL ("DT","the"),PL ("NN","job")]]],PL (".",".")]]
        , Dependency 3 [(1,"I"),(2,"have"),(3,"done"),(4,"the"),(5,"job")] [((3,1),NSUBJ),((3,2),AUX),((3,5),DOBJ),((5,4),DET)]
        )
@@ -173,7 +173,7 @@ ex15 = ( "I have done the job."
 ex16 = ( "I haven't done the job."
        , 3
        , (Present,Perfect,Active,Nothing,Just "not")
-       , [(0,("I","I")),(1,("have","have")),(2,("not","n't")),(3,("do","done")),(4,("the","the")),(5,("job","job")),(6,(".","."))]        
+       , [(0,("I","I")),(1,("have","have")),(2,("not","n't")),(3,("do","done")),(4,("the","the")),(5,("job","job")),(6,(".","."))]
        , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","have"),PL ("RB","n't"),PN "VP" [PL ("VBN","done"),PN "NP" [PL ("DT","the"),PL ("NN","job")]]],PL (".",".")]]
        , Dependency 4 [(1,"I"),(2,"have"),(3,"n't"),(4,"done"),(5,"the"),(6,"job")] [((4,1),NSUBJ),((4,2),AUX),((4,3),NEG),((4,6),DOBJ),((6,5),DET)]
        )
@@ -191,7 +191,7 @@ ex17 = ( "I had done the job at that time."
 ex18 = ( "WhatsApp is being targeted by China's censors."
        , 3
        , (Present,Progressive,Passive,Nothing,Nothing)
-       , [(0,("WhatsApp","WhatsApp")),(1,("be","is")),(2,("be","being")),(3,("target","targeted")),(4,("by","by")),(5,("China","China")),(6,("'s","'s")),(7,("censor","censors")),(8,(".","."))]       
+       , [(0,("WhatsApp","WhatsApp")),(1,("be","is")),(2,("be","being")),(3,("target","targeted")),(4,("by","by")),(5,("China","China")),(6,("'s","'s")),(7,("censor","censors")),(8,(".","."))]
        , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","WhatsApp")],PN "VP" [PL ("VBZ","is"),PN "VP" [PL ("VBG","being"),PN "VP" [PL ("VBN","targeted"),PN "PP" [PL ("IN","by"),PN "NP" [PN "NP" [PL ("NNP","China"),PL ("POS","'s")],PL ("NNS","censors")]]]]],PL (".",".")]]
        , Dependency 4 [(1,"WhatsApp"),(2,"is"),(3,"being"),(4,"targeted"),(5,"by"),(6,"China"),(7,"'s"),(8,"censors")] [((4,1),NSUBJPASS),((4,2),AUX),((4,3),AUXPASS),((4,8),NMOD),((6,7),CASE),((8,5),CASE),((8,6),NMOD)]
        )
@@ -231,7 +231,7 @@ ex22 = ( "He's actively considering a breakup of giant Wall Street banks."
        , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","He")],PN "VP" [PL ("VBZ","'s"),PN "ADVP" [PL ("RB","actively")],PN "VP" [PL ("VBG","considering"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("NN","breakup")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("JJ","giant"),PL ("NNP","Wall"),PL ("NNP","Street"),PL ("NNS","banks")]]]]],PL (".",".")]]
        , Dependency 4 [(1,"He"),(2,"'s"),(3,"actively"),(4,"considering"),(5,"a"),(6,"breakup"),(7,"of"),(8,"giant"),(9,"Wall"),(10,"Street"),(11,"banks")] [((4,1),NSUBJ),((4,2),AUX),((4,3),ADVMOD),((4,6),DOBJ),((6,5),DET),((6,11),NMOD),((11,7),CASE),((11,8),AMOD),((11,9),COMPOUND),((11,10),COMPOUND)]
        )
-         
+
 
 ex23 = ( "A major federal civil rights law does not protect employees from discrimination."
        , 8
@@ -240,7 +240,7 @@ ex23 = ( "A major federal civil rights law does not protect employees from discr
        , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","A"),PL ("JJ","major"),PL ("JJ","federal"),PL ("JJ","civil"),PL ("NNS","rights"),PL ("NN","law")],PN "VP" [PL ("VBZ","does"),PL ("RB","not"),PN "VP" [PL ("VB","protect"),PN "NP" [PL ("NNS","employees")],PN "PP" [PL ("IN","from"),PN "NP" [PL ("NN","discrimination")]]]],PL (".",".")]]
        , Dependency 9 [(1,"A"),(2,"major"),(3,"federal"),(4,"civil"),(5,"rights"),(6,"law"),(7,"does"),(8,"not"),(9,"protect"),(10,"employees"),(11,"from"),(12,"discrimination")] [((6,1),DET),((6,2),AMOD),((6,3),AMOD),((6,4),AMOD),((6,5),COMPOUND),((9,6),NSUBJ),((9,7),AUX),((9,8),NEG),((9,10),DOBJ),((9,12),NMOD),((12,11),CASE)]
        )
-  
+
 
 ex24 = ( "It isn't done."
        , 3
@@ -264,7 +264,7 @@ ex25 = ( "NASA enhances online scientific tool used by hundreds of scientists."
 
 -- | infinitive
 ex26 = ( "I have something to do now."
-       , 4  
+       , 4
        , (Present,Simple,Active,Just "to",Nothing)
        , [(0,("I","I")),(1,("have","have")),(2,("something","something")),(3,("to","to")),(4,("do","do")),(5,("now","now")),(6,(".","."))]
        , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","have"),PN "NP" [PL ("NN","something"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","do"),PN "ADVP" [PL ("RB","now")]]]]]],PL (".",".")]]
@@ -272,7 +272,7 @@ ex26 = ( "I have something to do now."
        )
 
 ex27 = ( "I have something to have now."
-       , 4  
+       , 4
        , (Present,Simple,Active,Just "to",Nothing)
        , [(0,("I","I")),(1,("have","have")),(2,("something","something")),(3,("to","to")),(4,("have","have")),(5,("now","now")),(6,(".","."))]
        , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","have"),PN "NP" [PL ("NN","something"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","have"),PN "ADVP" [PL ("RB","now")]]]]]],PL (".",".")]]
@@ -296,14 +296,15 @@ checkVP (_txt,i,expresult,lmatknlst,pt,_dep) =
   let vps = mkVPS lmatknlst pt
   in case find (\vp -> vp^.vp_index == i) vps of
        Just vp -> expresult == (vp^.vp_tense,vp^.vp_aspect,vp^.vp_voice,vp^?vp_auxiliary._Just._2._2.to unLemma,vp^?vp_negation._Just._2._2.to unLemma)
-       _       -> False 
+       _       -> False
 
 
 unitTestsVerbProperty :: TestTree
-unitTestsVerbProperty = testGroup "verb property" . flip map testcases $ \c ->
-  testCase (T.unpack (c^._1) ++ show (c^._3)) $
-    (checkVP c == True) @? (intercalate "\n" ((mkVPS (c^._4) (c^._5))^..traverse.to formatVerbProperty)  ++ "\n" ++ T.unpack (prettyPrint 0 (c^._5)))
- 
+unitTestsVerbProperty =
+  testGroup "verb property" . flip map testcases $ \c ->
+    testCase (T.unpack (c^._1) ++ show (c^._3)) $
+      (checkVP c == True) @? (intercalate "\n" ((mkVPS (c^._4) (c^._5))^..traverse.to formatVerbProperty)  ++ "\n" ++ T.unpack (prettyPrint 0 (c^._5)))
+
 
 unitTests :: TestTree
 unitTests = testGroup "All Unit tests" [unitTestsVerbProperty]
