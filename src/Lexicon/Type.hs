@@ -6,7 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-module Lexicon.Mapping.Type where
+module Lexicon.Type where
 
 import           Control.Lens         (makeLenses)
 import           Data.Hashable        (Hashable)
@@ -15,12 +15,13 @@ import           Data.Text            (Text)
 -- import qualified Data.Text.IO as T.IO
 import           GHC.Generics         (Generic)
 
-data VorN = V | N deriving (Show,Eq,Ord,Generic)
 
-instance Hashable VorN
+data POSVorN = Verb | Noun deriving (Show,Eq,Ord,Generic)
+
+instance Hashable POSVorN
 
 
-type SenseID = (Text,VorN,Text)
+type SenseID = (Text,POSVorN,Text)
 
 type PBArg = Text
 
