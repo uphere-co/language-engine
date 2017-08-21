@@ -45,16 +45,20 @@ import           OntoNotes.App.Analyze.Format              (formatSenses,formatT
                                                            ,formatNER
                                                            ,showTimex,showFormatTimex'
                                                            )
-import           OntoNotes.App.Util                        (CharIdx,SentItem,TagPos)
-import           OntoNotes.App.WikiEL                      (getWikiResolvedMentions)
+import           OntoNotes.App.Util                        (CharIdx,SentItem,TagPos,TokIdx)
+import           OntoNotes.App.WikiEL                      (getWikiResolvedMentions
+                                                           ,linkedMentionToTagPos
+                                                           )
 import           OntoNotes.Type.SenseInventory
 
 
 mergeTimexWikiNER :: [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
                   -> [EntityMention Text]
-                  -> Text 
-mergeTimexWikiNER sentswithtmx linked_mentions_resolved =
-  T.pack (show sentswithtmx) <> "\n" <> T.pack (show linked_mentions_resolved)
+                  -> [TagPos TokIdx (Either (Maybe Text) EntityMentionUID)]-- (Maybe Text)]
+mergeTimexWikiNER sentswithtmx lnk_mntns_rslvd =
+  let lnk_mntns_tagpos = map (fmap Right . linkedMentionToTagPos) lnk_mntns_rslvd
+  in lnk_mntns_tagpos
+  -- in T.pack (show sentswithtmx) <> "\n" <> T.pack (show lnk_mntns_tagpos)
 
   
 
@@ -113,7 +117,7 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
               , "-- TimeTagger -----------------------------------------------------------------------------------" ]
       line2 = case mtmx of
                 Nothing -> ["Time annotation not successful!"]
-                Just sentswithtmx -> [mergeTimexWikiNER sentswithtmx linked_mentions_resolved]
+                Just sentswithtmx -> [T.pack (show (mergeTimexWikiNER sentswithtmx linked_mentions_resolved))]
                                      -- concat $ map formatTimex sentswithtmx
 
       line3 = [ "-- WikiNamedEntityTagger ------------------------------------------------------------------------"

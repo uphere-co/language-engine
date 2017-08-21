@@ -111,7 +111,7 @@ linkedMentionToTagPos -- :: [Token]
 linkedMentionToTagPos linked_mention =
   let uid = EL._uid linked_mention
       IRange b e = (_info linked_mention)^._1
-  in (TokIdx b, TokIdx e,uid)
+  in TagPos (TokIdx b, TokIdx e,uid)
 
 
   
