@@ -1,12 +1,16 @@
-{-# LANGUAGE DataKinds       #-}
-{-# LANGUAGE KindSignatures  #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeOperators   #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE KindSignatures    #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module NLP.Syntax.Type where
 
 import           Control.Lens
-import           Data.Text                   (Text)
+import           Data.Hashable                          (Hashable)
+import           Data.Text                              (Text)
+import           GHC.Generics                           (Generic)
 --
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII

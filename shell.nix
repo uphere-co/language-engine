@@ -1,10 +1,11 @@
 { pkgs ? import <nixpkgs> {}
 , uphere-nix-overlay ? <uphere-nix-overlay>
-, HCoreNLP ? <HCoreNLP>
-, nlp-types ? <nlp-types>
-, PropBank ? <PropBank>
-, wiki-ner ? <wiki-ner>
-, textview ? <textview>
+, HCoreNLP           ? <HCoreNLP>
+, lexicon            ? <lexicon>
+, nlp-types          ? <nlp-types>
+, PropBank           ? <PropBank>
+, wiki-ner           ? <wiki-ner>
+, textview           ? <textview>
 }:
 
 
@@ -37,6 +38,7 @@ let
       "PropBank" = self.callPackage (import PropBank) {};
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
       "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
+      "lexicon"  = self.callPackage (import lexicon) {};
       "wiki-ner" = self.callPackage (import wiki-ner) {};
       "textview" = self.callPackage (import textview) {};
     };  
@@ -69,6 +71,7 @@ let
 
             foreign-store
             
+            p.lexicon
             p.nlp-types
             p.PropBank
             p.HCoreNLP
