@@ -1,5 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 -- the functions in this module will be relocated to a more common package like textview
 
@@ -25,7 +26,9 @@ import           Text.Annotation.View
 
 type SentIdx = Int
 
-type CharIdx = Int
+newtype TokIdx = TokIdx { unTokIdx :: Int } deriving (Num,Eq,Ord,Show)
+
+newtype CharIdx = ChIdx { unChIdx :: Int } deriving (Num,Eq,Ord,Show)
 
 type BeginEnd = (CharIdx,CharIdx)
 
@@ -35,25 +38,22 @@ type SentItem = (SentIdx,BeginEnd,Text)
 
 
 addText :: Text -> (SentIdx,BeginEnd) -> SentItem
-addText txt (n,(b,e)) = (n,(b,e),slice (b-1) e txt)
+addText txt (n,(b,e)) = (n,(b,e),slice (unChIdx (b-1)) (unChIdx e) txt)
 
 addTag :: [TagPos a] -> SentItem -> (SentItem,[TagPos a])
 addTag lst i@(_,(b,e),_) = (i,filter check lst)
   where check (b',e',_) = b' >= b && e' <= e
 
+
 underlineText :: (a -> Text) -> BeginEnd -> Text -> [TagPos a] -> [Text]
 underlineText lblf (b0,_e0) txt taglst =
-  let adjf (b,e,z) = (z,b-b0+1,e-b0+1)
-      -- tagged = zipWith f [1..] lst
+  let adjf (b,e,z) = (z,unChIdx (b-b0+1),unChIdx (e-b0+1))
       ann = AnnotText (tagText (map adjf taglst) txt)
       xss = lineSplitAnnot Nothing 80 ann
-      -- formatInt = T.pack . show
       ls = do xs <- xss
               x <- xs
               underlineAnnotWithLabel (fmap lblf) x
   in ls
-  --     result = T.intercalate "\n" ls
-  -- T.IO.putStrLn result
 
 
 getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd)]
@@ -67,8 +67,8 @@ getSentenceOffsets psents =
 addSUTime :: [SentItem] -> T.ListTimex
           -> [(SentItem,[TagPos (Maybe Text)])]
 addSUTime sents tmxs =
-  let f t = ( fromIntegral (t^.T.characterOffsetBegin) + 1
-            , fromIntegral (t^.T.characterOffsetEnd)
+  let f t = ( fromIntegral (t^.T.tokenBegin) + 1
+            , fromIntegral (t^.T.tokenEnd)
             , t^. T.timex . Tmx.value
             )
       cvt = map (\(x,xs) -> (x,map(\(i,j,z) -> (i,j,(fmap cutf8 z))) xs))
