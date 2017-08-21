@@ -13,6 +13,8 @@ let
 
 
   hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
+            hashable
+            lens
             text
             cabal-install
           ]);
