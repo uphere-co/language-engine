@@ -7,19 +7,21 @@
 module OntoNotes.App.Util where
 
 import           Control.Lens
-import           Data.Maybe               (fromJust)
-import           Data.Text                (Text)
-import qualified Data.Text        as T
-import qualified Data.Text.IO     as T.IO
-import           Text.ProtocolBuffers.Basic       (Utf8)
+import           Control.Monad                                 (guard)
+import           Data.Maybe                                    (fromJust,mapMaybe)
+import           Data.Text                                     (Text)
+import qualified Data.Text                             as T
+import qualified Data.Text.IO                          as T.IO
+import           Text.ProtocolBuffers.Basic                    (Utf8)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
 import qualified CoreNLP.Proto.CoreNLPProtos.Timex     as Tmx
 import qualified CoreNLP.Proto.HCoreNLPProto.ListTimex as T
 import qualified CoreNLP.Proto.HCoreNLPProto.TimexWithOffset as T
-import           CoreNLP.Simple.Convert                           (cutf8)
+import           CoreNLP.Simple.Convert                        (cutf8)
 import           CoreNLP.Simple.Type.Simplified
+import           PropBank.Util                                 (isInsideR)
 import           Text.Annotation.Type
 import           Text.Annotation.Util.Doc
 import           Text.Annotation.View
@@ -64,14 +66,32 @@ getSentenceOffsets psents =
     in (fromIntegral b+1,fromIntegral e)
 
 
-addSUTime :: [SentItem] -> T.ListTimex
+addSUTime :: [SentItem]
+          -> [Token]
+          -> T.ListTimex
           -> [(SentItem,[TagPos (Maybe Text)])]
-addSUTime sents tmxs =
-  let f t = ( fromIntegral (t^.T.tokenBegin) + 1
-            , fromIntegral (t^.T.tokenEnd)
-            , t^. T.timex . Tmx.value
-            )
-      cvt = map (\(x,xs) -> (x,map(\(i,j,z) -> (i,j,(fmap cutf8 z))) xs))
-  in (cvt . filter (not.null.(^._2)) . map (addTag (map f (tmxs^..T.timexes.traverse)))) sents
+addSUTime sents toks tmxs =
+  let f t = do (cstart,cend) <- convertRangeFromTokenToChar toks
+                                  (TokIdx (fromIntegral (t^.T.tokenBegin))
+                                  ,TokIdx (fromIntegral (t^.T.tokenEnd)))
+               return (cstart,cend,t^. T.timex . Tmx.value)
 
+      cvt = map (\(x,xs) -> (x,map(\(i,j,z) -> (i,j,(fmap cutf8 z))) xs))
+  in (cvt . filter (not.null.(^._2)) . map (addTag (mapMaybe f (tmxs^..T.timexes.traverse)))) sents
+
+
+--         ( fromIntegral (t^.T.tokenBegin) + 1
+--             , fromIntegral (t^.T.tokenEnd)
+--             , 
+--            )
+
+
+convertRangeFromTokenToChar :: [Token] -> (TokIdx,TokIdx) -> Maybe (CharIdx,CharIdx)
+convertRangeFromTokenToChar toks (TokIdx b,TokIdx e) = do
+  let matched_toks = filter (\tok -> (tok^.token_tok_idx_range) `isInsideR` (b,e)) toks
+  guard ((not.null) matched_toks)
+  let cb = (head matched_toks)^.token_char_idx_range._1
+      ce = (last matched_toks)^.token_char_idx_range._2
+  return (ChIdx (cb+1),ChIdx ce)
+        
 

@@ -110,8 +110,8 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
               , "-- TimeTagger -----------------------------------------------------------------------------------" ]
       line2 = case mtmx of
                 Nothing -> ["Time annotation not successful!"]
-                Just sentswithtmx -> [mergeTimexWikiNER sentswithtmx linked_mentions_resolved]
--- concat $ map formatTimex sentswithtmx
+                Just sentswithtmx -> -- [mergeTimexWikiNER sentswithtmx linked_mentions_resolved]
+                                     concat $ map formatTimex sentswithtmx
 
       line3 = [ "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
               , T.pack (render (formatNER mtokenss sentitems linked_mentions_resolved))

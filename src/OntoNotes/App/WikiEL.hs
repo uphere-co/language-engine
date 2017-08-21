@@ -45,6 +45,8 @@ import qualified WikiEL.Type.FileFormat        as F
 import qualified WikiEL                        as WEL
 --
 import           OntoNotes.App.Util                           (CharIdx(..),SentItem,TagPos(..)
+                                                              ,TokIdx(..)
+                                                              ,convertRangeFromTokenToChar
                                                               ,underlineText)
 
 
@@ -89,18 +91,25 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
       Just symbol -> Just (mentionUID, itemID, symbol)
       Nothing     -> Nothing  
 
+
+
+
 linkedMentionToTagPos :: [Token]
                       -> UIDCite EntityMentionUID (EL.EMInfo Text)
                       -> Maybe (TagPos EntityMentionUID)
 linkedMentionToTagPos toks linked_mention = do
   let uid = EL._uid linked_mention
       IRange b e = (_info linked_mention)^._1
+  (cstart,cend) <- convertRangeFromTokenToChar toks (TokIdx b,TokIdx e)
+  return (cstart,cend,uid)
+  
+{-       
       matched_toks = filter (\tok -> (tok^.token_tok_idx_range) `isInsideR` (b,e)) toks
   guard ((not.null) matched_toks)
   let cb = (head matched_toks)^.token_char_idx_range._1
       ce = (last matched_toks)^.token_char_idx_range._2
   return (ChIdx (cb+1),ChIdx ce,uid)
-
+-}
 
 
 formatTaggedSentences :: [(SentItem,[TagPos EntityMentionUID])] -> Box 
