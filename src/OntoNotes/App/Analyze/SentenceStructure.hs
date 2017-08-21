@@ -50,6 +50,9 @@ import           OntoNotes.App.WikiEL                      (getWikiResolvedMenti
 import           OntoNotes.Type.SenseInventory
 
 
+mergeTimexWikiNER :: [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
+                  -> [EntityMention Text]
+                  -> Text 
 mergeTimexWikiNER sentswithtmx linked_mentions_resolved =
   T.pack (show sentswithtmx) <> "\n" <> T.pack (show linked_mentions_resolved)
 

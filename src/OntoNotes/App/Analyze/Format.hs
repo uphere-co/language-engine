@@ -4,6 +4,7 @@
 module OntoNotes.App.Analyze.Format where
 
 import           Control.Lens                            ((^.),(^?),(%~),_1,_2,_3,_5,_6,_7,_Just)
+import           Control.Monad                           ((>=>))
 import           Data.Function                           ((&),on)
 import           Data.List                               (find,intercalate,intersperse,maximumBy)
 import           Data.Maybe                              (fromMaybe,mapMaybe)
@@ -23,10 +24,11 @@ import           NLP.Syntax.Type                         (Voice)
 import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID)
 --
 import           OntoNotes.App.Util                      (CharIdx,TagPos,SentItem
-                                                         ,addTag,underlineText)
-import           OntoNotes.App.WikiEL                    (formatLinkedMention,formatTaggedSentences,linkedMentionToTagPos)
+                                                         ,addTag,convertTagPosFromTokenToChar
+                                                         ,underlineText)
+import           OntoNotes.App.WikiEL                    (formatLinkedMention,formatTaggedSentences
+                                                         ,linkedMentionToTagPos)
 import           OntoNotes.Format                        (formatArgPatt,formatRoleMap)
--- import           OntoNotes.Type.ArgTable
 
 
 
@@ -98,11 +100,11 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
 
 
 formatNER :: [[Maybe Token]] -> [SentItem CharIdx] -> [UIDCite EntityMentionUID (EMInfo Text)] -> Box
-formatNER mtokenss sentitems linked_mentions_resolved =
+formatNER mtokenss sentitems lnk_mntns_rslvd =
   let toks = concatMap (map snd . sentToTokens') mtokenss
-      tags = mapMaybe (linkedMentionToTagPos toks) linked_mentions_resolved
+      tags = mapMaybe (convertTagPosFromTokenToChar toks . linkedMentionToTagPos) lnk_mntns_rslvd
       sents_tagged = map (addTag tags) sentitems
       doc1 = formatTaggedSentences sents_tagged
-      doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ linked_mentions_resolved
+      doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ lnk_mntns_rslvd
   in hsep 10 left [doc1,doc2]
 

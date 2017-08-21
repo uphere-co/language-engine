@@ -104,14 +104,16 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
 
 
 
-linkedMentionToTagPos :: [Token]
-                      -> UIDCite EntityMentionUID (EL.EMInfo Text)
-                      -> Maybe (TagPos CharIdx EntityMentionUID)
-linkedMentionToTagPos toks linked_mention = do
+linkedMentionToTagPos -- :: [Token]
+                      :: UIDCite EntityMentionUID (EL.EMInfo Text)
+                      -- -> Maybe (TagPos CharIdx EntityMentionUID)
+                      -> (TagPos TokIdx EntityMentionUID)
+linkedMentionToTagPos linked_mention =
   let uid = EL._uid linked_mention
       IRange b e = (_info linked_mention)^._1
-  (cstart,cend) <- convertRangeFromTokenToChar toks (TokIdx b,TokIdx e)
-  return (cstart,cend,uid)
+  in (TokIdx b, TokIdx e,uid)
+
+
   
 
 formatTaggedSentences :: [(SentItem CharIdx,[TagPos CharIdx EntityMentionUID])] -> Box 

@@ -80,12 +80,6 @@ addSUTime sents toks tmxs =
   in (cvt . filter (not.null.(^._2)) . map (addTag (mapMaybe f (tmxs^..T.timexes.traverse)))) sents
 
 
---         ( fromIntegral (t^.T.tokenBegin) + 1
---             , fromIntegral (t^.T.tokenEnd)
---             , 
---            )
-
-
 convertRangeFromTokenToChar :: [Token] -> (TokIdx,TokIdx) -> Maybe (CharIdx,CharIdx)
 convertRangeFromTokenToChar toks (TokIdx b,TokIdx e) = do
   let matched_toks = filter (\tok -> (tok^.token_tok_idx_range) `isInsideR` (b,e)) toks
@@ -95,3 +89,5 @@ convertRangeFromTokenToChar toks (TokIdx b,TokIdx e) = do
   return (ChIdx (cb+1),ChIdx ce)
         
 
+convertTagPosFromTokenToChar toks (tb,te,x) = 
+  convertRangeFromTokenToChar toks (tb,te) >>= \(cs,ce) -> return (cs,ce,x)

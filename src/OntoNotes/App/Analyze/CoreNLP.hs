@@ -53,6 +53,7 @@ runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
                 , [Maybe PennTree]
                 , [Dependency]
                 , Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
+                  
                 )
 runParser pp txt = do
   doc <- getDoc txt
