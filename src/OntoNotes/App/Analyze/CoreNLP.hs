@@ -31,11 +31,12 @@ import           WikiEL.EntityLinking                         (EntityMentionUID,
 import qualified WikiEL.EntityLinking                  as EL
 --
 import           OntoNotes.App.Util                           (BeginEnd,TagPos,SentItem,SentIdx
+                                                              ,CharIdx
                                                               ,addSUTime,addTag,addText,underlineText)
 import           OntoNotes.App.WikiEL                         (getWikiResolvedMentions)
 
 
-getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd)]
+getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd CharIdx)]
 getSentenceOffsets psents =
   zip ([1..] :: [Int]) $ flip map psents $ \s ->
     let b = fromJust $ fromJust $ firstOf (S.token . traverse . TK.beginChar) s
@@ -47,11 +48,11 @@ runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> Text
           -> IO ( [Sentence]
                 , [Maybe SentenceIndex] -- [Maybe Sentence]
-                , [SentItem]                  
+                , [SentItem CharIdx]
                 , [[Token]]
                 , [Maybe PennTree]
                 , [Dependency]
-                , Maybe [(SentItem, [TagPos (Maybe Text)])]
+                , Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
                 )
 runParser pp txt = do
   doc <- getDoc txt
@@ -61,7 +62,7 @@ runParser pp txt = do
   let psents = toListOf (D.sentence . traverse) pdoc
       sentidxs = getSentenceOffsets psents
       sentitems = map (addText txt) sentidxs
-  
+
 
   let parsetrees = map (\x -> pure . decodeToPennTree =<< (x^.S.parseTree) ) psents
       sentidxs = map (convertSentence pdoc) psents
@@ -76,5 +77,5 @@ runParser pp txt = do
     Right rsutime -> do
       let sentswithtmx = addSUTime sentitems toks rsutime
       return (Just sentswithtmx)
-      
+
   return (sents,sentidxs,sentitems,tokss,parsetrees,deps,mtmx)

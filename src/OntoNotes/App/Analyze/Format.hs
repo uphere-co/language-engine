@@ -22,7 +22,8 @@ import           Lexicon.Type                            (ArgPattern(..),type Ro
 import           NLP.Syntax.Type                         (Voice)                 
 import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID)
 --
-import           OntoNotes.App.Util                      (TagPos,SentItem,addTag,underlineText)
+import           OntoNotes.App.Util                      (CharIdx,TagPos,SentItem
+                                                         ,addTag,underlineText)
 import           OntoNotes.App.WikiEL                    (formatLinkedMention,formatTaggedSentences,linkedMentionToTagPos)
 import           OntoNotes.Format                        (formatArgPatt,formatRoleMap)
 -- import           OntoNotes.Type.ArgTable
@@ -38,19 +39,19 @@ formatLemmaPOS :: Token -> String
 formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
 
 
-formatTimex :: (SentItem,[TagPos (Maybe Text)]) -> [Text]
+formatTimex :: (SentItem CharIdx, [TagPos CharIdx (Maybe Text)]) -> [Text]
 formatTimex (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["----------"] ++ [T.pack (show a)]
 
 
-showTimex :: (SentItem,[TagPos (Maybe Text)]) -> IO ()
+showTimex :: (SentItem CharIdx, [TagPos CharIdx (Maybe Text)]) -> IO ()
 showTimex (s,a) = T.IO.putStrLn (T.intercalate "\n" (formatTimex (s,a)))
 
 
 
-getFormatTimex' :: (SentItem,[TagPos (Maybe Text)]) -> [Text]
+getFormatTimex' :: (SentItem CharIdx,[TagPos CharIdx (Maybe Text)]) -> [Text]
 getFormatTimex' (s,a) = (underlineText (const "") (s^._2) (s^._3) a) ++ ["----------"] ++ [T.pack (show a)]
 
-showFormatTimex' :: (SentItem,[TagPos (Maybe Text)]) -> IO ()
+showFormatTimex' :: (SentItem CharIdx,[TagPos CharIdx (Maybe Text)]) -> IO ()
 showFormatTimex' (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex' (s,a)))
 
 
@@ -96,7 +97,7 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
 
 
 
-formatNER :: [[Maybe Token]] -> [SentItem] -> [UIDCite EntityMentionUID (EMInfo Text)] -> Box
+formatNER :: [[Maybe Token]] -> [SentItem CharIdx] -> [UIDCite EntityMentionUID (EMInfo Text)] -> Box
 formatNER mtokenss sentitems linked_mentions_resolved =
   let toks = concatMap (map snd . sentToTokens') mtokenss
       tags = mapMaybe (linkedMentionToTagPos toks) linked_mentions_resolved

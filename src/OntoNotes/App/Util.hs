@@ -32,22 +32,22 @@ newtype TokIdx = TokIdx { unTokIdx :: Int } deriving (Num,Eq,Ord,Show)
 
 newtype CharIdx = ChIdx { unChIdx :: Int } deriving (Num,Eq,Ord,Show)
 
-type BeginEnd = (CharIdx,CharIdx)
+type BeginEnd i = (i,i) -- (CharIdx,CharIdx)
 
-type TagPos a = (CharIdx,CharIdx,a)
+type TagPos i a = (i,i,a)
 
-type SentItem = (SentIdx,BeginEnd,Text)
+type SentItem i = (SentIdx,BeginEnd i,Text)
 
 
-addText :: Text -> (SentIdx,BeginEnd) -> SentItem
+addText :: Text -> (SentIdx,BeginEnd CharIdx) -> SentItem CharIdx
 addText txt (n,(b,e)) = (n,(b,e),slice (unChIdx (b-1)) (unChIdx e) txt)
 
-addTag :: [TagPos a] -> SentItem -> (SentItem,[TagPos a])
+addTag :: (Ord i) => [TagPos i a] -> SentItem i -> (SentItem i,[TagPos i a])
 addTag lst i@(_,(b,e),_) = (i,filter check lst)
   where check (b',e',_) = b' >= b && e' <= e
 
 
-underlineText :: (a -> Text) -> BeginEnd -> Text -> [TagPos a] -> [Text]
+underlineText :: (a -> Text) -> BeginEnd CharIdx -> Text -> [TagPos CharIdx a] -> [Text]
 underlineText lblf (b0,_e0) txt taglst =
   let adjf (b,e,z) = (z,unChIdx (b-b0+1),unChIdx (e-b0+1))
       ann = AnnotText (tagText (map adjf taglst) txt)
@@ -58,7 +58,7 @@ underlineText lblf (b0,_e0) txt taglst =
   in ls
 
 
-getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd)]
+getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd CharIdx)]
 getSentenceOffsets psents =
   zip ([1..] :: [Int]) $ flip map psents $ \s ->
     let b = fromJust $ fromJust $ firstOf (S.token . traverse . TK.beginChar) s
@@ -66,10 +66,10 @@ getSentenceOffsets psents =
     in (fromIntegral b+1,fromIntegral e)
 
 
-addSUTime :: [SentItem]
+addSUTime :: [SentItem CharIdx]
           -> [Token]
           -> T.ListTimex
-          -> [(SentItem,[TagPos (Maybe Text)])]
+          -> [(SentItem CharIdx,[TagPos CharIdx (Maybe Text)])]
 addSUTime sents toks tmxs =
   let f t = do (cstart,cend) <- convertRangeFromTokenToChar toks
                                   (TokIdx (fromIntegral (t^.T.tokenBegin))
