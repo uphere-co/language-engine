@@ -15,13 +15,13 @@ import qualified Data.Text            as T
 import qualified Data.Text.IO         as T.IO
 import           Data.Text.Read               (decimal)
 --
-import           Lexicon.Mapping.Type
+import           Lexicon.Type
 
 
 parseRoleInst :: [Text] -> RoleInstance
 parseRoleInst (i:lma:sense:frame:rest)
   = let lst = map (\w -> let x:y:_ = T.splitOn ":" w in (x,y)) rest
-    in ((lma,V,sense),("frame",frame):lst)
+    in ((lma,Verb,sense),("frame",frame):lst)
 parseRoleInst x = error ("parseRoleInstance: " ++ show x)
 
 
@@ -31,8 +31,8 @@ loadRoleInsts fp = map parseRoleInst . map T.words . T.lines <$> T.IO.readFile f
 
 convertONIDtoSenseID lma sense_num =
   if lma == "hold" && sense_num == "5"       -- this is an ad hoc treatment for group 2
-  then (lma,V,"2." <> sense_num)
-  else (lma,V,"1." <> sense_num)
+  then (lma,Verb,"2." <> sense_num)
+  else (lma,Verb,"1." <> sense_num)
 
 
 parseWithNullCheck :: (Text -> a) -> Text -> Maybe a
