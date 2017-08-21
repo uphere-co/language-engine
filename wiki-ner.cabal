@@ -116,7 +116,6 @@ test-suite test
 --                      -prof
 --                      -fprof-auto
 
-
 test-suite testRun
   type: exitcode-stdio-1.0
   hs-source-dirs: test, src

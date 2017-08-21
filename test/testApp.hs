@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE BangPatterns #-}
 
-module Test.RDFDumpETL where
+--Uncomment it to run it in REPL
+--module Test.RDFDumpETL where
 
 import           Data.Text                             (Text)
 import           Data.Maybe                            (mapMaybe,catMaybes)
@@ -29,78 +31,17 @@ import qualified Data.Vector.Unboxed           as UV
 import qualified Data.Vector.Fusion.Bundle     as B
 import qualified WikiEL.Util.Hash              as H
 import qualified WikiEL.Graph                  as G
+import qualified WikiEL.ETL.RDF.Binary         as BR
+
+import qualified Data.ByteString.Lazy.Char8    as BL
 
 
-import qualified Data.ByteString.Lazy.Char8      as BL
 
 
-
-
-
-hasWikiAlias :: Either a YagoRdfTriple -> Maybe (YagoObject, YagoObject)
-hasWikiAlias (Right (_,ts,tv@(YagoVerb v),to@(YagoWikiAlias _))) | v =="redirectedFrom" = Just (ts, to)
-hasWikiAlias _ = Nothing
-
-isWordNet :: Either a YagoRdfTriple -> Bool
-isWordNet (Right (_,ts,tv,to@(YagoWordnet _))) = True
-isWordNet _ = False
-
-taxonomyWordNet :: Either a YagoRdfTriple -> Maybe (SynsetY, SynsetY)
-taxonomyWordNet (Right (_,YagoWordnet sub,YagoRDFSprop p,YagoWordnet super))|p == "subClassOf" = Just (x, y)
-  where
-    x = wordnetSynsetYAGO sub
-    y = wordnetSynsetYAGO super
-taxonomyWordNet _ = Nothing
-
-wikicatOfWordNetT :: Either a YagoRdfTriple -> Maybe Text
-wikicatOfWordNetT (Right (_,ts@(YagoWikicat cat),tv,to@(YagoWordnet synset)) ) = x
-  where x = Just (T.concat [cat, "\t",synset])
-wikicatOfWordNetT _ = Nothing
-
-
-interWikiLinks :: Either a YagoRdfTriple -> Maybe Text
-interWikiLinks (Right (_,ts@(YagoWikiTitle s),_,to@(YagoWikiTitle o))) = Just (T.intercalate "\t" [s,o])
-interWikiLinks _ = Nothing
-
-{-
--- following got just ~10% speed-up compared to readlineYAGO.
-parserInterEnwikiLinks :: Parser YagoRdfTriple
-parserInterEnwikiLinks = do
-  let ssep = skipWhile C.isSpace
-  ssep
-  subj <- parserYAGOwikiTitle
-  ssep
-  verb <- parserYAGOverb
-  ssep
-  obj  <- parserYAGOwikiTitle
-  ssep
-  return (nullID, subj, verb, obj)
-parseUserDefined = parseOnly
--}
-
-yago :: Text -> Text -> IO Text
-yago prevPartialBlock block = do
-  let
-    (mainBlock,partialBlock) = T.breakOnEnd "\n" block
-    lines = T.lines (T.append prevPartialBlock mainBlock)
-    aliases = map (hasWikiAlias.readlineYAGO) lines
-    synsets = filter (isWordNet.readlineYAGO) lines
-    typedCats = mapMaybe (wikicatOfWordNetT.readlineYAGO) lines
-
-    taxons = mapMaybe (taxonomyWordNet.readlineYAGO) lines
-    links = mapMaybe (interWikiLinks . readlineYAGO) lines
-    --links = mapMaybe (interWikiLinks . parseUserDefined parserInterEnwikiLinks) lines
-  --mapM_ print (rights aliases)
-  --mapM_ T.IO.putStrLn synsets
-  --mapM_ T.IO.putStrLn typedCats
-  --mapM_ print taxons
-  mapM_ T.IO.putStrLn links
-  
-  return partialBlock
 
 
 wikidata :: (ParsingState,Text) -> Text -> IO (ParsingState,Text)
-wikidata (prevState, prevPartialBlock) block = do
+wikidata (!prevState, prevPartialBlock) block = do
   let
     (mainBlock,partialBlock) = T.breakOnEnd "\n" block
     lines = T.lines (T.append prevPartialBlock mainBlock)
@@ -112,9 +53,7 @@ wikidata (prevState, prevPartialBlock) block = do
   --mapM_ T.IO.putStrLn rs
 
 
-main1 = readBlocks stdin yago ""
 main2 = readBlocks stdin wikidata (initState, "")
-
 
 
 type HashInvs =  M.Map H.WordHash Text
@@ -171,14 +110,46 @@ loadInterlinks (prevState, prevPartialBlock) block = do
   --mapM_ print edges
   return (state,partialBlock)
 
-
-foo :: FilePath -> IO Foo
-foo filepath = do
+foo :: ([Text] -> a) -> FilePath -> IO a
+foo f  filepath = do
   content <- T.IO.readFile filepath
   let
     lines = T.lines content
-    state = loadEdges lines
+    state = f lines
   return state
+
+data WNTypes = WNTypes { _types  :: M.Map H.WordHash [H.WordHash]
+                       , _toStr  :: M.Map H.WordHash Text
+                       }
+
+instance Show WNTypes where
+  show (WNTypes types names) = show (M.size types) ++ " names are mapped." ++ show (M.size names) ++ " hashes."
+
+loadWordnetTypes :: [Text] -> WNTypes
+loadWordnetTypes lines = foldl' addKey (WNTypes M.empty M.empty) edges
+  where
+    edges    = map parseInterlinks lines
+    addKey !(foo@(WNTypes types names)) (entity,synset) = foo'
+      where
+        f !map (key,val) = M.insert key val map
+        --g map (key,val) = M.insert key [val] map
+        g map (key,val) = map `seq` M.insertWith (++) key [val] map
+        hash = H.wordHash
+        key = hash entity
+        val = hash synset
+        foo' = WNTypes (g types (key, val)) (f (f names (key, entity)) (val, synset))
+
+wordnetType :: WNTypes -> Text -> [Text]
+wordnetType table@(WNTypes types names) name = f ts
+  where
+    key = H.wordHash name
+    f Nothing = []
+    f (Just ts) = mapMaybe (\t -> M.lookup t names) ts
+    ts = M.lookup key types
+
+main4 = do
+  wn <- foo loadWordnetTypes "enwiki/wnTypes"
+  print wn
 
 {-
 For preparing test data:
@@ -232,15 +203,20 @@ test1 sorted@(d,edges) names = do
   --print $ dEdges (H.wordHash "Germany")
 
 main3init = do
-  cc@(Foo edges names) <- foo "enwiki/interlinks" -- ~16min to sort
+  cc@(Foo edges names) <- foo loadEdges "enwiki/interlinks" -- ~16min to sort
+  wn <- foo loadWordnetTypes "enwiki/wnTypes"
   let
-    sorted = G.sortEdges G.From  edges  
-  --cc@(Foo edges names) <- foo "bb"
+    sorted = G.sortEdges G.From  edges
   print $ UV.length edges
   print $ M.size names
+  print $ wn
+
   store <- newStore cc
   store2 <- newStore sorted
+  store3 <- newStore wn
   print store
+  print store2
+  print store3
 
 {-
 -- Script for testing in REPL
@@ -287,5 +263,5 @@ main3 idx idx2 = do
   print $ UV.length es
 
 main :: IO ()
-main = main1
+main = main4
 
