@@ -146,7 +146,9 @@ prepareNETokens all =
 getWikiResolvedMentions :: ([Sentence], [Maybe SentenceIndex], [SentItem CharIdx], [[Token]]
                            ,[Maybe PennTree]
                            ,[Dependency]
-                           ,Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])])
+                           -- ,Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
+                           ,Maybe [TagPos TokIdx (Maybe Text)]
+                           )
                         -> ([(Text,NamedEntityClass)] -> [EntityMention Text])
                         -> [EntityMention Text]
 getWikiResolvedMentions loaded emTagger =
@@ -163,7 +165,8 @@ getWikiAllMentions :: ([Sentence]
                       ,[[Token]]
                       ,[Maybe PennTree]
                       ,[Dependency]
-                      ,Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])])
+                      ,Maybe [TagPos TokIdx (Maybe Text)] -- [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
+                      )
                    -> ([(Text,NamedEntityClass)] -> [EntityMention Text])
                    -> [EntityMention Text]
 getWikiAllMentions loaded emTagger =

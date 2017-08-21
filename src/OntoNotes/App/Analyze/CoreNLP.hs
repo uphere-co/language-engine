@@ -31,8 +31,10 @@ import           WikiEL.EntityLinking                         (EntityMentionUID,
 import qualified WikiEL.EntityLinking                  as EL
 --
 import           OntoNotes.App.Util                           (BeginEnd,TagPos,SentItem,SentIdx
-                                                              ,CharIdx
-                                                              ,addSUTime,addTag,addText,underlineText)
+                                                              ,CharIdx,TokIdx
+                                                              ,addSUTime,addTag,addText
+                                                              ,listTimexToTagPos
+                                                              ,underlineText)
 import           OntoNotes.App.WikiEL                         (getWikiResolvedMentions)
 
 
@@ -52,8 +54,8 @@ runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
                 , [[Token]]
                 , [Maybe PennTree]
                 , [Dependency]
-                , Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
-                  
+                -- , Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
+                , Maybe [TagPos TokIdx (Maybe Text)]
                 )
 runParser pp txt = do
   doc <- getDoc txt
@@ -75,8 +77,8 @@ runParser pp txt = do
 
   mtmx <- case fmap fst (messageGet lbstr_sutime) :: Either String T.ListTimex of
     Left _ -> return Nothing
-    Right rsutime -> do
-      let sentswithtmx = addSUTime sentitems toks rsutime
-      return (Just sentswithtmx)
+    Right rsutime -> return (Just (listTimexToTagPos rsutime))
+      -- let sentswithtmx = addSUTime sentitems toks rsutime
+      -- return (Just sentswithtmx)
 
   return (sents,sentidxs,sentitems,tokss,parsetrees,deps,mtmx)

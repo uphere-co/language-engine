@@ -45,19 +45,20 @@ import           OntoNotes.App.Analyze.Format              (formatSenses,formatT
                                                            ,formatNER
                                                            ,showTimex,showFormatTimex'
                                                            )
-import           OntoNotes.App.Util                        (CharIdx,SentItem,TagPos,TokIdx)
+import           OntoNotes.App.Util                        (CharIdx,SentItem,TagPos,TokIdx
+                                                           )
 import           OntoNotes.App.WikiEL                      (getWikiResolvedMentions
                                                            ,linkedMentionToTagPos
                                                            )
 import           OntoNotes.Type.SenseInventory
 
 
-mergeTimexWikiNER :: [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
+mergeTimexWikiNER :: [TagPos TokIdx (Maybe Text)]
                   -> [EntityMention Text]
                   -> [TagPos TokIdx (Either (Maybe Text) EntityMentionUID)]-- (Maybe Text)]
-mergeTimexWikiNER sentswithtmx lnk_mntns_rslvd =
+mergeTimexWikiNER tmxs lnk_mntns_rslvd =
   let lnk_mntns_tagpos = map (fmap Right . linkedMentionToTagPos) lnk_mntns_rslvd
-  in lnk_mntns_tagpos
+  in lnk_mntns_tagpos ++ map (fmap Left) tmxs
   -- in T.pack (show sentswithtmx) <> "\n" <> T.pack (show lnk_mntns_tagpos)
 
   
@@ -105,19 +106,20 @@ sentStructure :: HashMap Text Inventory
                  , [[Token]]
                  , [Maybe PennTree]
                  , [Dependency]
-                 , Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
+                 , Maybe [TagPos TokIdx (Maybe Text)]
+                 -- , Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
                  )
               -> [Text]
 sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded =
-  let (sents,sentidxs,sentitems,_tokss,mptrs,deps,mtmx) = loaded
+  let (sents,sentidxs,sentitems,_tokss,mptrs,deps,mtmxs) = loaded
       lmass = sents ^.. traverse . sentenceLemma
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = getWikiResolvedMentions loaded emTagger
       line1 = [ "================================================================================================="
               , "-- TimeTagger -----------------------------------------------------------------------------------" ]
-      line2 = case mtmx of
+      line2 = case mtmxs of
                 Nothing -> ["Time annotation not successful!"]
-                Just sentswithtmx -> [T.pack (show (mergeTimexWikiNER sentswithtmx linked_mentions_resolved))]
+                Just tmxs -> [T.pack (show (mergeTimexWikiNER tmxs linked_mentions_resolved))]
                                      -- concat $ map formatTimex sentswithtmx
 
       line3 = [ "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
