@@ -1,5 +1,6 @@
 {-# LANGUAGE ExplicitNamespaces #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
 
 module OntoNotes.App.Analyze.Format where
 
@@ -21,13 +22,16 @@ import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,toke
 import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
                                                          ,type RolePattInstance,POSVorN(..))
 import           NLP.Syntax.Type                         (Voice)                 
-import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID)
+import qualified WikiEL                        as WEL
+import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID,_emuid)
+import qualified WikiEL.EntityLinking          as EL
+import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,parseStanfordNE,namedEntityAnnotator,resolvedUID)
+
 --
-import           OntoNotes.App.Util                      (CharIdx,TagPos,SentItem
+import           OntoNotes.App.Util                      (CharIdx,TokIdx,TagPos(..),SentItem
                                                          ,addTag,convertTagPosFromTokenToChar
                                                          ,underlineText)
-import           OntoNotes.App.WikiEL                    (formatLinkedMention,formatTaggedSentences
-                                                         ,linkedMentionToTagPos)
+import           OntoNotes.App.WikiEL                    (linkedMentionToTagPos)
 import           OntoNotes.Format                        (formatArgPatt,formatRoleMap)
 
 
@@ -97,14 +101,37 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
 
 
 
+formatLinkedMention Cite {..} = printf "%3d: (-> %3d) %s " (EL._emuid _uid) (EL._emuid _ref) (formatEMInfo _info)
+formatLinkedMention Self {..} = printf "%3d:          %s " (EL._emuid _uid)                  (formatEMInfo _info)
 
 
-formatNER :: [[Maybe Token]] -> [SentItem CharIdx] -> [UIDCite EntityMentionUID (EMInfo Text)] -> Box
-formatNER mtokenss sentitems lnk_mntns_rslvd =
+formatIndexedTimex (c,mtxt)   = printf "%3s:          %s " (T.singleton c) (fromMaybe "" mtxt)
+
+formatTaggedSentences :: (a -> Text) ->  [(SentItem CharIdx,[TagPos CharIdx a])] -> Box 
+formatTaggedSentences f sents_tagged =
+  let txts = concatMap (\(s,a) -> underlineText f (s^._2) (s^._3) a) sents_tagged
+  in vcat top $ map (text . T.unpack) txts 
+
+
+formatPreNE tag = case resolvedUID tag of
+                    Left e -> "unresolved"
+                    Right i -> show i
+
+
+formatEMInfo :: EL.EMInfo Text -> String
+formatEMInfo em@(_,ws,tag) = printf "%-25s %-20s" (WEL.entityName em) (formatPreNE tag)
+
+
+
+
+
+
+formatTagged :: [[Maybe Token]] -> [SentItem CharIdx] -> [TagPos TokIdx (Either (EL.EntityMention Text) (Char,(Maybe Text)))] -> Box
+formatTagged mtokenss sentitems tlst =
   let toks = concatMap (map snd . sentToTokens') mtokenss
-      tags = mapMaybe (convertTagPosFromTokenToChar toks . linkedMentionToTagPos) lnk_mntns_rslvd
-      sents_tagged = map (addTag tags) sentitems
-      doc1 = formatTaggedSentences sents_tagged
-      doc2 = vcat top . intersperse (text "") . map (text.formatLinkedMention) $ lnk_mntns_rslvd
+      clst = mapMaybe (convertTagPosFromTokenToChar toks) tlst
+      sents_tagged = map (addTag clst) sentitems
+      doc1 = formatTaggedSentences (either (T.pack . show . _emuid . EL._uid) (T.singleton . (^._1))) sents_tagged
+      doc2 = vcat top . intersperse (text "") . map (text. either formatLinkedMention formatIndexedTimex) $ map (\(TagPos (_,_,x)) -> x) clst
   in hsep 10 left [doc1,doc2]
 

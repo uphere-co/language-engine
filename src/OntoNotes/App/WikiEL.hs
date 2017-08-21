@@ -104,35 +104,15 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
 
 
 
-linkedMentionToTagPos -- :: [Token]
-                      :: UIDCite EntityMentionUID (EL.EMInfo Text)
-                      -- -> Maybe (TagPos CharIdx EntityMentionUID)
-                      -> (TagPos TokIdx EntityMentionUID)
+linkedMentionToTagPos :: (EntityMention Text) --  UIDCite EntityMentionUID (EL.EMInfo Text)
+                      -> (TagPos TokIdx (EntityMention Text)) -- EntityMentionUID
 linkedMentionToTagPos linked_mention =
-  let uid = EL._uid linked_mention
+  let -- uid = EL._uid linked_mention
       IRange b e = (_info linked_mention)^._1
-  in TagPos (TokIdx b, TokIdx e,uid)
+  in TagPos (TokIdx b, TokIdx e,linked_mention)
 
 
   
-
-formatTaggedSentences :: [(SentItem CharIdx,[TagPos CharIdx EntityMentionUID])] -> Box 
-formatTaggedSentences sents_tagged =
-  let txts = concatMap (\(s,a) -> underlineText (T.pack . show . EL._emuid) (s^._2) (s^._3) a) sents_tagged
-  in vcat top $ map (text . T.unpack) txts 
-
-
-formatPreNE tag = case resolvedUID tag of
-                    Left e -> "unresolved"
-                    Right i -> show i
-
-
-formatEMInfo :: EL.EMInfo Text -> String
-formatEMInfo em@(_,ws,tag) = printf "%-25s %-20s" (WEL.entityName em) (formatPreNE tag)
-
-
-formatLinkedMention Cite {..} = printf "%3d: (-> %3d) %s " (EL._emuid _uid) (EL._emuid _ref) (formatEMInfo _info)
-formatLinkedMention Self {..} = printf "%3d:          %s " (EL._emuid _uid)                  (formatEMInfo _info)
 
 
 prepareNETokens all =

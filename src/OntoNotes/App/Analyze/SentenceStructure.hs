@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections     #-}
 
 module OntoNotes.App.Analyze.SentenceStructure where
 
@@ -43,7 +44,7 @@ import           WikiEL.WikiNamedEntityTagger              (PreNE(..))
 --
 import           OntoNotes.App.Analyze.CoreNLP             (runParser)
 import           OntoNotes.App.Analyze.Format              (formatSenses,formatTimex
-                                                           ,formatNER
+                                                           ,formatTagged
                                                            ,showTimex,showFormatTimex'
                                                            )
 import           OntoNotes.App.Util                        (CharIdx,SentItem,TagPos(..),TokIdx)
@@ -53,18 +54,14 @@ import           OntoNotes.App.WikiEL                      (getWikiResolvedMenti
 import           OntoNotes.Type.SenseInventory
 
 
-mergeTimexWikiNER :: [TagPos TokIdx (Maybe Text)]
-                  -> [EntityMention Text]
-                  -> [TagPos TokIdx (Either (Maybe Text) EntityMentionUID)]
-mergeTimexWikiNER tmxs lnk_mntns_rslvd =
-  let lnk_mntns_tagpos = map (fmap Right . linkedMentionToTagPos) lnk_mntns_rslvd
-      lst = lnk_mntns_tagpos ++ map (fmap Left) tmxs
-      tokidx (TagPos (i,_,_)) = i
-  in sortBy (compare `on` tokidx) lst 
+mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]
+mergeTagPos xs ys =
+  let zs = map (fmap Left) xs ++ map (fmap Right) ys 
+      idx (TagPos (i,_,_)) = i
+  in sortBy (compare `on` idx) zs
 
 
   
-
 
 getSenses :: Text -> HashMap Text Inventory -> HashMap (Text,Text) Int -> FrameDB -> HashMap Text [(Text,Text)]
           -> [(Text,Text,Int,Text,Text,Text,Text)]
@@ -117,15 +114,18 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
       lmass = sents ^.. traverse . sentenceLemma
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = getWikiResolvedMentions loaded emTagger
-      line1 = [ "================================================================================================="
-              , "-- TimeTagger -----------------------------------------------------------------------------------" ]
-      line2 = case mtmxs of
-                Nothing -> ["Time annotation not successful!"]
-                Just tmxs -> [T.pack (show (mergeTimexWikiNER tmxs linked_mentions_resolved))]
+      lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
+      mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
+      mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs 
+      line1 = [ "==================================================================================================" ]
+--               , "-- TimeTagger -----------------------------------------------------------------------------------" ]
+   --   line2 = case mtmxs of
+     --           Nothing -> ["Time annotation not successful!"]
+       --         Just tmxs -> [T.pack (show mergedtags)]
                                      -- concat $ map formatTimex sentswithtmx
 
-      line3 = [ "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
-              , T.pack (render (formatNER mtokenss sentitems linked_mentions_resolved))
+      line3 = [ "-- Time and NER tagged text ----------------------------------------------------------------------"
+              , T.pack (render (formatTagged mtokenss sentitems mergedtags))
               , "--------------------------------------------------------------------------------------------------"
               , "-- Sentence analysis -----------------------------------------------------------------------------"
               , "--------------------------------------------------------------------------------------------------" ]
@@ -158,4 +158,4 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
                         Nothing       -> [""]
                         Just (xs,yss) -> xs ++ (concat yss)
 
-  in line1 ++ line2 ++ line3 ++ line4
+  in line1 ++ line3 ++ line4
