@@ -25,7 +25,7 @@ import           Text.Taggy.Lens
 --
 import           FrameNet.Query.LexUnit
 import           FrameNet.Type.LexUnit
-import           Lexicon.Mapping.Type
+import           Lexicon.Type
 import           NLP.Syntax.Type
 import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink

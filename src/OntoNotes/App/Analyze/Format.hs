@@ -17,10 +17,10 @@ import           Text.ProtocolBuffers.Basic              (Utf8)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
 import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,token_pos)
-import           Lexicon.Mapping.Type                    (ArgPattern(..),type RoleInstance
-                                                         ,type RolePattInstance,VorN(..))
 import           Lexicon.Query                           (cutHistogram)
-import           NLP.Syntax.Type                         (Voice)
+import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
+                                                         ,type RolePattInstance,POSVorN(..))
+import           NLP.Syntax.Type                         (Voice)                 
 import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID)
 --
 import           OntoNotes.App.Util                      (TagPos,SentItem,addTag,underlineText)
@@ -79,7 +79,7 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
        ++ fromMaybe ""
             (do t1 <- t^?_Just._1
                 t2 <- t^?_Just._2
-                let sid = (lma,V, t1<>"."<>t2)
+                let sid = (lma,Verb, t1<>"."<>t2)
                 rm <- find (\rm -> rm^._1 == sid) rolemap
                 let msubcat =find ((== sid) . (^._1)) subcats
                 let margpattstr = do

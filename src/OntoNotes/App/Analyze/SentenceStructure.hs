@@ -25,7 +25,7 @@ import           CoreNLP.Simple.Type.Simplified            (NERSentence(..),Toke
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
 import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
-import           Lexicon.Mapping.Type                      (ArgPattern(..),RoleInstance,RolePattInstance)
+import           Lexicon.Type                              (ArgPattern(..),RoleInstance,RolePattInstance)
 import           NLP.Printer.PennTreebankII                (formatIndexTokensFromTree)
 import           NLP.Type.PennTreebankII                   (PennTree)
 import           NLP.Syntax.Clause                         (clauseStructure,constructCP)
