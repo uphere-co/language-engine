@@ -32,7 +32,7 @@ import           Text.Printf
 import           Data.Attribute
 import           Data.Bitree                        (getRoot)
 import           Data.BitreeZipper
-import           Lexicon.Mapping.Type
+import           Lexicon.Type
 import           Lexicon.Query
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Argument

@@ -5,7 +5,7 @@ module OntoNotes.Type.SenseInventory where
 import           Control.Lens
 import           Data.Text            (Text)
 --
-import           Lexicon.Mapping.Type
+import           Lexicon.Type
 
 data WordMeta = WordMeta { _word_meta_authors :: Text
                          , _word_meta_sample_score :: Maybe Text

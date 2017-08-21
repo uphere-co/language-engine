@@ -22,7 +22,7 @@ import           CoreNLP.Simple.Type          (tokenizer,words2sentences,postagg
 import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (loadRoleInsts,loadRolePattInsts)
-import           Lexicon.Mapping.Type         (ArgPattern(..),RoleInstance,RolePattInstance)
+import           Lexicon.Type                 (ArgPattern(..),RoleInstance,RolePattInstance)
 import           NLP.Syntax.Type              (Voice)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           WikiEL                       (loadEMtagger)

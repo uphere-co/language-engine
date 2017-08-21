@@ -43,7 +43,7 @@ import           FrameNet.Type.Common             (CoreType(..),fr_frame)
 import           FrameNet.Type.Frame
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query
-import           Lexicon.Mapping.Type             (VorN(..))
+import           Lexicon.Type                     (POSVorN(..))
 import           NLP.Syntax.Type
 import           PropBank.Query                   (constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB
@@ -54,7 +54,7 @@ import           VerbNet.Type.SemLink
 import           WordNet.Format
 import           WordNet.Query
 import           WordNet.Type
-import           WordNet.Type.POS
+-- import           WordNet.Type.POS                 
 --
 import           OntoNotes.App.Load
 import           OntoNotes.Corpus.Load
@@ -77,7 +77,7 @@ createONFN subcats sensemap framedb rolesetdb = do
   let g = T.head sid
       n = T.drop 2 sid
   let lmav = lma <> "-v"
-  subcat <- maybeToList (find (\c -> c^._1 == (lma,V,sid)) subcats)
+  subcat <- maybeToList (find (\c -> c^._1 == (lma,Verb,sid)) subcats)
   
   si <- maybeToList (HM.lookup lmav sensemap)
   osense <- maybeToList $
@@ -123,7 +123,7 @@ formatFEs (icorefes,iperifes,iextrafes) = formatf icorefes ++ " | " ++ formatf i
 
 
 problemID (i,(lma,osense,frame,pbs,_)) = let sid = osense^.sense_group <> "." <> osense^.sense_n
-                                         in (lma,V,sid)
+                                         in (lma,Verb,sid)
 
 
 formatProblem :: (Int,_) -> (String,String,String,String,String)
@@ -218,7 +218,7 @@ main = do
     "tag" -> do
       let n = fromMaybe 0 (startNum opt)
           indexed_being_processed = (drop (n-1) . take (n+99)) indexed
-      r <- flip execStateT (([] :: [(Int,(Text,VorN,Text),Text,Text)]),indexed_being_processed) $ runInputT defaultSettings prompt
+      r <- flip execStateT (([] :: [(Int,(Text,POSVorN,Text),Text,Text)]),indexed_being_processed) $ runInputT defaultSettings prompt
       print (fst r)
       let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
       writeFile filename (concatMap formatResult (fst r))
