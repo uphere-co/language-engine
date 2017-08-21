@@ -73,18 +73,26 @@ getSentenceOffsets psents =
     in (fromIntegral b+1,fromIntegral e)
 
 
+
+listTimexToTagPos :: T.ListTimex -> [TagPos TokIdx (Maybe Text)]
+listTimexToTagPos tmxs = tmxs^..
+                           T.timexes . traverse
+                           . to (\t -> TagPos (fi (t^.T.tokenBegin), fi (t^.T.tokenEnd), t^?T.timex.Tmx.value._Just.to cutf8))
+  where fi = fromIntegral                                                                     
+
+
 addSUTime :: [SentItem CharIdx]
           -> [Token]
           -> T.ListTimex
           -> [(SentItem CharIdx,[TagPos CharIdx (Maybe Text)])]
 addSUTime sents toks tmxs =
-  let f t = do (cstart,cend) <- convertRangeFromTokenToChar toks
-                                  (TokIdx (fromIntegral (t^.T.tokenBegin))
-                                  ,TokIdx (fromIntegral (t^.T.tokenEnd)))
-               return $ TagPos (cstart,cend,t^. T.timex . Tmx.value)
+  let tagposs = listTimexToTagPos tmxs
+      tagposs' = flip mapMaybe tagposs $ \(TagPos (i,j,x)) -> do
+                   (cstart,cend) <- convertRangeFromTokenToChar toks (i,j)
+                   return $ TagPos (cstart,cend,x)
 
-      cvt = map (\(x,xs) -> (x,map (fmap (fmap cutf8)) xs))
-  in (cvt . filter (not.null.(^._2)) . map (addTag (mapMaybe f (tmxs^..T.timexes.traverse)))) sents
+      -- cvt = map (\(x,xs) -> (x,map (fmap (fmap cutf8)) xs))
+  in (filter (not.null.(^._2)) . map (addTag tagposs')) sents
 
 
 convertRangeFromTokenToChar :: [Token] -> (TokIdx,TokIdx) -> Maybe (CharIdx,CharIdx)
