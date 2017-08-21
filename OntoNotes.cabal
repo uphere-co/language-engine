@@ -29,7 +29,7 @@ library
                        OntoNotes.Corpus.Load
                        OntoNotes.Corpus.PropBank
                        OntoNotes.Format
-                       OntoNotes.Mapping.FrameNet
+                       -- OntoNotes.Mapping.FrameNet
                        OntoNotes.Parser.Sense
                        OntoNotes.Parser.SenseInventory
                        OntoNotes.Type.ArgTable
@@ -68,6 +68,7 @@ library
                        HCoreNLP-Proto,
                        HFrameNet,
                        HWordNet,
+                       lexicon,
                        nlp-types,
                        PropBank,
                        syntactic-analysis,
@@ -95,29 +96,6 @@ Executable analyze
   ghc-prof-options:    -caf-all -auto-all
   other-modules:
   build-depends:       base,
-                       --
-                       boxes,
-                       bytestring,
-                       containers,
-                       data-default,
-                       filepath,
-                       haskeline,
-                       jvm,
-                       lens,
-                       protocol-buffers,
-                       text,
-                       unordered-containers,
-                       vector,
-                       --
-                       HCoreNLP,
-                       HCoreNLP-Proto,
-                       HFrameNet,
-                       nlp-types,
-                       PropBank,
-                       syntactic-analysis,
-                       textview,
-                       time,
-                       wiki-ner,
                        --
                        OntoNotes
 
@@ -179,6 +157,7 @@ Executable role-mapping-utility
                        --
                        HFrameNet,
                        HWordNet,
+                       lexicon,
                        PropBank,
                        syntactic-analysis,
                        VerbNet,

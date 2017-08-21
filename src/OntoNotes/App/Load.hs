@@ -126,21 +126,6 @@ createVNFNDB semlink =
   in foldl' (\(!acc) (k,v) -> HM.insertWith (++) k [v] acc) HM.empty lst
 
 
-
-parseRoleMap (i:lma:sense:frame:rest) = let lst = map (\w -> let x:y:_ = T.splitOn ":" w in (x,y)) rest
-                                        in ((lma,sense),("frame",frame):lst)
-
-
-loadRoleMap :: FilePath -> IO [((Text,Text), [(Text,Text)])]
-loadRoleMap fp = do
-  txt <- T.IO.readFile fp
-  let rolemap = map parseRoleMap . map T.words . T.lines $ txt
-  return rolemap
-
-
-deriving instance Read Voice
-
-
 parseWithNullCheck :: (Text -> a) -> Text -> Maybe a
 parseWithNullCheck f w = if w == "null" then Nothing else Just (f w)
 

@@ -41,6 +41,8 @@ import           Text.Taggy.Lens
 import           FrameNet.Query.Frame             (frameDB,loadFrameData)
 import           FrameNet.Type.Common             (CoreType(..),fr_frame)
 import           FrameNet.Type.Frame
+import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
+import           Lexicon.Mapping.Type             (loadRoleMap)
 import           NLP.Syntax.Type
 import           PropBank.Query                   (constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB
@@ -56,39 +58,11 @@ import           WordNet.Type.POS
 import           OntoNotes.App.Load
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Format
-import           OntoNotes.Mapping.FrameNet
+-- import           OntoNotes.Mapping.FrameNet
 import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.SenseInventory
 
 
-{- 
-main' :: IO ()
-main' = do
-  let vnfnrole_file= "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VN-FNRoleMapping.txt"
-  let pbvn_file= "/scratch/wavewave/SemLink/1.2.2c/vn-pb/vnpbMappings"
-
-  vnfnrole_txt <- T.L.IO.readFile vnfnrole_file
-  pbvn_txt <- T.L.IO.readFile pbvn_file
-
-  let e = do 
-        vnfnrole_xml <- maybeToEither "xml parsing vnfnrole failed" (vnfnrole_txt ^? html . allNamed (only "verbnetRoles-framenetFEs_RoleMappingData"))
-        pbvn_xml     <- maybeToEither "xml parsing pbvn failed"     (pbvn_txt     ^? html . allNamed (only "pbvn-typemap"))
-        vnfnrole     <- p_vnfnrolemap vnfnrole_xml
-        pbvn         <- p_pbvnmap pbvn_xml
-        return (vnfnrole,pbvn)
-  case e of
-    Left err -> error err
-    Right (vnfnrole,pbvn) -> do
-      let vnfnmap = HM.fromList (vnfnrole^..vnfnrolemap_vnfnroles.traverse.to ((,) <$> (^.vnfnroleinst_class) <*> id))
-          pbvnmap = HM.fromList (pbvn^..pbvnmap_predicates.traverse.to ((,)<$> (^.pbvn_lemma) <*> id))
-      print (HM.lookup "40.3.2" vnfnmap)
-      let mrun01 = do pbvn <- HM.lookup "run" pbvnmap
-                      find (\a->a^.pbvnarg_pbroleset == "run.01") (pbvn^.pbvn_argmap)
-          mfn = HM.lookup "51.3.2" vnfnmap
-
-      print mrun01
-      print mfn
--}
 
 extractPBRoles pb =
   pb^..roleset_roles.roles_role.traverse.to ((,) <$> (^.role_n) <*> (^.role_descr))
