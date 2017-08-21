@@ -6,9 +6,10 @@ module OntoNotes.App.Analyze.SentenceStructure where
 import           Control.Lens                              ((^.),(^..),to)
 import           Data.Bifunctor                            (bimap)
 import           Data.Foldable                             (forM_)
+import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
-import           Data.List                                 (zip5)
+import           Data.List                                 (sortBy,zip5)
 import           Data.Maybe                                (fromMaybe,maybeToList)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
@@ -45,8 +46,7 @@ import           OntoNotes.App.Analyze.Format              (formatSenses,formatT
                                                            ,formatNER
                                                            ,showTimex,showFormatTimex'
                                                            )
-import           OntoNotes.App.Util                        (CharIdx,SentItem,TagPos,TokIdx
-                                                           )
+import           OntoNotes.App.Util                        (CharIdx,SentItem,TagPos(..),TokIdx)
 import           OntoNotes.App.WikiEL                      (getWikiResolvedMentions
                                                            ,linkedMentionToTagPos
                                                            )
@@ -55,11 +55,13 @@ import           OntoNotes.Type.SenseInventory
 
 mergeTimexWikiNER :: [TagPos TokIdx (Maybe Text)]
                   -> [EntityMention Text]
-                  -> [TagPos TokIdx (Either (Maybe Text) EntityMentionUID)]-- (Maybe Text)]
+                  -> [TagPos TokIdx (Either (Maybe Text) EntityMentionUID)]
 mergeTimexWikiNER tmxs lnk_mntns_rslvd =
   let lnk_mntns_tagpos = map (fmap Right . linkedMentionToTagPos) lnk_mntns_rslvd
-  in lnk_mntns_tagpos ++ map (fmap Left) tmxs
-  -- in T.pack (show sentswithtmx) <> "\n" <> T.pack (show lnk_mntns_tagpos)
+      lst = lnk_mntns_tagpos ++ map (fmap Left) tmxs
+      tokidx (TagPos (i,_,_)) = i
+  in sortBy (compare `on` tokidx) lst 
+
 
   
 
