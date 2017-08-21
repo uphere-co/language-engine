@@ -7,7 +7,7 @@ import           Data.Maybe
 import           Data.Text                  (Text)
 import           Text.Printf
 --
-import           Lexicon.Mapping.Type       (ArgPattern,patt_property
+import           Lexicon.Type               (ArgPattern,patt_property
                                             ,patt_arg0,patt_arg1,patt_arg2,patt_arg3,patt_arg4)
 import           NLP.Syntax.Type            (Voice)
 

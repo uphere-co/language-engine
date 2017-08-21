@@ -25,11 +25,12 @@ import           CoreNLP.Simple.Type.Simplified            (NERSentence(..),Toke
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
 import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
-import           Lexicon.Mapping.Type                      (ArgPattern(..),RoleInstance,RolePattInstance)
+import           Lexicon.Type                              (ArgPattern(..),RoleInstance,RolePattInstance)
 import           NLP.Printer.PennTreebankII                (formatIndexTokensFromTree)
 import           NLP.Type.PennTreebankII                   (PennTree)
 import           NLP.Syntax.Clause                         (clauseStructure,constructCP)
-import           NLP.Syntax.Format                         (formatCP,formatClauseStructure,showClauseStructure)
+import           NLP.Syntax.Format                         (formatCP,formatVPwithPAWS
+                                                           ,formatClauseStructure,showClauseStructure)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (Voice,vp_lemma)
 import qualified NLP.Type.NamedEntity              as N
@@ -77,6 +78,7 @@ getSenses lma sensemap sensestat framedb ontomap = do
   return (s^.sense_group,s^.sense_n,num,txt_def,txt_frame,txt_fecore,txt_feperi)
 
 
+{-
 showSentStructure :: HashMap Text Inventory
                   -> HashMap (Text, Text) Int
                   -> FrameDB
@@ -96,7 +98,7 @@ showSentStructure :: HashMap Text Inventory
 showSentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded = do
   let txts = sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
   mapM_ T.IO.putStrLn txts
-
+-}
 
 sentStructure :: HashMap Text Inventory
               -> HashMap (Text, Text) Int
@@ -137,21 +139,23 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
                        vps = verbPropertyFromPennTree lemmamap ptr
                        clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
 
-                       subline1 = concat [ [T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)]
-                                         , [(formatIndexTokensFromTree 0 ptr)]
-                                         , ["--------------------------------------------------------------------------------------------------"]
-                                         , formatClauseStructure vps clausetr
-                                         , ["================================================================================================="] ]
+                       subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
+                                  , formatIndexTokensFromTree 0 ptr
+                                  , "--------------------------------------------------------------------------------------------------"
+                                  , formatClauseStructure vps clausetr
+                                  , "================================================================================================="
+                                  ]
 
                        subline2 = flip map (vps^..traverse) $ \vp ->
                                     let mcp = constructCP vp
                                         lma = vp^.vp_lemma.to unLemma
                                         senses = getSenses lma sensemap sensestat framedb ontomap
-                                        ssubline1 = [ T.pack (printf "Verb: %-20s" lma)
+                                        ssubline1 = [ formatVPwithPAWS clausetr vp
+                                                    , T.pack (printf "Verb: %-20s" lma)
                                                     , T.pack $ (formatSenses False rolemap subcats lma) senses
-                                                    , "--------------------------------------------------------------------------------------------------"
-                                                    , T.pack $ (maybe "cannot identify CP" formatCP mcp)
-                                                    , "--------------------------------------------------------------------------------------------------"
+                                                    -- , "--------------------------------------------------------------------------------------------------"
+                                                    -- , T.pack $ (maybe "cannot identify CP" formatCP mcp)
+                                                    -- , "--------------------------------------------------------------------------------------------------"
                                                     ]
                                     in ssubline1
                    in (subline1, subline2)

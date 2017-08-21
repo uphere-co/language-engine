@@ -30,8 +30,9 @@ import           System.IO
 import           Text.Printf
 --
 import           Data.Attribute
+import           Data.Bitree                        (getRoot)
 import           Data.BitreeZipper
-import           Lexicon.Mapping.Type
+import           Lexicon.Type
 import           Lexicon.Query
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Argument
@@ -158,14 +159,16 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
       argtable = fmap f argtable1
         where f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> Text
               f = phraseNodeType mtp . chooseATNode
+
+      fmtfunc = either (const "") (tokenWord.snd) . getRoot . current
   in (if doesShowDetail
        then "\n\n\n================================================================\n" ++
             T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
             "\n"                                                                   ++
             "\n================================================================\n" ++
-            formatMatchedVerb minst mvpmva ++ "\n"
-            ++ T.unpack (prettyPrint 0 proptr) ++ "\n"
-            ++ intercalate "\n" (map formatVerbProperty verbprops) ++ "\n"
+            -- formatMatchedVerb minst mvpmva ++ "\n" -- for the time being
+            T.unpack (prettyPrint 0 proptr) ++ "\n" ++
+            intercalate "\n" (map (formatVerbProperty fmtfunc) verbprops) ++ "\n"
        else ""
      )
      ++ formatArgTable mvpmva argtable
@@ -173,11 +176,6 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
 
 getArgMapFromRoleMap (lma,sense_num) rolemap =
   (^._2) <$> find (\rm -> convertONIDtoSenseID lma sense_num == rm^._1) rolemap
-{-   where f rm = if lma == "hold" && sense_num == "5"       -- this is an ad hoc treatment for group 2
-               then rm^._1 == (lma,"2." <> sense_num) 
-               else rm^._1 == (lma,"1." <> sense_num)
-
--}
 
 
 formatStatInst :: Bool
