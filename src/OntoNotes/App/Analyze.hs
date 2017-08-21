@@ -21,7 +21,9 @@ import           CoreNLP.Simple               (prepare)
 import           CoreNLP.Simple.Type          (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
 import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
-import           Lexicon.Mapping.Type         (loadRoleMap)
+import           Lexicon.Query                (loadRoleInsts,loadRolePattInsts)
+import           Lexicon.Mapping.Type         (ArgPattern(..),RoleInstance,RolePattInstance)
+import           NLP.Syntax.Type              (Voice)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention(..))
@@ -34,12 +36,12 @@ import           OntoNotes.App.Load           (Config(..),cfg,cfgG,cfg_framenet_
                                               ,cfg_sense_inventory_file
                                               ,cfg_verb_subcat_file
                                               ,cfg_wsj_directory
-                                              ,loadSenseInventory,loadVerbSubcat
+                                              ,loadSenseInventory
                                               )
 import           OntoNotes.App.WikiEL         (brandItemFile,orgItemFile,personItemFile,reprFile)
 import           OntoNotes.Corpus.Load        (senseInstStatistics)
 -- import           OntoNotes.Mapping.FrameNet   (mapFromONtoFN)
-import           OntoNotes.Type.ArgTable      (ArgPattern(..))
+-- import           OntoNotes.Type.ArgTable      (ArgPattern(..))
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 
 
@@ -51,8 +53,8 @@ queryProcess :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> FrameDB
              -> HashMap Text [(Text,Text)]
              -> ([(Text,NamedEntityClass)] -> [EntityMention Text])
-             -> [((Text,Text), [(Text,Text)])]
-             -> [((Text,Text),[(ArgPattern Text,Int)])]
+             -> [RoleInstance]
+             -> [RolePattInstance Voice]
              -> IO ()
 queryProcess pp sensemap sensestat framedb ontomap emTagger rolemap subcats =
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
@@ -69,8 +71,8 @@ queryProcess pp sensemap sensestat framedb ontomap emTagger rolemap subcats =
 
 runAnalysis :: Config -> IO ()
 runAnalysis cfg = do
-  subcats <- loadVerbSubcat (cfg^.cfg_verb_subcat_file)
-  rolemap <- loadRoleMap (cfg^.cfg_rolemap_file)
+  subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
+  rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
@@ -90,6 +92,15 @@ runAnalysis cfg = do
     queryProcess pp sensemap sensestat framedb ontomap emTagger rolemap subcats
 
 
+loadConfig
+  :: IO (HashMap Text Inventory
+        ,HashMap (Text, Text) Int
+        ,FrameDB
+        ,HashMap Text [(Text, Text)]
+        ,[(Text, NamedEntityClass)] -> [EntityMention Text]
+        ,[RoleInstance]
+        ,[RolePattInstance Voice]
+        )
 loadConfig = do
   let cfg = cfgG
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
@@ -98,8 +109,8 @@ loadConfig = do
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
   emTagger <- loadEMtagger reprFile [(orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)]
-  rolemap <- loadRoleMap (cfg^.cfg_rolemap_file)
-  subcats <- loadVerbSubcat (cfg^.cfg_verb_subcat_file)
+  rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
+  subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   return (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats)
 
 

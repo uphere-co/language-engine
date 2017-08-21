@@ -24,8 +24,9 @@ import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
 --
 import           FrameNet.Query.LexUnit
-import           FrameNet.Type.Common (fr_frame)
+import           FrameNet.Type.Common             (fr_frame)
 import           FrameNet.Type.LexUnit
+import           Lexicon.Mapping.Type             (VorN(..))
 import           WordNet.Format
 import           WordNet.Query
 import           WordNet.Type

@@ -32,7 +32,7 @@ library
                        -- OntoNotes.Mapping.FrameNet
                        OntoNotes.Parser.Sense
                        OntoNotes.Parser.SenseInventory
-                       OntoNotes.Type.ArgTable
+                       -- OntoNotes.Type.ArgTable
                        OntoNotes.Type.Sense
                        OntoNotes.Type.SenseInventory
   -- other-modules:
@@ -51,7 +51,7 @@ library
                        extra,
                        filepath,
                        jni,
-                       hashable,
+                       -- hashable,
                        haskeline,
                        jvm,
                        lens,
@@ -187,6 +187,7 @@ Executable sense-inventory
                        --
                        HFrameNet,
                        HWordNet,
+                       lexicon,
                        --
                        OntoNotes
 

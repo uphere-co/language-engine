@@ -7,12 +7,14 @@ import           Data.Maybe
 import           Data.Text                  (Text)
 import           Text.Printf
 --
-import           OntoNotes.Type.ArgTable
+import           Lexicon.Mapping.Type       (ArgPattern,patt_property
+                                            ,patt_arg0,patt_arg1,patt_arg2,patt_arg3,patt_arg4)
+import           NLP.Syntax.Type            (Voice)
 
 
-formatArgPatt :: ArgPattern Text -> String
+formatArgPatt :: ArgPattern Voice Text -> String
 formatArgPatt patt = printf "voice:%-15s arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s"
-                       (maybe "unidentified" show (patt^.patt_voice))
+                       (maybe "unidentified" show (patt^.patt_property))
                        (fromMaybe "" (patt^.patt_arg0))
                        (fromMaybe "" (patt^.patt_arg1))
                        (fromMaybe "" (patt^.patt_arg2))

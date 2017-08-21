@@ -25,12 +25,13 @@ import           CoreNLP.Simple.Type.Simplified            (NERSentence(..),Toke
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
 import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
+import           Lexicon.Mapping.Type                      (ArgPattern(..),RoleInstance,RolePattInstance)
 import           NLP.Printer.PennTreebankII                (formatIndexTokensFromTree)
 import           NLP.Type.PennTreebankII                   (PennTree)
 import           NLP.Syntax.Clause                         (clauseStructure,constructCP)
 import           NLP.Syntax.Format                         (formatCP,formatClauseStructure,showClauseStructure)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
-import           NLP.Syntax.Type                           (vp_lemma)
+import           NLP.Syntax.Type                           (Voice,vp_lemma)
 import qualified NLP.Type.NamedEntity              as N
 import           NLP.Type.PennTreebankII                   (Lemma(..),mkPennTreeIdx)
 import qualified NLP.Type.PennTreebankII.Separated as PS
@@ -45,7 +46,7 @@ import           OntoNotes.App.Analyze.Format              (formatSenses,formatT
                                                            )
 import           OntoNotes.App.Util                        (SentItem,TagPos)
 import           OntoNotes.App.WikiEL                      (getWikiResolvedMentions)
-import           OntoNotes.Type.ArgTable
+-- import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.SenseInventory
 
 
@@ -81,8 +82,8 @@ showSentStructure :: HashMap Text Inventory
                   -> FrameDB
                   -> HashMap Text [(Text, Text)]
                   -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
-                  -> [((Text,Text), [(Text,Text)])]
-                  -> [((Text,Text),[(ArgPattern Text,Int)])]
+                  -> [RoleInstance]
+                  -> [RolePattInstance Voice]
                   -> ( [Sentence]
                      , [Maybe SentenceIndex]
                      , [SentItem]
@@ -102,8 +103,8 @@ sentStructure :: HashMap Text Inventory
               -> FrameDB
               -> HashMap Text [(Text, Text)]
               -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
-              -> [((Text,Text), [(Text,Text)])]
-              -> [((Text,Text),[(ArgPattern Text,Int)])]
+              -> [RoleInstance]
+              -> [RolePattInstance Voice]
               -> ( [Sentence]
                  , [Maybe SentenceIndex]
                  , [SentItem]

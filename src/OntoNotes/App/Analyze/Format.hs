@@ -1,3 +1,4 @@
+{-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module OntoNotes.App.Analyze.Format where
@@ -16,12 +17,15 @@ import           Text.ProtocolBuffers.Basic              (Utf8)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
 import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,token_pos)
+import           Lexicon.Mapping.Type                    (ArgPattern(..),type RoleInstance
+                                                         ,type RolePattInstance,VorN(..))
+import           NLP.Syntax.Type                         (Voice)                 
 import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID)
 --
 import           OntoNotes.App.Util                      (TagPos,SentItem,addTag,underlineText)
 import           OntoNotes.App.WikiEL                    (formatLinkedMention,formatTaggedSentences,linkedMentionToTagPOS)
 import           OntoNotes.Format                        (formatArgPatt,formatRoleMap)
-import           OntoNotes.Type.ArgTable
+-- import           OntoNotes.Type.ArgTable
 
 
 
@@ -58,8 +62,8 @@ formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) =
 
 
 formatSenses :: Bool  -- ^ doesShowOtherSense
-             -> [((Text,Text), [(Text,Text)])]
-             -> [((Text,Text),[(ArgPattern Text,Int)])]
+             -> [RoleInstance]
+             -> [RolePattInstance Voice]
              -> Text
              -> [(Text,Text,Int,Text,Text,Text,Text)]
              -> String
@@ -74,10 +78,10 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
        ++ fromMaybe ""
             (do t1 <- t^?_Just._1
                 t2 <- t^?_Just._2
-                let sid = (lma, t1<>"."<>t2)
+                let sid = (lma,V, t1<>"."<>t2)
                 rm <- find (\rm -> rm^._1 == sid) rolemap
-                let sid' = (lma<>"-v",t2)
-                    msubcat =find ((== sid') . (^._1)) subcats
+                -- let sid' = (lma<>"-v",t2)
+                let msubcat =find ((== sid) . (^._1)) subcats
                 let margpattstr = do
                       subcat <- msubcat
                       return $ intercalate "\n" $ flip map (Prelude.take 5 (subcat^._2)) $ \(patt,n) ->

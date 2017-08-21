@@ -25,6 +25,7 @@ import           Text.Taggy.Lens
 --
 import           FrameNet.Query.LexUnit
 import           FrameNet.Type.LexUnit
+import           Lexicon.Mapping.Type
 import           NLP.Syntax.Type
 import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
@@ -32,7 +33,7 @@ import           WordNet.Query
 --
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Parser.SenseInventory
-import           OntoNotes.Type.ArgTable
+-- import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.SenseInventory
 
 
@@ -126,30 +127,6 @@ createVNFNDB semlink =
   in foldl' (\(!acc) (k,v) -> HM.insertWith (++) k [v] acc) HM.empty lst
 
 
-parseWithNullCheck :: (Text -> a) -> Text -> Maybe a
-parseWithNullCheck f w = if w == "null" then Nothing else Just (f w)
-
-
-parseSubcat :: [Text] -> (Text,Text,Maybe Voice,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Int)
-parseSubcat ws@[lma,sense,mvoice,marg0,marg1,marg2,marg3,marg4,count] =
-  ( lma ,sense
-  , parseWithNullCheck (read . T.unpack) mvoice
-  , parseWithNullCheck id marg0
-  , parseWithNullCheck id marg1
-  , parseWithNullCheck id marg2
-  , parseWithNullCheck id marg3
-  , parseWithNullCheck id marg4
-  , either (error ("error: " ++ show ws)) fst (decimal count)
-  )
-
-
-loadVerbSubcat :: FilePath -> IO [((Text,Text),[(ArgPattern Text,Int)])]
-loadVerbSubcat fp = do
-  txt <- T.IO.readFile fp
-  let getLemmaSense x = (x^._1,x^._2)
-      getArgTable x = ArgPattern (x^._3) (x^._4) (x^._5) (x^._6) (x^._7) (x^._8)
-  let subcats = map (\xs  -> (getLemmaSense (head xs),map (\x->(getArgTable x,x^._9)) xs)) .  groupBy ((==) `on` getLemmaSense) . map parseSubcat . map T.words . T.lines $ txt
-  return subcats
 
 
 loadAllexceptPropBank :: IO (LexUnitDB, HashMap (Text,Text) Int, HashMap (Text,Text) [Text], HashMap Text Inventory, [(Text,Text)], WordNetDB)
