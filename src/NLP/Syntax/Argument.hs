@@ -24,7 +24,7 @@ import           PropBank.Match               (findNode)
 import           PropBank.Type.Prop           (Argument(..),PropBankLabel(..)
                                               ,arg_label,arg_terminals)
 --
-import           Lexicon.Mapping.Type
+import           Lexicon.Type
 --
 import           NLP.Syntax.Type
 

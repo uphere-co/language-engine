@@ -30,23 +30,48 @@ formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
   where toTree (PN x xs) = Tr.Node x (map toTree xs)
         toTree (PL x)    = Tr.Node x []
+
         
-
-formatVerbProperty :: VerbProperty a -> String
-formatVerbProperty vp = printf "%3d %-15s : %-35s  aux: %-7s neg: %-5s | %s"
-                          (vp^.vp_index) (vp^.vp_lemma.to unLemma)
-                          (show (vp^.vp_tense) ++ "." ++ show (vp^.vp_aspect) ++ "." ++ show (vp^.vp_voice))
-                          (fromMaybe "" (vp^?vp_auxiliary._Just._2._2.to unLemma))
-                          (fromMaybe "" (vp^?vp_negation._Just._2._2.to unLemma))
-                          (show (vp^..vp_words.traverse._2._1))
+formatTense :: Tense -> Text
+formatTense Present = "Pres"
+formatTense Past    = "Past"
 
 
-formatVerbArgs :: VerbArgs (Either (Range,STag) (Int,POSTag)) -> String
-formatVerbArgs va = printf "%10s %-20s %s"
-                      (maybe "" fmtArg (va^.va_arg0))
-                      (T.intercalate " " (map (^._2) (va^.va_string)))
-                      ((intercalate " " . map (printf "%7s" . fmtArg)) (va^.va_args))
+formatAspect :: Aspect -> Text
+formatAspect Simple             = "Smpl"
+formatAspect Progressive        = "Prog"
+formatAspect Perfect            = "Perf"
+formatAspect PerfectProgressive = "PfPr"
+
+
+formatVoice :: Voice -> Text
+formatVoice Active  = "Actv"
+formatVoice Passive = "Pass"
+
+
+formatVerbProperty :: (a -> Text) -> VerbProperty a -> String
+formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
+                            (vp^.vp_index) (vp^.vp_lemma.to unLemma)
+                            (formatTense  (vp^.vp_tense)  <> "." <>
+                             formatAspect (vp^.vp_aspect) <> "." <>
+                             formatVoice  (vp^.vp_voice))
+                            (fromMaybe "" (vp^?vp_auxiliary._Just._2._2.to unLemma))
+                            (fromMaybe "" (vp^?vp_negation._Just._2._2.to unLemma))
+                            (T.intercalate " " (vp^..vp_words.traverse.to (f.fst))) -- _2._2.to unLemma))
+                          -- ()
+
+
+formatPAWS :: PredArgWorkspace (Either (Range,STag) (Int,POSTag)) -> String
+formatPAWS pa = printf "              subject       : %s\n\
+                       \              arg candidates: %s\n\
+                       \              complements   : %s"
+                  (maybe "" (T.intercalate " " . gettoken) (pa^.pa_CP.cp_TP.tp_DP))                
+                  ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
+                  ((intercalate " | " . map (T.unpack . T.intercalate " ". gettoken)) (pa^.pa_CP.cp_TP.tp_VP.vp_complements))
+                  
   where
+    gettoken = map (tokenWord.snd) . toList . current
+    
     fmtArg a = case a of
                  Right (_  ,p)           -> show p
                  Left  (_  ,(S_RT))      -> "ROOT"
@@ -82,9 +107,10 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
         formatposchunk (Left c) = show c
         formatposchunk (Right p) = "(" ++ show p ++ ")"
 
-formatClauseStructure :: [VerbProperty a]
+
+formatClauseStructure :: [VerbProperty (BitreeZipperICP '[Lemma])]
                       -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-                      -> [Text]
+                      -> Text
 formatClauseStructure vps clausetr =
   let tr' = bimap (\(_rng,x)->f x) g (cutOutLevel0 clausetr)
         where f (S_CL c,l)    = T.pack (show c) <> ":" <> T.pack (show l)
@@ -95,9 +121,19 @@ formatClauseStructure vps clausetr =
               f (S_RT  ,l)    = "ROOT" <> ":" <> T.pack (show l)
               g (Left x)      = T.pack (show x)
               g (Right x)     = T.pack (show x)
-      rngs = clauseRanges clausetr
-      xs = flip map vps $ \vp -> T.pack $ printf "%-50s | Clause %7s:  %s" (formatVerbProperty vp) (maybe "" show (clauseForVerb rngs vp)) (maybe "" formatVerbArgs (getVerbArgs clausetr vp))
-  in [formatBitree id tr'] ++ xs
+
+  in formatBitree id tr'
+
+formatVPwithPAWS :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+                 -> VerbProperty (BitreeZipperICP '[Lemma])
+                 -> Text
+formatVPwithPAWS clausetr vp =
+  let rngs = clauseRanges clausetr
+      fmt = either (const "") (tokenWord.snd) . getRoot . current
+  in T.pack $ printf "%7s:%-50s\n%s\n"
+                (maybe "" show (clauseForVerb rngs vp))
+                (formatVerbProperty fmt vp)
+                (maybe "" formatPAWS (findPAWS clausetr vp))
 
 
 showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
@@ -105,7 +141,8 @@ showClauseStructure lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
   
-      x:xs = formatClauseStructure vps clausetr
+      x = formatClauseStructure vps clausetr
+      xs = map (formatVPwithPAWS clausetr) vps
   T.IO.putStrLn x
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
 
