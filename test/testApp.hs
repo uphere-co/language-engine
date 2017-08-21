@@ -12,6 +12,7 @@ import qualified Data.Text.IO                  as T.IO
 
 import           WikiEL.ETL.RDF
 import           WikiEL.ETL.Util
+import           WikiEL.ETL.RDF.Binary
 import           WikiEL.ETL.Parser                     (wordnetSynsetYAGO)
 import           WikiEL.Type.WordNet                   (SynsetY)
 
@@ -28,6 +29,10 @@ import qualified Data.Vector.Unboxed           as UV
 import qualified Data.Vector.Fusion.Bundle     as B
 import qualified WikiEL.Util.Hash              as H
 import qualified WikiEL.Graph                  as G
+
+
+import qualified Data.ByteString.Lazy.Char8      as BL
+
 
 
 

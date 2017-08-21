@@ -35,3 +35,9 @@ cat yago/sample | runhaskell -i./src/ test/testApp.hs
 nix-build release.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 20 --cores 20 -A wiki-ner
 ```
 
+## Convert RDF dumps to Binary
+```
+# For YAGO
+cabal build yago-bin
+time ./dist/build/yago-bin/yago-bin
+```

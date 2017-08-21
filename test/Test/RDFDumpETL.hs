@@ -22,13 +22,12 @@ import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Wikipedia
 import           WikiEL.Type.FileFormat
 import           WikiEL.Type.WordNet
-import           WikiEL.Type.RDF.Wikidata
-import           WikiEL.Type.RDF.Yago
 import           WikiEL.ETL.Parser
 import           WikiEL.ETL.LoadData
 import           WikiEL.ETL.RDF.Wikidata
 import           WikiEL.ETL.RDF.Yago
-
+import           WikiEL.ETL.RDF.Binary
+import           WikiEL.ETL.RDF
 --For testing
 import           Text.RawString.QQ
 
@@ -48,7 +47,6 @@ import           Data.Word                             (Word64)
 import           Data.Int                              (Int32, Int64)
 import           Data.Bits                             (shift)
 import           Data.Text.Encoding                    (encodeUtf8)
-import           Data.Binary                           (encode)
 import           System.Random.MWC                     (createSystemRandom, withSystemRandom, asGenST, uniformVector)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
 import           Data.Ord                              (Ordering,comparing)
@@ -59,6 +57,11 @@ import           Control.Monad.ST                      (runST)
 
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
+
+
+
+--for binary storage testing
+
 
 
 {-
@@ -149,11 +152,24 @@ testYagoTaxonomyTSVrows = testCaseSteps "Parse lines in YAGO dump for taxonomy, 
     rows = map (parseOnly parserRDFrowInTSV) lines 
   mapM_ (uncurry eassertEqual) (zip rows expected)
 
+testYagoBinaryStore :: TestTree
+testYagoBinaryStore = testCaseSteps "Binary (de)serialization for YAGO RDF triples" $ \step -> do
+  let 
+    lines = ["<id_1kmo9y9_88c_1eoxwov>    <PowerVR>    rdf:type    <wikicat_Graphics_hardware_companies>   "
+            ,"<id_13tyf46_88c_4gx1l8>\t<de/NEC_PowerVR_PCX>    rdf:type    <wikicat_Graphics_chips>    "
+            ]
+    rows = mapParsed readlineYAGO lines
+    
+  eassertEqual rows ((decodeYagoRDF . encode) rows)
+          
+
 allYagoTest :: TestTree
 allYagoTest =
   testGroup
     "All YAGO Unit tests"
-    [testYagoRdfObjects, testYagoTaxonomyTSVrows]    
+    [ testYagoRdfObjects
+    , testYagoTaxonomyTSVrows
+    , testYagoBinaryStore]
 
 
 
@@ -421,7 +437,6 @@ lookupTriples comp conv vec val = runST $ do
 
 testUnboxedVector :: TestTree
 testUnboxedVector = testCaseSteps "Generate unboxed vector of random RDF triples" $ \step -> do
-  print $ encode (211 :: Int)
   rs <- withSystemRandom . asGenST $ \gen -> uniformVector gen 20000
   let
     triples = UV.map randomTriple rs -- 1.2s with 0.2M triples
