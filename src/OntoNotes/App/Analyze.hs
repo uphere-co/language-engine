@@ -40,13 +40,11 @@ import           OntoNotes.App.Load           (Config(..),cfg,cfgG,cfg_framenet_
                                               )
 import           OntoNotes.App.WikiEL         (brandItemFile,orgItemFile,personItemFile,reprFile)
 import           OntoNotes.Corpus.Load        (senseInstStatistics)
--- import           OntoNotes.Mapping.FrameNet   (mapFromONtoFN)
--- import           OntoNotes.Type.ArgTable      (ArgPattern(..))
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 
 
-
-
+-- | main query loop
+--
 queryProcess :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> HashMap Text Inventory
              -> HashMap (Text,Text) Int
@@ -69,6 +67,9 @@ queryProcess pp sensemap sensestat framedb ontomap emTagger rolemap subcats =
     putStrLn "=================================================================================================\n\n\n\n"
 
 
+
+-- | main program entry point
+--
 runAnalysis :: Config -> IO ()
 runAnalysis cfg = do
   subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)

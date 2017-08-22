@@ -45,10 +45,15 @@ import           OntoNotes.App.Analyze.Format              (formatSenses,formatT
                                                            ,formatNER
                                                            ,showTimex,showFormatTimex'
                                                            )
-import           OntoNotes.App.Util                        (SentItem,TagPos)
+import           OntoNotes.App.Util                        (CharIdx,SentItem,TagPos)
 import           OntoNotes.App.WikiEL                      (getWikiResolvedMentions)
--- import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.SenseInventory
+
+
+mergeTimexWikiNER sentswithtmx linked_mentions_resolved =
+  T.pack (show sentswithtmx) <> "\n" <> T.pack (show linked_mentions_resolved)
+
+  
 
 
 getSenses :: Text -> HashMap Text Inventory -> HashMap (Text,Text) Int -> FrameDB -> HashMap Text [(Text,Text)]
@@ -78,28 +83,8 @@ getSenses lma sensemap sensestat framedb ontomap = do
   return (s^.sense_group,s^.sense_n,num,txt_def,txt_frame,txt_fecore,txt_feperi)
 
 
-{-
-showSentStructure :: HashMap Text Inventory
-                  -> HashMap (Text, Text) Int
-                  -> FrameDB
-                  -> HashMap Text [(Text, Text)]
-                  -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
-                  -> [RoleInstance]
-                  -> [RolePattInstance Voice]
-                  -> ( [Sentence]
-                     , [Maybe SentenceIndex]
-                     , [SentItem]
-                     , [[Token]]
-                     , [Maybe PennTree]
-                     , [Dependency]
-                     , Maybe [(SentItem, [TagPos (Maybe Text)])]
-                     )
-               -> IO ()
-showSentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded = do
-  let txts = sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
-  mapM_ T.IO.putStrLn txts
--}
-
+-- | Finding the structure of the sentence and formatting it.
+-- 
 sentStructure :: HashMap Text Inventory
               -> HashMap (Text, Text) Int
               -> FrameDB
@@ -109,11 +94,11 @@ sentStructure :: HashMap Text Inventory
               -> [RolePattInstance Voice]
               -> ( [Sentence]
                  , [Maybe SentenceIndex]
-                 , [SentItem]
+                 , [SentItem CharIdx]
                  , [[Token]]
                  , [Maybe PennTree]
                  , [Dependency]
-                 , Maybe [(SentItem, [TagPos (Maybe Text)])]
+                 , Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
                  )
               -> [Text]
 sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded =
@@ -125,7 +110,8 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
               , "-- TimeTagger -----------------------------------------------------------------------------------" ]
       line2 = case mtmx of
                 Nothing -> ["Time annotation not successful!"]
-                Just sentswithtmx -> concat $ map formatTimex sentswithtmx
+                Just sentswithtmx -> [mergeTimexWikiNER sentswithtmx linked_mentions_resolved]
+                                     -- concat $ map formatTimex sentswithtmx
 
       line3 = [ "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
               , T.pack (render (formatNER mtokenss sentitems linked_mentions_resolved))
@@ -153,9 +139,6 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
                                         ssubline1 = [ formatVPwithPAWS clausetr vp
                                                     , T.pack (printf "Verb: %-20s" lma)
                                                     , T.pack $ (formatSenses False rolemap subcats lma) senses
-                                                    -- , "--------------------------------------------------------------------------------------------------"
-                                                    -- , T.pack $ (maybe "cannot identify CP" formatCP mcp)
-                                                    -- , "--------------------------------------------------------------------------------------------------"
                                                     ]
                                     in ssubline1
                    in (subline1, subline2)
