@@ -105,34 +105,6 @@ identifyCPHierarchy vps = let cps = mapMaybe ((\cp -> (,) <$> cprange cp <*> pur
                      (cp^?cp_TP.tp_maximal_projection._Just.to (getRange . current))
 
 
-rootRange []     = error "rootRange"
-rootRange rs@(r:_) = let res = mapAccumL (\(!rmax) rlst -> go rmax rlst) r (tail (inits rs))
-                     in (fst res, last (snd res))
-  where
-    go r rs = mapAccumL f r rs
-    
-    f !rmax r | r `isInsideR` rmax = (rmax, Right r)
-              | rmax `isInsideR` r = (r   , Right r)
-              | otherwise          = (rmax, Left r )
-
-
-
-partitionRanges :: [Range] -> [(Range,[Range])] -- (Range,[Either Range Range])
-partitionRanges rngs = let (rmax,rngs') = rootRange rngs
-                           (outside,inside') = partitionEithers rngs'
-                           inside = filter (not . (== rmax)) inside'
-                       in case outside of
-                            [] -> [(rmax,inside)]
-                            _  -> (rmax,inside) : partitionRanges outside
-
-
-
--- rangeTree :: [Range] -> Bitree Range Range
-rangeTree []   = error "rangeTree" -- rngs = runState (go rngs) []
-rangeTree rngs = let ps = partitionRanges rngs
-                     f (rmax,[]) = PL rmax
-                     f (rmax,rs) = PN rmax (rangeTree rs)
-                 in map f ps
 
 
 ---------
