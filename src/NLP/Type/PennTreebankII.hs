@@ -50,6 +50,7 @@ import           GHC.Generics
 --
 import           Data.Attribute
 import           Data.Bitree
+import           Data.Range                     (Range)
 
 
 -- based on http://www.clips.ua.ac.be/pages/mbsp-tags
@@ -402,7 +403,6 @@ type PennTreeGen chunk token = Bitree chunk token
     
 type PennTree = Bitree Text (Text,Text)
 
-type Range = (Int,Int)
 
 newtype Lemma = Lemma { unLemma :: Text }
               deriving (Show,Eq,Ord,FromJSON,ToJSON,IsString)
