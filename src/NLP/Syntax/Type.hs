@@ -38,6 +38,7 @@ instance Hashable Voice
 data Aspect = Simple | Progressive | Perfect | PerfectProgressive
            deriving (Show,Eq,Ord,Enum,Bounded)
 
+
 data VerbProperty w = VerbProperty { _vp_index  :: Int
                                    , _vp_lemma  :: Lemma
                                    , _vp_tense  :: Tense
@@ -51,6 +52,7 @@ data VerbProperty w = VerbProperty { _vp_index  :: Int
 
 makeLenses ''VerbProperty
 
+
 -- | Projection of Verb Phrase following X-bar theory.
 --   The name VP is defined in NLP.Type.PennTreebankII, so I use VerbP.
 --
@@ -62,11 +64,14 @@ data VerbP = VerbP { _vp_maximal_projection :: BitreeZipperICP '[Lemma]
 makeLenses ''VerbP
 
 
+data DP a = SilentPRO | RExp a
+
+
 -- | Projection of Tense Phrase following X-bar theory, which roughly
 --   corresponds to a sentence.
 --
 data TP = TP { _tp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
-             , _tp_DP                 :: Maybe (ATNode (BitreeZipperICP '[Lemma]))
+             , _tp_DP                 :: Maybe (ATNode (DP (BitreeZipperICP '[Lemma])))
              , _tp_VP                 :: VerbP
              }
 
@@ -82,11 +87,11 @@ data CP = CP { _cp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
 makeLenses ''CP
 
 
--- | workspace for predicate argument 
+-- | workspace for predicate argument
 --
 data PredArgWorkspace a = PAWS { _pa_CP :: CP
                                , _pa_candidate_args :: [a]
-                               } 
+                               }
 
 
 -- deriving instance (Show a) => Show (PredArgWorkspace a)
@@ -121,4 +126,3 @@ data STag = S_RT
 type ClauseTree = Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
 
 type ClauseTreeZipper = BitreeZipper (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-

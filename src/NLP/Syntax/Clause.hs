@@ -54,15 +54,21 @@ complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
                                       _   -> False
 
 
-    
-  
+
+
 identifySubject :: N.ClauseTag
                 -> BitreeZipperICP '[Lemma]
-                -> Maybe (ATNode (BitreeZipperICP '[Lemma]))
+                -> Maybe (ATNode (DP (BitreeZipperICP '[Lemma])))
 identifySubject tag vp =
-  case tag of
-    N.SINV -> SimpleNode <$> firstSiblingBy next (isChunkAs NP) vp
-    _      -> SimpleNode <$> firstSiblingBy prev (isChunkAs NP) vp
+  let r = case tag of
+            N.SINV -> firstSiblingBy next (isChunkAs NP) vp
+            _      -> firstSiblingBy prev (isChunkAs NP) vp
+  in case r of
+       Nothing -> Just (SimpleNode SilentPRO)
+       Just z  -> Just (SimpleNode (RExp z))
+
+-- SimpleNode . RExp <$>
+
 
 
 -- | Constructing CP umbrella and all of its ingrediant.
@@ -96,12 +102,12 @@ currentlevel (PL _ )          = 0
 
 
 promoteToVP :: ClauseTree -> Either (Int,(POSTag,Text)) ClauseTree
-promoteToVP x@(PL (Right (i,(p,t))))  = if isVerb p || p == TO || p == MD
-                                  then Left (i,(p,t))
-                                  else Right x
-promoteToVP x@(PL (Left _))       = Right x
+promoteToVP x@(PL (Right (i,(p,t)))) = if isVerb p || p == TO || p == MD
+                                       then Left (i,(p,t))
+                                       else Right x
+promoteToVP x@(PL (Left _))          = Right x
 promoteToVP (PN (_,(S_OTHER N.PRT,_)) (PL (Right (i,(p,t))):_)) = Left (i,(p,t))  -- for verb particle
-promoteToVP x@(PN _ _)            = Right x
+promoteToVP x@(PN _ _)               = Right x
 
 
 promote_PP_CP_from_NP :: Bitree (Range,(STag,Int)) t -> [Bitree (Range,(STag,Int)) t]
@@ -109,7 +115,7 @@ promote_PP_CP_from_NP x@(PN (_rng,(S_OTHER N.NP,_lvl)) [x1,x2]) =
   case (getRoot x1, getRoot x2) of
     (Left (_,(S_OTHER N.NP,_)), Left (_,(S_PP _,_)))   ->  [x1,x2]
     (Left (_,(S_OTHER N.NP,_)), Left (_,(S_SBAR _,_))) ->  [x1,x2]
-    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_CL _,_)))   ->  [x1,x2]        
+    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_CL _,_)))   ->  [x1,x2]
     _ -> [x]
 promote_PP_CP_from_NP x = [x]
 
@@ -163,17 +169,17 @@ clauseStructure vps  (PN (rng,tag) xs)
                          PL (i,(p1,t)):_  -> PN (rng,(S_OTHER N.PRT,lvl)) [PL (Right (i,(p1,t)))]
                          _                -> PL (Left (rng,(S_OTHER p,lvl)))
                      _    -> PN (rng,(S_OTHER p,lvl)) ys
-         N.RT   -> PN (rng,(S_RT,lvl)) ys 
+         N.RT   -> PN (rng,(S_RT,lvl)) ys
 
 
 findVerb :: Int -> ClauseTree -> Maybe ClauseTreeZipper
 findVerb i tr = getFirst (bifoldMap f f (mkBitreeZipper [] tr))
   where f x = First $ case getRoot (current x) of
                         Left (_,(S_VP lst,_))
-                          -> if i `elem` (map (^._1) lst) then Just x else Nothing 
+                          -> if i `elem` (map (^._1) lst) then Just x else Nothing
                         Right (Left (_,(S_VP lst,_)))
                           -> if i `elem` (map (^._1) lst) then Just x else Nothing
-                        _ -> Nothing 
+                        _ -> Nothing
 
 
 
@@ -187,7 +193,7 @@ clauseForVerb :: [Range] -> VerbProperty a -> Maybe Range
 clauseForVerb allrngs vp = case rngs of
                              [] -> Nothing
                              _  -> Just (minimumBy (compare `on` (\(b,e) -> e-b)) rngs)
-  where i `isIn` (b,e) = b <= i && i <= e  
+  where i `isIn` (b,e) = b <= i && i <= e
         rngs = filter (\rng -> getAll (mconcat (map (\i -> All (i `isIn` rng)) (vp^..vp_words.traverse._2._1)))) allrngs
 
 
@@ -216,7 +222,7 @@ findPAWS :: ClauseTree
          -> Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag)))
 findPAWS tr vp = do cp <- constructCP vp
                     predicateArgWS cp <$> findVerb (vp^.vp_index) tr
-            
+
 
 
 cutOutLevel0 :: ClauseTree -> ClauseTree
@@ -228,5 +234,3 @@ cutOutLevel0 (PN (rng,(p,lvl)) xs) =
          S_OTHER _ -> PL (Left (rng,(p,lvl)))
          _         -> PN (rng,(p,lvl)) (map cutOutLevel0 xs)
   else PN (rng,(p,lvl)) (map cutOutLevel0 xs)
-
-
