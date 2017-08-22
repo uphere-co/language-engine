@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -10,7 +11,7 @@ import           Data.Bifoldable
 import           Data.Either                            (partitionEithers)
 import           Data.Function                          (on)
 import           Data.IntMap                            (IntMap)
-import           Data.List                              (minimumBy)
+import           Data.List                              (inits,mapAccumL,minimumBy)
 import           Data.Maybe                             (listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid
 import           Data.Text                              (Text)
@@ -83,12 +84,9 @@ constructCP vprop = do
         cptag' <- N.convert <$> getchunk cp'
         let subj = identifySubject s vp
         case cptag' of
-          N.CL _ -> let nsubj = subj -- case subj of
-                                --   Just (SimpleNode SilentPRO) -> Just (fromMaybe (SimpleNode SilentPRO) (findMatchedSubject cp'))
-                                --  _ -> subj
-                    in return $ CP (Just cp')
-                                   (prev tp')
-                                   (TP (Just tp') subj verbp)
+          N.CL _ -> return $ CP (Just cp')
+                                (prev tp')
+                                (TP (Just tp') subj verbp)
           N.RT   -> return $ CP (Just cp')
                                 Nothing
                                 (TP (Just tp') subj verbp)
@@ -107,10 +105,35 @@ identifyCPHierarchy vps = let cps = mapMaybe ((\cp -> (,) <$> cprange cp <*> pur
                      (cp^?cp_TP.tp_maximal_projection._Just.to (getRange . current))
 
 
-{-
-rootRange :: [Range] -> (Range,[Range])
-rootRange rngs = 
--}
+rootRange []     = error "rootRange"
+rootRange rs@(r:_) = let res = mapAccumL (\(!rmax) rlst -> go rmax rlst) r (tail (inits rs))
+                     in (fst res, last (snd res))
+  where
+    go r rs = mapAccumL f r rs
+    
+    f !rmax r | r `isInsideR` rmax = (rmax, Right r)
+              | rmax `isInsideR` r = (r   , Right r)
+              | otherwise          = (rmax, Left r )
+
+
+
+partitionRanges :: [Range] -> [(Range,[Range])] -- (Range,[Either Range Range])
+partitionRanges rngs = let (rmax,rngs') = rootRange rngs
+                           (outside,inside') = partitionEithers rngs'
+                           inside = filter (not . (== rmax)) inside'
+                       in case outside of
+                            [] -> [(rmax,inside)]
+                            _  -> (rmax,inside) : partitionRanges outside
+
+
+
+-- rangeTree :: [Range] -> Bitree Range Range
+rangeTree []   = error "rangeTree" -- rngs = runState (go rngs) []
+rangeTree rngs = let ps = partitionRanges rngs
+                     f (rmax,[]) = PL rmax
+                     f (rmax,rs) = PN rmax (rangeTree rs)
+                 in map f ps
+
 
 ---------
 -- old --
