@@ -1,6 +1,9 @@
+{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
 
 -- the functions in this module will be relocated to a more common package like textview
 
@@ -34,7 +37,11 @@ newtype CharIdx = ChIdx { unChIdx :: Int } deriving (Num,Eq,Ord,Show)
 
 type BeginEnd i = (i,i) -- (CharIdx,CharIdx)
 
-type TagPos i a = (i,i,a)
+newtype TagPos i a = TagPos (i,i,a) deriving Show
+
+instance Functor (TagPos i) where
+  fmap f (TagPos (i,j,x)) = TagPos (i,j,f x)
+
 
 type SentItem i = (SentIdx,BeginEnd i,Text)
 
@@ -44,12 +51,12 @@ addText txt (n,(b,e)) = (n,(b,e),slice (unChIdx (b-1)) (unChIdx e) txt)
 
 addTag :: (Ord i) => [TagPos i a] -> SentItem i -> (SentItem i,[TagPos i a])
 addTag lst i@(_,(b,e),_) = (i,filter check lst)
-  where check (b',e',_) = b' >= b && e' <= e
+  where check (TagPos (b',e',_)) = b' >= b && e' <= e
 
 
 underlineText :: (a -> Text) -> BeginEnd CharIdx -> Text -> [TagPos CharIdx a] -> [Text]
 underlineText lblf (b0,_e0) txt taglst =
-  let adjf (b,e,z) = (z,unChIdx (b-b0+1),unChIdx (e-b0+1))
+  let adjf (TagPos (b,e,z)) = (z,unChIdx (b-b0+1),unChIdx (e-b0+1))
       ann = AnnotText (tagText (map adjf taglst) txt)
       xss = lineSplitAnnot Nothing 80 ann
       ls = do xs <- xss
@@ -66,24 +73,26 @@ getSentenceOffsets psents =
     in (fromIntegral b+1,fromIntegral e)
 
 
+
+listTimexToTagPos :: T.ListTimex -> [TagPos TokIdx (Maybe Text)]
+listTimexToTagPos tmxs = tmxs^..
+                           T.timexes . traverse
+                           . to (\t -> TagPos (fi (t^.T.tokenBegin), fi (t^.T.tokenEnd), t^?T.timex.Tmx.value._Just.to cutf8))
+  where fi = fromIntegral                                                                     
+
+
 addSUTime :: [SentItem CharIdx]
           -> [Token]
           -> T.ListTimex
           -> [(SentItem CharIdx,[TagPos CharIdx (Maybe Text)])]
 addSUTime sents toks tmxs =
-  let f t = do (cstart,cend) <- convertRangeFromTokenToChar toks
-                                  (TokIdx (fromIntegral (t^.T.tokenBegin))
-                                  ,TokIdx (fromIntegral (t^.T.tokenEnd)))
-               return (cstart,cend,t^. T.timex . Tmx.value)
+  let tagposs = listTimexToTagPos tmxs
+      tagposs' = flip mapMaybe tagposs $ \(TagPos (i,j,x)) -> do
+                   (cstart,cend) <- convertRangeFromTokenToChar toks (i,j)
+                   return $ TagPos (cstart,cend,x)
 
-      cvt = map (\(x,xs) -> (x,map(\(i,j,z) -> (i,j,(fmap cutf8 z))) xs))
-  in (cvt . filter (not.null.(^._2)) . map (addTag (mapMaybe f (tmxs^..T.timexes.traverse)))) sents
-
-
---         ( fromIntegral (t^.T.tokenBegin) + 1
---             , fromIntegral (t^.T.tokenEnd)
---             , 
---            )
+      -- cvt = map (\(x,xs) -> (x,map (fmap (fmap cutf8)) xs))
+  in (filter (not.null.(^._2)) . map (addTag tagposs')) sents
 
 
 convertRangeFromTokenToChar :: [Token] -> (TokIdx,TokIdx) -> Maybe (CharIdx,CharIdx)
@@ -95,3 +104,5 @@ convertRangeFromTokenToChar toks (TokIdx b,TokIdx e) = do
   return (ChIdx (cb+1),ChIdx ce)
         
 
+convertTagPosFromTokenToChar toks (TagPos (tb,te,x)) = 
+  convertRangeFromTokenToChar toks (tb,te) >>= \(cs,ce) -> return (TagPos (cs,ce,x))
