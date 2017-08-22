@@ -1,14 +1,16 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections     #-}
 
 module OntoNotes.App.Analyze.SentenceStructure where
 
 import           Control.Lens                              ((^.),(^..),to)
 import           Data.Bifunctor                            (bimap)
 import           Data.Foldable                             (forM_)
+import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
-import           Data.List                                 (zip5)
+import           Data.List                                 (sortBy,zip5)
 import           Data.Maybe                                (fromMaybe,maybeToList)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
@@ -42,14 +44,24 @@ import           WikiEL.WikiNamedEntityTagger              (PreNE(..))
 --
 import           OntoNotes.App.Analyze.CoreNLP             (runParser)
 import           OntoNotes.App.Analyze.Format              (formatSenses,formatTimex
-                                                           ,formatNER
+                                                           ,formatTagged
                                                            ,showTimex,showFormatTimex'
                                                            )
-import           OntoNotes.App.Util                        (SentItem,TagPos)
-import           OntoNotes.App.WikiEL                      (getWikiResolvedMentions)
--- import           OntoNotes.Type.ArgTable
+import           OntoNotes.App.Util                        (CharIdx,SentItem,TagPos(..),TokIdx)
+import           OntoNotes.App.WikiEL                      (getWikiResolvedMentions
+                                                           ,linkedMentionToTagPos
+                                                           )
 import           OntoNotes.Type.SenseInventory
 
+
+mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]
+mergeTagPos xs ys =
+  let zs = map (fmap Left) xs ++ map (fmap Right) ys 
+      idx (TagPos (i,_,_)) = i
+  in sortBy (compare `on` idx) zs
+
+
+  
 
 getSenses :: Text -> HashMap Text Inventory -> HashMap (Text,Text) Int -> FrameDB -> HashMap Text [(Text,Text)]
           -> [(Text,Text,Int,Text,Text,Text,Text)]
@@ -78,28 +90,8 @@ getSenses lma sensemap sensestat framedb ontomap = do
   return (s^.sense_group,s^.sense_n,num,txt_def,txt_frame,txt_fecore,txt_feperi)
 
 
-{-
-showSentStructure :: HashMap Text Inventory
-                  -> HashMap (Text, Text) Int
-                  -> FrameDB
-                  -> HashMap Text [(Text, Text)]
-                  -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
-                  -> [RoleInstance]
-                  -> [RolePattInstance Voice]
-                  -> ( [Sentence]
-                     , [Maybe SentenceIndex]
-                     , [SentItem]
-                     , [[Token]]
-                     , [Maybe PennTree]
-                     , [Dependency]
-                     , Maybe [(SentItem, [TagPos (Maybe Text)])]
-                     )
-               -> IO ()
-showSentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded = do
-  let txts = sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
-  mapM_ T.IO.putStrLn txts
--}
-
+-- | Finding the structure of the sentence and formatting it.
+-- 
 sentStructure :: HashMap Text Inventory
               -> HashMap (Text, Text) Int
               -> FrameDB
@@ -109,26 +101,31 @@ sentStructure :: HashMap Text Inventory
               -> [RolePattInstance Voice]
               -> ( [Sentence]
                  , [Maybe SentenceIndex]
-                 , [SentItem]
+                 , [SentItem CharIdx]
                  , [[Token]]
                  , [Maybe PennTree]
                  , [Dependency]
-                 , Maybe [(SentItem, [TagPos (Maybe Text)])]
+                 , Maybe [TagPos TokIdx (Maybe Text)]
+                 -- , Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
                  )
               -> [Text]
 sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded =
-  let (sents,sentidxs,sentitems,_tokss,mptrs,deps,mtmx) = loaded
+  let (sents,sentidxs,sentitems,_tokss,mptrs,deps,mtmxs) = loaded
       lmass = sents ^.. traverse . sentenceLemma
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = getWikiResolvedMentions loaded emTagger
-      line1 = [ "================================================================================================="
-              , "-- TimeTagger -----------------------------------------------------------------------------------" ]
-      line2 = case mtmx of
-                Nothing -> ["Time annotation not successful!"]
-                Just sentswithtmx -> concat $ map formatTimex sentswithtmx
+      lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
+      mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
+      mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs 
+      line1 = [ "==================================================================================================" ]
+--               , "-- TimeTagger -----------------------------------------------------------------------------------" ]
+   --   line2 = case mtmxs of
+     --           Nothing -> ["Time annotation not successful!"]
+       --         Just tmxs -> [T.pack (show mergedtags)]
+                                     -- concat $ map formatTimex sentswithtmx
 
-      line3 = [ "-- WikiNamedEntityTagger ------------------------------------------------------------------------"
-              , T.pack (render (formatNER mtokenss sentitems linked_mentions_resolved))
+      line3 = [ "-- Time and NER tagged text ----------------------------------------------------------------------"
+              , T.pack (render (formatTagged mtokenss sentitems mergedtags))
               , "--------------------------------------------------------------------------------------------------"
               , "-- Sentence analysis -----------------------------------------------------------------------------"
               , "--------------------------------------------------------------------------------------------------" ]
@@ -161,4 +158,4 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
                         Nothing       -> [""]
                         Just (xs,yss) -> xs ++ (concat yss)
 
-  in line1 ++ line2 ++ line3 ++ line4
+  in line1 ++ line3 ++ line4
