@@ -156,9 +156,10 @@ showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
 showClauseStructure lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-  
+      cpstr = identifyCPHierarchy vps
       x = formatClauseStructure vps clausetr
       xs = map (formatVPwithPAWS clausetr) vps
+  print cpstr
   T.IO.putStrLn x
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
 

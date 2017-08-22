@@ -3,13 +3,15 @@
 
 module NLP.Syntax.Clause where
 
+import           Control.Applicative                    ((<|>))
 import           Control.Lens
+import           Control.Monad                          ((<=<))
 import           Data.Bifoldable
 import           Data.Either                            (partitionEithers)
 import           Data.Function                          (on)
 import           Data.IntMap                            (IntMap)
 import           Data.List                              (minimumBy)
-import           Data.Maybe                             (listToMaybe,maybeToList)
+import           Data.Maybe                             (listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid
 import           Data.Text                              (Text)
 import qualified Data.Text               as T
@@ -17,6 +19,7 @@ import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.Range                             (isInsideR)
 import           Lexicon.Type                           (ATNode(..))
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -54,8 +57,6 @@ complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
                                       _   -> False
 
 
-
-
 identifySubject :: N.ClauseTag
                 -> BitreeZipperICP '[Lemma]
                 -> Maybe (ATNode (DP (BitreeZipperICP '[Lemma])))
@@ -66,9 +67,6 @@ identifySubject tag vp =
   in case r of
        Nothing -> Just (SimpleNode SilentPRO)
        Just z  -> Just (SimpleNode (RExp z))
-
--- SimpleNode . RExp <$>
-
 
 
 -- | Constructing CP umbrella and all of its ingrediant.
@@ -85,15 +83,38 @@ constructCP vprop = do
         cptag' <- N.convert <$> getchunk cp'
         let subj = identifySubject s vp
         case cptag' of
-          N.CL _ -> return $ CP (Just cp')
-                                (prev tp')
-                                (TP (Just tp') subj verbp)
+          N.CL _ -> let nsubj = subj -- case subj of
+                                --   Just (SimpleNode SilentPRO) -> Just (fromMaybe (SimpleNode SilentPRO) (findMatchedSubject cp'))
+                                --  _ -> subj
+                    in return $ CP (Just cp')
+                                   (prev tp')
+                                   (TP (Just tp') subj verbp)
           N.RT   -> return $ CP (Just cp')
                                 Nothing
                                 (TP (Just tp') subj verbp)
           _      -> return (CP Nothing Nothing (TP (Just tp') subj verbp))  -- somewhat problematic case?
       _ -> return (CP Nothing Nothing (TP Nothing Nothing verbp))           -- reduced relative clause
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
+
+
+
+
+
+identifyCPHierarchy :: [VerbProperty (BitreeZipperICP '[Lemma])] -> [Range] -- Bitree CP CP
+identifyCPHierarchy vps = let cps = mapMaybe ((\cp -> (,) <$> cprange cp <*> pure cp) <=< constructCP) vps 
+                          in map fst cps
+  where cprange cp = (cp^?cp_maximal_projection._Just.to (getRange . current)) <|>
+                     (cp^?cp_TP.tp_maximal_projection._Just.to (getRange . current))
+
+
+{-
+rootRange :: [Range] -> (Range,[Range])
+rootRange rngs = 
+-}
+
+---------
+-- old --
+---------
 
 
 currentlevel :: Bitree (Range,(STag,Int)) t -> Int
@@ -121,7 +142,7 @@ promote_PP_CP_from_NP x = [x]
 
 
 
-clauseStructure :: [VerbProperty a]
+clauseStructure :: [VerbProperty (BitreeZipperICP '[Lemma])]
                 -> PennTreeIdxG N.CombinedTag (POSTag,Text)
                 -> ClauseTree
 clauseStructure _vps (PL (i,pt)) = PL (Right (i,pt))
