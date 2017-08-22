@@ -1,6 +1,7 @@
 { mkDerivation, attoparsec, base, containers, nlp-types, primitive
 , stdenv, tasty, tasty-hunit, text, vector, vector-algorithms
 , xxhash
+, foreign-store, raw-strings-qq, mwc-random    
 }:
 mkDerivation {
   pname = "wiki-ner";
@@ -14,6 +15,12 @@ mkDerivation {
     attoparsec base containers nlp-types primitive tasty-hunit text
     vector vector-algorithms xxhash
   ];
+  executableHaskellDepends = [
+    raw-strings-qq
+    mwc-random    
+    foreign-store
+  ];
+
   testHaskellDepends = [
     attoparsec base containers nlp-types primitive tasty tasty-hunit
     text vector vector-algorithms xxhash
