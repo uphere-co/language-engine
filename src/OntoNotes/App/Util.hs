@@ -46,16 +46,22 @@ instance Functor (TagPos i) where
   fmap f (TagPos (i,j,x)) = TagPos (i,j,f x)
 
 instance FromJSON CharIdx where
-  parseJSON = genericParseJSON defaultOptions
+  parseJSON x@(Number n) = case floatingOrInteger n of
+                             Right i -> return (ChIdx i)
+                             Left  d -> typeMismatch "error in CharIdx" x
+  parseJSON o            = typeMismatch "error in CharIdx" o
 
 instance ToJSON CharIdx where
-  toJSON = genericToJSON defaultOptions
+  toJSON x = toJSON (unChIdx x)
 
 instance FromJSON TokIdx where
-  parseJSON = genericParseJSON defaultOptions
+  parseJSON x@(Number n) = case floatingOrInteger n of
+                             Right i -> return (TokIdx i)
+                             Left  d -> typeMismatch "error in TokIdx" x
+  parseJSON o            = typeMismatch "error in TokIdx" o
 
 instance ToJSON TokIdx where
-  toJSON = genericToJSON defaultOptions
+  toJSON x = toJSON (unTokIdx x)
 
 instance FromJSON (TagPos TokIdx (Maybe Text)) where
   parseJSON = genericParseJSON defaultOptions
