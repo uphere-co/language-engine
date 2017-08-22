@@ -33,6 +33,7 @@ library
                        lens,
                        monad-loops,
                        text,
+                       unordered-containers,
                        --
                        HCoreNLP,
                        HCoreNLP-Proto,

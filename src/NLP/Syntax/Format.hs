@@ -4,7 +4,7 @@
 module NLP.Syntax.Format where
 
 import           Control.Lens
-import           Data.Foldable                 (toList)
+import           Data.Foldable                 (toList,traverse_)
 import           Data.IntMap                   (IntMap)
 import           Data.List                     (intercalate)
 import           Data.Maybe
@@ -29,8 +29,6 @@ import           NLP.Syntax.Verb
 
 formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
-  where toTree (PN x xs) = Tr.Node x (map toTree xs)
-        toTree (PL x)    = Tr.Node x []
 
         
 formatTense :: Tense -> Text
@@ -124,6 +122,10 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
         formatposchunk (Right p) = "(" ++ show p ++ ")"
 
 
+formatCPHierarchy :: Bitree (Range,CP) (Range,CP) -> Text
+formatCPHierarchy tr = formatBitree (\(rng,cp) -> T.pack (printf "%-7s" (show rng))) tr
+
+
 formatClauseStructure :: [VerbProperty (BitreeZipperICP '[Lemma])]
                       -> ClauseTree
                       -> Text
@@ -139,6 +141,7 @@ formatClauseStructure vps clausetr =
               g (Right x)     = T.pack (show x)
 
   in formatBitree id tr'
+
 
 formatVPwithPAWS :: ClauseTree
                  -> VerbProperty (BitreeZipperICP '[Lemma])
@@ -159,7 +162,7 @@ showClauseStructure lemmamap ptree  = do
       cpstr = identifyCPHierarchy vps
       x = formatClauseStructure vps clausetr
       xs = map (formatVPwithPAWS clausetr) vps
-  print cpstr
-  T.IO.putStrLn x
+  traverse_ (mapM_ (T.IO.putStrLn . formatCPHierarchy)) cpstr
+  -- T.IO.putStrLn x
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
 

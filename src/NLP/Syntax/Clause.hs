@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections     #-}
 
 module NLP.Syntax.Clause where
 
@@ -8,19 +9,21 @@ import           Control.Applicative                    ((<|>))
 import           Control.Lens
 import           Control.Monad                          ((<=<))
 import           Data.Bifoldable
+import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
 import           Data.Function                          (on)
+import qualified Data.HashMap.Strict               as HM
 import           Data.IntMap                            (IntMap)
 import           Data.List                              (inits,mapAccumL,minimumBy)
 import           Data.Maybe                             (listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid
 import           Data.Text                              (Text)
-import qualified Data.Text               as T
+import qualified Data.Text                         as T
 import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
-import           Data.Range                             (isInsideR)
+import           Data.Range                             (isInsideR,rangeTree)
 import           Lexicon.Type                           (ATNode(..))
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -98,12 +101,17 @@ constructCP vprop = do
 
 
 
-identifyCPHierarchy :: [VerbProperty (BitreeZipperICP '[Lemma])] -> [Range] -- Bitree CP CP
-identifyCPHierarchy vps = let cps = mapMaybe ((\cp -> (,) <$> cprange cp <*> pure cp) <=< constructCP) vps 
-                          in map fst cps
+identifyCPHierarchy :: [VerbProperty (BitreeZipperICP '[Lemma])]
+                    -> Maybe [Bitree (Range,CP) (Range,CP)]
+identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
   where cprange cp = (cp^?cp_maximal_projection._Just.to (getRange . current)) <|>
                      (cp^?cp_TP.tp_maximal_projection._Just.to (getRange . current))
 
+        cps = mapMaybe ((\cp -> (,) <$> cprange cp <*> pure cp) <=< constructCP) vps 
+        cpmap = HM.fromList (map (\x->(x^._1,x)) cps)
+        rngs = HM.keys cpmap
+        rtr = rangeTree rngs
+        tofull rng = HM.lookup rng cpmap
 
 
 
