@@ -40,7 +40,8 @@ library
                      , WikiEL.WikiEntityClass
                      , WikiEL.Convert
                      , WikiEL.Graph
-  other-modules:       WikiEL.ETL.RDF.Common
+  -- other-modules:
+                     , WikiEL.ETL.RDF.Common
                      , WikiEL.ETL.RDF.Wikidata
                      , WikiEL.ETL.RDF.Yago
                      , WikiEL.Type.RDF.Wikidata
@@ -82,6 +83,42 @@ executable yago-bin
   default-language: Haskell2010
   ghc-options: -threaded
                -O2
+
+
+executable testApp
+  hs-source-dirs: test, src
+  other-modules:       Test.Data.Filename
+                     , Test.Data.News3
+                     , Test.NamedEntityTagger
+                     , Test.WikiEntityTagger
+                     , Test.CoreNLPEntity
+  main-is: testApp.hs
+  build-depends:       base
+                     , tasty-hunit
+                     , text
+                     , primitive
+                     , vector
+                     , vector-algorithms
+                     , lens
+                     , containers
+                     , attoparsec
+                     , xxhash
+                     , binary
+                     , bytestring
+                     , mwc-random
+                     , raw-strings-qq
+                     , tasty
+                     , nlp-types
+                     , wiki-ner
+                     , foreign-store
+  default-language:    Haskell2010
+  ghc-options:        -threaded
+                      -O2
+  ghc-prof-options:    -caf-all -auto-all
+                     
+--                      -prof
+--                      -fprof-auto
+
 
 
 test-suite test

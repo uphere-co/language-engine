@@ -54,3 +54,27 @@ cabal repl testRun --builddir=../dists/wiki-ner
 # To run the compiled experiments app
 cabal build testRun --builddir=../dists/wiki-ner
 ```
+
+
+
+### For profiling
+
+build with profiling option
+```
+$ cabal install --enable-profiling
+```
+
+default profiling (finding cost center)
+```
+$ .cabal-sandbox/bin/testApp wnTypes.1M  +RTS -p
+```
+Find `testApp.prof` file after run.
+
+
+time dependent memory profiling
+```
+$ .cabal-sandbox/bin/testApp wnTypes.1M +RTS -p -h
+$ hp2ps testApp.hp
+$ ps2pdf testApp.ps testApp.pdf
+```
+

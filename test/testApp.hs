@@ -23,6 +23,8 @@ import           WikiEL.ETL.RDF.Yago
 import           Data.Word                             (Word32)
 import           Foreign.Store
 
+import           System.Environment                    (getArgs)
+
 -- For Wiki interlinks
 --import           Data.Text                             (Text)
 import           Data.List                             (foldl')
@@ -148,7 +150,8 @@ wordnetType table@(WNTypes types names) name = f ts
     ts = M.lookup key types
 
 main4 = do
-  wn <- foo loadWordnetTypes "enwiki/wnTypes"
+  args <- getArgs 
+  wn <- foo loadWordnetTypes (args !! 0) -- "/scratch/wavewave/test/wnTypes.1M" -- "enwiki/wnTypes"
   print wn
 
 {-

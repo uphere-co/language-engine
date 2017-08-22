@@ -7,11 +7,16 @@ with pkgs;
 let 
     config = 
       self: super: {
+        mkDerivation = args: super.mkDerivation (args // {
+                         enableLibraryProfiling = true;
+                       });
         "nlp-types" = self.callPackage (import nlp-types) {};
       };
     #hsconfig = import ../nix/haskell-modules/configuration-ghc-8.0.x.nix { inherit pkgs; };
     #newHaskellPackages = haskellPackages;
-    newHaskellPackages = haskellPackages.override { overrides = self: super: config self super; };
+    newHaskellPackages = haskellPackages.override {
+                           overrides = self: super: config self super;
+                         };
     hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
               cabal-install
               aeson
