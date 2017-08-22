@@ -35,9 +35,22 @@ cat yago/sample | runhaskell -i./src/ test/testApp.hs
 nix-build release.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 20 --cores 20 -A wiki-ner
 ```
 
-## Convert RDF dumps to Binary
+## Run experiments in REPL with YAGO data.
+### Convert RDF dumps to Binary
 ```
 # For YAGO
 cabal build yago-bin
 time ./dist/build/yago-bin/yago-bin
+```
+
+### Run experiments
+```
+# Get test dataset for experiments
+-- uses `main1`
+cabal build yago-bin
+time cat yago/wordnet | dist/build/yago-bin/yago-bin > enwiki/wnTypes
+# To run experiments in REPL
+cabal repl testRun --builddir=../dists/wiki-ner
+# To run the compiled experiments app
+cabal build testRun --builddir=../dists/wiki-ner
 ```
