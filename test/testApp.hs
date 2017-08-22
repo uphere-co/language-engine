@@ -125,6 +125,8 @@ data WNTypes = WNTypes { _types  :: M.Map H.WordHash [H.WordHash]
 instance Show WNTypes where
   show (WNTypes types names) = show (M.size types) ++ " names are mapped." ++ show (M.size names) ++ " hashes."
 
+{-
+-- Stack-overflowed version. Left for profiling exercise.
 loadWordnetTypes :: [Text] -> WNTypes
 loadWordnetTypes lines = foldl' addKey (WNTypes M.empty M.empty) edges
   where
@@ -137,7 +139,23 @@ loadWordnetTypes lines = foldl' addKey (WNTypes M.empty M.empty) edges
         hash = H.wordHash
         key = hash entity
         val = hash synset
-        foo' = WNTypes (g types (key, val)) (f (f names (key, entity)) (val, synset))
+        --foo' = WNTypes (g types (key, val)) (f (f names (key, entity)) (val, synset))
+        --foo' = WNTypes types (f (f names (key, entity)) (val, synset))
+        foo' = WNTypes (g types (key, val)) names
+-}
+
+loadWordnetTypes :: [Text] -> WNTypes
+loadWordnetTypes lines = WNTypes types names
+  where
+    edges    = map parseInterlinks lines
+    hash = H.wordHash
+    --tryAppend invs (key, val) = M.insert key [val] invs
+    tryAppend invs (key, val) = M.insertWith (++) key [val] invs
+    tryAdd    invs word = M.insert (H.wordHash word) word invs    
+    f ts (entity, synset) = tryAppend ts (hash entity, hash synset)    
+    g ns (entity, synset) = tryAdd (tryAdd ns entity) synset
+    types = foldl' f M.empty edges
+    names = foldl' g M.empty edges
 
 wordnetType :: WNTypes -> Text -> [Text]
 wordnetType table@(WNTypes types names) name = f ts
