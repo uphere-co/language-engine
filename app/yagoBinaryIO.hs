@@ -59,9 +59,13 @@ interWikiLinks :: Either a YagoRdfTriple -> Maybe Text
 interWikiLinks (Right (_,ts@(YagoWikiTitle s),_,to@(YagoWikiTitle o))) = Just (T.intercalate "\t" [s,o])
 interWikiLinks _ = Nothing
 
-wordnetTypes :: Either a YagoRdfTriple -> Maybe Text
-wordnetTypes (Right (_,ts@(YagoWikiTitle s),_,to@(YagoWordnet o))) = Just (T.intercalate "\t" [s,o])
-wordnetTypes _ = Nothing
+wordnetType :: Either a YagoRdfTriple -> Maybe Text
+wordnetType (Right (_,ts@(YagoWikiTitle s),_,to@(YagoWordnet o))) = Just (T.intercalate "\t" [s,o])
+wordnetType _ = Nothing
+
+wordnetTaxonomy :: Either a YagoRdfTriple -> Maybe Text
+wordnetTaxonomy (Right (_,ts@(YagoWordnet s),YagoRDFSprop p,to@(YagoWordnet o))) |p == "subClassOf"= Just (T.intercalate "\t" [s,o])
+wordnetTaxonomy _ = Nothing
 
 {-
 -- following got just ~10% speed-up compared to readlineYAGO.
@@ -91,13 +95,16 @@ yago prevPartialBlock block = do
     taxons = mapMaybe (taxonomyWordNet.readlineYAGO) lines
     links = mapMaybe (interWikiLinks . readlineYAGO) lines
     wnTypes = mapMaybe (wordnetTypes . readlineYAGO) lines
+    taxonomies = mapMaybe (wordnetTaxonomy . readlineYAGO) lines
     --links = mapMaybe (interWikiLinks . parseUserDefined parserInterEnwikiLinks) lines
   --mapM_ print (rights aliases)
   --mapM_ T.IO.putStrLn synsets
   --mapM_ T.IO.putStrLn typedCats
   --mapM_ print taxons  
   --mapM_ T.IO.putStrLn links
-  mapM_ T.IO.putStrLn wnTypes
+  
+  --mapM_ T.IO.putStrLn wnTypes
+  mapM_ T.IO.putStrLn taxonomies
   
   return partialBlock
 
