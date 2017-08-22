@@ -5,18 +5,19 @@ module NLP.Syntax.Clause where
 
 import           Control.Lens
 import           Data.Bifoldable
-import           Data.Either                     (partitionEithers)
-import           Data.Function                   (on)
-import           Data.IntMap                     (IntMap)
-import           Data.List                       (minimumBy)
-import           Data.Maybe                      (listToMaybe,maybeToList)
+import           Data.Either                            (partitionEithers)
+import           Data.Function                          (on)
+import           Data.IntMap                            (IntMap)
+import           Data.List                              (minimumBy)
+import           Data.Maybe                             (listToMaybe,maybeToList)
 import           Data.Monoid
-import           Data.Text                       (Text)
+import           Data.Text                              (Text)
 import qualified Data.Text               as T
 import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Lexicon.Type                           (ATNode(..))
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 --
@@ -55,11 +56,13 @@ complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
 
     
   
-identifySubject :: N.ClauseTag -> BitreeZipperICP '[Lemma] -> Maybe (BitreeZipperICP '[Lemma])
+identifySubject :: N.ClauseTag
+                -> BitreeZipperICP '[Lemma]
+                -> Maybe (ATNode (BitreeZipperICP '[Lemma]))
 identifySubject tag vp =
   case tag of
-    N.SINV -> firstSiblingBy next (isChunkAs NP) vp
-    _      -> firstSiblingBy prev (isChunkAs NP) vp
+    N.SINV -> SimpleNode <$> firstSiblingBy next (isChunkAs NP) vp
+    _      -> SimpleNode <$> firstSiblingBy prev (isChunkAs NP) vp
 
 
 -- | Constructing CP umbrella and all of its ingrediant.

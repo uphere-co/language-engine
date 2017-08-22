@@ -69,8 +69,12 @@ test6 =
   , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","The"),PL ("NN","product")],PN "VP" [PL ("VBZ","enables"),PN "S" [PN "NP" [PL ("NNS","people")],PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","create"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("JJ","new"),PL ("NNS","kinds")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("NNS","arts")]],PL (",",","),PN "PP" [PL ("VBG","including"),PN "NP" [PL ("JJ","electronic"),PL ("NN","music")]]]]]]],PL (".",".")]]
   )
 
-
-
+test7 =
+  ( "Republican senators plan to write a health-care bill."
+  , [(0,("republican","Republican")),(1,("senator","senators")),(2,("plan","plan")),(3,("to","to")),(4,("write","write")),(5,("a","a")),(6,("health-care","health-care")),(7,("bill","bill")),(8,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("JJ","Republican"),PL ("NNS","senators")],PN "VP" [PL ("VBP","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","health-care"),PL ("NN","bill")]]]]],PL (".",".")]]
+  )
+  
 
 process :: (Text,[(Int,(Text,Text))],PennTree) -> IO ()
 process (txt,lma,pt) = do
@@ -87,7 +91,6 @@ process (txt,lma,pt) = do
 
 
 main :: IO ()
-main =
-  mapM_ process [ test1, test6 ]
+main = mapM_ process [ test1, test6, test7 ]
 
 

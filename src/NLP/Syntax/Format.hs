@@ -17,6 +17,7 @@ import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Lexicon.Type                           (chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           Text.Format.Tree
@@ -57,15 +58,15 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
                              formatVoice  (vp^.vp_voice))
                             (fromMaybe "" (vp^?vp_auxiliary._Just._2._2.to unLemma))
                             (fromMaybe "" (vp^?vp_negation._Just._2._2.to unLemma))
-                            (T.intercalate " " (vp^..vp_words.traverse.to (f.fst))) -- _2._2.to unLemma))
-                          -- ()
+                            (T.intercalate " " (vp^..vp_words.traverse.to (f.fst)))
+
 
 
 formatPAWS :: PredArgWorkspace (Either (Range,STag) (Int,POSTag)) -> String
 formatPAWS pa = printf "              subject       : %s\n\
                        \              arg candidates: %s\n\
                        \              complements   : %s"
-                  (maybe "" (T.intercalate " " . gettoken) (pa^.pa_CP.cp_TP.tp_DP))                
+                  (maybe "" (T.intercalate " " . gettoken) (pa^.pa_CP.cp_TP.tp_DP.to (fmap chooseATNode)))
                   ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
                   ((intercalate " | " . map (T.unpack . T.intercalate " ". gettoken)) (pa^.pa_CP.cp_TP.tp_VP.vp_complements))
                   
@@ -95,8 +96,8 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
                 (maybe "" (show . gettoken) (cp^.cp_complementizer))
                 (maybe "null" show (getchunk =<< cp^.cp_TP.tp_maximal_projection))
                 (maybe "" (show . gettoken) (cp^.cp_TP.tp_maximal_projection))
-                (maybe "null" show (getchunk =<< cp^.cp_TP.tp_DP))
-                (maybe "" (show . gettoken) (cp^.cp_TP.tp_DP))                
+                (maybe "null" show (getchunk =<< cp^.cp_TP.tp_DP.to (fmap chooseATNode)))
+                (maybe "" (show . gettoken) (cp^.cp_TP.tp_DP.to (fmap chooseATNode)))
                 (maybe "null" show (getchunk (cp^.cp_TP.tp_VP.vp_maximal_projection)))
                 ((show . gettoken) (cp^.cp_TP.tp_VP.vp_maximal_projection))
                 ((intercalate " | " . map (show . gettoken)) (cp^.cp_TP.tp_VP.vp_complements))

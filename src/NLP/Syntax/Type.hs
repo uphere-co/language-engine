@@ -1,9 +1,10 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE KindSignatures    #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE KindSignatures     #-}
+{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeOperators      #-}
 
 module NLP.Syntax.Type where
 
@@ -13,6 +14,7 @@ import           Data.Text                              (Text)
 import           GHC.Generics                           (Generic)
 --
 import           Data.BitreeZipper
+import           Lexicon.Type                           (ATNode(..))
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 
@@ -64,7 +66,7 @@ makeLenses ''VerbP
 --   corresponds to a sentence.
 --
 data TP = TP { _tp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
-             , _tp_DP                 :: Maybe (BitreeZipperICP '[Lemma])
+             , _tp_DP                 :: Maybe (ATNode (BitreeZipperICP '[Lemma]))
              , _tp_VP                 :: VerbP
              }
 
@@ -85,17 +87,11 @@ makeLenses ''CP
 data PredArgWorkspace a = PAWS { _pa_CP :: CP
                                , _pa_candidate_args :: [a]
                                } 
---                             deriving Show
 
+
+-- deriving instance (Show a) => Show (PredArgWorkspace a)
 
 makeLenses ''PredArgWorkspace
-
-{-                         -- _va_string :: [(POSTag,Text)]
-                           , 
-                           -- , _va_arg0 :: Maybe a
-                           -- , _va_args :: [a]
-                           -}
-
 
 
 ---------------
