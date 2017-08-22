@@ -22,6 +22,7 @@ type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
 type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 
+
 data Tense = Present | Past
            deriving (Show,Eq,Ord,Enum,Bounded)
 
@@ -120,3 +121,8 @@ data STag = S_RT
           | S_PP Text
           | S_OTHER N.PhraseTag
           deriving Show
+
+type ClauseTree = Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+
+type ClauseTreeZipper = BitreeZipper (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+

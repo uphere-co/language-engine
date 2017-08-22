@@ -109,7 +109,7 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
 
 
 formatClauseStructure :: [VerbProperty (BitreeZipperICP '[Lemma])]
-                      -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+                      -> ClauseTree
                       -> Text
 formatClauseStructure vps clausetr =
   let tr' = bimap (\(_rng,x)->f x) g (cutOutLevel0 clausetr)
@@ -124,7 +124,7 @@ formatClauseStructure vps clausetr =
 
   in formatBitree id tr'
 
-formatVPwithPAWS :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+formatVPwithPAWS :: ClauseTree
                  -> VerbProperty (BitreeZipperICP '[Lemma])
                  -> Text
 formatVPwithPAWS clausetr vp =

@@ -92,10 +92,7 @@ currentlevel (PN (_,(_,l)) _) = l
 currentlevel (PL _ )          = 0
 
 
-promoteToVP :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-            -> Either
-                 (Int,(POSTag,Text))
-                 (Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))))
+promoteToVP :: ClauseTree -> Either (Int,(POSTag,Text)) ClauseTree
 promoteToVP x@(PL (Right (i,(p,t))))  = if isVerb p || p == TO || p == MD
                                   then Left (i,(p,t))
                                   else Right x
@@ -117,7 +114,7 @@ promote_PP_CP_from_NP x = [x]
 
 clauseStructure :: [VerbProperty a]
                 -> PennTreeIdxG N.CombinedTag (POSTag,Text)
-                -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+                -> ClauseTree
 clauseStructure _vps (PL (i,pt)) = PL (Right (i,pt))
 clauseStructure vps  (PN (rng,tag) xs)
   = let ys = map (clauseStructure vps) xs
@@ -166,9 +163,7 @@ clauseStructure vps  (PN (rng,tag) xs)
          N.RT   -> PN (rng,(S_RT,lvl)) ys 
 
 
-findVerb :: Int
-         -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-         -> Maybe (BitreeZipper (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))))
+findVerb :: Int -> ClauseTree -> Maybe ClauseTreeZipper
 findVerb i tr = getFirst (bifoldMap f f (mkBitreeZipper [] tr))
   where f x = First $ case getRoot (current x) of
                         Left (_,(S_VP lst,_))
@@ -179,7 +174,7 @@ findVerb i tr = getFirst (bifoldMap f f (mkBitreeZipper [] tr))
 
 
 
-clauseRanges :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))) -> [Range]
+clauseRanges :: ClauseTree -> [Range]
 clauseRanges tr = bifoldMap f (const []) tr
   where f (rng,(S_CL _,_)) = [rng]
         f _                = []
@@ -193,11 +188,9 @@ clauseForVerb allrngs vp = case rngs of
         rngs = filter (\rng -> getAll (mconcat (map (\i -> All (i `isIn` rng)) (vp^..vp_words.traverse._2._1)))) allrngs
 
 
---               -> VerbProperty (BitreeZipperICP '[Lemma])
 
-predicateArgWS :: CP 
-               -> BitreeZipper (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-               -> PredArgWorkspace (Either (Range,STag) (Int,POSTag))
+
+predicateArgWS :: CP -> ClauseTreeZipper -> PredArgWorkspace (Either (Range,STag) (Int,POSTag))
 predicateArgWS cp z =
   PAWS { _pa_CP = cp
        , _pa_candidate_args = case child1 z of
@@ -215,31 +208,15 @@ predicateArgWS cp z =
             Just x' -> x': iterateMaybe f x'
 
 
-findPAWS :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+findPAWS :: ClauseTree
          -> VerbProperty (BitreeZipperICP '[Lemma])
          -> Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag)))
 findPAWS tr vp = do cp <- constructCP vp
                     predicateArgWS cp <$> findVerb (vp^.vp_index) tr
             
-{-        go (z0,acc) y = case getRoot (current y) of
-                          Left (_,(S_VP xs,_)) ->
-                            let acc' = map snd xs ++ acc 
-                            in case parent y of
-                                 Nothing -> (y,acc')
-                                 Just w -> go (y,acc') w
-                          Right (Left (_,(S_VP xs,_))) ->
-                            let acc' = map snd xs ++ acc 
-                            in case parent y of
-                                 Nothing -> (y,acc')
-                                 Just w -> go (y,acc') w
-                          _ -> (z0,acc)
 
 
- -}
-
-
-cutOutLevel0 :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-             -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+cutOutLevel0 :: ClauseTree -> ClauseTree
 cutOutLevel0 x@(PL _             ) = x
 cutOutLevel0 (PN (rng,(p,lvl)) xs) =
   if lvl == 0
