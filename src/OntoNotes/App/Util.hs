@@ -24,7 +24,7 @@ import qualified CoreNLP.Proto.HCoreNLPProto.ListTimex as T
 import qualified CoreNLP.Proto.HCoreNLPProto.TimexWithOffset as T
 import           CoreNLP.Simple.Convert                        (cutf8)
 import           CoreNLP.Simple.Type.Simplified
-import           PropBank.Util                                 (isInsideR)
+import           Data.Range                                    (isInsideR)
 import           Text.Annotation.Type
 import           Text.Annotation.Util.Doc
 import           Text.Annotation.View
