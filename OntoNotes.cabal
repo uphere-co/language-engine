@@ -58,6 +58,7 @@ library
                        monad-loops,
                        mtl,
                        protocol-buffers,
+                       scientific,
                        taggy-lens,
                        text,
                        time,

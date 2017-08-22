@@ -13,7 +13,9 @@ module OntoNotes.App.Util where
 import           Control.Lens
 import           Control.Monad                                 (guard)
 import           Data.Aeson
+import           Data.Aeson.Types                              (typeMismatch)
 import           Data.Maybe                                    (fromJust,mapMaybe)
+import           Data.Scientific                               (floatingOrInteger)
 import           Data.Text                                     (Text)
 import qualified Data.Text                             as T
 import qualified Data.Text.IO                          as T.IO
