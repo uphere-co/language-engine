@@ -18,15 +18,3 @@ merge idxf trs props =
  where joiner (i,x) (_,y) = (i,(x,y))
        m1 (i,x) = (i,(x,[]))
 
-
-getLeaves :: PennTreeGen c t -> [t]
-getLeaves (PN _ xs) = concatMap getLeaves xs
-getLeaves (PL x) = [x]
-
-
-isInside :: Int -> Range -> Bool
-x `isInside` (x1,y1) = x1 <= x && x <= y1
-
-
-isInsideR :: Range -> Range -> Bool
-(x0,y0) `isInsideR` (x1,y1) = x1 <= x0 && y0 <= y1
