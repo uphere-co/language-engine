@@ -144,9 +144,10 @@ formatClauseStructure vps clausetr =
 
 
 formatVPwithPAWS :: ClauseTree
+                 -> Maybe [Bitree (Range,CP) (Range,CP)]
                  -> VerbProperty (BitreeZipperICP '[Lemma])
                  -> Text
-formatVPwithPAWS clausetr vp =
+formatVPwithPAWS clausetr mcpstr vp =
   let rngs = clauseRanges clausetr
       fmt = either (const "") (tokenWord.snd) . getRoot . current
   in T.pack $ printf "%7s:%-50s\n%s\n"
@@ -159,10 +160,10 @@ showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
 showClauseStructure lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      cpstr = identifyCPHierarchy vps
-      x = formatClauseStructure vps clausetr
-      xs = map (formatVPwithPAWS clausetr) vps
-  traverse_ (mapM_ (T.IO.putStrLn . formatCPHierarchy)) cpstr
+      mcpstr = identifyCPHierarchy vps
+      -- x = formatClauseStructure vps clausetr
+      xs = map (formatVPwithPAWS clausetr mcpstr) vps
+  traverse_ (mapM_ (T.IO.putStrLn . formatCPHierarchy)) mcpstr
   -- T.IO.putStrLn x
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
 

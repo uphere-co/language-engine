@@ -14,7 +14,7 @@ import           Data.Either                            (partitionEithers)
 import           Data.Function                          (on)
 import qualified Data.HashMap.Strict               as HM
 import           Data.IntMap                            (IntMap)
-import           Data.List                              (inits,mapAccumL,minimumBy)
+import           Data.List                              (find,inits,mapAccumL,minimumBy)
 import           Data.Maybe                             (listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid
 import           Data.Text                              (Text)
@@ -24,7 +24,7 @@ import           Text.Printf
 import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.Range                             (isInsideR,rangeTree)
-import           Lexicon.Type                           (ATNode(..))
+import           Lexicon.Type                           (ATNode(..),chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 --
@@ -113,6 +113,22 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
         rtr = rangeTree rngs
         tofull rng = HM.lookup rng cpmap
 
+
+getRoot1 :: Bitree a a -> a
+getRoot1 = either id id . getRoot
+
+
+mkCPZipper :: Range -> Bitree (Range,CP) (Range,CP) -> Maybe (BitreeZipper (Range,CP) (Range,CP))
+mkCPZipper rng tr = find (\z -> fst (getRoot1 (current z)) == rng) $ biList (mkBitreeZipper [] tr)
+
+
+resolvePRO :: BitreeZipper (Range,CP) (Range,CP) -> Maybe (BitreeZipperICP '[Lemma])
+resolvePRO z = do cp0 <- snd . getRoot1 . current <$> parent z
+                  atnode <- cp0^.cp_TP.tp_DP
+                  case chooseATNode atnode of
+                    SilentPRO -> Nothing
+                    RExp x    -> Just x
+                    
 
 
 ---------
