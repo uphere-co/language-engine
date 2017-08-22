@@ -94,7 +94,7 @@ yago prevPartialBlock block = do
 
     taxons = mapMaybe (taxonomyWordNet.readlineYAGO) lines
     links = mapMaybe (interWikiLinks . readlineYAGO) lines
-    wnTypes = mapMaybe (wordnetTypes . readlineYAGO) lines
+    wnTypes = mapMaybe (wordnetType . readlineYAGO) lines
     taxonomies = mapMaybe (wordnetTaxonomy . readlineYAGO) lines
     --links = mapMaybe (interWikiLinks . parseUserDefined parserInterEnwikiLinks) lines
   --mapM_ print (rights aliases)
