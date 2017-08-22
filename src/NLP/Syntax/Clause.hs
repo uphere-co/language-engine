@@ -5,18 +5,19 @@ module NLP.Syntax.Clause where
 
 import           Control.Lens
 import           Data.Bifoldable
-import           Data.Either                     (partitionEithers)
-import           Data.Function                   (on)
-import           Data.IntMap                     (IntMap)
-import           Data.List                       (minimumBy)
-import           Data.Maybe                      (listToMaybe,maybeToList)
+import           Data.Either                            (partitionEithers)
+import           Data.Function                          (on)
+import           Data.IntMap                            (IntMap)
+import           Data.List                              (minimumBy)
+import           Data.Maybe                             (listToMaybe,maybeToList)
 import           Data.Monoid
-import           Data.Text                       (Text)
+import           Data.Text                              (Text)
 import qualified Data.Text               as T
 import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Lexicon.Type                           (ATNode(..))
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 --
@@ -53,13 +54,21 @@ complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
                                       _   -> False
 
 
-    
-  
-identifySubject :: N.ClauseTag -> BitreeZipperICP '[Lemma] -> Maybe (BitreeZipperICP '[Lemma])
+
+
+identifySubject :: N.ClauseTag
+                -> BitreeZipperICP '[Lemma]
+                -> Maybe (ATNode (DP (BitreeZipperICP '[Lemma])))
 identifySubject tag vp =
-  case tag of
-    N.SINV -> firstSiblingBy next (isChunkAs NP) vp
-    _      -> firstSiblingBy prev (isChunkAs NP) vp
+  let r = case tag of
+            N.SINV -> firstSiblingBy next (isChunkAs NP) vp
+            _      -> firstSiblingBy prev (isChunkAs NP) vp
+  in case r of
+       Nothing -> Just (SimpleNode SilentPRO)
+       Just z  -> Just (SimpleNode (RExp z))
+
+-- SimpleNode . RExp <$>
+
 
 
 -- | Constructing CP umbrella and all of its ingrediant.
@@ -92,16 +101,13 @@ currentlevel (PN (_,(_,l)) _) = l
 currentlevel (PL _ )          = 0
 
 
-promoteToVP :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-            -> Either
-                 (Int,(POSTag,Text))
-                 (Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))))
-promoteToVP x@(PL (Right (i,(p,t))))  = if isVerb p || p == TO || p == MD
-                                  then Left (i,(p,t))
-                                  else Right x
-promoteToVP x@(PL (Left _))       = Right x
+promoteToVP :: ClauseTree -> Either (Int,(POSTag,Text)) ClauseTree
+promoteToVP x@(PL (Right (i,(p,t)))) = if isVerb p || p == TO || p == MD
+                                       then Left (i,(p,t))
+                                       else Right x
+promoteToVP x@(PL (Left _))          = Right x
 promoteToVP (PN (_,(S_OTHER N.PRT,_)) (PL (Right (i,(p,t))):_)) = Left (i,(p,t))  -- for verb particle
-promoteToVP x@(PN _ _)            = Right x
+promoteToVP x@(PN _ _)               = Right x
 
 
 promote_PP_CP_from_NP :: Bitree (Range,(STag,Int)) t -> [Bitree (Range,(STag,Int)) t]
@@ -109,7 +115,7 @@ promote_PP_CP_from_NP x@(PN (_rng,(S_OTHER N.NP,_lvl)) [x1,x2]) =
   case (getRoot x1, getRoot x2) of
     (Left (_,(S_OTHER N.NP,_)), Left (_,(S_PP _,_)))   ->  [x1,x2]
     (Left (_,(S_OTHER N.NP,_)), Left (_,(S_SBAR _,_))) ->  [x1,x2]
-    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_CL _,_)))   ->  [x1,x2]        
+    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_CL _,_)))   ->  [x1,x2]
     _ -> [x]
 promote_PP_CP_from_NP x = [x]
 
@@ -117,7 +123,7 @@ promote_PP_CP_from_NP x = [x]
 
 clauseStructure :: [VerbProperty a]
                 -> PennTreeIdxG N.CombinedTag (POSTag,Text)
-                -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+                -> ClauseTree
 clauseStructure _vps (PL (i,pt)) = PL (Right (i,pt))
 clauseStructure vps  (PN (rng,tag) xs)
   = let ys = map (clauseStructure vps) xs
@@ -163,23 +169,21 @@ clauseStructure vps  (PN (rng,tag) xs)
                          PL (i,(p1,t)):_  -> PN (rng,(S_OTHER N.PRT,lvl)) [PL (Right (i,(p1,t)))]
                          _                -> PL (Left (rng,(S_OTHER p,lvl)))
                      _    -> PN (rng,(S_OTHER p,lvl)) ys
-         N.RT   -> PN (rng,(S_RT,lvl)) ys 
+         N.RT   -> PN (rng,(S_RT,lvl)) ys
 
 
-findVerb :: Int
-         -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-         -> Maybe (BitreeZipper (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))))
+findVerb :: Int -> ClauseTree -> Maybe ClauseTreeZipper
 findVerb i tr = getFirst (bifoldMap f f (mkBitreeZipper [] tr))
   where f x = First $ case getRoot (current x) of
                         Left (_,(S_VP lst,_))
-                          -> if i `elem` (map (^._1) lst) then Just x else Nothing 
+                          -> if i `elem` (map (^._1) lst) then Just x else Nothing
                         Right (Left (_,(S_VP lst,_)))
                           -> if i `elem` (map (^._1) lst) then Just x else Nothing
-                        _ -> Nothing 
+                        _ -> Nothing
 
 
 
-clauseRanges :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text))) -> [Range]
+clauseRanges :: ClauseTree -> [Range]
 clauseRanges tr = bifoldMap f (const []) tr
   where f (rng,(S_CL _,_)) = [rng]
         f _                = []
@@ -189,15 +193,13 @@ clauseForVerb :: [Range] -> VerbProperty a -> Maybe Range
 clauseForVerb allrngs vp = case rngs of
                              [] -> Nothing
                              _  -> Just (minimumBy (compare `on` (\(b,e) -> e-b)) rngs)
-  where i `isIn` (b,e) = b <= i && i <= e  
+  where i `isIn` (b,e) = b <= i && i <= e
         rngs = filter (\rng -> getAll (mconcat (map (\i -> All (i `isIn` rng)) (vp^..vp_words.traverse._2._1)))) allrngs
 
 
---               -> VerbProperty (BitreeZipperICP '[Lemma])
 
-predicateArgWS :: CP 
-               -> BitreeZipper (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-               -> PredArgWorkspace (Either (Range,STag) (Int,POSTag))
+
+predicateArgWS :: CP -> ClauseTreeZipper -> PredArgWorkspace (Either (Range,STag) (Int,POSTag))
 predicateArgWS cp z =
   PAWS { _pa_CP = cp
        , _pa_candidate_args = case child1 z of
@@ -215,31 +217,15 @@ predicateArgWS cp z =
             Just x' -> x': iterateMaybe f x'
 
 
-findPAWS :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+findPAWS :: ClauseTree
          -> VerbProperty (BitreeZipperICP '[Lemma])
          -> Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag)))
 findPAWS tr vp = do cp <- constructCP vp
                     predicateArgWS cp <$> findVerb (vp^.vp_index) tr
-            
-{-        go (z0,acc) y = case getRoot (current y) of
-                          Left (_,(S_VP xs,_)) ->
-                            let acc' = map snd xs ++ acc 
-                            in case parent y of
-                                 Nothing -> (y,acc')
-                                 Just w -> go (y,acc') w
-                          Right (Left (_,(S_VP xs,_))) ->
-                            let acc' = map snd xs ++ acc 
-                            in case parent y of
-                                 Nothing -> (y,acc')
-                                 Just w -> go (y,acc') w
-                          _ -> (z0,acc)
 
 
- -}
 
-
-cutOutLevel0 :: Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
-             -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+cutOutLevel0 :: ClauseTree -> ClauseTree
 cutOutLevel0 x@(PL _             ) = x
 cutOutLevel0 (PN (rng,(p,lvl)) xs) =
   if lvl == 0
@@ -248,5 +234,3 @@ cutOutLevel0 (PN (rng,(p,lvl)) xs) =
          S_OTHER _ -> PL (Left (rng,(p,lvl)))
          _         -> PN (rng,(p,lvl)) (map cutOutLevel0 xs)
   else PN (rng,(p,lvl)) (map cutOutLevel0 xs)
-
-

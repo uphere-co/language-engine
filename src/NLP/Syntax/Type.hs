@@ -1,9 +1,10 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE KindSignatures    #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE KindSignatures     #-}
+{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeOperators      #-}
 
 module NLP.Syntax.Type where
 
@@ -13,6 +14,7 @@ import           Data.Text                              (Text)
 import           GHC.Generics                           (Generic)
 --
 import           Data.BitreeZipper
+import           Lexicon.Type                           (ATNode(..))
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 
@@ -20,6 +22,7 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
+
 
 
 data Tense = Present | Past
@@ -35,6 +38,7 @@ instance Hashable Voice
 data Aspect = Simple | Progressive | Perfect | PerfectProgressive
            deriving (Show,Eq,Ord,Enum,Bounded)
 
+
 data VerbProperty w = VerbProperty { _vp_index  :: Int
                                    , _vp_lemma  :: Lemma
                                    , _vp_tense  :: Tense
@@ -48,6 +52,7 @@ data VerbProperty w = VerbProperty { _vp_index  :: Int
 
 makeLenses ''VerbProperty
 
+
 -- | Projection of Verb Phrase following X-bar theory.
 --   The name VP is defined in NLP.Type.PennTreebankII, so I use VerbP.
 --
@@ -59,11 +64,14 @@ data VerbP = VerbP { _vp_maximal_projection :: BitreeZipperICP '[Lemma]
 makeLenses ''VerbP
 
 
+data DP a = SilentPRO | RExp a
+
+
 -- | Projection of Tense Phrase following X-bar theory, which roughly
 --   corresponds to a sentence.
 --
 data TP = TP { _tp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
-             , _tp_DP                 :: Maybe (BitreeZipperICP '[Lemma])
+             , _tp_DP                 :: Maybe (ATNode (DP (BitreeZipperICP '[Lemma])))
              , _tp_VP                 :: VerbP
              }
 
@@ -79,22 +87,16 @@ data CP = CP { _cp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
 makeLenses ''CP
 
 
--- | workspace for predicate argument 
+-- | workspace for predicate argument
 --
 data PredArgWorkspace a = PAWS { _pa_CP :: CP
                                , _pa_candidate_args :: [a]
-                               } 
---                             deriving Show
+                               }
 
+
+-- deriving instance (Show a) => Show (PredArgWorkspace a)
 
 makeLenses ''PredArgWorkspace
-
-{-                         -- _va_string :: [(POSTag,Text)]
-                           , 
-                           -- , _va_arg0 :: Maybe a
-                           -- , _va_args :: [a]
-                           -}
-
 
 
 ---------------
@@ -120,3 +122,7 @@ data STag = S_RT
           | S_PP Text
           | S_OTHER N.PhraseTag
           deriving Show
+
+type ClauseTree = Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+
+type ClauseTreeZipper = BitreeZipper (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
