@@ -16,6 +16,7 @@ import           Text.Printf                                  (printf)
 --
 import           CoreNLP.Simple.Convert                       (sentToNER')
 import           CoreNLP.Simple.Type.Simplified
+import           Data.Range                                   (isInsideR)
 import           NLP.Type.NamedEntity                         (NamedEntityClass)
 import           WikiEL                                       (loadEMtagger)
 import           WikiEL.CoreNLP                               (parseNEROutputStr)
@@ -31,7 +32,6 @@ import           WikiEL.ETL.LoadData
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
 import qualified NLP.Type.NamedEntity          as N
 import           NLP.Type.PennTreebankII                      (PennTree)
-import           PropBank.Util                                (isInsideR)
 import qualified WikiEL.WikiEntityClass        as WC
 import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Wikipedia

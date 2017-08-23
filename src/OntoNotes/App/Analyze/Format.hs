@@ -12,13 +12,14 @@ import           Data.Maybe                              (fromMaybe,mapMaybe)
 import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
 import qualified Data.Text                       as T
-import qualified Data.Text.IO                    as T.IO 
+import qualified Data.Text.IO                    as T.IO
 import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat)
 import           Text.Printf                             (printf)
 import           Text.ProtocolBuffers.Basic              (Utf8)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
 import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,token_pos)
+import           Lexicon.Query                           (cutHistogram)
 import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
                                                          ,type RolePattInstance,POSVorN(..))
 import           NLP.Syntax.Type                         (Voice)                 
@@ -64,7 +65,7 @@ showFormatTimex' (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex' (s,a
 
 
 formatSense :: (Text,Text,Int,Text,Text,Text,Text) -> String
-formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) = 
+formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) =
   printf "%2s.%-6s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s " sgrp sn num txt_def txt_frame txt_fecore txt_feperi
 
 
@@ -74,14 +75,14 @@ formatSenses :: Bool  -- ^ doesShowOtherSense
              -> Text
              -> [(Text,Text,Int,Text,Text,Text,Text)]
              -> String
-formatSenses doesShowOtherSense rolemap subcats lma lst 
+formatSenses doesShowOtherSense rolemap subcats lma lst
   = let t = chooseFrame lst
     in "Top frame: "
        ++ printf " %-20s | %-40s      ------      %-30s\n"
             (fromMaybe "" (t^?_Just._5))
             (fromMaybe "" (t^?_Just._6))
             (fromMaybe "" (t^?_Just._7))
-       ++ "--------------------------------------------------------------------------------------------------\n"                 -- ++ show subcats
+       ++ "--------------------------------------------------------------------------------------------------\n"
        ++ fromMaybe ""
             (do t1 <- t^?_Just._1
                 t2 <- t^?_Just._2
@@ -89,8 +90,9 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
                 rm <- find (\rm -> rm^._1 == sid) rolemap
                 let msubcat =find ((== sid) . (^._1)) subcats
                 let margpattstr = do
-                      subcat <- msubcat
-                      return $ intercalate "\n" $ flip map (Prelude.take 5 (subcat^._2)) $ \(patt,n) ->
+                      (sid,insts) <- msubcat
+                      let subcat = (sid,cutHistogram 0.9 insts)
+                      return $ intercalate "\n" $ flip map {- (Prelude.take 5 (subcat^._2)) -} (subcat^._2) $ \(patt,n) ->
                                  printf "%s     #count: %5d" (formatArgPatt patt) (n :: Int)
                 return (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr)
             )
@@ -134,4 +136,3 @@ formatTagged mtokenss sentitems tlst =
       doc1 = formatTaggedSentences (either (T.pack . show . _emuid . EL._uid) (T.singleton . (^._1))) sents_tagged
       doc2 = vcat top . intersperse (text "") . map (text. either formatLinkedMention formatIndexedTimex) $ map (\(TagPos (_,_,x)) -> x) clst
   in hsep 10 left [doc1,doc2]
-

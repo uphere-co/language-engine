@@ -30,7 +30,9 @@ import           FrameNet.Type.Frame                       (fe_coreType,fe_name,
 import           Lexicon.Type                              (ArgPattern(..),RoleInstance,RolePattInstance)
 import           NLP.Printer.PennTreebankII                (formatIndexTokensFromTree)
 import           NLP.Type.PennTreebankII                   (PennTree)
-import           NLP.Syntax.Clause                         (clauseStructure,constructCP)
+import           NLP.Syntax.Clause                         (clauseStructure,constructCP
+                                                           ,identifyCPHierarchy
+                                                           )
 import           NLP.Syntax.Format                         (formatCP,formatVPwithPAWS
                                                            ,formatClauseStructure,showClauseStructure)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
@@ -135,7 +137,7 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
                    let lemmamap = mkLemmaMap' lmas
                        vps = verbPropertyFromPennTree lemmamap ptr
                        clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
-
+                       mcpstr = identifyCPHierarchy vps
                        subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                                   , formatIndexTokensFromTree 0 ptr
                                   , "--------------------------------------------------------------------------------------------------"
@@ -147,7 +149,7 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
                                     let mcp = constructCP vp
                                         lma = vp^.vp_lemma.to unLemma
                                         senses = getSenses lma sensemap sensestat framedb ontomap
-                                        ssubline1 = [ formatVPwithPAWS clausetr vp
+                                        ssubline1 = [ formatVPwithPAWS clausetr mcpstr vp
                                                     , T.pack (printf "Verb: %-20s" lma)
                                                     , T.pack $ (formatSenses False rolemap subcats lma) senses
                                                     ]
