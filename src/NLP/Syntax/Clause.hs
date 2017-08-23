@@ -100,14 +100,15 @@ constructCP vprop = do
 
 
 
+cpRange cp = (cp^?cp_maximal_projection._Just.to (getRange . current)) <|>
+             (cp^?cp_TP.tp_maximal_projection._Just.to (getRange . current))
+
+
 
 identifyCPHierarchy :: [VerbProperty (BitreeZipperICP '[Lemma])]
                     -> Maybe [Bitree (Range,CP) (Range,CP)]
 identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
-  where cprange cp = (cp^?cp_maximal_projection._Just.to (getRange . current)) <|>
-                     (cp^?cp_TP.tp_maximal_projection._Just.to (getRange . current))
-
-        cps = mapMaybe ((\cp -> (,) <$> cprange cp <*> pure cp) <=< constructCP) vps 
+  where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure cp) <=< constructCP) vps 
         cpmap = HM.fromList (map (\x->(x^._1,x)) cps)
         rngs = HM.keys cpmap
         rtr = rangeTree rngs
