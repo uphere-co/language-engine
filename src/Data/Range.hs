@@ -1,7 +1,15 @@
+{-# LANGUAGE BangPatterns #-}
+
 --
 -- This is a module that collects operation and comparison on range
 --
 module Data.Range where
+
+import           Data.Either  (partitionEithers)
+import           Data.List    (inits,mapAccumL)
+--
+import           Data.Bitree
+
 
 type Range = (Int,Int)
 
@@ -11,3 +19,32 @@ x `isInside` (x1,y1) = x1 <= x && x <= y1
 
 isInsideR :: Range -> Range -> Bool
 (x0,y0) `isInsideR` (x1,y1) = x1 <= x0 && y0 <= y1
+
+rootRange []     = error "rootRange"
+rootRange rs@(r:_) = let res = mapAccumL (\(!rmax) rlst -> go rmax rlst) r (tail (inits rs))
+                     in (fst res, last (snd res))
+  where
+    go r rs = mapAccumL f r rs
+    
+    f !rmax r | r `isInsideR` rmax = (rmax, Right r)
+              | rmax `isInsideR` r = (r   , Right r)
+              | otherwise          = (rmax, Left r )
+
+
+
+partitionRanges :: [Range] -> [(Range,[Range])]
+partitionRanges rngs = let (rmax,rngs') = rootRange rngs
+                           (outside,inside') = partitionEithers rngs'
+                           inside = filter (not . (== rmax)) inside'
+                       in case outside of
+                            [] -> [(rmax,inside)]
+                            _  -> (rmax,inside) : partitionRanges outside
+
+
+
+rangeTree :: [Range] -> [Bitree Range Range]
+rangeTree []   = error "rangeTree"
+rangeTree rngs = let ps = partitionRanges rngs
+                     f (rmax,[]) = PL rmax
+                     f (rmax,rs) = PN rmax (rangeTree rs)
+                 in map f ps
