@@ -4,11 +4,12 @@
 module NLP.Syntax.Format where
 
 import           Control.Lens
-import           Data.Foldable                 (toList)
+import           Control.Monad                 (join)
+import           Data.Foldable                 (toList,traverse_)
 import           Data.IntMap                   (IntMap)
 import           Data.List                     (intercalate)
 import           Data.Maybe
-import           Data.Monoid                   ((<>))
+import           Data.Monoid                   ((<>),First(..))
 import           Data.Text                     (Text)
 import qualified Data.Text               as T
 import qualified Data.Text.IO            as T.IO
@@ -29,8 +30,6 @@ import           NLP.Syntax.Verb
 
 formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
-  where toTree (PN x xs) = Tr.Node x (map toTree xs)
-        toTree (PL x)    = Tr.Node x []
 
         
 formatTense :: Tense -> Text
@@ -61,12 +60,24 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
                             (T.intercalate " " (vp^..vp_words.traverse.to (f.fst)))
 
 
-formatDPTokens :: ATNode (DP (BitreeZipperICP '[Lemma])) -> Text
-formatDPTokens x = case chooseATNode x of
-                     SilentPRO -> "*PRO*"
-                     RExp z -> gettokens z
+formatDPTokens :: Maybe [Bitree (Range,CP) (Range,CP)]
+               -> CP
+               -> Text
+                   -- ATNode (DP (BitreeZipperICP '[Lemma])) -> Text
+formatDPTokens mcpstr cp = let lst = (join . maybeToList) mcpstr
+                               mrng = cpRange cp
+                               pro = do rng <- cpRange cp
+                                        z <- getFirst (foldMap (First . extractZipperById rng) lst)
+                                        z' <- resolvePRO z
+                                        return (gettokens z')
+                               
+                           in -- (maybe "no zipper"  (const "exist") z)
+                              case fmap chooseATNode dp of
+                                Just SilentPRO -> "*PRO* -> " <> fromMaybe "" pro
+                                Just (RExp z) -> gettokens z
+                                Nothing -> ""
   where gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
-
+        dp = cp^.cp_TP.tp_DP
 
 formatDPType :: ATNode (DP (BitreeZipperICP '[Lemma])) -> Maybe ChunkTag
 formatDPType x = case chooseATNode x of
@@ -76,14 +87,16 @@ formatDPType x = case chooseATNode x of
 
 
 
-formatPAWS :: PredArgWorkspace (Either (Range,STag) (Int,POSTag)) -> String
-formatPAWS pa = printf "              subject       : %s\n\
-                       \              arg candidates: %s\n\
-                       \              complements   : %s"
-                  (maybe "" formatDPTokens (pa^.pa_CP.cp_TP.tp_DP))
-                   -- (T.intercalate " " . gettoken) (pa^.pa_CP.cp_TP.tp_DP.to (fmap chooseATNode)))
-                  ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
-                  ((intercalate " | " . map (T.unpack . T.intercalate " ". gettoken)) (pa^.pa_CP.cp_TP.tp_VP.vp_complements))
+formatPAWS :: Maybe [Bitree (Range,CP) (Range,CP)]
+           -> PredArgWorkspace (Either (Range,STag) (Int,POSTag))
+           -> String
+formatPAWS mcpstr pa =
+  printf "              subject       : %s\n\
+         \              arg candidates: %s\n\
+         \              complements   : %s"
+         (formatDPTokens mcpstr (pa^.pa_CP)) -- .cp_TP.tp_DP)))
+         ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
+         ((intercalate " | " . map (T.unpack . T.intercalate " ". gettoken)) (pa^.pa_CP.cp_TP.tp_VP.vp_complements))
                   
   where
     gettoken = map (tokenWord.snd) . toList . current
@@ -98,8 +111,9 @@ formatPAWS pa = printf "              subject       : %s\n\
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
 
-formatCP :: CP -> String
-formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
+formatCP :: Maybe [Bitree (Range,CP) (Range,CP)] -> CP -> String
+formatCP mcpstr cp
+            = printf "Complementizer Phrase: %-4s  %s\n\
                      \Complementizer       : %-4s  %s\n\
                      \Tense Phrase         : %-4s  %s\n\
                      \Determiner Phrase    : %-4s  %s\n\
@@ -112,7 +126,7 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
                 (maybe "null" show (getchunk =<< cp^.cp_TP.tp_maximal_projection))
                 (maybe "" (show . gettoken) (cp^.cp_TP.tp_maximal_projection))
                 (maybe "null" show (cp^.cp_TP.tp_DP.to (fmap formatDPType)))
-                (fromMaybe "" (cp^.cp_TP.tp_DP.to (fmap formatDPTokens)))
+                (formatDPTokens mcpstr cp)
                 (maybe "null" show (getchunk (cp^.cp_TP.tp_VP.vp_maximal_projection)))
                 ((show . gettoken) (cp^.cp_TP.tp_VP.vp_maximal_projection))
                 ((intercalate " | " . map (show . gettoken)) (cp^.cp_TP.tp_VP.vp_complements))
@@ -122,6 +136,10 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
         getposchunk = bimap (chunkTag . snd) (posTag . snd) . getRoot . current
         formatposchunk (Left c) = show c
         formatposchunk (Right p) = "(" ++ show p ++ ")"
+
+
+formatCPHierarchy :: Bitree (Range,CP) (Range,CP) -> Text
+formatCPHierarchy tr = formatBitree (\(rng,cp) -> T.pack (printf "%-7s" (show rng))) tr
 
 
 formatClauseStructure :: [VerbProperty (BitreeZipperICP '[Lemma])]
@@ -140,25 +158,28 @@ formatClauseStructure vps clausetr =
 
   in formatBitree id tr'
 
+
 formatVPwithPAWS :: ClauseTree
+                 -> Maybe [Bitree (Range,CP) (Range,CP)]
                  -> VerbProperty (BitreeZipperICP '[Lemma])
                  -> Text
-formatVPwithPAWS clausetr vp =
+formatVPwithPAWS clausetr mcpstr vp =
   let rngs = clauseRanges clausetr
       fmt = either (const "") (tokenWord.snd) . getRoot . current
   in T.pack $ printf "%7s:%-50s\n%s\n"
                 (maybe "" show (clauseForVerb rngs vp))
                 (formatVerbProperty fmt vp)
-                (maybe "" formatPAWS (findPAWS clausetr vp))
+                (maybe "" (formatPAWS mcpstr) (findPAWS clausetr vp))
 
 
 showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
 showClauseStructure lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-  
-      x = formatClauseStructure vps clausetr
-      xs = map (formatVPwithPAWS clausetr) vps
-  T.IO.putStrLn x
+      mcpstr = identifyCPHierarchy vps
+      -- x = formatClauseStructure vps clausetr
+      xs = map (formatVPwithPAWS clausetr mcpstr) vps
+  traverse_ (mapM_ (T.IO.putStrLn . formatCPHierarchy)) mcpstr
+  -- T.IO.putStrLn x
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
 

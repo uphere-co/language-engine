@@ -1,23 +1,30 @@
+{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections     #-}
 
 module NLP.Syntax.Clause where
 
+import           Control.Applicative                    ((<|>))
 import           Control.Lens
+import           Control.Monad                          ((<=<))
 import           Data.Bifoldable
+import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
 import           Data.Function                          (on)
+import qualified Data.HashMap.Strict               as HM
 import           Data.IntMap                            (IntMap)
-import           Data.List                              (minimumBy)
-import           Data.Maybe                             (listToMaybe,maybeToList)
+import           Data.List                              (find,inits,mapAccumL,minimumBy)
+import           Data.Maybe                             (listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid
 import           Data.Text                              (Text)
-import qualified Data.Text               as T
+import qualified Data.Text                         as T
 import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
-import           Lexicon.Type                           (ATNode(..))
+import           Data.Range                             (isInsideR,rangeTree)
+import           Lexicon.Type                           (ATNode(..),chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 --
@@ -54,8 +61,6 @@ complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
                                       _   -> False
 
 
-
-
 identifySubject :: N.ClauseTag
                 -> BitreeZipperICP '[Lemma]
                 -> Maybe (ATNode (DP (BitreeZipperICP '[Lemma])))
@@ -66,9 +71,6 @@ identifySubject tag vp =
   in case r of
        Nothing -> Just (SimpleNode SilentPRO)
        Just z  -> Just (SimpleNode (RExp z))
-
--- SimpleNode . RExp <$>
-
 
 
 -- | Constructing CP umbrella and all of its ingrediant.
@@ -96,6 +98,44 @@ constructCP vprop = do
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
+
+
+cpRange cp = (cp^?cp_maximal_projection._Just.to (getRange . current)) <|>
+             (cp^?cp_TP.tp_maximal_projection._Just.to (getRange . current))
+
+
+
+identifyCPHierarchy :: [VerbProperty (BitreeZipperICP '[Lemma])]
+                    -> Maybe [Bitree (Range,CP) (Range,CP)]
+identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
+  where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure cp) <=< constructCP) vps 
+        cpmap = HM.fromList (map (\x->(x^._1,x)) cps)
+        rngs = HM.keys cpmap
+        rtr = rangeTree rngs
+        tofull rng = HM.lookup rng cpmap
+
+
+
+
+
+-- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
+--   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
+--   of TP of which is marked as silent pronoun.
+--
+resolvePRO :: BitreeZipper (Range,CP) (Range,CP) -> Maybe (BitreeZipperICP '[Lemma])
+resolvePRO z = do cp0 <- snd . getRoot1 . current <$> parent z
+                  atnode <- cp0^.cp_TP.tp_DP
+                  case chooseATNode atnode of
+                    SilentPRO -> Nothing
+                    RExp x    -> Just x
+                    
+
+
+---------
+-- old --
+---------
+
+
 currentlevel :: Bitree (Range,(STag,Int)) t -> Int
 currentlevel (PN (_,(_,l)) _) = l
 currentlevel (PL _ )          = 0
@@ -121,7 +161,7 @@ promote_PP_CP_from_NP x = [x]
 
 
 
-clauseStructure :: [VerbProperty a]
+clauseStructure :: [VerbProperty (BitreeZipperICP '[Lemma])]
                 -> PennTreeIdxG N.CombinedTag (POSTag,Text)
                 -> ClauseTree
 clauseStructure _vps (PL (i,pt)) = PL (Right (i,pt))
