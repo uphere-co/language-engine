@@ -4,7 +4,8 @@
 module Data.BitreeZipper where
 
 import           Control.Lens
-import           Data.List               (unfoldr)
+import           Data.Bifoldable         (biList)
+import           Data.List               (find,unfoldr)
 --
 import           Data.Bitree
 --
@@ -52,7 +53,7 @@ mkBitreeZipper zs p@(PN x xs) = PN (TZ p zs) lst
   where lst = map (\(LZ xs1 y xs2) -> mkBitreeZipper ((TC x xs1 xs2):zs) y) (genListZippers xs)
 
 
-extractZipperById :: (Eq i) => i -> Bitree (i,a) (i,a) -> Maybe (BitreeZipper (i,a) (i,a)
+extractZipperById :: (Eq i) => i -> Bitree (i,a) (i,a) -> Maybe (BitreeZipper (i,a) (i,a))
 extractZipperById rng tr = find (\z -> fst (getRoot1 (current z)) == rng) $ biList (mkBitreeZipper [] tr)
 
 
