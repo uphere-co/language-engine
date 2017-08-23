@@ -20,6 +20,7 @@ library
                        Data.Attribute
                        Data.Bitree
                        Data.BitreeZipper
+                       Data.Range
                        NLP.Parser.PennTreebankII
                        NLP.Printer.PennTreebankII
                        NLP.Type.NamedEntity
