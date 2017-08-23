@@ -51,6 +51,10 @@ getRoot (PL x)   = Right x
 getRoot (PN x _) = Left x
 
 
+getRoot1 :: Bitree a a -> a
+getRoot1 = either id id . getRoot
+
+
 getLeaves :: Bitree n l -> [l]
 getLeaves (PN _ xs) = concatMap getLeaves xs
 getLeaves (PL x) = [x]
