@@ -67,7 +67,7 @@ formatDPTokens :: Maybe [Bitree (Range,CP) (Range,CP)]
 formatDPTokens mcpstr cp = let lst = (join . maybeToList) mcpstr
                                mrng = cpRange cp
                                pro = do rng <- cpRange cp
-                                        z <- getFirst (foldMap (First . mkCPZipper rng) lst)
+                                        z <- getFirst (foldMap (First . extractZipperById rng) lst)
                                         z' <- resolvePRO z
                                         return (gettokens z')
                                

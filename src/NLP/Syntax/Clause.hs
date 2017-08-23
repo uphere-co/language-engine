@@ -115,14 +115,13 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
         tofull rng = HM.lookup rng cpmap
 
 
-getRoot1 :: Bitree a a -> a
-getRoot1 = either id id . getRoot
 
 
-mkCPZipper :: Range -> Bitree (Range,CP) (Range,CP) -> Maybe (BitreeZipper (Range,CP) (Range,CP))
-mkCPZipper rng tr = find (\z -> fst (getRoot1 (current z)) == rng) $ biList (mkBitreeZipper [] tr)
 
-
+-- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
+--   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
+--   of TP of which is marked as silent pronoun.
+--
 resolvePRO :: BitreeZipper (Range,CP) (Range,CP) -> Maybe (BitreeZipperICP '[Lemma])
 resolvePRO z = do cp0 <- snd . getRoot1 . current <$> parent z
                   atnode <- cp0^.cp_TP.tp_DP
