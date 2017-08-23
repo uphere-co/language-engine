@@ -39,6 +39,7 @@ library
                        attoparsec,
                        bifunctors,
                        binary,
+                       containers,
                        discrimination,
                        lens,
                        taggy-lens,
