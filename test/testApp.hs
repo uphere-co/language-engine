@@ -101,6 +101,12 @@ showPath invs path = catMaybes (UV.foldl' f [] path)
   where
     f accum hash = M.lookup hash invs : accum
 
+showPaths :: Foldable t => HashInvs -> t (UV.Vector H.WordHash) -> IO ()
+showPaths names = mapM_ (print . showPath names)
+showPathPairs :: Foldable t => HashInvs -> t (UV.Vector H.WordHash, UV.Vector H.WordHash) -> IO ()
+showPathPairs names = mapM_  (print . (\(x,y)-> reverse (showPath names y) ++ tail (showPath names x)))
+
+
 -- loadInterlinks is uselessly slow for now.
 loadInterlinks :: (Foo,Text) -> Text -> IO (Foo,Text)
 loadInterlinks (prevState, prevPartialBlock) block = do
@@ -173,10 +179,22 @@ main4 = do
   print wn
 
 {-
-For preparing test data:
+--For preparing test data:
 $ lbzcat yago/yago3_entire_tsv.bz2 | grep "<linksTo>" > yago/wikilinks
 $ time cat yago/wikilinks | runhaskell -i./src/ test/testApp.hs > enwiki/interlinks
 real	60m40.005s
+
+-- using `yago-bin` with `wordnetTypes`
+cabal build yago-bin --builddir=../dists/wiki-ner
+$ time grep subclassOf yago/wordnet | ../dists/wiki-ner/build/yago-bin/yago-bin > enwiki/wnTypes
+-- using `yago-bin` with `wordnetTaxonomy`
+cabal build yago-bin --builddir=../dists/wiki-ner
+$ time grep subclassOf yago/wordnet | ../dists/wiki-ner/build/yago-bin/yago-bin > enwiki/taxonomies
+real	0m3.048s
+
+cp enwiki/wnTypes enwiki/synsets
+cat enwiki/taxonomies >> enwiki/synsets
+
 -}
 
 
@@ -225,7 +243,7 @@ test1 sorted@(d,edges) names = do
 
 main3init = do
   cc@(Foo edges names) <- foo loadEdges "enwiki/interlinks" -- ~16min to sort
-  wn <- foo loadWordnetTypes "enwiki/wnTypes"
+  wn <- foo loadWordnetTypes "enwiki/synsets"
   let
     sorted = G.sortEdges G.From  edges
   print $ UV.length edges
@@ -241,10 +259,6 @@ main3init = do
 
 {-
 -- Script for testing in REPL
-showPath :: HashInvs -> UV.Vector H.WordHash -> [ Text]
-showPath invs path = catMaybes (UV.foldl' f [] path)
-  where
-    f accum hash = M.lookup hash invs : accum
 
 idx=2
 idx2=1
@@ -252,8 +266,14 @@ Just store <- lookupStore idx :: IO (Maybe (Store Foo))
 Just store2 <- lookupStore idx2 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
 cc@(Foo edges names) <- readStore store
 sorted@(d,es) <- readStore store2
---test1 sorted names
 
+
+idx3=3
+Just store3 <- lookupStore idx :: IO (Maybe (Store WNTypes))
+taxons@(WNTypes tes tns) <- readStore store3
+
+
+--test1 sorted names
 hash word = H.wordHash (T.pack word)
 fNode node cutoff = G.accumReachable (UV.fromList [(node,0)]) cutoff (G.neighbor sorted) (UV.fromList [node],0)
 t1 = fNode (hash "Larry_Page") 2
@@ -271,8 +291,20 @@ pNode node cutoff = G.allPathsUpto (G.neighbor sorted) (hash node) cutoff
 --paths = G.destOverlap (pNode "Larry_Page" 2) (pNode "Steve_Jobs" 2)
 dfe = G.neighbor sorted
 paths = G.destOverlapUpto dfe 2 (hash "Larry_Page") (hash "Steve_Jobs")
-showPaths paths = mapM_ print (map (\(x,y)-> (reverse (showPath names y)) ++ tail (showPath names x)) paths)
+
+showPaths names paths = mapM_ print (map (showPaths names) paths)
+
+
+taxons@(Foo tes tns) <- foo loadEdges "enwiki/taxonomies"
+synset node cutoff = G.allPathsUpto (G.neighbor (G.sortEdges G.From tes)) (hash node) cutoff
+synsetPath node1 node2 cutoff = G.destOverlapUpto (G.neighbor (G.sortEdges G.From tes)) cutoff (hash node1) (hash node2)
+synsetPath2 node1 node2 cutoff = G.destOverlapUpto (G.neighbor (G.sortEdges G.To tes)) cutoff (hash node1) (hash node2)
+
+showPaths tns $ synset "football_103378765" 2
+showPathPairs tns $synsetPath "baseball_100471613" "abstraction_100002137" 15
+showPathPairs tns $synsetPath2 "contact_sport_100433458" "field_game_100467719" 10
 -}
+
 main3 :: Word32 -> Word32 -> IO ()
 main3 idx idx2 = do
   Just store <- lookupStore idx :: IO (Maybe (Store Foo))
