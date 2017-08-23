@@ -126,44 +126,26 @@ foo f  filepath = do
     state = f lines
   return state
 
-data WNTypes = WNTypes { _types  :: M.Map H.WordHash [H.WordHash]
-                       , _toStr  :: M.Map H.WordHash Text
+data WNTypes = WNTypes { _types  :: !(M.Map H.WordHash [H.WordHash])
+                       , _toStr  :: !(M.Map H.WordHash Text)
                        }
 
 instance Show WNTypes where
   show (WNTypes types names) = show (M.size types) ++ " names are mapped." ++ show (M.size names) ++ " hashes."
 
-{-
 -- Stack-overflowed version. Left for profiling exercise.
 loadWordnetTypes :: [Text] -> WNTypes
 loadWordnetTypes lines = foldl' addKey (WNTypes M.empty M.empty) edges
   where
     edges    = map parseInterlinks lines
-    addKey !(foo@(WNTypes types names)) (entity,synset) = foo'
+    addKey foo@(WNTypes types names) edge = WNTypes (f types edge) (g names edge)
       where
-        f !map (key,val) = M.insert key val map
-        --g map (key,val) = M.insert key [val] map
-        g map (key,val) = map `seq` M.insertWith (++) key [val] map
         hash = H.wordHash
-        key = hash entity
-        val = hash synset
-        --foo' = WNTypes (g types (key, val)) (f (f names (key, entity)) (val, synset))
-        --foo' = WNTypes types (f (f names (key, entity)) (val, synset))
-        foo' = WNTypes (g types (key, val)) names
--}
+        tryAppend invs (key, val) = M.insertWith (++) key [val] invs
+        trySet    invs word = M.insert (H.wordHash word) word invs    
+        f ts (entity, synset) = tryAppend ts (hash entity, hash synset)    
+        g ns (entity, synset) = trySet (trySet ns entity) synset
 
-loadWordnetTypes :: [Text] -> WNTypes
-loadWordnetTypes lines = WNTypes types names
-  where
-    edges    = map parseInterlinks lines
-    hash = H.wordHash
-    --tryAppend invs (key, val) = M.insert key [val] invs
-    tryAppend invs (key, val) = M.insertWith (++) key [val] invs
-    tryAdd    invs word = M.insert (H.wordHash word) word invs    
-    f ts (entity, synset) = tryAppend ts (hash entity, hash synset)    
-    g ns (entity, synset) = tryAdd (tryAdd ns entity) synset
-    types = foldl' f M.empty edges
-    names = foldl' g M.empty edges
 
 wordnetType :: WNTypes -> Text -> [Text]
 wordnetType table@(WNTypes types names) name = f ts
@@ -244,18 +226,29 @@ test1 sorted@(d,edges) names = do
 main3init = do
   cc@(Foo edges names) <- foo loadEdges "enwiki/interlinks" -- ~16min to sort
   wn <- foo loadWordnetTypes "enwiki/synsets"
+  taxons@(Foo tes tns) <- foo loadEdges "enwiki/synsets" -- ~16min to sort
   let
     sorted = G.sortEdges G.From  edges
+    sortedTEs = G.sortEdges G.From  tes
   print $ UV.length edges
   print $ M.size names
-  print $ wn
+  print $ UV.length (snd sorted)
 
+  print $ M.size tns
+  print $ UV.length (snd sortedTEs)
+
+  print $ wn
+  
   store <- newStore cc
   store2 <- newStore sorted
   store3 <- newStore wn
+  store4 <- newStore taxons
+  store5 <- newStore sortedTEs
   print store
   print store2
   print store3
+  print store4
+  print store5
 
 {-
 -- Script for testing in REPL
@@ -267,14 +260,28 @@ Just store2 <- lookupStore idx2 :: IO (Maybe (Store (G.Direction, UV.Vector (H.W
 cc@(Foo edges names) <- readStore store
 sorted@(d,es) <- readStore store2
 
-
 idx3=3
 Just store3 <- lookupStore idx :: IO (Maybe (Store WNTypes))
-taxons@(WNTypes tes tns) <- readStore store3
+wn@(WNTypes wes wns) <- readStore store3
+
+idx4=4
+idx5=5
+Just store4 <- lookupStore idx4 :: IO (Maybe (Store Foo))
+Just store5 <- lookupStore idx5 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
+taxons@(Foo tes tns) <- readStore store4
+sortedTEs <- readStore store5
+
+
+hash word = H.wordHash (T.pack word)
+
+-- store1~3 takes about 26.5% of memory ~ 34 GB.
+
+
+showPathPairs  names $ G.destOverlapUpto dfe 2 (hash "Larry_Page") (hash "Steve_Jobs")
+
 
 
 --test1 sorted names
-hash word = H.wordHash (T.pack word)
 fNode node cutoff = G.accumReachable (UV.fromList [(node,0)]) cutoff (G.neighbor sorted) (UV.fromList [node],0)
 t1 = fNode (hash "Larry_Page") 2
 t2 = fNode (hash "Steve_Jobs") 2
@@ -295,14 +302,19 @@ paths = G.destOverlapUpto dfe 2 (hash "Larry_Page") (hash "Steve_Jobs")
 showPaths names paths = mapM_ print (map (showPaths names) paths)
 
 
+
+-- With
+-- hash word = H.wordHash (T.pack word)
+-- wn@(WNTypes wes wns) <- foo loadWordnetTypes2 "enwiki/wnTypes"
 taxons@(Foo tes tns) <- foo loadEdges "enwiki/taxonomies"
 synset node cutoff = G.allPathsUpto (G.neighbor (G.sortEdges G.From tes)) (hash node) cutoff
+
 synsetPath node1 node2 cutoff = G.destOverlapUpto (G.neighbor (G.sortEdges G.From tes)) cutoff (hash node1) (hash node2)
 synsetPath2 node1 node2 cutoff = G.destOverlapUpto (G.neighbor (G.sortEdges G.To tes)) cutoff (hash node1) (hash node2)
 
-showPaths tns $ synset "football_103378765" 2
-showPathPairs tns $synsetPath "baseball_100471613" "abstraction_100002137" 15
-showPathPairs tns $synsetPath2 "contact_sport_100433458" "field_game_100467719" 10
+showPaths wns $ synset "football_103378765" 2
+showPathPairs wns $synsetPath "baseball_100471613" "abstraction_100002137" 15
+showPathPairs wns $synsetPath2 "contact_sport_100433458" "field_game_100467719" 10
 -}
 
 main3 :: Word32 -> Word32 -> IO ()
