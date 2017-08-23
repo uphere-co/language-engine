@@ -223,19 +223,29 @@ test1 sorted@(d,edges) names = do
 main3init = do
   cc@(Foo edges names) <- foo loadEdges "enwiki/interlinks" -- ~16min to sort
   wn <- foo loadWordnetTypes "enwiki/synsets"
+  taxons@(Foo tes tns) <- foo loadEdges "enwiki/synsets" -- ~16min to sort
   let
     sorted = G.sortEdges G.From  edges
+    sortedTEs = G.sortEdges G.From  tes
   print $ UV.length edges
   print $ M.size names
   print $ UV.length (snd sorted)
-  print $ wn
 
+  print $ M.size tns
+  print $ UV.length (snd sortedTEs)
+
+  print $ wn
+  
   store <- newStore cc
   store2 <- newStore sorted
   store3 <- newStore wn
+  store4 <- newStore taxons
+  store5 <- newStore sortedTEs
   print store
   print store2
   print store3
+  print store4
+  print store5
 
 {-
 -- Script for testing in REPL
@@ -249,11 +259,24 @@ sorted@(d,es) <- readStore store2
 
 idx3=3
 Just store3 <- lookupStore idx :: IO (Maybe (Store WNTypes))
-taxons@(WNTypes tes tns) <- readStore store3
+wn@(WNTypes wes wns) <- readStore store3
+
+idx4=4
+idx5=5
+Just store4 <- lookupStore idx4 :: IO (Maybe (Store Foo))
+Just store5 <- lookupStore idx5 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
+taxons@(Foo tes tns) <- readStore store4
+sortedTEs <- readStore store5
+
 
 hash word = H.wordHash (T.pack word)
 
 -- store1~3 takes about 26.5% of memory ~ 34 GB.
+
+
+showPathPairs  names $ G.destOverlapUpto dfe 2 (hash "Larry_Page") (hash "Steve_Jobs")
+
+
 
 --test1 sorted names
 fNode node cutoff = G.accumReachable (UV.fromList [(node,0)]) cutoff (G.neighbor sorted) (UV.fromList [node],0)
@@ -276,14 +299,19 @@ paths = G.destOverlapUpto dfe 2 (hash "Larry_Page") (hash "Steve_Jobs")
 showPaths names paths = mapM_ print (map (showPaths names) paths)
 
 
+
+-- With
+-- hash word = H.wordHash (T.pack word)
+-- wn@(WNTypes wes wns) <- foo loadWordnetTypes2 "enwiki/wnTypes"
 taxons@(Foo tes tns) <- foo loadEdges "enwiki/taxonomies"
 synset node cutoff = G.allPathsUpto (G.neighbor (G.sortEdges G.From tes)) (hash node) cutoff
+
 synsetPath node1 node2 cutoff = G.destOverlapUpto (G.neighbor (G.sortEdges G.From tes)) cutoff (hash node1) (hash node2)
 synsetPath2 node1 node2 cutoff = G.destOverlapUpto (G.neighbor (G.sortEdges G.To tes)) cutoff (hash node1) (hash node2)
 
-showPaths tns $ synset "football_103378765" 2
-showPathPairs tns $synsetPath "baseball_100471613" "abstraction_100002137" 15
-showPathPairs tns $synsetPath2 "contact_sport_100433458" "field_game_100467719" 10
+showPaths wns $ synset "football_103378765" 2
+showPathPairs wns $synsetPath "baseball_100471613" "abstraction_100002137" 15
+showPathPairs wns $synsetPath2 "contact_sport_100433458" "field_game_100467719" 10
 -}
 
 main3 :: Word32 -> Word32 -> IO ()
