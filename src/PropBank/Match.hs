@@ -11,6 +11,7 @@ import           Data.List                       (find,intercalate)
 import           Data.Maybe                      (mapMaybe,listToMaybe,maybeToList)
 import           Data.Text                       (Text)
 --
+import           Data.Range                      (isInside,isInsideR)
 import           NLP.Type.PennTreebankII
 --
 import           PropBank.Type.Match
