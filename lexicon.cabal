@@ -19,6 +19,7 @@ library
   exposed-modules:     Lexicon
                        Lexicon.Format
                        Lexicon.Mapping.OntoNotesFrameNet
+                       Lexicon.Merge
                        Lexicon.Query
                        Lexicon.Type
   -- other-modules:
