@@ -17,6 +17,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Lexicon
+                       Lexicon.Format
                        Lexicon.Mapping.OntoNotesFrameNet
                        Lexicon.Query
                        Lexicon.Type
