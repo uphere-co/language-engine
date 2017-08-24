@@ -17,6 +17,9 @@ data NamedEntityClass = Org | Person | Loc | Time | Date | Money | Percent| Misc
 instance ToJSON NamedEntityClass where
   toJSON = genericToJSON defaultOptions
 
+instance FromJSON NamedEntityClass where
+  parseJSON = genericParseJSON defaultOptions
+
 data NamedEntity = NamedEntity { _str  :: Text
                                , _type :: NamedEntityClass}
                  deriving(Show, Eq)
