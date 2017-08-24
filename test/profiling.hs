@@ -5,15 +5,21 @@ import           Data.Vector.Algorithms.Intro          (sort, sortBy)
 import           Control.Monad.ST                      (runST)
 import           Control.Exception                     (evaluate)
 import           Control.DeepSeq                       (force)
+import           Control.Arrow                         (second,(***))
 import qualified Data.List                     as L
 import qualified Data.Vector.Storable          as S
 import qualified Data.Map.Strict               as M
 import qualified Data.Vector                   as V
 import qualified Data.Vector.Unboxed           as UV
 import qualified Data.Text.Lazy                as T.L
+import qualified Data.Text.Lazy.Encoding       as T.L.E
 import qualified Data.Text.Lazy.IO             as T.L.IO
 import qualified Data.Text                     as T
+import qualified Data.Text.Encoding            as T.E
 import qualified Data.Text.IO                  as T.IO
+import qualified Data.ByteString               as BS
+import qualified Data.ByteString.Lazy          as BS.L
+import qualified Data.ByteString.Internal      as BSI (c2w, w2c)
 
 
 import qualified WikiEL.Util.Hash              as H
@@ -119,24 +125,50 @@ prof2 = do
 prof3 = do
   let
     hash = H.wordHash
-    filepath = "enwiki/interlinks.1M"
-  
+    n = BSI.c2w '\n'
+    filepath = "enwiki/interlinks.10M"
   -- Check that "a list of inverse hash has expected memory footprint".
+  -- Evidence that "ByteString is several times faster and memory efficient than Text"
   content <- T.L.IO.readFile filepath
+  contentS <- T.IO.readFile filepath
+  contentB  <- BS.readFile filepath
+  contentBL <- BS.L.readFile filepath
   let
-    parseInterlinks line = (from, to)
-      where
-        [from,to] = T.words line
-    lines = map T.L.toStrict (T.L.lines content)
-    es    = map parseInterlinks lines
+    parseInterlinks line = (from, to) where [from,to] = T.words line
+    parseInterlinks2 line = second T.tail (T.break (=='\t') line)
+    linesL  = T.L.lines content
+    linesS = T.lines contentS
+    linesB = BS.split n contentB
+    linesBL= BS.L.split n contentBL
+    esS     = map parseInterlinks linesS
+    esL    = map (parseInterlinks .  T.L.toStrict) linesL
+    esB    = map (parseInterlinks2 . T.E.decodeUtf8) linesB
+    esBL    = map (parseInterlinks2 . T.L.toStrict . T.L.E.decodeUtf8) linesBL
+    es    = map parseInterlinks2 linesS
     invs2 = map (\(x,y) -> (hash x, x,hash y,y)) es
-    tokens = concatMap T.words lines
+    tokens = concatMap T.words linesS
     invs = concatMap (\(x,y) -> [(hash x, x),(hash y,y)]) es
     tt = map (\x -> (hash x, x)) tokens
-  print $ length lines
-  -- (0.69 secs, 1,364,017,784 bytes)
+  print $ length linesL
+  -- (9.09 secs, 14,475,242,656 bytes)
+  print $ length linesS
+  -- (1.14 secs, 2,189,833,424 bytes)
+  print $ length linesB
+  --(0.30 secs, 1,760,761,512 bytes)
+  print $ length linesBL
+  --(2.39 secs, 3,173,228,320 bytes)
+  print $ length esS
+  -- (0.60 secs, 880,762,968 bytes)
+  print $ length esL
+  -- (9.72 secs, 880,762,016 bytes)
+  print $ length esB
+  --(0.69 secs, 880,762,672 bytes)
+  print $ length esBL
+  --(0.71 secs, 880,762,672 bytes)
   print $ length es
-  -- (0.16 secs, 88,764,080 bytes)
+  
+
+  
   print $ length invs2
   -- (0.07 secs, 88,760,392 bytes) -- low numbers because es and invs2 shares elements
   print $ length tokens

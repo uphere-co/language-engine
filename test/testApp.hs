@@ -7,7 +7,7 @@
 import           Data.Text                             (Text)
 import           Data.Maybe                            (mapMaybe,catMaybes)
 import           System.IO                             (stdin,stdout)
-import           Control.Arrow                         ((***))
+import           Control.Arrow                         (second,(***))
 import           Data.Either                           (rights)
 import qualified Data.Text.Lazy                as T.L
 import qualified Data.Text.Lazy.IO             as T.L.IO
@@ -84,6 +84,8 @@ parseInterlinks :: Text -> (Text, Text)
 parseInterlinks line = (from, to)
   where
     [from,to] = T.words line
+
+parseInterlinks2 line = second T.tail (T.break (=='\t') line)
 
 -- UV.snoc is very inefficient for large Foo
 addEdge :: Foo -> (Text,Text) -> Foo
@@ -333,5 +335,5 @@ main3 idx idx2 = do
 
   
 main :: IO ()
-main = main1
+main = main2
 
