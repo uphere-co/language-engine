@@ -77,12 +77,12 @@ formatDPTokens mcpstr cp = let lst = (join . maybeToList) mcpstr
   where gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
         dp = cp^.cp_TP.tp_DP
 
+
 formatDPType :: ATNode (DP (BitreeZipperICP '[Lemma])) -> Maybe ChunkTag
 formatDPType x = case chooseATNode x of
                    SilentPRO -> Just NP
                    RExp z -> getchunk z
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
-
 
 
 formatPAWS :: Maybe [Bitree (Range,CP) (Range,CP)]
