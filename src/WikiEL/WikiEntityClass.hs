@@ -1,7 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 module WikiEL.WikiEntityClass where
 
+import           Data.Aeson
 import           Data.Text                             (Text)
 import           Data.Map                              (Map)
 import           Data.Maybe                            (fromMaybe,fromJust)
@@ -11,6 +13,7 @@ import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 import qualified Data.Map                      as M
 import qualified Data.Set                      as S
+import           GHC.Generics                          (Generic)
 
 import           NLP.Type.NamedEntity                  (NamedEntityClass)
 import qualified NLP.Type.NamedEntity          as N
@@ -22,7 +25,13 @@ import           WikiEL.ETL.Parser
 type NEClass = NamedEntityClass
 
 newtype ItemClass = ItemClass { _itemID :: ItemID }
-                  deriving (Show,Eq,Ord)
+                  deriving (Show,Eq,Ord,Generic)
+
+instance ToJSON ItemClass where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON ItemClass where
+  parseJSON = genericParseJSON defaultOptions
 
 buildItemClass :: Text -> ItemClass
 buildItemClass x = ItemClass (itemID x)

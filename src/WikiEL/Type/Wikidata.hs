@@ -1,12 +1,20 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 module WikiEL.Type.Wikidata where
 
+import           Data.Aeson
 import           Data.Text                             (Text)
-
+import           GHC.Generics                          (Generic)
 
 newtype ItemID = ItemID { _itemID :: Int }
-               deriving (Eq, Ord)
+               deriving (Eq,Ord,Generic)
+
+instance ToJSON ItemID where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON ItemID where
+  parseJSON = genericParseJSON defaultOptions
 
 instance Show ItemID where
   show (ItemID uid) = "Q" ++ show uid
