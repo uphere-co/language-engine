@@ -6,9 +6,9 @@ module Lexicon.Merge where
 
 import           Control.Lens                  ((^.),(%~),_1,_2)
 import           Data.Function                 (on)
-import qualified Data.HashSet            as HS 
+import qualified Data.HashSet            as HS
 import           Data.List                     (groupBy,sortBy,tails)
-import           Data.Maybe                    (isNothing,mapMaybe)
+import           Data.Maybe                    (isNothing,mapMaybe,maybeToList)
 import           Data.Text                     (Text)
 --
 import           NLP.Type.PennTreebankII       (TernaryLogic(..))
@@ -75,9 +75,28 @@ patternRelation x y | x `isSubPatternOf` y = SubPatternOf
                          each patt_arg4 x y
 
 patternGraph :: (a -> a -> TernaryLogic) -> [(Int,a)] -> [(Int,Int)]
-patternGraph f lst = (concatMap (\(x:xs) -> mapMaybe (link x) xs) . init . tails) lst 
+patternGraph f lst = (concatMap (\(x:xs) -> mapMaybe (link x) (x:xs)) . init . tails) lst
   where
     link (i,x) (j,y) = case f x y of
                          SubPatternOf   -> Just (i,j)
                          SuperPatternOf -> Just (j,i)
                          Neither        -> Nothing
+
+
+listOfSupersetSubset :: [(Int,Int)] -> [(Int,[Int],[Int])]
+listOfSupersetSubset xs = let is = map fst xs
+                          in map (\i -> (i,superset i xs,subset i xs)) is
+  where superset i = map snd . filter (\x -> fst x == i)
+        subset   i = map fst . filter (\x -> snd x == i)
+
+
+
+topPatterns :: [(Int,(ArgPattern () Text,Int))]
+            -> [(Int,[Int],[Int])]
+            -> [(ArgPattern () Text,Int)]
+topPatterns ipatts slst = do
+    (topi,_,subis) <- filter (\x -> length (x^._2) == 1) slst
+    top <- maybeToList (lookup topi ipatts)
+    let subs = mapMaybe (\s -> lookup s ipatts) subis
+        n = sum (map snd subs)
+    return (top^._1,n)
