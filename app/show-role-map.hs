@@ -4,6 +4,7 @@
 module Main where
 
 import           Control.Lens              ((^.),_1,_2)
+import           Data.Function             (on)
 import qualified Data.HashMap.Strict as HM
 import           Data.List                 (find,intercalate)
 import           Data.Text                 (Text)
@@ -13,7 +14,7 @@ import           Text.Printf               (printf)
 import           NLP.Type.SyntaxProperty   (Voice)
 --
 import           Lexicon.Format            (formatArgPatt,formatRoleMap)
-import           Lexicon.Merge             (mergePatterns)
+import           Lexicon.Merge             (mergePatterns,patternGraph,patternRelation)
 import           Lexicon.Query             (loadRoleInsts,loadRolePattInsts)
 import           Lexicon.Type              (ArgPattern(..))
 
@@ -28,6 +29,8 @@ main = do
   flip mapM_ (drop 100 (take 150 subcats)) $ \subcat -> do
     let pattstats0 = subcat^._2
         pattstats = mergePatterns (subcat^._2)
+        ipattstats = zip [1..] pattstats
+        pattgraph = patternGraph (patternRelation `on` (^._1)) ipattstats 
         formatArgPattStat pstats =
           intercalate "\n" $ flip map pstats $ \(patt,n) ->
             printf "%s     #count: %5d" (formatArgPatt "voice" patt) (n :: Int)
@@ -35,6 +38,7 @@ main = do
         argpattstr = formatArgPattStat pattstats
 
     print (subcat^._1)
+    print pattgraph
     putStrLn "\n"
     case find (\rm -> (rm^._1) == (subcat^._1)) rolemap of
       Nothing -> return ()
