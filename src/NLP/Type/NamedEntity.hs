@@ -1,15 +1,24 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module NLP.Type.NamedEntity where
 
+import           Data.Aeson
 import           Data.Maybe                        (catMaybes)
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import           Data.Monoid
+import           GHC.Generics
 
 data NamedEntityClass = Org | Person | Loc | Time | Date | Money | Percent| MiscNum | Misc | Other
-                      deriving(Show, Eq)
+                      deriving(Show,Eq,Generic)
+
+instance ToJSON NamedEntityClass where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON NamedEntityClass where
+  parseJSON = genericParseJSON defaultOptions
 
 data NamedEntity = NamedEntity { _str  :: Text
                                , _type :: NamedEntityClass}
