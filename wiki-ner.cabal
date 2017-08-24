@@ -57,6 +57,7 @@ library
                      , FlexibleInstances
                      , StandaloneDeriving
   build-depends:       base
+                     , aeson
                      , binary
                      , bytestring
                      , tasty-hunit
@@ -94,6 +95,7 @@ executable testApp
                      , Test.CoreNLPEntity
   main-is: testApp.hs
   build-depends:       base
+                     , aeson
                      , tasty-hunit
                      , text
                      , primitive
@@ -131,6 +133,7 @@ test-suite test
                      , Test.CoreNLPEntity
   main-is: testAll.hs
   build-depends:       base
+                     , aeson
                      , tasty-hunit
                      , text
                      , primitive
@@ -163,6 +166,7 @@ test-suite testRun
                      , Test.CoreNLPEntity
   main-is: testApp.hs
   build-depends:       base
+                     , aeson
                      , tasty-hunit
                      , text
                      , primitive

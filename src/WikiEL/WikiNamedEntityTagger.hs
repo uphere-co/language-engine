@@ -1,15 +1,18 @@
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
+
 module WikiEL.WikiNamedEntityTagger where
 
+import           Data.Aeson
 import           Data.Text                             (Text)
 import           Data.Vector                           (Vector,toList,fromList,ifoldr,foldl')
 import           Control.Arrow                         (second)
 import qualified Data.Vector                   as V
 import qualified Data.Text                     as T
-
+import           GHC.Generics                          (Generic)
 
 import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
 import           WikiEL.Type.Wikidata                  (ItemID)
@@ -54,7 +57,10 @@ data PreNE = UnresolvedUID NEClass
            | AmbiguousUID [ItemID]
            | Resolved (ItemID, NEClass)
            | UnresolvedClass [(ItemID, ItemClass)]
-           deriving(Show, Eq)
+           deriving(Show, Eq, Generic)
+
+instance ToJSON PreNE where
+  toJSON = genericToJSON defaultOptions
 
 resolvedUID :: PreNE -> Either String ItemID
 resolvedUID (Resolved (id,_)) = Right id

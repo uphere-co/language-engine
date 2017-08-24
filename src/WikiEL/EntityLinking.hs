@@ -1,14 +1,17 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 module WikiEL.EntityLinking where
 
+import           Data.Aeson
 import           Data.List                             (inits,foldl')
 import           Data.Vector                           (Vector,toList)
 import           Data.Text                             (Text)
 import qualified Data.Text                  as T
+import           GHC.Generics                          (Generic)
 
 import           WikiEL.Misc                           (IRange(..),RelativePosition(..),relativePos,isContain,subVector) 
 import           WikiEL.Type.Wikidata                  (ItemID)
@@ -23,7 +26,7 @@ canRefer :: OrderedNamedEntity -> OrderedNamedEntity -> Bool
 canRefer src target = (N._order src > N._order target) && mayRefer (N._entity src) (N._entity target)
 
 
-newtype EntityMentionUID = EntityMentionUID { _emuid :: Int}
+newtype EntityMentionUID = EntityMentionUID { _emuid :: Int} deriving (Generic)
 
 instance Show EntityMentionUID where
   show (EntityMentionUID uid) = "EMuid " ++ show uid
@@ -33,11 +36,21 @@ data UIDCite uid info = Cite { _uid  :: uid
                              , _info :: info} 
                       | Self { _uid  :: uid
                              , _info :: info}
-                      deriving(Eq)
+                      deriving(Eq,Generic)
 -- w : type of word token
 type EMInfo w = (IRange, Vector w, PreNE)
 type EntityMention w = UIDCite EntityMentionUID (EMInfo w)
 
+instance ToJSON (EntityMentionUID) where
+  toJSON = genericToJSON defaultOptions
+
+instance ToJSON (EntityMention Text) where
+  toJSON = genericToJSON defaultOptions
+  {-
+  toJSON (Cite uid ref info) = object ["UID" .= show uid, "Ref" .= show ref, "Info" .= toString info ]
+  toJSON (Self uid info) = object ["UID" .= show uid, "Info" .= toString info ]
+  -}
+  
 entityName :: EMInfo Text -> Text
 entityName (_, ws, _) = T.intercalate " " (toList ws)
 
