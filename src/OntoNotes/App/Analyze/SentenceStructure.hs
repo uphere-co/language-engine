@@ -108,7 +108,6 @@ sentStructure :: HashMap Text Inventory
                  , [Maybe PennTree]
                  , [Dependency]
                  , Maybe [TagPos TokIdx (Maybe Text)]
-                 -- , Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
                  )
               -> [Text]
 sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded =
@@ -120,13 +119,7 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs 
       line1 = [ "==================================================================================================" ]
---               , "-- TimeTagger -----------------------------------------------------------------------------------" ]
-   --   line2 = case mtmxs of
-     --           Nothing -> ["Time annotation not successful!"]
-       --         Just tmxs -> [T.pack (show mergedtags)]
-                                     -- concat $ map formatTimex sentswithtmx
-
-      line3 = [ "-- Time and NER tagged text ----------------------------------------------------------------------"
+      line2 = [ "-- Time and NER tagged text ----------------------------------------------------------------------"
               , T.pack (render (formatTagged mtokenss sentitems mergedtags))
               , "--------------------------------------------------------------------------------------------------"
               , "-- Sentence analysis -----------------------------------------------------------------------------"
@@ -155,9 +148,9 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
                                                     ]
                                     in ssubline1
                    in (subline1, subline2)
-      line4 = concatMap f mlines
+      line3 = concatMap f mlines
         where f mxs = case mxs of
                         Nothing       -> [""]
                         Just (xs,yss) -> xs ++ (concat yss)
 
-  in line1 ++ line3 ++ line4
+  in line1 ++ line2 ++ line3
