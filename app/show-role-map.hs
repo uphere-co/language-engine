@@ -5,30 +5,34 @@ module Main where
 
 import           Control.Lens              ((^.),_1,_2)
 import qualified Data.HashMap.Strict as HM
-import           Data.List                 (intercalate)
+import           Data.List                 (find,intercalate)
 import           Data.Text                 (Text)
 import qualified Data.Text           as T
 import           Text.Printf               (printf)
 --
 import           Lexicon.Format            (formatArgPatt,formatRoleMap)
-import           Lexicon.Query             (loadRolePattInsts)
+import           Lexicon.Query             (loadRoleInsts,loadRolePattInsts)
 import           Lexicon.Type              (ArgPattern(..))
 import           NLP.Type.SyntaxProperty   (Voice)
 
 
 main = do
-  let verb_subcat_file = "/scratch/wavewave/run/20170820/verbsubcat_propbank_ontonotes_statonly.tsv" 
+  let verb_subcat_file = "/scratch/wavewave/run/20170820/verbsubcat_propbank_ontonotes_statonly.tsv"
+      rolemap_file = "/home/wavewave/repo/srcp/OntoNotes/mapping/final.txt" 
   subcats <- loadRolePattInsts verb_subcat_file
-  -- rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
+  rolemap <- loadRoleInsts rolemap_file
   
-  -- let flattened = createONFN subcats sensemap framedb rolesetdb
-  --     indexed = zip [1..] flattened
-
   
-  flip mapM_ subcats $ \subcat -> do
-    let argpattstr = intercalate "\n" $ flip map (Prelude.take 10 (subcat^._2)) $
+  flip mapM_ (drop 100 (take 150 subcats)) $ \subcat -> do
+    let argpattstr = intercalate "\n" $ flip map (subcat^._2) $
                        \(patt :: ArgPattern Voice Text,n) ->
                          printf "%s     #count: %5d" (formatArgPatt "voice" patt) (n :: Int)
     print (subcat^._1)
+    putStrLn "\n"
+    case find (\rm -> (rm^._1) == (subcat^._1)) rolemap of
+      Nothing -> return ()
+      Just rm -> do
+        putStrLn $ formatRoleMap  (rm^._2)
+        putStrLn "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
     putStrLn argpattstr
-  
+    putStrLn "\n\n\n\n"  
