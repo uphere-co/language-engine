@@ -34,6 +34,7 @@ let
               lens
               raw-strings-qq
               foreign-store
+              deepseq
               p.nlp-types
             ]);
 in stdenv.mkDerivation {

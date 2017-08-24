@@ -4,14 +4,14 @@ module WikiEL.Graph where
 
 import           Data.Int                              (Int32, Int64)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
+import           Control.Monad.ST                      (runST)
 import qualified Data.Vector.Unboxed           as UV
 import qualified Data.Vector                   as V
 import qualified Data.Vector.Generic           as GV
-import           Control.Monad.ST                      (runST)
+import qualified Data.List                     as L
 
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy)
 
-import qualified Data.List as L
 
 isIn :: (UV.Unbox a, Ord a) => UV.Vector a -> a -> Bool
 isIn vals = f
