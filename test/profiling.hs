@@ -125,30 +125,39 @@ prof2 = do
 prof3 = do
   let
     hash = H.wordHash
-    n = BSI.c2w '\n'
+    nl = BSI.c2w '\n'
+    tab = BSI.c2w '\t'
     filepath = "enwiki/interlinks.10M"
   -- Check that "a list of inverse hash has expected memory footprint".
   -- Evidence that "ByteString is several times faster and memory efficient than Text"
+  -- Evidence that "ByteString is about 2x faster to hash"  -- this is because an input type of H.hash is ByteString.
   content <- T.L.IO.readFile filepath
   contentS <- T.IO.readFile filepath
   contentB  <- BS.readFile filepath
   contentBL <- BS.L.readFile filepath
   let
     parseInterlinks line = (from, to) where [from,to] = T.words line
-    parseInterlinks2 line = second T.tail (T.break (=='\t') line)
+    parseInterlinksT line = second T.tail (T.break (=='\t') line)
+    parseInterlinksB line = second BS.tail (BS.break (== tab) line)
     linesL  = T.L.lines content
     linesS = T.lines contentS
-    linesB = BS.split n contentB
-    linesBL= BS.L.split n contentBL
+    linesB = BS.split nl contentB
+    linesBL= BS.L.split nl contentBL
     esS     = map parseInterlinks linesS
     esL    = map (parseInterlinks .  T.L.toStrict) linesL
-    esB    = map (parseInterlinks2 . T.E.decodeUtf8) linesB
-    esBL    = map (parseInterlinks2 . T.L.toStrict . T.L.E.decodeUtf8) linesBL
-    es    = map parseInterlinks2 linesS
+    esB    = map parseInterlinksB linesB
+    esB'    = map (parseInterlinks . T.E.decodeUtf8) linesB
+    esBL    = map (parseInterlinksT . T.L.toStrict . T.L.E.decodeUtf8) linesBL
+    es    = map parseInterlinksT linesS
     invs2 = map (\(x,y) -> (hash x, x,hash y,y)) es
     tokens = concatMap T.words linesS
     invs = concatMap (\(x,y) -> [(hash x, x),(hash y,y)]) es
+
+    invsS = concatMap (\(x,y) -> [(hash x, x),(hash y,y)]) esS
+    --invsB = concatMap (\(x,y) -> [(H.hash x, T.E.decodeUtf8 x),(H.hash y, T.E.decodeUtf8 y)]) esB
+    invsB = concatMap (\(x,y) -> [(H.hash x, x),(H.hash y, y)]) esB
     tt = map (\x -> (hash x, x)) tokens
+  -- eAssertEqual (map (T.E.decodeUtf8 *** T.E.decodeUtf8) (take 10 esB)) (take 10 esS)
   print $ length linesL
   -- (9.09 secs, 14,475,242,656 bytes)
   print $ length linesS
@@ -163,10 +172,16 @@ prof3 = do
   -- (9.72 secs, 880,762,016 bytes)
   print $ length esB
   --(0.69 secs, 880,762,672 bytes)
+  print $ length esB'
   print $ length esBL
   --(0.71 secs, 880,762,672 bytes)
   print $ length es
   
+  print $ length invsS
+  --(4.36 secs, 5,680,761,032 bytes)
+  print $ length invsB
+  --(1.79 secs, 3,200,763,504 bytes)
+
 
   
   print $ length invs2
