@@ -13,6 +13,9 @@ newtype ItemID = ItemID { _itemID :: Int }
 instance ToJSON ItemID where
   toJSON = genericToJSON defaultOptions
 
+instance FromJSON ItemID where
+  parseJSON = genericParseJSON defaultOptions
+
 instance Show ItemID where
   show (ItemID uid) = "Q" ++ show uid
 

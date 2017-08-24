@@ -30,6 +30,9 @@ newtype ItemClass = ItemClass { _itemID :: ItemID }
 instance ToJSON ItemClass where
   toJSON = genericToJSON defaultOptions
 
+instance FromJSON ItemClass where
+  parseJSON = genericParseJSON defaultOptions
+
 buildItemClass :: Text -> ItemClass
 buildItemClass x = ItemClass (itemID x)
 

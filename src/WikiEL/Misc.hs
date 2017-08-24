@@ -14,6 +14,9 @@ data IRange = IRange { beg :: Int
 instance ToJSON IRange where
   toJSON = genericToJSON defaultOptions
 
+instance FromJSON IRange where
+  parseJSON = genericParseJSON defaultOptions
+
 instance Show IRange where
   show (IRange beg end) = "IRange [" ++ show beg ++ "," ++ show end ++ ")"
 

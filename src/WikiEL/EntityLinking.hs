@@ -41,15 +41,18 @@ data UIDCite uid info = Cite { _uid  :: uid
 type EMInfo w = (IRange, Vector w, PreNE)
 type EntityMention w = UIDCite EntityMentionUID (EMInfo w)
 
-instance ToJSON (EntityMentionUID) where
+instance ToJSON EntityMentionUID where
   toJSON = genericToJSON defaultOptions
+
+instance FromJSON EntityMentionUID where
+  parseJSON = genericParseJSON defaultOptions
 
 instance ToJSON (EntityMention Text) where
   toJSON = genericToJSON defaultOptions
-  {-
-  toJSON (Cite uid ref info) = object ["UID" .= show uid, "Ref" .= show ref, "Info" .= toString info ]
-  toJSON (Self uid info) = object ["UID" .= show uid, "Info" .= toString info ]
-  -}
+
+instance FromJSON (EntityMention Text) where
+  parseJSON = genericParseJSON defaultOptions
+
   
 entityName :: EMInfo Text -> Text
 entityName (_, ws, _) = T.intercalate " " (toList ws)

@@ -62,6 +62,9 @@ data PreNE = UnresolvedUID NEClass
 instance ToJSON PreNE where
   toJSON = genericToJSON defaultOptions
 
+instance FromJSON PreNE where
+  parseJSON = genericParseJSON defaultOptions
+
 resolvedUID :: PreNE -> Either String ItemID
 resolvedUID (Resolved (id,_)) = Right id
 resolvedUID (UnresolvedUID _) = Left "Unresolved ItemID"
