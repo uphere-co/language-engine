@@ -27,7 +27,7 @@ import           CoreNLP.Simple.Type.Simplified            (NERSentence(..),Toke
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
 import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
-import           Lexicon.Type                              (ArgPattern(..),RoleInstance,RolePattInstance)
+import           Lexicon.Type                              (ArgPattern(..),POSVorN(..),RoleInstance,RolePattInstance)
 import           NLP.Printer.PennTreebankII                (formatIndexTokensFromTree)
 import           NLP.Type.PennTreebankII                   (PennTree)
 import           NLP.Syntax.Clause                         (clauseStructure,constructCP
@@ -44,6 +44,10 @@ import           WikiEL.EntityLinking                      (EntityMentionUID,Ent
                                                            ,entityLinking,entityLinkings,buildEntityMentions,entityUID)
 import           WikiEL.WikiNamedEntityTagger              (PreNE(..))
 --
+import           OntoNotes.App.Util                        (CharIdx,SentItem,TagPos(..),TokIdx)
+import           OntoNotes.App.WikiEL                      (getWikiResolvedMentions
+                                                           ,linkedMentionToTagPos
+                                                           )
 import           OntoNotes.Type.SenseInventory
 --
 import qualified OntoNotes.App.Analyze.Config   as Analyze (Config, showDetail)
@@ -52,10 +56,7 @@ import           OntoNotes.App.Analyze.Format              (formatSenses,formatT
                                                            ,formatTagged
                                                            ,showTimex,showFormatTimex'
                                                            )
-import           OntoNotes.App.Util                        (CharIdx,SentItem,TagPos(..),TokIdx)
-import           OntoNotes.App.WikiEL                      (getWikiResolvedMentions
-                                                           ,linkedMentionToTagPos
-                                                           )
+import           OntoNotes.App.Analyze.Type                
 
 
 mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]
@@ -72,30 +73,37 @@ getSenses :: Text
           -> HashMap (Text,Text) Int
           -> FrameDB
           -> HashMap Text [(Text,Text)]
-          -> [(Text,Text,Int,Text,Text,Text,Text)]
+          -> [(ONSenseFrameNetInstance,Int)] -- [(Text,Text,Int,Text,Text,Text,Text)]
 getSenses lma sensemap sensestat framedb ontomap = do
   let lmav = lma <> "-v"
   si <- maybeToList (HM.lookup lmav sensemap)
   s <- si^.inventory_senses
+  let sid = (lma,Verb, s^.sense_group <> "." <> s^.sense_n)
   let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
       txt_def = T.take 40 (s^.sense_name)
-      (txt_frame,txt_fecore,txt_feperi)
-        = fromMaybe ("","","") $ do
-            lst <- HM.lookup lma ontomap
-            frtxt <- lookup (s^.sense_group <> "." <> s^.sense_n) lst
-            case frtxt of
-              "copula"    -> return ("** COPULA **"    , "","")
-              "idioms"    -> return ("** IDIOMS **"    , "","")
-              "lightverb" -> return ("** LIGHT VERB **", "","")
-              _ -> do
-                frame <- HM.lookup frtxt (framedb^.frameDB)
-                let fes = frame^..frame_FE.traverse
-                    corefes = filter (\fe -> fe^.fe_coreType == Core || fe^.fe_coreType == CoreUnexpressed) fes
-                    perifes = filter (\fe -> fe^.fe_coreType == Peripheral) fes
-                    fecoretxt = T.intercalate ", " (map (^.fe_name) corefes)
-                    feperitxt = T.intercalate ", " (map (^.fe_name) perifes)
-                return (frtxt,fecoretxt,feperitxt)
-  return (s^.sense_group,s^.sense_n,num,txt_def,txt_frame,txt_fecore,txt_feperi)
+      tframe = fromMaybe (Left FrameNone) $ do
+        lst <- HM.lookup lma ontomap
+        frtxt <- lookup (s^.sense_group <> "." <> s^.sense_n) lst
+        case frtxt of
+          "copula"    -> return (Left FrameCopula)  -- ("** COPULA **"    , "","")
+          "idioms"    -> return (Left FrameIdiom)  -- ("** IDIOMS **"    , "","")
+          "lightverb" -> return (Left FrameLightVerb) -- ("** LIGHT VERB **", "","")
+          _ -> do
+            frame <- HM.lookup frtxt (framedb^.frameDB)
+            let fes = frame^..frame_FE.traverse
+                corefes = map (^.fe_name)
+                        . filter (\fe -> fe^.fe_coreType == Core || fe^.fe_coreType == CoreUnexpressed)
+                        $ fes
+                perifes = map (^.fe_name)
+                        . filter (\fe -> fe^.fe_coreType == Peripheral)
+                        $ fes
+                -- fecoretxt = T.intercalate ", " (map (^.fe_name) corefes)
+                -- feperitxt = T.intercalate ", " (map (^.fe_name) perifes)
+            return (Right (TF frtxt corefes perifes)) -- (frtxt,fecoretxt,feperitxt)
+  return ((ONFNInstance sid txt_def tframe),num)
+
+  -- (s^.sense_group,s^.sense_n,num,txt_def,txt_frame,txt_fecore,txt_feperi)
+
 
 
 

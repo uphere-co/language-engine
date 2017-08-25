@@ -4,7 +4,7 @@
 
 module OntoNotes.App.Analyze.Format where
 
-import           Control.Lens                            ((^.),(^?),(%~),_1,_2,_3,_5,_6,_7,_Just)
+import           Control.Lens                            ((^.),(^?),(%~),_1,_2,_3,_5,_6,_7,_Just,_Right,to)
 import           Control.Monad                           ((>=>))
 import           Data.Function                           ((&),on)
 import           Data.List                               (find,intercalate,intersperse,maximumBy,sortBy)
@@ -29,19 +29,26 @@ import           NLP.Syntax.Type                         (Voice)
 import qualified WikiEL                        as WEL
 import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID,_emuid)
 import qualified WikiEL.EntityLinking          as EL
-import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,parseStanfordNE,namedEntityAnnotator,resolvedUID)
+import           WikiEL.WikiNamedEntityTagger            (resolveNEs,getStanfordNEs,parseStanfordNE
+                                                         ,namedEntityAnnotator,resolvedUID)
 
 --
 import           OntoNotes.App.Util                      (CharIdx,TokIdx,TagPos(..),SentItem
                                                          ,addTag,convertTagPosFromTokenToChar
                                                          ,underlineText)
 import           OntoNotes.App.WikiEL                    (linkedMentionToTagPos)
+--
+import           OntoNotes.App.Analyze.Type              (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
+                                                         ,chooseFrame
+                                                         ,onfn_senseID,onfn_definition,onfn_frame
+                                                         ,tf_frameID,tf_feCore,tf_fePeri
+                                                         )
 
 
 
-chooseFrame :: [(Text,Text,Int,Text,Text,Text,Text)] -> Maybe (Text,Text,Int,Text,Text,Text,Text)
-chooseFrame [] = Nothing
-chooseFrame xs = Just (maximumBy (compare `on` (^._3)) xs)
+formatExFrame FrameCopula = "** COPULA **"
+formatExFrame FrameIdiom  = "** IDIOM **"
+formatExFrame FrameLightVerb = "** LIGHT VERB **"
 
 
 formatLemmaPOS :: Token -> String
@@ -66,29 +73,35 @@ showFormatTimex' (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex' (s,a
 
 
 
-formatSense :: (Text,Text,Int,Text,Text,Text,Text) -> String
-formatSense (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) =
-  printf "%2s.%-6s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s " sgrp sn num txt_def txt_frame txt_fecore txt_feperi
+formatSense :: (ONSenseFrameNetInstance,Int) -> String
+formatSense (onfninst,num) = -- (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) =
+  printf "%-8s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s "
+         (onfninst^.onfn_senseID._3)
+         num
+         (onfninst^.onfn_definition)
+         (onfninst^.onfn_frame.to (either formatExFrame (^.tf_frameID)))
+         (maybe "" (T.intercalate ", ") ((onfninst^?onfn_frame._Right.tf_feCore)))
+         (maybe "" (T.intercalate ", ") ((onfninst^?onfn_frame._Right.tf_fePeri)))
 
 
 formatSenses :: Bool  -- ^ doesShowOtherSense
              -> [RoleInstance]
              -> [RolePattInstance Voice]
              -> Text
-             -> [(Text,Text,Int,Text,Text,Text,Text)]
+             -> [(ONSenseFrameNetInstance,Int)] -- [(Text,Text,Int,Text,Text,Text,Text)]
              -> String
-formatSenses doesShowOtherSense rolemap subcats lma lst
-  = let t = chooseFrame lst
+formatSenses doesShowOtherSense rolemap subcats lma onfnlst
+  = let t = chooseFrame onfnlst
     in "Top frame: "
        ++ printf " %-20s | %-40s      ------      %-30s\n"
-            (fromMaybe "" (t^?_Just._5))
-            (fromMaybe "" (t^?_Just._6))
-            (fromMaybe "" (t^?_Just._7))
+            (fromMaybe "" (t ^? _Just . _1 . onfn_frame . to (either formatExFrame (^.tf_frameID))))
+            (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_feCore))
+            (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_fePeri))
        ++ "--------------------------------------------------------------------------------------------------\n"
        ++ fromMaybe ""
-            (do t1 <- t^?_Just._1
-                t2 <- t^?_Just._2
-                let sid = (lma,Verb, t1<>"."<>t2)
+            (do -- t1 <- t^?_Just._1
+                -- t2 <- t^?_Just._2
+                sid <- t^?_Just._1.onfn_senseID -- (lma,Verb, t1<>"."<>t2)
                 rm <- find (\rm -> rm^._1 == sid) rolemap
                 let msubcat =find ((== sid) . (^._1)) subcats
                 let margpattstr = do
@@ -99,7 +112,7 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
             )
        ++ "\n--------------------------------------------------------------------------------------------------\n"
        ++ if doesShowOtherSense
-          then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense lst)
+          then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense onfnlst)
           else ""
 
 
