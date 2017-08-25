@@ -6,7 +6,30 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeOperators      #-}
 
-module NLP.Syntax.Type where
+module NLP.Syntax.Type
+(
+
+  -- * reexport from NLP.Type.SyntaxProperty
+  Tense(..)
+, Voice(..)
+, Aspect(..)
+
+  -- * type synonym
+, type BitreeICP
+, type BitreeZipperICP
+, VerbProperty(..), vp_index, vp_lemma, vp_tense, vp_aspect, vp_voice, vp_auxiliary, vp_negation, vp_words
+, VerbP(..), vp_maximal_projection, vp_verbProperty, vp_complements
+, TP(..), tp_maximal_projection, tp_DP, tp_VP
+, CP(..), cp_maximal_projection, cp_complementizer, cp_TP
+, DP(..)
+, PredArgWorkspace(..), pa_CP, pa_candidate_args
+
+  -- * old types
+, SBARType(..)
+, STag(..)
+, type ClauseTree
+, type ClauseTreeZipper
+) where
 
 import           Control.Lens
 import           Data.Hashable                          (Hashable)
@@ -17,26 +40,12 @@ import           Data.BitreeZipper
 import           Lexicon.Type                           (ATNode(..))
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
+import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
 
 
 type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
-
-
-
-data Tense = Present | Past
-           deriving (Show,Eq,Ord,Enum,Bounded)
-
-
-data Voice = Active | Passive
-           deriving (Show,Eq,Ord,Enum,Bounded,Read,Generic)
-
-instance Hashable Voice
-
-
-data Aspect = Simple | Progressive | Perfect | PerfectProgressive
-           deriving (Show,Eq,Ord,Enum,Bounded)
 
 
 data VerbProperty w = VerbProperty { _vp_index  :: Int

@@ -63,7 +63,6 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
 formatDPTokens :: Maybe [Bitree (Range,CP) (Range,CP)]
                -> CP
                -> Text
-                   -- ATNode (DP (BitreeZipperICP '[Lemma])) -> Text
 formatDPTokens mcpstr cp = let lst = (join . maybeToList) mcpstr
                                mrng = cpRange cp
                                pro = do rng <- cpRange cp
@@ -71,20 +70,19 @@ formatDPTokens mcpstr cp = let lst = (join . maybeToList) mcpstr
                                         z' <- resolvePRO z
                                         return (gettokens z')
                                
-                           in -- (maybe "no zipper"  (const "exist") z)
-                              case fmap chooseATNode dp of
+                           in case fmap chooseATNode dp of
                                 Just SilentPRO -> "*PRO* -> " <> fromMaybe "" pro
                                 Just (RExp z) -> gettokens z
                                 Nothing -> ""
   where gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
         dp = cp^.cp_TP.tp_DP
 
+
 formatDPType :: ATNode (DP (BitreeZipperICP '[Lemma])) -> Maybe ChunkTag
 formatDPType x = case chooseATNode x of
                    SilentPRO -> Just NP
                    RExp z -> getchunk z
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
-
 
 
 formatPAWS :: Maybe [Bitree (Range,CP) (Range,CP)]
