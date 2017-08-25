@@ -90,7 +90,7 @@ data ArgPattern p a = ArgPattern { _patt_property :: Maybe p
 makeLenses ''ArgPattern
 
 
-instance (Hashable p) => Hashable (ArgPattern p Text)
+instance (Hashable v, Hashable p) => Hashable (ArgPattern v p)
 
 
 -----------------
