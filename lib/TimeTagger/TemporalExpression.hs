@@ -22,6 +22,6 @@ import qualified CoreNLP.Proto.HCoreNLPProto.TimexWithOffset as T
 import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
-import           CoreNLP.Simple.Type.Simplified
 import           CoreNLP.Simple.Util
+import 	       	 NLP.Type.CoreNLP
 import           Text.TaggedText
