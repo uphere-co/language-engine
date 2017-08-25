@@ -23,6 +23,7 @@ library
                        Data.Range
                        NLP.Parser.PennTreebankII
                        NLP.Printer.PennTreebankII
+                       NLP.Type.CoreNLP
                        NLP.Type.NamedEntity
                        NLP.Type.PennTreebankII
                        NLP.Type.PennTreebankII.Separated
