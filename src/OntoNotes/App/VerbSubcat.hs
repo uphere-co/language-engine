@@ -32,7 +32,7 @@ import           Text.Printf
 import           Data.Attribute
 import           Data.Bitree                        (getRoot)
 import           Data.BitreeZipper
-import           Lexicon.Format                     (formatArgPatt, formatRoleMap)
+import           Lexicon.Format                     (formatArgPatt, formatGRel, formatRoleMap)
 import           Lexicon.Type
 import           Lexicon.Query
 import           NLP.Printer.PennTreebankII
@@ -89,15 +89,15 @@ formatArgMap isStat argmap =
   ++ "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
 
 
-formatArgTable :: Maybe (VerbProperty (BitreeZipperICP '[Lemma]),_) -> ArgTable Text -> String
+formatArgTable :: Maybe (VerbProperty (BitreeZipperICP '[Lemma]),_) -> ArgTable GRel -> String
 formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
                               (fromMaybe "" (tbl^.tbl_rel))
                               (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
-                              (fromMaybe "" (tbl^.tbl_arg0))
-                              (fromMaybe "" (tbl^.tbl_arg1))
-                              (fromMaybe "" (tbl^.tbl_arg2))
-                              (fromMaybe "" (tbl^.tbl_arg3))
-                              (fromMaybe "" (tbl^.tbl_arg4))
+                              (maybe "" formatGRel (tbl^.tbl_arg0))
+                              (maybe "" formatGRel (tbl^.tbl_arg1))
+                              (maybe "" formatGRel (tbl^.tbl_arg2))
+                              (maybe "" formatGRel (tbl^.tbl_arg3))
+                              (maybe "" formatGRel (tbl^.tbl_arg4))
                               (tbl^.tbl_file_sid_tid._1)
                               (tbl^.tbl_file_sid_tid._2)
                               (tbl^.tbl_file_sid_tid._3)
@@ -155,9 +155,9 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
                (constructCP vp^?_Just.cp_TP)
       argtable0 = mkArgTable iproptr l2p filesidtid args
       argtable1 = zipperArgTable iproptr argtable0
-      argtable :: ArgTable Text
+      -- argtable :: ArgTable (ATNode GRel)
       argtable = fmap f argtable1
-        where f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> Text
+        where f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> GRel
               f = phraseNodeType mtp . chooseATNode
 
       fmtfunc = either (const "") (tokenWord.snd) . getRoot . current
@@ -257,7 +257,7 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                         argtable1 = zipperArgTable iproptr argtable0
                         -- argtable :: ArgTable Text
                         argtable = fmap f argtable1
-                          where -- f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> Text
+                          where f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> ATNode GRel
                                 f = fmap (phraseNodeType mtp) --  . chooseATNode
                         
                         --   where f = fmap phraseNodeType
@@ -282,11 +282,11 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                          sense
                          sense_num
                          (maybe "null" show (patt^.patt_property)) 
-                         (fromMaybe "null" (patt^.patt_arg0))
-                         (fromMaybe "null" (patt^.patt_arg1))
-                         (fromMaybe "null" (patt^.patt_arg2))
-                         (fromMaybe "null" (patt^.patt_arg3))
-                         (fromMaybe "null" (patt^.patt_arg4))
+                         (maybe "null" formatGRel (patt^.patt_arg0))
+                         (maybe "null" formatGRel (patt^.patt_arg1))
+                         (maybe "null" formatGRel (patt^.patt_arg2))
+                         (maybe "null" formatGRel (patt^.patt_arg3))
+                         (maybe "null" formatGRel (patt^.patt_arg4))
                          n
 
 showStatInst :: Bool
