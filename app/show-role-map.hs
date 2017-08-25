@@ -26,7 +26,7 @@ main = do
   rolemap <- loadRoleInsts rolemap_file
 
 
-  flip mapM_ (drop 100 (take 150 subcats)) $ \subcat -> do
+  flip mapM_ subcats $ \subcat -> do
     let pattstats0 = subcat^._2
         pattstats = mergePatterns (subcat^._2)
         ipattstats = zip [1..] pattstats
