@@ -1,4 +1,5 @@
 {-# LANGUAGE ExplicitNamespaces #-}
+{-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RecordWildCards    #-}
 
@@ -84,6 +85,16 @@ formatSense (onfninst,num) =
          (maybe "" (T.intercalate ", ") ((onfninst^?onfn_frame._Right.tf_fePeri)))
 
 
+
+getTopPatternFromONFNInst rolemap subcats inst = do
+  let sid = inst^.onfn_senseID
+  rm <- find (\rm -> rm^._1 == sid) rolemap
+  let msubcat = find ((== sid) . (^._1)) subcats
+      mtoppatts_cut = cutHistogram 0.9 . constructTopPatterns . (^._2) <$> msubcat
+  return (rm,mtoppatts_cut)
+
+
+
 formatSenses :: Bool  -- ^ doesShowOtherSense
              -> [RoleInstance]
              -> [RolePattInstance Voice]
@@ -98,8 +109,13 @@ formatSenses doesShowOtherSense rolemap subcats lma onfnlst
             (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_feCore))
             (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_fePeri))
        ++ "--------------------------------------------------------------------------------------------------\n"
-       ++ fromMaybe ""
-            (do sid <- t^?_Just._1.onfn_senseID
+       ++ fromMaybe "" (do
+            inst <- t^?_Just._1
+            (rm,mtoppatts) <- getTopPatternFromONFNInst rolemap subcats inst
+            let margpattstr = fmap formatArgPattStat mtoppatts
+            return (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr)
+          )
+            {- (do sid <- t^?_Just._1.onfn_senseID
                 rm <- find (\rm -> rm^._1 == sid) rolemap
                 let msubcat =find ((== sid) . (^._1)) subcats
                 let margpattstr = do
@@ -107,7 +123,7 @@ formatSenses doesShowOtherSense rolemap subcats lma onfnlst
                       let toppatts_cut = cutHistogram 0.9 (constructTopPatterns (subcat^._2))
                       return (formatArgPattStat toppatts_cut)
                 return (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr)
-            )
+            )-}
        ++ "\n--------------------------------------------------------------------------------------------------\n"
        ++ if doesShowOtherSense
           then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense onfnlst)
@@ -121,7 +137,9 @@ formatLinkedMention Self {..} = printf "%3d:          %s " (EL._emuid _uid)     
 
 formatIndexedTimex (c,mtxt)   = printf "%3s:          %s " (T.singleton c) (fromMaybe "" mtxt)
 
-formatTaggedSentences :: (a -> Text) ->  [(SentItem CharIdx,[TagPos CharIdx a])] -> Box 
+formatTaggedSentences :: (a -> Text)
+                      ->  [(SentItem CharIdx,[TagPos CharIdx a])]
+                      -> Box 
 formatTaggedSentences f sents_tagged =
   let txts = concatMap (\(s,a) -> underlineText f (s^._2) (s^._3) a) sents_tagged
   in vcat top $ map (text . T.unpack) txts 
@@ -136,7 +154,10 @@ formatEMInfo :: EL.EMInfo Text -> String
 formatEMInfo em@(_,ws,tag) = printf "%-25s %-20s" (WEL.entityName em) (formatPreNE tag)
 
 
-formatTagged :: [[Maybe Token]] -> [SentItem CharIdx] -> [TagPos TokIdx (Either (EL.EntityMention Text) (Char,(Maybe Text)))] -> Box
+formatTagged :: [[Maybe Token]]
+             -> [SentItem CharIdx]
+             -> [TagPos TokIdx (Either (EL.EntityMention Text) (Char,(Maybe Text)))]
+             -> Box
 formatTagged mtokenss sentitems tlst =
   let toks = concatMap (map snd . sentToTokens') mtokenss
       clst = mapMaybe (convertTagPosFromTokenToChar toks) tlst
