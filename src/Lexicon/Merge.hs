@@ -4,7 +4,7 @@
 
 module Lexicon.Merge where
 
-import           Control.Lens                  ((^.),(%~),_1,_2)
+import           Control.Lens                  ((^.),(%~),(.~),_1,_2)
 import           Data.Function                 (on)
 import qualified Data.HashSet            as HS
 import           Data.List                     (groupBy,sortBy,tails)
@@ -48,11 +48,22 @@ convertPassive patt =
     conv x               = x
 
 
+
+convertNP :: ArgPattern () Text -> ArgPattern () Text
+convertNP patt =
+  let arglst = [patt^.patt_arg0,patt^.patt_arg1,patt^.patt_arg2,patt^.patt_arg3,patt^.patt_arg4]
+  in if | not (Just "NP-SBJ" `elem` arglst) && patt^.patt_arg0 == Just "NP" -> (patt_arg0 .~ Just "NP-SBJ") patt
+        | not (Just "NP-1" `elem` arglst) && patt^.patt_arg1 == Just "NP"   -> (patt_arg1 .~ Just "NP-1") patt
+        | otherwise                                                         -> patt
+
+
+
+
 mergePatterns :: [(ArgPattern Voice Text,Int)] -> [(ArgPattern () Text,Int)]
 mergePatterns pattstats0 =
   let pgrps = groupBy ((==) `on` (^._1))
             . sortBy (compare `on` (^._1))
-            . map (_1 %~ convertPassive)
+            . map (_1 %~ convertNP . convertPassive)
             $ pattstats0
   in sortBy (flip compare `on` (^._2)) . map (\xs -> (fst (head xs), sum (map snd xs))) $ pgrps
 
