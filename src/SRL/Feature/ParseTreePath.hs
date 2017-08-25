@@ -7,6 +7,7 @@ import           Data.List                      (group)
 import           Data.BitreeZipper
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
+import           NLP.Syntax.Util
 --
 -- import           SRL.Feature.Verb
 import           SRL.Type
