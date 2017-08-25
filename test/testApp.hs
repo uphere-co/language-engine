@@ -7,8 +7,10 @@
 import           Data.Text                             (Text)
 import           Data.Maybe                            (mapMaybe,catMaybes)
 import           System.IO                             (stdin,stdout)
-import           Control.Arrow                         ((***))
+import           Control.Arrow                         (second,(***))
 import           Data.Either                           (rights)
+import qualified Data.Text.Lazy                as T.L
+import qualified Data.Text.Lazy.IO             as T.L.IO
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 
@@ -20,6 +22,8 @@ import           WikiEL.Type.WordNet                   (SynsetY)
 
 import           WikiEL.ETL.RDF.Yago
 
+
+-- ========================
 import           Data.Word                             (Word32)
 import           Foreign.Store
 
@@ -29,6 +33,7 @@ import           System.Environment                    (getArgs)
 --import           Data.Text                             (Text)
 import           Data.List                             (foldl')
 import qualified Data.Map.Strict               as M
+import qualified Data.Vector                   as V
 import qualified Data.Vector.Unboxed           as UV
 import qualified Data.Vector.Fusion.Bundle     as B
 import qualified WikiEL.Util.Hash              as H
@@ -39,7 +44,7 @@ import qualified Data.ByteString.Lazy.Char8    as BL
 
 
 
-
+type LText = T.L.Text
 
 
 wikidata :: (ParsingState,Text) -> Text -> IO (ParsingState,Text)
@@ -80,6 +85,8 @@ parseInterlinks line = (from, to)
   where
     [from,to] = T.words line
 
+parseInterlinks2 line = second T.tail (T.break (=='\t') line)
+
 -- UV.snoc is very inefficient for large Foo
 addEdge :: Foo -> (Text,Text) -> Foo
 addEdge foo@(Foo edges names) (from,to) = foo'
@@ -94,7 +101,6 @@ loadEdges lines  = Foo edges names
     edges = UV.fromList (map (H.wordHash *** H.wordHash) es)
     f accum (from, to) = tryAdd (tryAdd accum from) to
     names = foldl' f M.empty es
-
 
 showPath :: HashInvs -> UV.Vector H.WordHash -> [ Text]
 showPath invs path = catMaybes (UV.foldl' f [] path)
@@ -120,9 +126,9 @@ loadInterlinks (prevState, prevPartialBlock) block = do
 
 foo :: ([Text] -> a) -> FilePath -> IO a
 foo f  filepath = do
-  content <- T.IO.readFile filepath
+  content <- T.L.IO.readFile filepath
   let
-    lines = T.lines content
+    lines = map T.L.toStrict (T.L.lines content)
     state = f lines
   return state
 
@@ -327,6 +333,7 @@ main3 idx idx2 = do
   print $ M.size names  
   print $ UV.length es
 
+  
 main :: IO ()
-main = main4
+main = main2
 
