@@ -7,7 +7,7 @@ module OntoNotes.App.Analyze.Format where
 import           Control.Lens                            ((^.),(^?),(%~),_1,_2,_3,_5,_6,_7,_Just)
 import           Control.Monad                           ((>=>))
 import           Data.Function                           ((&),on)
-import           Data.List                               (find,intercalate,intersperse,maximumBy)
+import           Data.List                               (find,intercalate,intersperse,maximumBy,sortBy)
 import           Data.Maybe                              (fromMaybe,mapMaybe)
 import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
@@ -19,7 +19,9 @@ import           Text.ProtocolBuffers.Basic              (Utf8)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
 import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,token_pos)
-import           Lexicon.Format                          (formatArgPatt,formatRoleMap)
+import           Lexicon.Format                          (formatArgPatt,formatArgPattStat,formatRoleMap)
+import           Lexicon.Merge                           (mergePatterns,patternGraph,patternRelation
+                                                         ,listOfSupersetSubset,topPatterns)
 import           Lexicon.Query                           (cutHistogram)
 import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
                                                          ,type RolePattInstance,POSVorN(..))
@@ -90,10 +92,16 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
                 rm <- find (\rm -> rm^._1 == sid) rolemap
                 let msubcat =find ((== sid) . (^._1)) subcats
                 let margpattstr = do
-                      (sid,insts) <- msubcat
-                      let subcat = (sid,cutHistogram 0.9 insts)
-                      return $ intercalate "\n" $ flip map (subcat^._2) $ \(patt,n) ->
-                                 printf "%s     #count: %5d" (formatArgPatt "voice" patt) (n :: Int)
+                      subcat <- msubcat
+                      let ipattstats = zip [1..] . mergePatterns $ (subcat^._2)                      
+                          supersub = listOfSupersetSubset . patternGraph (patternRelation `on` (^._1)) $ ipattstats
+                          toppatts = sortBy (flip compare `on` snd) (topPatterns ipattstats supersub)
+                          toppatts_cut = cutHistogram 0.9 toppatts
+                      return (formatArgPattStat toppatts_cut)
+                      -- (sid,insts) <- msubcat
+                      -- let subcat = (sid,cutHistogram 0.9 insts)
+                      -- return $ intercalate "\n" $ flip map (subcat^._2) $ \(patt,n) ->
+                      --           printf "%s     #count: %5d" (formatArgPatt "voice" patt) (n :: Int)
                 return (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr)
             )
        ++ "\n--------------------------------------------------------------------------------------------------\n"

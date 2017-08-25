@@ -29,8 +29,6 @@ import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention(..))
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass)
 --
-import           OntoNotes.App.Analyze.CoreNLP           (runParser)
-import           OntoNotes.App.Analyze.SentenceStructure (sentStructure)
 import           OntoNotes.App.Load           (Config(..),cfg,cfgG,cfg_framenet_framedir
                                               ,cfg_rolemap_file
                                               ,cfg_sense_inventory_file
@@ -41,11 +39,16 @@ import           OntoNotes.App.Load           (Config(..),cfg,cfgG,cfg_framenet_
 import           OntoNotes.App.WikiEL         (brandItemFile,orgItemFile,personItemFile,reprFile)
 import           OntoNotes.Corpus.Load        (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
+--
+import qualified OntoNotes.App.Analyze.Config as Analyze
+import           OntoNotes.App.Analyze.CoreNLP           (runParser)
+import           OntoNotes.App.Analyze.SentenceStructure (sentStructure)
 
 
 -- | main query loop
 --
-queryProcess :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+queryProcess :: Analyze.Config
+             -> J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> HashMap Text Inventory
              -> HashMap (Text,Text) Int
              -> FrameDB
@@ -54,43 +57,17 @@ queryProcess :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> [RoleInstance]
              -> [RolePattInstance Voice]
              -> IO ()
-queryProcess pp sensemap sensestat framedb ontomap emTagger rolemap subcats =
+queryProcess config pp sensemap sensestat framedb ontomap emTagger rolemap subcats =
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     let input = T.pack input'
         (command,rest) = T.splitAt 3 input
     case command of
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
-                  (mapM_ T.IO.putStrLn . sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats) =<< runParser pp txt
-      ":v " ->    (mapM_ T.IO.putStrLn . sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats) =<< runParser pp rest
+                  (mapM_ T.IO.putStrLn . sentStructure config sensemap sensestat framedb ontomap emTagger rolemap subcats) =<< runParser pp txt
+      ":v " ->    (mapM_ T.IO.putStrLn . sentStructure config sensemap sensestat framedb ontomap emTagger rolemap subcats) =<< runParser pp rest
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
-
-
-
--- | main program entry point
---
-runAnalysis :: Config -> IO ()
-runAnalysis cfg = do
-  subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
-  rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
-  framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
-  let ontomap = HM.fromList mapFromONtoFN
-  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
-  sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
-  let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-  emTagger <- loadEMtagger reprFile [(orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)]
-  clspath <- getEnv "CLASSPATH"
-  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
-    pp <- prepare (def & (tokenizer .~ True)
-                       . (words2sentences .~ True)
-                       . (postagger .~ True)
-                       . (lemma .~ True)
-                       . (sutime .~ True)
-                       . (constituency .~ True)
-                       . (ner .~ True)
-                  )
-    queryProcess pp sensemap sensestat framedb ontomap emTagger rolemap subcats
 
 
 loadConfig
@@ -130,3 +107,28 @@ loadJVM = do
                      . (ner .~ True)
                 )
   return pp
+
+
+-- | main program entry point
+--
+runAnalysis :: Config -> Analyze.Config -> IO ()
+runAnalysis cfg acfg = do
+  subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
+  rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
+  framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
+  let ontomap = HM.fromList mapFromONtoFN
+  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
+  sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
+  let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
+  emTagger <- loadEMtagger reprFile [(orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)]
+  clspath <- getEnv "CLASSPATH"
+  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
+    pp <- prepare (def & (tokenizer .~ True)
+                       . (words2sentences .~ True)
+                       . (postagger .~ True)
+                       . (lemma .~ True)
+                       . (sutime .~ True)
+                       . (constituency .~ True)
+                       . (ner .~ True)
+                  )
+    queryProcess acfg pp sensemap sensestat framedb ontomap emTagger rolemap subcats

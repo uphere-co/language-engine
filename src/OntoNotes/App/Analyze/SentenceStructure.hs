@@ -44,6 +44,9 @@ import           WikiEL.EntityLinking                      (EntityMentionUID,Ent
                                                            ,entityLinking,entityLinkings,buildEntityMentions,entityUID)
 import           WikiEL.WikiNamedEntityTagger              (PreNE(..))
 --
+import           OntoNotes.Type.SenseInventory
+--
+import qualified OntoNotes.App.Analyze.Config   as Analyze (Config, showDetail)
 import           OntoNotes.App.Analyze.CoreNLP             (runParser)
 import           OntoNotes.App.Analyze.Format              (formatSenses,formatTimex
                                                            ,formatTagged
@@ -53,7 +56,6 @@ import           OntoNotes.App.Util                        (CharIdx,SentItem,Tag
 import           OntoNotes.App.WikiEL                      (getWikiResolvedMentions
                                                            ,linkedMentionToTagPos
                                                            )
-import           OntoNotes.Type.SenseInventory
 
 
 mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]
@@ -92,9 +94,12 @@ getSenses lma sensemap sensestat framedb ontomap = do
   return (s^.sense_group,s^.sense_n,num,txt_def,txt_frame,txt_fecore,txt_feperi)
 
 
+
+
 -- | Finding the structure of the sentence and formatting it.
 -- 
-sentStructure :: HashMap Text Inventory
+sentStructure :: Analyze.Config
+              -> HashMap Text Inventory
               -> HashMap (Text, Text) Int
               -> FrameDB
               -> HashMap Text [(Text, Text)]
@@ -110,7 +115,7 @@ sentStructure :: HashMap Text Inventory
                  , Maybe [TagPos TokIdx (Maybe Text)]
                  )
               -> [Text]
-sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded =
+sentStructure config sensemap sensestat framedb ontomap emTagger rolemap subcats loaded =
   let (sents,sentidxs,sentitems,_tokss,mptrs,deps,mtmxs) = loaded
       lmass = sents ^.. traverse . sentenceLemma
       mtokenss = sents ^.. traverse . sentenceToken
@@ -133,24 +138,28 @@ sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded
                        mcpstr = identifyCPHierarchy vps
                        subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                                   , formatIndexTokensFromTree 0 ptr
-                                  , "--------------------------------------------------------------------------------------------------"
-                                  , formatClauseStructure vps clausetr
-                                  , "================================================================================================="
-                                  ]
+                                  ] 
 
+                       subline1_1 = [ "--------------------------------------------------------------------------------------------------"
+                                    , formatClauseStructure vps clausetr
+                                    , "================================================================================================="
+                                    ]
+                                    
                        subline2 = flip map (vps^..traverse) $ \vp ->
                                     let mcp = constructCP vp
                                         lma = vp^.vp_lemma.to unLemma
                                         senses = getSenses lma sensemap sensestat framedb ontomap
-                                        ssubline1 = [ formatVPwithPAWS clausetr mcpstr vp
-                                                    , T.pack (printf "Verb: %-20s" lma)
-                                                    , T.pack $ (formatSenses False rolemap subcats lma) senses
-                                                    ]
-                                    in ssubline1
-                   in (subline1, subline2)
+                                    in [ formatVPwithPAWS clausetr mcpstr vp
+                                       , T.pack (printf "Verb: %-20s" lma)
+                                       , T.pack $ (formatSenses False rolemap subcats lma) senses
+                                       ]
+                   in (subline1 ++ if config^.Analyze.showDetail then subline1_1 else [], subline2)
       line3 = concatMap f mlines
         where f mxs = case mxs of
                         Nothing       -> [""]
                         Just (xs,yss) -> xs ++ (concat yss)
 
-  in line1 ++ line2 ++ line3
+  in line1 ++ line2 ++ line3 
+
+     -- (if config^.Analyze.showDetail then line3 else []) 
+
