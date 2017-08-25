@@ -62,6 +62,11 @@ cabal build testRun --builddir=../dists/wiki-ner
 build with profiling option
 ```
 $ cabal install --enable-profiling
+# Or, for testing in REPL
+$ cabal configure --enable-tests --enable-profiling 
+$ cabal repl testRun
+-- Profiling each lines in REPL
+> :set +s
 ```
 
 default profiling (finding cost center)
