@@ -17,6 +17,7 @@ let
             attoparsec
             bifunctors
             discrimination
+            hashable
             lens
             pretty-hex
             taggy-lens
