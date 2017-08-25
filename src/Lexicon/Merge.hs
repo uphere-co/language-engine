@@ -57,13 +57,27 @@ convertNP patt =
         | otherwise                                                         -> patt
 
 
+mergeS "S"     = "SBAR"
+mergeS "S-1"   = "SBAR-1"
+mergeS "S-2"   = "SBAR-2"
+mergeS "S-SBJ" = "SBAR-SBJ"
+mergeS x       = x
+
+
+convertS :: ArgPattern () Text -> ArgPattern () Text
+convertS = (patt_arg0 %~ fmap mergeS)
+         . (patt_arg1 %~ fmap mergeS)
+         . (patt_arg2 %~ fmap mergeS)
+         . (patt_arg3 %~ fmap mergeS)
+         . (patt_arg4 %~ fmap mergeS)
+
 
 
 mergePatterns :: [(ArgPattern Voice Text,Int)] -> [(ArgPattern () Text,Int)]
 mergePatterns pattstats0 =
   let pgrps = groupBy ((==) `on` (^._1))
             . sortBy (compare `on` (^._1))
-            . map (_1 %~ convertNP . convertPassive)
+            . map (_1 %~ convertNP . convertS . convertPassive)
             $ pattstats0
   in sortBy (flip compare `on` (^._2)) . map (\xs -> (fst (head xs), sum (map snd xs))) $ pgrps
 
