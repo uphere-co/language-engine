@@ -74,7 +74,7 @@ showFormatTimex' (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex' (s,a
 
 
 formatSense :: (ONSenseFrameNetInstance,Int) -> String
-formatSense (onfninst,num) = -- (sgrp,sn,num,txt_def,txt_frame,txt_fecore,txt_feperi) =
+formatSense (onfninst,num) =
   printf "%-8s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s "
          (onfninst^.onfn_senseID._3)
          num
@@ -88,7 +88,7 @@ formatSenses :: Bool  -- ^ doesShowOtherSense
              -> [RoleInstance]
              -> [RolePattInstance Voice]
              -> Text
-             -> [(ONSenseFrameNetInstance,Int)] -- [(Text,Text,Int,Text,Text,Text,Text)]
+             -> [(ONSenseFrameNetInstance,Int)]
              -> String
 formatSenses doesShowOtherSense rolemap subcats lma onfnlst
   = let t = chooseFrame onfnlst
@@ -99,9 +99,7 @@ formatSenses doesShowOtherSense rolemap subcats lma onfnlst
             (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_fePeri))
        ++ "--------------------------------------------------------------------------------------------------\n"
        ++ fromMaybe ""
-            (do -- t1 <- t^?_Just._1
-                -- t2 <- t^?_Just._2
-                sid <- t^?_Just._1.onfn_senseID -- (lma,Verb, t1<>"."<>t2)
+            (do sid <- t^?_Just._1.onfn_senseID
                 rm <- find (\rm -> rm^._1 == sid) rolemap
                 let msubcat =find ((== sid) . (^._1)) subcats
                 let margpattstr = do
@@ -136,10 +134,6 @@ formatPreNE tag = case resolvedUID tag of
 
 formatEMInfo :: EL.EMInfo Text -> String
 formatEMInfo em@(_,ws,tag) = printf "%-25s %-20s" (WEL.entityName em) (formatPreNE tag)
-
-
-
-
 
 
 formatTagged :: [[Maybe Token]] -> [SentItem CharIdx] -> [TagPos TokIdx (Either (EL.EntityMention Text) (Char,(Maybe Text)))] -> Box

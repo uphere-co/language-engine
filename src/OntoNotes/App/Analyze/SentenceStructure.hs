@@ -73,7 +73,7 @@ getSenses :: Text
           -> HashMap (Text,Text) Int
           -> FrameDB
           -> HashMap Text [(Text,Text)]
-          -> [(ONSenseFrameNetInstance,Int)] -- [(Text,Text,Int,Text,Text,Text,Text)]
+          -> [(ONSenseFrameNetInstance,Int)]
 getSenses lma sensemap sensestat framedb ontomap = do
   let lmav = lma <> "-v"
   si <- maybeToList (HM.lookup lmav sensemap)
@@ -85,9 +85,9 @@ getSenses lma sensemap sensestat framedb ontomap = do
         lst <- HM.lookup lma ontomap
         frtxt <- lookup (s^.sense_group <> "." <> s^.sense_n) lst
         case frtxt of
-          "copula"    -> return (Left FrameCopula)  -- ("** COPULA **"    , "","")
-          "idioms"    -> return (Left FrameIdiom)  -- ("** IDIOMS **"    , "","")
-          "lightverb" -> return (Left FrameLightVerb) -- ("** LIGHT VERB **", "","")
+          "copula"    -> return (Left FrameCopula)
+          "idioms"    -> return (Left FrameIdiom)
+          "lightverb" -> return (Left FrameLightVerb)
           _ -> do
             frame <- HM.lookup frtxt (framedb^.frameDB)
             let fes = frame^..frame_FE.traverse
@@ -97,15 +97,8 @@ getSenses lma sensemap sensestat framedb ontomap = do
                 perifes = map (^.fe_name)
                         . filter (\fe -> fe^.fe_coreType == Peripheral)
                         $ fes
-                -- fecoretxt = T.intercalate ", " (map (^.fe_name) corefes)
-                -- feperitxt = T.intercalate ", " (map (^.fe_name) perifes)
-            return (Right (TF frtxt corefes perifes)) -- (frtxt,fecoretxt,feperitxt)
+            return (Right (TF frtxt corefes perifes))
   return ((ONFNInstance sid txt_def tframe),num)
-
-  -- (s^.sense_group,s^.sense_n,num,txt_def,txt_frame,txt_fecore,txt_feperi)
-
-
-
 
 
 -- | Finding the structure of the sentence and formatting it.
@@ -173,5 +166,4 @@ sentStructure config sensemap sensestat framedb ontomap emTagger rolemap subcats
 
   in line1 ++ line2 ++ line3 
 
-     -- (if config^.Analyze.showDetail then line3 else []) 
 
