@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -67,3 +68,10 @@ loadRolePattInsts fp = do
          . map T.words
          . T.lines
          $ txt
+
+
+cutHistogram :: Double -> [(a,Int)] -> [(a,Int)]
+cutHistogram c xs = let ys = scanl (\(!acc,f) (x,i) -> (acc+i, f . ((x,i):))) (0,id) xs
+                        n = fst (last ys )
+                        ncut= fromIntegral n * c
+                    in (\x -> (x^._2) []) . head  . snd . break (\x->fromIntegral (x^._1) >= ncut) $ ys
