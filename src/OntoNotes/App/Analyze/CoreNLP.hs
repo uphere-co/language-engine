@@ -21,8 +21,8 @@ import           CoreNLP.Simple                               (annotate,serializ
 import           CoreNLP.Simple.Convert                       (convertPsent,convertSentence,convertToken
                                                               ,decodeToPennTree
                                                               ,sentToDep,sentToNER)
-import           CoreNLP.Simple.Type.Simplified               (NERSentence(..),Token,Dependency,Sentence,SentenceIndex)
 import           CoreNLP.Simple.Util                          (getDoc,getProtoDoc,getTKTokens)
+import 	       	 NLP.Type.CoreNLP                             (NERSentence(..),Token,Dependency,Sentence,SentenceIndex)
 import qualified NLP.Type.NamedEntity                  as N
 import           NLP.Type.PennTreebankII                      (PennTree)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
