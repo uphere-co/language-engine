@@ -68,6 +68,7 @@ convertS = (patt_arg0 %~ fmap mergeS)
          . (patt_arg3 %~ fmap mergeS)
          . (patt_arg4 %~ fmap mergeS)
 
+
 convertSBAR :: ArgPattern () GRel -> ArgPattern () GRel
 convertSBAR patt =
   let arglst = [patt^.patt_arg0,patt^.patt_arg1,patt^.patt_arg2,patt^.patt_arg3,patt^.patt_arg4]
@@ -102,6 +103,7 @@ patternRelation x y | x `isSubPatternOf` y = SubPatternOf
                          each patt_arg3 x y &&
                          each patt_arg4 x y
 
+
 patternGraph :: (a -> a -> TernaryLogic) -> [(Int,a)] -> [(Int,Int)]
 patternGraph f lst = (concatMap (\(x:xs) -> mapMaybe (link x) (x:xs)) . init . tails) lst
   where
@@ -128,3 +130,11 @@ topPatterns ipatts slst = do
     let subs = mapMaybe (\s -> lookup s ipatts) subis
         n = sum (map snd subs)
     return (top^._1,n)
+
+
+constructTopPatterns :: [(ArgPattern Voice GRel,Int)] -> [(ArgPattern () GRel,Int)]
+constructTopPatterns insts = 
+  let ipattstats = (zip [1..] . mergePatterns) insts
+      supersub = listOfSupersetSubset . patternGraph (patternRelation `on` (^._1)) $ ipattstats
+  in sortBy (flip compare `on` snd) (topPatterns ipattstats supersub)
+

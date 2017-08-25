@@ -29,7 +29,7 @@ main = do
 
   flip mapM_ subcats $ \subcat -> do
     let pattstats0 = subcat^._2
-        pattstats = mergePatterns (subcat^._2)
+        pattstats = mergePatterns pattstats0
         ipattstats = zip [1..] pattstats
         pattgraph = patternGraph (patternRelation `on` (^._1)) ipattstats
         supersub  = listOfSupersetSubset pattgraph
