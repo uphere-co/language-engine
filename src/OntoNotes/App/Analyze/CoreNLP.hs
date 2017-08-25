@@ -82,3 +82,15 @@ runParser pp txt = do
       -- return (Just sentswithtmx)
 
   return (sents,sentidxs,sentitems,tokss,parsetrees,deps,mtmx)
+
+
+preRunParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+          -> Text
+          -> IO ( [Sentence] )
+preRunParser pp txt = do
+  doc <- getDoc txt
+  ann <- annotate pp doc
+  pdoc <- getProtoDoc ann
+  let psents = toListOf (D.sentence . traverse) pdoc
+      sents = map (convertPsent) psents
+  return sents
