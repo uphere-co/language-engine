@@ -25,6 +25,7 @@ library
                        -- attoparsec,
                        containers,
                        either,
+                       lens,
                        mtl,
                        text,
                        transformers,

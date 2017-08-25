@@ -1,4 +1,5 @@
 { pkgs ? import <nixpkgs> {}
+, HCoreNLP              ? <HCoreNLP>
 , uphere-nix-overlay ? <uphere-nix-overlay>
 , textview ? <textview>
 }:
