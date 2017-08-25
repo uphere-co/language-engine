@@ -71,13 +71,19 @@ convertS = (patt_arg0 %~ fmap mergeS)
          . (patt_arg3 %~ fmap mergeS)
          . (patt_arg4 %~ fmap mergeS)
 
+convertSBAR :: ArgPattern () Text -> ArgPattern () Text
+convertSBAR patt =
+  let arglst = [patt^.patt_arg0,patt^.patt_arg1,patt^.patt_arg2,patt^.patt_arg3,patt^.patt_arg4]
+  in if | not (Just "SBAR-SBJ" `elem` arglst) && patt^.patt_arg0 == Just "SBAR" -> (patt_arg0 .~ Just "SBAR-SBJ") patt
+        | not (Just "SBAR-1" `elem` arglst) && patt^.patt_arg1 == Just "SBAR"   -> (patt_arg1 .~ Just "SBAR-1") patt
+        | otherwise                                                         -> patt
 
 
 mergePatterns :: [(ArgPattern Voice Text,Int)] -> [(ArgPattern () Text,Int)]
 mergePatterns pattstats0 =
   let pgrps = groupBy ((==) `on` (^._1))
             . sortBy (compare `on` (^._1))
-            . map (_1 %~ convertNP . convertS . convertPassive)
+            . map (_1 %~ convertSBAR . convertNP . convertS . convertPassive)
             $ pattstats0
   in sortBy (flip compare `on` (^._2)) . map (\xs -> (fst (head xs), sum (map snd xs))) $ pgrps
 
