@@ -29,6 +29,7 @@ library
                        hashable,
                        lens,
                        text,
+                       unordered-containers,
                        --
                        nlp-types
   hs-source-dirs:      src

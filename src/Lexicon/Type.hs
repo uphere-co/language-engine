@@ -28,12 +28,29 @@ type PBArg = Text
 type FNFrameElement = Text
 
 
+-- | Grammatical relation argument type (temporary type for "pseudo"-theta-role)
+--
+data GArg = GASBJ | GA1 | GA2
+          deriving (Show,Eq,Ord,Generic)
+
+instance Hashable GArg                   
+
+-- | Grammatical relation
+--
+data GRel = GR_NP    (Maybe GArg)
+          | GR_S     (Maybe GArg)
+          | GR_SBAR  (Maybe GArg)
+          | GR_PP    (Maybe Text)
+          | GR_ADVP  (Maybe Text)
+          | GR_ADJP
+          | GR_X     Text
+          deriving (Show,Eq,Ord,Generic)
+
+instance Hashable GRel                   
 
 -----------------------------
 -- ArgTable and ArgPattern --
 -----------------------------
-
-
 
 -- | ArgTable node that allows simple or linked node
 --
@@ -41,7 +58,6 @@ data ATNode a = SimpleNode { _atnode_orig :: a }
               | LinkedNode { _atnode_orig  :: a
                            , _atnode_link  :: a }
               deriving (Show,Functor,Foldable,Traversable)
-
 
 
 -- now i can experiment flexibly with linked node
@@ -84,7 +100,7 @@ instance (Hashable p) => Hashable (ArgPattern p Text)
 
 type RoleInstance = (SenseID,[(PBArg,FNFrameElement)])
 
-type RolePattInstance v = (SenseID,[(ArgPattern v Text,Int)])
+type RolePattInstance v = (SenseID,[(ArgPattern v GRel,Int)])
 
 
 
