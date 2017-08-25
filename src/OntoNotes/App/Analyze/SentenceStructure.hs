@@ -67,7 +67,11 @@ mergeTagPos xs ys =
 
   
 
-getSenses :: Text -> HashMap Text Inventory -> HashMap (Text,Text) Int -> FrameDB -> HashMap Text [(Text,Text)]
+getSenses :: Text
+          -> HashMap Text Inventory
+          -> HashMap (Text,Text) Int
+          -> FrameDB
+          -> HashMap Text [(Text,Text)]
           -> [(Text,Text,Int,Text,Text,Text,Text)]
 getSenses lma sensemap sensestat framedb ontomap = do
   let lmav = lma <> "-v"

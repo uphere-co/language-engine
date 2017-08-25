@@ -20,7 +20,7 @@ import           Text.ProtocolBuffers.Basic              (Utf8)
 import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
 import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,token_pos)
 import           Lexicon.Format                          (formatArgPatt,formatArgPattStat,formatRoleMap)
-import           Lexicon.Merge                           (mergePatterns,patternGraph,patternRelation
+import           Lexicon.Merge                           (constructTopPatterns,mergePatterns,patternGraph,patternRelation
                                                          ,listOfSupersetSubset,topPatterns)
 import           Lexicon.Query                           (cutHistogram)
 import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
@@ -93,15 +93,8 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
                 let msubcat =find ((== sid) . (^._1)) subcats
                 let margpattstr = do
                       subcat <- msubcat
-                      let ipattstats = zip [1..] . mergePatterns $ (subcat^._2)                      
-                          supersub = listOfSupersetSubset . patternGraph (patternRelation `on` (^._1)) $ ipattstats
-                          toppatts = sortBy (flip compare `on` snd) (topPatterns ipattstats supersub)
-                          toppatts_cut = cutHistogram 0.9 toppatts
+                      let toppatts_cut = cutHistogram 0.9 (constructTopPatterns (subcat^._2))
                       return (formatArgPattStat toppatts_cut)
-                      -- (sid,insts) <- msubcat
-                      -- let subcat = (sid,cutHistogram 0.9 insts)
-                      -- return $ intercalate "\n" $ flip map (subcat^._2) $ \(patt,n) ->
-                      --           printf "%s     #count: %5d" (formatArgPatt "voice" patt) (n :: Int)
                 return (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr)
             )
        ++ "\n--------------------------------------------------------------------------------------------------\n"
