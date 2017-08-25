@@ -160,7 +160,7 @@ sentStructure config sensemap sensestat framedb ontomap emTagger rolemap subcats
                                                        fmap (^._1) (chooseFrame senses)
                                     in [ formatVPwithPAWS clausetr mcpstr vp
                                        , T.pack (printf "Verb: %-20s" lma)
-                                       , T.pack $ (formatSenses False rolemap subcats lma senses mrmmtoppatts)
+                                       , T.pack $ (formatSenses False senses mrmmtoppatts)
                                        ]
                    in (subline1 ++ if config^.Analyze.showDetail then subline1_1 else [], subline2)
       line3 = concatMap f mlines

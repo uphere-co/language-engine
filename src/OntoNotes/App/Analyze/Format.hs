@@ -99,31 +99,26 @@ formatSense (onfninst,num) =
 
 
 
+formatFrame t = 
+  printf " %-20s | %-40s      ------      %-30s\n"
+    (fromMaybe "" (t ^? _Just . _1 . onfn_frame . to (either formatExFrame (^.tf_frameID))))
+    (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_feCore))
+    (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_fePeri))
+
 
 formatSenses :: Bool  -- ^ doesShowOtherSense
-             -> [RoleInstance]
-             -> [RolePattInstance Voice]
-             -> Text
              -> [(ONSenseFrameNetInstance,Int)]
              -> Maybe (RoleInstance, Maybe [(ArgPattern () GRel,Int)])
              -> String
-formatSenses doesShowOtherSense rolemap subcats lma onfnlst mrmmtoppatts
+formatSenses doesShowOtherSense onfnlst mrmmtoppatts
   = let t = chooseFrame onfnlst
     in "Top frame: "
-       ++ printf " %-20s | %-40s      ------      %-30s\n"
-            (fromMaybe "" (t ^? _Just . _1 . onfn_frame . to (either formatExFrame (^.tf_frameID))))
-            (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_feCore))
-            (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_fePeri))
+       ++ formatFrame t 
        ++ "--------------------------------------------------------------------------------------------------\n"
        ++ flip (maybe "") mrmmtoppatts
             (\(rm,mtoppatts) ->
                let margpattstr = fmap formatArgPattStat mtoppatts
                in (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr))
-
-            -- inst <- t^?_Just._1
-            -- (rm,mtoppatts) <- getTopPatternsFromONFNInst rolemap subcats inst
-            -- let 
-            --  )
        ++ "\n--------------------------------------------------------------------------------------------------\n"
        ++ if doesShowOtherSense
           then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense onfnlst)
