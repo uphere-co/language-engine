@@ -17,12 +17,12 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import           Text.Printf
 --
-import           CoreNLP.Simple.Type.Simplified
 import           Data.Bitree
 import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated      as N
+import 	       	 NLP.Type.CoreNLP
 import           NLP.Type.UniversalDependencies2.Syntax
 --
 import           NLP.Syntax.Clause

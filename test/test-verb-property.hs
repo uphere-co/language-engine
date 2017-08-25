@@ -14,14 +14,13 @@ import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 --
-import           CoreNLP.Simple.Type.Simplified
---
 import           Data.Bitree                       (getRoot)
 import           Data.BitreeZipper                 (current)
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
+import 	       	 NLP.Type.CoreNLP
 import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
 --
