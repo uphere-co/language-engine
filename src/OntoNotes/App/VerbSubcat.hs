@@ -32,6 +32,7 @@ import           Text.Printf
 import           Data.Attribute
 import           Data.Bitree                        (getRoot)
 import           Data.BitreeZipper
+import           Lexicon.Format                     (formatArgPatt, formatRoleMap)
 import           Lexicon.Type
 import           Lexicon.Query
 import           NLP.Printer.PennTreebankII
@@ -51,9 +52,8 @@ import           PropBank.Type.Prop
 import           OntoNotes.App.Load           hiding (Config)
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
-import           OntoNotes.Format
+-- import           OntoNotes.Format
 import           OntoNotes.Parser.Sense
--- import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.Sense
 import           OntoNotes.Type.SenseInventory
 --
@@ -274,7 +274,7 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
           let margmap = getArgMapFromRoleMap (lma,sense_num) rolemap 
           traverse_ (putStrLn . formatArgMap True) margmap
           forM_ statlst $ \(patt,n :: Int) -> do
-            let str1 = formatArgPatt patt :: String
+            let str1 = formatArgPatt "voice" patt :: String
             putStrLn (printf "%s     #count: %5d" str1 n)
         else do
           forM_ statlst $ \(patt, n :: Int) -> do

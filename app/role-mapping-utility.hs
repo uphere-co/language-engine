@@ -41,9 +41,10 @@ import           Text.Taggy.Lens
 import           FrameNet.Query.Frame             (frameDB,loadFrameData)
 import           FrameNet.Type.Common             (CoreType(..),fr_frame)
 import           FrameNet.Type.Frame
+import           Lexicon.Format                   (formatArgPatt,formatRoleMap)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query
-import           Lexicon.Type                     (POSVorN(..))
+import           Lexicon.Type                     (ArgPattern(..),POSVorN(..))
 import           NLP.Syntax.Type
 import           PropBank.Query                   (constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB
@@ -54,13 +55,9 @@ import           VerbNet.Type.SemLink
 import           WordNet.Format
 import           WordNet.Query
 import           WordNet.Type
--- import           WordNet.Type.POS                 
 --
 import           OntoNotes.App.Load
 import           OntoNotes.Corpus.Load
-import           OntoNotes.Format
--- import           OntoNotes.Mapping.FrameNet
--- import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.SenseInventory
 
 
@@ -133,8 +130,8 @@ formatProblem (i,(lma,osense,frame,pbs,subcat)) =
       sensestr = printf "definition: %s\n%s" (osense^.sense_name) (osense^.sense_examples)      
       fes = numberedFEs frame
       framestr = printf "%s" (frame^.frame_name) ++ "\n" ++ formatFEs fes
-      argpattstr = intercalate "\n" $ flip map (Prelude.take 10 (subcat^._2)) $ \(patt,n) ->
-                     printf "%s     #count: %5d" (formatArgPatt patt) (n :: Int)
+      argpattstr = intercalate "\n" $ flip map (Prelude.take 10 (subcat^._2)) $ \(patt :: ArgPattern Voice Text,n) ->
+                     printf "%s     #count: %5d" (formatArgPatt "voice" patt) (n :: Int)
       pbinfos = map (\pb -> (pb^.roleset_id,pb^.roleset_name,extractPBExamples pb,extractPBRoles pb)) pbs
       pbinfostr = intercalate "\n" $ map formatPBInfos pbinfos
   in (headstr,sensestr,framestr,argpattstr,pbinfostr)
@@ -155,8 +152,7 @@ showProblem prob = do
   putStrLn "---------------------------------------------------------------------------------------------------------\n"
 
 
-reformatInput o txt = let ws = T.words txt
-                      in T.intercalate " " $ map f ws
+reformatInput o = T.intercalate " " . map f . T.words
   where fes0 = numberedFEs (o^._2._3) 
         fes = fes0^._1 ++ fes0^._2 ++ fes0^._3
 

@@ -19,6 +19,7 @@ import           Text.ProtocolBuffers.Basic              (Utf8)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
 import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,token_pos)
+import           Lexicon.Format                          (formatArgPatt,formatRoleMap)
 import           Lexicon.Query                           (cutHistogram)
 import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
                                                          ,type RolePattInstance,POSVorN(..))
@@ -33,7 +34,6 @@ import           OntoNotes.App.Util                      (CharIdx,TokIdx,TagPos(
                                                          ,addTag,convertTagPosFromTokenToChar
                                                          ,underlineText)
 import           OntoNotes.App.WikiEL                    (linkedMentionToTagPos)
-import           OntoNotes.Format                        (formatArgPatt,formatRoleMap)
 
 
 
@@ -92,8 +92,8 @@ formatSenses doesShowOtherSense rolemap subcats lma lst
                 let margpattstr = do
                       (sid,insts) <- msubcat
                       let subcat = (sid,cutHistogram 0.9 insts)
-                      return $ intercalate "\n" $ flip map {- (Prelude.take 5 (subcat^._2)) -} (subcat^._2) $ \(patt,n) ->
-                                 printf "%s     #count: %5d" (formatArgPatt patt) (n :: Int)
+                      return $ intercalate "\n" $ flip map (subcat^._2) $ \(patt,n) ->
+                                 printf "%s     #count: %5d" (formatArgPatt "voice" patt) (n :: Int)
                 return (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr)
             )
        ++ "\n--------------------------------------------------------------------------------------------------\n"

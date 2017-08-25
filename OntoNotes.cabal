@@ -28,11 +28,8 @@ library
                        OntoNotes.App.WikiEL
                        OntoNotes.Corpus.Load
                        OntoNotes.Corpus.PropBank
-                       OntoNotes.Format
-                       -- OntoNotes.Mapping.FrameNet
                        OntoNotes.Parser.Sense
                        OntoNotes.Parser.SenseInventory
-                       -- OntoNotes.Type.ArgTable
                        OntoNotes.Type.Sense
                        OntoNotes.Type.SenseInventory
   -- other-modules:

@@ -33,7 +33,6 @@ import           WordNet.Query
 --
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Parser.SenseInventory
--- import           OntoNotes.Type.ArgTable
 import           OntoNotes.Type.SenseInventory
 
 
