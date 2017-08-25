@@ -22,13 +22,13 @@ import           Text.PrettyPrint.Boxes                    (render)
 import           Text.Printf                               (printf)
 --
 import           CoreNLP.Simple.Convert                    (mkLemmaMap,mkLemmaMap',sentToNER')
-import           CoreNLP.Simple.Type.Simplified            (NERSentence(..),Token,Dependency,Sentence,SentenceIndex
-                                                           ,sentenceNER,sentenceWord,sentenceToken,sentenceLemma)
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
 import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
 import           Lexicon.Type                              (ArgPattern(..),RoleInstance,RolePattInstance)
 import           NLP.Printer.PennTreebankII                (formatIndexTokensFromTree)
+import 	       	 NLP.Type.CoreNLP                          (NERSentence(..),Token,Dependency,Sentence,SentenceIndex
+                                                           ,sentenceNER,sentenceWord,sentenceToken,sentenceLemma)
 import           NLP.Type.PennTreebankII                   (PennTree)
 import           NLP.Syntax.Clause                         (clauseStructure,constructCP
                                                            ,identifyCPHierarchy

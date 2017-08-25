@@ -23,8 +23,8 @@ import           System.Directory.Tree
 import           System.FilePath
 import           System.IO
 --
-import           CoreNLP.Simple.Type.Simplified
 import           NLP.Parser.PennTreebankII
+import 	       	 NLP.Type.CoreNLP
 import           NLP.Type.PennTreebankII
 import           PropBank.Match
 import           PropBank.Parser.Prop

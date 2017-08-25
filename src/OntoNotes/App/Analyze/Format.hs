@@ -18,12 +18,12 @@ import           Text.Printf                             (printf)
 import           Text.ProtocolBuffers.Basic              (Utf8)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
-import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,token_pos)
 import           Lexicon.Format                          (formatArgPatt,formatRoleMap)
 import           Lexicon.Query                           (cutHistogram)
 import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
                                                          ,type RolePattInstance,POSVorN(..))
 import           NLP.Syntax.Type                         (Voice)                 
+import 	       	 NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import qualified WikiEL                        as WEL
 import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID,_emuid)
 import qualified WikiEL.EntityLinking          as EL
