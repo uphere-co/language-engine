@@ -25,7 +25,7 @@ import           Lexicon.Merge                           (constructTopPatterns,m
                                                          ,listOfSupersetSubset,topPatterns)
 import           Lexicon.Query                           (cutHistogram)
 import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
-                                                         ,type RolePattInstance,POSVorN(..))
+                                                         ,type RolePattInstance,POSVorN(..),GRel(..))
 import           NLP.Syntax.Type                         (Voice)                 
 import qualified WikiEL                        as WEL
 import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID,_emuid)
@@ -44,6 +44,19 @@ import           OntoNotes.App.Analyze.Type              (ExceptionalFrame(..),O
                                                          ,onfn_senseID,onfn_definition,onfn_frame
                                                          ,tf_frameID,tf_feCore,tf_fePeri
                                                          )
+
+
+
+getTopPatternsFromONFNInst :: [RoleInstance]
+                           -> [RolePattInstance Voice]
+                           -> ONSenseFrameNetInstance
+                           -> Maybe (RoleInstance, Maybe [(ArgPattern () GRel,Int)])
+getTopPatternsFromONFNInst rolemap subcats inst = do
+  let sid = inst^.onfn_senseID
+  rm <- find (\rm -> rm^._1 == sid) rolemap
+  let msubcat = find ((== sid) . (^._1)) subcats
+      mtoppatts_cut = cutHistogram 0.9 . constructTopPatterns . (^._2) <$> msubcat
+  return (rm,mtoppatts_cut)
 
 
 
@@ -86,22 +99,15 @@ formatSense (onfninst,num) =
 
 
 
-getTopPatternFromONFNInst rolemap subcats inst = do
-  let sid = inst^.onfn_senseID
-  rm <- find (\rm -> rm^._1 == sid) rolemap
-  let msubcat = find ((== sid) . (^._1)) subcats
-      mtoppatts_cut = cutHistogram 0.9 . constructTopPatterns . (^._2) <$> msubcat
-  return (rm,mtoppatts_cut)
-
-
 
 formatSenses :: Bool  -- ^ doesShowOtherSense
              -> [RoleInstance]
              -> [RolePattInstance Voice]
              -> Text
              -> [(ONSenseFrameNetInstance,Int)]
+             -> Maybe (RoleInstance, Maybe [(ArgPattern () GRel,Int)])
              -> String
-formatSenses doesShowOtherSense rolemap subcats lma onfnlst
+formatSenses doesShowOtherSense rolemap subcats lma onfnlst mrmmtoppatts
   = let t = chooseFrame onfnlst
     in "Top frame: "
        ++ printf " %-20s | %-40s      ------      %-30s\n"
@@ -109,21 +115,15 @@ formatSenses doesShowOtherSense rolemap subcats lma onfnlst
             (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_feCore))
             (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_fePeri))
        ++ "--------------------------------------------------------------------------------------------------\n"
-       ++ fromMaybe "" (do
-            inst <- t^?_Just._1
-            (rm,mtoppatts) <- getTopPatternFromONFNInst rolemap subcats inst
-            let margpattstr = fmap formatArgPattStat mtoppatts
-            return (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr)
-          )
-            {- (do sid <- t^?_Just._1.onfn_senseID
-                rm <- find (\rm -> rm^._1 == sid) rolemap
-                let msubcat =find ((== sid) . (^._1)) subcats
-                let margpattstr = do
-                      subcat <- msubcat
-                      let toppatts_cut = cutHistogram 0.9 (constructTopPatterns (subcat^._2))
-                      return (formatArgPattStat toppatts_cut)
-                return (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr)
-            )-}
+       ++ flip (maybe "") mrmmtoppatts
+            (\(rm,mtoppatts) ->
+               let margpattstr = fmap formatArgPattStat mtoppatts
+               in (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr))
+
+            -- inst <- t^?_Just._1
+            -- (rm,mtoppatts) <- getTopPatternsFromONFNInst rolemap subcats inst
+            -- let 
+            --  )
        ++ "\n--------------------------------------------------------------------------------------------------\n"
        ++ if doesShowOtherSense
           then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense onfnlst)

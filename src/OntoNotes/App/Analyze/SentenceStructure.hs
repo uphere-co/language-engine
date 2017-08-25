@@ -4,7 +4,7 @@
 
 module OntoNotes.App.Analyze.SentenceStructure where
 
-import           Control.Lens                              ((^.),(^..),to)
+import           Control.Lens                              ((^.),(^..),_1,to)
 import           Data.Bifunctor                            (bimap)
 import           Data.Foldable                             (forM_)
 import           Data.Function                             (on)
@@ -55,18 +55,19 @@ import           OntoNotes.App.Analyze.CoreNLP             (runParser)
 import           OntoNotes.App.Analyze.Format              (formatSenses,formatTimex
                                                            ,formatTagged
                                                            ,showTimex,showFormatTimex'
+                                                           ,getTopPatternsFromONFNInst
                                                            )
-import           OntoNotes.App.Analyze.Type                
+import           OntoNotes.App.Analyze.Type
 
 
 mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]
 mergeTagPos xs ys =
-  let zs = map (fmap Left) xs ++ map (fmap Right) ys 
+  let zs = map (fmap Left) xs ++ map (fmap Right) ys
       idx (TagPos (i,_,_)) = i
   in sortBy (compare `on` idx) zs
 
 
-  
+
 
 getSenses :: Text
           -> HashMap Text Inventory
@@ -102,7 +103,7 @@ getSenses lma sensemap sensestat framedb ontomap = do
 
 
 -- | Finding the structure of the sentence and formatting it.
--- 
+--
 sentStructure :: Analyze.Config
               -> HashMap Text Inventory
               -> HashMap (Text, Text) Int
@@ -127,7 +128,7 @@ sentStructure config sensemap sensestat framedb ontomap emTagger rolemap subcats
       linked_mentions_resolved = getWikiResolvedMentions loaded emTagger
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
-      mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs 
+      mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
       line1 = [ "==================================================================================================" ]
       line2 = [ "-- Time and NER tagged text ----------------------------------------------------------------------"
               , T.pack (render (formatTagged mtokenss sentitems mergedtags))
@@ -141,22 +142,25 @@ sentStructure config sensemap sensestat framedb ontomap emTagger rolemap subcats
                        vps = verbPropertyFromPennTree lemmamap ptr
                        clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
                        mcpstr = identifyCPHierarchy vps
+
                        subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                                   , formatIndexTokensFromTree 0 ptr
-                                  ] 
+                                  ]
 
                        subline1_1 = [ "--------------------------------------------------------------------------------------------------"
                                     , formatClauseStructure vps clausetr
                                     , "================================================================================================="
                                     ]
-                                    
+
                        subline2 = flip map (vps^..traverse) $ \vp ->
                                     let mcp = constructCP vp
                                         lma = vp^.vp_lemma.to unLemma
                                         senses = getSenses lma sensemap sensestat framedb ontomap
+                                        mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<<
+                                                       fmap (^._1) (chooseFrame senses)
                                     in [ formatVPwithPAWS clausetr mcpstr vp
                                        , T.pack (printf "Verb: %-20s" lma)
-                                       , T.pack $ (formatSenses False rolemap subcats lma) senses
+                                       , T.pack $ (formatSenses False rolemap subcats lma senses mrmmtoppatts)
                                        ]
                    in (subline1 ++ if config^.Analyze.showDetail then subline1_1 else [], subline2)
       line3 = concatMap f mlines
@@ -164,6 +168,4 @@ sentStructure config sensemap sensestat framedb ontomap emTagger rolemap subcats
                         Nothing       -> [""]
                         Just (xs,yss) -> xs ++ (concat yss)
 
-  in line1 ++ line2 ++ line3 
-
-
+  in line1 ++ line2 ++ line3
