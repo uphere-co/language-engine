@@ -270,7 +270,7 @@ showMatchedFrame (mcpstr,vstr,paws) = do
 
 matchSO rolemap (dp,verbp,paws) (patt,num) =
   case verbp^.vp_verbProperty.vp_voice of
-    Active -> ((patt,num), catMaybes [matchSubject rolemap dp patt, matchObject1 rolemap verbp patt])
+    Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt)
     Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap paws patt,matchThemeForPassive rolemap dp patt])
 
 
@@ -290,21 +290,23 @@ matchAgentForPassive rolemap paws patt = do
     ppcheck _                    = False
 
 matchThemeForPassive rolemap dp patt = do
-  (p,GR_NP (Just GA1)) <- object1Position patt
+  (p,GR_NP (Just GA1)) <- matchGRelArg GA1 patt
   (,dp) <$> lookup p rolemap
 
 
-matchObject1 rolemap verbp patt = do
-  obj <- listToMaybe (verbp^.vp_complements)
-  Left (_,node) <- Just (getRoot (current obj))
-  let ctag = chunkTag node
-  (p,a) <- object1Position patt
+matchObjects rolemap verbp patt = do
+  (garg,obj) <- zip [GA1,GA2] (verbp^.vp_complements)
+  ctag <- case getRoot (current obj) of
+            Left (_,node) -> [chunkTag node]
+            _             -> []
+  (p,a) <- maybeToList (matchGRelArg garg patt)
   case ctag of
-    NP   -> guard (a == GR_NP   (Just GA1))
-    S    -> guard (a == GR_SBAR (Just GA1))
-    SBAR -> guard (a == GR_SBAR (Just GA1))
-    _    -> Nothing
-  (,obj) <$> lookup p rolemap
+    NP   -> guard (a == GR_NP   (Just garg))
+    S    -> guard (a == GR_SBAR (Just garg))
+    SBAR -> guard (a == GR_SBAR (Just garg))
+    _    -> []
+  fe <- maybeToList (lookup p rolemap)
+  return (fe,obj)
 
 
 
@@ -317,4 +319,4 @@ matchGRelArg grel patt = check patt_arg0 "arg0" <|>
 
 subjectPosition = matchGRelArg GASBJ
 
-object1Position = matchGRelArg GA1
+-- object1Position = matchGRelArg GA1
