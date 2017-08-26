@@ -221,7 +221,25 @@ formatVerbStructure clausetr mcpstr (VerbStructure vp lma senses mrmmtoppatts) =
 
 
 
-mytest dstr = do
+matchFrame mcpstr vstr cp = do
+  let verbp = cp^.cp_TP.tp_VP
+      mrmmtoppatts = vstr^.vs_mrmmtoppatts        
+      mdp_resolved = resolveDP mcpstr cp
+  (rm,mtoppatts) <- mrmmtoppatts
+  let rolemap = rm^._2
+  frame <- lookup "frame" rolemap
+  let selected = do
+        toppattstats <- mtoppatts
+        dp_resolved <- mdp_resolved
+        let matched = map (matchSO rolemap (dp_resolved,verbp)) toppattstats
+            cmpmatch = flip compare `on` lengthOf (_2.folded)
+            cmpstat  = flip compare `on` (^._1._2)
+            eq       = (==) `on` lengthOf (_2.folded)
+        listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy cmpmatch $ matched
+  return (frame,selected)
+  
+
+showMatchedFrames dstr = do
   let xs    = do msstr <- dstr^.ds_sentStructures
                  sstr <- maybeToList msstr
                  let clausetr = sstr^.ss_clausetr
@@ -231,42 +249,19 @@ mytest dstr = do
                  paws <- maybeToList (findPAWS clausetr vp)
                  return (clausetr,mcpstr,vstr,paws)
   flip mapM_ xs $ \x -> do
-    -- print (vstr^.vs_lma)
-    -- print (vstr^.vs_senses)
-    -- print (vstr^.vs_mrmmtoppatts)
-    -- print (length vstrs)
-    let vstr = x^._3
+    let mcpstr = x^._2
+        vstr = x^._3
         paws = x^._4
-
+        cp = paws^.pa_CP
         vp =vstr^.vs_vp
-        mrmmtoppatts = vstr^.vs_mrmmtoppatts
-
-    print (x^._3.vs_lma)
-    -- putStrLn (formatPAWS (x^._2) paws)
-    let cp = paws^.pa_CP
-        verbp = cp^.cp_TP.tp_VP
-        mdp_resolved = resolveDP (x^._2) cp
         gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
-        mframedp = do (rm,mtoppatts) <- mrmmtoppatts
-                      let rolemap = rm^._2
-                      frame <- lookup "frame" rolemap
-                      toppattstats <- mtoppatts
-                      dp_resolved <- mdp_resolved
-                      return (frame,rolemap,toppattstats,dp_resolved)
-    flip traverse_ mframedp $ \(frame,rolemap,toppattstats,dp_resolved) -> do
-      -- let toppatts = toppattstats^..traverse._1
-      T.IO.putStrLn "---------------------------"
-      T.IO.putStrLn frame
-      let matched = map (matchSO rolemap (dp_resolved,verbp)) toppattstats
-          selected = listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy cmpmatch $ matched
-            where cmpmatch = flip compare `on` lengthOf (_2.folded)
-                  cmpstat  = flip compare `on` (^._1._2)
-                  eq  = (==) `on` lengthOf (_2.folded)
-
-
-      flip traverse_ selected $ \((patt,num),felst) ->
-        putStrLn (printf "%100s" (formatArgPatt "voice" patt) ++
-                  intercalate ", " (map (\(fe,z) -> printf "%s: %s" fe (gettokens z)) felst))
+    T.IO.putStrLn "---------------------------"
+    putStrLn ("predicate: " <> maybe "unidentified CP" show (cpRange cp)) 
+    T.IO.putStrLn ("Verb: " <> (x^._3.vs_lma))
+    flip traverse_ (matchFrame mcpstr vstr cp) $ \(frame,mselected) -> do
+      T.IO.putStrLn ("Frame: " <> frame)
+      flip traverse_ mselected $ \((patt,num),felst) -> do
+        mapM_ putStrLn . map (\(fe,z) -> printf "%-15s: %-7s %s" fe (show (getRange (current z))) (gettokens z)) $ felst
 
 
 
