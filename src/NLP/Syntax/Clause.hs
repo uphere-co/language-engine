@@ -23,6 +23,7 @@ import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.BitreeZipper.Util
 import           Data.Range                             (isInsideR,rangeTree)
 import           Lexicon.Type                           (ATNode(..),chooseATNode)
 import           NLP.Type.PennTreebankII

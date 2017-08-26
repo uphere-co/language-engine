@@ -28,6 +28,7 @@ import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmati
 import           Data.Attribute
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.BitreeZipper.Util
 import           NLP.Type.PennTreebankII
 --
 import           NLP.Syntax.Type
