@@ -84,3 +84,5 @@ child1 :: BitreeZipper c t -> Maybe (BitreeZipper c t)
 child1 (TZ (PL _) _) = Nothing
 child1 (TZ (PN c (x:xs)) ys) = Just (TZ x ((TC c [] xs):ys))
 
+-- root :: BitreeZipper c t -> BitreeZipper c t
+-- root 
