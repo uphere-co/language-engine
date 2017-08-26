@@ -33,8 +33,6 @@ import           NLP.Type.PennTreebankII                   (PennTree)
 import           NLP.Syntax.Clause                         (clauseStructure,constructCP
                                                            ,identifyCPHierarchy
                                                            )
-import           NLP.Syntax.Format                         (formatCP,formatVPwithPAWS
-                                                           ,formatClauseStructure,showClauseStructure)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (BitreeZipperICP,VerbProperty(..),Voice,vp_lemma)
 import qualified NLP.Type.NamedEntity              as N
@@ -110,7 +108,7 @@ getTopPatternsFromSensesAndVP rolemap subcats senses vp =
 
 -- | Finding the structure of the sentence and formatting it.
 --
-{- 
+
 docStructure :: AnalyzePredata
              -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
              -> ( [Sentence]
@@ -121,9 +119,7 @@ docStructure :: AnalyzePredata
                 , [Dependency]
                 , Maybe [TagPos TokIdx (Maybe Text)]
                 )
-             -> [Text]
-
--}
+             -> DocStructure
 docStructure apredata emTagger loaded =
   let (sents,sentidxs,sentitems,_tokss,mptrs,deps,mtmxs) = loaded
       lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
@@ -133,7 +129,9 @@ docStructure apredata emTagger loaded =
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
       sentStructures = map (sentStructure apredata) (zip3 ([0..]::[Int]) lmass mptrs)
-  in (mtokenss,sentitems,mergedtags,sentStructures)
+  in DocStructure mtokenss sentitems mergedtags sentStructures
+
+
 
 sentStructure :: AnalyzePredata -> (Int,[Lemma],Maybe PennTree) -> Maybe SentStructure
 sentStructure apredata (i,lmas,mptr) =
@@ -159,36 +157,3 @@ verbStructure apredata vp =
       senses = getSenses lma sensemap sensestat framedb ontomap
       mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<< fmap (^._1) (chooseFrame senses)
   in VerbStructure vp lma senses mrmmtoppatts
-
-
-formatDocStructure showdetail (mtokenss,sentitems,mergedtags,sstrs) =
-  let line1 = [ "=================================================================================================="
-              , "-- Time and NER tagged text ----------------------------------------------------------------------"
-              , T.pack (render (formatTagged mtokenss sentitems mergedtags))
-              , "--------------------------------------------------------------------------------------------------"
-              , "-- Sentence analysis -----------------------------------------------------------------------------"
-              , "--------------------------------------------------------------------------------------------------" ]
-      line3 = concatMap (maybe [""] (formatSentStructure showdetail)) sstrs
-
-  in line1  ++ line3
-
-
-formatSentStructure showdetail (SentStructure i ptr vps clausetr mcpstr vstrs) =
-   let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
-                  , formatIndexTokensFromTree 0 ptr
-                  ]
-       subline1_1 = [ "--------------------------------------------------------------------------------------------------"
-                    , formatClauseStructure vps clausetr
-                    , "================================================================================================="
-                    ]
-       subline2 = map (formatVerbStructure clausetr mcpstr) vstrs
-
-
-   in subline1 ++ (if showdetail then subline1_1 else []) ++ concat subline2
-
-
-formatVerbStructure clausetr mcpstr (VerbStructure vp lma senses mrmmtoppatts) =
-  [ formatVPwithPAWS clausetr mcpstr vp
-  , T.pack (printf "Verb: %-20s" lma)
-  , T.pack $ (formatSenses False senses mrmmtoppatts)
-  ]

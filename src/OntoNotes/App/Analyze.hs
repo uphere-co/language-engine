@@ -42,7 +42,8 @@ import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 --
 import qualified OntoNotes.App.Analyze.Config as Analyze
 import           OntoNotes.App.Analyze.CoreNLP           (runParser)
-import           OntoNotes.App.Analyze.SentenceStructure (docStructure,formatDocStructure)
+import           OntoNotes.App.Analyze.Format            (formatDocStructure)
+import           OntoNotes.App.Analyze.SentenceStructure (docStructure)
 import           OntoNotes.App.Analyze.Type
 
 

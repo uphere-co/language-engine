@@ -12,13 +12,17 @@ import           Data.Text                     (Text)
 --
 import           Data.Bitree                   (Bitree)
 import           Data.Range                    (Range)
+import           CoreNLP.Simple.Type.Simplified (Token)
 import           FrameNet.Query.Frame          (FrameDB)
 import           Lexicon.Type                  (ArgPattern,GRel,RoleInstance,RolePattInstance,SenseID)
 import           NLP.Syntax.Type               (BitreeZipperICP,ClauseTree,CP,VerbProperty(..))
 import           NLP.Type.PennTreebankII       (Lemma,PennTree)
 import           NLP.Type.SyntaxProperty       (Voice)
+import           WikiEL.EntityLinking          (EntityMention)
 --
+import           OntoNotes.App.Util            (CharIdx,SentItem,TagPos,TokIdx)
 import           OntoNotes.Type.SenseInventory (Inventory)
+--
 
 
 data ExceptionalFrame = FrameCopula  | FrameIdiom | FrameLightVerb | FrameNone
@@ -31,9 +35,9 @@ data TextifiedFrame = TF { _tf_frameID :: Text
                          }
                     deriving (Show,Eq,Ord)
 
-makeLenses ''TextifiedFrame                             
+makeLenses ''TextifiedFrame
 
-                           
+
 data ONSenseFrameNetInstance = ONFNInstance { _onfn_senseID :: SenseID
                                             , _onfn_definition :: Text
                                             , _onfn_frame :: Either ExceptionalFrame TextifiedFrame
@@ -41,7 +45,7 @@ data ONSenseFrameNetInstance = ONFNInstance { _onfn_senseID :: SenseID
                              deriving (Show,Eq,Ord)
 
 
-makeLenses ''ONSenseFrameNetInstance                                      
+makeLenses ''ONSenseFrameNetInstance
 
 
 
@@ -68,7 +72,7 @@ data VerbStructure = VerbStructure { _vs_vp           :: VerbProperty (BitreeZip
                                    , _vs_mrmmtoppatts :: Maybe (RoleInstance, Maybe [(ArgPattern () GRel, Int)])
                                    }
 
-makeLenses ''VerbStructure                     
+makeLenses ''VerbStructure
 
 data SentStructure = SentStructure { _ss_i :: Int
                                    , _ss_ptr  :: PennTree
@@ -80,12 +84,10 @@ data SentStructure = SentStructure { _ss_i :: Int
 
 makeLenses ''SentStructure
 
-{- 
-data DocStructure = DocStructure
 
+data DocStructure = DocStructure { _ds_mtokenss :: [[Maybe Token]]
+                                 , _ds_sentitems :: [SentItem CharIdx]
+                                 , _ds_mergedtags :: [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text))]
+                                 , _ds_sentStructures :: [Maybe SentStructure] }
 
-
-([[Maybe Token]], [SentItem CharIdx],[TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text))]
-  ,[Maybe (Int, PennTree, [NLP.Syntax.Type.VerbProperty (NLP.Syntax.Type.BitreeZipperICP '[Lemma])]
-          , NLP.Syntax.Type.ClauseTree, Maybe [Bitree (Range,CP) (Range,CP),                                                                                                                                                                                                                                                                                                                         [(NLP.Syntax.Type.VerbProperty
--}
+makeLenses ''DocStructure

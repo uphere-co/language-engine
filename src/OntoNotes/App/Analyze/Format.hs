@@ -14,19 +14,25 @@ import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
 import qualified Data.Text                       as T
 import qualified Data.Text.IO                    as T.IO
-import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat)
+import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat,render)
 import           Text.Printf                             (printf)
 import           Text.ProtocolBuffers.Basic              (Utf8)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
 import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,token_pos)
+import           Data.Bitree                             (Bitree)
+import           Data.Range                              (Range)
 import           Lexicon.Format                          (formatArgPatt,formatArgPattStat,formatRoleMap)
 import           Lexicon.Merge                           (constructTopPatterns,mergePatterns,patternGraph,patternRelation
                                                          ,listOfSupersetSubset,topPatterns)
 import           Lexicon.Query                           (cutHistogram)
 import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
                                                          ,type RolePattInstance,POSVorN(..),GRel(..))
-import           NLP.Syntax.Type                         (Voice)                 
+import           NLP.Syntax.Format                       (formatCP,formatVPwithPAWS
+                                                         ,formatClauseStructure,showClauseStructure)
+import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
+import           NLP.Syntax.Type                         (CP,ClauseTree)
+import           NLP.Type.SyntaxProperty                 (Voice)
 import qualified WikiEL                        as WEL
 import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID,_emuid)
 import qualified WikiEL.EntityLinking          as EL
@@ -40,6 +46,7 @@ import           OntoNotes.App.Util                      (CharIdx,TokIdx,TagPos(
 import           OntoNotes.App.WikiEL                    (linkedMentionToTagPos)
 --
 import           OntoNotes.App.Analyze.Type              (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
+                                                         ,DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,chooseFrame
                                                          ,onfn_senseID,onfn_definition,onfn_frame
                                                          ,tf_frameID,tf_feCore,tf_fePeri
@@ -99,7 +106,7 @@ formatSense (onfninst,num) =
 
 
 
-formatFrame t = 
+formatFrame t =
   printf " %-20s | %-40s      ------      %-30s\n"
     (fromMaybe "" (t ^? _Just . _1 . onfn_frame . to (either formatExFrame (^.tf_frameID))))
     (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_feCore))
@@ -113,7 +120,7 @@ formatSenses :: Bool  -- ^ doesShowOtherSense
 formatSenses doesShowOtherSense onfnlst mrmmtoppatts
   = let t = chooseFrame onfnlst
     in "Top frame: "
-       ++ formatFrame t 
+       ++ formatFrame t
        ++ "--------------------------------------------------------------------------------------------------\n"
        ++ flip (maybe "") mrmmtoppatts
             (\(rm,mtoppatts) ->
@@ -134,10 +141,10 @@ formatIndexedTimex (c,mtxt)   = printf "%3s:          %s " (T.singleton c) (from
 
 formatTaggedSentences :: (a -> Text)
                       ->  [(SentItem CharIdx,[TagPos CharIdx a])]
-                      -> Box 
+                      -> Box
 formatTaggedSentences f sents_tagged =
   let txts = concatMap (\(s,a) -> underlineText f (s^._2) (s^._3) a) sents_tagged
-  in vcat top $ map (text . T.unpack) txts 
+  in vcat top $ map (text . T.unpack) txts
 
 
 formatPreNE tag = case resolvedUID tag of
@@ -160,3 +167,39 @@ formatTagged mtokenss sentitems tlst =
       doc1 = formatTaggedSentences (either (T.pack . show . _emuid . EL._uid) (T.singleton . (^._1))) sents_tagged
       doc2 = vcat top . intersperse (text "") . map (text. either formatLinkedMention formatIndexedTimex) $ map (\(TagPos (_,_,x)) -> x) clst
   in hsep 10 left [doc1,doc2]
+
+
+
+
+formatDocStructure :: Bool -> DocStructure -> [Text]
+formatDocStructure showdetail (DocStructure mtokenss sentitems mergedtags sstrs) =
+  let line1 = [ "=================================================================================================="
+              , "-- Time and NER tagged text ----------------------------------------------------------------------"
+              , T.pack (render (formatTagged mtokenss sentitems mergedtags))
+              , "--------------------------------------------------------------------------------------------------"
+              , "-- Sentence analysis -----------------------------------------------------------------------------"
+              , "--------------------------------------------------------------------------------------------------" ]
+      line3 = concatMap (maybe [""] (formatSentStructure showdetail)) sstrs
+
+  in line1  ++ line3
+
+
+formatSentStructure :: Bool -> SentStructure -> [Text]
+formatSentStructure showdetail (SentStructure i ptr vps clausetr mcpstr vstrs) =
+   let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
+                  , formatIndexTokensFromTree 0 ptr
+                  ]
+       subline1_1 = [ "--------------------------------------------------------------------------------------------------"
+                    , formatClauseStructure vps clausetr
+                    , "================================================================================================="
+                    ]
+       subline2 = map (formatVerbStructure clausetr mcpstr) vstrs
+   in subline1 ++ (if showdetail then subline1_1 else []) ++ concat subline2
+
+
+formatVerbStructure :: ClauseTree -> Maybe [Bitree (Range,CP) (Range,CP)] -> VerbStructure -> [Text]
+formatVerbStructure clausetr mcpstr (VerbStructure vp lma senses mrmmtoppatts) =
+  [ formatVPwithPAWS clausetr mcpstr vp
+  , T.pack (printf "Verb: %-20s" lma)
+  , T.pack $ (formatSenses False senses mrmmtoppatts)
+  ]
