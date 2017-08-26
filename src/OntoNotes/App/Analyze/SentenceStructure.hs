@@ -36,7 +36,7 @@ import           NLP.Syntax.Clause                         (clauseStructure,cons
 import           NLP.Syntax.Format                         (formatCP,formatVPwithPAWS
                                                            ,formatClauseStructure,showClauseStructure)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
-import           NLP.Syntax.Type                           (Voice,vp_lemma)
+import           NLP.Syntax.Type                           (BitreeZipperICP,VerbProperty(..),Voice,vp_lemma)
 import qualified NLP.Type.NamedEntity              as N
 import           NLP.Type.PennTreebankII                   (Lemma(..),mkPennTreeIdx)
 import qualified NLP.Type.PennTreebankII.Separated as PS
@@ -105,19 +105,14 @@ getSenses lma sensemap sensestat framedb ontomap = do
 getTopPatternsFromSensesAndVP rolemap subcats senses vp =
   let mcp = constructCP vp
       mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<< fmap (^._1) (chooseFrame senses)
-  in (senses,mrmmtoppatts) 
+  in (senses,mrmmtoppatts)
 
 
 -- | Finding the structure of the sentence and formatting it.
 --
 {- 
-docStructure :: HashMap Text Inventory
-             -> HashMap (Text, Text) Int
-             -> FrameDB
-             -> HashMap Text [(Text, Text)]
+docStructure :: AnalyzePredata
              -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
-             -> [RoleInstance]
-             -> [RolePattInstance Voice]
              -> ( [Sentence]
                 , [Maybe SentenceIndex]
                 , [SentItem CharIdx]
@@ -126,8 +121,10 @@ docStructure :: HashMap Text Inventory
                 , [Dependency]
                 , Maybe [TagPos TokIdx (Maybe Text)]
                 )
-             -> [Text] -}
-docStructure apredata emTagger {- sensemap sensestat framedb ontomap emTagger rolemap subcats-} loaded =
+             -> [Text]
+
+-}
+docStructure apredata emTagger loaded =
   let (sents,sentidxs,sentitems,_tokss,mptrs,deps,mtmxs) = loaded
       lmass = sents ^.. traverse . sentenceLemma
       mtokenss = sents ^.. traverse . sentenceToken
@@ -135,21 +132,22 @@ docStructure apredata emTagger {- sensemap sensestat framedb ontomap emTagger ro
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
-      sentStructures = map (sentStructure {- sensemap sensestat framedb ontomap rolemap subcats -} apredata) (zip3 ([0..]::[Int]) lmass mptrs)
+      sentStructures = map (sentStructure apredata) (zip3 ([0..]::[Int]) lmass mptrs)
   in (mtokenss,sentitems,mergedtags,sentStructures)
 
-     
-sentStructure apredata {- sensemap sensestat framedb ontomap rolemap subcats -} (i,lmas,mptr) = 
+
+sentStructure apredata (i,lmas,mptr) =
   flip fmap mptr $ \ptr ->
     let lemmamap = mkLemmaMap' lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
         mcpstr = identifyCPHierarchy vps
-        verbStructures = map (verbStructure apredata {- sensemap sensestat framedb ontomap rolemap subcats -} ) vps
+        verbStructures = map (verbStructure apredata) vps
     in (i,ptr,vps,clausetr,mcpstr,verbStructures)
 
 
-verbStructure apredata {- sensemap sensestat framedb ontomap rolemap subcats -} vp = 
+verbStructure :: AnalyzePredata -> VerbProperty (BitreeZipperICP '[Lemma]) -> VerbStructure
+verbStructure apredata vp =
   let lma = vp^.vp_lemma.to unLemma
       sensemap = apredata^.analyze_sensemap
       sensestat = apredata^.analyze_sensestat
@@ -157,14 +155,14 @@ verbStructure apredata {- sensemap sensestat framedb ontomap rolemap subcats -} 
       ontomap = apredata^.analyze_ontomap
       rolemap = apredata^.analyze_rolemap
       subcats = apredata^.analyze_subcats
-      
+
       senses = getSenses lma sensemap sensestat framedb ontomap
-      mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<< fmap (^._1) (chooseFrame senses)          
-  in (vp,lma,senses,mrmmtoppatts)
+      mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<< fmap (^._1) (chooseFrame senses)
+  in VerbStructure vp lma senses mrmmtoppatts
 
 
-formatDocStructure showdetail (mtokenss,sentitems,mergedtags,sstrs) = 
-  let line1 = [ "==================================================================================================" 
+formatDocStructure showdetail (mtokenss,sentitems,mergedtags,sstrs) =
+  let line1 = [ "=================================================================================================="
               , "-- Time and NER tagged text ----------------------------------------------------------------------"
               , T.pack (render (formatTagged mtokenss sentitems mergedtags))
               , "--------------------------------------------------------------------------------------------------"
@@ -189,7 +187,7 @@ formatSentStructure showdetail (i,ptr,vps,clausetr,mcpstr,vstrs) =
    in subline1 ++ (if showdetail then subline1_1 else []) ++ concat subline2
 
 
-formatVerbStructure clausetr mcpstr (vp,lma,senses,mrmmtoppatts) = 
+formatVerbStructure clausetr mcpstr (VerbStructure vp lma senses mrmmtoppatts) =
   [ formatVPwithPAWS clausetr mcpstr vp
   , T.pack (printf "Verb: %-20s" lma)
   , T.pack $ (formatSenses False senses mrmmtoppatts)

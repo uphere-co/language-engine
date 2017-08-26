@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds       #-}
+{-# LANGUAGE KindSignatures  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module OntoNotes.App.Analyze.Type where
@@ -9,7 +11,9 @@ import           Data.List                     (maximumBy)
 import           Data.Text                     (Text)
 --
 import           FrameNet.Query.Frame          (FrameDB)
-import           Lexicon.Type                  (RoleInstance,RolePattInstance,SenseID)
+import           Lexicon.Type                  (ArgPattern,GRel,RoleInstance,RolePattInstance,SenseID)
+import           NLP.Syntax.Type               (BitreeZipperICP,VerbProperty(..))
+import           NLP.Type.PennTreebankII       (Lemma)
 import           NLP.Type.SyntaxProperty       (Voice)
 --
 import           OntoNotes.Type.SenseInventory (Inventory)
@@ -54,3 +58,22 @@ data AnalyzePredata = AnalyzePredata { _analyze_sensemap  :: HashMap Text Invent
                                      }
 
 makeLenses ''AnalyzePredata
+
+
+data VerbStructure = VerbStructure { _vs_vp           :: VerbProperty (BitreeZipperICP '[Lemma])
+                                   , _vs_lma          :: Text
+                                   , _vs_senses       :: [(ONSenseFrameNetInstance,Int)]
+                                   , _vs_mrmmtoppatts :: Maybe (RoleInstance, Maybe [(ArgPattern () GRel, Int)])
+                                   }
+
+makeLenses ''VerbStructure                     
+
+{- 
+data DocStructure = DocStructure
+
+
+
+([[Maybe Token]], [SentItem CharIdx],[TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text))]
+  ,[Maybe (Int, PennTree, [NLP.Syntax.Type.VerbProperty (NLP.Syntax.Type.BitreeZipperICP '[Lemma])]
+          , NLP.Syntax.Type.ClauseTree, Maybe [Bitree (Range,CP) (Range,CP),                                                                                                                                                                                                                                                                                                                         [(NLP.Syntax.Type.VerbProperty
+-}
