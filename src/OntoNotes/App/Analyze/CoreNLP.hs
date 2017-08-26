@@ -36,6 +36,8 @@ import           OntoNotes.App.Util                           (BeginEnd,TagPos,S
                                                               ,listTimexToTagPos
                                                               ,underlineText)
 import           OntoNotes.App.WikiEL                         (getWikiResolvedMentions)
+--
+import           OntoNotes.App.Analyze.Type                   (DocAnalysisInput(..))
 
 
 getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd CharIdx)]
@@ -48,37 +50,22 @@ getSentenceOffsets psents =
 
 runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> Text
-          -> IO ( [Sentence]
-                , [Maybe SentenceIndex] -- [Maybe Sentence]
-                , [SentItem CharIdx]
-                , [[Token]]
-                , [Maybe PennTree]
-                , [Dependency]
-                -- , Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
-                , Maybe [TagPos TokIdx (Maybe Text)]
-                )
+          -> IO DocAnalysisInput
 runParser pp txt = do
   doc <- getDoc txt
   ann <- annotate pp doc
   pdoc <- getProtoDoc ann
   lbstr_sutime <- BL.fromStrict <$> serializeTimex ann
   let psents = toListOf (D.sentence . traverse) pdoc
-      sentidxs = getSentenceOffsets psents
-      sentitems = map (addText txt) sentidxs
-
-
-  let parsetrees = map (\x -> pure . decodeToPennTree =<< (x^.S.parseTree) ) psents
+      sentitems = map (addText txt) (getSentenceOffsets psents)
+      parsetrees = map (\x -> pure . decodeToPennTree =<< (x^.S.parseTree) ) psents
       sentidxs = map (convertSentence pdoc) psents
       sents = map (convertPsent) psents
       Right deps = mapM sentToDep psents
       tktokss = map (getTKTokens) psents
       tokss = map (mapMaybe convertToken) tktokss
       toks = concat tokss
-
   mtmx <- case fmap fst (messageGet lbstr_sutime) :: Either String T.ListTimex of
     Left _ -> return Nothing
     Right rsutime -> return (Just (listTimexToTagPos rsutime))
-      -- let sentswithtmx = addSUTime sentitems toks rsutime
-      -- return (Just sentswithtmx)
-
-  return (sents,sentidxs,sentitems,tokss,parsetrees,deps,mtmx)
+  return (DocAnalysisInput sents sentidxs sentitems tokss parsetrees deps mtmx)

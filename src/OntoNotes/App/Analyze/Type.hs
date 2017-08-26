@@ -12,7 +12,7 @@ import           Data.Text                     (Text)
 --
 import           Data.Bitree                   (Bitree)
 import           Data.Range                    (Range)
-import           CoreNLP.Simple.Type.Simplified (Token)
+import           CoreNLP.Simple.Type.Simplified (Dependency,Sentence,SentenceIndex,Token)
 import           FrameNet.Query.Frame          (FrameDB)
 import           Lexicon.Type                  (ArgPattern,GRel,RoleInstance,RolePattInstance,SenseID)
 import           NLP.Syntax.Type               (BitreeZipperICP,ClauseTree,CP,VerbProperty(..))
@@ -91,3 +91,14 @@ data DocStructure = DocStructure { _ds_mtokenss :: [[Maybe Token]]
                                  , _ds_sentStructures :: [Maybe SentStructure] }
 
 makeLenses ''DocStructure
+
+data DocAnalysisInput = DocAnalysisInput { _dainput_sents :: [Sentence] 
+                                         , _dainput_sentidxs :: [Maybe SentenceIndex]
+                                         , _dainput_sentitems :: [SentItem CharIdx]
+                                         , _dainput_tokss :: [[Token]]
+                                         , _dainput_mptrs :: [Maybe PennTree]
+                                         , _dainput_deps :: [Dependency]
+                                         , _dainput_mtmxs :: Maybe [TagPos TokIdx (Maybe Text)]
+                                         }
+
+makeLenses ''DocAnalysisInput

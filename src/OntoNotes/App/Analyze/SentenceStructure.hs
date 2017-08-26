@@ -111,20 +111,12 @@ getTopPatternsFromSensesAndVP rolemap subcats senses vp =
 
 docStructure :: AnalyzePredata
              -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
-             -> ( [Sentence]
-                , [Maybe SentenceIndex]
-                , [SentItem CharIdx]
-                , [[Token]]
-                , [Maybe PennTree]
-                , [Dependency]
-                , Maybe [TagPos TokIdx (Maybe Text)]
-                )
+             -> DocAnalysisInput
              -> DocStructure
-docStructure apredata emTagger loaded =
-  let (sents,sentidxs,sentitems,_tokss,mptrs,deps,mtmxs) = loaded
-      lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
+docStructure apredata emTagger docinput@(DocAnalysisInput sents sentidxs sentitems _tokss mptrs deps mtmxs) =
+  let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
-      linked_mentions_resolved = getWikiResolvedMentions loaded emTagger
+      linked_mentions_resolved = getWikiResolvedMentions docinput emTagger
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
