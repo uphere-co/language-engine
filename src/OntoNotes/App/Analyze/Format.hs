@@ -275,12 +275,12 @@ matchSO rolemap (dp,verbp,paws) (patt,num) =
 
 
 matchSubject rolemap dp patt = do
-  (p,GR_NP (Just GASBJ)) <- subjectPosition patt
+  (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
   (,dp) <$> lookup p rolemap
 
 
 matchAgentForPassive rolemap paws patt = do
-    (p,GR_NP (Just GASBJ)) <- subjectPosition patt
+    (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
     Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
     tr <- current . root <$> paws^.pa_CP.cp_maximal_projection
     pp <- find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
@@ -290,7 +290,7 @@ matchAgentForPassive rolemap paws patt = do
     ppcheck _                    = False
 
 matchThemeForPassive rolemap dp patt = do
-  (p,GR_NP (Just GA1)) <- matchGRelArg GA1 patt
+  (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
   (,dp) <$> lookup p rolemap
 
 
@@ -299,7 +299,7 @@ matchObjects rolemap verbp patt = do
   ctag <- case getRoot (current obj) of
             Left (_,node) -> [chunkTag node]
             _             -> []
-  (p,a) <- maybeToList (matchGRelArg garg patt)
+  (p,a) <- maybeToList (pbArgForGArg garg patt)
   case ctag of
     NP   -> guard (a == GR_NP   (Just garg))
     S    -> guard (a == GR_SBAR (Just garg))
@@ -308,15 +308,16 @@ matchObjects rolemap verbp patt = do
   fe <- maybeToList (lookup p rolemap)
   return (fe,obj)
 
+-- matchPP patt =
+  
 
-
-matchGRelArg grel patt = check patt_arg0 "arg0" <|>
+pbArgForGArg grel patt = check patt_arg0 "arg0" <|>
                          check patt_arg1 "arg1" <|>
                          check patt_arg2 "arg2" <|>
                          check patt_arg3 "arg3" <|>
                          check patt_arg4 "arg4"
   where check l label = patt^.l >>= \a -> findGArg a >>= \grel' -> if grel==grel' then Just (label,a) else Nothing
 
-subjectPosition = matchGRelArg GASBJ
+-- subjectPosition =  matchGRelArg GASBJ
 
 -- object1Position = matchGRelArg GA1
