@@ -116,7 +116,9 @@ docStructure :: AnalyzePredata
 docStructure apredata emTagger docinput@(DocAnalysisInput sents sentidxs sentitems _tokss mptrs deps mtmxs) =
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
-      linked_mentions_resolved = getWikiResolvedMentions docinput emTagger
+      linked_mentions_resolved = getWikiResolvedMentions emTagger
+                                                         (docinput^.dainput_sents)
+                                                         (concat (docinput^.dainput_tokss))
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs

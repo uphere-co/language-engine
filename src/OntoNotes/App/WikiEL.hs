@@ -106,11 +106,10 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
 
 
 
-linkedMentionToTagPos :: (EntityMention Text) --  UIDCite EntityMentionUID (EL.EMInfo Text)
-                      -> (TagPos TokIdx (EntityMention Text)) -- EntityMentionUID
+linkedMentionToTagPos :: (EntityMention Text)
+                      -> (TagPos TokIdx (EntityMention Text))
 linkedMentionToTagPos linked_mention =
-  let -- uid = EL._uid linked_mention
-      IRange b e = (_info linked_mention)^._1
+  let IRange b e = (_info linked_mention)^._1
   in TagPos (TokIdx b, TokIdx e,linked_mention)
 
 
@@ -125,13 +124,13 @@ prepareNETokens all =
   in neTokens
 
 
-getWikiResolvedMentions :: DocAnalysisInput 
-                        -> ([(Text,NamedEntityClass)] -> [EntityMention Text])
+getWikiResolvedMentions :: ([(Text,NamedEntityClass)] -> [EntityMention Text])
+                        -> [Sentence]
+                        -> [Token]
                         -> [EntityMention Text]
-getWikiResolvedMentions docinput emTagger =
-  let tokens = docinput^.dainput_tokss
-      linked_mentions_all =  emTagger (prepareNETokens (docinput^.dainput_sents)) -- getWikiAllMentions docinput emTagger
-      input_pos = V.fromList (map (^. token_pos) $ concat tokens)
+getWikiResolvedMentions emTagger sents tokens =
+  let linked_mentions_all =  emTagger (prepareNETokens sents) -- getWikiAllMentions docinput emTagger
+      input_pos = V.fromList (map (^. token_pos) tokens)
       linked_mentions_all_unfiltered = (EMP.filterEMbyPOS input_pos linked_mentions_all)
   in filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all_unfiltered
 
