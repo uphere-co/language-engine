@@ -126,7 +126,7 @@ docStructure :: AnalyzePredata
 -}
 docStructure apredata emTagger loaded =
   let (sents,sentidxs,sentitems,_tokss,mptrs,deps,mtmxs) = loaded
-      lmass = sents ^.. traverse . sentenceLemma
+      lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = getWikiResolvedMentions loaded emTagger
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
@@ -135,15 +135,15 @@ docStructure apredata emTagger loaded =
       sentStructures = map (sentStructure apredata) (zip3 ([0..]::[Int]) lmass mptrs)
   in (mtokenss,sentitems,mergedtags,sentStructures)
 
-
+sentStructure :: AnalyzePredata -> (Int,[Lemma],Maybe PennTree) -> Maybe SentStructure
 sentStructure apredata (i,lmas,mptr) =
   flip fmap mptr $ \ptr ->
-    let lemmamap = mkLemmaMap' lmas
+    let lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
         mcpstr = identifyCPHierarchy vps
         verbStructures = map (verbStructure apredata) vps
-    in (i,ptr,vps,clausetr,mcpstr,verbStructures)
+    in SentStructure i ptr vps clausetr mcpstr verbStructures
 
 
 verbStructure :: AnalyzePredata -> VerbProperty (BitreeZipperICP '[Lemma]) -> VerbStructure
@@ -173,7 +173,7 @@ formatDocStructure showdetail (mtokenss,sentitems,mergedtags,sstrs) =
   in line1  ++ line3
 
 
-formatSentStructure showdetail (i,ptr,vps,clausetr,mcpstr,vstrs) =
+formatSentStructure showdetail (SentStructure i ptr vps clausetr mcpstr vstrs) =
    let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                   , formatIndexTokensFromTree 0 ptr
                   ]

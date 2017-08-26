@@ -10,10 +10,12 @@ import           Data.HashMap.Strict           (HashMap)
 import           Data.List                     (maximumBy)
 import           Data.Text                     (Text)
 --
+import           Data.Bitree                   (Bitree)
+import           Data.Range                    (Range)
 import           FrameNet.Query.Frame          (FrameDB)
 import           Lexicon.Type                  (ArgPattern,GRel,RoleInstance,RolePattInstance,SenseID)
-import           NLP.Syntax.Type               (BitreeZipperICP,VerbProperty(..))
-import           NLP.Type.PennTreebankII       (Lemma)
+import           NLP.Syntax.Type               (BitreeZipperICP,ClauseTree,CP,VerbProperty(..))
+import           NLP.Type.PennTreebankII       (Lemma,PennTree)
 import           NLP.Type.SyntaxProperty       (Voice)
 --
 import           OntoNotes.Type.SenseInventory (Inventory)
@@ -67,6 +69,16 @@ data VerbStructure = VerbStructure { _vs_vp           :: VerbProperty (BitreeZip
                                    }
 
 makeLenses ''VerbStructure                     
+
+data SentStructure = SentStructure { _ss_i :: Int
+                                   , _ss_ptr  :: PennTree
+                                   , _ss_vps  :: [VerbProperty (BitreeZipperICP '[Lemma])]
+                                   , _ss_clausetr :: ClauseTree
+                                   , _ss_mcpstr :: Maybe [Bitree (Range,CP) (Range,CP)]
+                                   , _ss_verbStructures :: [VerbStructure]
+                                   }
+
+makeLenses ''SentStructure
 
 {- 
 data DocStructure = DocStructure
