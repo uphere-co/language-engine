@@ -9,7 +9,7 @@ module OntoNotes.App.Analyze.Format where
 
 import           Control.Applicative
 import           Control.Lens                            ((^..),(^.),(^?),(%~),_1,_2,_3,_4,_5,_6,_7,_Just,_Right,to)
-import           Control.Monad                           ((>=>))
+import           Control.Monad                           ((>=>),guard)
 import           Data.Foldable
 import           Data.Function                           ((&),on)
 import           Data.List                               (find,intercalate,intersperse,maximumBy,sortBy)
@@ -64,7 +64,8 @@ import           OntoNotes.App.Analyze.Type              (ExceptionalFrame(..),O
                                                          ,ss_verbStructures, ss_mcpstr, ss_clausetr
                                                          ,ds_sentStructures
                                                          )
-
+--
+import Debug.Trace
 
 
 getTopPatternsFromONFNInst :: [RoleInstance]
@@ -268,7 +269,7 @@ mytest dstr = do
 -- convertPosition rm txt = lookup txt rm
 
 matchSO rolemap (dp,verbp) patt = (patt,catMaybes [snd <$> matchSubject rolemap dp patt
-                                                , snd <$> matchObject rolemap verbp patt])
+                                                  , snd <$> matchObject rolemap verbp patt])
 
 
 matchSubject rolemap dp patt = do
@@ -279,9 +280,17 @@ matchSubject rolemap dp patt = do
 
 matchObject rolemap verbp patt = do
   obj <- listToMaybe (verbp^.vp_complements)
+  Left (_,node) <- Just (getRoot (current obj))
+  let ctag = chunkTag node
   (p,a) <- object1Position patt
+  case ctag of
+    NP   -> guard (a == GR_NP   (Just GA1))
+    S    -> guard (a == GR_SBAR (Just GA1))
+    SBAR -> guard (a == GR_SBAR (Just GA1))
+    _    -> Nothing
   fe <- lookup p rolemap
   return (patt,(fe,obj))
+
 
 matchGRelArg grel patt = check patt_arg0 "arg0" <|>
                          check patt_arg1 "arg1" <|>
