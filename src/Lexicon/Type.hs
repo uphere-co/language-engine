@@ -48,6 +48,13 @@ data GRel = GR_NP    (Maybe GArg)
 
 instance Hashable GRel                   
 
+findGArg :: GRel -> Maybe GArg
+findGArg (GR_NP   x) = x
+findGArg (GR_S    x) = x
+findGArg (GR_SBAR x) = x
+findGArg _           = Nothing
+
+
 -----------------------------
 -- ArgTable and ArgPattern --
 -----------------------------
