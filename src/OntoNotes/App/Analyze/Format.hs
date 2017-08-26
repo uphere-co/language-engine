@@ -270,8 +270,25 @@ showMatchedFrame (mcpstr,vstr,paws) = do
 
 matchSO rolemap (dp,verbp,paws) (patt,num) =
   case verbp^.vp_verbProperty.vp_voice of
-    Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt)
-    Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap paws patt,matchThemeForPassive rolemap dp patt])
+    Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap paws patt )
+    Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap paws patt,matchThemeForPassive rolemap dp patt] ++ matchPrepArgs rolemap paws patt)
+
+
+matchPrepArgs rolemap paws patt = do
+  (p,prep) <- pbArgForPP patt
+  -- prep <- maybeToList mprep
+  z <- maybeToList (matchPP paws prep)
+  (,z) <$> maybeToList (lookup p rolemap)
+
+
+matchPP paws prep = do
+    Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
+    tr <- current . root <$> paws^.pa_CP.cp_maximal_projection
+    find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
+  where
+    ppcheck (Left (_,S_PP prep')) = prep == prep'
+    ppcheck _                     = False
+
 
 
 matchSubject rolemap dp patt = do
@@ -281,13 +298,11 @@ matchSubject rolemap dp patt = do
 
 matchAgentForPassive rolemap paws patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
-    Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
-    tr <- current . root <$> paws^.pa_CP.cp_maximal_projection
-    pp <- find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
-    (,pp) <$> lookup p rolemap
-  where
-    ppcheck (Left (_,S_PP "by")) = True
-    ppcheck _                    = False
+    z <- matchPP paws "by"
+    (,z) <$> lookup p rolemap
+
+
+
 
 matchThemeForPassive rolemap dp patt = do
   (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
@@ -316,8 +331,19 @@ pbArgForGArg grel patt = check patt_arg0 "arg0" <|>
                          check patt_arg2 "arg2" <|>
                          check patt_arg3 "arg3" <|>
                          check patt_arg4 "arg4"
-  where check l label = patt^.l >>= \a -> findGArg a >>= \grel' -> if grel==grel' then Just (label,a) else Nothing
+  where check l label = do a <- patt^.l
+                           grel' <- findGArg a
+                           if grel==grel' then Just (label,a) else Nothing
 
--- subjectPosition =  matchGRelArg GASBJ
 
--- object1Position = matchGRelArg GA1
+pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
+                            , check patt_arg1 "arg1"
+                            , check patt_arg2 "arg2"
+                            , check patt_arg3 "arg3"
+                            , check patt_arg4 "arg4"
+                            ]
+  where check l label = do a <- patt^.l
+                           -- grel <- findGArg a
+                           case a of
+                             GR_PP mprep -> (label,) <$> mprep
+                             _           -> Nothing
