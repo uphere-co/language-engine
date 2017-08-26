@@ -135,10 +135,12 @@ resolveDP mcpstr cp =
   let lst = (join . maybeToList) mcpstr
       mrng = cpRange cp
       dp = cp^.cp_TP.tp_DP
-  in do rng <- cpRange cp
-        z <- getFirst (foldMap (First . extractZipperById rng) lst)
-        resolvePRO z
-
+  in case fmap chooseATNode dp of
+       Just SilentPRO -> do rng <- cpRange cp
+                            z <- getFirst (foldMap (First . extractZipperById rng) lst)
+                            resolvePRO z
+       Just (RExp z)  -> Just z
+       Nothing        -> Nothing
 
 
 
