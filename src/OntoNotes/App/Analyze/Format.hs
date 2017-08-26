@@ -3,11 +3,12 @@
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE TupleSections      #-}
 
 module OntoNotes.App.Analyze.Format where
 
 import           Control.Applicative
-import           Control.Lens                            ((^.),(^?),(%~),_1,_2,_3,_4,_5,_6,_7,_Just,_Right,to)
+import           Control.Lens                            ((^..),(^.),(^?),(%~),_1,_2,_3,_4,_5,_6,_7,_Just,_Right,to)
 import           Control.Monad                           ((>=>))
 import           Data.Foldable
 import           Data.Function                           ((&),on)
@@ -17,6 +18,7 @@ import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
 import qualified Data.Text                       as T
 import qualified Data.Text.IO                    as T.IO
+import           Data.Traversable                        (traverse)
 import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat,render)
 import           Text.Printf                             (printf)
 import           Text.ProtocolBuffers.Basic              (Utf8)
@@ -33,6 +35,7 @@ import           Lexicon.Query                           (cutHistogram)
 import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
                                                          ,type RolePattInstance,POSVorN(..),GRel(..),GArg(..)
                                                          ,patt_arg0,patt_arg1,patt_arg2,patt_arg3,patt_arg4
+                                                         ,findGArg
                                                          )
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
@@ -240,21 +243,32 @@ mytest dstr = do
     -- putStrLn (formatPAWS (x^._2) paws)
     let cp = paws^.pa_CP
         mdp_resolved = resolveDP (x^._2) cp
+        gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
         mframedp = do (rm,mtoppatts) <- mrmmtoppatts
                       let rolemap = rm^._2
                       frame <- lookup "frame" rolemap
-                      toppatts <- mtoppatts
+                      toppattstats <- mtoppatts
                       dp_resolved <- mdp_resolved
-                      return (frame,rolemap,toppatts,dp_resolved)
-    flip traverse_ mframedp $ \(frame,rolemap,toppatts,dp_resolved) -> do
+                      return (frame,rolemap,toppattstats,dp_resolved)
+    flip traverse_ mframedp $ \(frame,rolemap,toppattstats,dp_resolved) -> do
+      let toppatts = toppattstats^..traverse._1
       T.IO.putStrLn "---------------------------"
       T.IO.putStrLn frame
-      print . mapMaybe (\x -> subjectPosition x >>= \p -> lookup p rolemap) . map fst $ toppatts
-      print . map (tokenWord.snd) . toList . current $ dp_resolved
+      flip mapM_ (mapMaybe (matchSubject rolemap dp_resolved) toppatts) $ \(patt,(fe,dp)) ->
+        putStrLn (printf "%100s %15s %s"  (formatArgPatt "voice" patt) fe (gettokens dp))
+
+
+      -- print . map (tokenWord.snd) . toList . current $ dp_resolved
 
     -- T.IO.putStrLn (formatDPTokens (cp^.cp_TP.tp_DP,))
 
 -- convertPosition rm txt = lookup txt rm
+
+matchSubject rolemap dp patt = do
+  (p,GR_NP (Just GASBJ)) <- subjectPosition patt
+  fe <- lookup p rolemap
+  return (patt,(fe,dp))
+
 
 subjectPosition patt = check patt_arg0 "arg0" <|>
                        check patt_arg1 "arg1" <|>
@@ -262,9 +276,16 @@ subjectPosition patt = check patt_arg0 "arg0" <|>
                        check patt_arg3 "arg3" <|>
                        check patt_arg4 "arg4"
   where
+    check l label = patt^.l >>= \a -> findGArg a >>= \case GASBJ -> Just (label,a) ; _ -> Nothing
+
+{- 
+object1Position patt = check patt_arg0 "arg0" <|>
+                       check patt_arg1 "arg1" <|>
+                       check patt_arg2 "arg2" <|>
+                       check patt_arg3 "arg3" <|>
+                       check patt_arg4 "arg4"
+  where
     findgarg (GR_NP x)   = x
     findgarg (GR_S  x)   = x
-    findgarg (GR_SBAR x) = x
-    findgarg _           = Nothing
-
-    check l label = patt^.l >>= findgarg >>= \case GASBJ -> Just label ; _ -> Nothing
+    findgarg (G
+-}
