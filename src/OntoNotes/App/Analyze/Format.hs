@@ -13,7 +13,7 @@ import           Control.Monad                           ((>=>))
 import           Data.Foldable
 import           Data.Function                           ((&),on)
 import           Data.List                               (find,intercalate,intersperse,maximumBy,sortBy)
-import           Data.Maybe                              (fromMaybe,listToMaybe,mapMaybe,maybeToList)
+import           Data.Maybe                              (catMaybes,fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
 import qualified Data.Text                       as T
@@ -242,6 +242,7 @@ mytest dstr = do
     print (x^._3.vs_lma)
     -- putStrLn (formatPAWS (x^._2) paws)
     let cp = paws^.pa_CP
+        verbp = cp^.cp_TP.tp_VP
         mdp_resolved = resolveDP (x^._2) cp
         gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
         mframedp = do (rm,mtoppatts) <- mrmmtoppatts
@@ -254,8 +255,10 @@ mytest dstr = do
       let toppatts = toppattstats^..traverse._1
       T.IO.putStrLn "---------------------------"
       T.IO.putStrLn frame
-      flip mapM_ (mapMaybe (matchSubject rolemap dp_resolved) toppatts) $ \(patt,(fe,dp)) ->
-        putStrLn (printf "%100s %15s %s"  (formatArgPatt "voice" patt) fe (gettokens dp))
+      flip mapM_ (map (matchSO rolemap (dp_resolved,verbp)) toppatts) $ \(patt,felst) ->
+        
+        putStrLn (printf "%100s" (formatArgPatt "voice" patt) ++
+                  intercalate ", " (map (\(fe,z) -> printf "%s: %s" fe (gettokens z)) felst))
 
 
       -- print . map (tokenWord.snd) . toList . current $ dp_resolved
@@ -264,19 +267,32 @@ mytest dstr = do
 
 -- convertPosition rm txt = lookup txt rm
 
+matchSO rolemap (dp,verbp) patt = (patt,catMaybes [snd <$> matchSubject rolemap dp patt
+                                                , snd <$> matchObject rolemap verbp patt])
+
+
 matchSubject rolemap dp patt = do
   (p,GR_NP (Just GASBJ)) <- subjectPosition patt
   fe <- lookup p rolemap
   return (patt,(fe,dp))
 
 
-subjectPosition patt = check patt_arg0 "arg0" <|>
-                       check patt_arg1 "arg1" <|>
-                       check patt_arg2 "arg2" <|>
-                       check patt_arg3 "arg3" <|>
-                       check patt_arg4 "arg4"
-  where
-    check l label = patt^.l >>= \a -> findGArg a >>= \case GASBJ -> Just (label,a) ; _ -> Nothing
+matchObject rolemap verbp patt = do
+  obj <- listToMaybe (verbp^.vp_complements)
+  (p,a) <- object1Position patt
+  fe <- lookup p rolemap
+  return (patt,(fe,obj))
+
+matchGRelArg grel patt = check patt_arg0 "arg0" <|>
+                         check patt_arg1 "arg1" <|>
+                         check patt_arg2 "arg2" <|>
+                         check patt_arg3 "arg3" <|>
+                         check patt_arg4 "arg4"
+  where check l label = patt^.l >>= \a -> findGArg a >>= \grel' -> if grel==grel' then Just (label,a) else Nothing
+
+subjectPosition = matchGRelArg GASBJ 
+
+object1Position = matchGRelArg GA1
 
 {- 
 object1Position patt = check patt_arg0 "arg0" <|>
@@ -284,8 +300,5 @@ object1Position patt = check patt_arg0 "arg0" <|>
                        check patt_arg2 "arg2" <|>
                        check patt_arg3 "arg3" <|>
                        check patt_arg4 "arg4"
-  where
-    findgarg (GR_NP x)   = x
-    findgarg (GR_S  x)   = x
-    findgarg (G
+  where check l label = patt^.l >>= \a -> findGArg a >>= \case GA
 -}
