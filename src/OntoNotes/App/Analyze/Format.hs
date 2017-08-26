@@ -223,7 +223,7 @@ formatVerbStructure clausetr mcpstr (VerbStructure vp lma senses mrmmtoppatts) =
 
 matchFrame mcpstr vstr cp = do
   let verbp = cp^.cp_TP.tp_VP
-      mrmmtoppatts = vstr^.vs_mrmmtoppatts        
+      mrmmtoppatts = vstr^.vs_mrmmtoppatts
       mdp_resolved = resolveDP mcpstr cp
   (rm,mtoppatts) <- mrmmtoppatts
   let rolemap = rm^._2
@@ -237,7 +237,7 @@ matchFrame mcpstr vstr cp = do
             eq       = (==) `on` lengthOf (_2.folded)
         listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy cmpmatch $ matched
   return (frame,selected)
-  
+
 
 showMatchedFrames dstr = do
   let xs    = do msstr <- dstr^.ds_sentStructures
@@ -256,7 +256,7 @@ showMatchedFrames dstr = do
         vp =vstr^.vs_vp
         gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
     T.IO.putStrLn "---------------------------"
-    putStrLn ("predicate: " <> maybe "unidentified CP" show (cpRange cp)) 
+    putStrLn ("predicate: " <> maybe "unidentified CP" show (cpRange cp))
     T.IO.putStrLn ("Verb: " <> (x^._3.vs_lma))
     flip traverse_ (matchFrame mcpstr vstr cp) $ \(frame,mselected) -> do
       T.IO.putStrLn ("Frame: " <> frame)
