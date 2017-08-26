@@ -4,7 +4,7 @@ import           Control.Monad.Loops (iterateUntilM)
 import           Data.List           (unfoldr)
 --
 import           Data.Bitree         (Bitree)
-import           Data.BitreeZipper   (BitreeZipper,current)
+import           Data.BitreeZipper   (BitreeZipper,current,parent)
 
 
 firstSiblingBy :: (BitreeZipper c t -> Maybe (BitreeZipper c t))
@@ -20,4 +20,9 @@ siblingsBy :: (BitreeZipper c t -> Maybe (BitreeZipper c t))
            -> BitreeZipper c t
            -> [BitreeZipper c t]
 siblingsBy dir p = filter (p.current) . unfoldr (\z -> dir z >>= \z' -> return (z',z'))
+
+
+
+root :: BitreeZipper c t -> BitreeZipper c t
+root z = last (z : unfoldr (\x -> parent x >>= \y -> Just (y,y)) z)
 
