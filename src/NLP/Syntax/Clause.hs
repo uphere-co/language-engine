@@ -7,7 +7,7 @@ module NLP.Syntax.Clause where
 
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
-import           Control.Monad                          ((<=<))
+import           Control.Monad                          ((<=<),join)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
@@ -129,6 +129,18 @@ resolvePRO z = do cp0 <- snd . getRoot1 . current <$> parent z
                     SilentPRO -> Nothing
                     RExp x    -> Just x
                     
+
+
+resolveDP mcpstr cp =
+  let lst = (join . maybeToList) mcpstr
+      mrng = cpRange cp
+      dp = cp^.cp_TP.tp_DP
+  in do rng <- cpRange cp
+        z <- getFirst (foldMap (First . extractZipperById rng) lst)
+        resolvePRO z
+
+
+
 
 
 ---------
