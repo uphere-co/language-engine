@@ -8,11 +8,12 @@
 module OntoNotes.App.Analyze.Format where
 
 import           Control.Applicative
-import           Control.Lens                            ((^..),(^.),(^?),(%~),_1,_2,_3,_4,_5,_6,_7,_Just,_Right,to)
+import           Control.Lens                            ((^..),(^.),(^?),(%~),_1,_2,_3,_4,_5,_6,_7,_Just,_Right,to
+                                                         ,lengthOf,folded)
 import           Control.Monad                           ((>=>),guard)
 import           Data.Foldable
 import           Data.Function                           ((&),on)
-import           Data.List                               (find,intercalate,intersperse,maximumBy,sortBy)
+import           Data.List                               (find,groupBy,intercalate,intersperse,maximumBy,sortBy)
 import           Data.Maybe                              (catMaybes,fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
@@ -253,32 +254,33 @@ mytest dstr = do
                       dp_resolved <- mdp_resolved
                       return (frame,rolemap,toppattstats,dp_resolved)
     flip traverse_ mframedp $ \(frame,rolemap,toppattstats,dp_resolved) -> do
-      let toppatts = toppattstats^..traverse._1
+      -- let toppatts = toppattstats^..traverse._1
       T.IO.putStrLn "---------------------------"
       T.IO.putStrLn frame
-      flip mapM_ (map (matchSO rolemap (dp_resolved,verbp)) toppatts) $ \(patt,felst) ->
-        
+      let matched = map (matchSO rolemap (dp_resolved,verbp)) toppattstats
+          selected = listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy cmpmatch $ matched
+            where cmpmatch = flip compare `on` lengthOf (_2.folded)
+                  cmpstat  = flip compare `on` (^._1._2)
+                  eq  = (==) `on` lengthOf (_2.folded)
+
+
+      flip traverse_ selected $ \((patt,num),felst) ->
         putStrLn (printf "%100s" (formatArgPatt "voice" patt) ++
                   intercalate ", " (map (\(fe,z) -> printf "%s: %s" fe (gettokens z)) felst))
 
 
-      -- print . map (tokenWord.snd) . toList . current $ dp_resolved
 
-    -- T.IO.putStrLn (formatDPTokens (cp^.cp_TP.tp_DP,))
-
--- convertPosition rm txt = lookup txt rm
-
-matchSO rolemap (dp,verbp) patt = (patt,catMaybes [snd <$> matchSubject rolemap dp patt
-                                                  , snd <$> matchObject rolemap verbp patt])
+matchSO rolemap (dp,verbp) (patt,num) =
+  ((patt,num), catMaybes [matchSubject rolemap dp patt, matchObject1 rolemap verbp patt])
 
 
 matchSubject rolemap dp patt = do
   (p,GR_NP (Just GASBJ)) <- subjectPosition patt
   fe <- lookup p rolemap
-  return (patt,(fe,dp))
+  return (fe,dp)
 
 
-matchObject rolemap verbp patt = do
+matchObject1 rolemap verbp patt = do
   obj <- listToMaybe (verbp^.vp_complements)
   Left (_,node) <- Just (getRoot (current obj))
   let ctag = chunkTag node
@@ -289,7 +291,7 @@ matchObject rolemap verbp patt = do
     SBAR -> guard (a == GR_SBAR (Just GA1))
     _    -> Nothing
   fe <- lookup p rolemap
-  return (patt,(fe,obj))
+  return (fe,obj)
 
 
 matchGRelArg grel patt = check patt_arg0 "arg0" <|>
@@ -299,11 +301,11 @@ matchGRelArg grel patt = check patt_arg0 "arg0" <|>
                          check patt_arg4 "arg4"
   where check l label = patt^.l >>= \a -> findGArg a >>= \grel' -> if grel==grel' then Just (label,a) else Nothing
 
-subjectPosition = matchGRelArg GASBJ 
+subjectPosition = matchGRelArg GASBJ
 
 object1Position = matchGRelArg GA1
 
-{- 
+{-
 object1Position patt = check patt_arg0 "arg0" <|>
                        check patt_arg1 "arg1" <|>
                        check patt_arg2 "arg2" <|>
