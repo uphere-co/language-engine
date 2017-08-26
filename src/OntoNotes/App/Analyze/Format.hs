@@ -63,7 +63,7 @@ getTopPatternsFromONFNInst rolemap subcats inst = do
 formatExFrame FrameCopula = "** COPULA **"
 formatExFrame FrameIdiom  = "** IDIOM **"
 formatExFrame FrameLightVerb = "** LIGHT VERB **"
-
+formatExFrame _              = "** UNIDENTIFIED **"
 
 formatLemmaPOS :: Token -> String
 formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))

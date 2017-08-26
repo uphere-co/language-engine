@@ -2,13 +2,17 @@
 
 module OntoNotes.App.Analyze.Type where
 
-import           Control.Lens      ((^.),_2,makeLenses)
-import           Data.Function     (on)
-import           Data.List         (maximumBy)
-import           Data.Text         (Text)
+import           Control.Lens                  ((^.),_2,makeLenses)
+import           Data.Function                 (on)
+import           Data.HashMap.Strict           (HashMap)
+import           Data.List                     (maximumBy)
+import           Data.Text                     (Text)
 --
-import           Lexicon.Type      (SenseID)
+import           FrameNet.Query.Frame          (FrameDB)
+import           Lexicon.Type                  (RoleInstance,RolePattInstance,SenseID)
+import           NLP.Type.SyntaxProperty       (Voice)
 --
+import           OntoNotes.Type.SenseInventory (Inventory)
 
 
 data ExceptionalFrame = FrameCopula  | FrameIdiom | FrameLightVerb | FrameNone
@@ -39,3 +43,14 @@ chooseFrame :: [(ONSenseFrameNetInstance,Int)] -> Maybe (ONSenseFrameNetInstance
 chooseFrame [] = Nothing
 chooseFrame xs = Just (maximumBy (compare `on` (^._2)) xs)
 
+
+
+data AnalyzePredata = AnalyzePredata { _analyze_sensemap  :: HashMap Text Inventory
+                                     , _analyze_sensestat :: HashMap (Text,Text) Int
+                                     , _analyze_framedb   :: FrameDB
+                                     , _analyze_ontomap   :: HashMap Text [(Text,Text)]
+                                     , _analyze_rolemap   :: [RoleInstance]
+                                     , _analyze_subcats   :: [RolePattInstance Voice]
+                                     }
+
+makeLenses ''AnalyzePredata

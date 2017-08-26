@@ -127,7 +127,7 @@ docStructure :: HashMap Text Inventory
                 , Maybe [TagPos TokIdx (Maybe Text)]
                 )
              -> [Text] -}
-docStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded =
+docStructure apredata emTagger {- sensemap sensestat framedb ontomap emTagger rolemap subcats-} loaded =
   let (sents,sentidxs,sentitems,_tokss,mptrs,deps,mtmxs) = loaded
       lmass = sents ^.. traverse . sentenceLemma
       mtokenss = sents ^.. traverse . sentenceToken
@@ -135,22 +135,29 @@ docStructure sensemap sensestat framedb ontomap emTagger rolemap subcats loaded 
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
-      sentStructures = map (sentStructure sensemap sensestat framedb ontomap rolemap subcats) (zip3 ([0..]::[Int]) lmass mptrs)
+      sentStructures = map (sentStructure {- sensemap sensestat framedb ontomap rolemap subcats -} apredata) (zip3 ([0..]::[Int]) lmass mptrs)
   in (mtokenss,sentitems,mergedtags,sentStructures)
 
      
-sentStructure sensemap sensestat framedb ontomap rolemap subcats (i,lmas,mptr) = 
+sentStructure apredata {- sensemap sensestat framedb ontomap rolemap subcats -} (i,lmas,mptr) = 
   flip fmap mptr $ \ptr ->
     let lemmamap = mkLemmaMap' lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
         mcpstr = identifyCPHierarchy vps
-        verbStructures = map (verbStructure sensemap sensestat framedb ontomap rolemap subcats) vps
+        verbStructures = map (verbStructure apredata {- sensemap sensestat framedb ontomap rolemap subcats -} ) vps
     in (i,ptr,vps,clausetr,mcpstr,verbStructures)
 
 
-verbStructure sensemap sensestat framedb ontomap rolemap subcats vp = 
+verbStructure apredata {- sensemap sensestat framedb ontomap rolemap subcats -} vp = 
   let lma = vp^.vp_lemma.to unLemma
+      sensemap = apredata^.analyze_sensemap
+      sensestat = apredata^.analyze_sensestat
+      framedb = apredata^.analyze_framedb
+      ontomap = apredata^.analyze_ontomap
+      rolemap = apredata^.analyze_rolemap
+      subcats = apredata^.analyze_subcats
+      
       senses = getSenses lma sensemap sensestat framedb ontomap
       mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<< fmap (^._1) (chooseFrame senses)          
   in (vp,lma,senses,mrmmtoppatts)
