@@ -108,7 +108,6 @@ getTopPatternsFromSensesAndVP rolemap subcats senses vp =
 
 -- | Finding the structure of the sentence and formatting it.
 --
-
 docStructure :: AnalyzePredata
              -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
              -> DocAnalysisInput
@@ -151,5 +150,3 @@ verbStructure apredata vp =
       senses = getSenses lma sensemap sensestat framedb ontomap
       mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<< fmap (^._1) (chooseFrame senses)
   in VerbStructure vp lma senses mrmmtoppatts
-
-

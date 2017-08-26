@@ -4,6 +4,7 @@
 module OntoNotes.App.Analyze where
 
 import           Control.Lens                 ((^.),(.~),(&))
+import           Control.Monad                (when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
@@ -62,10 +63,12 @@ queryProcess config pp apredata emTagger =
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
                   dstr <- docStructure apredata emTagger <$> runParser pp txt
-                  mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showDetail) dstr)
+                  when (config^.Analyze.showDetail) $
+                    mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
                   showMatchedFrames dstr
       ":v " -> do dstr <- docStructure apredata emTagger <$> runParser pp rest
-                  mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showDetail) dstr)
+                  when (config^.Analyze.showDetail) $ 
+                    mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
                   showMatchedFrames dstr
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"

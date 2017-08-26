@@ -235,7 +235,7 @@ matchFrame mcpstr vstr cp = do
             cmpmatch = flip compare `on` lengthOf (_2.folded)
             cmpstat  = flip compare `on` (^._1._2)
             eq       = (==) `on` lengthOf (_2.folded)
-        listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy cmpmatch $ matched
+        (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy cmpmatch) matched
   return (frame,selected)
 
 
@@ -300,11 +300,3 @@ subjectPosition = matchGRelArg GASBJ
 
 object1Position = matchGRelArg GA1
 
-{-
-object1Position patt = check patt_arg0 "arg0" <|>
-                       check patt_arg1 "arg1" <|>
-                       check patt_arg2 "arg2" <|>
-                       check patt_arg3 "arg3" <|>
-                       check patt_arg4 "arg4"
-  where check l label = patt^.l >>= \a -> findGArg a >>= \case GA
--}

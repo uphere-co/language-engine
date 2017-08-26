@@ -12,22 +12,18 @@ import           OntoNotes.App.Load                      (cfg,cfgG)
 
 
 
-data ProgOption = ProgOption { _showDetail :: Bool
-                             }
-                deriving Show
-
-makeLenses ''ProgOption
-
-pOptions :: O.Parser ProgOption
-pOptions = ProgOption <$> O.switch (O.long "detail" <> O.short 'd' <> O.help "Whether to show detail")
+pOptions :: O.Parser Analyze.Config
+pOptions = Analyze.Config 
+           <$> O.switch (O.long "detail" <> O.short 'd' <> O.help "Whether to show detail")
+           <*> O.switch (O.long "full" <> O.short 'f' <> O.help "Whether to show full detail")
 
 
-progOption :: O.ParserInfo ProgOption 
+progOption :: O.ParserInfo Analyze.Config
 progOption = O.info pOptions (O.fullDesc <> O.progDesc "analyze text")
 
 
 main :: IO ()
 main = do
-  opt <- O.execParser progOption
-  let acfg = Analyze.Config (opt^.showDetail)
+  acfg <- O.execParser progOption
+  -- let acfg = Analyze.Config (opt^.showDetail) (opt^.showFullDetail)
   runAnalysis cfg acfg
