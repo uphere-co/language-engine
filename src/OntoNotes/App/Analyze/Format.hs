@@ -1,15 +1,18 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RecordWildCards    #-}
 
 module OntoNotes.App.Analyze.Format where
 
-import           Control.Lens                            ((^.),(^?),(%~),_1,_2,_3,_5,_6,_7,_Just,_Right,to)
+import           Control.Applicative
+import           Control.Lens                            ((^.),(^?),(%~),_1,_2,_3,_4,_5,_6,_7,_Just,_Right,to)
 import           Control.Monad                           ((>=>))
+import           Data.Foldable
 import           Data.Function                           ((&),on)
 import           Data.List                               (find,intercalate,intersperse,maximumBy,sortBy)
-import           Data.Maybe                              (fromMaybe,mapMaybe)
+import           Data.Maybe                              (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
 import qualified Data.Text                       as T
@@ -20,18 +23,22 @@ import           Text.ProtocolBuffers.Basic              (Utf8)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
 import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,token_pos)
-import           Data.Bitree                             (Bitree)
-import           Data.Range                              (Range)
+import           Data.Bitree
+import           Data.BitreeZipper
+import           Data.Range
 import           Lexicon.Format                          (formatArgPatt,formatArgPattStat,formatRoleMap)
 import           Lexicon.Merge                           (constructTopPatterns,mergePatterns,patternGraph,patternRelation
                                                          ,listOfSupersetSubset,topPatterns)
 import           Lexicon.Query                           (cutHistogram)
 import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
-                                                         ,type RolePattInstance,POSVorN(..),GRel(..))
-import           NLP.Syntax.Format                       (formatCP,formatVPwithPAWS
-                                                         ,formatClauseStructure,showClauseStructure)
+                                                         ,type RolePattInstance,POSVorN(..),GRel(..),GArg(..)
+                                                         ,patt_arg0,patt_arg1,patt_arg2,patt_arg3,patt_arg4
+                                                         )
+import           NLP.Syntax.Clause
+import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
-import           NLP.Syntax.Type                         (CP,ClauseTree)
+import           NLP.Syntax.Type
+import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty                 (Voice)
 import qualified WikiEL                        as WEL
 import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID,_emuid)
@@ -50,6 +57,9 @@ import           OntoNotes.App.Analyze.Type              (ExceptionalFrame(..),O
                                                          ,chooseFrame
                                                          ,onfn_senseID,onfn_definition,onfn_frame
                                                          ,tf_frameID,tf_feCore,tf_fePeri
+                                                         ,vs_lma,vs_vp,vs_mrmmtoppatts
+                                                         ,ss_verbStructures, ss_mcpstr, ss_clausetr
+                                                         ,ds_sentStructures
                                                          )
 
 
@@ -203,3 +213,58 @@ formatVerbStructure clausetr mcpstr (VerbStructure vp lma senses mrmmtoppatts) =
   , T.pack (printf "Verb: %-20s" lma)
   , T.pack $ (formatSenses False senses mrmmtoppatts)
   ]
+
+
+
+mytest dstr = do
+  let xs    = do msstr <- dstr^.ds_sentStructures
+                 sstr <- maybeToList msstr
+                 let clausetr = sstr^.ss_clausetr
+                     mcpstr = sstr^.ss_mcpstr
+                 vstr <- sstr ^.ss_verbStructures
+                 let vp = vstr^.vs_vp
+                 paws <- maybeToList (findPAWS clausetr vp)
+                 return (clausetr,mcpstr,vstr,paws)
+  flip mapM_ xs $ \x -> do
+    -- print (vstr^.vs_lma)
+    -- print (vstr^.vs_senses)
+    -- print (vstr^.vs_mrmmtoppatts)
+    -- print (length vstrs)
+    let vstr = x^._3
+        paws = x^._4
+
+        vp =vstr^.vs_vp
+        mrmmtoppatts = vstr^.vs_mrmmtoppatts
+
+    print (x^._3.vs_lma)
+    -- putStrLn (formatPAWS (x^._2) paws)
+    let cp = paws^.pa_CP
+        mdp_resolved = resolveDP (x^._2) cp
+        mframedp = do (rm,mtoppatts) <- mrmmtoppatts
+                      let rolemap = rm^._2
+                      frame <- lookup "frame" rolemap
+                      toppatts <- mtoppatts
+                      dp_resolved <- mdp_resolved
+                      return (frame,rolemap,toppatts,dp_resolved)
+    flip traverse_ mframedp $ \(frame,rolemap,toppatts,dp_resolved) -> do
+      T.IO.putStrLn "---------------------------"
+      T.IO.putStrLn frame
+      print . mapMaybe (\x -> subjectPosition x >>= \p -> lookup p rolemap) . map fst $ toppatts
+      print . map (tokenWord.snd) . toList . current $ dp_resolved
+
+    -- T.IO.putStrLn (formatDPTokens (cp^.cp_TP.tp_DP,))
+
+-- convertPosition rm txt = lookup txt rm
+
+subjectPosition patt = check patt_arg0 "arg0" <|>
+                       check patt_arg1 "arg1" <|>
+                       check patt_arg2 "arg2" <|>
+                       check patt_arg3 "arg3" <|>
+                       check patt_arg4 "arg4"
+  where
+    findgarg (GR_NP x)   = x
+    findgarg (GR_S  x)   = x
+    findgarg (GR_SBAR x) = x
+    findgarg _           = Nothing
+
+    check l label = patt^.l >>= findgarg >>= \case GASBJ -> Just label ; _ -> Nothing

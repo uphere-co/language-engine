@@ -149,3 +149,5 @@ verbStructure apredata vp =
       senses = getSenses lma sensemap sensestat framedb ontomap
       mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<< fmap (^._1) (chooseFrame senses)
   in VerbStructure vp lma senses mrmmtoppatts
+
+
