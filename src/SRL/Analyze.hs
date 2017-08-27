@@ -73,9 +73,13 @@ queryProcess config pp apredata emTagger =
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
                   (mapM_ showMatchedFrame . concat . allPAWSTriplesFromDocStructure) dstr
                   --
-                  putStrLn "hello"
-                  let test = fromJust (head (dstr^.ds_sentStructures))
-                  meaningGraph test
+                  putStrLn "-------------"
+                  putStrLn "meaning graph"
+                  putStrLn "-------------"
+                  let sstr1 = fromJust (head (dstr^.ds_sentStructures))
+                      mg = meaningGraph sstr1
+                  mapM_ print (mg^.mg_vertices)
+                  mapM_ print (mg^.mg_edges)
                   --
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"

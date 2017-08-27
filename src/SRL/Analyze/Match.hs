@@ -21,7 +21,9 @@ import           NLP.Syntax.Clause            (cpRange,findPAWS,resolveDP)
 import           NLP.Syntax.Type
 import           NLP.Type.PennTreebankII
 --
-import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),ds_sentStructures
+import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
+                                              ,SentStructure
+                                              ,ds_sentStructures
                                               ,ss_clausetr,ss_mcpstr,ss_verbStructures
                                               ,vs_lma,vs_mrmmtoppatts,vs_vp
                                               ,mv_range,mv_id
@@ -146,7 +148,8 @@ matchFrame (mcpstr,vstr,paws) = do
   return (rng,verb,frame,selected)
 
 
-meaningGraph sstr = do
+meaningGraph :: SentStructure -> MeaningGraph
+meaningGraph sstr =
   let pawstriples = mkPAWSTriples sstr
       matched =  mapMaybe matchFrame pawstriples
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList
@@ -179,13 +182,4 @@ meaningGraph sstr = do
                  let rng' = getRange (current z)
                  i' <- maybeToList (HM.lookup rng' rngidxmap)
                  return (MGEdge fe i i')
-  mapM_ print vertices
-  mapM_ print edges
-  {-
-  flip mapM_ frames $ \(frame,mselected) ->
-    flip traverse_ mselected $ \(_,felst) -> do
-      let gettokens = T.intercalate " " . map (tokenWord.snd) . toList
-    
-          pairs = map (\(fe,z) -> let x = current z in (getRange x, gettokens x)) felst
-      print (frame,pairs)
-  -}
+  in MeaningGraph vertices edges
