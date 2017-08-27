@@ -5,24 +5,27 @@ module SRL.Analyze.Match where
 
 import           Control.Applicative
 import           Control.Lens
-import           Control.Monad           (guard)
+import           Control.Monad                (guard)
 import           Data.Foldable
-import           Data.Function           (on)
-import           Data.List               (find,groupBy,sortBy)
-import           Data.Maybe              (catMaybes,listToMaybe,mapMaybe,maybeToList)
-import qualified Data.Text          as T
+import           Data.Function                (on)
+import qualified Data.HashMap.Strict    as HM
+import           Data.List                    (find,groupBy,sortBy)
+import           Data.Maybe                   (catMaybes,listToMaybe,mapMaybe,maybeToList)
+import qualified Data.Text              as T
 --
-import           Data.Bitree             (getNodes,getRoot)
-import           Data.BitreeZipper       (current,mkBitreeZipper)
-import           Data.BitreeZipper.Util  (root)
+import           Data.Bitree                  (getNodes,getRoot)
+import           Data.BitreeZipper            (current,mkBitreeZipper)
+import           Data.BitreeZipper.Util       (root)
 import           Lexicon.Type
-import           NLP.Syntax.Clause       (findPAWS,resolveDP)
+import           NLP.Syntax.Clause            (cpRange,findPAWS,resolveDP)
 import           NLP.Syntax.Type
 import           NLP.Type.PennTreebankII
 --
-import           SRL.Analyze.Type        (ds_sentStructures
-                                         ,ss_clausetr,ss_mcpstr,ss_verbStructures
-                                         ,vs_mrmmtoppatts,vs_vp)
+import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),ds_sentStructures
+                                              ,ss_clausetr,ss_mcpstr,ss_verbStructures
+                                              ,vs_lma,vs_mrmmtoppatts,vs_vp
+                                              ,mv_range,mv_id
+                                              )
 
 
 allPAWSTriplesFromDocStructure dstr = do
@@ -127,7 +130,9 @@ matchFrame (mcpstr,vstr,paws) = do
       verbp = cp^.cp_TP.tp_VP
       mrmmtoppatts = vstr^.vs_mrmmtoppatts
       mdp_resolved = resolveDP mcpstr cp
+      verb = vstr^.vs_lma
   (rm,mtoppatts) <- mrmmtoppatts
+  rng <- cpRange cp
   let rolemap = rm^._2
   frame <- lookup "frame" rolemap
   let selected = do
@@ -138,16 +143,49 @@ matchFrame (mcpstr,vstr,paws) = do
             cmpstat  = flip compare `on` (^._1._2)
             eq       = (==) `on` lengthOf (_2.folded)
         (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy cmpmatch) matched
-  return (frame,selected)
+  return (rng,verb,frame,selected)
 
 
 meaningGraph sstr = do
   let pawstriples = mkPAWSTriples sstr
-      frames =  mapMaybe matchFrame pawstriples
-  print (length frames)
+      matched =  mapMaybe matchFrame pawstriples
+      gettokens = T.intercalate " " . map (tokenWord.snd) . toList
+
+      preds = map (\(rng,verb,frame,mselected) -> (\i -> MGPredicate i rng frame verb)) matched
+      ipreds = zipWith ($) preds [1..]
+      entities0 = do (_,_,_,mselected) <- matched
+                     (_,felst) <- maybeToList mselected
+                     (fe,z) <- felst
+                     let x = current z
+                         rng = getRange x
+                         txt = gettokens x
+                     return (rng,txt)
+
+      filterFrame = filter (\(rng,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
+
+
+      entities = map (\(rng,txt) i -> MGEntity i rng txt) 
+               . filterFrame
+               . map head
+               . groupBy ((==) `on` (^._1))
+               . sortBy (compare `on` (^._1))
+               $ entities0
+      vertices = ipreds ++ zipWith ($) entities (enumFrom (length ipreds+1))
+      rngidxmap = HM.fromList [(v^.mv_range,v^.mv_id) | v <- vertices ]
+      edges = do (rng,_,_,mselected) <- matched
+                 i <- maybeToList (HM.lookup rng rngidxmap)
+                 (_,felst) <- maybeToList mselected
+                 (fe,z) <- felst
+                 let rng' = getRange (current z)
+                 i' <- maybeToList (HM.lookup rng' rngidxmap)
+                 return (MGEdge fe i i')
+  mapM_ print vertices
+  mapM_ print edges
+  {-
   flip mapM_ frames $ \(frame,mselected) ->
     flip traverse_ mselected $ \(_,felst) -> do
       let gettokens = T.intercalate " " . map (tokenWord.snd) . toList
     
           pairs = map (\(fe,z) -> let x = current z in (getRange x, gettokens x)) felst
       print (frame,pairs)
+  -}

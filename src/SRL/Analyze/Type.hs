@@ -104,12 +104,14 @@ data DocAnalysisInput = DocAnalysisInput { _dainput_sents :: [Sentence]
 makeLenses ''DocAnalysisInput
 
 
-data MGVertex = MGEntity { _mv_id :: Int
-                         , _mv_range :: Range
-                         , _mv_text :: Text }
-              | MGFrame { _mv_id :: Int
-                        , _mv_range :: Range
-                        , _mv_frame :: Text }
+data MGVertex = MGEntity    { _mv_id :: Int
+                            , _mv_range :: Range
+                            , _mv_text :: Text }
+              | MGPredicate { _mv_id    :: Int
+                            , _mv_range :: Range
+                            , _mv_frame :: Text
+                            , _mv_verb  :: Text
+                            }
               deriving Show
 
 makeLenses ''MGVertex
