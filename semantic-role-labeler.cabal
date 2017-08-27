@@ -21,6 +21,7 @@ library
                        SRL.Analyze.Config
                        SRL.Analyze.CoreNLP
                        SRL.Analyze.Format
+                       SRL.Analyze.Match
                        SRL.Analyze.SentenceStructure
                        SRL.Analyze.Type
 

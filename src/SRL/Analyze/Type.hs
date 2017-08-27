@@ -102,3 +102,8 @@ data DocAnalysisInput = DocAnalysisInput { _dainput_sents :: [Sentence]
                                          }
 
 makeLenses ''DocAnalysisInput
+
+
+
+data MeaningGraph = MeaningGraph {
+                                 }

@@ -43,9 +43,8 @@ import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 --
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP           (runParser)
-import           SRL.Analyze.Format            (formatDocStructure,showMatchedFrame
-                                                         ,mkPAWSTriples
-                                                         )
+import           SRL.Analyze.Format            (formatDocStructure,showMatchedFrame)
+import           SRL.Analyze.Match             (mkPAWSTriples)
 import           SRL.Analyze.SentenceStructure (docStructure)
 import           SRL.Analyze.Type
 
