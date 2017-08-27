@@ -11,6 +11,7 @@ import qualified Data.ByteString.Char8  as B
 import           Data.Default                 (def)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
+import           Data.Maybe
 import           Data.Text                    (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.IO           as T.IO
@@ -44,7 +45,7 @@ import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP           (runParser)
 import           SRL.Analyze.Format            (formatDocStructure,showMatchedFrame)
-import           SRL.Analyze.Match             (mkPAWSTriples)
+import           SRL.Analyze.Match             (allPAWSTriplesFromDocStructure,meaningGraph)
 import           SRL.Analyze.SentenceStructure (docStructure)
 import           SRL.Analyze.Type
 
@@ -66,11 +67,16 @@ queryProcess config pp apredata emTagger =
                   dstr <- docStructure apredata emTagger <$> runParser pp txt
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  mapM_ showMatchedFrame (mkPAWSTriples dstr)
+                  (mapM_ showMatchedFrame . concat . allPAWSTriplesFromDocStructure) dstr
       ":v " -> do dstr <- docStructure apredata emTagger <$> runParser pp rest
                   when (config^.Analyze.showDetail) $ 
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  mapM_ showMatchedFrame (mkPAWSTriples dstr)
+                  (mapM_ showMatchedFrame . concat . allPAWSTriplesFromDocStructure) dstr
+                  --
+                  putStrLn "hello"
+                  let test = fromJust (head (dstr^.ds_sentStructures))
+                  meaningGraph test
+                  --
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 

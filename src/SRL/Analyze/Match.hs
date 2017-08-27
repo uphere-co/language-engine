@@ -6,9 +6,11 @@ module SRL.Analyze.Match where
 import           Control.Applicative
 import           Control.Lens
 import           Control.Monad           (guard)
+import           Data.Foldable
 import           Data.Function           (on)
 import           Data.List               (find,groupBy,sortBy)
-import           Data.Maybe              (catMaybes,listToMaybe,maybeToList)
+import           Data.Maybe              (catMaybes,listToMaybe,mapMaybe,maybeToList)
+import qualified Data.Text          as T
 --
 import           Data.Bitree             (getNodes,getRoot)
 import           Data.BitreeZipper       (current,mkBitreeZipper)
@@ -22,29 +24,14 @@ import           SRL.Analyze.Type        (ds_sentStructures
                                          ,ss_clausetr,ss_mcpstr,ss_verbStructures
                                          ,vs_mrmmtoppatts,vs_vp)
 
-matchFrame mcpstr vstr paws = do
-  let cp = paws^.pa_CP
-      verbp = cp^.cp_TP.tp_VP
-      mrmmtoppatts = vstr^.vs_mrmmtoppatts
-      mdp_resolved = resolveDP mcpstr cp
-  (rm,mtoppatts) <- mrmmtoppatts
-  let rolemap = rm^._2
-  frame <- lookup "frame" rolemap
-  let selected = do
-        toppattstats <- mtoppatts
-        dp_resolved <- mdp_resolved
-        let matched = map (matchSO rolemap (dp_resolved,verbp,paws)) toppattstats
-            cmpmatch = flip compare `on` lengthOf (_2.folded)
-            cmpstat  = flip compare `on` (^._1._2)
-            eq       = (==) `on` lengthOf (_2.folded)
-        (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy cmpmatch) matched
-  return (frame,selected)
 
-
-
-mkPAWSTriples dstr = do
+allPAWSTriplesFromDocStructure dstr = do
   msstr <- dstr^.ds_sentStructures
   sstr <- maybeToList msstr
+  return (mkPAWSTriples sstr)
+
+
+mkPAWSTriples sstr = do
   let clausetr = sstr^.ss_clausetr
       mcpstr = sstr^.ss_mcpstr
   vstr <- sstr ^.ss_verbStructures
@@ -52,60 +39,6 @@ mkPAWSTriples dstr = do
   paws <- maybeToList (findPAWS clausetr vp)
   return (mcpstr,vstr,paws)
 
-
-matchSO rolemap (dp,verbp,paws) (patt,num) =
-  case verbp^.vp_verbProperty.vp_voice of
-    Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap paws patt )
-    Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap paws patt,matchThemeForPassive rolemap dp patt] ++ matchPrepArgs rolemap paws patt)
-
-
-matchPrepArgs rolemap paws patt = do
-  (p,prep) <- pbArgForPP patt
-  z <- maybeToList (matchPP paws prep)
-  (,z) <$> maybeToList (lookup p rolemap)
-
-
-matchPP paws prep = do
-    Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
-    tr <- current . root <$> paws^.pa_CP.cp_maximal_projection
-    find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
-  where
-    ppcheck (Left (_,S_PP prep')) = prep == prep'
-    ppcheck _                     = False
-
-
-
-matchSubject rolemap dp patt = do
-  (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
-  (,dp) <$> lookup p rolemap
-
-
-matchAgentForPassive rolemap paws patt = do
-    (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
-    z <- matchPP paws "by"
-    (,z) <$> lookup p rolemap
-
-
-
-
-matchThemeForPassive rolemap dp patt = do
-  (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
-  (,dp) <$> lookup p rolemap
-
-
-matchObjects rolemap verbp patt = do
-  (garg,obj) <- zip [GA1,GA2] (verbp^.vp_complements)
-  ctag <- case getRoot (current obj) of
-            Left (_,node) -> [chunkTag node]
-            _             -> []
-  (p,a) <- maybeToList (pbArgForGArg garg patt)
-  case ctag of
-    NP   -> guard (a == GR_NP   (Just garg))
-    S    -> guard (a == GR_SBAR (Just garg))
-    SBAR -> guard (a == GR_SBAR (Just garg))
-    _    -> []
-  fe <- maybeToList (lookup p rolemap)
-  return (fe,obj)
 
   
 
@@ -130,3 +63,91 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
                              GR_PP mprep -> (label,) <$> mprep
                              _           -> Nothing
 
+
+
+matchSubject rolemap dp patt = do
+  (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
+  (,dp) <$> lookup p rolemap
+
+
+matchObjects rolemap verbp patt = do
+  (garg,obj) <- zip [GA1,GA2] (verbp^.vp_complements)
+  ctag <- case getRoot (current obj) of
+            Left (_,node) -> [chunkTag node]
+            _             -> []
+  (p,a) <- maybeToList (pbArgForGArg garg patt)
+  case ctag of
+    NP   -> guard (a == GR_NP   (Just garg))
+    S    -> guard (a == GR_SBAR (Just garg))
+    SBAR -> guard (a == GR_SBAR (Just garg))
+    _    -> []
+  fe <- maybeToList (lookup p rolemap)
+  return (fe,obj)
+
+
+
+matchPP paws prep = do
+    Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
+    tr <- current . root <$> paws^.pa_CP.cp_maximal_projection
+    find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
+  where
+    ppcheck (Left (_,S_PP prep')) = prep == prep'
+    ppcheck _                     = False
+
+matchPrepArgs rolemap paws patt = do
+  (p,prep) <- pbArgForPP patt
+  z <- maybeToList (matchPP paws prep)
+  (,z) <$> maybeToList (lookup p rolemap)
+
+
+
+matchAgentForPassive rolemap paws patt = do
+    (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
+    z <- matchPP paws "by"
+    (,z) <$> lookup p rolemap
+
+
+
+
+matchThemeForPassive rolemap dp patt = do
+  (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
+  (,dp) <$> lookup p rolemap
+
+
+
+matchSO rolemap (dp,verbp,paws) (patt,num) =
+  case verbp^.vp_verbProperty.vp_voice of
+    Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap paws patt )
+    Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap paws patt,matchThemeForPassive rolemap dp patt] ++ matchPrepArgs rolemap paws patt)
+
+
+
+matchFrame (mcpstr,vstr,paws) = do
+  let cp = paws^.pa_CP
+      verbp = cp^.cp_TP.tp_VP
+      mrmmtoppatts = vstr^.vs_mrmmtoppatts
+      mdp_resolved = resolveDP mcpstr cp
+  (rm,mtoppatts) <- mrmmtoppatts
+  let rolemap = rm^._2
+  frame <- lookup "frame" rolemap
+  let selected = do
+        toppattstats <- mtoppatts
+        dp_resolved <- mdp_resolved
+        let matched = map (matchSO rolemap (dp_resolved,verbp,paws)) toppattstats
+            cmpmatch = flip compare `on` lengthOf (_2.folded)
+            cmpstat  = flip compare `on` (^._1._2)
+            eq       = (==) `on` lengthOf (_2.folded)
+        (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy cmpmatch) matched
+  return (frame,selected)
+
+
+meaningGraph sstr = do
+  let pawstriples = mkPAWSTriples sstr
+      frames =  mapMaybe matchFrame pawstriples
+  print (length frames)
+  flip mapM_ frames $ \(frame,mselected) ->
+    flip traverse_ mselected $ \(_,felst) -> do
+      let gettokens = T.intercalate " " . map (tokenWord.snd) . toList
+    
+          pairs = map (\(fe,z) -> let x = current z in (getRange x, gettokens x)) felst
+      print (frame,pairs)
