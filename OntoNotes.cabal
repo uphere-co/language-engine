@@ -84,20 +84,20 @@ library
   ghc-prof-options:    -caf-all -auto-all
 
 
-Executable analyze
-  Main-is:             analyze.hs
-  hs-source-dirs:      app
-  default-language:    Haskell2010
-  ghc-options:         -O2 -Wall
-                       -funbox-strict-fields
-                       -fno-warn-unused-do-bind
-                       -fno-warn-orphans
-                       -threaded
-  ghc-prof-options:    -caf-all -auto-all
-  other-modules:
-  build-depends:       base,
-                       --
-                       OntoNotes
+-- Executable analyze
+--   Main-is:             analyze.hs
+--   hs-source-dirs:      app
+--   default-language:    Haskell2010
+--   ghc-options:         -O2 -Wall
+--                        -funbox-strict-fields
+--                        -fno-warn-unused-do-bind
+--                        -fno-warn-orphans
+--                        -threaded
+--   ghc-prof-options:    -caf-all -auto-all
+--   other-modules:
+--   build-depends:       base,
+--                        --
+--                        OntoNotes
 
 
 -- Executable argument
