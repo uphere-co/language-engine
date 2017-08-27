@@ -17,27 +17,24 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:
-                       SRL
-                       SRL.CoNLL.CoNLL08.Parser
-                       SRL.CoNLL.CoNLL08.Type
-                       SRL.DataSet.PropBank
-                       SRL.Feature
-                       -- SRL.Feature.Clause
-                       SRL.Feature.Dependency
-                       SRL.Feature.ParseTreePath
-                       -- SRL.Feature.Verb
-                       SRL.Format
-                       SRL.Init
-                       SRL.PropBankMatch
-                       SRL.Train
-                       SRL.Type
-                       -- SRL.Type.Clause
-                       -- SRL.Type.Verb
-                       SRL.Util
-                       SRL.Vectorize.Dense
-                       SRL.Vectorize.Sparse
+                       SRL.Old.CoNLL.CoNLL08.Parser
+                       SRL.Old.CoNLL.CoNLL08.Type
+                       SRL.Old.DataSet.PropBank
+                       SRL.Old.Feature.Dependency
+                       SRL.Old.Feature.ParseTreePath
+                       SRL.Old.Format
+                       SRL.Old.Init
+                       SRL.Old.PropBankMatch
+                       SRL.Old.Type
+                       SRL.Old.Util
+                       SRL.Old.Vectorize.Dense
+                       SRL.Old.Vectorize.Sparse
                        SVM
-                   
+                  
+                       -- -- the following module cannot be compiled now
+                       -- SRL.Old.Feature
+                       -- SRL.Old.Train
+                                          
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base,
@@ -55,7 +52,6 @@ library
                        jvm,
                        lens,
                        split,
-                       -- svm-simple,
                        text,
                        time,
                        vector,
@@ -110,73 +106,72 @@ Executable dependency
 
 
 
-Executable feature
-  Main-is:             feature.hs
-  hs-source-dirs:      app
-  default-language:    Haskell2010
-  ghc-options:         -O2 -Wall
-                       -funbox-strict-fields
-                       -fno-warn-unused-do-bind
-                       -fno-warn-orphans
-  ghc-prof-options:    -caf-all -auto-all
-  other-modules:       
-  build-depends:       base,
-                       --
-                       attoparsec,
-                       bytestring,
-                       containers,
-                       data-default,
-                       either,
-                       filepath,
-                       jvm,
-                       lens,
-                       optparse-applicative,
-                       text,
-                       time,
-                       --
-                       HCoreNLP,
-                       HCoreNLP-Proto,
-                       PropBank,
-                       nlp-types,
-                       --
-                       semantic-role-labeler                       
+-- Executable feature
+--   Main-is:             feature.hs
+--   hs-source-dirs:      app
+--   default-language:    Haskell2010
+--   ghc-options:         -O2 -Wall
+--                        -funbox-strict-fields
+--                        -fno-warn-unused-do-bind
+--                        -fno-warn-orphans
+--   ghc-prof-options:    -caf-all -auto-all
+--   other-modules:       
+--   build-depends:       base,
+--                        --
+--                        attoparsec,
+--                        bytestring,
+--                        containers,
+--                        data-default,
+--                        either,
+--                        filepath,
+--                        jvm,
+--                        lens,
+--                        optparse-applicative,
+--                        text,
+--                        time,
+--                        --
+--                        HCoreNLP,
+--                        HCoreNLP-Proto,
+--                        PropBank,
+--                        nlp-types,
+--                        --
+--                        semantic-role-labeler                       
 
 
                        
-Executable SRL
-  Main-is:             SRL.hs
-  hs-source-dirs:      app
-  default-language:    Haskell2010
-  ghc-options:         -O2 -Wall
-                       -funbox-strict-fields
-                       -fno-warn-unused-do-bind
-                       -fno-warn-orphans
-                       -threaded
-  ghc-prof-options:    -caf-all -auto-all
-  other-modules:       
-  build-depends:       base,
-                       --
-                       attoparsec,
-                       bytestring,
-                       containers,
-                       data-default,
-                       either,
-                       filepath,
-                       jni,
-                       jvm,
-                       lens,
-                       optparse-applicative,
-                       -- svm-simple,
-                       text,
-                       time,
-                       vector,
-                       --
-                       fastText,
-                       HCoreNLP,
-                       HCoreNLP-Proto,
-                       PropBank,
-                       nlp-types,
-                       --
-                       semantic-role-labeler                       
+-- Executable SRL
+--   Main-is:             SRL.hs
+--   hs-source-dirs:      app
+--   default-language:    Haskell2010
+--   ghc-options:         -O2 -Wall
+--                        -funbox-strict-fields
+--                        -fno-warn-unused-do-bind
+--                        -fno-warn-orphans
+--                        -threaded
+--   ghc-prof-options:    -caf-all -auto-all
+--   other-modules:       
+--   build-depends:       base,
+--                        --
+--                        attoparsec,
+--                        bytestring,
+--                        containers,
+--                        data-default,
+--                        either,
+--                        filepath,
+--                        jni,
+--                        jvm,
+--                        lens,
+--                        optparse-applicative,
+--                        text,
+--                        time,
+--                        vector,
+--                        --
+--                        fastText,
+--                        HCoreNLP,
+--                        HCoreNLP-Proto,
+--                        PropBank,
+--                        nlp-types,
+--                        --
+--                        semantic-role-labeler                       
                          
 

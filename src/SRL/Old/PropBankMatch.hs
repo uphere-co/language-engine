@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module SRL.PropBankMatch where
+module SRL.Old.PropBankMatch where
 
 import           Control.Applicative
 import           Control.Lens
@@ -17,15 +17,15 @@ import qualified Data.Text.IO               as T.IO
 import           Data.Time.Calendar              (fromGregorian)
 --
 import qualified CoreNLP.Simple.Type        as S
+import           Data.Bitree                     (getLeaves)
 import           NLP.Parser.PennTreebankII
 import           NLP.Printer.PennTreebankII      (prettyPrint)
 import           NLP.Type.PennTreebankII
--- import           PropBank.Match
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
-import           SRL.Type
+import           SRL.Old.Type
 
 
 propbank :: (FilePath,FilePath,IsOmit) -> EitherT String IO ([PennTree],[Instance])

@@ -30,9 +30,9 @@ import           CoreNLP.Simple.Type
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
-import           SRL.Feature
-import           SRL.PropBankMatch
-import           SRL.Type
+import           SRL.Old.Feature
+import           SRL.Old.PropBankMatch
+import           SRL.Old.Type
 
 data ProgOption = ProgOption { penndir :: FilePath
                              , propdir :: FilePath

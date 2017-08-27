@@ -15,7 +15,7 @@ import           Data.Tuple                (swap)
 import           System.Directory
 import           System.FilePath
 --
-import           SRL.CoNLL.CoNLL08.Parser
+import           SRL.Old.CoNLL.CoNLL08.Parser
 
 
 showSent :: Sentence -> Text

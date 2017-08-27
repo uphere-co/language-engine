@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module SRL.Vectorize.Sparse where
+module SRL.Old.Vectorize.Sparse where
 
 import           Control.Lens
 import           Data.List                 (foldl')
@@ -12,7 +12,7 @@ import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
 import           PropBank.Type.Prop
 --
-import           SRL.Type
+import           SRL.Old.Type
 --
 
 

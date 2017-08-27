@@ -23,9 +23,9 @@ import           CoreNLP.Simple.Type
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 --
-import           SRL.Feature.Dependency
-import           SRL.Format
-import           SRL.Init
+import           SRL.Old.Feature.Dependency
+import           SRL.Old.Format
+import           SRL.Old.Init
 
 
 main :: IO ()
@@ -53,17 +53,10 @@ mainProcess pp = do
     dep <- hoistEither $ sentToDep sent
     let tr = decodeToPennTree (fromJust (sent^.S.parseTree))
         itr = mkPennTreeIdx tr
-        -- dtr = depLevelTree dep itr
-        -- dtr' = depTree dep (mkAnnotatable itr)
-        -- ditr = depInfoTree dep (mkAnnotatable itr)
 
     liftIO $ print (motherMap dep)
     liftIO $ putStrLn "==============="
     liftIO $ print dep        
-    -- liftIO $ putStrLn "==============="        
-    -- liftIO $ print dtr'
-    -- liftIO $ putStrLn "==============="
-    -- liftIO $ print ditr 
     liftIO $ TIO.putStrLn $ prettyPrint 0 tr
     liftIO $ putStrLn "==============="
     let terms = map (^._2) . toList $ tr

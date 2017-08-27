@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
-module SRL.Format where
+module SRL.Old.Format where
 
 import           Control.Lens
 import           Data.IntMap                   (IntMap)
@@ -20,46 +20,14 @@ import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
 import           Text.Format.Tree
 --
-import           SRL.Type
--- import           SRL.Type.Clause
--- import           SRL.Type.Verb
-import           SRL.Util
+import           SRL.Old.Type
+import           SRL.Old.Util
 
 
 
 formatRngText :: [Text] -> (Int,Int) -> String
 formatRngText terms p = show p ++ ": " ++ T.unpack (clippedText p terms)
 
-{- 
-formatBitree :: (a -> Text) ->  Bitree a a -> Text
-formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
-  where toTree (PN x xs) = Tr.Node x (map toTree xs)
-        toTree (PL x)    = Tr.Node x []
-        
-
-formatVerbProperty :: VerbProperty -> String
-formatVerbProperty vp = printf "%3d %-15s : %20s %s"
-                          (vp^.vp_index) (vp^.vp_lemma.to unLemma)
-                          (show (vp^.vp_tense) ++ "." ++ show (vp^.vp_aspect) ++ "." ++ show (vp^.vp_voice))
-                          (show (vp^.vp_words))
-
-
-formatVerbArgs :: VerbArgs (Either (Range,STag) (Int,POSTag)) -> String
-formatVerbArgs va = printf "%10s %-20s %s"
-                      (maybe "" formatArg (va^.va_arg0))
-                      (T.intercalate " " (map (^._2) (va^.va_string)))
-                      ((intercalate " " . map (printf "%7s" . formatArg)) (va^.va_args))
-  where
-    formatArg a = case a of
-                    Right (_  ,p)           -> show p
-                    Left  (_  ,(S_RT))      -> "ROOT"
-                    Left  (rng,(S_SBAR _))  -> "SBAR" ++ show rng
-                    Left  (rng,(S_CL c))    -> show c ++ show rng
-                    Left  (_  ,(S_VP _))    -> "VP"
-                    Left  (rng,(S_PP t))    -> "(PP " ++ show t ++ ")" ++ show rng
-                    Left  (rng,(S_OTHER t)) -> show t ++ show rng
-
--}
 
 showVerb :: IntMap Text -> (Lemma ,[Int]) -> Text
 showVerb tkmap (lma,is) = unLemma lma <> " : " <> fullwords
