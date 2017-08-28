@@ -22,6 +22,7 @@ library
                        OntoNotes.App.Analyze.CoreNLP
                        OntoNotes.App.Analyze.Format
                        OntoNotes.App.Analyze.SentenceStructure
+                       OntoNotes.App.Analyze.Type
                        OntoNotes.App.Load
                        OntoNotes.App.Serializer
                        OntoNotes.App.Util
