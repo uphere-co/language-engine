@@ -48,6 +48,8 @@ import           OntoNotes.App.Util                           (CharIdx(..),SentI
                                                               ,TokIdx(..)
                                                               ,convertRangeFromTokenToChar
                                                               ,underlineText)
+--
+import           OntoNotes.App.Analyze.Type                   (DocAnalysisInput,dainput_sents,dainput_tokss)
 
 
 groupupheredir' = "/scratch/groups/uphere"
@@ -104,11 +106,10 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
 
 
 
-linkedMentionToTagPos :: (EntityMention Text) --  UIDCite EntityMentionUID (EL.EMInfo Text)
-                      -> (TagPos TokIdx (EntityMention Text)) -- EntityMentionUID
+linkedMentionToTagPos :: (EntityMention Text)
+                      -> (TagPos TokIdx (EntityMention Text))
 linkedMentionToTagPos linked_mention =
-  let -- uid = EL._uid linked_mention
-      IRange b e = (_info linked_mention)^._1
+  let IRange b e = (_info linked_mention)^._1
   in TagPos (TokIdx b, TokIdx e,linked_mention)
 
 
@@ -123,33 +124,20 @@ prepareNETokens all =
   in neTokens
 
 
-getWikiResolvedMentions :: ([Sentence], [Maybe SentenceIndex], [SentItem CharIdx], [[Token]]
-                           ,[Maybe PennTree]
-                           ,[Dependency]
-                           -- ,Maybe [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
-                           ,Maybe [TagPos TokIdx (Maybe Text)]
-                           )
-                        -> ([(Text,NamedEntityClass)] -> [EntityMention Text])
+getWikiResolvedMentions :: ([(Text,NamedEntityClass)] -> [EntityMention Text])
+                        -> [Sentence]
+                        -> [Token]
                         -> [EntityMention Text]
-getWikiResolvedMentions loaded emTagger =
-  let tokens = loaded^._4
-      linked_mentions_all = getWikiAllMentions loaded emTagger
-      input_pos = V.fromList (map (^. token_pos) $ concat tokens)
+getWikiResolvedMentions emTagger sents tokens =
+  let linked_mentions_all =  emTagger (prepareNETokens sents) -- getWikiAllMentions docinput emTagger
+      input_pos = V.fromList (map (^. token_pos) tokens)
       linked_mentions_all_unfiltered = (EMP.filterEMbyPOS input_pos linked_mentions_all)
   in filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all_unfiltered
 
 
-getWikiAllMentions :: ([Sentence]
-                      ,[Maybe SentenceIndex]
-                      ,[SentItem CharIdx]
-                      ,[[Token]]
-                      ,[Maybe PennTree]
-                      ,[Dependency]
-                      ,Maybe [TagPos TokIdx (Maybe Text)] -- [(SentItem CharIdx, [TagPos CharIdx (Maybe Text)])]
-                      )
+{-
+getWikiAllMentions :: [Sentence]
                    -> ([(Text,NamedEntityClass)] -> [EntityMention Text])
                    -> [EntityMention Text]
-getWikiAllMentions loaded emTagger =
-  let neTokens = prepareNETokens (loaded^._1)
-      linked_mentions_all = emTagger neTokens
-  in linked_mentions_all
+getWikiAllMentions sents emTagger = emTagger (prepareNETokens sents)
+-}
