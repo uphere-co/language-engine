@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                nlp-types
-version:             0.1.2.0
+version:             0.1.3.0
 -- synopsis:            
 -- description:         
 license:             OtherLicense
@@ -20,6 +20,7 @@ library
                        Data.Attribute
                        Data.Bitree
                        Data.BitreeZipper
+                       Data.BitreeZipper.Util
                        Data.Range
                        NLP.Parser.PennTreebankII
                        NLP.Printer.PennTreebankII
@@ -45,6 +46,7 @@ library
                        discrimination,
                        hashable,
                        lens,
+                       monad-loops,
                        taggy-lens,
                        text,
                        transformers

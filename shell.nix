@@ -19,6 +19,7 @@ let
             discrimination
             hashable
             lens
+            monad-loops
             pretty-hex
             taggy-lens
             text
