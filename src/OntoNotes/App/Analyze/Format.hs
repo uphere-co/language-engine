@@ -272,51 +272,80 @@ showMatchedFrame (mcpstr,vstr,paws) = do
 
 matchSO rolemap (dp,verbp,paws) (patt,num) =
   case verbp^.vp_verbProperty.vp_voice of
-    Active -> ((patt,num), catMaybes [matchSubject rolemap dp patt, matchObject1 rolemap verbp patt])
-    Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap paws patt,matchThemeForPassive rolemap dp patt])
+    Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap paws patt )
+    Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap paws patt,matchThemeForPassive rolemap dp patt] ++ matchPrepArgs rolemap paws patt)
+
+
+matchPrepArgs rolemap paws patt = do
+  (p,prep) <- pbArgForPP patt
+  -- prep <- maybeToList mprep
+  z <- maybeToList (matchPP paws prep)
+  (,z) <$> maybeToList (lookup p rolemap)
+
+
+matchPP paws prep = do
+    Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
+    tr <- current . root <$> paws^.pa_CP.cp_maximal_projection
+    find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
+  where
+    ppcheck (Left (_,S_PP prep')) = prep == prep'
+    ppcheck _                     = False
+
 
 
 matchSubject rolemap dp patt = do
-  (p,GR_NP (Just GASBJ)) <- subjectPosition patt
+  (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
   (,dp) <$> lookup p rolemap
 
 
 matchAgentForPassive rolemap paws patt = do
-    (p,GR_NP (Just GASBJ)) <- subjectPosition patt
-    Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
-    tr <- current . root <$> paws^.pa_CP.cp_maximal_projection
-    pp <- find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
-    (,pp) <$> lookup p rolemap
-  where
-    ppcheck (Left (_,S_PP "by")) = True
-    ppcheck _                    = False
+    (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
+    z <- matchPP paws "by"
+    (,z) <$> lookup p rolemap
+
+
+
 
 matchThemeForPassive rolemap dp patt = do
-  (p,GR_NP (Just GA1)) <- object1Position patt
+  (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
   (,dp) <$> lookup p rolemap
 
 
-matchObject1 rolemap verbp patt = do
-  obj <- listToMaybe (verbp^.vp_complements)
-  Left (_,node) <- Just (getRoot (current obj))
-  let ctag = chunkTag node
-  (p,a) <- object1Position patt
+matchObjects rolemap verbp patt = do
+  (garg,obj) <- zip [GA1,GA2] (verbp^.vp_complements)
+  ctag <- case getRoot (current obj) of
+            Left (_,node) -> [chunkTag node]
+            _             -> []
+  (p,a) <- maybeToList (pbArgForGArg garg patt)
   case ctag of
-    NP   -> guard (a == GR_NP   (Just GA1))
-    S    -> guard (a == GR_SBAR (Just GA1))
-    SBAR -> guard (a == GR_SBAR (Just GA1))
-    _    -> Nothing
-  (,obj) <$> lookup p rolemap
+    NP   -> guard (a == GR_NP   (Just garg))
+    S    -> guard (a == GR_SBAR (Just garg))
+    SBAR -> guard (a == GR_SBAR (Just garg))
+    _    -> []
+  fe <- maybeToList (lookup p rolemap)
+  return (fe,obj)
 
+-- matchPP patt =
+  
 
-
-matchGRelArg grel patt = check patt_arg0 "arg0" <|>
+pbArgForGArg grel patt = check patt_arg0 "arg0" <|>
                          check patt_arg1 "arg1" <|>
                          check patt_arg2 "arg2" <|>
                          check patt_arg3 "arg3" <|>
                          check patt_arg4 "arg4"
-  where check l label = patt^.l >>= \a -> findGArg a >>= \grel' -> if grel==grel' then Just (label,a) else Nothing
+  where check l label = do a <- patt^.l
+                           grel' <- findGArg a
+                           if grel==grel' then Just (label,a) else Nothing
 
-subjectPosition = matchGRelArg GASBJ
 
-object1Position = matchGRelArg GA1
+pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
+                            , check patt_arg1 "arg1"
+                            , check patt_arg2 "arg2"
+                            , check patt_arg3 "arg3"
+                            , check patt_arg4 "arg4"
+                            ]
+  where check l label = do a <- patt^.l
+                           -- grel <- findGArg a
+                           case a of
+                             GR_PP mprep -> (label,) <$> mprep
+                             _           -> Nothing
