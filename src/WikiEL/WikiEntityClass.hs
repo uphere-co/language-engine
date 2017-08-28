@@ -40,7 +40,8 @@ otherClass  = buildItemClass "Q35120" -- maps to entity (Q35120), which means "a
 orgClass    = buildItemClass "Q43229"
 personClass = buildItemClass "Q215627"
 brandClass  = buildItemClass "Q431289"
-locationClass = buildItemClass "Q17334923"
+locationClass = buildItemClass "Q1496967" -- territorial entity (Q1496967), instead of location (Q17334923)
+occupationClass = buildItemClass "Q12737077"
 
 toNEClass :: ItemClass -> NEClass
 toNEClass c | c==orgClass      = N.Org
@@ -52,7 +53,7 @@ neClassMatch :: NEClass -> ItemClass -> Bool
 neClassMatch N.Org    ic | ic==orgClass      = True
 neClassMatch N.Person ic | ic==personClass   = True
 neClassMatch N.Loc    ic | ic==locationClass = True
-neClassMatch N.Other  ic | ic==brandClass    = True
+neClassMatch N.Other  ic | ic==brandClass || ic==occupationClass = True
 neClassMatch _ _ = False
 
 
