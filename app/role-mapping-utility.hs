@@ -44,7 +44,8 @@ import           FrameNet.Type.Frame
 import           Lexicon.Format                   (formatArgPatt,formatRoleMap)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query
-import           Lexicon.Type                     (ArgPattern(..),POSVorN(..))
+import           Lexicon.Type                     (ArgPattern(..),POSVorN(..)
+                                                  ,RoleInstance,RolePattInstance)
 import           NLP.Syntax.Type
 import           PropBank.Query                   (constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB
@@ -130,7 +131,7 @@ formatProblem (i,(lma,osense,frame,pbs,subcat)) =
       sensestr = printf "definition: %s\n%s" (osense^.sense_name) (osense^.sense_examples)      
       fes = numberedFEs frame
       framestr = printf "%s" (frame^.frame_name) ++ "\n" ++ formatFEs fes
-      argpattstr = intercalate "\n" $ flip map (Prelude.take 10 (subcat^._2)) $ \(patt :: ArgPattern Voice Text,n) ->
+      argpattstr = intercalate "\n" $ flip map (Prelude.take 10 (subcat^._2)) $ \(patt,n) ->
                      printf "%s     #count: %5d" (formatArgPatt "voice" patt) (n :: Int)
       pbinfos = map (\pb -> (pb^.roleset_id,pb^.roleset_name,extractPBExamples pb,extractPBRoles pb)) pbs
       pbinfostr = intercalate "\n" $ map formatPBInfos pbinfos
@@ -204,8 +205,9 @@ main = do
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (preddb,rolesetdb) <- loadPropBankDB
-  subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
-  rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
+  
+  (subcats :: [RolePattInstance Voice]) <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
+  (rolemap :: [RoleInstance]) <- loadRoleInsts (cfg^.cfg_rolemap_file)
 
   let flattened = createONFN subcats sensemap framedb rolesetdb 
   let indexed = zip [1..] flattened

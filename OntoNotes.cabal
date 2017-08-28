@@ -18,6 +18,7 @@ cabal-version:       >=1.10
 library
   exposed-modules:     OntoNotes
                        OntoNotes.App.Analyze
+                       OntoNotes.App.Analyze.Config
                        OntoNotes.App.Analyze.CoreNLP
                        OntoNotes.App.Analyze.Format
                        OntoNotes.App.Analyze.SentenceStructure
