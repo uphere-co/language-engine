@@ -39,10 +39,9 @@ import qualified Data.Vector.Fusion.Bundle     as B
 import qualified WikiEL.Util.Hash              as H
 import qualified WikiEL.Graph                  as G
 import qualified WikiEL.ETL.RDF.Binary         as BR
-
 import qualified Data.ByteString.Lazy.Char8    as BL
 
-
+import qualified WikiEL.Graph.ETL              as G.E
 
 type LText = T.L.Text
 
@@ -126,11 +125,15 @@ loadInterlinks (prevState, prevPartialBlock) block = do
 
 foo :: ([Text] -> a) -> FilePath -> IO a
 foo f  filepath = do
+  content <- T.IO.readFile filepath
+  return $ f (T.lines content)
+  {-
   content <- T.L.IO.readFile filepath
   let
     lines = map T.L.toStrict (T.L.lines content)
     state = f lines
   return state
+-}
 
 data WNTypes = WNTypes { _types  :: !(M.Map H.WordHash [H.WordHash])
                        , _toStr  :: !(M.Map H.WordHash Text)
@@ -160,11 +163,6 @@ wordnetType table@(WNTypes types names) name = f ts
     f Nothing = []
     f (Just ts) = mapMaybe (\t -> M.lookup t names) ts
     ts = M.lookup key types
-
-main4 = do
-  args <- getArgs 
-  wn <- foo loadWordnetTypes (args !! 0) -- "/scratch/wavewave/test/wnTypes.1M" -- "enwiki/wnTypes"
-  print wn
 
 {-
 --For preparing test data:
@@ -230,31 +228,28 @@ test1 sorted@(d,edges) names = do
   --print $ dEdges (H.wordHash "Germany")
 
 main3init = do
-  cc@(Foo edges names) <- foo loadEdges "enwiki/interlinks" -- ~16min to sort
-  wn <- foo loadWordnetTypes "enwiki/synsets"
-  taxons@(Foo tes tns) <- foo loadEdges "enwiki/synsets" -- ~16min to sort
+  cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph "enwiki/edges" -- ~40min to sort
+  --wn <- foo loadWordnetTypes "enwiki/synsets"
+  --taxons@(Foo tes tns) <- foo loadEdges "enwiki/synsets" -- ~16min to sort
   let
     sorted = G.sortEdges G.From  edges
-    sortedTEs = G.sortEdges G.From  tes
+    --sortedTEs = G.sortEdges G.From  tes
   print $ UV.length edges
   print $ M.size names
   print $ UV.length (snd sorted)
-
-  print $ M.size tns
-  print $ UV.length (snd sortedTEs)
-
-  print $ wn
-  
   store <- newStore cc
   store2 <- newStore sorted
-  store3 <- newStore wn
-  store4 <- newStore taxons
-  store5 <- newStore sortedTEs
   print store
   print store2
-  print store3
-  print store4
-  print store5
+  --print $ M.size tns
+  --print $ UV.length (snd sortedTEs)
+  --print $ wn  
+  --store3 <- newStore wn
+  --store4 <- newStore taxons
+  --store5 <- newStore sortedTEs  
+  --print store3
+  --print store4
+  --print store5
 
 {-
 -- Script for testing in REPL
@@ -333,7 +328,36 @@ main3 idx idx2 = do
   print $ M.size names  
   print $ UV.length es
 
+main4 = do
+  args <- getArgs 
+  wn <- foo loadWordnetTypes (args !! 0) -- "/scratch/wavewave/test/wnTypes.1M" -- "enwiki/wnTypes"
+  print wn
+
+--compare Text vs ByteSTring
+main5 = do
+  cc@(Foo edges names) <- foo loadEdges "enwiki/interlinks.10M"
+  --(0.05 secs, 781,992 bytes)
+  --(1.62 secs, 858,703,296 bytes)     --with strict Text
+  print $ UV.length edges
+  --(27.39 secs, 38,171,046,944 bytes)
+  --(34.03 secs, 41,512,027,152 bytes) --with strict Text and parserlink2
+  --(21.60 secs, 24,037,759,056 bytes) --with strict Text
+  print $ M.size names
+  --(50.94 secs, 28,697,355,912 bytes)
+  --(36.51 secs, 28,697,355,544 bytes) --with strict Text
+
+  gg@(G.E.Graph es ns) <- G.E.applyLines G.E.loadGraph "enwiki/interlinks.10M"
+  --(0.11 secs, 362,147,360 bytes)
+  print $ UV.length es
+  --(30.99 secs, 22,382,063,760 bytes) -- With Maybe
+  --(27.19 secs, 21,342,065,888 bytes) -- Without Maybe
+  --(17.40 secs, 21,087,622,824 bytes) -- Without Maybe and with toLink2
+  print $ M.size ns
+  --(34.97 secs, 25,536,287,552 bytes) -- With Maybe
+  --(33.73 secs, 25,536,287,552 bytes) -- Without Maybe
+
+
   
 main :: IO ()
-main = main2
+main = main5
 

@@ -40,6 +40,7 @@ library
                      , WikiEL.WikiEntityClass
                      , WikiEL.Convert
                      , WikiEL.Graph
+                     , WikiEL.Graph.ETL
   -- other-modules:
                      , WikiEL.ETL.RDF.Common
                      , WikiEL.ETL.RDF.Wikidata
