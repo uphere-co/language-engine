@@ -17,17 +17,9 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     OntoNotes
-                       OntoNotes.App.Analyze
-                       OntoNotes.App.Analyze.Config
-                       OntoNotes.App.Analyze.CoreNLP
-                       OntoNotes.App.Analyze.Format
-                       OntoNotes.App.Analyze.SentenceStructure
-                       OntoNotes.App.Analyze.Type
                        OntoNotes.App.Load
                        OntoNotes.App.Serializer
-                       OntoNotes.App.Util
                        OntoNotes.App.VerbSubcat
-                       OntoNotes.App.WikiEL
                        OntoNotes.Corpus.Load
                        OntoNotes.Corpus.PropBank
                        OntoNotes.Parser.Sense
@@ -82,37 +74,6 @@ library
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
   ghc-prof-options:    -caf-all -auto-all
-
-
-
--- Executable argument
---   Main-is:             argument.hs
---   hs-source-dirs:      app
---   default-language:    Haskell2010
---   ghc-options:         -O2 -Wall
---                        -funbox-strict-fields
---                        -fno-warn-unused-do-bind
---                        -fno-warn-orphans
---                        -threaded
---   ghc-prof-options:    -caf-all -auto-all
---   other-modules:
---   build-depends:       base,
---                        --
---                        bytestring,
---                        containers,
---                        directory-tree,
---                        either,
---                        filepath,
---                        lens,
---                        text,
---                        --
---                        HCoreNLP,
---                        nlp-types,
---                        PropBank,
---                        syntactic-analysis,
---                        textview,
---                        --
---                        OntoNotes
 
 
 Executable role-mapping-utility
