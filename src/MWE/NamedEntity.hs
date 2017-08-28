@@ -14,11 +14,11 @@ import qualified Data.Text.IO               as TIO
 import           NLP.Type.CoreNLP
 
 
-preProcessing sents constraint = do
+getReplacedTextWithNewWikiEL sents constraint = do
   let tokenss = catMaybes <$> sents ^.. traverse . sentenceToken
-  let constraint' = catMaybes $ map (\c -> convertConstraintInCharIdx c tokenss) constraint
+      cinchar = catMaybes $ map (\c -> convertConstraintInCharIdx c tokenss) constraint
 
-  a <- flip evalStateT constraint $ do
+  taggedTokenss <- flip evalStateT constraint $ do
     forM tokenss $ \tokens -> do
       forM tokens $ \t -> do
         s <- get
@@ -34,7 +34,7 @@ preProcessing sents constraint = do
             else return (t,0)
           else return (t,0)
 
-  let f t1 t2 n1 n2 = case n1 of
+  let changeToken t1 t2 n1 n2 = case n1 of
         0 -> fillGap t1 t2 n1 n2 " "
         1 -> fillGap t1 t2 n1 n2 "-"
         2 -> fillGap t1 t2 n1 n2 " "
@@ -42,17 +42,13 @@ preProcessing sents constraint = do
       fillGap t1 t2 n1 n2 char = if (n1 == 1 || n1 == 2)
                                  then T.replace "&" "AND" $ T.replace "." "-PERIOD" $ (T.append (t1 ^. token_text) (T.replicate (gapLength t1 t2) char))
                                  else (T.append (t1 ^. token_text) (T.replicate (gapLength t1 t2) char))
-      result' = (map (\xs -> (map (\((t1,n1),(t2,n2)) -> f t1 t2 n1 n2) (zip xs (drop 1 xs))) ++ [last xs ^. _1 ^. token_text] ) a)
+      result' = (map (\xs -> (map (\((t1,n1),(t2,n2)) -> changeToken t1 t2 n1 n2) (zip xs (drop 1 xs))) ++ [last xs ^. _1 ^. token_text] ) taggedTokenss)
       result = T.intercalate "" $ concat $ intersperse ["\n"] result'
 
-  print tokenss
-  TIO.putStrLn result
-  print constraint'
-  mkNewWikiEL constraint' tokenss >>= print
-
-
-
-
+  newwikiel <- mkNewWikiEL cinchar tokenss
+  
+  return (result,newwikiel)
+  
 contained :: (Ord a) => (a,a) -> (a,a) -> Bool
 contained (a,b) (c,d) = if (a >= c && b <=d) then True else False
 
