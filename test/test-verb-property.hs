@@ -20,7 +20,7 @@ import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Verb
-import 	       	 NLP.Type.CoreNLP
+import           NLP.Type.CoreNLP
 import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
 --

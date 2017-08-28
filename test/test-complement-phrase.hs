@@ -22,7 +22,7 @@ import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated      as N
-import 	       	 NLP.Type.CoreNLP
+import           NLP.Type.CoreNLP
 import           NLP.Type.UniversalDependencies2.Syntax
 --
 import           NLP.Syntax.Clause
