@@ -92,7 +92,7 @@ data DocStructure = DocStructure { _ds_mtokenss :: [[Maybe Token]]
 
 makeLenses ''DocStructure
 
-data DocAnalysisInput = DocAnalysisInput { _dainput_sents :: [Sentence] 
+data DocAnalysisInput = DocAnalysisInput { _dainput_sents :: [Sentence]
                                          , _dainput_sentidxs :: [Maybe SentenceIndex]
                                          , _dainput_sentitems :: [SentItem CharIdx]
                                          , _dainput_tokss :: [[Token]]
@@ -104,6 +104,32 @@ data DocAnalysisInput = DocAnalysisInput { _dainput_sents :: [Sentence]
 makeLenses ''DocAnalysisInput
 
 
+data MGVertex = MGEntity    { _mv_id :: Int
+                            , _mv_range :: Range
+                            , _mv_text :: Text }
+              | MGPredicate { _mv_id    :: Int
+                            , _mv_range :: Range
+                            , _mv_frame :: Text
+                            , _mv_verb  :: Text
+                            }
+              deriving Show
 
-data MeaningGraph = MeaningGraph {
+makeLenses ''MGVertex
+
+
+data MGEdge = MGEdge { _me_relation :: Text
+                     , _me_start :: Int
+                     , _me_end :: Int }
+
+            deriving Show
+
+makeLenses ''MGEdge
+
+
+data MeaningGraph = MeaningGraph { _mg_vertices :: [MGVertex]
+                                 , _mg_edges :: [MGEdge]
                                  }
+                  deriving Show
+
+makeLenses ''MeaningGraph
+

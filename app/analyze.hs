@@ -5,9 +5,10 @@ module Main where
 import           Data.Monoid                             ((<>))
 import qualified Options.Applicative          as O
 --
-import           OntoNotes.App.Analyze                   (runAnalysis)
-import qualified OntoNotes.App.Analyze.Config as Analyze
 import           OntoNotes.App.Load                      (cfg,cfgG)
+--
+import           SRL.Analyze                             (runAnalysis)
+import qualified SRL.Analyze.Config           as Analyze
 
 
 
@@ -24,5 +25,4 @@ progOption = O.info pOptions (O.fullDesc <> O.progDesc "analyze text")
 main :: IO ()
 main = do
   acfg <- O.execParser progOption
-  -- let acfg = Analyze.Config (opt^.showDetail) (opt^.showFullDetail)
   runAnalysis cfg acfg

@@ -229,9 +229,10 @@ showMatchedFrame (mcpstr,vstr,paws) = do
       vp =vstr^.vs_vp
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
   T.IO.putStrLn "---------------------------"
-  putStrLn ("predicate: " <> maybe "unidentified CP" show (cpRange cp))
-  T.IO.putStrLn ("Verb: " <> (vstr^.vs_lma))
-  flip traverse_ (matchFrame mcpstr vstr paws) $ \(frame,mselected) -> do
+  flip traverse_ (matchFrame (mcpstr,vstr,paws)) $ \(rng,verb,frame,mselected) -> do
+    putStrLn ("predicate: " <> show rng) -- maybe "unidentified CP" show (cpRange cp))
+    T.IO.putStrLn ("Verb: " <> verb) -- (vstr^.vs_lma))
+    
     T.IO.putStrLn ("Frame: " <> frame)
     flip traverse_ mselected $ \((patt,num),felst) -> do
       mapM_ putStrLn . map (\(fe,z) -> printf "%-15s: %-7s %s" fe (show (getRange (current z))) (gettokens z)) $ felst
