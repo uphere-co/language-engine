@@ -323,9 +323,9 @@ main1 = do
   input_raw <- T.IO.readFile rawNewsFile3
   input <- T.IO.readFile nerNewsFile3
   uid2tag <- fromFiles [ (WC.personClass, personItemFile)
-                       --, (WC.orgClass, orgItemFile)
-                       --, (WC.brandClass, brandItemFile)
-                       --, (WC.occupationClass, occupationItemFile)
+                       , (WC.orgClass, orgItemFile)
+                       , (WC.brandClass, brandItemFile)
+                       , (WC.occupationClass, occupationItemFile)
                        , (WC.locationClass, locationItemFile)
                        ]
   wikiTable <- loadWETagger reprFile
