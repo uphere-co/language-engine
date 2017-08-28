@@ -13,8 +13,9 @@ import           Text.Printf               (printf)
 --
 import           NLP.Type.SyntaxProperty   (Voice)
 --
-import           Lexicon.Format            (formatArgPatt,formatRoleMap)
-import           Lexicon.Merge             (mergePatterns,patternGraph,patternRelation,listOfSupersetSubset,topPatterns)
+import           Lexicon.Format            (formatArgPatt,formatArgPattStat,formatRoleMap)
+import           Lexicon.Merge             (mergePatterns,patternGraph,patternRelation,
+                                            listOfSupersetSubset,topPatterns)
 import           Lexicon.Query             (loadRoleInsts,loadRolePattInsts)
 import           Lexicon.Type              (ArgPattern(..))
 
@@ -28,15 +29,12 @@ main = do
 
   flip mapM_ subcats $ \subcat -> do
     let pattstats0 = subcat^._2
-        pattstats = mergePatterns (subcat^._2)
+        pattstats = mergePatterns pattstats0
         ipattstats = zip [1..] pattstats
         pattgraph = patternGraph (patternRelation `on` (^._1)) ipattstats
         supersub  = listOfSupersetSubset pattgraph
 
         toppatts = sortBy (flip compare `on` snd) (topPatterns ipattstats supersub)
-        formatArgPattStat pstats =
-          intercalate "\n" $ flip map pstats $ \(patt,n) ->
-            printf "%s     #count: %5d" (formatArgPatt "voice" patt) (n :: Int)
         argpattstr0 = formatArgPattStat pattstats0
         argpattstr = formatArgPattStat pattstats
         topargpattstr = formatArgPattStat toppatts

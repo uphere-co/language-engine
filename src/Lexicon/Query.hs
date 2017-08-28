@@ -9,6 +9,7 @@ import           Control.Lens
 import           Data.Function                (on)
 import           Data.Hashable                (Hashable)
 import           Data.List                    (groupBy)
+import           Data.Maybe                   (listToMaybe)
 import           Data.Monoid                  ((<>))
 import           Data.Text                    (Text)
 import qualified Data.Text            as T
@@ -35,21 +36,39 @@ convertONIDtoSenseID lma sense_num =
   else (lma,Verb,"1." <> sense_num)
 
 
+
+parseGRel w = case T.splitOn "-" w of
+                t:ts -> case t of
+                          "NP"   -> GR_NP   (listToMaybe ts >>= identifyGA)
+                          "S"    -> GR_S    (listToMaybe ts >>= identifyGA)
+                          "SBAR" -> GR_SBAR (listToMaybe ts >>= identifyGA)
+                          "PP"   -> GR_PP   (listToMaybe ts)
+                          "ADVP" -> GR_ADVP (listToMaybe ts)
+                          "ADJP" -> GR_ADJP
+                          x      -> GR_X w
+                _ -> GR_X w
+  where
+    identifyGA "SBJ" = Just GASBJ
+    identifyGA "1"   = Just GA1
+    identifyGA "2"   = Just GA2
+    identifyGA _     = Nothing
+
+
 parseWithNullCheck :: (Text -> a) -> Text -> Maybe a
 parseWithNullCheck f w = if w == "null" then Nothing else Just (f w)
 
 
 parseRolePattInst
   :: (Read p) =>
-     [Text] -> (SenseID,Maybe p,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Maybe Text,Int)
+     [Text] -> (SenseID, ArgPattern p GRel, Int)
 parseRolePattInst ws@[lma',sense',mvoice,marg0,marg1,marg2,marg3,marg4,count] =
     ( sid
-    , parseWithNullCheck (read . T.unpack) mvoice
-    , parseWithNullCheck id marg0
-    , parseWithNullCheck id marg1
-    , parseWithNullCheck id marg2
-    , parseWithNullCheck id marg3
-    , parseWithNullCheck id marg4
+    , ArgPattern (parseWithNullCheck (read . T.unpack) mvoice)
+                 (parseWithNullCheck parseGRel marg0)
+                 (parseWithNullCheck parseGRel marg1)
+                 (parseWithNullCheck parseGRel marg2)
+                 (parseWithNullCheck parseGRel marg3)
+                 (parseWithNullCheck parseGRel marg4)
     , either (error ("error: " ++ show ws)) fst (decimal count)
     )
   where lma = T.intercalate "-" . init . T.splitOn "-" $ lma'
@@ -61,8 +80,8 @@ loadRolePattInsts :: (Read v,Hashable v) => FilePath -> IO [RolePattInstance v]
 loadRolePattInsts fp = do
   txt <- T.IO.readFile fp
   let getLemmaSense x = x^._1
-      getArgTable x = ArgPattern (x^._2) (x^._3) (x^._4) (x^._5) (x^._6) (x^._7)
-  return . map (\xs  -> (getLemmaSense (head xs),map (\x->(getArgTable x,x^._8)) xs))
+      -- getArgTable x = ArgPattern (x^._2) (x^._3) (x^._4) (x^._5) (x^._6) (x^._7)
+  return . map (\xs  -> (getLemmaSense (head xs),map (\x->(x^._2,x^._3)) xs))
          . groupBy ((==) `on` getLemmaSense)
          . map parseRolePattInst
          . map T.words

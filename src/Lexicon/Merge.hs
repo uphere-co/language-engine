@@ -14,7 +14,7 @@ import           Data.Text                     (Text)
 import           NLP.Type.PennTreebankII       (TernaryLogic(..))
 import           NLP.Type.SyntaxProperty       (Voice(..))
 --
-import           Lexicon.Type                  (ArgPattern(..)
+import           Lexicon.Type                  (ArgPattern(..), GArg(..), GRel(..)
                                                ,patt_property
                                                ,patt_arg0
                                                ,patt_arg1
@@ -24,16 +24,16 @@ import           Lexicon.Type                  (ArgPattern(..)
                                                )
 
 
-convertPassive :: ArgPattern Voice Text -> ArgPattern () Text
+convertPassive :: ArgPattern Voice GRel -> ArgPattern () GRel
 convertPassive patt =
     case patt^.patt_property of
       Just Passive -> ArgPattern
                         (Just ())
-                        (conv (patt^.patt_arg0))
-                        (conv (patt^.patt_arg1))
-                        (conv (patt^.patt_arg2))
-                        (conv (patt^.patt_arg3))
-                        (conv (patt^.patt_arg4))
+                        (fmap conv (patt^.patt_arg0))
+                        (fmap conv (patt^.patt_arg1))
+                        (fmap conv (patt^.patt_arg2))
+                        (fmap conv (patt^.patt_arg3))
+                        (fmap conv (patt^.patt_arg4))
       _            -> ArgPattern
                         (Just ())
                         (patt^.patt_arg0)
@@ -43,43 +43,41 @@ convertPassive patt =
                         (patt^.patt_arg4)
 
   where
-    conv (Just "PP-by")  = Just "NP-SBJ"
-    conv (Just "NP-SBJ") = Just "NP-1"
-    conv x               = x
+    conv (GR_PP (Just "by"))  = GR_NP (Just GASBJ)
+    conv (GR_NP (Just GASBJ)) = GR_NP (Just GA1)
+    conv x                    = x
 
 
 
-convertNP :: ArgPattern () Text -> ArgPattern () Text
+convertNP :: ArgPattern () GRel -> ArgPattern () GRel
 convertNP patt =
   let arglst = [patt^.patt_arg0,patt^.patt_arg1,patt^.patt_arg2,patt^.patt_arg3,patt^.patt_arg4]
-  in if | not (Just "NP-SBJ" `elem` arglst) && patt^.patt_arg0 == Just "NP" -> (patt_arg0 .~ Just "NP-SBJ") patt
-        | not (Just "NP-1" `elem` arglst) && patt^.patt_arg1 == Just "NP"   -> (patt_arg1 .~ Just "NP-1") patt
-        | otherwise                                                         -> patt
+  in if | not (Just (GR_NP (Just GASBJ)) `elem` arglst) && patt^.patt_arg0 == Just (GR_NP Nothing) -> (patt_arg0 .~ Just (GR_NP (Just GASBJ))) patt
+        | not (Just (GR_NP (Just GA1)) `elem` arglst) && patt^.patt_arg1 == Just (GR_NP Nothing) -> (patt_arg1 .~ Just (GR_NP (Just GA1))) patt
+        | otherwise                                                                                -> patt
 
 
-mergeS "S"     = "SBAR"
-mergeS "S-1"   = "SBAR-1"
-mergeS "S-2"   = "SBAR-2"
-mergeS "S-SBJ" = "SBAR-SBJ"
-mergeS x       = x
+mergeS (GR_S x) = GR_SBAR x
+mergeS x        = x
 
 
-convertS :: ArgPattern () Text -> ArgPattern () Text
+convertS :: ArgPattern () GRel -> ArgPattern () GRel
 convertS = (patt_arg0 %~ fmap mergeS)
          . (patt_arg1 %~ fmap mergeS)
          . (patt_arg2 %~ fmap mergeS)
          . (patt_arg3 %~ fmap mergeS)
          . (patt_arg4 %~ fmap mergeS)
 
-convertSBAR :: ArgPattern () Text -> ArgPattern () Text
+
+convertSBAR :: ArgPattern () GRel -> ArgPattern () GRel
 convertSBAR patt =
   let arglst = [patt^.patt_arg0,patt^.patt_arg1,patt^.patt_arg2,patt^.patt_arg3,patt^.patt_arg4]
-  in if | not (Just "SBAR-SBJ" `elem` arglst) && patt^.patt_arg0 == Just "SBAR" -> (patt_arg0 .~ Just "SBAR-SBJ") patt
-        | not (Just "SBAR-1" `elem` arglst) && patt^.patt_arg1 == Just "SBAR"   -> (patt_arg1 .~ Just "SBAR-1") patt
-        | otherwise                                                         -> patt
+  in if | not (Just (GR_S (Just GASBJ)) `elem` arglst)  && patt^.patt_arg0 == Just (GR_SBAR Nothing) -> (patt_arg0 .~ Just (GR_SBAR (Just GASBJ))) patt
+        | not (Just (GR_SBAR (Just GA1)) `elem` arglst) && patt^.patt_arg1 == Just (GR_SBAR Nothing) -> (patt_arg1 .~ Just (GR_SBAR (Just GA1))) patt
+        | otherwise                                                                                  -> patt
 
 
-mergePatterns :: [(ArgPattern Voice Text,Int)] -> [(ArgPattern () Text,Int)]
+mergePatterns :: [(ArgPattern Voice GRel,Int)] -> [(ArgPattern () GRel,Int)]
 mergePatterns pattstats0 =
   let pgrps = groupBy ((==) `on` (^._1))
             . sortBy (compare `on` (^._1))
@@ -93,7 +91,7 @@ pattern SuperPatternOf = No
 pattern Neither        = Unclear
 
 
-patternRelation :: ArgPattern () Text -> ArgPattern () Text -> TernaryLogic
+patternRelation :: ArgPattern () GRel -> ArgPattern () GRel -> TernaryLogic
 patternRelation x y | x `isSubPatternOf` y = SubPatternOf
                     | y `isSubPatternOf` x = SuperPatternOf
                     | otherwise            = Neither
@@ -104,6 +102,7 @@ patternRelation x y | x `isSubPatternOf` y = SubPatternOf
                          each patt_arg2 x y &&
                          each patt_arg3 x y &&
                          each patt_arg4 x y
+
 
 patternGraph :: (a -> a -> TernaryLogic) -> [(Int,a)] -> [(Int,Int)]
 patternGraph f lst = (concatMap (\(x:xs) -> mapMaybe (link x) (x:xs)) . init . tails) lst
@@ -122,12 +121,20 @@ listOfSupersetSubset xs = let is = map fst xs
 
 
 
-topPatterns :: [(Int,(ArgPattern () Text,Int))]
+topPatterns :: [(Int,(ArgPattern () GRel,Int))]
             -> [(Int,[Int],[Int])]
-            -> [(ArgPattern () Text,Int)]
+            -> [(ArgPattern () GRel,Int)]
 topPatterns ipatts slst = do
     (topi,_,subis) <- filter (\x -> length (x^._2) == 1) slst
     top <- maybeToList (lookup topi ipatts)
     let subs = mapMaybe (\s -> lookup s ipatts) subis
         n = sum (map snd subs)
     return (top^._1,n)
+
+
+constructTopPatterns :: [(ArgPattern Voice GRel,Int)] -> [(ArgPattern () GRel,Int)]
+constructTopPatterns insts = 
+  let ipattstats = (zip [1..] . mergePatterns) insts
+      supersub = listOfSupersetSubset . patternGraph (patternRelation `on` (^._1)) $ ipattstats
+  in sortBy (flip compare `on` snd) (topPatterns ipattstats supersub)
+
