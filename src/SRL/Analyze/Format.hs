@@ -60,6 +60,10 @@ import           OntoNotes.App.WikiEL                    (linkedMentionToTagPos)
 import           SRL.Analyze.Match                       (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
+                                                         ,MGVertex(..),MGEdge(..)
+                                                         ,MeaningGraph(MeaningGraph)
+                                                         ,mg_vertices,mg_edges
+                                                         ,me_relation,me_start,me_end
                                                          ,chooseFrame
                                                          ,onfn_senseID,onfn_definition,onfn_frame
                                                          ,tf_frameID,tf_feCore,tf_fePeri
@@ -238,4 +242,20 @@ showMatchedFrame (mcpstr,vstr,paws) = do
       mapM_ putStrLn . map (\(fe,z) -> printf "%-15s: %-7s %s" fe (show (getRange (current z))) (gettokens z)) $ felst
 
 
+dotMeaningGraph :: MeaningGraph -> String
+dotMeaningGraph mg = printf "digraph G {\n  %s\n  %s\n}" vtxt etxt
+  where
+    vtxt :: String
+    vtxt =
+      let vertices = mg^.mg_vertices
+          verbs = mapMaybe (\case MGEntity _ _ _ -> Nothing ; MGPredicate i _ f v -> Just (i,f <> ":" <> v)) vertices
+          entities = mapMaybe (\case MGEntity i _ t -> Just (i,t); MGPredicate _ _ _ _ -> Nothing) vertices
+      in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=box label=\"%s\"];" i t)) verbs ++  "\n  " ++
+         (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=oval label=\"%s\"];" i t)) entities
+    etxt :: String
+    etxt =      
+      let edges = mg^.mg_edges
+          formatf e = printf "i%d -> i%d [label=\"%s\"];" (e^.me_start) (e^.me_end) (e^.me_relation)
+      in (intercalate "\n " . map formatf) edges
+         
 
