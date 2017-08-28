@@ -7,7 +7,7 @@ module NLP.Syntax.Clause where
 
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
-import           Control.Monad                          ((<=<))
+import           Control.Monad                          ((<=<),join)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
@@ -23,6 +23,7 @@ import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.BitreeZipper.Util
 import           Data.Range                             (isInsideR,rangeTree)
 import           Lexicon.Type                           (ATNode(..),chooseATNode)
 import           NLP.Type.PennTreebankII
@@ -129,6 +130,20 @@ resolvePRO z = do cp0 <- snd . getRoot1 . current <$> parent z
                     SilentPRO -> Nothing
                     RExp x    -> Just x
                     
+
+
+resolveDP mcpstr cp =
+  let lst = (join . maybeToList) mcpstr
+      mrng = cpRange cp
+      dp = cp^.cp_TP.tp_DP
+  in case fmap chooseATNode dp of
+       Just SilentPRO -> do rng <- cpRange cp
+                            z <- getFirst (foldMap (First . extractZipperById rng) lst)
+                            resolvePRO z
+       Just (RExp z)  -> Just z
+       Nothing        -> Nothing
+
+
 
 
 ---------

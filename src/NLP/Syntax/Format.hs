@@ -60,22 +60,11 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
                             (T.intercalate " " (vp^..vp_words.traverse.to (f.fst)))
 
 
-formatDPTokens :: Maybe [Bitree (Range,CP) (Range,CP)]
-               -> CP
-               -> Text
-formatDPTokens mcpstr cp = let lst = (join . maybeToList) mcpstr
-                               mrng = cpRange cp
-                               pro = do rng <- cpRange cp
-                                        z <- getFirst (foldMap (First . extractZipperById rng) lst)
-                                        z' <- resolvePRO z
-                                        return (gettokens z')
-                               
-                           in case fmap chooseATNode dp of
-                                Just SilentPRO -> "*PRO* -> " <> fromMaybe "" pro
-                                Just (RExp z) -> gettokens z
-                                Nothing -> ""
+formatDPTokens (dp,mpro) = case fmap chooseATNode dp of
+                             Just SilentPRO -> "*PRO* -> " <> maybe "" gettokens mpro
+                             Just (RExp z)  -> gettokens z
+                             Nothing        -> ""
   where gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
-        dp = cp^.cp_TP.tp_DP
 
 
 formatDPType :: ATNode (DP (BitreeZipperICP '[Lemma])) -> Maybe ChunkTag
@@ -92,7 +81,7 @@ formatPAWS mcpstr pa =
   printf "              subject       : %s\n\
          \              arg candidates: %s\n\
          \              complements   : %s"
-         (formatDPTokens mcpstr (pa^.pa_CP)) -- .cp_TP.tp_DP)))
+         (formatDPTokens (pa^.pa_CP^.cp_TP.tp_DP,resolveDP mcpstr (pa^.pa_CP)))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
          ((intercalate " | " . map (T.unpack . T.intercalate " ". gettoken)) (pa^.pa_CP.cp_TP.tp_VP.vp_complements))
                   
@@ -124,7 +113,7 @@ formatCP mcpstr cp
                 (maybe "null" show (getchunk =<< cp^.cp_TP.tp_maximal_projection))
                 (maybe "" (show . gettoken) (cp^.cp_TP.tp_maximal_projection))
                 (maybe "null" show (cp^.cp_TP.tp_DP.to (fmap formatDPType)))
-                (formatDPTokens mcpstr cp)
+                (formatDPTokens (cp^.cp_TP.tp_DP,resolveDP mcpstr cp))
                 (maybe "null" show (getchunk (cp^.cp_TP.tp_VP.vp_maximal_projection)))
                 ((show . gettoken) (cp^.cp_TP.tp_VP.vp_maximal_projection))
                 ((intercalate " | " . map (show . gettoken)) (cp^.cp_TP.tp_VP.vp_complements))
