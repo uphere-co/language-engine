@@ -1,9 +1,13 @@
 { pkgs ? import <nixpkgs> {}
 , uphere-nix-overlay ? <uphere-nix-overlay>
 , HCoreNLP           ? <HCoreNLP>
+, HFrameNet          ? <HFrameNet>
+, HWordNet           ? <HWordNet>
 , lexicon            ? <lexicon>
 , nlp-types          ? <nlp-types>
+, OntoNotes          ? <OntoNotes>
 , PropBank           ? <PropBank>
+, VerbNet            ? <VerbNet>
 , syntactic-analysis ? <syntactic-analysis>
 , wiki-ner           ? <wiki-ner>
 , textview           ? <textview>
@@ -40,15 +44,19 @@ let
 
   hsconfig2 =
     self: super: {
-      "lexicon"   = self.callPackage (import lexicon) {};
-      "nlp-types" = self.callPackage (import nlp-types) {};
-      "PropBank" = self.callPackage (import PropBank) {};
+      "lexicon"        = self.callPackage (import lexicon) {};
+      "nlp-types"      = self.callPackage (import nlp-types) {};
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
-      "HCoreNLP" = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
-      "wiki-ner" = self.callPackage (import wiki-ner) {};
-      "fastText" = self.callPackage fastTextNix { inherit fasttext; };
+      "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
+      "HFrameNet"      = self.callPackage (import HFrameNet) {};
+      "HWordNet"       = self.callPackage (import HWordNet) {};
+      "OntoNotes"      = self.callPackage (import OntoNotes) {};
+      "PropBank"       = self.callPackage (import PropBank) {};
+      "VerbNet"        = self.callPackage (import VerbNet) {};
+      "wiki-ner"       = self.callPackage (import wiki-ner) {};
+      "fastText"       = self.callPackage fastTextNix { inherit fasttext; };
       "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
-      "textview" = self.callPackage (import textview) {};
+      "textview"       = self.callPackage (import textview) {};
     };  
   newHaskellPackages = haskellPackages.override {
     overrides = self: super: hsconfig self super // hsconfig2 self super;
@@ -77,8 +85,10 @@ let
             fficxx-runtime
 
             foreign-store
-            
+
+            p.lexicon
             p.nlp-types
+            p.OntoNotes
             p.PropBank
             p.HCoreNLP
             p.HCoreNLP-Proto
