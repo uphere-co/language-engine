@@ -83,7 +83,7 @@ getNEClass :: WikiUID2NETag -> ItemID -> ItemClass
 getNEClass table uid = f (M.lookup uid (_map table))
   where 
     f (Just x) = x
-    f _ = error ("Unknown UID: " ++ show uid)
+    f Nothing  = otherClass -- for unknown UID, return "Other" class, instead of emitting errors
 
 
 newtype SubclassUID   = SubclassUID { _sub :: ItemID}
