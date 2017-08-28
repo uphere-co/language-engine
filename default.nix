@@ -1,4 +1,4 @@
-{ mkDerivation, base, containers, either, stdenv, text, textview
+{ mkDerivation, base, containers, either, nlp-types, stdenv, text, textview
 , transformers
 }:
 mkDerivation {
@@ -6,7 +6,7 @@ mkDerivation {
   version = "0.1.0.0";
   src = ./.;
   libraryHaskellDepends = [
-    base containers either text textview transformers
+    base containers either nlp-types text textview transformers
   ];
   license = "unknown";
 }
