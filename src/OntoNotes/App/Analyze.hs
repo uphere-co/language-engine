@@ -42,7 +42,7 @@ import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 --
 import qualified OntoNotes.App.Analyze.Config as Analyze
 import           OntoNotes.App.Analyze.CoreNLP           (runParser)
-import           OntoNotes.App.Analyze.SentenceStructure (sentStructure)
+import           OntoNotes.App.Analyze.SentenceStructure (docStructure,formatDocStructure)
 
 
 -- | main query loop
@@ -64,8 +64,8 @@ queryProcess config pp sensemap sensestat framedb ontomap emTagger rolemap subca
     case command of
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
-                  (mapM_ T.IO.putStrLn . sentStructure config sensemap sensestat framedb ontomap emTagger rolemap subcats) =<< runParser pp txt
-      ":v " ->    (mapM_ T.IO.putStrLn . sentStructure config sensemap sensestat framedb ontomap emTagger rolemap subcats) =<< runParser pp rest
+                  (mapM_ T.IO.putStrLn . formatDocStructure (config^.Analyze.showDetail) . docStructure sensemap sensestat framedb ontomap emTagger rolemap subcats) =<< runParser pp txt
+      ":v " ->    (mapM_ T.IO.putStrLn . formatDocStructure (config^.Analyze.showDetail) . docStructure sensemap sensestat framedb ontomap emTagger rolemap subcats) =<< runParser pp rest
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
@@ -94,7 +94,7 @@ loadConfig = do
 
 getAnalysis input config =
   let (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats) = config
-  in sentStructure sensemap sensestat framedb ontomap emTagger rolemap subcats  input
+  in docStructure sensemap sensestat framedb ontomap emTagger rolemap subcats  input
 
 
 loadJVM = do
