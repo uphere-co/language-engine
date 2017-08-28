@@ -1,6 +1,7 @@
 { pkgs ? import <nixpkgs> {}
 , uphere-nix-overlay ? <uphere-nix-overlay>
 , HCoreNLP           ? <HCoreNLP>
+, lexicon            ? <lexicon>
 , nlp-types          ? <nlp-types>
 , PropBank           ? <PropBank>
 , syntactic-analysis ? <syntactic-analysis>
@@ -39,6 +40,7 @@ let
 
   hsconfig2 =
     self: super: {
+      "lexicon"   = self.callPackage (import lexicon) {};
       "nlp-types" = self.callPackage (import nlp-types) {};
       "PropBank" = self.callPackage (import PropBank) {};
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};

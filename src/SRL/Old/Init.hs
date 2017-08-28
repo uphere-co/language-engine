@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 
-module SRL.Init where
+module SRL.Old.Init where
 
 import           Control.Lens
 import qualified Data.ByteString.Char8      as B

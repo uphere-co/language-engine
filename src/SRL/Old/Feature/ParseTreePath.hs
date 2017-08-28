@@ -1,16 +1,17 @@
 {-# LANGUAGE TupleSections #-}
 
-module SRL.Feature.ParseTreePath where
+module SRL.Old.Feature.ParseTreePath where
 
 import           Data.List                      (group)
 --
+import           Data.Bitree                    (getLeaves)
 import           Data.BitreeZipper
+import           NLP.Syntax.Util                (phraseType)
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
 import           NLP.Syntax.Util
 --
--- import           SRL.Feature.Verb
-import           SRL.Type
+import           SRL.Old.Type
 --
 
 

@@ -7,7 +7,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeOperators #-}
 
-module SRL.Feature.Dependency where
+module SRL.Old.Feature.Dependency where
 
 import           Control.Lens            hiding (levels,Level)
 import           Data.Function                  (on)
@@ -19,6 +19,7 @@ import           Data.Text                      (Text)
 import           Data.Tree                      (levels)
 --
 import           Data.Attribute
+import           Data.Bitree                    (getLeaves)
 import           Data.BitreeZipper
 import 	       	 NLP.Type.CoreNLP
 import           NLP.Type.PennTreebankII
@@ -26,9 +27,9 @@ import           NLP.Type.UniversalDependencies2.Syntax
 import qualified NLP.Type.UniversalDependencies2.Syntax as UD (DependencyRelation(ROOT))
 import           PropBank.Util
 --
-import           SRL.Feature.ParseTreePath
-import           SRL.Type
-import           SRL.Util
+import           SRL.Old.Feature.ParseTreePath
+import           SRL.Old.Type
+import           SRL.Old.Util
 --
 
 

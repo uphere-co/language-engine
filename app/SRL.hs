@@ -9,8 +9,6 @@
 
 module Main where
 
-
--- import           AI.SVM.Base
 import           Control.Applicative               (optional)
 import           Control.Lens               hiding (levels,(<.>))
 import           Control.Monad                     (void,when)
@@ -33,18 +31,17 @@ import           CoreNLP.Simple
 import           CoreNLP.Simple.Convert
 import           CoreNLP.Simple.Type
 import           Data.Attribute
--- import           FastText.Binding
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
 --
-import           SRL.DataSet.PropBank
-import           SRL.Feature
-import           SRL.Format
-import           SRL.Init
-import           SRL.Train
-import           SRL.Type
-import           SRL.Util
+import           SRL.Old.DataSet.PropBank
+import           SRL.Old.Feature
+import           SRL.Old.Format
+import           SRL.Old.Init
+import           SRL.Old.Train
+import           SRL.Old.Type
+import           SRL.Old.Util
 import           SVM
 
 data ProgOption = ProgOption { penndir :: Maybe FilePath

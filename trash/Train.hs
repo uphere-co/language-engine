@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module SRL.Train where
+module SRL.Old.Train where
 
 import           Control.Exception
 import           Control.Lens               hiding (levels,(<.>))
@@ -32,10 +32,10 @@ import           PropBank.Match
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
-import           SRL.Feature 
-import           SRL.PropBankMatch
-import           SRL.Type
-import           SRL.Vectorize.Sparse
+import           SRL.Old.Feature 
+import           SRL.Old.PropBankMatch
+import           SRL.Old.Type
+import           SRL.Old.Vectorize.Sparse
 import           SVM
 
 

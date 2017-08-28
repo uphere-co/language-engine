@@ -1,4 +1,4 @@
-module SRL.Vectorize.Dense where
+module SRL.Old.Vectorize.Dense where
 
 import           Control.Lens
 import           Data.List                 (foldl')
@@ -16,7 +16,7 @@ import           FastText.Binding
 import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
 --
-import           SRL.Type
+import           SRL.Old.Type
 
  
 foreign import ccall "get_vector" c_get_fasttextvector :: FastTextVector -> IO (Ptr CFloat)

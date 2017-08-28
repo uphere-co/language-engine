@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
-module SRL.CoNLL.CoNLL08.Parser where
+module SRL.Old.CoNLL.CoNLL08.Parser where
 
 import           Control.Lens
 import           Data.List           (transpose)
@@ -15,7 +15,7 @@ import qualified Data.Text.IO as TIO
 import           Data.Text.Read      (decimal)
 import           Data.Tuple          (swap)
 --
-import           SRL.CoNLL.CoNLL08.Type
+import           SRL.Old.CoNLL.CoNLL08.Type
 
 parseDeprel :: Text -> Deprel
 parseDeprel "ADV"   = ADV

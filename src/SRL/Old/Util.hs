@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 
-module SRL.Util where
+module SRL.Old.Util where
 
 import           Control.Lens
 import           Data.Bifoldable                             (biList)
@@ -17,7 +17,7 @@ import           Data.Attribute
 import           Data.Bitree
 import           NLP.Type.PennTreebankII
 --
-import           SRL.Type
+import           SRL.Old.Type
 
 
 clippedText :: (Int,Int) -> [Text] -> Text

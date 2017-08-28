@@ -2,7 +2,7 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module SRL.Type where
+module SRL.Old.Type where
 
 import           Control.Lens     hiding (Level)
 import           Data.Maybe              (mapMaybe)
@@ -17,7 +17,7 @@ import           PropBank.Type.Match
 import           PropBank.Type.Prop
 --
 import           NLP.Syntax.Type
--- import           SRL.Type.Verb
+
 
 
 data Position = Before | After | Embed

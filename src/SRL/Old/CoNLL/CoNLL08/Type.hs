@@ -1,4 +1,4 @@
-module SRL.CoNLL.CoNLL08.Type where
+module SRL.Old.CoNLL.CoNLL08.Type where
 
 data Deprel = ADV     -- ^ Unclassified adverbial
             | AMOD    -- ^ Modifier of adjective or adverb 

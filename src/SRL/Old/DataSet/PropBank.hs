@@ -1,4 +1,4 @@
-module SRL.DataSet.PropBank where
+module SRL.Old.DataSet.PropBank where
 
 import PropBank.Type.Prop
 

@@ -6,7 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
-module SRL.Feature where
+module SRL.Old.Feature where
 
 import           Control.Lens            hiding (levels,Level)
 import           Control.Monad                  (guard)
@@ -23,11 +23,11 @@ import           PropBank.Match
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
 --
-import           SRL.Feature.Dependency
-import           SRL.Feature.ParseTreePath
-import           SRL.Format
-import           SRL.Type
-import           SRL.Util
+import           SRL.Old.Feature.Dependency
+import           SRL.Old.Feature.ParseTreePath
+import           SRL.Old.Format
+import           SRL.Old.Type
+import           SRL.Old.Util
 --
 
 {-
