@@ -30,7 +30,7 @@ import           SRL.Old.Type
 import           SRL.Old.Util
 --
 
-
+{-
 verbTree :: [VerbProperty]
          -> PennTreeIdxG (ANAtt '[]) (ALAtt '[Maybe Level,Lemma])
          -> Maybe (Bitree (Int,(Lemma,[Int]), Maybe Level)
@@ -65,7 +65,7 @@ verbTree vps = fmap squash . worker
     squash (PN y [z@(PL w  )]) = if y == w then PL w     else PN y [squash z]
     squash (PN y ys)           = PN y (map squash ys)
     squash x                   = x
-
+-}
 
 calcSRLFeature :: SentenceInfo -> Int -> NodeRange -> Maybe SRLFeature
 calcSRLFeature sentinfo predidx (Single rng) = 

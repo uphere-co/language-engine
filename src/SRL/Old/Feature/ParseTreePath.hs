@@ -9,6 +9,7 @@ import           Data.BitreeZipper
 import           NLP.Syntax.Util                (phraseType)
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
+import           NLP.Syntax.Util
 --
 import           SRL.Old.Type
 --

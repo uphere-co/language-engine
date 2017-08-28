@@ -9,8 +9,8 @@ import           Data.Maybe              (mapMaybe)
 import           Data.Text               (Text)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
-import qualified CoreNLP.Simple.Type.Simplified        as S
 import           Data.BitreeZipper
+import 	       	 NLP.Type.CoreNLP                      as S
 import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
 import           PropBank.Type.Match

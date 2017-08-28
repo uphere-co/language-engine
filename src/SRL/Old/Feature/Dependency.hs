@@ -18,10 +18,10 @@ import           Data.Maybe                     (catMaybes,fromJust,mapMaybe)
 import           Data.Text                      (Text)
 import           Data.Tree                      (levels)
 --
-import           CoreNLP.Simple.Type.Simplified
 import           Data.Attribute
 import           Data.Bitree                    (getLeaves)
 import           Data.BitreeZipper
+import 	       	 NLP.Type.CoreNLP
 import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax
 import qualified NLP.Type.UniversalDependencies2.Syntax as UD (DependencyRelation(ROOT))
