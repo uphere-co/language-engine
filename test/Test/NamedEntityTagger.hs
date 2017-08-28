@@ -322,7 +322,12 @@ main1 = do
     input_pos = V.fromList (map fst News3.posTags)
   input_raw <- T.IO.readFile rawNewsFile3
   input <- T.IO.readFile nerNewsFile3
-  uid2tag <- fromFiles [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile), (WC.brandClass, brandItemFile)]
+  uid2tag <- fromFiles [ (WC.personClass, personItemFile)
+                       --, (WC.orgClass, orgItemFile)
+                       --, (WC.brandClass, brandItemFile)
+                       --, (WC.occupationClass, occupationItemFile)
+                       , (WC.locationClass, locationItemFile)
+                       ]
   wikiTable <- loadWETagger reprFile
 
   let
@@ -342,17 +347,17 @@ main1 = do
     companyWithSymbols = mapMaybe (getCompanySymbol tickerMap) orgMentions
 
   -- For loading WordNet synsets data.
-  wordNetMapping <- loadWordNetMapping wordnetMappingFile
+  --wordNetMapping <- loadWordNetMapping wordnetMappingFile
   let
     -- WordNet synset lookup.
-    wn = buildWordNetSynsetLookup wordNetMapping
-    synsets = map (lookupWordNet wn . entityUID) linked_mentions
+    --wn = buildWordNetSynsetLookup wordNetMapping
+    --synsets = map (lookupWordNet wn . entityUID) linked_mentions
   mapM_ print named_entities
   mapM_ print wiki_entities
   print "Entity-linked named entities"
   -- mapM_ print all_linked_mentions  
   mapM_ print linked_mentions
-  mapM_ print synsets
+  --mapM_ print synsets -- takes many minutes
   print "Entity-linked organization entities"
   mapM_ print orgMentions
   print "Entity-linked public company entities"

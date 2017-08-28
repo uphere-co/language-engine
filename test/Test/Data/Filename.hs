@@ -21,8 +21,11 @@ reprFileTiny   = EntityReprFile "data/wikidata.test.entities"
 orgItemFile    = ItemIDFile "data/ne.org"
 personItemFile = ItemIDFile "data/ne.person"
 brandItemFile  = ItemIDFile "data/ne.brand"
-reprFile       = EntityReprFile "data/uid"
-
+locationItemFile = ItemIDFile "data/ne.loc"
+occupationItemFile = ItemIDFile "data/ne.occupation"
+--reprFile       = EntityReprFile "data/names"
+--reprFile       = EntityReprFile "data/names.person.2"
+reprFile       = EntityReprFile "data/names.pl.2"
 -- Full data
 wordnetMappingFile   = WordNetMappingFile "data/page_id.wiki_id.wordnet.tsv"
 propertyNameFile = PropertyNameFile   "data_full/properties.tsv"
