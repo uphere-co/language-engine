@@ -39,7 +39,6 @@ import           OntoNotes.App.Load           (Config(..),cfg,cfgG,cfg_framenet_
                                               ,cfg_wsj_directory
                                               ,loadSenseInventory
                                               )
-import           OntoNotes.App.WikiEL         (brandItemFile,orgItemFile,personItemFile,reprFile)
 import           OntoNotes.Corpus.Load        (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 --
@@ -49,6 +48,7 @@ import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructu
 import           SRL.Analyze.Match             (allPAWSTriplesFromDocStructure,meaningGraph)
 import           SRL.Analyze.SentenceStructure (docStructure)
 import           SRL.Analyze.Type
+import           SRL.Analyze.WikiEL            (brandItemFile,orgItemFile,personItemFile,reprFile)
 
 
 -- | main query loop

@@ -21,8 +21,8 @@ import           CoreNLP.Simple                               (annotate,serializ
 import           CoreNLP.Simple.Convert                       (convertPsent,convertSentence,convertToken
                                                               ,decodeToPennTree
                                                               ,sentToDep,sentToNER)
-import           CoreNLP.Simple.Type.Simplified               (NERSentence(..),Token,Dependency,Sentence,SentenceIndex)
 import           CoreNLP.Simple.Util                          (getDoc,getProtoDoc,getTKTokens)
+import 	       	 NLP.Type.CoreNLP                             (NERSentence(..),Token,Dependency,Sentence,SentenceIndex)
 import qualified NLP.Type.NamedEntity                  as N
 import           NLP.Type.PennTreebankII                      (PennTree)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
@@ -30,14 +30,13 @@ import           WikiEL.EntityLinking                         (EntityMentionUID,
                                                               ,entityLinking,entityLinkings,buildEntityMentions,entityUID)
 import qualified WikiEL.EntityLinking                  as EL
 --
-import           OntoNotes.App.Util                           (BeginEnd,TagPos,SentItem,SentIdx
+import           SRL.Analyze.Type                             (DocAnalysisInput(..))
+import           SRL.Analyze.Util                             (BeginEnd,TagPos,SentItem,SentIdx
                                                               ,CharIdx,TokIdx
                                                               ,addSUTime,addTag,addText
                                                               ,listTimexToTagPos
                                                               ,underlineText)
-import           OntoNotes.App.WikiEL                         (getWikiResolvedMentions)
---
-import           SRL.Analyze.Type                   (DocAnalysisInput(..))
+import           SRL.Analyze.WikiEL                           (getWikiResolvedMentions)
 
 
 getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd CharIdx)]
@@ -69,3 +68,15 @@ runParser pp txt = do
     Left _ -> return Nothing
     Right rsutime -> return (Just (listTimexToTagPos rsutime))
   return (DocAnalysisInput sents sentidxs sentitems tokss parsetrees deps mtmx)
+
+
+preRunParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
+          -> Text
+          -> IO ( [Sentence] )
+preRunParser pp txt = do
+  doc <- getDoc txt
+  ann <- annotate pp doc
+  pdoc <- getProtoDoc ann
+  let psents = toListOf (D.sentence . traverse) pdoc
+      sents = map (convertPsent) psents
+  return sents

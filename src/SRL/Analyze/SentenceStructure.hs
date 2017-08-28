@@ -22,40 +22,37 @@ import           Text.PrettyPrint.Boxes                    (render)
 import           Text.Printf                               (printf)
 --
 import           CoreNLP.Simple.Convert                    (mkLemmaMap,mkLemmaMap',sentToNER')
-import           CoreNLP.Simple.Type.Simplified            (NERSentence(..),Token,Dependency,Sentence,SentenceIndex
-                                                           ,sentenceNER,sentenceWord,sentenceToken,sentenceLemma)
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
 import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
 import           Lexicon.Type                              (ArgPattern(..),POSVorN(..),RoleInstance,RolePattInstance)
 import           NLP.Printer.PennTreebankII                (formatIndexTokensFromTree)
-import           NLP.Type.PennTreebankII                   (PennTree)
 import           NLP.Syntax.Clause                         (clauseStructure,constructCP
-                                                           ,identifyCPHierarchy
-                                                           )
+                                                           ,identifyCPHierarchy)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (BitreeZipperICP,VerbProperty(..),Voice,vp_lemma)
 import qualified NLP.Type.NamedEntity              as N
-import           NLP.Type.PennTreebankII                   (Lemma(..),mkPennTreeIdx)
+import 	       	 NLP.Type.CoreNLP                          (NERSentence(..),Token,Dependency,Sentence,SentenceIndex
+                                                           ,sentenceNER,sentenceWord,sentenceToken,sentenceLemma)
+
+import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,mkPennTreeIdx)
 import qualified NLP.Type.PennTreebankII.Separated as PS
 import           WikiEL.EntityLinking                      (EntityMentionUID,EntityMention(..),UIDCite(..)
                                                            ,entityLinking,entityLinkings,buildEntityMentions,entityUID)
 import           WikiEL.WikiNamedEntityTagger              (PreNE(..))
 --
-import           OntoNotes.App.Util                        (CharIdx,SentItem,TagPos(..),TokIdx)
-import           OntoNotes.App.WikiEL                      (getWikiResolvedMentions
-                                                           ,linkedMentionToTagPos
-                                                           )
 import           OntoNotes.Type.SenseInventory
 --
-import qualified SRL.Analyze.Config   as Analyze (Config, showDetail)
-import           SRL.Analyze.CoreNLP             (runParser)
-import           SRL.Analyze.Format              (formatSenses,formatTimex
+import qualified SRL.Analyze.Config             as Analyze (Config, showDetail)
+import           SRL.Analyze.CoreNLP                       (runParser)
+import           SRL.Analyze.Format                        (formatSenses,formatTimex
                                                            ,formatTagged
                                                            ,showTimex,showFormatTimex'
-                                                           ,getTopPatternsFromONFNInst
-                                                           )
+                                                           ,getTopPatternsFromONFNInst)
 import           SRL.Analyze.Type
+import           SRL.Analyze.Util                          (CharIdx,SentItem,TagPos(..),TokIdx)
+import           SRL.Analyze.WikiEL                        (getWikiResolvedMentions
+                                                           ,linkedMentionToTagPos)
 
 
 mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]
