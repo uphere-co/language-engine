@@ -4,6 +4,7 @@
 module OntoNotes.App.Analyze where
 
 import           Control.Lens                 ((^.),(.~),(&))
+import           Control.Monad                (when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
@@ -42,7 +43,7 @@ import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 --
 import qualified OntoNotes.App.Analyze.Config as Analyze
 import           OntoNotes.App.Analyze.CoreNLP           (runParser)
-import           OntoNotes.App.Analyze.Format            (formatDocStructure)
+import           OntoNotes.App.Analyze.Format            (formatDocStructure,showMatchedFrames)
 import           OntoNotes.App.Analyze.SentenceStructure (docStructure)
 import           OntoNotes.App.Analyze.Type
 
@@ -61,10 +62,14 @@ queryProcess config pp apredata emTagger =
     case command of
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
-                  (mapM_ T.IO.putStrLn . formatDocStructure (config^.Analyze.showDetail) . docStructure apredata emTagger)
-                    =<< runParser pp txt
-      ":v " ->    (mapM_ T.IO.putStrLn . formatDocStructure (config^.Analyze.showDetail) . docStructure apredata emTagger)
-                    =<< runParser pp rest
+                  dstr <- docStructure apredata emTagger <$> runParser pp txt
+                  when (config^.Analyze.showDetail) $
+                    mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
+                  showMatchedFrames dstr
+      ":v " -> do dstr <- docStructure apredata emTagger <$> runParser pp rest
+                  when (config^.Analyze.showDetail) $ 
+                    mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
+                  showMatchedFrames dstr
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 

@@ -1,19 +1,25 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE TupleSections      #-}
 
 module OntoNotes.App.Analyze.Format where
 
-import           Control.Lens                            ((^.),(^?),(%~),_1,_2,_3,_5,_6,_7,_Just,_Right,to)
-import           Control.Monad                           ((>=>))
+import           Control.Applicative
+import           Control.Lens                            ((^..),(^.),(^?),(%~),_1,_2,_3,_4,_5,_6,_7,_Just,_Right,to
+                                                         ,lengthOf,folded)
+import           Control.Monad                           ((>=>),guard)
+import           Data.Foldable
 import           Data.Function                           ((&),on)
-import           Data.List                               (find,intercalate,intersperse,maximumBy,sortBy)
-import           Data.Maybe                              (fromMaybe,mapMaybe)
+import           Data.List                               (find,groupBy,intercalate,intersperse,maximumBy,sortBy)
+import           Data.Maybe                              (catMaybes,fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
 import qualified Data.Text                       as T
 import qualified Data.Text.IO                    as T.IO
+import           Data.Traversable                        (traverse)
 import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat,render)
 import           Text.Printf                             (printf)
 import           Text.ProtocolBuffers.Basic              (Utf8)
@@ -21,17 +27,24 @@ import           Text.ProtocolBuffers.Basic              (Utf8)
 import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
 import           Data.Bitree                             (Bitree)
 import           Data.Range                              (Range)
+import           Data.Bitree
+import           Data.BitreeZipper
+import           Data.Range
 import           Lexicon.Format                          (formatArgPatt,formatArgPattStat,formatRoleMap)
 import           Lexicon.Merge                           (constructTopPatterns,mergePatterns,patternGraph,patternRelation
                                                          ,listOfSupersetSubset,topPatterns)
 import           Lexicon.Query                           (cutHistogram)
 import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
-                                                         ,type RolePattInstance,POSVorN(..),GRel(..))
-import           NLP.Syntax.Format                       (formatCP,formatVPwithPAWS
-                                                         ,formatClauseStructure,showClauseStructure)
+                                                         ,type RolePattInstance,POSVorN(..),GRel(..),GArg(..)
+                                                         ,patt_arg0,patt_arg1,patt_arg2,patt_arg3,patt_arg4
+                                                         ,findGArg
+                                                         )
+import           NLP.Syntax.Clause
+import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
-import           NLP.Syntax.Type                         (CP,ClauseTree)
+import           NLP.Syntax.Type
 import 	       	 NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
+import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty                 (Voice)
 import qualified WikiEL                        as WEL
 import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID,_emuid)
@@ -50,8 +63,12 @@ import           OntoNotes.App.Analyze.Type              (ExceptionalFrame(..),O
                                                          ,chooseFrame
                                                          ,onfn_senseID,onfn_definition,onfn_frame
                                                          ,tf_frameID,tf_feCore,tf_fePeri
+                                                         ,vs_lma,vs_vp,vs_mrmmtoppatts
+                                                         ,ss_verbStructures, ss_mcpstr, ss_clausetr
+                                                         ,ds_sentStructures
                                                          )
-
+--
+import Debug.Trace
 
 
 getTopPatternsFromONFNInst :: [RoleInstance]
@@ -203,3 +220,85 @@ formatVerbStructure clausetr mcpstr (VerbStructure vp lma senses mrmmtoppatts) =
   , T.pack (printf "Verb: %-20s" lma)
   , T.pack $ (formatSenses False senses mrmmtoppatts)
   ]
+
+
+
+matchFrame mcpstr vstr cp = do
+  let verbp = cp^.cp_TP.tp_VP
+      mrmmtoppatts = vstr^.vs_mrmmtoppatts
+      mdp_resolved = resolveDP mcpstr cp
+  (rm,mtoppatts) <- mrmmtoppatts
+  let rolemap = rm^._2
+  frame <- lookup "frame" rolemap
+  let selected = do
+        toppattstats <- mtoppatts
+        dp_resolved <- mdp_resolved
+        let matched = map (matchSO rolemap (dp_resolved,verbp)) toppattstats
+            cmpmatch = flip compare `on` lengthOf (_2.folded)
+            cmpstat  = flip compare `on` (^._1._2)
+            eq       = (==) `on` lengthOf (_2.folded)
+        (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy cmpmatch) matched
+  return (frame,selected)
+
+
+showMatchedFrames dstr = do
+  let xs    = do msstr <- dstr^.ds_sentStructures
+                 sstr <- maybeToList msstr
+                 let clausetr = sstr^.ss_clausetr
+                     mcpstr = sstr^.ss_mcpstr
+                 vstr <- sstr ^.ss_verbStructures
+                 let vp = vstr^.vs_vp
+                 paws <- maybeToList (findPAWS clausetr vp)
+                 return (clausetr,mcpstr,vstr,paws)
+  flip mapM_ xs $ \x -> do
+    let mcpstr = x^._2
+        vstr = x^._3
+        paws = x^._4
+        cp = paws^.pa_CP
+        vp =vstr^.vs_vp
+        gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
+    T.IO.putStrLn "---------------------------"
+    putStrLn ("predicate: " <> maybe "unidentified CP" show (cpRange cp))
+    T.IO.putStrLn ("Verb: " <> (x^._3.vs_lma))
+    flip traverse_ (matchFrame mcpstr vstr cp) $ \(frame,mselected) -> do
+      T.IO.putStrLn ("Frame: " <> frame)
+      flip traverse_ mselected $ \((patt,num),felst) -> do
+        mapM_ putStrLn . map (\(fe,z) -> printf "%-15s: %-7s %s" fe (show (getRange (current z))) (gettokens z)) $ felst
+
+
+
+matchSO rolemap (dp,verbp) (patt,num) =
+  ((patt,num), catMaybes [matchSubject rolemap dp patt, matchObject1 rolemap verbp patt])
+
+
+matchSubject rolemap dp patt = do
+  (p,GR_NP (Just GASBJ)) <- subjectPosition patt
+  fe <- lookup p rolemap
+  return (fe,dp)
+
+
+matchObject1 rolemap verbp patt = do
+  obj <- listToMaybe (verbp^.vp_complements)
+  Left (_,node) <- Just (getRoot (current obj))
+  let ctag = chunkTag node
+  (p,a) <- object1Position patt
+  case ctag of
+    NP   -> guard (a == GR_NP   (Just GA1))
+    S    -> guard (a == GR_SBAR (Just GA1))
+    SBAR -> guard (a == GR_SBAR (Just GA1))
+    _    -> Nothing
+  fe <- lookup p rolemap
+  return (fe,obj)
+
+
+matchGRelArg grel patt = check patt_arg0 "arg0" <|>
+                         check patt_arg1 "arg1" <|>
+                         check patt_arg2 "arg2" <|>
+                         check patt_arg3 "arg3" <|>
+                         check patt_arg4 "arg4"
+  where check l label = patt^.l >>= \a -> findGArg a >>= \grel' -> if grel==grel' then Just (label,a) else Nothing
+
+subjectPosition = matchGRelArg GASBJ
+
+object1Position = matchGRelArg GA1
+

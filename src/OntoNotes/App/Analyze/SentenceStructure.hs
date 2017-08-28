@@ -108,7 +108,6 @@ getTopPatternsFromSensesAndVP rolemap subcats senses vp =
 
 -- | Finding the structure of the sentence and formatting it.
 --
-
 docStructure :: AnalyzePredata
              -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
              -> DocAnalysisInput
