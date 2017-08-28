@@ -228,31 +228,28 @@ test1 sorted@(d,edges) names = do
   --print $ dEdges (H.wordHash "Germany")
 
 main3init = do
-  cc@(Foo edges names) <- foo loadEdges "enwiki/interlinks" -- ~16min to sort
-  wn <- foo loadWordnetTypes "enwiki/synsets"
-  taxons@(Foo tes tns) <- foo loadEdges "enwiki/synsets" -- ~16min to sort
+  cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph "enwiki/edges" -- ~40min to sort
+  --wn <- foo loadWordnetTypes "enwiki/synsets"
+  --taxons@(Foo tes tns) <- foo loadEdges "enwiki/synsets" -- ~16min to sort
   let
     sorted = G.sortEdges G.From  edges
-    sortedTEs = G.sortEdges G.From  tes
+    --sortedTEs = G.sortEdges G.From  tes
   print $ UV.length edges
   print $ M.size names
   print $ UV.length (snd sorted)
-
-  print $ M.size tns
-  print $ UV.length (snd sortedTEs)
-
-  print $ wn
-  
   store <- newStore cc
   store2 <- newStore sorted
-  store3 <- newStore wn
-  store4 <- newStore taxons
-  store5 <- newStore sortedTEs
   print store
   print store2
-  print store3
-  print store4
-  print store5
+  --print $ M.size tns
+  --print $ UV.length (snd sortedTEs)
+  --print $ wn  
+  --store3 <- newStore wn
+  --store4 <- newStore taxons
+  --store5 <- newStore sortedTEs  
+  --print store3
+  --print store4
+  --print store5
 
 {-
 -- Script for testing in REPL
