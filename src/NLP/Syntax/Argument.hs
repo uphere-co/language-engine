@@ -43,7 +43,7 @@ headAdverb xs = getLast (foldMap (Last . f) xs)
         f (PL (_,(pos,t))) = if isAdverb pos then Just (T.toLower t) else Nothing
 
 
-phraseNodeType :: Maybe TP -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text)) -> Text
+phraseNodeType :: Maybe TP -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text)) -> GRel
 phraseNodeType mtp z
   = let rng = getRange (current z)
         subj = do tp <- mtp
@@ -55,30 +55,34 @@ phraseNodeType mtp z
         obj  = do tp <- mtp
                   let os = zip [1..] (tp^.tp_VP.vp_complements)
                   m <- find (\o -> getRange (current (o^._2)) == rng) os
-                  return (m^._1) 
-        grel = case subj of
-                 Just True -> "-SBJ"
-                 _ -> case obj of
-                        Just n -> "-" <> T.pack (show n)
-                        _ -> ""
+                  return (m^._1)
+        mgarg :: Maybe GArg
+        mgarg = case subj of
+                  Just True -> Just GASBJ
+                  _ -> case obj of
+                         Just 1 -> Just GA1
+                         Just 2 -> Just GA2
+                         _ -> Nothing
                                                               
         phrase = case current z of
                    PN (_,c) xs       -> case c of
-                                          PP   -> T.pack (show c) <> maybe "" (\t -> "-" <> t) (headPreposition xs)
+                                          PP   -> GR_PP (headPreposition xs)
                                           ADVP -> case headAdverb xs of
-                                                    Just t -> T.pack (show c) <> "-" <> t
+                                                    Just t -> GR_ADVP (Just t)
                                                     Nothing -> case headPreposition xs of
-                                                                 Just t -> "PP-" <> t
-                                                                 Nothing -> "??ADVP"
-                                          PRT  -> "PP" <> maybe "" (\t -> "-" <> t) (headAdverb xs)
-                                          WHNP -> "NP" <> grel
-                                          _     -> T.pack (show c) <> grel
+                                                                 Just t -> GR_ADVP (Just t)
+                                                                 Nothing -> GR_X "??ADVP"
+                                          PRT  -> GR_PP (headAdverb xs)
+                                          WHNP -> GR_NP mgarg
+                                          NP   -> GR_NP mgarg
+                                          S    -> GR_S  mgarg
+                                          SBAR -> GR_SBAR mgarg
                    PL (_,(D_NONE,t)) -> case parent z of
-                                          Nothing -> "??"<> t
+                                          Nothing -> GR_X ("??"<> t)
                                           Just z' -> phraseNodeType mtp z'
                    PL (_,(p     ,t)) -> case isNoun p of
-                                          Yes -> "NP" <> grel
-                                          _   -> "??" <> T.pack (show (p,t))
+                                          Yes -> GR_NP mgarg
+                                          _   -> GR_X ("??" <> T.pack (show (p,t)))
     in phrase
 
 
