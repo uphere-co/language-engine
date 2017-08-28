@@ -75,8 +75,11 @@ test7 =
   , PN "ROOT" [PN "S" [PN "NP" [PL ("JJ","Republican"),PL ("NNS","senators")],PN "VP" [PL ("VBP","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","health-care"),PL ("NN","bill")]]]]],PL (".",".")]]
   )
   
-
-
+test8 =
+  ( "I want to plan to write a paper."
+  , [(0,("I","I")),(1,("want","want")),(2,("to","to")),(3,("plan","plan")),(4,("to","to")),(5,("write","write")),(6,("a","a")),(7,("paper","paper")),(8,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","want"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","paper")]]]]]]]],PL (".",".")]]
+  )
 
 
 process :: (Text,[(Int,(Text,Text))],PennTree) -> IO ()
@@ -94,6 +97,6 @@ process (txt,lma,pt) = do
 
 
 main :: IO ()
-main = mapM_ process [ test1, test6, test7 ]
+main = mapM_ process [ test1, test6, test7, test8 ]
 
 

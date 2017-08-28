@@ -100,7 +100,7 @@ constructCP vprop = do
 
 
 
-
+cpRange :: CP -> Maybe Range
 cpRange cp = (cp^?cp_maximal_projection._Just.to (getRange . current)) <|>
              (cp^?cp_TP.tp_maximal_projection._Just.to (getRange . current))
 
@@ -131,7 +131,7 @@ resolvePRO z = do cp0 <- snd . getRoot1 . current <$> parent z
                     RExp x    -> Just x
                     
 
-
+resolveDP :: Maybe [Bitree (Range,CP) (Range,CP)] -> CP -> Maybe (BitreeZipperICP '[Lemma])
 resolveDP mcpstr cp =
   let lst = (join . maybeToList) mcpstr
       mrng = cpRange cp
