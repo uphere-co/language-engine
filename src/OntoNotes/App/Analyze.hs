@@ -43,7 +43,9 @@ import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 --
 import qualified OntoNotes.App.Analyze.Config as Analyze
 import           OntoNotes.App.Analyze.CoreNLP           (runParser)
-import           OntoNotes.App.Analyze.Format            (formatDocStructure,showMatchedFrames)
+import           OntoNotes.App.Analyze.Format            (formatDocStructure,showMatchedFrame
+                                                         ,mkPAWSTriples
+                                                         )
 import           OntoNotes.App.Analyze.SentenceStructure (docStructure)
 import           OntoNotes.App.Analyze.Type
 
@@ -65,11 +67,11 @@ queryProcess config pp apredata emTagger =
                   dstr <- docStructure apredata emTagger <$> runParser pp txt
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  showMatchedFrames dstr
+                  mapM_ showMatchedFrame (mkPAWSTriples dstr)
       ":v " -> do dstr <- docStructure apredata emTagger <$> runParser pp rest
                   when (config^.Analyze.showDetail) $ 
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  showMatchedFrames dstr
+                  mapM_ showMatchedFrame (mkPAWSTriples dstr)
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 

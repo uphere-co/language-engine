@@ -29,6 +29,7 @@ import           Data.Bitree                             (Bitree)
 import           Data.Range                              (Range)
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.BitreeZipper.Util                  (root)
 import           Data.Range
 import           Lexicon.Format                          (formatArgPatt,formatArgPattStat,formatRoleMap)
 import           Lexicon.Merge                           (constructTopPatterns,mergePatterns,patternGraph,patternRelation
@@ -223,8 +224,9 @@ formatVerbStructure clausetr mcpstr (VerbStructure vp lma senses mrmmtoppatts) =
 
 
 
-matchFrame mcpstr vstr cp = do
-  let verbp = cp^.cp_TP.tp_VP
+matchFrame mcpstr vstr paws = do
+  let cp = paws^.pa_CP
+      verbp = cp^.cp_TP.tp_VP
       mrmmtoppatts = vstr^.vs_mrmmtoppatts
       mdp_resolved = resolveDP mcpstr cp
   (rm,mtoppatts) <- mrmmtoppatts
@@ -233,7 +235,7 @@ matchFrame mcpstr vstr cp = do
   let selected = do
         toppattstats <- mtoppatts
         dp_resolved <- mdp_resolved
-        let matched = map (matchSO rolemap (dp_resolved,verbp)) toppattstats
+        let matched = map (matchSO rolemap (dp_resolved,verbp,paws)) toppattstats
             cmpmatch = flip compare `on` lengthOf (_2.folded)
             cmpstat  = flip compare `on` (^._1._2)
             eq       = (==) `on` lengthOf (_2.folded)
@@ -241,40 +243,57 @@ matchFrame mcpstr vstr cp = do
   return (frame,selected)
 
 
-showMatchedFrames dstr = do
-  let xs    = do msstr <- dstr^.ds_sentStructures
-                 sstr <- maybeToList msstr
-                 let clausetr = sstr^.ss_clausetr
-                     mcpstr = sstr^.ss_mcpstr
-                 vstr <- sstr ^.ss_verbStructures
-                 let vp = vstr^.vs_vp
-                 paws <- maybeToList (findPAWS clausetr vp)
-                 return (clausetr,mcpstr,vstr,paws)
-  flip mapM_ xs $ \x -> do
-    let mcpstr = x^._2
-        vstr = x^._3
-        paws = x^._4
-        cp = paws^.pa_CP
-        vp =vstr^.vs_vp
-        gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
-    T.IO.putStrLn "---------------------------"
-    putStrLn ("predicate: " <> maybe "unidentified CP" show (cpRange cp))
-    T.IO.putStrLn ("Verb: " <> (x^._3.vs_lma))
-    flip traverse_ (matchFrame mcpstr vstr cp) $ \(frame,mselected) -> do
-      T.IO.putStrLn ("Frame: " <> frame)
-      flip traverse_ mselected $ \((patt,num),felst) -> do
-        mapM_ putStrLn . map (\(fe,z) -> printf "%-15s: %-7s %s" fe (show (getRange (current z))) (gettokens z)) $ felst
+
+mkPAWSTriples dstr = do
+  msstr <- dstr^.ds_sentStructures
+  sstr <- maybeToList msstr
+  let clausetr = sstr^.ss_clausetr
+      mcpstr = sstr^.ss_mcpstr
+  vstr <- sstr ^.ss_verbStructures
+  let vp = vstr^.vs_vp
+  paws <- maybeToList (findPAWS clausetr vp)
+  return (mcpstr,vstr,paws)
 
 
 
-matchSO rolemap (dp,verbp) (patt,num) =
-  ((patt,num), catMaybes [matchSubject rolemap dp patt, matchObject1 rolemap verbp patt])
+showMatchedFrame (mcpstr,vstr,paws) = do
+  let cp = paws^.pa_CP
+      vp =vstr^.vs_vp
+      gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
+  T.IO.putStrLn "---------------------------"
+  putStrLn ("predicate: " <> maybe "unidentified CP" show (cpRange cp))
+  T.IO.putStrLn ("Verb: " <> (vstr^.vs_lma))
+  flip traverse_ (matchFrame mcpstr vstr paws) $ \(frame,mselected) -> do
+    T.IO.putStrLn ("Frame: " <> frame)
+    flip traverse_ mselected $ \((patt,num),felst) -> do
+      mapM_ putStrLn . map (\(fe,z) -> printf "%-15s: %-7s %s" fe (show (getRange (current z))) (gettokens z)) $ felst
+
+
+
+matchSO rolemap (dp,verbp,paws) (patt,num) =
+  case verbp^.vp_verbProperty.vp_voice of
+    Active -> ((patt,num), catMaybes [matchSubject rolemap dp patt, matchObject1 rolemap verbp patt])
+    Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap paws patt,matchThemeForPassive rolemap dp patt])
 
 
 matchSubject rolemap dp patt = do
   (p,GR_NP (Just GASBJ)) <- subjectPosition patt
-  fe <- lookup p rolemap
-  return (fe,dp)
+  (,dp) <$> lookup p rolemap
+
+
+matchAgentForPassive rolemap paws patt = do
+    (p,GR_NP (Just GASBJ)) <- subjectPosition patt
+    Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
+    tr <- current . root <$> paws^.pa_CP.cp_maximal_projection
+    pp <- find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
+    (,pp) <$> lookup p rolemap
+  where
+    ppcheck (Left (_,S_PP "by")) = True
+    ppcheck _                    = False
+
+matchThemeForPassive rolemap dp patt = do
+  (p,GR_NP (Just GA1)) <- object1Position patt
+  (,dp) <$> lookup p rolemap
 
 
 matchObject1 rolemap verbp patt = do
@@ -287,8 +306,8 @@ matchObject1 rolemap verbp patt = do
     S    -> guard (a == GR_SBAR (Just GA1))
     SBAR -> guard (a == GR_SBAR (Just GA1))
     _    -> Nothing
-  fe <- lookup p rolemap
-  return (fe,obj)
+  (,obj) <$> lookup p rolemap
+
 
 
 matchGRelArg grel patt = check patt_arg0 "arg0" <|>
@@ -301,4 +320,3 @@ matchGRelArg grel patt = check patt_arg0 "arg0" <|>
 subjectPosition = matchGRelArg GASBJ
 
 object1Position = matchGRelArg GA1
-
