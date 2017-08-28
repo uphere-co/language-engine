@@ -1,7 +1,5 @@
 module MWE
-( module MWE.Company
-, module MWE.Idiom
+( module MWE.NamedEntity
 ) where
 
-import MWE.Company
-import MWE.Idiom
+import MWE.NamedEntity

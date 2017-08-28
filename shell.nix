@@ -1,6 +1,8 @@
-{ pkgs ? import <nixpkgs> {}
+{ pkgs               ? import <nixpkgs> {}
+, HCoreNLP           ? <HCoreNLP>
+, nlp-types          ? <nlp-types>
+, textview           ? <textview>
 , uphere-nix-overlay ? <uphere-nix-overlay>
-, textview ? <textview>
 }:
 
 with pkgs;
@@ -10,6 +12,7 @@ let
                { inherit pkgs; };
   config2 =
     self: super: {
+      "nlp-types" = self.callPackage (import nlp-types) {};
       "textview" = self.callPackage (import textview) {};
     };
   newHaskellPackages = haskellPackages.override {
@@ -22,6 +25,7 @@ let
             containers
             haskeline
             monad-loops
+            p.nlp-types
             p.textview
             cabal-install
           ]);
