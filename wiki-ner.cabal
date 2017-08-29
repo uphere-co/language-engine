@@ -90,7 +90,7 @@ executable yago-bin
 executable testApp
   hs-source-dirs: test, src
   other-modules:       Test.Data.Filename
-                     , Test.Data.News3
+                     , Test.Data.POS
                      , Test.NamedEntityTagger
                      , Test.WikiEntityTagger
                      , Test.CoreNLPEntity
@@ -129,7 +129,7 @@ test-suite test
   type: exitcode-stdio-1.0
   hs-source-dirs: test, src
   other-modules:       Test.Data.Filename
-                     , Test.Data.News3
+                     , Test.Data.POS
                      , Test.NamedEntityTagger
                      , Test.WikiEntityTagger
                      , Test.CoreNLPEntity
@@ -162,7 +162,7 @@ test-suite testRun
   type: exitcode-stdio-1.0
   hs-source-dirs: test, src
   other-modules:       Test.Data.Filename
-                     , Test.Data.News3
+                     , Test.Data.POS
                      , Test.NamedEntityTagger
                      , Test.WikiEntityTagger
                      , Test.CoreNLPEntity

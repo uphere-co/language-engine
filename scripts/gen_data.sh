@@ -13,12 +13,17 @@ tail -n +2 locations.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  >
 tail -n +2 persons.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > person_types
 tail -n +2 occupations.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > occupation_types
 tail -n +2 brands.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > brand_types
+tail -n +2 human_rules.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > human_rule_types
+tail -n +2 buildings.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > building_types
 
 grep -Fwf org_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.org.2
 grep -Fwf loc_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.loc.2
 grep -Fwf person_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.person.2
 grep -Fwf occupation_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.occupation.2
 grep -Fwf brand_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.brand.2
+grep -Fwf human_rule_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.human_rule.2
+grep -Fwf building_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.building.2
+
 cp ne.business_person ne.person.2
 cat ne.*.2 | sort | uniq > uid
 cat ../enwiki/names | sed 's/q/Q/g' | grep -Fwf uid  > tmp
@@ -32,12 +37,16 @@ rm ne.loc
 rm ne.person
 rm ne.brand
 rm ne.occupation
+rm ne.human_rule
+rm ne.building
 rm names
 ln -s ne.org.2    ne.org
 ln -s ne.loc.2    ne.loc
 ln -s ne.person.2 ne.person
-ln -s ne.brand.2  ne.brand
 ln -s ne.occupation.2 ne.occupation
+ln -s ne.brand.2  ne.brand
+ln -s ne.human_rule.2 ne.human_rule
+ln -s ne.building.2 ne.building
 ln -s names.2 names
 
 

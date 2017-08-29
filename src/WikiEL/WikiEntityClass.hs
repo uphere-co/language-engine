@@ -40,8 +40,10 @@ otherClass  = buildItemClass "Q35120" -- maps to entity (Q35120), which means "a
 orgClass    = buildItemClass "Q43229"
 personClass = buildItemClass "Q215627"
 brandClass  = buildItemClass "Q431289"
-locationClass = buildItemClass "Q1496967" -- territorial entity (Q1496967), instead of location (Q17334923)
+locationClass  = buildItemClass "Q1496967" -- territorial entity (Q1496967), instead of location (Q17334923)
 occupationClass = buildItemClass "Q12737077"
+humanRuleClass = buildItemClass "Q1151067"
+buildingClass  = buildItemClass "Q41176"
 
 toNEClass :: ItemClass -> NEClass
 toNEClass c | c==orgClass      = N.Org

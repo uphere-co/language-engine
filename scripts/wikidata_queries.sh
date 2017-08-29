@@ -95,3 +95,23 @@ SELECT ?item ?itemLabel WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
 }
 '  | tr -d '\r' > brands.csv
+
+#subclass of human made rules
+curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode query='
+SELECT ?item ?itemLabel 
+WHERE 
+{
+  ?item wdt:P279* wd:Q1151067.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+}
+'  | tr -d '\r' > human_rules.csv
+
+#subclass of buildings
+curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode query='
+SELECT ?item ?itemLabel 
+WHERE 
+{
+  ?item wdt:P279* wd:Q41176.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+}
+'  | tr -d '\r' > buildings.csv
