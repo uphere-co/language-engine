@@ -356,13 +356,14 @@ main1 = do
   mapM_ print wiki_entities
   print "Entity-linked named entities"
   -- mapM_ print all_linked_mentions  
-  mapM_ print linked_mentions
+  mapM_ print (filter EL.hasResolvedUID linked_mentions)
   --mapM_ print synsets -- takes many minutes
   print "Entity-linked organization entities"
   mapM_ print orgMentions
   print "Entity-linked public company entities"
   mapM_ print companyWithSymbols
 
+  
   
   
 main2 = do

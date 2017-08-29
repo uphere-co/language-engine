@@ -65,6 +65,10 @@ instance ToJSON PreNE where
 instance FromJSON PreNE where
   parseJSON = genericParseJSON defaultOptions
 
+isResolved :: PreNE -> Bool
+isResolved (Resolved _ ) = True
+isResolved _ = False
+
 resolvedUID :: PreNE -> Either String ItemID
 resolvedUID (Resolved (id,_)) = Right id
 resolvedUID (UnresolvedUID _) = Left "Unresolved ItemID"

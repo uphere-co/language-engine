@@ -11,6 +11,8 @@ let
                          enableLibraryProfiling = true;
                        });
         "nlp-types" = self.callPackage (import nlp-types) {};
+        "vector" = self.vector_0_12_0_1;
+        "discrimination" = pkgs.haskell.lib.doJailbreak (super.discrimination);
       };
     #hsconfig = import ../nix/haskell-modules/configuration-ghc-8.0.x.nix { inherit pkgs; };
     #newHaskellPackages = haskellPackages;

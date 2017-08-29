@@ -16,7 +16,7 @@ import           GHC.Generics                          (Generic)
 import           WikiEL.Misc                           (IRange(..),RelativePosition(..),relativePos,isContain,subVector) 
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           NLP.Type.NamedEntity                  (NamedEntity, OrderedNamedEntity)
-import           WikiEL.WikiNamedEntityTagger          (PreNE(..),resolvedUID)
+import           WikiEL.WikiNamedEntityTagger          (PreNE(..),isResolved,resolvedUID)
 import qualified NLP.Type.NamedEntity       as N
 
 mayRefer :: NamedEntity -> NamedEntity -> Bool
@@ -65,6 +65,10 @@ entityUID m = resolvedUID tag
 entityIRange :: EntityMention a -> IRange
 entityIRange (Cite _ _ (range, _, _)) = range
 entityIRange (Self _   (range, _, _)) = range
+
+hasResolvedUID :: EntityMention a -> Bool
+hasResolvedUID (Cite _ _ (_,_, ne)) = isResolved ne
+hasResolvedUID (Self _   (_,_, ne)) = isResolved ne
 
 mentionedEntityName :: EntityMention Text -> Text
 mentionedEntityName em = entityName (_info em)
