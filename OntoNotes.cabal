@@ -28,7 +28,7 @@ library
                        OntoNotes.Type.SenseInventory
   -- other-modules:
   -- other-extensions:
-  build-depends:       base >=4.9 && <4.10,
+  build-depends:       base,
                        aeson,
                        attoparsec,
                        binary,
