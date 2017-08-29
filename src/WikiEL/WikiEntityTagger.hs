@@ -53,10 +53,12 @@ greedyMatch :: Vector WordsHash -> WordsHash -> (Int, IRange)
 greedyMatch entities words = greedyMatchImpl entities words (0, IRange 0 (length entities))
 
 getMatchedIndexes :: Vector WordsHash -> (Int, IRange) -> (Int, Vector Int)
-getMatchedIndexes vec (len, IRange beg end) = (len, matchedItems)
+getMatchedIndexes vec (len, IRange beg end) = (len, matchedIdxs)
   where
-    tmp          = findIndices (\x-> UV.length x == len) vec
-    matchedItems = V.filter (\x-> x>=beg && x<end) tmp
+    ivec = V.indexed vec
+    tmp  = V.slice beg (end-beg) ivec
+    matchedItems = V.filter (\(i,x) -> UV.length x == len) tmp
+    matchedIdxs  = V.map fst matchedItems
 
 greedyMatchedItems :: Vector WordsHash-> WordsHash-> (Int, Vector Int)
 greedyMatchedItems entities words = getMatchedIndexes entities (greedyMatch entities words)
