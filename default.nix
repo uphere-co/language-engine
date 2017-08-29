@@ -1,11 +1,11 @@
-{ mkDerivation, attoparsec, base, bifunctors, bindings-svm
+{ mkDerivation, attoparsec, base, bifunctors, bindings-svm, boxes
 , bytestring, containers, data-default, discrimination, either
-, fastText, filepath, foreign-store, HCoreNLP, HCoreNLP-Proto, jni
-, jvm, lens, nlp-types, optparse-applicative, PropBank, split
+, fastText, filepath, foreign-store, HCoreNLP, HCoreNLP-Proto, HFrameNet, jni
+, jvm, lens, nlp-types, optparse-applicative, OntoNotes, PropBank, split
 , stdenv
 , syntactic-analysis
-, tasty, tasty-hunit, text, time, transformers, vector
-, textview
+, tasty, tasty-hunit, text, textview, time, transformers, vector
+, wiki-ner
 }:
 mkDerivation {
   pname = "semantic-role-labeler";
@@ -14,11 +14,11 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    attoparsec base bifunctors bindings-svm bytestring containers
+    attoparsec base bifunctors bindings-svm boxes bytestring containers
     data-default discrimination either fastText filepath foreign-store
-    HCoreNLP HCoreNLP-Proto jni jvm lens nlp-types PropBank
+    HCoreNLP HCoreNLP-Proto HFrameNet jni jvm lens nlp-types OntoNotes PropBank
     syntactic-analysis
-    split text time vector textview
+    split text time vector textview wiki-ner
   ];
   executableHaskellDepends = [
     attoparsec base bytestring containers data-default either fastText
