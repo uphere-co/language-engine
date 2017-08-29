@@ -25,7 +25,6 @@ import           Text.Printf                             (printf)
 import           Text.ProtocolBuffers.Basic              (Utf8)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
-import           CoreNLP.Simple.Type.Simplified          (Token,token_lemma,token_pos)
 import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.BitreeZipper.Util                  (root)
@@ -43,6 +42,7 @@ import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
+import 	       	 NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty                 (Voice)
 import qualified WikiEL                        as WEL
@@ -50,12 +50,6 @@ import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,Ent
 import qualified WikiEL.EntityLinking          as EL
 import           WikiEL.WikiNamedEntityTagger            (resolveNEs,getStanfordNEs,parseStanfordNE
                                                          ,namedEntityAnnotator,resolvedUID)
-
---
-import           OntoNotes.App.Util                      (CharIdx,TokIdx,TagPos(..),SentItem
-                                                         ,addTag,convertTagPosFromTokenToChar
-                                                         ,underlineText)
-import           OntoNotes.App.WikiEL                    (linkedMentionToTagPos)
 --
 import           SRL.Analyze.Match                       (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
@@ -71,6 +65,10 @@ import           SRL.Analyze.Type                        (ExceptionalFrame(..),O
                                                          ,ss_verbStructures, ss_mcpstr, ss_clausetr
                                                          ,ds_sentStructures
                                                          )
+import           SRL.Analyze.Util                        (CharIdx,TokIdx,TagPos(..),SentItem
+                                                         ,addTag,convertTagPosFromTokenToChar
+                                                         ,underlineText)
+import           SRL.Analyze.WikiEL                      (linkedMentionToTagPos)
 
 
 

@@ -24,6 +24,8 @@ library
                        SRL.Analyze.Match
                        SRL.Analyze.SentenceStructure
                        SRL.Analyze.Type
+                       SRL.Analyze.Util
+                       SRL.Analyze.WikiEL
 
                        SRL.Old.CoNLL.CoNLL08.Parser
                        SRL.Old.CoNLL.CoNLL08.Type
@@ -47,6 +49,7 @@ library
   -- other-extensions:
   build-depends:       base,
                        --
+                       aeson,
                        attoparsec,
                        bifunctors,
                        bindings-svm,
@@ -64,6 +67,7 @@ library
                        monad-loops,
                        process,
                        protocol-buffers,
+                       scientific,
                        split,
                        text,
                        time,

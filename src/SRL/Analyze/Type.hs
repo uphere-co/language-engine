@@ -12,17 +12,17 @@ import           Data.Text                     (Text)
 --
 import           Data.Bitree                   (Bitree)
 import           Data.Range                    (Range)
-import           CoreNLP.Simple.Type.Simplified (Dependency,Sentence,SentenceIndex,Token)
 import           FrameNet.Query.Frame          (FrameDB)
 import           Lexicon.Type                  (ArgPattern,GRel,RoleInstance,RolePattInstance,SenseID)
 import           NLP.Syntax.Type               (BitreeZipperICP,ClauseTree,CP,VerbProperty(..))
+import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
 import           NLP.Type.PennTreebankII       (Lemma,PennTree)
 import           NLP.Type.SyntaxProperty       (Voice)
 import           WikiEL.EntityLinking          (EntityMention)
 --
-import           OntoNotes.App.Util            (CharIdx,SentItem,TagPos,TokIdx)
 import           OntoNotes.Type.SenseInventory (Inventory)
 --
+import           SRL.Analyze.Util              (CharIdx,SentItem,TagPos,TokIdx)
 
 
 data ExceptionalFrame = FrameCopula  | FrameIdiom | FrameLightVerb | FrameNone
