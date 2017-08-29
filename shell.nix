@@ -1,23 +1,24 @@
 { pkgs ? import <nixpkgs> {}
 , nlp-types ? <nlp-types>
+, uphere-nix-overlay ? <uphere-nix-overlay>
 }:
 
 with pkgs;
 
-let 
-    config = 
+let     
+    config1 = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix") { inherit pkgs; };
+    config2 = 
       self: super: {
-        mkDerivation = args: super.mkDerivation (args // {
-                         enableLibraryProfiling = true;
-                       });
+#        mkDerivation = args: super.mkDerivation (args // {
+#                         enableLibraryProfiling = true;
+#                       });
         "nlp-types" = self.callPackage (import nlp-types) {};
-        "vector" = self.vector_0_12_0_1;
-        "discrimination" = pkgs.haskell.lib.doJailbreak (super.discrimination);
       };
+
     #hsconfig = import ../nix/haskell-modules/configuration-ghc-8.0.x.nix { inherit pkgs; };
     #newHaskellPackages = haskellPackages;
     newHaskellPackages = haskellPackages.override {
-                           overrides = self: super: config self super;
+                           overrides = self: super: config1 self super // config2 self super;
                          };
     hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
               cabal-install

@@ -10,18 +10,18 @@ module WikiEL
   , EMP.filterEMbyPOS
   ) where
 
-import qualified WikiEL.EntityLinking               as EL
-import qualified WikiEL.EntityMentionPruning        as EMP
-
 import           Data.Text                                    (Text)  
 import           Data.Vector                                  (fromList)
+import           NLP.Type.PennTreebankII                      (POSTag(..))
 import           NLP.Type.NamedEntity                         (NamedEntityClass,NamedEntityFrag(..))
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,namedEntityAnnotator)
 import           WikiEL.WikiEntityTagger                      (NameUIDTable,loadWETagger)
 import           WikiEL.WikiEntityClass                       (WikiUID2NETag,ItemClass,fromFiles)
 import           WikiEL.EntityLinking                         (EntityMention,entityLinkings,buildEntityMentions)
-import           WikiEL.Type.FileFormat               
+import qualified WikiEL.EntityLinking               as EL
+import qualified WikiEL.EntityMentionPruning        as EMP
 
+import           WikiEL.Type.FileFormat
 import           WikiEL.WordNet -- for WordNet synset lookup. 
 
 
@@ -37,6 +37,14 @@ extractEntityMentions wikiTable uid2tag neTokens = linked_mentions
     mentions = buildEntityMentions words wiki_named_entities
     linked_mentions = entityLinkings mentions
 
+extractFilteredEntityMentions :: NameUIDTable -> WikiUID2NETag -> [(Text, NamedEntityClass, POSTag)] -> [EntityMention Text]
+extractFilteredEntityMentions wikiTable uid2tag tokens = filtered_mentions
+  where    
+    neTokens = map (\(x,y,z)->(x,y)) tokens
+    poss     = map (\(x,y,z)->z)     tokens
+    all_linked_mentions = extractEntityMentions wikiTable uid2tag neTokens
+    filtered_mentions = EMP.filterEMbyPOS (fromList poss) all_linked_mentions
+    
 loadEMtagger :: EntityReprFile -> [(ItemClass, ItemIDFile)] -> IO( [(Text, NamedEntityClass)] -> [EntityMention Text] )
 loadEMtagger wikiNameFile uid2tagFiles = do
   wikiTable <- loadWETagger  wikiNameFile
