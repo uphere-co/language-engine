@@ -57,8 +57,9 @@ getMatchedIndexes vec (len, IRange beg end) = (len, matchedIdxs)
   where
     ivec = V.indexed vec
     tmp  = V.slice beg (end-beg) ivec
-    matchedItems = V.filter (\(i,x) -> UV.length x == len) tmp
-    matchedIdxs  = V.map fst matchedItems
+    f (i,x) | UV.length x == len = Just i
+    f _ = Nothing
+    matchedIdxs = V.mapMaybe f tmp    
 
 greedyMatchedItems :: Vector WordsHash-> WordsHash-> (Int, Vector Int)
 greedyMatchedItems entities words = getMatchedIndexes entities (greedyMatch entities words)
@@ -71,6 +72,7 @@ greedyAnnotationImpl entities text offset results =
     r = (IRange offset (offset+len), matched)
   in
     if len==0 || null matched
+      -- According to Hackage, UV.tail and UV.drop yield elements "without copying"
       then greedyAnnotationImpl entities (UV.tail text) (offset+1) results
       else greedyAnnotationImpl entities (UV.drop len text) (offset+len) (r:results)
 
