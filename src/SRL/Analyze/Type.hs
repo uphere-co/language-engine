@@ -1,14 +1,17 @@
 {-# LANGUAGE DataKinds       #-}
+{-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE KindSignatures  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module SRL.Analyze.Type where
 
 import           Control.Lens                  ((^.),_2,makeLenses)
+import           Data.Aeson
 import           Data.Function                 (on)
 import           Data.HashMap.Strict           (HashMap)
 import           Data.List                     (maximumBy)
 import           Data.Text                     (Text)
+import           GHC.Generics
 --
 import           Data.Bitree                   (Bitree)
 import           Data.Range                    (Range)
@@ -84,11 +87,11 @@ data SentStructure = SentStructure { _ss_i :: Int
 
 makeLenses ''SentStructure
 
-
 data DocStructure = DocStructure { _ds_mtokenss :: [[Maybe Token]]
                                  , _ds_sentitems :: [SentItem CharIdx]
                                  , _ds_mergedtags :: [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text))]
-                                 , _ds_sentStructures :: [Maybe SentStructure] }
+                                 , _ds_sentStructures :: [Maybe SentStructure]
+                                 }
 
 makeLenses ''DocStructure
 
@@ -99,10 +102,15 @@ data DocAnalysisInput = DocAnalysisInput { _dainput_sents :: [Sentence]
                                          , _dainput_mptrs :: [Maybe PennTree]
                                          , _dainput_deps :: [Dependency]
                                          , _dainput_mtmxs :: Maybe [TagPos TokIdx (Maybe Text)]
-                                         }
+                                         } deriving (Show, Generic)
 
 makeLenses ''DocAnalysisInput
 
+instance ToJSON DocAnalysisInput where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON DocAnalysisInput where
+  parseJSON = genericParseJSON defaultOptions
 
 data MGVertex = MGEntity    { _mv_id :: Int
                             , _mv_range :: Range
