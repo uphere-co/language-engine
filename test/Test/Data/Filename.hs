@@ -24,6 +24,7 @@ brandItemFile  = ItemIDFile "data/ne.brand"
 locationItemFile = ItemIDFile "data/ne.loc"
 occupationItemFile = ItemIDFile "data/ne.occupation"
 reprFile       = EntityReprFile "data/names"
+--reprFile       = EntityReprFile "data/names.1"
 --reprFile       = EntityReprFile "data/names.person.2"
 -- Full data
 wordnetMappingFile   = WordNetMappingFile "data/page_id.wiki_id.wordnet.tsv"
