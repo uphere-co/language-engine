@@ -49,7 +49,6 @@ import qualified WikiEL                        as WEL
 import qualified WikiEL.EntityMentionPruning   as EMP
 
 import           Test.Data.Filename
-import qualified Test.Data.News3               as News3
 
 uid = itemID
 uids = fromList . map uid
@@ -312,26 +311,14 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
       Just symbol -> Just (mentionUID, itemID, symbol)
       Nothing     -> Nothing
 
-
-main1 = do
-  -- For loading ticker symbol data.
-  tickerMap <- loadCompanySymbol listedCompanyFile
-
+runEL (tickerMap,uid2tag,wikiTable) rawFile nerFile posFile = do
   let
     -- Load data for entity mention pruner. Input is a list of PoS tags of the input text.
-    input_pos = V.fromList (map fst News3.posTags)
-  input_raw <- T.IO.readFile rawNewsFile3
-  input <- T.IO.readFile nerNewsFile3
-  uid2tag <- fromFiles [ (WC.personClass, personItemFile)
-                       , (WC.orgClass, orgItemFile)
-                       , (WC.brandClass, brandItemFile)
-                       , (WC.occupationClass, occupationItemFile)
-                       , (WC.locationClass, locationItemFile)
-                       ]
-  wikiTable <- loadWETagger reprFile
-
+    input_pos = V.fromList (map fst posFile)
+  input_raw <- T.IO.readFile rawFile
+  input_ner <- T.IO.readFile nerFile
   let
-    stanford_nefs  = map parseStanfordNE (parseNEROutputStr input)
+    stanford_nefs  = map parseStanfordNE (parseNEROutputStr input_ner)
     named_entities = getStanfordNEs stanford_nefs -- filter (\x -> snd x == N.Org || snd x == N.Person) 
     wiki_entities  = namedEntityAnnotator wikiTable uid2tag stanford_nefs
     wiki_named_entities = resolveNEs named_entities wiki_entities
@@ -363,8 +350,25 @@ main1 = do
   print "Entity-linked public company entities"
   mapM_ print companyWithSymbols
 
-  
-  
+main1 = do
+  -- For loading ticker symbol data.
+  tickerMap <- loadCompanySymbol listedCompanyFile
+  uid2tag <- fromFiles [ (WC.personClass, personItemFile)
+                       , (WC.orgClass, orgItemFile)
+                       , (WC.brandClass, brandItemFile)
+                       , (WC.occupationClass, occupationItemFile)
+                       , (WC.locationClass, locationItemFile)
+                       , (WC.humanRuleClass, humanRuleItemFile)
+                       , (WC.buildingClass, buildingItemFile)
+                       ]
+  wikiTable <- loadWETagger reprFile
+
+
+  runEL (tickerMap,uid2tag,wikiTable) rawNewsFile3 nerNewsFile3 posNewsFile3
+  runEL (tickerMap,uid2tag,wikiTable) rawNewsFile4 nerNewsFile4 posNewsFile4
+  runEL (tickerMap,uid2tag,wikiTable) rawNewsFile5 nerNewsFile5 posNewsFile5
+
+
   
 main2 = do
     propertyNames  <- loadPropertyNames  propertyNameFile
