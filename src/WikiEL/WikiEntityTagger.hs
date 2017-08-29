@@ -54,7 +54,7 @@ greedyMatch entities words = greedyMatchImpl entities words (0, IRange 0 (length
 
 getMatchedIndexes :: Vector WordsHash -> (Int, IRange) -> (Int, Vector Int)
 getMatchedIndexes vec (len, IRange beg end) = (len, matchedItems)
-  where 
+  where
     tmp          = findIndices (\x-> UV.length x == len) vec
     matchedItems = V.filter (\x-> x>=beg && x<end) tmp
 
@@ -71,7 +71,8 @@ greedyAnnotationImpl entities text offset results =
     if len==0 || null matched
       then greedyAnnotationImpl entities (UV.tail text) (offset+1) results
       else greedyAnnotationImpl entities (UV.drop len text) (offset+len) (r:results)
-  
+
+-- Vector Int : indexes of matched elements. To be converted to ItemIDs using _uids. 
 greedyAnnotation :: Vector WordsHash -> WordsHash -> [(IRange, Vector Int)]
 greedyAnnotation entities text = greedyAnnotationImpl entities text 0 []
 

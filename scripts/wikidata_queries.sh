@@ -50,6 +50,15 @@ WHERE
 '  | tr -d '\r' > orgs.csv
 
 curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode query='
+SELECT ?item ?itemLabel 
+WHERE 
+{
+  ?item wdt:P279* wd:Q1496967.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+}
+'  | tr -d '\r' > locations.csv
+
+curl -H "Accept: text/csv" -G https://query.wikidata.org/sparql --data-urlencode query='
 SELECT ?item ?itemLabel
 WHERE
 {
