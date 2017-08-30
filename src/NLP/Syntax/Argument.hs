@@ -20,6 +20,7 @@ import           NLP.Type.PennTreebankII      (PennTreeIdx,Range,POSTag(..),Chun
                                               ,identifyTrace
                                               ,isAdverb,isNoun
                                               )
+import           NLP.Type.SyntaxProperty      (Tense(..),Voice(..),Aspect(..))
 import           PropBank.Match               (findNode)
 import           PropBank.Type.Prop           (Argument(..),PropBankLabel(..)
                                               ,arg_label,arg_terminals)

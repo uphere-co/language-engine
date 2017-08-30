@@ -19,6 +19,7 @@ import           Data.Attribute                              (ahead)
 import           Data.Bitree
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
+import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
 --
 import           NLP.Syntax.Type
 import           NLP.Syntax.Util

@@ -20,11 +20,11 @@ type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 data XType = X_V | X_T | X_C
 
-type family Property x (tag :: [*]) :: *
+type family Property   (x :: XType) (tag :: [*]) :: *
  
-type family Specifier x (tag :: [*]) :: *
-type family Complement x (tag :: [*]) :: *
-type family Adjunct x (tag :: [*]) :: *
+type family Specifier  (x :: XType) (tag :: [*]) :: *
+type family Complement (x :: XType) (tag :: [*]) :: *
+type family Adjunct    (x :: XType) (tag :: [*]) :: *
 
 type Zipper tag = BitreeZipperICP tag
 

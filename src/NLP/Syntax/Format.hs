@@ -22,6 +22,7 @@ import           Data.BitreeZipper
 import           Lexicon.Type                           (ATNode(..),chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
+import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
 import           Text.Format.Tree
 --
 import           NLP.Syntax.Clause

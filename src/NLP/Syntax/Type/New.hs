@@ -1,9 +1,17 @@
+{-# LANGUAGE DataKinds    #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module NLP.Syntax.Type.New where
 
-import           NLP.Syntax.Type
+
+import           Lexicon.Type
+--
+import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
+--
+
+data DP a = SilentPRO | RExp a
+
 
 type instance Property   X_V t = VerbProperty (Zipper t)
 

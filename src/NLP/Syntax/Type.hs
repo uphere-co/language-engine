@@ -10,12 +10,12 @@ module NLP.Syntax.Type
 (
 
   -- * reexport from NLP.Type.SyntaxProperty
-  Tense(..)
-, Voice(..)
-, Aspect(..)
+--   Tense(..)
+-- , Voice(..)
+-- , Aspect(..)
 
   -- * type synonym
-, type BitreeICP
+  type BitreeICP
 , type BitreeZipperICP
 , VerbProperty(..), vp_index, vp_lemma, vp_tense, vp_aspect, vp_voice, vp_auxiliary, vp_negation, vp_words
 , VerbP(..), vp_maximal_projection, vp_verbProperty, vp_complements
@@ -42,22 +42,11 @@ import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
 --
+import           NLP.Syntax.Type.New                    (DP(..))
 import           NLP.Syntax.Type.XBar                   (BitreeICP,BitreeZipperICP)
+import           NLP.Syntax.Type.Verb
 
 
-
-data VerbProperty w = VerbProperty { _vp_index  :: Int
-                                   , _vp_lemma  :: Lemma
-                                   , _vp_tense  :: Tense
-                                   , _vp_aspect :: Aspect
-                                   , _vp_voice  :: Voice
-                                   , _vp_auxiliary :: Maybe (w,(Int,Lemma))
-                                   , _vp_negation :: Maybe (w,(Int,Lemma))
-                                   , _vp_words  :: [(w,(Int,Lemma))]
-                                   }
-                    deriving (Show)
-
-makeLenses ''VerbProperty
 
                        
 
@@ -73,7 +62,6 @@ data VerbP as = VerbP { _vp_maximal_projection :: BitreeZipperICP (Lemma ': as)
 makeLenses ''VerbP
 
 
-data DP a = SilentPRO | RExp a
 
 
 -- | Projection of Tense Phrase following X-bar theory, which roughly
