@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module NLP.Syntax.Clause where
 
@@ -34,19 +35,23 @@ import           NLP.Syntax.Util
 import           NLP.Syntax.Verb
 
 
-maximalProjectionVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+maximalProjectionVP :: VerbProperty (BitreeZipperICP (Lemma ': as))
+                    -> Maybe (BitreeZipperICP (Lemma ': as))
 maximalProjectionVP vp = listToMaybe (vp^.vp_words) >>= parent . fst
 
 
-parentOfVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+parentOfVP :: VerbProperty (BitreeZipperICP (Lemma ': as))
+           -> Maybe (BitreeZipperICP (Lemma ': as))
 parentOfVP vp = parent =<< maximalProjectionVP vp
 
 
-headVP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe (BitreeZipperICP '[Lemma])
+headVP :: VerbProperty (BitreeZipperICP (Lemma ': as))
+       -> Maybe (BitreeZipperICP (Lemma ': as))
 headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 
-complementsOfVerb :: VerbProperty (BitreeZipperICP '[Lemma]) -> [BitreeZipperICP '[Lemma]]
+complementsOfVerb :: VerbProperty (BitreeZipperICP (Lemma ': as))
+                  -> [BitreeZipperICP (Lemma ': as)]
 complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
@@ -63,8 +68,8 @@ complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
 
 
 identifySubject :: N.ClauseTag
-                -> BitreeZipperICP '[Lemma]
-                -> Maybe (ATNode (DP (BitreeZipperICP '[Lemma])))
+                -> BitreeZipperICP (Lemma ': as)
+                -> Maybe (ATNode (DP (BitreeZipperICP (Lemma ': as))))
 identifySubject tag vp =
   let r = case tag of
             N.SINV -> firstSiblingBy next (isChunkAs NP) vp
@@ -76,7 +81,8 @@ identifySubject tag vp =
 
 -- | Constructing CP umbrella and all of its ingrediant.
 --
-constructCP :: VerbProperty (BitreeZipperICP '[Lemma]) -> Maybe CP
+constructCP :: VerbProperty (BitreeZipperICP (Lemma ': as))
+            -> Maybe (CP as)
 constructCP vprop = do
     vp <- maximalProjectionVP vprop
     tp' <- parentOfVP vprop
@@ -100,14 +106,14 @@ constructCP vprop = do
 
 
 
-cpRange :: CP -> Maybe Range
+cpRange :: CP xs -> Maybe Range
 cpRange cp = (cp^?cp_maximal_projection._Just.to (getRange . current)) <|>
              (cp^?cp_TP.tp_maximal_projection._Just.to (getRange . current))
 
 
 
-identifyCPHierarchy :: [VerbProperty (BitreeZipperICP '[Lemma])]
-                    -> Maybe [Bitree (Range,CP) (Range,CP)]
+identifyCPHierarchy :: [VerbProperty (BitreeZipperICP (Lemma ': as))]
+                    -> Maybe [Bitree (Range,CP as) (Range,CP as)]
 identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
   where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure cp) <=< constructCP) vps 
         cpmap = HM.fromList (map (\x->(x^._1,x)) cps)
@@ -123,7 +129,8 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
-resolvePRO :: BitreeZipper (Range,CP) (Range,CP) -> Maybe (BitreeZipperICP '[Lemma])
+resolvePRO :: BitreeZipper (Range,CP as) (Range,CP as)
+           -> Maybe (BitreeZipperICP (Lemma ': as))
 resolvePRO z = do cp0 <- snd . getRoot1 . current <$> parent z
                   atnode <- cp0^.cp_TP.tp_DP
                   case chooseATNode atnode of
@@ -131,7 +138,9 @@ resolvePRO z = do cp0 <- snd . getRoot1 . current <$> parent z
                     RExp x    -> Just x
                     
 
-resolveDP :: Maybe [Bitree (Range,CP) (Range,CP)] -> CP -> Maybe (BitreeZipperICP '[Lemma])
+resolveDP :: Maybe [Bitree (Range,CP as) (Range,CP as)]
+          -> CP as
+          -> Maybe (BitreeZipperICP (Lemma ': as))
 resolveDP mcpstr cp =
   let lst = (join . maybeToList) mcpstr
       mrng = cpRange cp
@@ -254,7 +263,9 @@ clauseForVerb allrngs vp = case rngs of
 
 
 
-predicateArgWS :: CP -> ClauseTreeZipper -> PredArgWorkspace (Either (Range,STag) (Int,POSTag))
+predicateArgWS :: CP xs
+               -> ClauseTreeZipper
+               -> PredArgWorkspace xs (Either (Range,STag) (Int,POSTag))
 predicateArgWS cp z =
   PAWS { _pa_CP = cp
        , _pa_candidate_args = case child1 z of
@@ -273,8 +284,8 @@ predicateArgWS cp z =
 
 
 findPAWS :: ClauseTree
-         -> VerbProperty (BitreeZipperICP '[Lemma])
-         -> Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag)))
+         -> VerbProperty (BitreeZipperICP (Lemma ': as))
+         -> Maybe (PredArgWorkspace as (Either (Range,STag) (Int,POSTag)))
 findPAWS tr vp = do cp <- constructCP vp
                     predicateArgWS cp <$> findVerb (vp^.vp_index) tr
 

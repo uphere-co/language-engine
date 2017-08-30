@@ -1,5 +1,6 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module NLP.Syntax.Format where
 
@@ -67,15 +68,15 @@ formatDPTokens (dp,mpro) = case fmap chooseATNode dp of
   where gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
 
 
-formatDPType :: ATNode (DP (BitreeZipperICP '[Lemma])) -> Maybe ChunkTag
+formatDPType :: ATNode (DP (BitreeZipperICP (Lemma ': as))) -> Maybe ChunkTag
 formatDPType x = case chooseATNode x of
                    SilentPRO -> Just NP
                    RExp z -> getchunk z
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
-formatPAWS :: Maybe [Bitree (Range,CP) (Range,CP)]
-           -> PredArgWorkspace (Either (Range,STag) (Int,POSTag))
+formatPAWS :: Maybe [Bitree (Range,CP as) (Range,CP as)]
+           -> PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
            -> String
 formatPAWS mcpstr pa =
   printf "              subject       : %s\n\
@@ -98,7 +99,7 @@ formatPAWS mcpstr pa =
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
 
-formatCP :: Maybe [Bitree (Range,CP) (Range,CP)] -> CP -> String
+formatCP :: Maybe [Bitree (Range,CP as) (Range,CP as)] -> CP as -> String
 formatCP mcpstr cp
             = printf "Complementizer Phrase: %-4s  %s\n\
                      \Complementizer       : %-4s  %s\n\
@@ -125,7 +126,7 @@ formatCP mcpstr cp
         formatposchunk (Right p) = "(" ++ show p ++ ")"
 
 
-formatCPHierarchy :: Bitree (Range,CP) (Range,CP) -> Text
+formatCPHierarchy :: Bitree (Range,CP as) (Range,CP as) -> Text
 formatCPHierarchy tr = formatBitree (\(rng,cp) -> T.pack (printf "%-7s" (show rng))) tr
 
 
@@ -147,8 +148,8 @@ formatClauseStructure vps clausetr =
 
 
 formatVPwithPAWS :: ClauseTree
-                 -> Maybe [Bitree (Range,CP) (Range,CP)]
-                 -> VerbProperty (BitreeZipperICP '[Lemma])
+                 -> Maybe [Bitree (Range,CP as) (Range,CP as)]
+                 -> VerbProperty (BitreeZipperICP (Lemma ': as))
                  -> Text
 formatVPwithPAWS clausetr mcpstr vp =
   let rngs = clauseRanges clausetr

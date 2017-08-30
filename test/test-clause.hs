@@ -15,12 +15,14 @@ import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 --
+import           Data.Bitree
 import           NLP.Printer.PennTreebankII
+import           NLP.Type.PennTreebankII
+import           Text.Format.Tree
+--
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
-import           NLP.Type.PennTreebankII
-
-
+import           NLP.Syntax.Verb
 
 
 test1, test6 :: (Text,[(Int,(Text,Text))],PennTree)
@@ -94,6 +96,14 @@ process (txt,lma,pt) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"  
   T.IO.putStrLn $ prettyPrint 0 pt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
+  let vps = verbPropertyFromPennTree lmap1 pt
+      mcpstr = identifyCPHierarchy vps
+  case mcpstr of
+    Nothing -> putStrLn "CP Hierarchy not identified..."
+    Just cpstr -> do
+      let fmt x = T.pack (show (x^._1))
+      mapM_ (T.IO.putStrLn . linePrint fmt . toTree) cpstr
+    
 
 
 main :: IO ()

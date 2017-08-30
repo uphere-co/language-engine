@@ -43,7 +43,7 @@ headAdverb xs = getLast (foldMap (Last . f) xs)
         f (PL (_,(pos,t))) = if isAdverb pos then Just (T.toLower t) else Nothing
 
 
-phraseNodeType :: Maybe TP -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text)) -> GRel
+phraseNodeType :: Maybe (TP as) -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text)) -> GRel
 phraseNodeType mtp z
   = let rng = getRange (current z)
         subj = do tp <- mtp
@@ -136,7 +136,7 @@ mkArgTable itr l2p (file,sid,tid) args  =
                          _   -> Nothing
 
 
-mkArgPattern :: Maybe TP -> ArgTable (ATNode a) -> ArgPattern Voice a
+mkArgPattern :: Maybe (TP as) -> ArgTable (ATNode a) -> ArgPattern Voice a
 mkArgPattern mtp ArgTable {..} =
   ArgPattern { _patt_property = mtp^?_Just.tp_VP.vp_verbProperty.vp_voice
              , _patt_arg0 = fmap chooseATNode _tbl_arg0
