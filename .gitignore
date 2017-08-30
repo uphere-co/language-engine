@@ -1,0 +1,12 @@
+*.*~
+*sandbox*
+result
+.vscode/
+dist/
+dist-newstyle/
+data/
+data_full/
+enwiki
+wikidata
+dbpedia
+yago
