@@ -4,7 +4,7 @@
 module SRL.Analyze where
 
 import           Control.Lens                 ((^.),(.~),(&))
-import           Control.Monad                (void,when)
+import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
@@ -78,17 +78,18 @@ queryProcess config pp apredata emTagger =
                   putStrLn "-------------"
                   putStrLn "meaning graph"
                   putStrLn "-------------"
-                  let sstr1 = fromJust (head (dstr^.ds_sentStructures))
-                      mg = meaningGraph sstr1
-                  mapM_ print (mg^.mg_vertices)
-                  mapM_ print (mg^.mg_edges)
-                  putStrLn "-----------------"
-                  putStrLn "meaning graph dot"
-                  putStrLn "-----------------"
-                  let dotstr = dotMeaningGraph mg
-                  putStrLn dotstr
-                  writeFile "test.dot" dotstr
-                  void (readProcess "dot" ["-Tpng","test.dot","-otest.png"] "")
+                  let sstrs1 = catMaybes (dstr^.ds_sentStructures)
+                      mgs = map meaningGraph sstrs1
+                  forM_ (zip [1..] mgs) $ \(i,mg) -> do
+                    mapM_ print (mg^.mg_vertices)
+                    mapM_ print (mg^.mg_edges)
+                    putStrLn "-----------------"
+                    putStrLn "meaning graph dot"
+                    putStrLn "-----------------"
+                    let dotstr = dotMeaningGraph mg
+                    putStrLn dotstr
+                    writeFile ("test" ++ (show i) ++ ".dot") dotstr
+                    void (readProcess "dot" ["-Tpng","test.dot","-otest.png"] "")
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 

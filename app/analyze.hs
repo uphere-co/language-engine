@@ -25,4 +25,4 @@ progOption = O.info pOptions (O.fullDesc <> O.progDesc "analyze text")
 main :: IO ()
 main = do
   acfg <- O.execParser progOption
-  runAnalysis cfg acfg
+  runAnalysis cfgG acfg
