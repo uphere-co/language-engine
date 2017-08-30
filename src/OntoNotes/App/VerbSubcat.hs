@@ -39,7 +39,9 @@ import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Argument
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
-import           NLP.Syntax.Type
+-- import           NLP.Syntax.Type
+import           NLP.Syntax.Type.Verb
+import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Verb
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -52,7 +54,6 @@ import           PropBank.Type.Prop
 import           OntoNotes.App.Load           hiding (Config)
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
--- import           OntoNotes.Format
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Type.Sense
 import           OntoNotes.Type.SenseInventory
@@ -152,7 +153,7 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
       iproptr = mkPennTreeIdx proptr
       mvpmva =  matchVerbPropertyWithRelation verbprops clausetr minst
       mtp = do (vp,_) <- mvpmva
-               (constructCP vp^?_Just.cp_TP)
+               (constructCP vp^?_Just.complement)
       argtable0 = mkArgTable iproptr l2p filesidtid args
       argtable1 = zipperArgTable iproptr argtable0
       -- argtable :: ArgTable (ATNode GRel)
@@ -252,7 +253,7 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                         clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr {- coretr -}))
                         mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
                         mtp = do (vp,_) <- mvpmva
-                                 (constructCP vp^?_Just.cp_TP)
+                                 (constructCP vp^?_Just.complement)
                         argtable0 = mkArgTable iproptr l2p filesidtid args
                         argtable1 = zipperArgTable iproptr argtable0
                         -- argtable :: ArgTable Text
