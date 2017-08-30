@@ -61,6 +61,8 @@ data VerbProperty w = VerbProperty { _vp_index  :: Int
 
 makeLenses ''VerbProperty
 
+                       
+
 
 -- | Projection of Verb Phrase following X-bar theory.
 --   The name VP is defined in NLP.Type.PennTreebankII, so I use VerbP.
