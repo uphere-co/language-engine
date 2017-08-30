@@ -4,7 +4,7 @@
 module SRL.Analyze where
 
 import           Control.Lens                 ((^.),(.~),(&))
-import           Control.Monad                (void,when)
+import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
@@ -30,7 +30,7 @@ import           NLP.Syntax.Type              (Voice)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention(..))
-import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass)
+import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
 --
 import           OntoNotes.App.Load           (Config(..),cfg,cfgG,cfg_framenet_framedir
                                               ,cfg_rolemap_file
@@ -48,7 +48,8 @@ import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructu
 import           SRL.Analyze.Match             (allPAWSTriplesFromDocStructure,meaningGraph)
 import           SRL.Analyze.SentenceStructure (docStructure)
 import           SRL.Analyze.Type
-import           SRL.Analyze.WikiEL            (brandItemFile,orgItemFile,personItemFile,reprFile)
+import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
+                                               ,occupationItemFile,orgItemFile,personItemFile,reprFile)
 
 
 -- | main query loop
@@ -77,17 +78,18 @@ queryProcess config pp apredata emTagger =
                   putStrLn "-------------"
                   putStrLn "meaning graph"
                   putStrLn "-------------"
-                  let sstr1 = fromJust (head (dstr^.ds_sentStructures))
-                      mg = meaningGraph sstr1
-                  mapM_ print (mg^.mg_vertices)
-                  mapM_ print (mg^.mg_edges)
-                  putStrLn "-----------------"
-                  putStrLn "meaning graph dot"
-                  putStrLn "-----------------"
-                  let dotstr = dotMeaningGraph mg
-                  putStrLn dotstr
-                  writeFile "test.dot" dotstr
-                  void (readProcess "dot" ["-Tpng","test.dot","-otest.png"] "")
+                  let sstrs1 = catMaybes (dstr^.ds_sentStructures)
+                      mgs = map meaningGraph sstrs1
+                  forM_ (zip [1..] mgs) $ \(i,mg) -> do
+                    mapM_ print (mg^.mg_vertices)
+                    mapM_ print (mg^.mg_edges)
+                    putStrLn "-----------------"
+                    putStrLn "meaning graph dot"
+                    putStrLn "-----------------"
+                    let dotstr = dotMeaningGraph mg
+                    putStrLn dotstr
+                    writeFile ("test" ++ (show i) ++ ".dot") dotstr
+                    void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
@@ -102,17 +104,23 @@ loadConfig
         ,[RolePattInstance Voice]
         )
 loadConfig = do
+  (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats) <- loadAnalyzePredata
+  emTagger <- loadEMtagger reprFile [ (orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)
+                                    , (locationClass, locationItemFile), (occupationClass, occupationItemFile)
+                                    , (humanRuleClass, humanRuleItemFile), (buildingClass, buildingItemFile) ]
+  return (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats)
+
+loadAnalyzePredata :: IO AnalyzePredata
+loadAnalyzePredata = do
   let cfg = cfgG
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-  emTagger <- loadEMtagger reprFile [(orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)]
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
   subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
-  return (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats)
-
+  return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats)
 
 getAnalysis input config =
   let (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats) = config
