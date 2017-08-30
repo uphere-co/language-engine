@@ -6,52 +6,38 @@ module SRL.Analyze.SentenceStructure where
 
 import           Control.Lens                              ((^.),(^..),_1,to)
 import           Data.Bifunctor                            (bimap)
-import           Data.Foldable                             (forM_)
 import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
-import           Data.List                                 (sortBy,zip5)
+import           Data.List                                 (sortBy)
 import           Data.Maybe                                (fromMaybe,maybeToList)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
-import qualified Data.Text.IO                      as T.IO
-import           Data.Traversable                          (forM)
-import qualified Language.Java                     as J
-import           Text.PrettyPrint.Boxes                    (render)
-import           Text.Printf                               (printf)
 --
-import           CoreNLP.Simple.Convert                    (mkLemmaMap,mkLemmaMap',sentToNER')
+import           CoreNLP.Simple.Convert                    (mkLemmaMap')
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
 import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
-import           Lexicon.Type                              (ArgPattern(..),POSVorN(..),RoleInstance,RolePattInstance)
-import           NLP.Printer.PennTreebankII                (formatIndexTokensFromTree)
-import           NLP.Syntax.Clause                         (clauseStructure,constructCP
-                                                           ,identifyCPHierarchy)
+import           Lexicon.Type                              (POSVorN(..),GRel
+                                                           ,RoleInstance,RolePattInstance
+                                                           ,ArgPattern)
+import           NLP.Syntax.Clause                         (clauseStructure,identifyCPHierarchy)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
 import           NLP.Syntax.Type.XBar                      (Zipper)
 import qualified NLP.Type.NamedEntity              as N
-import 	       	 NLP.Type.CoreNLP                          (NERSentence(..),Token,Dependency,Sentence,SentenceIndex
-                                                           ,sentenceNER,sentenceWord,sentenceToken,sentenceLemma)
-
+import           NLP.Type.CoreNLP                          (sentenceToken,sentenceLemma)
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,mkPennTreeIdx)
 import qualified NLP.Type.PennTreebankII.Separated as PS
-import           WikiEL.EntityLinking                      (EntityMentionUID,EntityMention(..),UIDCite(..)
-                                                           ,entityLinking,entityLinkings,buildEntityMentions,entityUID)
-import           WikiEL.WikiNamedEntityTagger              (PreNE(..))
+import           NLP.Type.SyntaxProperty                   (Voice)
+import           WikiEL.EntityLinking                      (EntityMention)
 --
 import           OntoNotes.Type.SenseInventory
 --
-import qualified SRL.Analyze.Config             as Analyze (Config, showDetail)
-import           SRL.Analyze.CoreNLP                       (runParser)
-import           SRL.Analyze.Format                        (formatSenses,formatTimex
-                                                           ,formatTagged
-                                                           ,showTimex,showFormatTimex'
-                                                           ,getTopPatternsFromONFNInst)
+import           SRL.Analyze.Format                        (getTopPatternsFromONFNInst)
 import           SRL.Analyze.Type
-import           SRL.Analyze.Util                          (CharIdx,SentItem,TagPos(..),TokIdx)
+import           SRL.Analyze.Util                          (TagPos(..))
 import           SRL.Analyze.WikiEL                        (getWikiResolvedMentions
                                                            ,linkedMentionToTagPos)
 
@@ -98,9 +84,13 @@ getSenses lma sensemap sensestat framedb ontomap = do
   return ((ONFNInstance sid txt_def tframe),num)
 
 
-getTopPatternsFromSensesAndVP rolemap subcats senses vp =
-  let mcp = constructCP vp
-      mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<< fmap (^._1) (chooseFrame senses)
+getTopPatternsFromSensesAndVP :: [RoleInstance]
+                              -> [RolePattInstance Voice]
+                              -> [(ONSenseFrameNetInstance,Int)]
+                              -> ([(ONSenseFrameNetInstance,Int)]
+                                 ,Maybe (RoleInstance,Maybe [(ArgPattern () GRel,Int)]))
+getTopPatternsFromSensesAndVP rolemap subcats senses =
+  let mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<< fmap (^._1) (chooseFrame senses)
   in (senses,mrmmtoppatts)
 
 
@@ -110,7 +100,7 @@ docStructure :: AnalyzePredata
              -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
              -> DocAnalysisInput
              -> DocStructure
-docStructure apredata emTagger docinput@(DocAnalysisInput sents sentidxs sentitems _tokss mptrs deps mtmxs) =
+docStructure apredata emTagger docinput@(DocAnalysisInput sents _sentidxs sentitems _tokss mptrs _deps mtmxs) =
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = getWikiResolvedMentions emTagger

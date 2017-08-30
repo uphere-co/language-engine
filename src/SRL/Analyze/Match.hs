@@ -197,11 +197,11 @@ meaningGraph sstr =
       matched =  mapMaybe matchFrame pawstriples
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList
 
-      preds = map (\(rng,verb,frame,mselected) -> (\i -> MGPredicate i rng frame verb)) matched
+      preds = map (\(rng,verb,frame,_mselected) -> (\i -> MGPredicate i rng frame verb)) matched
       ipreds = zipWith ($) preds [1..]
       entities0 = do (_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
-                     (fe,z) <- felst
+                     (_fe,z) <- felst
                      let x = current z
                          rng = getRange x
                          txt = gettokens x

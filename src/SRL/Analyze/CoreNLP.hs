@@ -2,41 +2,27 @@
 
 module SRL.Analyze.CoreNLP where
 
-import           Control.Lens                                 ((^.),(^..),_2,firstOf,lastOf,toListOf)
+import           Control.Lens                                 ((^.),firstOf,lastOf,toListOf)
 import qualified Data.ByteString.Lazy.Char8            as BL
 import           Data.Maybe                                   (fromJust,mapMaybe)
 import           Data.Text                                    (Text)
-import qualified Data.Text                             as T
 import qualified Language.Java                         as J
-import           Text.ProtocolBuffers.Basic                   (Utf8)
 import           Text.ProtocolBuffers.WireMessage             (messageGet)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
-import qualified CoreNLP.Proto.CoreNLPProtos.Timex     as Tmx
 import qualified CoreNLP.Proto.HCoreNLPProto.ListTimex as T
-import qualified CoreNLP.Proto.HCoreNLPProto.TimexWithOffset as T
 import           CoreNLP.Simple                               (annotate,serializeTimex)
 import           CoreNLP.Simple.Convert                       (convertPsent,convertSentence,convertToken
                                                               ,decodeToPennTree
-                                                              ,sentToDep,sentToNER)
+                                                              ,sentToDep)
 import           CoreNLP.Simple.Util                          (getDoc,getProtoDoc,getTKTokens)
-import 	       	 NLP.Type.CoreNLP                             (NERSentence(..),Token,Dependency,Sentence,SentenceIndex)
-import qualified NLP.Type.NamedEntity                  as N
-import           NLP.Type.PennTreebankII                      (PennTree)
-import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
-import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),UIDCite(..)
-                                                              ,entityLinking,entityLinkings,buildEntityMentions,entityUID)
-import qualified WikiEL.EntityLinking                  as EL
+import           NLP.Type.CoreNLP                             (Sentence)
 --
 import           SRL.Analyze.Type                             (DocAnalysisInput(..))
-import           SRL.Analyze.Util                             (BeginEnd,TagPos,SentItem,SentIdx
-                                                              ,CharIdx,TokIdx
-                                                              ,addSUTime,addTag,addText
-                                                              ,listTimexToTagPos
-                                                              ,underlineText)
-import           SRL.Analyze.WikiEL                           (getWikiResolvedMentions)
+import           SRL.Analyze.Util                             (BeginEnd,SentIdx,CharIdx
+                                                              ,addText,listTimexToTagPos)
 
 
 getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd CharIdx)]
@@ -63,7 +49,6 @@ runParser pp txt = do
       Right deps = mapM sentToDep psents
       tktokss = map (getTKTokens) psents
       tokss = map (mapMaybe convertToken) tktokss
-      toks = concat tokss
   mtmx <- case fmap fst (messageGet lbstr_sutime) :: Either String T.ListTimex of
     Left _ -> return Nothing
     Right rsutime -> return (Just (listTimexToTagPos rsutime))
