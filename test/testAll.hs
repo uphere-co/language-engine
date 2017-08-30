@@ -1,3 +1,5 @@
+module Main where
+
 import           Test.Tasty.HUnit                      (testCase,testCaseSteps)
 import           Test.Tasty                            (defaultMain, testGroup,TestTree)
 
@@ -18,5 +20,5 @@ unitTests =
     , GO.allTest
     ]
 
---main = defaultMain unitTests
-main = NET.main1
+main = defaultMain unitTests
+main1 = NET.main1
