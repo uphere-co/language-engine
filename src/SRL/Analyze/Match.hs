@@ -1,5 +1,6 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections     #-}
 
 module SRL.Analyze.Match where
 
@@ -12,6 +13,7 @@ import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
 import           Data.Maybe                   (catMaybes,listToMaybe,mapMaybe,maybeToList)
 import qualified Data.Text              as T
+import           Data.Text                    (Text)
 --
 import           Data.Bitree                  (getNodes,getRoot)
 import           Data.BitreeZipper            (current,mkBitreeZipper)
@@ -19,23 +21,36 @@ import           Data.BitreeZipper.Util       (root)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,findPAWS,resolveDP)
 import           NLP.Syntax.Type
+import           NLP.Syntax.Type.Verb
+import           NLP.Syntax.Type.XBar
 import           NLP.Type.PennTreebankII
+import           NLP.Type.SyntaxProperty      (Voice(..))
 --
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
+                                              ,DocStructure
                                               ,SentStructure
+                                              ,VerbStructure
                                               ,ds_sentStructures
                                               ,ss_clausetr,ss_mcpstr,ss_verbStructures
                                               ,vs_lma,vs_mrmmtoppatts,vs_vp
                                               ,mv_range,mv_id
                                               )
-
-
+ 
+allPAWSTriplesFromDocStructure
+  :: DocStructure
+  -> [[(Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
+       ,VerbStructure
+       ,PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))]]
 allPAWSTriplesFromDocStructure dstr = do
   msstr <- dstr^.ds_sentStructures
   sstr <- maybeToList msstr
   return (mkPAWSTriples sstr)
 
 
+mkPAWSTriples :: SentStructure
+              -> [(Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
+                  ,VerbStructure
+                  ,PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))]
 mkPAWSTriples sstr = do
   let clausetr = sstr^.ss_clausetr
       mcpstr = sstr^.ss_mcpstr
@@ -45,18 +60,19 @@ mkPAWSTriples sstr = do
   return (mcpstr,vstr,paws)
 
 
-  
 
-pbArgForGArg grel patt = check patt_arg0 "arg0" <|>
+pbArgForGArg :: GArg -> ArgPattern p GRel -> Maybe (Text,GRel)
+pbArgForGArg garg patt = check patt_arg0 "arg0" <|>
                          check patt_arg1 "arg1" <|>
                          check patt_arg2 "arg2" <|>
                          check patt_arg3 "arg3" <|>
                          check patt_arg4 "arg4"
   where check l label = do a <- patt^.l
-                           grel' <- findGArg a
-                           if grel==grel' then Just (label,a) else Nothing
+                           garg' <- findGArg a
+                           if garg==garg' then Just (label,a) else Nothing
 
 
+pbArgForPP :: ArgPattern p GRel -> [(Text,Text)]
 pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
                             , check patt_arg1 "arg1"
                             , check patt_arg2 "arg2"
@@ -69,14 +85,21 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
                              _           -> Nothing
 
 
-
+matchSubject :: [(PBArg,FNFrameElement)]
+             -> Zipper '[Lemma]
+             -> ArgPattern p GRel
+             -> Maybe (FNFrameElement, Zipper '[Lemma])
 matchSubject rolemap dp patt = do
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
   (,dp) <$> lookup p rolemap
 
 
+matchObjects :: [(PBArg,FNFrameElement)]
+             -> VerbP '[Lemma]
+             -> ArgPattern p GRel
+             -> [(FNFrameElement, Zipper '[Lemma])]
 matchObjects rolemap verbp patt = do
-  (garg,obj) <- zip [GA1,GA2] (verbp^.vp_complements)
+  (garg,obj) <- zip [GA1,GA2] (verbp^.complement)
   ctag <- case getRoot (current obj) of
             Left (_,node) -> [chunkTag node]
             _             -> []
@@ -90,22 +113,32 @@ matchObjects rolemap verbp patt = do
   return (fe,obj)
 
 
-
+matchPP :: PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
+        -> Text
+        -> Maybe (Zipper '[Lemma])
 matchPP paws prep = do
     Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
-    tr <- current . root <$> paws^.pa_CP.cp_maximal_projection
+    tr <- current . root <$> paws^.pa_CP.maximalProjection
     find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
   where
     ppcheck (Left (_,S_PP prep')) = prep == prep'
     ppcheck _                     = False
 
+
+matchPrepArgs :: [(PBArg,FNFrameElement)]
+              -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
+              -> ArgPattern p GRel
+              -> [(FNFrameElement, Zipper '[Lemma])]
 matchPrepArgs rolemap paws patt = do
   (p,prep) <- pbArgForPP patt
   z <- maybeToList (matchPP paws prep)
   (,z) <$> maybeToList (lookup p rolemap)
 
 
-
+matchAgentForPassive :: [(PBArg,FNFrameElement)]
+                     -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
+                     -> ArgPattern p GRel
+                     -> Maybe (FNFrameElement, Zipper '[Lemma])
 matchAgentForPassive rolemap paws patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
     z <- matchPP paws "by"
@@ -113,23 +146,33 @@ matchAgentForPassive rolemap paws patt = do
 
 
 
-
+matchThemeForPassive :: [(PBArg,FNFrameElement)]
+                     -> Zipper '[Lemma]
+                     -> ArgPattern p GRel
+                     -> Maybe (FNFrameElement, Zipper '[Lemma]) 
 matchThemeForPassive rolemap dp patt = do
   (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
   (,dp) <$> lookup p rolemap
 
 
-
+matchSO :: [(PBArg,FNFrameElement)]
+        -> (Zipper '[Lemma], VerbP '[Lemma], PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
+        -> (ArgPattern p GRel, Int)
+        -> ((ArgPattern p GRel, Int), [(FNFrameElement, Zipper '[Lemma])])
 matchSO rolemap (dp,verbp,paws) (patt,num) =
-  case verbp^.vp_verbProperty.vp_voice of
+  case verbp^.headX.vp_voice of
     Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap paws patt )
     Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap paws patt,matchThemeForPassive rolemap dp patt] ++ matchPrepArgs rolemap paws patt)
 
 
-
+matchFrame :: (Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
+              ,VerbStructure
+              ,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
+           -> Maybe (Range,Text,FNFrameElement
+                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, Zipper '[Lemma])]))
 matchFrame (mcpstr,vstr,paws) = do
   let cp = paws^.pa_CP
-      verbp = cp^.cp_TP.tp_VP
+      verbp = cp^.complement.complement
       mrmmtoppatts = vstr^.vs_mrmmtoppatts
       mdp_resolved = resolveDP mcpstr cp
       verb = vstr^.vs_lma
@@ -183,3 +226,4 @@ meaningGraph sstr =
                  i' <- maybeToList (HM.lookup rng' rngidxmap)
                  return (MGEdge fe i i')
   in MeaningGraph vertices edges
+

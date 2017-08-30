@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE LambdaCase         #-}
@@ -42,6 +43,7 @@ import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
+import           NLP.Syntax.Type.XBar                    (CP)
 import 	       	 NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty                 (Voice)
@@ -215,7 +217,7 @@ formatSentStructure showdetail (SentStructure i ptr vps clausetr mcpstr vstrs) =
    in subline1 ++ (if showdetail then subline1_1 else []) ++ concat subline2
 
 
-formatVerbStructure :: ClauseTree -> Maybe [Bitree (Range,CP) (Range,CP)] -> VerbStructure -> [Text]
+formatVerbStructure :: ClauseTree -> Maybe [Bitree (Range,CP '[Lemma]) (Range,CP '[Lemma])] -> VerbStructure -> [Text]
 formatVerbStructure clausetr mcpstr (VerbStructure vp lma senses mrmmtoppatts) =
   [ formatVPwithPAWS clausetr mcpstr vp
   , T.pack (printf "Verb: %-20s" lma)

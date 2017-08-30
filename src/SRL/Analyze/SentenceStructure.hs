@@ -30,7 +30,8 @@ import           NLP.Printer.PennTreebankII                (formatIndexTokensFro
 import           NLP.Syntax.Clause                         (clauseStructure,constructCP
                                                            ,identifyCPHierarchy)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
-import           NLP.Syntax.Type                           (BitreeZipperICP,VerbProperty(..),Voice,vp_lemma)
+import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
+import           NLP.Syntax.Type.XBar                      (Zipper)
 import qualified NLP.Type.NamedEntity              as N
 import 	       	 NLP.Type.CoreNLP                          (NERSentence(..),Token,Dependency,Sentence,SentenceIndex
                                                            ,sentenceNER,sentenceWord,sentenceToken,sentenceLemma)
@@ -134,7 +135,7 @@ sentStructure apredata (i,lmas,mptr) =
     in SentStructure i ptr vps clausetr mcpstr verbStructures
 
 
-verbStructure :: AnalyzePredata -> VerbProperty (BitreeZipperICP '[Lemma]) -> VerbStructure
+verbStructure :: AnalyzePredata -> VerbProperty (Zipper '[Lemma]) -> VerbStructure
 verbStructure apredata vp =
   let lma = vp^.vp_lemma.to unLemma
       sensemap = apredata^.analyze_sensemap
