@@ -27,6 +27,8 @@ import           Text.Format.Tree
 --
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Type
+import           NLP.Syntax.Type.Verb
+import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Verb
 
 
@@ -83,9 +85,9 @@ formatPAWS mcpstr pa =
   printf "              subject       : %s\n\
          \              arg candidates: %s\n\
          \              complements   : %s"
-         (formatDPTokens (pa^.pa_CP^.cp_TP.tp_DP,resolveDP mcpstr (pa^.pa_CP)))
+         (formatDPTokens (pa^.pa_CP^.complement.specifier,resolveDP mcpstr (pa^.pa_CP)))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
-         ((intercalate " | " . map (T.unpack . T.intercalate " ". gettoken)) (pa^.pa_CP.cp_TP.tp_VP.vp_complements))
+         ((intercalate " | " . map (T.unpack . T.intercalate " ". gettoken)) (pa^.pa_CP.complement.complement.complement))
                   
   where
     gettoken = map (tokenWord.snd) . toList . current
@@ -100,7 +102,9 @@ formatPAWS mcpstr pa =
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
 
-formatCP :: Maybe [Bitree (Range,CP as) (Range,CP as)] -> CP as -> String
+formatCP :: Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
+         -> CP (Lemma ': as)
+         -> String
 formatCP mcpstr cp
             = printf "Complementizer Phrase: %-4s  %s\n\
                      \Complementizer       : %-4s  %s\n\
@@ -108,17 +112,17 @@ formatCP mcpstr cp
                      \Determiner Phrase    : %-4s  %s\n\
                      \Verb Phrase          : %-4s  %s\n\
                      \Verb Complements     : %s\n"
-                (maybe "null" show (getchunk =<< cp^.cp_maximal_projection))
-                (maybe "" (show . gettoken) (cp^.cp_maximal_projection))
-                (maybe "null" formatposchunk (fmap getposchunk (cp^.cp_complementizer)))
-                (maybe "" (show . gettoken) (cp^.cp_complementizer))
-                (maybe "null" show (getchunk =<< cp^.cp_TP.tp_maximal_projection))
-                (maybe "" (show . gettoken) (cp^.cp_TP.tp_maximal_projection))
-                (maybe "null" show (cp^.cp_TP.tp_DP.to (fmap formatDPType)))
-                (formatDPTokens (cp^.cp_TP.tp_DP,resolveDP mcpstr cp))
-                (maybe "null" show (getchunk (cp^.cp_TP.tp_VP.vp_maximal_projection)))
-                ((show . gettoken) (cp^.cp_TP.tp_VP.vp_maximal_projection))
-                ((intercalate " | " . map (show . gettoken)) (cp^.cp_TP.tp_VP.vp_complements))
+                (maybe "null" show (getchunk =<< cp^.maximalProjection))
+                (maybe "" (show . gettoken) (cp^.maximalProjection))
+                (maybe "null" formatposchunk (fmap getposchunk (cp^.headX)))
+                (maybe "" (show . gettoken) (cp^.headX))
+                (maybe "null" show (getchunk =<< cp^.complement.maximalProjection))
+                (maybe "" (show . gettoken) (cp^.complement.maximalProjection))
+                (maybe "null" show (cp^.complement.specifier.to (fmap formatDPType)))
+                (formatDPTokens (cp^.complement.specifier,resolveDP mcpstr cp))
+                (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
+                ((show . gettoken) (cp^.complement.complement.maximalProjection))
+                ((intercalate " | " . map (show . gettoken)) (cp^.complement.complement.complement))
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
@@ -149,7 +153,7 @@ formatClauseStructure vps clausetr =
 
 
 formatVPwithPAWS :: ClauseTree
-                 -> Maybe [Bitree (Range,CP as) (Range,CP as)]
+                 -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
                  -> VerbProperty (BitreeZipperICP (Lemma ': as))
                  -> Text
 formatVPwithPAWS clausetr mcpstr vp =

@@ -22,6 +22,7 @@ import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
 --
 import           NLP.Syntax.Type
+import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util
 import           NLP.Syntax.Verb
 

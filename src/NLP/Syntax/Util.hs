@@ -5,17 +5,13 @@
 
 module NLP.Syntax.Util where
 
-import           Control.Monad.Loops        (iterateUntilM)
-import           Data.List                  (unfoldr)
---
 import           Data.Attribute
 import           Data.Bitree
 import           Data.BitreeZipper
-
 import           NLP.Type.PennTreebankII
 --
-import           NLP.Syntax.Type
-
+import           NLP.Syntax.Type.Verb
+import           NLP.Syntax.Type.XBar
 
 
 

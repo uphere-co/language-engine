@@ -14,15 +14,15 @@ module NLP.Syntax.Type
 -- , Voice(..)
 -- , Aspect(..)
 
-  -- * type synonym
-  type BitreeICP
-, type BitreeZipperICP
-, VerbProperty(..), vp_index, vp_lemma, vp_tense, vp_aspect, vp_voice, vp_auxiliary, vp_negation, vp_words
-, VerbP(..), vp_maximal_projection, vp_verbProperty, vp_complements
-, TP(..), tp_maximal_projection, tp_DP, tp_VP
-, CP(..), cp_maximal_projection, cp_complementizer, cp_TP
-, DP(..)
-, PredArgWorkspace(..), pa_CP, pa_candidate_args
+--  -- * type synonym
+--   type BitreeICP
+-- , type BitreeZipperICP
+-- , VerbProperty(..), vp_index, vp_lemma, vp_tense, vp_aspect, vp_voice, vp_auxiliary, vp_negation, vp_words
+-- , VerbP(..), vp_maximal_projection, vp_verbProperty, vp_complements
+-- , TP(..), tp_maximal_projection, tp_DP, tp_VP
+-- , CP(..), cp_maximal_projection, cp_complementizer, cp_TP
+-- , DP(..)
+PredArgWorkspace(..), pa_CP, pa_candidate_args
 
   -- * old types
 , SBARType(..)
@@ -42,15 +42,14 @@ import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
 --
-import           NLP.Syntax.Type.New                    (DP(..))
-import           NLP.Syntax.Type.XBar                   (BitreeICP,BitreeZipperICP)
+import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Type.Verb
 
 
 
                        
 
-
+{- 
 -- | Projection of Verb Phrase following X-bar theory.
 --   The name VP is defined in NLP.Type.PennTreebankII, so I use VerbP.
 --
@@ -83,7 +82,7 @@ data CP as = CP { _cp_maximal_projection :: Maybe (BitreeZipperICP (Lemma ': as)
 
 makeLenses ''CP
 
-
+-}
 -- | workspace for predicate argument
 --
 data PredArgWorkspace as a = PAWS { _pa_CP :: CP as

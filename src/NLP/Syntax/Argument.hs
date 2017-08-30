@@ -27,7 +27,8 @@ import           PropBank.Type.Prop           (Argument(..),PropBankLabel(..)
 --
 import           Lexicon.Type
 --
-import           NLP.Syntax.Type
+import           NLP.Syntax.Type.Verb
+import           NLP.Syntax.Type.XBar
 
 
 headPreposition :: [PennTreeIdx] -> Maybe Text
@@ -48,13 +49,13 @@ phraseNodeType :: Maybe (TP as) -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Te
 phraseNodeType mtp z
   = let rng = getRange (current z)
         subj = do tp <- mtp
-                  dpnode <- tp^.tp_DP.to (fmap chooseATNode)
+                  dpnode <- tp^.specifier.to (fmap chooseATNode)
                   dp <- case dpnode of
                           SilentPRO -> Nothing
                           RExp z -> Just z
                   return (getRange (current dp) == rng)
         obj  = do tp <- mtp
-                  let os = zip [1..] (tp^.tp_VP.vp_complements)
+                  let os = zip [1..] (tp^.complement.complement)
                   m <- find (\o -> getRange (current (o^._2)) == rng) os
                   return (m^._1)
         mgarg :: Maybe GArg
@@ -139,7 +140,7 @@ mkArgTable itr l2p (file,sid,tid) args  =
 
 mkArgPattern :: Maybe (TP as) -> ArgTable (ATNode a) -> ArgPattern Voice a
 mkArgPattern mtp ArgTable {..} =
-  ArgPattern { _patt_property = mtp^?_Just.tp_VP.vp_verbProperty.vp_voice
+  ArgPattern { _patt_property = mtp^?_Just.complement.headX.vp_voice
              , _patt_arg0 = fmap chooseATNode _tbl_arg0
              , _patt_arg1 = fmap chooseATNode _tbl_arg1
              , _patt_arg2 = fmap chooseATNode _tbl_arg2
