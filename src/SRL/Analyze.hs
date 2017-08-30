@@ -30,7 +30,7 @@ import           NLP.Syntax.Type              (Voice)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention(..))
-import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass)
+import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
 --
 import           OntoNotes.App.Load           (Config(..),cfg,cfgG,cfg_framenet_framedir
                                               ,cfg_rolemap_file
@@ -48,7 +48,8 @@ import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructu
 import           SRL.Analyze.Match             (allPAWSTriplesFromDocStructure,meaningGraph)
 import           SRL.Analyze.SentenceStructure (docStructure)
 import           SRL.Analyze.Type
-import           SRL.Analyze.WikiEL            (brandItemFile,orgItemFile,personItemFile,reprFile)
+import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
+                                               ,occupationItemFile,orgItemFile,personItemFile,reprFile)
 
 
 -- | main query loop
@@ -108,7 +109,9 @@ loadConfig = do
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-  emTagger <- loadEMtagger reprFile [(orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)]
+  emTagger <- loadEMtagger reprFile [ (orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)
+                                    , (locationClass, locationItemFile), (occupationClass, occupationItemFile)
+                                    , (humanRuleClass, humanRuleItemFile), (buildingClass, buildingItemFile) ]
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
   subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   return (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats)

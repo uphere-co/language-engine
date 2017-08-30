@@ -87,6 +87,15 @@ personItemFile = ItemIDFile (wikinerdir </> "data/ne.person")
 
 brandItemFile  = ItemIDFile (wikinerdir </> "data/ne.brand")
 
+locationItemFile = ItemIDFile (wikinerdir </> "data/ne.loc")
+
+occupationItemFile = ItemIDFile (wikinerdir </> "data/ne.occupation")
+
+humanRuleItemFile = ItemIDFile (wikinerdir </> "data/ne.human_rule")
+
+buildingItemFile = ItemIDFile (wikinerdir </> "data/ne.building")
+
+
 wordnetMappingFile = WordNetMappingFile (wikinerdir </> "data/page_id.wiki_id.wordnet.tsv")
  
 getOrgs :: EntityMention a -> Maybe (EntityMentionUID, ItemID)
