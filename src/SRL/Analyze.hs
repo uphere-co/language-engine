@@ -89,7 +89,7 @@ queryProcess config pp apredata emTagger =
                     let dotstr = dotMeaningGraph mg
                     putStrLn dotstr
                     writeFile ("test" ++ (show i) ++ ".dot") dotstr
-                    void (readProcess "dot" ["-Tpng","test.dot","-otest.png"] "")
+                    void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
@@ -104,19 +104,23 @@ loadConfig
         ,[RolePattInstance Voice]
         )
 loadConfig = do
+  (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats) <- loadAnalyzePredata
+  emTagger <- loadEMtagger reprFile [ (orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)
+                                    , (locationClass, locationItemFile), (occupationClass, occupationItemFile)
+                                    , (humanRuleClass, humanRuleItemFile), (buildingClass, buildingItemFile) ]
+  return (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats)
+
+loadAnalyzePredata :: IO AnalyzePredata
+loadAnalyzePredata = do
   let cfg = cfgG
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-  emTagger <- loadEMtagger reprFile [ (orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)
-                                    , (locationClass, locationItemFile), (occupationClass, occupationItemFile)
-                                    , (humanRuleClass, humanRuleItemFile), (buildingClass, buildingItemFile) ]
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
   subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
-  return (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats)
-
+  return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats)
 
 getAnalysis input config =
   let (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats) = config
