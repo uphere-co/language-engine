@@ -111,6 +111,7 @@ Executable analyze
   other-modules:
   build-depends:       base,
                        --
+                       lens,
                        optparse-applicative,
                        --
                        OntoNotes,
