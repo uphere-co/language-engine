@@ -21,6 +21,7 @@ library
                        NLP.Syntax.Clause
                        NLP.Syntax.Format
                        NLP.Syntax.Type
+                       NLP.Syntax.Type.New
                        NLP.Syntax.Type.XBar
                        NLP.Syntax.Util
                        NLP.Syntax.Verb

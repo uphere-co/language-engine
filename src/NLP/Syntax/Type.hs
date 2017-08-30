@@ -41,11 +41,9 @@ import           Lexicon.Type                           (ATNode(..))
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
+--
+import           NLP.Syntax.Type.XBar                   (BitreeICP,BitreeZipperICP)
 
-
-type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
-
-type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 
 data VerbProperty w = VerbProperty { _vp_index  :: Int
