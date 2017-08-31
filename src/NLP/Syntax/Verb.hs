@@ -30,8 +30,11 @@ import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.BitreeZipper.Util
 import           NLP.Type.PennTreebankII
+import           NLP.Type.SyntaxProperty                     (Tense(..),Voice(..),Aspect(..))
 --
 import           NLP.Syntax.Type
+import           NLP.Syntax.Type.Verb
+import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util
 
 

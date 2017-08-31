@@ -10,19 +10,19 @@ module NLP.Syntax.Type
 (
 
   -- * reexport from NLP.Type.SyntaxProperty
-  Tense(..)
-, Voice(..)
-, Aspect(..)
+--   Tense(..)
+-- , Voice(..)
+-- , Aspect(..)
 
-  -- * type synonym
-, type BitreeICP
-, type BitreeZipperICP
-, VerbProperty(..), vp_index, vp_lemma, vp_tense, vp_aspect, vp_voice, vp_auxiliary, vp_negation, vp_words
-, VerbP(..), vp_maximal_projection, vp_verbProperty, vp_complements
-, TP(..), tp_maximal_projection, tp_DP, tp_VP
-, CP(..), cp_maximal_projection, cp_complementizer, cp_TP
-, DP(..)
-, PredArgWorkspace(..), pa_CP, pa_candidate_args
+--  -- * type synonym
+--   type BitreeICP
+-- , type BitreeZipperICP
+-- , VerbProperty(..), vp_index, vp_lemma, vp_tense, vp_aspect, vp_voice, vp_auxiliary, vp_negation, vp_words
+-- , VerbP(..), vp_maximal_projection, vp_verbProperty, vp_complements
+-- , TP(..), tp_maximal_projection, tp_DP, tp_VP
+-- , CP(..), cp_maximal_projection, cp_complementizer, cp_TP
+-- , DP(..)
+PredArgWorkspace(..), pa_CP, pa_candidate_args
 
   -- * old types
 , SBARType(..)
@@ -41,66 +41,53 @@ import           Lexicon.Type                           (ATNode(..))
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
+--
+import           NLP.Syntax.Type.XBar
+import           NLP.Syntax.Type.Verb
 
 
-type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
-type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
+                       
 
-
-data VerbProperty w = VerbProperty { _vp_index  :: Int
-                                   , _vp_lemma  :: Lemma
-                                   , _vp_tense  :: Tense
-                                   , _vp_aspect :: Aspect
-                                   , _vp_voice  :: Voice
-                                   , _vp_auxiliary :: Maybe (w,(Int,Lemma))
-                                   , _vp_negation :: Maybe (w,(Int,Lemma))
-                                   , _vp_words  :: [(w,(Int,Lemma))]
-                                   }
-                    deriving (Show)
-
-makeLenses ''VerbProperty
-
-
+{- 
 -- | Projection of Verb Phrase following X-bar theory.
 --   The name VP is defined in NLP.Type.PennTreebankII, so I use VerbP.
 --
-data VerbP = VerbP { _vp_maximal_projection :: BitreeZipperICP '[Lemma]
-                   , _vp_verbProperty       :: VerbProperty (BitreeZipperICP '[Lemma])
-                   , _vp_complements        :: [BitreeZipperICP '[Lemma]]
-                   }
+data VerbP as = VerbP { _vp_maximal_projection :: BitreeZipperICP (Lemma ': as)
+                      , _vp_verbProperty       :: VerbProperty (BitreeZipperICP (Lemma ': as))
+                      , _vp_complements        :: [BitreeZipperICP (Lemma ': as)]
+                      }
 
 makeLenses ''VerbP
 
 
-data DP a = SilentPRO | RExp a
 
 
 -- | Projection of Tense Phrase following X-bar theory, which roughly
 --   corresponds to a sentence.
 --
-data TP = TP { _tp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
-             , _tp_DP                 :: Maybe (ATNode (DP (BitreeZipperICP '[Lemma])))
-             , _tp_VP                 :: VerbP
-             }
+data TP as = TP { _tp_maximal_projection :: Maybe (BitreeZipperICP (Lemma ': as))
+                , _tp_DP                 :: Maybe (ATNode (DP (BitreeZipperICP (Lemma ': as))))
+                , _tp_VP                 :: VerbP as
+                }
 
 makeLenses ''TP
 
 -- | Projection of Complementizer Phrase following X-bar theory
 --
-data CP = CP { _cp_maximal_projection :: Maybe (BitreeZipperICP '[Lemma])
-             , _cp_complementizer     :: Maybe (BitreeZipperICP '[Lemma])
-             , _cp_TP                 :: TP
-             }
+data CP as = CP { _cp_maximal_projection :: Maybe (BitreeZipperICP (Lemma ': as))
+                , _cp_complementizer     :: Maybe (BitreeZipperICP (Lemma ': as))
+                , _cp_TP                 :: TP as
+                }
 
 makeLenses ''CP
 
-
+-}
 -- | workspace for predicate argument
 --
-data PredArgWorkspace a = PAWS { _pa_CP :: CP
-                               , _pa_candidate_args :: [a]
-                               }
+data PredArgWorkspace as a = PAWS { _pa_CP :: CP as
+                                  , _pa_candidate_args :: [a]
+                                  }
 
 
 -- deriving instance (Show a) => Show (PredArgWorkspace a)

@@ -15,12 +15,14 @@ import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 --
+import           Data.Bitree
 import           NLP.Printer.PennTreebankII
+import           NLP.Type.PennTreebankII
+import           Text.Format.Tree
+--
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
-import           NLP.Type.PennTreebankII
-
-
+import           NLP.Syntax.Verb
 
 
 test1, test6 :: (Text,[(Int,(Text,Text))],PennTree)
@@ -75,8 +77,11 @@ test7 =
   , PN "ROOT" [PN "S" [PN "NP" [PL ("JJ","Republican"),PL ("NNS","senators")],PN "VP" [PL ("VBP","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","health-care"),PL ("NN","bill")]]]]],PL (".",".")]]
   )
   
-
-
+test8 =
+  ( "I want to plan to write a paper."
+  , [(0,("I","I")),(1,("want","want")),(2,("to","to")),(3,("plan","plan")),(4,("to","to")),(5,("write","write")),(6,("a","a")),(7,("paper","paper")),(8,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","want"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","paper")]]]]]]]],PL (".",".")]]
+  )
 
 
 process :: (Text,[(Int,(Text,Text))],PennTree) -> IO ()
@@ -91,9 +96,17 @@ process (txt,lma,pt) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"  
   T.IO.putStrLn $ prettyPrint 0 pt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
+  let vps = verbPropertyFromPennTree lmap1 pt
+      mcpstr = identifyCPHierarchy vps
+  case mcpstr of
+    Nothing -> putStrLn "CP Hierarchy not identified..."
+    Just cpstr -> do
+      let fmt x = T.pack (show (x^._1))
+      mapM_ (T.IO.putStrLn . linePrint fmt . toTree) cpstr
+    
 
 
 main :: IO ()
-main = mapM_ process [ test1, test6, test7 ]
+main = mapM_ process [ test1, test6, test7, test8 ]
 
 
