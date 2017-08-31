@@ -49,10 +49,12 @@ phraseNodeType :: Maybe (TP as) -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Te
 phraseNodeType mtp z
   = let rng = getRange (current z)
         subj = do tp <- mtp
-                  dpnode <- tp^.specifier.to (fmap chooseATNode)
-                  dp <- case dpnode of
-                          SilentPRO -> Nothing
-                          RExp z' -> Just z'
+                  let dplinks = tp^.specifier -- .to (fmap chooseATNode)
+                  dp <- case dplinks of
+                          [] -> Nothing
+                          _ -> case last dplinks of
+                                 Left SilentPRO -> Nothing
+                                 Right z'       -> Just z'
                   return (getRange (current dp) == rng)
         obj  = do tp <- mtp
                   let os = zip [1..] (tp^.complement.complement)

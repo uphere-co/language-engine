@@ -18,7 +18,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:
-                       -- NLP.Syntax.Argument
+                       NLP.Syntax.Argument
                        NLP.Syntax.Clause
                        NLP.Syntax.Format
                        NLP.Syntax.Type
