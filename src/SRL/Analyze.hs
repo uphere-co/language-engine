@@ -92,7 +92,10 @@ queryProcess config pp apredata emTagger =
                     let isEntity x = case x of
                           MGEntity {..} -> True
                           otherwise     -> False
-                    print (map (\x -> if ((x ^. mv_range) == (4,4)) then (x & mv_text .~ "Changed" ) else (id x) ) (filter isEntity (mg ^. mg_vertices)))
+                    let twiki = [((4,4),"-NamedEntityA"),((5,5),"-NamedEntityB")]
+                    let mg = map (\x -> if (x ^. mv_range) `elem` (map (\(x,y) -> x) twiki)
+                                       then (x & mv_text .~ (T.append (x ^. mv_text) (fromMaybe "" $ lookup (x ^. mv_range) twiki)))
+                                       else id x) mg -- (filter isEntity (mg ^. mg_vertices))
                     mapM_ print (mg^.mg_vertices)
                     mapM_ print (mg^.mg_edges)
                     putStrLn "-----------------"
