@@ -8,7 +8,6 @@ import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
-import           Data.Char                    (isPunctuation,isSpace)
 import           Data.Default                 (def)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
@@ -30,6 +29,7 @@ import           Lexicon.Query                (loadRoleInsts,loadRolePattInsts)
 import           Lexicon.Type                 (ArgPattern(..),RoleInstance,RolePattInstance)
 import           NLP.Syntax.Type              (Voice)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
+import           Text.Format.Dot              (mkLabelText)
 import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention(..))
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
@@ -90,7 +90,7 @@ queryProcess config pp apredata emTagger =
                     putStrLn "-----------------"
                     putStrLn "meaning graph dot"
                     putStrLn "-----------------"
-                    let dotstr = dotMeaningGraph (T.unpack (T.replace ("\"") ("\\\"") (T.dropWhile (isSpace) title))) mg
+                    let dotstr = dotMeaningGraph (T.unpack $ mkLabelText title) mg
                     putStrLn dotstr
                     writeFile ("test" ++ (show i) ++ ".dot") dotstr
                     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
