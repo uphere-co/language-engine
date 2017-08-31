@@ -18,7 +18,9 @@ cabal build test --builddir=../dists/wiki-ner
 ./dist/build/test/test  +RTS -N -RTS
 # with --builddir:
 ../dists/wiki-ner/build/test/test  +RTS -N -RTS
+
 # Or run tests in REPL
+cabal new-configure --enable-tests --builddir=../dists/wiki-ner
 cabal new-repl test --builddir=../dists/wiki-ner
 
 # Clean up
