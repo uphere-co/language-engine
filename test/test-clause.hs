@@ -83,7 +83,12 @@ test8 =
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","want"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","paper")]]]]]]]],PL (".",".")]]
   )
 
-
+test9 =
+  ( "I saw the man who sat on the bench."
+  , [(0,("I","I")),(1,("see","saw")),(2,("the","the")),(3,("man","man")),(4,("who","who")),(5,("sit","sat")),(6,("on","on")),(7,("the","the")),(8,("bench","bench")),(9,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","saw"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","man")],PN "SBAR" [PN "WHNP" [PL ("WP","who")],PN "S" [PN "VP" [PL ("VBD","sat"),PN "PP" [PL ("IN","on"),PN "NP" [PL ("DT","the"),PL ("NN","bench")]]]]]]],PL (".",".")]]
+  )
+  
 process :: (Text,[(Int,(Text,Text))],PennTree) -> IO ()
 process (txt,lma,pt) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
@@ -96,17 +101,17 @@ process (txt,lma,pt) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"  
   T.IO.putStrLn $ prettyPrint 0 pt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
-  let vps = verbPropertyFromPennTree lmap1 pt
+  {- let vps = verbPropertyFromPennTree lmap1 pt
       mcpstr = identifyCPHierarchy vps
   case mcpstr of
     Nothing -> putStrLn "CP Hierarchy not identified..."
     Just cpstr -> do
       let fmt x = T.pack (show (x^._1))
       mapM_ (T.IO.putStrLn . linePrint fmt . toTree) cpstr
-    
+  -}
 
 
 main :: IO ()
-main = mapM_ process [ test1, test6, test7, test8 ]
+main = mapM_ process [ test1, test6, test7, test8, test9 ]
 
 

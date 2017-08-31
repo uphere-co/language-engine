@@ -70,7 +70,7 @@ type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Maybe (Zipper t) -> {- Maybe (ATNode (DP (Zipper t))) -} [Either NTrace (Zipper t)] -> VerbP t -> TP t
+mkTP :: Maybe (Zipper t) -> [Either NTrace (Zipper t)] -> VerbP t -> TP t
 mkTP mtp mdp vp = XP () mtp mdp () vp 
 
   

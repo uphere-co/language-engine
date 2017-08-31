@@ -162,13 +162,20 @@ formatVPwithPAWS :: ClauseTree
                  -> VerbProperty (BitreeZipperICP (Lemma ': as))
                  -> Text
 formatVPwithPAWS clausetr mcpstr vp =
-  let rngs = clauseRanges clausetr
+  let -- rngs = clauseRanges clausetr
+      mpaws = findPAWS clausetr vp mcpstr
+      mrng = cpRange . (^.pa_CP) =<< mpaws
       fmt = either (const "") (tokenWord.snd) . getRoot . current
-  in T.pack $ printf "%7s:%-50s\n%s\n"
-                (maybe "" show (clauseForVerb rngs vp))
-                (formatVerbProperty fmt vp)
-                (maybe "" (formatPAWS mcpstr) (findPAWS clausetr vp mcpstr))
-
+  in case (,) <$> mpaws <*> mrng of
+       Nothing -> "fail in identifying PAWS"
+       Just (paws,rng) -> T.pack (printf "%7s:%-50s\n%s\n"
+                                   (show rng) -- (maybe "" show (clauseForVerb rngs vp))
+                                   (formatVerbProperty fmt vp)
+                                   (maybe "" (formatPAWS mcpstr) mpaws))
+                          <> "\n"
+                          <> T.pack (formatCP mcpstr (paws^.pa_CP))
+                          <> "\n"
+                          
 
 showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
 showClauseStructure lemmamap ptree  = do

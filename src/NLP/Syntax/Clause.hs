@@ -182,6 +182,41 @@ bindingAnalysis cpstr = execState (go rng0) cpstr
                                Nothing -> return ()
 
 
+
+
+predicateArgWS :: CP xs
+               -> ClauseTreeZipper
+               -> PredArgWorkspace xs (Either (Range,STag) (Int,POSTag))
+predicateArgWS cp z =
+  PAWS { _pa_CP = cp
+       , _pa_candidate_args = case child1 z of
+                                Nothing -> []
+                                Just z' -> map extractArg (z':iterateMaybe next z')
+       }
+  where extractArg x = case getRoot (current x) of
+                         Left (rng,(stag,_))         -> Left  (rng,stag)
+                         Right (Left (rng,(stag,_))) -> Left  (rng,stag)
+                         Right (Right (i,(ptag,_)))  -> Right (i,ptag)
+        iterateMaybe :: (a -> Maybe a) -> a -> [a]
+        iterateMaybe f x =
+          case f x of
+            Nothing -> []
+            Just x' -> x': iterateMaybe f x'
+
+
+findPAWS :: ClauseTree
+         -> VerbProperty (BitreeZipperICP (Lemma ': as))
+         -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
+         -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
+findPAWS tr vp mcpstr = do
+  cp <- constructCP vp   -- very inefficient. but for testing.
+  rng <- cpRange cp
+  cpstr <- mcpstr
+  cp' <- snd . getRoot1 . current <$> ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
+  predicateArgWS cp' <$> findVerb (vp^.vp_index) tr
+
+
+
 ---------
 -- old --
 ---------
@@ -279,47 +314,6 @@ clauseRanges tr = bifoldMap f (const []) tr
   where f (rng,(S_CL _,_)) = [rng]
         f _                = []
 
-
-clauseForVerb :: [Range] -> VerbProperty a -> Maybe Range
-clauseForVerb allrngs vp = case rngs of
-                             [] -> Nothing
-                             _  -> Just (minimumBy (compare `on` (\(b,e) -> e-b)) rngs)
-  where i `isIn` (b,e) = b <= i && i <= e
-        rngs = filter (\rng -> getAll (mconcat (map (\i -> All (i `isIn` rng)) (vp^..vp_words.traverse._2._1)))) allrngs
-
-
-
-
-predicateArgWS :: CP xs
-               -> ClauseTreeZipper
-               -> PredArgWorkspace xs (Either (Range,STag) (Int,POSTag))
-predicateArgWS cp z =
-  PAWS { _pa_CP = cp
-       , _pa_candidate_args = case child1 z of
-                                Nothing -> []
-                                Just z' -> map extractArg (z':iterateMaybe next z')
-       }
-  where extractArg x = case getRoot (current x) of
-                         Left (rng,(stag,_))         -> Left  (rng,stag)
-                         Right (Left (rng,(stag,_))) -> Left  (rng,stag)
-                         Right (Right (i,(ptag,_)))  -> Right (i,ptag)
-        iterateMaybe :: (a -> Maybe a) -> a -> [a]
-        iterateMaybe f x =
-          case f x of
-            Nothing -> []
-            Just x' -> x': iterateMaybe f x'
-
-
-findPAWS :: ClauseTree
-         -> VerbProperty (BitreeZipperICP (Lemma ': as))
-         -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
-         -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
-findPAWS tr vp mcpstr = do
-  cp <- constructCP vp   -- very inefficient. but for testing.
-  rng <- cpRange cp
-  cpstr <- mcpstr
-  cp' <- snd . getRoot1 . current <$> ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
-  predicateArgWS cp' <$> findVerb (vp^.vp_index) tr
 
 
 
