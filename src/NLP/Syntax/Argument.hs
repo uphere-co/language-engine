@@ -20,7 +20,7 @@ import           NLP.Type.PennTreebankII      (PennTreeIdx,Range,POSTag(..),Chun
                                               ,identifyTrace
                                               ,isAdverb,isNoun
                                               )
-import           NLP.Type.SyntaxProperty      (Tense(..),Voice(..),Aspect(..))
+import           NLP.Type.SyntaxProperty      (Voice(..))
 import           PropBank.Match               (findNode)
 import           PropBank.Type.Prop           (Argument(..),PropBankLabel(..)
                                               ,arg_label,arg_terminals)
@@ -52,7 +52,7 @@ phraseNodeType mtp z
                   dpnode <- tp^.specifier.to (fmap chooseATNode)
                   dp <- case dpnode of
                           SilentPRO -> Nothing
-                          RExp z -> Just z
+                          RExp z' -> Just z'
                   return (getRange (current dp) == rng)
         obj  = do tp <- mtp
                   let os = zip [1..] (tp^.complement.complement)
@@ -61,7 +61,7 @@ phraseNodeType mtp z
         mgarg :: Maybe GArg
         mgarg = case subj of
                   Just True -> Just GASBJ
-                  _ -> case obj of
+                  _ -> case obj :: Maybe Int of
                          Just 1 -> Just GA1
                          Just 2 -> Just GA2
                          _ -> Nothing
@@ -79,6 +79,7 @@ phraseNodeType mtp z
                                           NP   -> GR_NP mgarg
                                           S    -> GR_S  mgarg
                                           SBAR -> GR_SBAR mgarg
+                                          _    -> GR_X (T.pack (show c))
                    PL (_,(D_NONE,t)) -> case parent z of
                                           Nothing -> GR_X ("??"<> t)
                                           Just z' -> phraseNodeType mtp z'
@@ -122,15 +123,15 @@ mkArgTable itr l2p (file,sid,tid) args  =
              (adj <$> findArg (== NumberedArgument 4))
              (file,sid,tid)
   where
-    adj x@(PL (i,(D_NONE,t))) = let (_trc,mlid) = identifyTrace t
-                                    mlnk = do lid <-mlid 
-                                              rng <- lookup lid l2p
-                                              return rng
-                                              -- matchR rng itr
-                                in case mlnk of
-                                     Nothing -> SimpleNode (bimap fst fst (getRoot x))
-                                     Just lnk -> LinkedNode (bimap fst fst (getRoot x)) (Left lnk)
-    adj x                     = SimpleNode (bimap fst fst (getRoot x))
+    adj x@(PL (_i,(D_NONE,t))) = let (_trc,mlid) = identifyTrace t
+                                     mlnk = do lid <-mlid 
+                                               rng <- lookup lid l2p
+                                               return rng
+                                 in case mlnk of
+                                      Nothing -> SimpleNode (bimap fst fst (getRoot x))
+                                      Just lnk -> LinkedNode (bimap fst fst (getRoot x)) (Left lnk)
+    adj x                      = SimpleNode (bimap fst fst (getRoot x))
+    --
     findArg lcond = do a <- find (\a -> lcond (a^.arg_label)) args
                        let ns = a^.arg_terminals
                        case ns of

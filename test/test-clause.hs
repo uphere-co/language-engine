@@ -25,7 +25,7 @@ import           NLP.Syntax.Format
 import           NLP.Syntax.Verb
 
 
-test1, test6 :: (Text,[(Int,(Text,Text))],PennTree)
+test1, test6, test7, test8 :: (Text,[(Int,(Text,Text))],PennTree)
 test1 =
   ( "The man, it seems, have a lichtenstein corporation, license in Libya and sheltered in the Bahamas."
    , [(0,("the","The")),(1,("man","man")),(2,(",",",")),(3,("it","it")),(4,("seem","seems")),(5,(",",",")),(6,("have","have")),(7,("a","a")),(8,("lichtenstein","lichtenstein")),(9,("corporation","corporation")),(10,(",",",")),(11,("license","licensed")),(12,("in","in")),(13,("Libya","Libya")),(14,("and","and")),(15,("sheltered","sheltered")),(16,("in","in")),(17,("the","the")),(18,("Bahamas","Bahamas")),(19,(".","."))]    

@@ -14,18 +14,15 @@ import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
 import           Data.Function                          (on)
 import qualified Data.HashMap.Strict               as HM
-import           Data.IntMap                            (IntMap)
-import           Data.List                              (find,inits,mapAccumL,minimumBy)
+import           Data.List                              (minimumBy)
 import           Data.Maybe                             (listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid
 import           Data.Text                              (Text)
-import qualified Data.Text                         as T
-import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.BitreeZipper.Util
-import           Data.Range                             (isInsideR,rangeTree)
+import           Data.Range                             (rangeTree)
 import           Lexicon.Type                           (ATNode(..),chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -34,26 +31,21 @@ import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util
-import           NLP.Syntax.Verb
 
 
-maximalProjectionVP :: VerbProperty (BitreeZipperICP (Lemma ': as))
-                    -> Maybe (BitreeZipperICP (Lemma ': as))
+maximalProjectionVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
 maximalProjectionVP vp = listToMaybe (vp^.vp_words) >>= parent . fst
 
 
-parentOfVP :: VerbProperty (BitreeZipperICP (Lemma ': as))
-           -> Maybe (BitreeZipperICP (Lemma ': as))
+parentOfVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
 parentOfVP vp = parent =<< maximalProjectionVP vp
 
 
-headVP :: VerbProperty (BitreeZipperICP (Lemma ': as))
-       -> Maybe (BitreeZipperICP (Lemma ': as))
+headVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
 headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 
-complementsOfVerb :: VerbProperty (BitreeZipperICP (Lemma ': as))
-                  -> [BitreeZipperICP (Lemma ': as)]
+complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [Zipper (Lemma ': as)]
 complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
@@ -70,8 +62,8 @@ complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
 
 
 identifySubject :: N.ClauseTag
-                -> BitreeZipperICP (Lemma ': as)
-                -> Maybe (ATNode (DP (BitreeZipperICP (Lemma ': as))))
+                -> Zipper (Lemma ': as)
+                -> Maybe (ATNode (DP (Zipper (Lemma ': as))))
 identifySubject tag vp =
   let r = case tag of
             N.SINV -> firstSiblingBy next (isChunkAs NP) vp
@@ -79,6 +71,13 @@ identifySubject tag vp =
   in case r of
        Nothing -> Just (SimpleNode SilentPRO)
        Just z  -> Just (SimpleNode (RExp z))
+
+
+
+-- identifySubjectFromAnnotation :: Zipper '[Lemma,Link] -> [Zipper '[Lemma,Link]]
+
+--
+-- z = identifySubjectFromAnnotation z
 
 
 -- | Constructing CP umbrella and all of its ingrediant.
@@ -114,7 +113,7 @@ cpRange cp = (cp^?maximalProjection._Just.to (getRange . current)) <|>
 
 
 
-identifyCPHierarchy :: [VerbProperty (BitreeZipperICP (Lemma ': as))]
+identifyCPHierarchy :: [VerbProperty (Zipper (Lemma ': as))]
                     -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
 identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
   where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure cp) <=< constructCP) vps 
@@ -131,8 +130,7 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
-resolvePRO :: BitreeZipper (Range,CP as) (Range,CP as)
-           -> Maybe (BitreeZipperICP as)
+resolvePRO :: BitreeZipper (Range,CP as) (Range,CP as) -> Maybe (Zipper as)
 resolvePRO z = do cp0 <- snd . getRoot1 . current <$> parent z
                   atnode <- cp0^.complement.specifier
                   case chooseATNode atnode of
@@ -140,12 +138,9 @@ resolvePRO z = do cp0 <- snd . getRoot1 . current <$> parent z
                     RExp x    -> Just x
                     
 
-resolveDP :: Maybe [Bitree (Range,CP as) (Range,CP as)]
-          -> CP as
-          -> Maybe (BitreeZipperICP as)
+resolveDP :: Maybe [Bitree (Range,CP as) (Range,CP as)] -> CP as -> Maybe (Zipper as)
 resolveDP mcpstr cp =
   let lst = (join . maybeToList) mcpstr
-      mrng = cpRange cp
       dp = cp^.complement.specifier
   in case fmap chooseATNode dp of
        Just SilentPRO -> do rng <- cpRange cp
@@ -187,7 +182,7 @@ promote_PP_CP_from_NP x = [x]
 
 
 
-clauseStructure :: [VerbProperty (BitreeZipperICP '[Lemma])]
+clauseStructure :: [VerbProperty (Zipper '[Lemma])]
                 -> PennTreeIdxG N.CombinedTag (POSTag,Text)
                 -> ClauseTree
 clauseStructure _vps (PL (i,pt)) = PL (Right (i,pt))

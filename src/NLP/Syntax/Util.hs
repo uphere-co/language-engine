@@ -10,7 +10,6 @@ import           Data.Bitree
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 --
-import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 
 

@@ -19,15 +19,13 @@ import           Data.Attribute                              (ahead)
 import           Data.Bitree
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
-import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
+import           NLP.Type.SyntaxProperty                     (Voice(..))
 --
-import           NLP.Syntax.Type
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util
-import           NLP.Syntax.Verb
 
 
-withCopula :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,POSTag)
+withCopula :: Zipper (Lemma ': as) -> Maybe (Int,POSTag)
 withCopula x = do p1 <- parent x
                   p2 <- (parent <=< parent) x
                   p3 <- (parent <=< parent <=< parent) x
@@ -53,7 +51,7 @@ withCopula x = do p1 <- parent x
 
 
 
-withHave :: BitreeZipperICP (Lemma ': as) -> Maybe (Int,POSTag)
+withHave :: Zipper (Lemma ': as) -> Maybe (Int,POSTag)
 withHave x = check1 x <|> check2 x <|> check3 x
   where check1 z = do w <- current <$> (prev <=< parent) z
                       guard (isLemmaAs "have" w)
@@ -66,15 +64,15 @@ withHave x = check1 x <|> check2 x <|> check3 x
                       getIdxPOS w
 
 
-isInNP :: BitreeZipperICP as -> Bool
+isInNP :: Zipper as -> Bool
 isInNP z = maybe False (isChunkAs NP . current) ((parent <=< parent) z)
 
 
-isInPP :: BitreeZipperICP as -> Bool
+isInPP :: Zipper as -> Bool
 isInPP z = maybe False (isChunkAs PP . current) (parent z)
 
 
-isPassive :: BitreeZipperICP (Lemma ': as) -> Bool
+isPassive :: Zipper (Lemma ': as) -> Bool
 isPassive z
   = let b1 = isVBN z
         b2 = isJust (withCopula z)
