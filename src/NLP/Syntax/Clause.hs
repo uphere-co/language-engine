@@ -9,6 +9,7 @@ module NLP.Syntax.Clause where
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
 import           Control.Monad                          ((<=<),join)
+import           Control.Monad.Trans.State              (State,runState,get)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
@@ -23,7 +24,7 @@ import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.BitreeZipper.Util
 import           Data.Range                             (rangeTree)
-import           Lexicon.Type                           (ATNode(..),chooseATNode)
+import           Lexicon.Type                           (chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 --
@@ -63,14 +64,14 @@ complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
 
 identifySubject :: N.ClauseTag
                 -> Zipper (Lemma ': as)
-                -> Maybe (ATNode (DP (Zipper (Lemma ': as))))
+                -> [Either NTrace (Zipper (Lemma ': as))]
 identifySubject tag vp =
   let r = case tag of
             N.SINV -> firstSiblingBy next (isChunkAs NP) vp
             _      -> firstSiblingBy prev (isChunkAs NP) vp
   in case r of
-       Nothing -> Just (SimpleNode SilentPRO)
-       Just z  -> Just (SimpleNode (RExp z))
+       Nothing -> [Left SilentPRO] -- Just (SimpleNode SilentPRO)
+       Just z  -> [Right z] -- Just (SimpleNode (RExp z))
 
 
 
@@ -102,7 +103,7 @@ constructCP vprop = do
                                   Nothing
                                   (mkTP (Just tp') subj verbp)
           _      -> return (mkCP Nothing Nothing (mkTP (Just tp') subj verbp))  -- somewhat problematic case?
-      _ -> return (mkCP Nothing Nothing (mkTP Nothing Nothing verbp))           -- reduced relative clause
+      _ -> return (mkCP Nothing Nothing (mkTP Nothing [] verbp))           -- reduced relative clause
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -130,24 +131,40 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
-resolvePRO :: BitreeZipper (Range,CP as) (Range,CP as) -> Maybe (Zipper as)
-resolvePRO z = do cp0 <- snd . getRoot1 . current <$> parent z
-                  atnode <- cp0^.complement.specifier
-                  case chooseATNode atnode of
-                    SilentPRO -> Nothing
-                    RExp x    -> Just x
+-- resolvePRO :: BitreeZipper (Range,CP as) (Range,CP as) -> [Either NTrace (Zipper as)]
+-- resolvePRO z = do cp0 <- snd . getRoot1 . current <$> maybeToList (parent z)
+--                  cp0^.complement.specifier
+                  -- return (map Right atnode)
+                  {- case atnode of
+                    [] -> Nothing -- SilentPRO -> Nothing   -- should be changed
+                    lst -> last -- RExp x    -> Just x -}
                     
 
-resolveDP :: Maybe [Bitree (Range,CP as) (Range,CP as)] -> CP as -> Maybe (Zipper as)
-resolveDP mcpstr cp =
-  let lst = (join . maybeToList) mcpstr
-      dp = cp^.complement.specifier
-  in case fmap chooseATNode dp of
+resolveDP :: CP as -> State [Bitree (Range,CP as) (Range,CP as)] [Either NTrace (Zipper as)]
+resolveDP cp =
+  case cp^.complement.specifier of
+    [] -> return []
+    xs -> case last xs of
+            Left SilentPRO -> do
+              cpstr <- get
+              let mcp' = do rng <-cpRange cp
+                            z <- getFirst (foldMap (First . extractZipperById rng) cpstr)
+                            snd . getRoot1 . current <$> parent z
+              case mcp' of
+                Nothing -> return xs
+                Just cp' -> (++) <$> pure xs <*> resolveDP cp'
+            _ -> return xs
+
+
+
+-- resolveDP
+
+    {- case fmap chooseATNode dp of
        Just SilentPRO -> do rng <- cpRange cp
                             z <- getFirst (foldMap (First . extractZipperById rng) lst)
                             resolvePRO z
        Just (RExp z)  -> Just z
-       Nothing        -> Nothing
+       Nothing        -> Nothing -}
 
 
 

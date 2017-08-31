@@ -36,7 +36,7 @@ type family Adjunct    (x :: XType) (tag :: [*]) :: *
 type Zipper tag = BitreeZipperICP tag
 
 data XP x tag = XP { _headX             :: Property x tag
-                   , _maximalProjection :: Maximal x tag --  Maybe (Zipper tag)
+                   , _maximalProjection :: Maximal x tag
                    , _specifier         :: Specifier x tag
                    , _adjunct           :: Adjunct x tag
                    , _complement        :: Complement x tag
@@ -45,8 +45,9 @@ data XP x tag = XP { _headX             :: Property x tag
 
 makeLenses ''XP
 
-data DP a = SilentPRO | RExp a
+-- data DP a = SilentPRO | RExp a
 
+data NTrace = SilentPRO  --    | Moved
 
 type instance Property   'X_V t = VerbProperty (Zipper t)
 
@@ -63,13 +64,13 @@ mkVerbP vp vprop comps = XP vprop vp () () comps
 type instance Property   'X_T t = ()
 
 type instance Maximal    'X_T t = Maybe (Zipper t)
-type instance Specifier  'X_T t = Maybe (ATNode (DP (Zipper t)))
+type instance Specifier  'X_T t = [Either NTrace (Zipper t)] -- Maybe (ATNode (DP (Zipper t)))
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Maybe (Zipper t) -> Maybe (ATNode (DP (Zipper t))) -> VerbP t -> TP t
+mkTP :: Maybe (Zipper t) -> {- Maybe (ATNode (DP (Zipper t))) -} [Either NTrace (Zipper t)] -> VerbP t -> TP t
 mkTP mtp mdp vp = XP () mtp mdp () vp 
 
   
