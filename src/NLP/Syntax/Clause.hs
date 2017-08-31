@@ -1,15 +1,17 @@
-{-# LANGUAGE BangPatterns      #-}
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections     #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE TypeOperators       #-}
 
 module NLP.Syntax.Clause where
 
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
-import           Control.Monad                          ((<=<),join)
-import           Control.Monad.Trans.State              (State,runState,get)
+import           Control.Monad                          ((<=<),join,void)
+import           Control.Monad.IO.Class                 (liftIO)
+import           Control.Monad.Trans.State              (State,StateT(..),runState,get,put)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
@@ -75,12 +77,6 @@ identifySubject tag vp =
 
 
 
--- identifySubjectFromAnnotation :: Zipper '[Lemma,Link] -> [Zipper '[Lemma,Link]]
-
---
--- z = identifySubjectFromAnnotation z
-
-
 -- | Constructing CP umbrella and all of its ingrediant.
 --
 constructCP :: VerbProperty (Zipper (Lemma ': as))
@@ -103,7 +99,7 @@ constructCP vprop = do
                                   Nothing
                                   (mkTP (Just tp') subj verbp)
           _      -> return (mkCP Nothing Nothing (mkTP (Just tp') subj verbp))  -- somewhat problematic case?
-      _ -> return (mkCP Nothing Nothing (mkTP Nothing [] verbp))           -- reduced relative clause
+      _ -> return (mkCP Nothing Nothing (mkTP Nothing [] verbp))                -- reduced relative clause
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -140,22 +136,40 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
                     lst -> last -- RExp x    -> Just x -}
                     
 
-resolveDP :: CP as -> State [Bitree (Range,CP as) (Range,CP as)] [Either NTrace (Zipper as)]
-resolveDP cp =
-  case cp^.complement.specifier of
-    [] -> return []
-    xs -> case last xs of
-            Left SilentPRO -> do
-              cpstr <- get
-              let mcp' = do rng <-cpRange cp
-                            z <- getFirst (foldMap (First . extractZipperById rng) cpstr)
-                            snd . getRoot1 . current <$> parent z
-              case mcp' of
-                Nothing -> return xs
-                Just cp' -> (++) <$> pure xs <*> resolveDP cp'
-            _ -> return xs
+resolveDP :: forall as m. (Monad m) =>
+             Range -> StateT (Bitree (Range,CP as) (Range,CP as)) m [Either NTrace (Zipper as)]
+resolveDP rng = do
+  tr <- get
+  -- let cp = (either snd snd . getRoot) tr --  . current) z
+  case extractZipperById rng tr of
+    Nothing -> return []
+    Just z -> do
+      let cp = (snd . getRoot1 . current) z
+      case cp^.complement.specifier of
+        [] -> return []
+        xs -> case last xs of
+                Left SilentPRO -> do
+                  -- cpstr <- get
+                  let mcp' =   -- rng <-cpRange cp
+
+                                -- z' <- (extractZipperById rng . current . root) z
+                              snd . getRoot1 . current <$> parent z
+                  case mcp' of
+                    Nothing -> return xs
+                    Just cp' -> case cpRange cp' of
+                                  Just rng' -> (++) <$> pure xs <*> resolveDP rng -- cp'
+                                  Nothing -> return xs
+                _ -> return xs
 
 
+
+{- 
+
+         z
+         bfs = let ds = siblingsBy next (const True) (child1 z)
+               
+  flip runState cpstr $ do
+   -}                       
 
 -- resolveDP
 
