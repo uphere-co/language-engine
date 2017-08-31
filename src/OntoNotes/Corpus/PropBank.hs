@@ -12,7 +12,9 @@ import qualified Data.Text               as T
 import           Text.Printf
 --
 import           NLP.Syntax.Clause
-import           NLP.Syntax.Type
+import           NLP.Syntax.Type                 (PredArgWorkspace,STag)
+import           NLP.Syntax.Type.Verb
+import           NLP.Syntax.Type.XBar
 import           NLP.Type.PennTreebankII
 import           PropBank.Format
 import           PropBank.Match
@@ -76,7 +78,7 @@ matchVerbPropertyWithRelation :: [VerbProperty (BitreeZipperICP '[Lemma])]
                               -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
                               -> MatchedInstance
                               -> Maybe (VerbProperty (BitreeZipperICP '[Lemma])
-                                       ,Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag))))
+                                       ,Maybe (PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))))
 matchVerbPropertyWithRelation verbprops clausetr minst = do
   relidx <- findRelNode (minst^.mi_arguments)
   vp <- find (\vp->vp^.vp_index==relidx) verbprops

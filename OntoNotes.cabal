@@ -104,6 +104,7 @@ Executable role-mapping-utility
                        HFrameNet,
                        HWordNet,
                        lexicon,
+                       nlp-types,
                        PropBank,
                        syntactic-analysis,
                        VerbNet,

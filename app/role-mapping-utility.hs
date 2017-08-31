@@ -47,6 +47,7 @@ import           Lexicon.Query
 import           Lexicon.Type                     (ArgPattern(..),POSVorN(..)
                                                   ,RoleInstance,RolePattInstance)
 import           NLP.Syntax.Type
+import           NLP.Type.SyntaxProperty          (Voice)
 import           PropBank.Query                   (constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB
                                                   )
