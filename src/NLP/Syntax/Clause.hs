@@ -11,6 +11,8 @@ import           Control.Applicative                    ((<|>))
 import           Control.Lens
 import           Control.Monad                          ((<=<),join,void)
 import           Control.Monad.IO.Class                 (liftIO)
+import           Control.Monad.Trans.Class              (lift)
+import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
@@ -18,8 +20,8 @@ import           Data.Either                            (partitionEithers)
 import           Data.Function                          (on)
 import qualified Data.HashMap.Strict               as HM
 import           Data.List                              (minimumBy)
-import           Data.Maybe                             (listToMaybe,mapMaybe,maybeToList)
-import           Data.Monoid
+import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
+import           Data.Monoid                            (First(..),Last(..),(<>))
 import           Data.Text                              (Text)
 --
 import           Data.Bitree
@@ -33,7 +35,7 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util
+import           NLP.Syntax.Util                        (isChunkAs)
 --
 import           Debug.Trace
 
@@ -74,8 +76,8 @@ identifySubject tag vp =
             N.SINV -> firstSiblingBy next (isChunkAs NP) vp
             _      -> firstSiblingBy prev (isChunkAs NP) vp
   in case r of
-       Nothing -> [Left SilentPRO] -- Just (SimpleNode SilentPRO)
-       Just z  -> [Right z] -- Just (SimpleNode (RExp z))
+       Nothing -> [Left NULL]
+       Just z  -> [Right z]
 
 
 
@@ -138,6 +140,8 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
                     lst -> last -- RExp x    -> Just x -}
                     
 
+currentCP = snd . getRoot1 . current
+
 resolveDP :: forall as.
              Range -> State (Bitree (Range,CP as) (Range,CP as))  [Either NTrace (Zipper as)]
 resolveDP rng = do
@@ -145,16 +149,27 @@ resolveDP rng = do
   case extractZipperById rng tr of
     Nothing -> return []
     Just z -> do
-      let cp = (snd . getRoot1 . current) z
+      let cp = currentCP z
       case cp^.complement.specifier of
         [] -> return []
         xs -> case last xs of
-                Left SilentPRO ->
-                  case snd . getRoot1 . current <$> parent z of
-                    Nothing -> return xs
-                    Just cp' -> case cpRange cp' of
-                                  Just rng' -> (++) <$> pure xs <*> resolveDP rng' -- cp'
-                                  Nothing -> return xs
+                Left NULL -> do
+                  let xspro = init xs ++ [Left SilentPRO]
+                      xsmov = init xs ++ [Left Moved]
+                  fmap (fromMaybe xspro) . runMaybeT $ do
+                    if maybe False (isChunkAs WHNP . current) (cp^.headX)
+                      then do
+                        z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
+                        return (xsmov ++ [Left WHPRO, Right z'])
+                      else do
+                        cp'  <- (MaybeT . return) (currentCP <$> parent z)
+                        rng' <- (MaybeT . return) (cpRange cp')
+                        (++) <$> pure xspro <*> lift (resolveDP rng')
+                Left SilentPRO -> 
+                  fmap (fromMaybe xs) . runMaybeT $ do
+                    cp'  <- (MaybeT . return) (currentCP <$> parent z)
+                    rng' <- (MaybeT . return) (cpRange cp')
+                    (++) <$> pure xs <*> lift (resolveDP rng')
                 _ -> return xs
 
 
@@ -164,7 +179,6 @@ bindingAnalysis cpstr = execState (go rng0) cpstr
          getrng = either fst fst . getRoot . current
          rng0 = (either fst fst . getRoot) cpstr
          go rng = do xs <- resolveDP rng
-                     -- liftIO $ T.IO.putStrLn (formatDPTokens xs)
                      tr <- get
                      case extractZipperById rng tr of
                        Nothing -> return ()
