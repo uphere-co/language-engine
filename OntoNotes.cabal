@@ -19,7 +19,7 @@ library
   exposed-modules:     OntoNotes
                        OntoNotes.App.Load
                        OntoNotes.App.Serializer
-                       -- OntoNotes.App.VerbSubcat
+                       OntoNotes.App.VerbSubcat
                        OntoNotes.Corpus.Load
                        OntoNotes.Corpus.PropBank
                        OntoNotes.Parser.Sense
