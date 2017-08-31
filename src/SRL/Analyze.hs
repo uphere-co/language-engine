@@ -87,15 +87,16 @@ queryProcess config pp apredata emTagger =
                   print (sstrs1 ^.. traverse . ss_clausetr)
                   
                   let mgs = map meaningGraph sstrs1
-                  forM_ (zip mtokss (zip [1..] mgs)) $ \(mtks,(i,mg)) -> do
+                  forM_ (zip mtokss (zip [1..] mgs)) $ \(mtks,(i,mg'')) -> do
                     title <- mkTextFromToken mtks
                     let isEntity x = case x of
                           MGEntity {..} -> True
                           otherwise     -> False
-                    let twiki = [((4,4),"-NamedEntityA"),((5,5),"-NamedEntityB")]
-                    let mg = map (\x -> if (x ^. mv_range) `elem` (map (\(x,y) -> x) twiki)
-                                       then (x & mv_text .~ (T.append (x ^. mv_text) (fromMaybe "" $ lookup (x ^. mv_range) twiki)))
-                                       else id x) mg -- (filter isEntity (mg ^. mg_vertices))
+                    let twiki = [((0,0),"-NamedEntityA"),((1,1),"-NamedEntityB")]
+                    let mg' = map (\x -> if (x ^. mv_range) `elem` (map (\(x,y) -> x) twiki) && isEntity x
+                                        then (x & mv_text .~ (T.append (x ^. mv_text) (fromMaybe "" $ lookup (x ^. mv_range) twiki)))
+                                        else id x) (mg'' ^. mg_vertices) -- (filter isEntity (mg ^. mg_vertices))
+                        mg = MeaningGraph mg' (mg'' ^. mg_edges)
                     mapM_ print (mg^.mg_vertices)
                     mapM_ print (mg^.mg_edges)
                     putStrLn "-----------------"
