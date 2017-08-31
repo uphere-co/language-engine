@@ -34,6 +34,8 @@ import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util
+--
+import           Debug.Trace
 
 
 maximalProjectionVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
@@ -157,7 +159,7 @@ resolveDP rng = do
                   case mcp' of
                     Nothing -> return xs
                     Just cp' -> case cpRange cp' of
-                                  Just rng' -> (++) <$> pure xs <*> resolveDP rng -- cp'
+                                  Just rng' -> (++) <$> pure xs <*> resolveDP rng' -- cp'
                                   Nothing -> return xs
                 _ -> return xs
 

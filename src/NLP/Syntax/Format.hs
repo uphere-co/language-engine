@@ -188,9 +188,9 @@ bindingAnalysis cpstr = void (runStateT (go rng0) cpstr)
    where z0 = either id id . getRoot . mkBitreeZipper [] $ cpstr
          getrng = either fst fst . getRoot . current
          rng0 = (either fst fst . getRoot) cpstr
-         go rng = do -- xs <- resolveDP
-                     -- liftIO $ T.IO.putStrLn (formatDPTokens xs)
-                     liftIO (print rng)
+         go rng = do xs <- resolveDP rng
+                     liftIO $ T.IO.putStrLn (formatDPTokens xs)
+                     -- liftIO (print rng)
                      tr <- get
                      case extractZipperById rng tr of
                        Nothing -> return ()
