@@ -240,8 +240,8 @@ showMatchedFrame (mcpstr,vstr,paws) = do
       mapM_ putStrLn . map (\(fe,z) -> printf "%-15s: %-7s %s" fe (show (getRange (current z))) (gettokens z)) $ felst
 
 
-dotMeaningGraph :: MeaningGraph -> String
-dotMeaningGraph mg = printf "digraph G {\n  %s\n  %s\n}" vtxt etxt
+dotMeaningGraph :: String -> MeaningGraph -> String
+dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt ttxt
   where
     vtxt :: String
     vtxt =
@@ -255,5 +255,5 @@ dotMeaningGraph mg = printf "digraph G {\n  %s\n  %s\n}" vtxt etxt
       let edges = mg^.mg_edges
           formatf e = printf "i%d -> i%d [label=\"%s\"];" (e^.me_start) (e^.me_end) (e^.me_relation)
       in (intercalate "\n " . map formatf) edges
-         
-
+    ttxt :: String
+    ttxt = "labelloc=\"t\"; \n " ++ "label=\"" ++ title ++ "\"; \n " 

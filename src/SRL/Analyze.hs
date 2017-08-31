@@ -8,6 +8,7 @@ import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
+import           Data.Char                    (isPunctuation,isSpace)
 import           Data.Default                 (def)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
@@ -16,6 +17,7 @@ import           Data.Text                    (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.IO           as T.IO
 import qualified Language.Java          as J
+import           MWE.Util                     (mkTextFromToken)
 import           System.Console.Haskeline     (runInputT,defaultSettings,getInputLine)
 import           System.Environment           (getEnv)
 import           System.Process               (readProcess)
@@ -79,14 +81,16 @@ queryProcess config pp apredata emTagger =
                   putStrLn "meaning graph"
                   putStrLn "-------------"
                   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
+                      mtokss = (dstr ^. ds_mtokenss)
                       mgs = map meaningGraph sstrs1
-                  forM_ (zip [1..] mgs) $ \(i,mg) -> do
+                  forM_ (zip mtokss (zip [1..] mgs)) $ \(mtks,(i,mg)) -> do
+                    title <- mkTextFromToken mtks
                     mapM_ print (mg^.mg_vertices)
                     mapM_ print (mg^.mg_edges)
                     putStrLn "-----------------"
                     putStrLn "meaning graph dot"
                     putStrLn "-----------------"
-                    let dotstr = dotMeaningGraph mg
+                    let dotstr = dotMeaningGraph (T.unpack (T.filter (not . isPunctuation) (T.dropWhile (isSpace) title))) mg
                     putStrLn dotstr
                     writeFile ("test" ++ (show i) ++ ".dot") dotstr
                     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")

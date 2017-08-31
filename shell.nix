@@ -4,6 +4,7 @@
 , HFrameNet          ? <HFrameNet>
 , HWordNet           ? <HWordNet>
 , lexicon            ? <lexicon>
+, multi-word-tagger  ? <multi-word-tagger>
 , nlp-types          ? <nlp-types>
 , OntoNotes          ? <OntoNotes>
 , PropBank           ? <PropBank>
@@ -45,6 +46,7 @@ let
   hsconfig2 =
     self: super: {
       "lexicon"        = self.callPackage (import lexicon) {};
+      "multi-word-tagger" = self.callPackage (import multi-word-tagger) {};
       "nlp-types"      = self.callPackage (import nlp-types) {};
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
       "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
@@ -87,6 +89,7 @@ let
             foreign-store
 
             p.lexicon
+            p.multi-word-tagger
             p.nlp-types
             p.OntoNotes
             p.PropBank
