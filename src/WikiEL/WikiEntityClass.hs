@@ -25,8 +25,11 @@ import           WikiEL.ETL.Parser
 type NEClass = NamedEntityClass
 
 newtype ItemClass = ItemClass { _itemID :: ItemID }
-                  deriving (Show,Eq,Ord,Generic)
+                  deriving (Eq,Ord,Generic)
 
+instance Show ItemClass where
+  show (ItemClass id) = "Class:" ++ show id
+                  
 instance ToJSON ItemClass where
   toJSON = genericToJSON defaultOptions
 

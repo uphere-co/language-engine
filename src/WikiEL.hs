@@ -53,4 +53,12 @@ loadEMtagger wikiNameFile uid2tagFiles = do
     emTagger = extractEntityMentions wikiTable uid2tag
   return emTagger
 
--- TODO:privide filter to drop unresolved entity mentions
+loadFEMtagger :: EntityReprFile -> [(ItemClass, ItemIDFile)] -> IO( [(Text, NamedEntityClass, POSTag)] -> [EntityMention Text] )
+loadFEMtagger wikiNameFile uid2tagFiles = do
+  wikiTable <- loadWETagger  wikiNameFile
+  uid2tag <- fromFiles uid2tagFiles
+  let
+    femTagger = extractFilteredEntityMentions wikiTable uid2tag
+  return femTagger
+
+
