@@ -90,7 +90,7 @@ queryProcess config pp apredata emTagger =
                     putStrLn "-----------------"
                     putStrLn "meaning graph dot"
                     putStrLn "-----------------"
-                    let dotstr = dotMeaningGraph (T.unpack (T.filter (not . isPunctuation) (T.dropWhile (isSpace) title))) mg
+                    let dotstr = dotMeaningGraph (T.unpack (T.replace ("\"") ("\\\"") (T.dropWhile (isSpace) title))) mg
                     putStrLn dotstr
                     writeFile ("test" ++ (show i) ++ ".dot") dotstr
                     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
