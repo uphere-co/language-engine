@@ -142,7 +142,6 @@ resolveDP :: forall as m. (Monad m) =>
              Range -> StateT (Bitree (Range,CP as) (Range,CP as)) m [Either NTrace (Zipper as)]
 resolveDP rng = do
   tr <- get
-  -- let cp = (either snd snd . getRoot) tr --  . current) z
   case extractZipperById rng tr of
     Nothing -> return []
     Just z -> do
@@ -150,39 +149,13 @@ resolveDP rng = do
       case cp^.complement.specifier of
         [] -> return []
         xs -> case last xs of
-                Left SilentPRO -> do
-                  -- cpstr <- get
-                  let mcp' =   -- rng <-cpRange cp
-
-                                -- z' <- (extractZipperById rng . current . root) z
-                              snd . getRoot1 . current <$> parent z
-                  case mcp' of
+                Left SilentPRO ->
+                  case snd . getRoot1 . current <$> parent z of
                     Nothing -> return xs
                     Just cp' -> case cpRange cp' of
                                   Just rng' -> (++) <$> pure xs <*> resolveDP rng' -- cp'
                                   Nothing -> return xs
                 _ -> return xs
-
-
-
-{- 
-
-         z
-         bfs = let ds = siblingsBy next (const True) (child1 z)
-               
-  flip runState cpstr $ do
-   -}                       
-
--- resolveDP
-
-    {- case fmap chooseATNode dp of
-       Just SilentPRO -> do rng <- cpRange cp
-                            z <- getFirst (foldMap (First . extractZipperById rng) lst)
-                            resolvePRO z
-       Just (RExp z)  -> Just z
-       Nothing        -> Nothing -}
-
-
 
 
 ---------
@@ -315,9 +288,14 @@ predicateArgWS cp z =
 
 findPAWS :: ClauseTree
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
+         -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
          -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
-findPAWS tr vp = do cp <- constructCP vp
-                    predicateArgWS cp <$> findVerb (vp^.vp_index) tr
+findPAWS tr vp mcpstr = do
+  cp <- constructCP vp   -- very inefficient. but for testing.
+  rng <- cpRange cp
+  cpstr <- mcpstr
+  cp' <- snd . getRoot1 . current <$> ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
+  predicateArgWS cp' <$> findVerb (vp^.vp_index) tr
 
 
 

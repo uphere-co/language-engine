@@ -7,7 +7,7 @@ module NLP.Syntax.Format where
 import           Control.Lens
 import           Control.Monad                 (void)
 import           Control.Monad.IO.Class        (liftIO)
-import           Control.Monad.Trans.State     (State,StateT(..),runState,get,put)
+import           Control.Monad.Trans.State     (State,StateT(..),execState,get,put)
 import           Data.Foldable                 (toList,traverse_)
 import           Data.IntMap                   (IntMap)
 import           Data.List                     (intercalate)
@@ -167,37 +167,41 @@ formatVPwithPAWS clausetr mcpstr vp =
   in T.pack $ printf "%7s:%-50s\n%s\n"
                 (maybe "" show (clauseForVerb rngs vp))
                 (formatVerbProperty fmt vp)
-                (maybe "" (formatPAWS mcpstr) (findPAWS clausetr vp))
+                (maybe "" (formatPAWS mcpstr) (findPAWS clausetr vp mcpstr))
 
 
 showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
 showClauseStructure lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      mcpstr = ( identifyCPHierarchy) vps
+      mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy) vps
       xs = map (formatVPwithPAWS clausetr mcpstr) vps
   traverse_ (mapM_ (T.IO.putStrLn . formatCPHierarchy)) mcpstr
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
 
-  traverse_ (mapM_ bindingAnalysis) mcpstr
+  -- traverse_ (mapM_ bindingAnalysis) mcpstr
 
 
 
-bindingAnalysis :: Bitree (Range,CP as) (Range,CP as) -> IO () -- Bitree (Range,CP as) (Range,CP as)
-bindingAnalysis cpstr = void (runStateT (go rng0) cpstr)
+bindingAnalysis :: Bitree (Range,CP as) (Range,CP as) -> Bitree (Range,CP as) (Range,CP as)
+bindingAnalysis cpstr = execState (go rng0) cpstr
    where z0 = either id id . getRoot . mkBitreeZipper [] $ cpstr
          getrng = either fst fst . getRoot . current
          rng0 = (either fst fst . getRoot) cpstr
          go rng = do xs <- resolveDP rng
-                     liftIO $ T.IO.putStrLn (formatDPTokens xs)
-                     -- liftIO (print rng)
+                     -- liftIO $ T.IO.putStrLn (formatDPTokens xs)
                      tr <- get
                      case extractZipperById rng tr of
                        Nothing -> return ()
-                       Just z -> 
-                         case child1 z of
-                           Just z' -> go (getrng z' )
+                       Just z -> do
+                         let subtr = case z^.tz_current of
+                                       PN (rng,cp) ys -> PN (rng,(complement.specifier .~ xs) cp) ys
+                                       PL (rng,cp)    -> PL (rng,(complement.specifier .~ xs) cp) 
+                         let z' = (tz_current .~ subtr) z
+                         put (toBitree z')
+                         case child1 z' of
+                           Just z'' -> go (getrng z'')
                            Nothing ->                 
-                             case next z of
-                               Just z' -> go (getrng z')
+                             case next z' of
+                               Just z'' -> go (getrng z'')
                                Nothing -> return ()
