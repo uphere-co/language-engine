@@ -1,5 +1,6 @@
 { pkgs ? import <nixpkgs> {}
 , nlp-types ? <nlp-types>
+, graph-algorithms ? <graph-algorithms>
 , uphere-nix-overlay ? <uphere-nix-overlay>
 }:
 
@@ -9,10 +10,11 @@ let
     config1 = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix") { inherit pkgs; };
     config2 = 
       self: super: {
-#        mkDerivation = args: super.mkDerivation (args // {
-#                         enableLibraryProfiling = true;
-#                       });
+        mkDerivation = args: super.mkDerivation (args // {
+                         enableLibraryProfiling = true;
+                       });
         "nlp-types" = self.callPackage (import nlp-types) {};
+        "graph-algorithms" = self.callPackage (import graph-algorithms) {};
       };
 
     #hsconfig = import ../nix/haskell-modules/configuration-ghc-8.0.x.nix { inherit pkgs; };
@@ -23,9 +25,9 @@ let
     hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
               cabal-install
               aeson
-	      haskeline
+              haskeline
               text
-              #vector_0_12_0_1 # Specify the version explicitly since vector is 0.11.0.0 as of May 2017.
+              vector
               vector-algorithms
               tasty-hunit
               containers
@@ -38,6 +40,7 @@ let
               raw-strings-qq
               foreign-store
               deepseq
+              p.graph-algorithms
               p.nlp-types
             ]);
 in stdenv.mkDerivation {

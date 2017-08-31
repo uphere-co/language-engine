@@ -19,7 +19,7 @@ cabal build test --builddir=../dists/wiki-ner
 # with --builddir:
 ../dists/wiki-ner/build/test/test  +RTS -N -RTS
 # Or run tests in REPL
-cabal repl test --builddir=../dists/wiki-ner
+cabal new-repl test --builddir=../dists/wiki-ner
 
 # Clean up
 cabal clean
@@ -50,7 +50,7 @@ time ./dist/build/yago-bin/yago-bin
 cabal build yago-bin
 time cat yago/wordnet | dist/build/yago-bin/yago-bin > enwiki/wnTypes
 # To run experiments in REPL
-cabal repl testRun --builddir=../dists/wiki-ner
+cabal new-repl testRun --builddir=../dists/wiki-ner
 # To run the compiled experiments app
 cabal build testRun --builddir=../dists/wiki-ner
 ```
@@ -64,7 +64,7 @@ build with profiling option
 $ cabal install --enable-profiling
 # Or, for testing in REPL
 $ cabal configure --enable-tests --enable-profiling 
-$ cabal repl testRun
+$ cabal new-repl testRun
 -- Profiling each lines in REPL
 > :set +s
 ```

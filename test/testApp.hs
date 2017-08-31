@@ -1,6 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE OverloadedStrings
+           , BangPatterns
+ #-}
 
+
+module Main where
 --Uncomment it to run it in REPL
 --module Test.RDFDumpETL where
 
@@ -41,7 +44,7 @@ import qualified WikiEL.Graph                  as G
 import qualified WikiEL.ETL.RDF.Binary         as BR
 import qualified Data.ByteString.Lazy.Char8    as BL
 
-import qualified WikiEL.Graph.ETL              as G.E
+import qualified Graph.ETL                     as G.E
 
 type LText = T.L.Text
 
@@ -228,7 +231,8 @@ test1 sorted@(d,edges) names = do
   --print $ dEdges (H.wordHash "Germany")
 
 main3init = do
-  cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph "enwiki/edges" -- ~40min to sort
+  cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph "enwiki/edges" -- ~40min to sort in REPL. ~10min with a compiled binary.
+  --cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph "enwiki/wnTypes.1M"
   --wn <- foo loadWordnetTypes "enwiki/synsets"
   --taxons@(Foo tes tns) <- foo loadEdges "enwiki/synsets" -- ~16min to sort
   let
@@ -359,5 +363,6 @@ main5 = do
 
   
 main :: IO ()
-main = main5
+--main = main5
+main = main3init
 
