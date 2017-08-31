@@ -6,19 +6,15 @@ module SRL.Old.Format where
 import           Control.Lens
 import           Data.IntMap                   (IntMap)
 import qualified Data.IntMap             as IM
-import           Data.List                     (intercalate)
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Text               as T
 import           Data.Text                     (Text)
-import           Data.Tree               as Tr
 import           Text.Printf            hiding (formatArg)
 --
-import           Data.Bitree
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
-import           Text.Format.Tree
 --
 import           SRL.Old.Type
 import           SRL.Old.Util

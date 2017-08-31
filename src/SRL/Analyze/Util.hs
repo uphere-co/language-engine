@@ -3,11 +3,13 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
--- the functions in this module will be relocated to a more common package like textview
 
+-- the functions in this module will be relocated to a more common package like textview
+--
 module SRL.Analyze.Util where
 
 import           Control.Lens
@@ -17,10 +19,7 @@ import           Data.Aeson.Types                              (typeMismatch)
 import           Data.Maybe                                    (fromJust,mapMaybe)
 import           Data.Scientific                               (floatingOrInteger)
 import           Data.Text                                     (Text)
-import qualified Data.Text                             as T
-import qualified Data.Text.IO                          as T.IO
 import           GHC.Generics                                  (Generic)
-import           Text.ProtocolBuffers.Basic                    (Utf8)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
@@ -29,7 +28,7 @@ import qualified CoreNLP.Proto.HCoreNLPProto.ListTimex as T
 import qualified CoreNLP.Proto.HCoreNLPProto.TimexWithOffset as T
 import           CoreNLP.Simple.Convert                        (cutf8)
 import           Data.Range                                    (isInsideR)
-import 	       	 NLP.Type.CoreNLP
+import           NLP.Type.CoreNLP
 import           Text.Annotation.Type
 import           Text.Annotation.Util.Doc
 import           Text.Annotation.View
@@ -48,18 +47,18 @@ instance Functor (TagPos i) where
   fmap f (TagPos (i,j,x)) = TagPos (i,j,f x)
 
 instance FromJSON CharIdx where
-  parseJSON x@(Number n) = case floatingOrInteger n of
+  parseJSON x@(Number n) = case floatingOrInteger n :: Either Double Int of
                              Right i -> return (ChIdx i)
-                             Left  d -> typeMismatch "error in CharIdx" x
+                             Left  _ -> typeMismatch "error in CharIdx" x
   parseJSON o            = typeMismatch "error in CharIdx" o
 
 instance ToJSON CharIdx where
   toJSON x = toJSON (unChIdx x)
 
 instance FromJSON TokIdx where
-  parseJSON x@(Number n) = case floatingOrInteger n of
+  parseJSON x@(Number n) = case floatingOrInteger n :: Either Double Int of
                              Right i -> return (TokIdx i)
-                             Left  d -> typeMismatch "error in TokIdx" x
+                             Left  _ -> typeMismatch "error in TokIdx" x
   parseJSON o            = typeMismatch "error in TokIdx" o
 
 instance ToJSON TokIdx where
@@ -133,5 +132,6 @@ convertRangeFromTokenToChar toks (TokIdx b,TokIdx e) = do
   return (ChIdx (cb+1),ChIdx ce)
         
 
+convertTagPosFromTokenToChar :: [Token] -> TagPos TokIdx a -> Maybe (TagPos CharIdx a)
 convertTagPosFromTokenToChar toks (TagPos (tb,te,x)) = 
   convertRangeFromTokenToChar toks (tb,te) >>= \(cs,ce) -> return (TagPos (cs,ce,x))
