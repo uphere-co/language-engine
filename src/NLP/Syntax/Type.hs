@@ -32,18 +32,18 @@ PredArgWorkspace(..), pa_CP, pa_candidate_args
 ) where
 
 import           Control.Lens
-import           Data.Hashable                          (Hashable)
+-- import           Data.Hashable                          (Hashable)
 import           Data.Text                              (Text)
-import           GHC.Generics                           (Generic)
+-- import           GHC.Generics                           (Generic)
 --
 import           Data.BitreeZipper
-import           Lexicon.Type                           (ATNode(..))
+-- import           Lexicon.Type                           (ATNode(..))
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
-import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
+-- import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
 --
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Type.Verb
+-- import           NLP.Syntax.Type.Verb
 
 
 

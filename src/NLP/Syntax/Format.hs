@@ -5,16 +5,14 @@
 module NLP.Syntax.Format where
 
 import           Control.Lens
-import           Control.Monad                 (join)
 import           Data.Foldable                 (toList,traverse_)
 import           Data.IntMap                   (IntMap)
 import           Data.List                     (intercalate)
 import           Data.Maybe
-import           Data.Monoid                   ((<>),First(..))
+import           Data.Monoid                   ((<>))
 import           Data.Text                     (Text)
 import qualified Data.Text               as T
 import qualified Data.Text.IO            as T.IO
-import           Data.Tree               as Tr
 import           Text.Printf
 --
 import           Data.Bitree
@@ -64,6 +62,7 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
                             (T.intercalate " " (vp^..vp_words.traverse.to (f.fst)))
 
 
+formatDPTokens :: (Maybe (ATNode (DP (Zipper as))), Maybe (Zipper as)) -> Text
 formatDPTokens (dp,mpro) = case fmap chooseATNode dp of
                              Just SilentPRO -> "*PRO* -> " <> maybe "" gettokens mpro
                              Just (RExp z)  -> gettokens z
@@ -71,7 +70,7 @@ formatDPTokens (dp,mpro) = case fmap chooseATNode dp of
   where gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
 
 
-formatDPType :: ATNode (DP (BitreeZipperICP (Lemma ': as))) -> Maybe ChunkTag
+formatDPType :: ATNode (DP (Zipper as)) -> Maybe ChunkTag
 formatDPType x = case chooseATNode x of
                    SilentPRO -> Just NP
                    RExp z -> getchunk z
@@ -132,13 +131,12 @@ formatCP mcpstr cp
 
 
 formatCPHierarchy :: Bitree (Range,CP as) (Range,CP as) -> Text
-formatCPHierarchy tr = formatBitree (\(rng,cp) -> T.pack (printf "%-7s" (show rng))) tr
+formatCPHierarchy tr = formatBitree (\(rng,_cp) -> T.pack (printf "%-7s" (show rng))) tr
 
 
-formatClauseStructure :: [VerbProperty (BitreeZipperICP '[Lemma])]
-                      -> ClauseTree
-                      -> Text
-formatClauseStructure vps clausetr =
+formatClauseStructure -- :: [VerbProperty (BitreeZipperICP '[Lemma])]
+                      :: ClauseTree -> Text
+formatClauseStructure clausetr =
   let tr' = bimap (\(_rng,x)->f x) g (cutOutLevel0 clausetr)
         where f (S_CL c,l)    = T.pack (show c) <> ":" <> T.pack (show l)
               f (S_SBAR zs,l) = "SBAR:" <> T.pack (show zs) <> "," <> T.pack (show l)

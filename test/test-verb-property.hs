@@ -289,7 +289,7 @@ testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,
 
 
 
-mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty (BitreeZipperICP '[Lemma])]
+mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty (Zipper '[Lemma])]
 mkVPS lmatknlst pt =
   let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
   in verbPropertyFromPennTree lemmamap pt
@@ -310,6 +310,7 @@ unitTestsVerbProperty =
       (checkVP c == True) @? (intercalate "\n" ((mkVPS (c^._4) (c^._5))^..traverse.to (formatVerbProperty fmtfunc))  ++ "\n" ++ T.unpack (prettyPrint 0 (c^._5)))
 
 
+fmtfunc :: Zipper as -> Text
 fmtfunc = either (const "") (tokenWord.snd) . getRoot . current
 
 

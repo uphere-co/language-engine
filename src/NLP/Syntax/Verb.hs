@@ -14,7 +14,7 @@ module NLP.Syntax.Verb where
 import           Control.Applicative
 import           Control.Lens                                ((^.),(^..),(^?),_1,_2,_Just)
 import           Control.Monad
-import           Control.Monad.Loops                         (iterateUntilM)
+-- import           Control.Monad.Loops                         (iterateUntilM)
 import           Data.Foldable                               (toList)
 import           Data.Function                               (on)
 import           Data.IntMap                                 (IntMap)
@@ -23,8 +23,8 @@ import           Data.Text                                   (Text)
 import           Data.Maybe
 import           Data.Monoid
 --
-import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
-import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmatize)
+-- import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
+import           CoreNLP.Simple.Convert                      (lemmatize)
 import           Data.Attribute
 import           Data.Bitree
 import           Data.BitreeZipper
@@ -32,7 +32,7 @@ import           Data.BitreeZipper.Util
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty                     (Tense(..),Voice(..),Aspect(..))
 --
-import           NLP.Syntax.Type
+-- import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util
@@ -142,8 +142,8 @@ tenseAspectVoiceAuxNeg z = do
   vbg lma = 
           case findPrevVerb z of
             Nothing -> return (Present,Progressive,Active,auxNegWords lma z [z])
-            Just z1 -> do
-              z1 <- findPrevVerb z
+            Just z1 ->
+              -- z1 <- findPrevVerb z
               auxBe z1 (return (Past,Progressive,Active,auxNegWords lma z1 [z1,z]))
                        Nothing
                        (do z2 <- findPrevVerb z1
