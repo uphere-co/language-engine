@@ -11,7 +11,7 @@ import           Control.Applicative                    ((<|>))
 import           Control.Lens
 import           Control.Monad                          ((<=<),join,void)
 import           Control.Monad.IO.Class                 (liftIO)
-import           Control.Monad.Trans.State              (State,StateT(..),runState,get,put)
+import           Control.Monad.Trans.State              (State,execState,get,put)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
@@ -138,8 +138,8 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
                     lst -> last -- RExp x    -> Just x -}
                     
 
-resolveDP :: forall as m. (Monad m) =>
-             Range -> StateT (Bitree (Range,CP as) (Range,CP as)) m [Either NTrace (Zipper as)]
+resolveDP :: forall as.
+             Range -> State (Bitree (Range,CP as) (Range,CP as))  [Either NTrace (Zipper as)]
 resolveDP rng = do
   tr <- get
   case extractZipperById rng tr of
@@ -156,6 +156,30 @@ resolveDP rng = do
                                   Just rng' -> (++) <$> pure xs <*> resolveDP rng' -- cp'
                                   Nothing -> return xs
                 _ -> return xs
+
+
+bindingAnalysis :: Bitree (Range,CP as) (Range,CP as) -> Bitree (Range,CP as) (Range,CP as)
+bindingAnalysis cpstr = execState (go rng0) cpstr
+   where z0 = either id id . getRoot . mkBitreeZipper [] $ cpstr
+         getrng = either fst fst . getRoot . current
+         rng0 = (either fst fst . getRoot) cpstr
+         go rng = do xs <- resolveDP rng
+                     -- liftIO $ T.IO.putStrLn (formatDPTokens xs)
+                     tr <- get
+                     case extractZipperById rng tr of
+                       Nothing -> return ()
+                       Just z -> do
+                         let subtr = case z^.tz_current of
+                                       PN (rng,cp) ys -> PN (rng,(complement.specifier .~ xs) cp) ys
+                                       PL (rng,cp)    -> PL (rng,(complement.specifier .~ xs) cp) 
+                         let z' = (tz_current .~ subtr) z
+                         put (toBitree z')
+                         case child1 z' of
+                           Just z'' -> go (getrng z'')
+                           Nothing ->                 
+                             case next z' of
+                               Just z'' -> go (getrng z'')
+                               Nothing -> return ()
 
 
 ---------
