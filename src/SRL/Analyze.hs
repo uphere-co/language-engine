@@ -1,9 +1,9 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
-
+{-# LANGUAGE RecordWildCards   #-}
 module SRL.Analyze where
 
-import           Control.Lens                 ((^.),(.~),(&))
+import           Control.Lens                 ((^.),(^..),(.~),(&),(%~),at)
 import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
@@ -82,9 +82,17 @@ queryProcess config pp apredata emTagger =
                   putStrLn "-------------"
                   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
                       mtokss = (dstr ^. ds_mtokenss)
-                      mgs = map meaningGraph sstrs1
+
+                  print (sstrs1 ^.. traverse . ss_ptr)
+                  print (sstrs1 ^.. traverse . ss_clausetr)
+                  
+                  let mgs = map meaningGraph sstrs1
                   forM_ (zip mtokss (zip [1..] mgs)) $ \(mtks,(i,mg)) -> do
                     title <- mkTextFromToken mtks
+                    let isEntity x = case x of
+                          MGEntity {..} -> True
+                          otherwise     -> False
+                    print (map (\x -> if ((x ^. mv_range) == (4,4)) then (x & mv_text .~ "Changed" ) else (id x) ) (filter isEntity (mg ^. mg_vertices)))
                     mapM_ print (mg^.mg_vertices)
                     mapM_ print (mg^.mg_edges)
                     putStrLn "-----------------"
