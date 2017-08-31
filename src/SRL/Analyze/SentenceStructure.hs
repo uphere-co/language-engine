@@ -22,7 +22,7 @@ import           FrameNet.Type.Frame                       (fe_coreType,fe_name,
 import           Lexicon.Type                              (POSVorN(..),GRel
                                                            ,RoleInstance,RolePattInstance
                                                            ,ArgPattern)
-import           NLP.Syntax.Clause                         (clauseStructure,identifyCPHierarchy)
+import           NLP.Syntax.Clause                         (bindingAnalysis,clauseStructure,identifyCPHierarchy)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
 import           NLP.Syntax.Type.XBar                      (Zipper)
@@ -120,7 +120,7 @@ sentStructure apredata (i,lmas,mptr) =
     let lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
-        mcpstr = identifyCPHierarchy vps
+        mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy) vps
         verbStructures = map (verbStructure apredata) vps
     in SentStructure i ptr vps clausetr mcpstr verbStructures
 

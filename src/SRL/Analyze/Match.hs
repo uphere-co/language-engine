@@ -16,8 +16,8 @@ import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
 import           Data.Bitree                  (getNodes,getRoot)
-import           Data.BitreeZipper            (current,mkBitreeZipper)
-import           Data.BitreeZipper.Util       (root)
+import           Data.BitreeZipper            (current,mkBitreeZipper,root)
+--import           Data.BitreeZipper.Util       (root)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,findPAWS,resolveDP)
 import           NLP.Syntax.Type
@@ -56,7 +56,7 @@ mkPAWSTriples sstr = do
       mcpstr = sstr^.ss_mcpstr
   vstr <- sstr ^.ss_verbStructures
   let vp = vstr^.vs_vp
-  paws <- maybeToList (findPAWS clausetr vp)
+  paws <- maybeToList (findPAWS clausetr vp mcpstr)
   return (mcpstr,vstr,paws)
 
 
@@ -174,7 +174,13 @@ matchFrame (mcpstr,vstr,paws) = do
   let cp = paws^.pa_CP
       verbp = cp^.complement.complement
       mrmmtoppatts = vstr^.vs_mrmmtoppatts
-      mdp_resolved = resolveDP mcpstr cp
+      mdp_resolved = let dps = cp^.complement.specifier
+                     in if null dps
+                        then Nothing
+                        else case last dps of
+                               Left SilentPRO -> Nothing
+                               Right z -> Just z
+        -- Just (last dps) --  of  -- resolveDP mcpstr cp
       verb = vstr^.vs_lma
   (rm,mtoppatts) <- mrmmtoppatts
   rng <- cpRange cp

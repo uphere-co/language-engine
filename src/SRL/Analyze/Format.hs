@@ -199,7 +199,7 @@ formatSentStructure showdetail (SentStructure i ptr vps clausetr mcpstr vstrs) =
                   , formatIndexTokensFromTree 0 ptr
                   ]
        subline1_1 = [ "--------------------------------------------------------------------------------------------------"
-                    , formatClauseStructure vps clausetr
+                    , formatClauseStructure clausetr
                     , "================================================================================================="
                     ]
        subline2 = map (formatVerbStructure clausetr mcpstr) vstrs
