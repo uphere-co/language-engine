@@ -47,7 +47,11 @@ makeLenses ''XP
 
 -- data DP a = SilentPRO | RExp a
 
-data NTrace = SilentPRO  --    | Moved
+-- | Denote trace. We use our own trace annotation system.
+--   Empty categories are first identified as NULL and
+--   will be resolved step by step.
+--
+data NTrace = NULL | SilentPRO | Moved | WHPRO  --    | Moved
 
 type instance Property   'X_V t = VerbProperty (Zipper t)
 
@@ -70,7 +74,7 @@ type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Maybe (Zipper t) -> {- Maybe (ATNode (DP (Zipper t))) -} [Either NTrace (Zipper t)] -> VerbP t -> TP t
+mkTP :: Maybe (Zipper t) -> [Either NTrace (Zipper t)] -> VerbP t -> TP t
 mkTP mtp mdp vp = XP () mtp mdp () vp 
 
   

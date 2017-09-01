@@ -64,18 +64,13 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
                             (fromMaybe "" (vp^?vp_negation._Just._2._2.to unLemma))
                             (T.intercalate " " (vp^..vp_words.traverse.to (f.fst)))
 
-{- 
-formatDPTokens :: (Maybe (ATNode (DP (Zipper as))), Maybe (Zipper as)) -> Text
-formatDPTokens (dp,mpro) = case fmap chooseATNode dp of
-                             Just SilentPRO -> "*PRO* -> " <> maybe "" gettokens mpro
-                             Just (RExp z)  -> gettokens z
-                             Nothing        -> ""
-  where gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
--}
 
 formatDPTokens :: [Either NTrace (Zipper as)] -> Text
 formatDPTokens xs = T.intercalate " -> " (map fmt xs)
-  where fmt (Left SilentPRO) = "*PRO*"
+  where fmt (Left NULL)      = "*NUL*"
+        fmt (Left SilentPRO) = "*PRO*"
+        fmt (Left Moved)     = "*MOV*"
+        fmt (Left WHPRO)     = "*WHP*"
         fmt (Right z) = T.pack (show (getRange (current z)))
 
 {- 
@@ -162,13 +157,20 @@ formatVPwithPAWS :: ClauseTree
                  -> VerbProperty (BitreeZipperICP (Lemma ': as))
                  -> Text
 formatVPwithPAWS clausetr mcpstr vp =
-  let rngs = clauseRanges clausetr
+  let -- rngs = clauseRanges clausetr
+      mpaws = findPAWS clausetr vp mcpstr
+      mrng = cpRange . (^.pa_CP) =<< mpaws
       fmt = either (const "") (tokenWord.snd) . getRoot . current
-  in T.pack $ printf "%7s:%-50s\n%s\n"
-                (maybe "" show (clauseForVerb rngs vp))
-                (formatVerbProperty fmt vp)
-                (maybe "" (formatPAWS mcpstr) (findPAWS clausetr vp mcpstr))
-
+  in case (,) <$> mpaws <*> mrng of
+       Nothing -> "fail in identifying PAWS"
+       Just (paws,rng) -> T.pack (printf "%7s:%-50s\n%s\n"
+                                   (show rng) -- (maybe "" show (clauseForVerb rngs vp))
+                                   (formatVerbProperty fmt vp)
+                                   (maybe "" (formatPAWS mcpstr) mpaws))
+                          <> "\n"
+                          <> T.pack (formatCP mcpstr (paws^.pa_CP))
+                          <> "\n"
+                          
 
 showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
 showClauseStructure lemmamap ptree  = do
