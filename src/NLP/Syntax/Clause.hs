@@ -1,14 +1,17 @@
-{-# LANGUAGE BangPatterns      #-}
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections     #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE TypeOperators       #-}
 
 module NLP.Syntax.Clause where
 
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
-import           Control.Monad                          ((<=<),join)
+import           Control.Monad                          ((<=<),join,void)
+import           Control.Monad.IO.Class                 (liftIO)
+import           Control.Monad.Trans.State              (State,execState,get,put)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
@@ -23,7 +26,7 @@ import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.BitreeZipper.Util
 import           Data.Range                             (rangeTree)
-import           Lexicon.Type                           (ATNode(..),chooseATNode)
+import           Lexicon.Type                           (chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 --
@@ -31,6 +34,8 @@ import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util
+--
+import           Debug.Trace
 
 
 maximalProjectionVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
@@ -63,21 +68,15 @@ complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
 
 identifySubject :: N.ClauseTag
                 -> Zipper (Lemma ': as)
-                -> Maybe (ATNode (DP (Zipper (Lemma ': as))))
+                -> [Either NTrace (Zipper (Lemma ': as))]
 identifySubject tag vp =
   let r = case tag of
             N.SINV -> firstSiblingBy next (isChunkAs NP) vp
             _      -> firstSiblingBy prev (isChunkAs NP) vp
   in case r of
-       Nothing -> Just (SimpleNode SilentPRO)
-       Just z  -> Just (SimpleNode (RExp z))
+       Nothing -> [Left SilentPRO] -- Just (SimpleNode SilentPRO)
+       Just z  -> [Right z] -- Just (SimpleNode (RExp z))
 
-
-
--- identifySubjectFromAnnotation :: Zipper '[Lemma,Link] -> [Zipper '[Lemma,Link]]
-
---
--- z = identifySubjectFromAnnotation z
 
 
 -- | Constructing CP umbrella and all of its ingrediant.
@@ -102,7 +101,7 @@ constructCP vprop = do
                                   Nothing
                                   (mkTP (Just tp') subj verbp)
           _      -> return (mkCP Nothing Nothing (mkTP (Just tp') subj verbp))  -- somewhat problematic case?
-      _ -> return (mkCP Nothing Nothing (mkTP Nothing Nothing verbp))           -- reduced relative clause
+      _ -> return (mkCP Nothing Nothing (mkTP Nothing [] verbp))                -- reduced relative clause
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -130,26 +129,57 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
-resolvePRO :: BitreeZipper (Range,CP as) (Range,CP as) -> Maybe (Zipper as)
-resolvePRO z = do cp0 <- snd . getRoot1 . current <$> parent z
-                  atnode <- cp0^.complement.specifier
-                  case chooseATNode atnode of
-                    SilentPRO -> Nothing
-                    RExp x    -> Just x
+-- resolvePRO :: BitreeZipper (Range,CP as) (Range,CP as) -> [Either NTrace (Zipper as)]
+-- resolvePRO z = do cp0 <- snd . getRoot1 . current <$> maybeToList (parent z)
+--                  cp0^.complement.specifier
+                  -- return (map Right atnode)
+                  {- case atnode of
+                    [] -> Nothing -- SilentPRO -> Nothing   -- should be changed
+                    lst -> last -- RExp x    -> Just x -}
                     
 
-resolveDP :: Maybe [Bitree (Range,CP as) (Range,CP as)] -> CP as -> Maybe (Zipper as)
-resolveDP mcpstr cp =
-  let lst = (join . maybeToList) mcpstr
-      dp = cp^.complement.specifier
-  in case fmap chooseATNode dp of
-       Just SilentPRO -> do rng <- cpRange cp
-                            z <- getFirst (foldMap (First . extractZipperById rng) lst)
-                            resolvePRO z
-       Just (RExp z)  -> Just z
-       Nothing        -> Nothing
+resolveDP :: forall as.
+             Range -> State (Bitree (Range,CP as) (Range,CP as))  [Either NTrace (Zipper as)]
+resolveDP rng = do
+  tr <- get
+  case extractZipperById rng tr of
+    Nothing -> return []
+    Just z -> do
+      let cp = (snd . getRoot1 . current) z
+      case cp^.complement.specifier of
+        [] -> return []
+        xs -> case last xs of
+                Left SilentPRO ->
+                  case snd . getRoot1 . current <$> parent z of
+                    Nothing -> return xs
+                    Just cp' -> case cpRange cp' of
+                                  Just rng' -> (++) <$> pure xs <*> resolveDP rng' -- cp'
+                                  Nothing -> return xs
+                _ -> return xs
 
 
+bindingAnalysis :: Bitree (Range,CP as) (Range,CP as) -> Bitree (Range,CP as) (Range,CP as)
+bindingAnalysis cpstr = execState (go rng0) cpstr
+   where z0 = either id id . getRoot . mkBitreeZipper [] $ cpstr
+         getrng = either fst fst . getRoot . current
+         rng0 = (either fst fst . getRoot) cpstr
+         go rng = do xs <- resolveDP rng
+                     -- liftIO $ T.IO.putStrLn (formatDPTokens xs)
+                     tr <- get
+                     case extractZipperById rng tr of
+                       Nothing -> return ()
+                       Just z -> do
+                         let subtr = case z^.tz_current of
+                                       PN (rng,cp) ys -> PN (rng,(complement.specifier .~ xs) cp) ys
+                                       PL (rng,cp)    -> PL (rng,(complement.specifier .~ xs) cp) 
+                         let z' = (tz_current .~ subtr) z
+                         put (toBitree z')
+                         case child1 z' of
+                           Just z'' -> go (getrng z'')
+                           Nothing ->                 
+                             case next z' of
+                               Just z'' -> go (getrng z'')
+                               Nothing -> return ()
 
 
 ---------
@@ -282,9 +312,14 @@ predicateArgWS cp z =
 
 findPAWS :: ClauseTree
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
+         -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
          -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
-findPAWS tr vp = do cp <- constructCP vp
-                    predicateArgWS cp <$> findVerb (vp^.vp_index) tr
+findPAWS tr vp mcpstr = do
+  cp <- constructCP vp   -- very inefficient. but for testing.
+  rng <- cpRange cp
+  cpstr <- mcpstr
+  cp' <- snd . getRoot1 . current <$> ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
+  predicateArgWS cp' <$> findVerb (vp^.vp_index) tr
 
 
 
