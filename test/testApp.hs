@@ -199,7 +199,7 @@ fff, ttt :: Ord a => (a,a)->a
 fff  (x,_) = x
 ttt  (_,x) = x
 
-tt,ff :: Ord a => (a,a) -> (a,a) -> Ordering
+tt,ff ::  Ord a => (a,a) -> (a,a) -> Ordering
 ff = edgeOrdering fff
 tt = edgeOrdering ttt
 
@@ -331,7 +331,7 @@ main3reload = do
     --refs = concatMap (WEL.toWikipages titles) (filter WEL.hasResolvedUID mentions5)  
     pathsT len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hashT wp1) (hashT wp2)
     f x y = length (pathsT 1 x y)    
-    a = WEL.tryDisambiguate titles (WEL.matchToSimilar f) mentions3
+    a = WEL.tryDisambiguate titles (WEL.matchToSimilar f 5) mentions3
   mapM_ print a
 
 

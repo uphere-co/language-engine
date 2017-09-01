@@ -106,17 +106,17 @@ tryDisambiguate (i2t,t2i) fTD mentions = map (updateNE f) mentions
 
 
 -- n : Node, s : Score type
-mostSimilar :: (Num s, Ord s, Ord n) => (n->n->s) -> n -> [n] -> Maybe (s,n,n)
-mostSimilar f ref ns = fCutoff maxsim
+mostSimilar :: (Num s, Ord s, Ord n) => (n->n->s) -> s-> n -> [n] -> Maybe (s,n,n)
+mostSimilar f cutoff ref ns = fCutoff maxsim
   where
     maxsim = maximum $ map (\n -> (f ref n, ref, n)) ns
-    fCutoff sim@(score,_,_) | score>5 = Just sim
+    fCutoff sim@(score,_,_) | score>cutoff = Just sim
     fCutoff _ = Nothing
 
-matchToSimilar :: (Num s, Ord s, Ord n) => (n->n->s) -> [n] -> [n] -> Maybe (s,n,n)
-matchToSimilar f refs ns = mayMax ss
+matchToSimilar :: (Num s, Ord s, Ord n) => (n->n->s) -> s -> [n] -> [n] -> Maybe (s,n,n)
+matchToSimilar f cutoff refs ns = mayMax ss
   where
-    ss = mapMaybe (\ref -> mostSimilar f ref ns) refs
+    ss = mapMaybe (\ref -> mostSimilar f cutoff ref ns) refs
     mayMax [] = Nothing
     mayMax vs = Just (maximum vs)
     
