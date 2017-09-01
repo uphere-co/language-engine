@@ -12,12 +12,10 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
 import           Data.BitreeZipper
 import           NLP.Type.CoreNLP                      as S
 import           NLP.Type.PennTreebankII
+import           NLP.Type.SyntaxProperty                      (Voice)
 import           NLP.Type.UniversalDependencies2.Syntax
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
---
-import           NLP.Syntax.Type
-
 
 
 data Position = Before | After | Embed
@@ -31,10 +29,10 @@ data Direction = Up | Down
 type ParseTreePath = [(Either ChunkTag POSTag, Direction)]
 
 
-type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
+type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 
-type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst)) 
+type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 
 type RoleSet = (Text,Text)
@@ -60,7 +58,7 @@ data SRLFeature = SRLFeat { _sfeat_range :: Range
                           }
                 deriving (Show)
 
-makeLenses ''SRLFeature                         
+makeLenses ''SRLFeature
 
 
 data ArgNodeFeature = AFeat { _afeat_label :: PropBankLabel
@@ -99,7 +97,7 @@ data ArgumentInput = ArgumentInput { _pblabel :: PropBankLabel
                                    , _nodes :: [NodeRange]
                                    }
                    deriving (Show)
-                            
+
 makeLenses ''ArgumentInput
 
 
@@ -136,5 +134,3 @@ position :: Int -> Range -> Position
 position n (b,e) = if | n < b     -> Before
                       | n > e     -> After
                       | otherwise -> Embed
-
-

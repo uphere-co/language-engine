@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE LambdaCase         #-}
@@ -7,68 +8,53 @@
 
 module SRL.Analyze.Format where
 
-import           Control.Applicative
-import           Control.Lens                            ((^..),(^.),(^?),(%~),_1,_2,_3,_4,_5,_6,_7,_Just,_Right,to
-                                                         ,lengthOf,folded)
-import           Control.Monad                           ((>=>),guard)
+import           Control.Lens                            ((^.),(^?),_1,_2,_3,_Just,_Right,to)
 import           Data.Foldable
-import           Data.Function                           ((&),on)
-import           Data.List                               (find,groupBy,intercalate,intersperse,maximumBy,sortBy)
-import           Data.Maybe                              (catMaybes,fromMaybe,listToMaybe,mapMaybe,maybeToList)
+import           Data.List                               (find,intercalate,intersperse)
+import           Data.Maybe                              (fromMaybe,mapMaybe)
 import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
 import qualified Data.Text                       as T
 import qualified Data.Text.IO                    as T.IO
-import           Data.Traversable                        (traverse)
+
 import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat,render)
 import           Text.Printf                             (printf)
-import           Text.ProtocolBuffers.Basic              (Utf8)
+
 --
-import           CoreNLP.Simple.Convert                  (sentToTokens,sentToTokens')
+import           CoreNLP.Simple.Convert                  (sentToTokens')
 import           Data.Bitree
 import           Data.BitreeZipper
-import           Data.BitreeZipper.Util                  (root)
+
 import           Data.Range
-import           Lexicon.Format                          (formatArgPatt,formatArgPattStat,formatRoleMap)
-import           Lexicon.Merge                           (constructTopPatterns,mergePatterns,patternGraph,patternRelation
-                                                         ,listOfSupersetSubset,topPatterns)
+import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
+import           Lexicon.Merge                           (constructTopPatterns)
 import           Lexicon.Query                           (cutHistogram)
-import           Lexicon.Type                            (ArgPattern(..),type RoleInstance
-                                                         ,type RolePattInstance,POSVorN(..),GRel(..),GArg(..)
-                                                         ,patt_arg0,patt_arg1,patt_arg2,patt_arg3,patt_arg4
-                                                         ,findGArg
-                                                         )
-import           NLP.Syntax.Clause
+import           Lexicon.Type                            (ArgPattern(..),RoleInstance
+                                                         ,RolePattInstance,GRel(..))
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
+import           NLP.Syntax.Type.XBar                    (CP)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty                 (Voice)
 import qualified WikiEL                        as WEL
-import           WikiEL.EntityLinking                    (UIDCite(..),EMInfo,EntityMentionUID,_emuid)
+import           WikiEL.EntityLinking                    (UIDCite(..),_emuid)
 import qualified WikiEL.EntityLinking          as EL
-import           WikiEL.WikiNamedEntityTagger            (resolveNEs,getStanfordNEs,parseStanfordNE
-                                                         ,namedEntityAnnotator,resolvedUID)
+import           WikiEL.WikiNamedEntityTagger            (PreNE,resolvedUID)
 --
 import           SRL.Analyze.Match                       (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
-                                                         ,MGVertex(..),MGEdge(..)
-                                                         ,MeaningGraph(MeaningGraph)
+                                                         ,MGVertex(..),MeaningGraph
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_start,me_end
                                                          ,chooseFrame
                                                          ,onfn_senseID,onfn_definition,onfn_frame
-                                                         ,tf_frameID,tf_feCore,tf_fePeri
-                                                         ,vs_lma,vs_vp,vs_mrmmtoppatts
-                                                         ,ss_verbStructures, ss_mcpstr, ss_clausetr
-                                                         ,ds_sentStructures
-                                                         )
+                                                         ,tf_frameID,tf_feCore,tf_fePeri)
 import           SRL.Analyze.Util                        (CharIdx,TokIdx,TagPos(..),SentItem
                                                          ,addTag,convertTagPosFromTokenToChar
                                                          ,underlineText)
-import           SRL.Analyze.WikiEL                      (linkedMentionToTagPos)
 
 
 
@@ -84,11 +70,12 @@ getTopPatternsFromONFNInst rolemap subcats inst = do
   return (rm,mtoppatts_cut)
 
 
-
+formatExFrame :: ExceptionalFrame -> Text
 formatExFrame FrameCopula = "** COPULA **"
 formatExFrame FrameIdiom  = "** IDIOM **"
 formatExFrame FrameLightVerb = "** LIGHT VERB **"
 formatExFrame _              = "** UNIDENTIFIED **"
+
 
 formatLemmaPOS :: Token -> String
 formatLemmaPOS t = printf "%10s %5s" (t^.token_lemma) (show (t^.token_pos))
@@ -124,6 +111,7 @@ formatSense (onfninst,num) =
 
 
 
+formatFrame :: Maybe (ONSenseFrameNetInstance, Int) -> String
 formatFrame t =
   printf " %-20s | %-40s      ------      %-30s\n"
     (fromMaybe "" (t ^? _Just . _1 . onfn_frame . to (either formatExFrame (^.tf_frameID))))
@@ -150,12 +138,14 @@ formatSenses doesShowOtherSense onfnlst mrmmtoppatts
           else ""
 
 
-
+formatLinkedMention :: EL.EntityMention Text -> String
 formatLinkedMention Cite {..} = printf "%3d: (-> %3d) %s " (EL._emuid _uid) (EL._emuid _ref) (formatEMInfo _info)
 formatLinkedMention Self {..} = printf "%3d:          %s " (EL._emuid _uid)                  (formatEMInfo _info)
 
 
+formatIndexedTimex :: (Char,Maybe Text) -> String
 formatIndexedTimex (c,mtxt)   = printf "%3s:          %s " (T.singleton c) (fromMaybe "" mtxt)
+
 
 formatTaggedSentences :: (a -> Text)
                       ->  [(SentItem CharIdx,[TagPos CharIdx a])]
@@ -165,13 +155,14 @@ formatTaggedSentences f sents_tagged =
   in vcat top $ map (text . T.unpack) txts
 
 
+formatPreNE :: PreNE -> String
 formatPreNE tag = case resolvedUID tag of
-                    Left e -> "unresolved"
+                    Left _ -> "unresolved"
                     Right i -> show i
 
 
 formatEMInfo :: EL.EMInfo Text -> String
-formatEMInfo em@(_,ws,tag) = printf "%-25s %-20s" (WEL.entityName em) (formatPreNE tag)
+formatEMInfo em@(_,_,tag) = printf "%-25s %-20s" (WEL.entityName em) (formatPreNE tag)
 
 
 formatTagged :: [[Maybe Token]]
@@ -208,14 +199,14 @@ formatSentStructure showdetail (SentStructure i ptr vps clausetr mcpstr vstrs) =
                   , formatIndexTokensFromTree 0 ptr
                   ]
        subline1_1 = [ "--------------------------------------------------------------------------------------------------"
-                    , formatClauseStructure vps clausetr
+                    , formatClauseStructure clausetr
                     , "================================================================================================="
                     ]
        subline2 = map (formatVerbStructure clausetr mcpstr) vstrs
    in subline1 ++ (if showdetail then subline1_1 else []) ++ concat subline2
 
 
-formatVerbStructure :: ClauseTree -> Maybe [Bitree (Range,CP) (Range,CP)] -> VerbStructure -> [Text]
+formatVerbStructure :: ClauseTree -> Maybe [Bitree (Range,CP '[Lemma]) (Range,CP '[Lemma])] -> VerbStructure -> [Text]
 formatVerbStructure clausetr mcpstr (VerbStructure vp lma senses mrmmtoppatts) =
   [ formatVPwithPAWS clausetr mcpstr vp
   , T.pack (printf "Verb: %-20s" lma)
@@ -225,18 +216,18 @@ formatVerbStructure clausetr mcpstr (VerbStructure vp lma senses mrmmtoppatts) =
 
 
 
-
+showMatchedFrame :: (Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
+                    ,VerbStructure
+                    ,PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
+                 -> IO ()
 showMatchedFrame (mcpstr,vstr,paws) = do
-  let cp = paws^.pa_CP
-      vp =vstr^.vs_vp
-      gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
+  let gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
   T.IO.putStrLn "---------------------------"
   flip traverse_ (matchFrame (mcpstr,vstr,paws)) $ \(rng,verb,frame,mselected) -> do
     putStrLn ("predicate: " <> show rng) -- maybe "unidentified CP" show (cpRange cp))
     T.IO.putStrLn ("Verb: " <> verb) -- (vstr^.vs_lma))
-    
     T.IO.putStrLn ("Frame: " <> frame)
-    flip traverse_ mselected $ \((patt,num),felst) -> do
+    flip traverse_ mselected $ \(_,felst) -> do
       mapM_ putStrLn . map (\(fe,z) -> printf "%-15s: %-7s %s" fe (show (getRange (current z))) (gettokens z)) $ felst
 
 

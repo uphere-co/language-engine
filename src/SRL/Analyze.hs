@@ -27,15 +27,15 @@ import           CoreNLP.Simple.Type          (tokenizer,words2sentences,postagg
 import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (loadRoleInsts,loadRolePattInsts)
-import           Lexicon.Type                 (ArgPattern(..),RoleInstance,RolePattInstance)
-import           NLP.Syntax.Type              (Voice)
+import           Lexicon.Type                 (RoleInstance,RolePattInstance)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           Text.Format.Dot              (mkLabelText)
+import           NLP.Type.SyntaxProperty      (Voice)
 import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention(..))
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
 --
-import           OntoNotes.App.Load           (Config(..),cfg,cfgG,cfg_framenet_framedir
+import           OntoNotes.App.Load           (Config(..),cfgG,cfg_framenet_framedir
                                               ,cfg_rolemap_file
                                               ,cfg_sense_inventory_file
                                               ,cfg_verb_subcat_file
@@ -139,13 +139,22 @@ loadAnalyzePredata = do
   subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats)
 
+getAnalysis :: DocAnalysisInput
+            -> (HashMap Text Inventory
+               ,HashMap (Text,Text) Int
+               ,FrameDB
+               ,HashMap Text [(Text,Text)]
+               ,([(Text,NamedEntityClass)] -> [EntityMention Text])
+               ,[RoleInstance]
+               ,[RolePattInstance Voice])
+            -> DocStructure
 getAnalysis input config =
   let (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats) = config
       apredata = AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats
   in docStructure apredata emTagger input
 
 
- 
+loadJVM :: IO (J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
 loadJVM = prepare (def & (tokenizer .~ True)
                        . (words2sentences .~ True)
                        . (postagger .~ True)

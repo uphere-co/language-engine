@@ -23,7 +23,6 @@ import           NLP.Printer.PennTreebankII      (prettyPrint)
 import           NLP.Type.PennTreebankII
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
-import           PropBank.Util
 --
 import           SRL.Old.Type
 
