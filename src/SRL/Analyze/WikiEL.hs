@@ -167,7 +167,7 @@ mkWikiList :: DocStructure -> [((Int, Int), Text)]
 mkWikiList dstr =
   let tagposs = toList (dstr ^. ds_mergedtags)
       wikiel  = lefts $ map (\(TagPos (_,_,e)) -> e) tagposs
-      wikilst = map (\w -> (adjustWikiRange $ getRangeFromEntityMention w, T.append " - " (getNEFromEntityMention w))) wikiel
+      wikilst = map (\w -> (adjustWikiRange $ getRangeFromEntityMention w, T.append " | " (getNEFromEntityMention w))) wikiel
   in wikilst
       
 

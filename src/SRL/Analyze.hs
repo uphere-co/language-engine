@@ -79,37 +79,40 @@ queryProcess config pp apredata emTagger =
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
                   (mapM_ showMatchedFrame . concat . allPAWSTriplesFromDocStructure) dstr
                   --
-                  putStrLn "-------------"
-                  putStrLn "meaning graph"
-                  putStrLn "-------------"
-                  let sstrs1 = catMaybes (dstr^.ds_sentStructures)
-                      mtokss = (dstr ^. ds_mtokenss)
-                      wikilst = mkWikiList dstr
-                  print (sstrs1 ^.. traverse . ss_ptr)
-                  print (sstrs1 ^.. traverse . ss_clausetr)
-                  
-                  let mgs = map meaningGraph sstrs1
-                  forM_ (zip mtokss (zip [1..] mgs)) $ \(mtks,(i,mg'')) -> do
-                    let title = mkTextFromToken mtks
-                    let isEntity x = case x of
-                          MGEntity {..} -> True
-                          otherwise     -> False
-                    let mg' = map (\x -> if (x ^. mv_range) `elem` (map (\(x,y) -> x) wikilst) && isEntity x
-                                        then (x & mv_text .~ (T.append (x ^. mv_text) (fromMaybe "" $ lookup (x ^. mv_range) wikilst)))
-                                        else id x) (mg'' ^. mg_vertices) -- (filter isEntity (mg ^. mg_vertices))
-                        mg = MeaningGraph mg' (mg'' ^. mg_edges)
-                    mapM_ print (mg^.mg_vertices)
-                    mapM_ print (mg^.mg_edges)
-                    putStrLn "-----------------"
-                    putStrLn "meaning graph dot"
-                    putStrLn "-----------------"
-                    let dotstr = dotMeaningGraph (T.unpack $ mkLabelText title) mg
-                    putStrLn dotstr
-                    writeFile ("test" ++ (show i) ++ ".dot") dotstr
-                    void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
+
+
+printMeaningGraph dstr = do
+  putStrLn "-------------"
+  putStrLn "meaning graph"
+  putStrLn "-------------"
+  let sstrs1 = catMaybes (dstr^.ds_sentStructures)
+      mtokss = (dstr ^. ds_mtokenss)
+      wikilst = mkWikiList dstr
+  print (sstrs1 ^.. traverse . ss_ptr)
+  print (sstrs1 ^.. traverse . ss_clausetr)
+
+  let mgs = map meaningGraph sstrs1
+  forM_ (zip mtokss (zip [1..] mgs)) $ \(mtks,(i,mg'')) -> do
+    let title = mkTextFromToken mtks
+    let isEntity x = case x of
+          MGEntity {..} -> True
+          otherwise     -> False
+    let mg' = map (\x -> if (x ^. mv_range) `elem` (map (\(x,y) -> x) wikilst) && isEntity x
+                        then (x & mv_text .~ (T.append (x ^. mv_text) (fromMaybe "" $ lookup (x ^. mv_range) wikilst)))
+                        else id x) (mg'' ^. mg_vertices) -- (filter isEntity (mg ^. mg_vertices))
+        mg = MeaningGraph mg' (mg'' ^. mg_edges)
+    mapM_ print (mg^.mg_vertices)
+    mapM_ print (mg^.mg_edges)
+    putStrLn "-----------------"
+    putStrLn "meaning graph dot"
+    putStrLn "-----------------"
+    let dotstr = dotMeaningGraph (T.unpack $ mkLabelText title) mg
+    putStrLn dotstr
+    writeFile ("test" ++ (show i) ++ ".dot") dotstr
+    void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
 
 loadConfig
   :: IO (HashMap Text Inventory

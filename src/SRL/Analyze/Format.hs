@@ -240,7 +240,7 @@ dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt t
           verbs = mapMaybe (\case MGEntity _ _ _ -> Nothing ; MGPredicate i _ f v -> Just (i,f <> ":" <> v)) vertices
           entities = mapMaybe (\case MGEntity i _ t -> Just (i,t); MGPredicate _ _ _ _ -> Nothing) vertices
       in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=box label=\"%s\"];" i t)) verbs ++  "\n  " ++
-         (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=oval label=\"%s\"];" i t)) entities
+         (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=record label=\"{ %s }\"];" i t)) entities
     etxt :: String
     etxt =      
       let edges = mg^.mg_edges
