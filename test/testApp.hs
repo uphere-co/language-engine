@@ -329,12 +329,17 @@ main3reload = do
   Just store6 <- lookupStore 6 :: IO (Maybe (Store (M.Map WEL.ItemID T.Text, M.Map T.Text WEL.ItemID)))
   titles@(i2t,t2i) <- readStore store6
   
+  uidTag   <-  WEL.loadFiles classFiles
   let
     --refs = concatMap (WEL.toWikipages titles) (filter WEL.hasResolvedUID mentions5)  
     pathsT len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hashT wp1) (hashT wp2)
     f x y = length (pathsT 1 x y)    
-    a = WEL.tryDisambiguate titles (WEL.matchToSimilar f 5) mentions3
-  mapM_ print a
+    a3 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 5) mentions3
+    a4 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 5) mentions4
+    a5 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 5) mentions5
+  mapM_ print (filter WEL.hasResolvedUID a3)
+  mapM_ print (filter WEL.hasResolvedUID a4)
+  mapM_ print (filter WEL.hasResolvedUID a5)
 
 
 

@@ -59,12 +59,12 @@ fromNEClass N.Loc    = locationClass
 fromNEClass _        = otherClass
 
 mayCite :: NEClass -> ItemClass -> Bool 
-mayCite N.Org    orgClass      = True
-mayCite N.Person personClass   = True
-mayCite N.Loc    locationClass = True
-mayCite N.Date   humanRuleClass= True
-mayCite N.Time   humanRuleClass= True
-mayCite N.Money  humanRuleClass= True
+mayCite N.Org    c | c==orgClass      = True
+mayCite N.Person c | c==personClass   = True
+mayCite N.Loc    c | c==locationClass = True
+mayCite N.Date   c | c==humanRuleClass= True
+mayCite N.Time   c | c==humanRuleClass= True
+mayCite N.Money  c | c==humanRuleClass= True
 mayCite N.Other  _             = True
 mayCite N.Misc   _             = True
 mayCite _        _             = False

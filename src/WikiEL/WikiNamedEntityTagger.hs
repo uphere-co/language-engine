@@ -86,6 +86,7 @@ resolveNEClass ts stag xs = g matchedUIDs
                 | otherwise             = accum
     matchedUIDs = foldl' f [] xs
     g [uid] = Resolved     (uid, u uid)
+    g []    = UnresolvedUID stag
     g uids  = AmbiguousUID (uids, stag)
 
 resolveNEsImpl :: WEC.WikiuidNETag -> [(IRange,PreNE)] -> [(IRange, NEClass)] -> [(IRange, Vector ItemID)] -> [(IRange,PreNE)]

@@ -10,6 +10,7 @@ module WikiEL
   , EL.hasResolvedUID
   , EL.EntityMention
   , EMP.filterEMbyPOS
+  , WEC.loadFiles
   , ItemID
   ) where
 
@@ -21,11 +22,12 @@ import           NLP.Type.NamedEntity                         (NamedEntityClass,
 
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,namedEntityAnnotator)
 import           WikiEL.WikiEntityTagger                      (NameUIDTable,loadWETagger)
-import           WikiEL.WikiEntityClass                       (WikiuidNETag,ItemClass,loadFiles,fromNEClass)
+import           WikiEL.WikiEntityClass                       (WikiuidNETag,ItemClass)
 import           WikiEL.EntityLinking                         (EntityMention,entityLinkings,buildEntityMentions)
 import qualified WikiEL.EntityLinking               as EL
 import qualified WikiEL.EntityMentionPruning        as EMP
 import qualified WikiEL.ETL.Util                    as U
+import qualified WikiEL.WikiEntityClass             as WEC
 import           WikiEL.Type.FileFormat
 import           WikiEL.WordNet -- for WordNet synset lookup. 
 
@@ -60,7 +62,7 @@ extractFilteredEntityMentions wikiTable uidNEtags tokens = filtered_mentions
 loadEMtagger :: EntityReprFile -> [(ItemClass, ItemIDFile)] -> IO( [(Text, NamedEntityClass)] -> [EntityMention Text] )
 loadEMtagger wikiNameFile uidTagFiles = do
   wikiTable <- loadWETagger  wikiNameFile
-  uidNEtags <- loadFiles uidTagFiles
+  uidNEtags <- WEC.loadFiles uidTagFiles
   let
     emTagger = extractEntityMentions wikiTable uidNEtags
   return emTagger
@@ -68,7 +70,7 @@ loadEMtagger wikiNameFile uidTagFiles = do
 loadFEMtagger :: EntityReprFile -> [(ItemClass, ItemIDFile)] -> IO( [(Text, NamedEntityClass, POSTag)] -> [EntityMention Text] )
 loadFEMtagger wikiNameFile uidTagFiles = do
   wikiTable <- loadWETagger  wikiNameFile
-  uidNEtags <- loadFiles uidTagFiles
+  uidNEtags <- WEC.loadFiles uidTagFiles
   let
     femTagger = extractFilteredEntityMentions wikiTable uidNEtags
   return femTagger
@@ -92,16 +94,20 @@ updateNE :: (PreNE->PreNE) -> EntityMention a -> EntityMention a
 updateNE f (EL.Self id     info@(range,vec,ne)) = EL.Self id     (range,vec,f ne)
 updateNE f (EL.Cite id ref info@(range,vec,ne)) = EL.Cite id ref (range,vec,f ne)
 
-tryDisambiguate :: (M.Map ItemID Text, M.Map Text ItemID) -> ([Text] -> [Text] -> Maybe (a,Text,Text)) -> [EntityMention b] -> [EntityMention b]
-tryDisambiguate (i2t,t2i) fTD mentions = map (updateNE f) mentions
+tryDisambiguate :: WikiuidNETag -> (M.Map ItemID Text, M.Map Text ItemID) -> ([Text] -> [Text] -> Maybe (a,Text,Text)) -> [EntityMention b] -> [EntityMention b]
+tryDisambiguate uidNEtags (i2t,t2i) fTD mentions = map (updateNE f) mentions
   where
     refs = concatMap (toWikipages i2t) (filter EL.hasResolvedUID mentions)
     f x@(AmbiguousUID ([],_))= x
     f x@(AmbiguousUID (ids,stag)) = g (fTD refs titles)
       where
         titles = mapMaybe (`M.lookup` i2t) ids
-        g (Just (score,ref,title)) = Resolved (fromJust $ M.lookup title t2i, fromNEClass stag)
-        g Nothing                  = x
+        g (Just (score,ref,title)) | WEC.mayCite stag tag = Resolved (uid,tag)
+          where
+            uid  = fromJust $ M.lookup title t2i
+            tag = WEC.guessItemClass2 uidNEtags stag uid        
+        g _                  = x
+          
     f x                  = x
 
 
