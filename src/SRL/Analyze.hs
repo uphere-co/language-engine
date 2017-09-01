@@ -4,12 +4,14 @@
 
 module SRL.Analyze where
 
-import           Control.Lens                 ((^.),(^..),(.~),(&),(%~),at)
+import           Control.Lens                 ((^.),(^..),(.~),(&),(%~),at,to)
 import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
 import           Data.Default                 (def)
+import           Data.Either                  (lefts)
+import           Data.Foldable                (toList)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
 import           Data.Maybe
@@ -32,6 +34,7 @@ import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           Text.Format.Dot              (mkLabelText)
 import           NLP.Type.SyntaxProperty      (Voice)
 import           WikiEL                       (loadEMtagger)
+import           WikiEL.Convert               (getNEFromEntityMention,getRangeFromEntityMention)
 import           WikiEL.EntityLinking         (EntityMention(..))
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
 --
@@ -51,8 +54,12 @@ import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructu
 import           SRL.Analyze.Match             (allPAWSTriplesFromDocStructure,meaningGraph)
 import           SRL.Analyze.SentenceStructure (docStructure)
 import           SRL.Analyze.Type
+import           SRL.Analyze.Util              (TagPos(..))
 import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
                                                ,occupationItemFile,orgItemFile,personItemFile,reprFile)
+
+
+adjustWikiRange (a,b) = (a,b-1)
 
 
 -- | main query loop
@@ -83,7 +90,9 @@ queryProcess config pp apredata emTagger =
                   putStrLn "-------------"
                   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
                       mtokss = (dstr ^. ds_mtokenss)
-
+                      tagposs = toList (dstr ^. ds_mergedtags)
+                      wikiel = lefts $ map (\(TagPos (_,_,e)) -> e) tagposs
+                      twiki = map (\w -> (adjustWikiRange $ getRangeFromEntityMention w, T.append " - " (getNEFromEntityMention w))) wikiel
                   print (sstrs1 ^.. traverse . ss_ptr)
                   print (sstrs1 ^.. traverse . ss_clausetr)
                   
@@ -93,7 +102,6 @@ queryProcess config pp apredata emTagger =
                     let isEntity x = case x of
                           MGEntity {..} -> True
                           otherwise     -> False
-                    let twiki = [((0,0),"-NamedEntityA"),((1,1),"-NamedEntityB")]
                     let mg' = map (\x -> if (x ^. mv_range) `elem` (map (\(x,y) -> x) twiki) && isEntity x
                                         then (x & mv_text .~ (T.append (x ^. mv_text) (fromMaybe "" $ lookup (x ^. mv_range) twiki)))
                                         else id x) (mg'' ^. mg_vertices) -- (filter isEntity (mg ^. mg_vertices))
