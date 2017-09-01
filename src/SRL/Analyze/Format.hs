@@ -42,7 +42,7 @@ import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
-import 	       	 NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
+import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty                 (Voice)
 import qualified WikiEL                        as WEL

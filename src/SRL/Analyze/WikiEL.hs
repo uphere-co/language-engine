@@ -29,7 +29,7 @@ import qualified WikiEL.EntityMentionPruning   as EMP
 import           WikiEL.ETL.LoadData
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
-import 	       	 NLP.Type.CoreNLP
+import           NLP.Type.CoreNLP
 import qualified NLP.Type.NamedEntity          as N
 import           NLP.Type.PennTreebankII                      (PennTree)
 import qualified WikiEL.WikiEntityClass        as WC

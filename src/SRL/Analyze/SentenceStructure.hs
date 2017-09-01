@@ -32,7 +32,7 @@ import           NLP.Syntax.Clause                         (clauseStructure,cons
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (BitreeZipperICP,VerbProperty(..),Voice,vp_lemma)
 import qualified NLP.Type.NamedEntity              as N
-import 	       	 NLP.Type.CoreNLP                          (NERSentence(..),Token,Dependency,Sentence,SentenceIndex
+import           NLP.Type.CoreNLP                          (NERSentence(..),Token,Dependency,Sentence,SentenceIndex
                                                            ,sentenceNER,sentenceWord,sentenceToken,sentenceLemma)
 
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,mkPennTreeIdx)

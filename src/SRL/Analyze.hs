@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
+
 module SRL.Analyze where
 
 import           Control.Lens                 ((^.),(^..),(.~),(&),(%~),at)
@@ -88,7 +89,7 @@ queryProcess config pp apredata emTagger =
                   
                   let mgs = map meaningGraph sstrs1
                   forM_ (zip mtokss (zip [1..] mgs)) $ \(mtks,(i,mg'')) -> do
-                    title <- mkTextFromToken mtks
+                    let title = mkTextFromToken mtks
                     let isEntity x = case x of
                           MGEntity {..} -> True
                           otherwise     -> False

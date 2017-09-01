@@ -29,7 +29,7 @@ import qualified CoreNLP.Proto.HCoreNLPProto.ListTimex as T
 import qualified CoreNLP.Proto.HCoreNLPProto.TimexWithOffset as T
 import           CoreNLP.Simple.Convert                        (cutf8)
 import           Data.Range                                    (isInsideR)
-import 	       	 NLP.Type.CoreNLP
+import           NLP.Type.CoreNLP
 import           Text.Annotation.Type
 import           Text.Annotation.Util.Doc
 import           Text.Annotation.View
