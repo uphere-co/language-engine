@@ -1,18 +1,23 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RecordWildCards  #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module SRL.Analyze.WikiEL where
 
 import           Control.Lens                                 ((^.),(^..),_1)
+import           Data.Either                                  (lefts)
+import           Data.Foldable                                (toList)
 import           Data.Map                                     (Map)
 import qualified Data.Map                               as M
 import           Data.Text                                    (Text)
+import qualified Data.Text                              as T
 import qualified Data.Vector                            as V
 import           System.FilePath                              ((</>))
 --
 import           CoreNLP.Simple.Convert                       (sentToNER')
 import           NLP.Type.NamedEntity                         (NamedEntityClass)
 
+import           WikiEL.Convert                               (getNEFromEntityMention,getRangeFromEntityMention)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..))
 import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention,UIDCite(..))
 import qualified WikiEL.EntityMentionPruning   as EMP
@@ -25,6 +30,7 @@ import           WikiEL.Type.Equity
 import           WikiEL.Type.FileFormat
 import qualified WikiEL.EntityLinking          as EL
 --
+import           SRL.Analyze.Type
 import           SRL.Analyze.Util                             (TagPos(..),TokIdx(..))
 
 
@@ -132,9 +138,6 @@ linkedMentionToTagPos linked_mention =
   let IRange b e = (_info linked_mention)^._1
   in TagPos (TokIdx b, TokIdx e,linked_mention)
 
-
-  
-
 prepareNETokens :: [Sentence] -> [(Text,NamedEntityClass)]
 prepareNETokens sents =
   let mws = sents ^.. traverse . sentenceWord
@@ -153,6 +156,20 @@ getWikiResolvedMentions emTagger sents tokens =
       input_pos = V.fromList (map (^. token_pos) tokens)
       linked_mentions_all_unfiltered = (EMP.filterEMbyPOS input_pos linked_mentions_all)
   in filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all_unfiltered
+
+
+adjustWikiRange :: (Int,Int) -> (Int,Int)
+adjustWikiRange (a,b) = (a,b-1)
+
+
+
+mkWikiList :: DocStructure -> [((Int, Int), Text)]
+mkWikiList dstr =
+  let tagposs = toList (dstr ^. ds_mergedtags)
+      wikiel  = lefts $ map (\(TagPos (_,_,e)) -> e) tagposs
+      wikilst = map (\w -> (adjustWikiRange $ getRangeFromEntityMention w, T.append " - " (getNEFromEntityMention w))) wikiel
+  in wikilst
+      
 
 
 {-

@@ -10,8 +10,6 @@ import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
 import           Data.Default                 (def)
-import           Data.Either                  (lefts)
-import           Data.Foldable                (toList)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
 import           Data.Maybe
@@ -34,7 +32,6 @@ import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           Text.Format.Dot              (mkLabelText)
 import           NLP.Type.SyntaxProperty      (Voice)
 import           WikiEL                       (loadEMtagger)
-import           WikiEL.Convert               (getNEFromEntityMention,getRangeFromEntityMention)
 import           WikiEL.EntityLinking         (EntityMention(..))
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
 --
@@ -57,10 +54,7 @@ import           SRL.Analyze.Type
 import           SRL.Analyze.Util              (TagPos(..))
 import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
                                                ,occupationItemFile,orgItemFile,personItemFile,reprFile)
-
-
-adjustWikiRange (a,b) = (a,b-1)
-
+import           SRL.Analyze.WikiEL            (mkWikiList)
 
 -- | main query loop
 --
@@ -90,9 +84,7 @@ queryProcess config pp apredata emTagger =
                   putStrLn "-------------"
                   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
                       mtokss = (dstr ^. ds_mtokenss)
-                      tagposs = toList (dstr ^. ds_mergedtags)
-                      wikiel = lefts $ map (\(TagPos (_,_,e)) -> e) tagposs
-                      twiki = map (\w -> (adjustWikiRange $ getRangeFromEntityMention w, T.append " - " (getNEFromEntityMention w))) wikiel
+                      wikilst = mkWikiList dstr
                   print (sstrs1 ^.. traverse . ss_ptr)
                   print (sstrs1 ^.. traverse . ss_clausetr)
                   
@@ -102,8 +94,8 @@ queryProcess config pp apredata emTagger =
                     let isEntity x = case x of
                           MGEntity {..} -> True
                           otherwise     -> False
-                    let mg' = map (\x -> if (x ^. mv_range) `elem` (map (\(x,y) -> x) twiki) && isEntity x
-                                        then (x & mv_text .~ (T.append (x ^. mv_text) (fromMaybe "" $ lookup (x ^. mv_range) twiki)))
+                    let mg' = map (\x -> if (x ^. mv_range) `elem` (map (\(x,y) -> x) wikilst) && isEntity x
+                                        then (x & mv_text .~ (T.append (x ^. mv_text) (fromMaybe "" $ lookup (x ^. mv_range) wikilst)))
                                         else id x) (mg'' ^. mg_vertices) -- (filter isEntity (mg ^. mg_vertices))
                         mg = MeaningGraph mg' (mg'' ^. mg_edges)
                     mapM_ print (mg^.mg_vertices)
