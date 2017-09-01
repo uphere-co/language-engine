@@ -25,11 +25,12 @@ import           WikiEL.ETL.Parser
 
 type NEClass = NamedEntityClass
 
-newtype ItemClass = ItemClass { _itemID :: ItemID }
+data ItemClass = ItemClass { _itemID  :: ItemID
+                           , _strName :: Text }
                   deriving (Eq,Ord,Generic)
 
 instance Show ItemClass where
-  show (ItemClass id) = "Class:" ++ show id
+  show id = "Class:" ++ show (_strName id)
                   
 instance ToJSON ItemClass where
   toJSON = genericToJSON defaultOptions
@@ -37,25 +38,19 @@ instance ToJSON ItemClass where
 instance FromJSON ItemClass where
   parseJSON = genericParseJSON defaultOptions
 
-buildItemClass :: Text -> ItemClass
-buildItemClass x = ItemClass (itemID x)
+buildItemClass :: Text -> Text -> ItemClass
+buildItemClass x name = ItemClass (itemID x) name
 
-otherClass  = buildItemClass "Q35120" -- maps to entity (Q35120), which means "anything"
-orgClass    = buildItemClass "Q43229"
-personClass = buildItemClass "Q215627"
-locationClass   = buildItemClass "Q1496967" -- territorial entity (Q1496967), instead of location (Q17334923)
-brandClass      = buildItemClass "Q431289"
-occupationClass = buildItemClass "Q12737077"
-humanRuleClass  = buildItemClass "Q1151067"
-buildingClass   = buildItemClass "Q41176"
+otherClass  = buildItemClass "Q35120"  "Other"-- maps to entity (Q35120), which means "anything"
+orgClass    = buildItemClass "Q43229"  "Organization"
+personClass = buildItemClass "Q215627" "Person"
+locationClass   = buildItemClass "Q1496967"  "Location"-- territorial entity (Q1496967), instead of location (Q17334923)
+brandClass      = buildItemClass "Q431289"   "Brand"
+occupationClass = buildItemClass "Q12737077" "Occupation"
+humanRuleClass  = buildItemClass "Q1151067"  "HumanRule"
+buildingClass   = buildItemClass "Q41176"    "Building"
 extednedClasses = [brandClass,occupationClass,humanRuleClass,buildingClass]
 allClasses      = [otherClass, orgClass, personClass, locationClass] ++ extednedClasses
-
-toNEClass :: ItemClass -> NEClass
-toNEClass c | c==orgClass      = N.Org
-toNEClass c | c==personClass   = N.Person
-toNEClass c | c==locationClass = N.Loc
-toNEClass _ = N.Other
 
 fromNEClass :: NEClass -> ItemClass
 fromNEClass N.Org    = orgClass
@@ -63,6 +58,16 @@ fromNEClass N.Person = personClass
 fromNEClass N.Loc    = locationClass
 fromNEClass _        = otherClass
 
+mayCite :: NEClass -> ItemClass -> Bool 
+mayCite N.Org    orgClass      = True
+mayCite N.Person personClass   = True
+mayCite N.Loc    locationClass = True
+mayCite N.Date   humanRuleClass= True
+mayCite N.Time   humanRuleClass= True
+mayCite N.Money  humanRuleClass= True
+mayCite N.Other  _             = True
+mayCite N.Misc   _             = True
+mayCite _        _             = False
 
 loadTypedUIDs :: (ItemClass , ItemIDFile) -> IO [(ItemID, ItemClass)]
 loadTypedUIDs (tag, fileName) = do
@@ -86,11 +91,16 @@ hasNETag :: WikiuidNETag -> (ItemID, NEClass) -> Bool
 hasNETag (WikiuidNETag tags) (id,stag) | stag /= N.Other = S.member (id,fromNEClass stag) tags
 hasNETag (WikiuidNETag tags) (id,stag) = any (\x -> S.member (id,x) tags) extednedClasses
 
-guessNETag :: WikiuidNETag -> ItemID -> ItemClass
-guessNETag (WikiuidNETag tags) id = fromMaybe otherClass x
+guessItemClass :: WikiuidNETag -> ItemID -> ItemClass
+guessItemClass (WikiuidNETag tags) id = fromMaybe otherClass x
   where
     x = L.find (\x -> S.member (id,x) tags) allClasses
 
+guessItemClass2 :: WikiuidNETag -> NEClass -> ItemID -> ItemClass
+guessItemClass2 tags ne id | hasNETag tags (id,ne) = fromNEClass ne
+guessItemClass2 tags ne id = guessItemClass tags id
+  
+    
 newtype SubclassUID   = SubclassUID { _sub :: ItemID}
                       deriving (Show, Ord, Eq)
 newtype SuperclassUID   = SuperclassUID { _super :: ItemID}

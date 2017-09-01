@@ -21,7 +21,7 @@ import           NLP.Type.NamedEntity                         (NamedEntityClass,
 
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,namedEntityAnnotator)
 import           WikiEL.WikiEntityTagger                      (NameUIDTable,loadWETagger)
-import           WikiEL.WikiEntityClass                       (WikiuidNETag,ItemClass,loadFiles)
+import           WikiEL.WikiEntityClass                       (WikiuidNETag,ItemClass,loadFiles,fromNEClass)
 import           WikiEL.EntityLinking                         (EntityMention,entityLinkings,buildEntityMentions)
 import qualified WikiEL.EntityLinking               as EL
 import qualified WikiEL.EntityMentionPruning        as EMP
@@ -85,8 +85,8 @@ toWikipages :: M.Map ItemID Text -> EntityMention a -> [Text]
 toWikipages titles mention = toTitle titles (EL.entityPreNE mention)
   where
     toTitle titles (AmbiguousUID (ids,_)) = mapMaybe (`M.lookup` titles) ids
-    toTitle titles (Resolved (id,_))  = mapMaybe (`M.lookup` titles) [id]
-    toTitle titles _                  = []
+    toTitle titles (Resolved (id,_))      = mapMaybe (`M.lookup` titles) [id]
+    toTitle titles _                      = []
 
 updateNE :: (PreNE->PreNE) -> EntityMention a -> EntityMention a
 updateNE f (EL.Self id     info@(range,vec,ne)) = EL.Self id     (range,vec,f ne)
@@ -100,7 +100,7 @@ tryDisambiguate (i2t,t2i) fTD mentions = map (updateNE f) mentions
     f x@(AmbiguousUID (ids,stag)) = g (fTD refs titles)
       where
         titles = mapMaybe (`M.lookup` i2t) ids
-        g (Just (score,ref,title)) = Resolved (fromJust $ M.lookup title t2i, stag)
+        g (Just (score,ref,title)) = Resolved (fromJust $ M.lookup title t2i, fromNEClass stag)
         g Nothing                  = x
     f x                  = x
 

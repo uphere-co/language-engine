@@ -4,7 +4,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
-module WikiEL.WikiNamedEntityTagger where
+module WikiEL.WikiNamedEntityTagger 
+( module WikiEL.WikiNamedEntityTagger 
+, WEC.mayCite
+) where
 
 import           Data.Aeson
 import           Data.Text                             (Text)
@@ -21,6 +24,7 @@ import           WikiEL.WikiEntityTagger               (NameUIDTable,buildEntity
 import qualified WikiEL.NamedEntity            as N
 import qualified WikiEL.CoreNLP                as C
 import qualified WikiEL.WikiEntityClass        as WEC
+import qualified NLP.Type.NamedEntity          as NE
 
 
 type NEClass = NamedEntityClass
@@ -54,7 +58,7 @@ getStanfordNEs = dropNonNE . partitonFrags
 
 data PreNE = UnresolvedUID NEClass
            | AmbiguousUID ([ItemID],NEClass)
-           | Resolved (ItemID, NEClass)
+           | Resolved (ItemID, WEC.ItemClass)
            | UnresolvedClass [ItemID]
            deriving(Show, Eq, Generic)
 
@@ -77,10 +81,11 @@ resolvedUID (UnresolvedClass _) = Left "Unresolved named entity class"
 resolveNEClass :: WEC.WikiuidNETag -> NEClass -> Vector ItemID -> PreNE
 resolveNEClass ts stag xs = g matchedUIDs
   where
-    f accum uid | WEC.hasNETag ts (uid, stag)  = uid:accum
-                | otherwise                    = accum
+    u = WEC.guessItemClass2 ts stag
+    f accum uid | WEC.mayCite stag (u uid)  = uid:accum
+                | otherwise             = accum
     matchedUIDs = foldl' f [] xs
-    g [uid] = Resolved (uid, stag)
+    g [uid] = Resolved     (uid, u uid)
     g uids  = AmbiguousUID (uids, stag)
 
 resolveNEsImpl :: WEC.WikiuidNETag -> [(IRange,PreNE)] -> [(IRange, NEClass)] -> [(IRange, Vector ItemID)] -> [(IRange,PreNE)]
@@ -111,8 +116,7 @@ resolveNEs :: WEC.WikiuidNETag -> [(IRange, NEClass)] -> [(IRange, Vector ItemID
 resolveNEs ts lhss rhss = map (second assumeCorrectAnnotation) xs
   where
     xs = reverse (resolveNEsImpl ts [] lhss rhss)
-    --TODO: correct otherClass
-    assumeCorrectAnnotation (UnresolvedClass [itemID]) = Resolved (itemID, WEC.toNEClass WEC.otherClass)
+    assumeCorrectAnnotation (UnresolvedClass [itemID]) = Resolved (itemID, WEC.guessItemClass ts itemID)
     assumeCorrectAnnotation x = x
 
     

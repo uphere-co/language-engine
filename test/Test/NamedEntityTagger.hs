@@ -105,7 +105,7 @@ testNEResolution = testCaseSteps "Resolving Wiki UID with Stanford NE tag" $ \st
     uidTags = WC.fromList [org "Q1", org "Q2", person "Q3"]
   
   eassertEqual (resolveNEClass uidTags N.Org ambiguousUID) (AmbiguousUID ([uid "Q2", uid "Q1"], N.Org))
-  eassertEqual (resolveNEClass uidTags N.Person ambiguousUID) (Resolved (uid "Q3", N.Person))
+  eassertEqual (resolveNEClass uidTags N.Person ambiguousUID) (Resolved (uid "Q3", WC.personClass))
 
   step "Single entity cases"
   eassertEqual (resolveNEs uidTags [(IRange 1 4, N.Person)] entities) [(IRange 1 4, resolveNEClass uidTags N.Person ambiguousUID)]
@@ -125,17 +125,17 @@ testNEResolution = testCaseSteps "Resolving Wiki UID with Stanford NE tag" $ \st
     entities1 = [(IRange 0 2, ambiguousUID1),(IRange 5 8, ambiguousUID2)]
     
     r1 = resolveNEs uidTags stanford_nes entities1
-    expected_r1 = [(IRange 0 2, Resolved (uid "Q13", N.Person)),
+    expected_r1 = [(IRange 0 2, Resolved (uid "Q13", WC.personClass)),
                    (IRange 5 8, AmbiguousUID ([uid "Q22", uid "Q21"],N.Org))]
 
     entities2 = [(IRange 0 2, ambiguousUID1),(IRange 5 7, ambiguousUID2)]
     r2 = resolveNEs uidTags stanford_nes entities2
-    expected_r2 = [(IRange 0 2, Resolved (uid "Q13", N.Person)),
+    expected_r2 = [(IRange 0 2, Resolved (uid "Q13", WC.personClass)),
                    (IRange 5 8, UnresolvedUID N.Org)]
 
     entities3 = [(IRange 0 2, ambiguousUID1),(IRange 4 6, ambiguousUID2)]
     r3 = resolveNEs uidTags stanford_nes entities3
-    expected_r3 = [(IRange 0 2, Resolved (uid "Q13", N.Person)),
+    expected_r3 = [(IRange 0 2, Resolved (uid "Q13", WC.personClass)),
                    (IRange 4 6, UnresolvedClass (toList ambiguousUID2))]
 
     entities4 = [(IRange 0 2, ambiguousUID1),(IRange 7 9, ambiguousUID2)]
@@ -161,7 +161,7 @@ testEntityMentionProperties = testCaseSteps "Test helper functions for accessing
     united_airlines = fromList ["United","Airlines"]
     emuid = EL.EntityMentionUID
     -- t1 :: EMInfo Text
-    t1 = (IRange 0 2,   united_airlines, Resolved (uid "Q174769", N.Org)) 
+    t1 = (IRange 0 2,   united_airlines, Resolved (uid "Q174769", WC.orgClass)) 
     -- em :: EntityMention Text
     em = EL.Self (emuid 0) t1
   eassertEqual (WEL.mentionedEntityName em) "United Airlines"
@@ -188,10 +188,10 @@ testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \ste
     flag2 = WC.hasNETag uidTag (uid "Q3503829", N.Person) -- Sundar Pichai
     united_airlines = fromList ["United","Airlines"]
     oscar_munoz     = fromList ["Oscar","Munoz"]
-    t1  = (IRange 0 2,   united_airlines, Resolved (uid "Q174769", N.Org))
-    t1' = (IRange 90 92, united_airlines, Resolved (uid "Q174769", N.Org))
-    t2  = (IRange 5 7,   oscar_munoz, Resolved (uid "Q21066734", N.Person))
-    t2' = (IRange 95 97, oscar_munoz, Resolved (uid "Q21066734", N.Person))
+    t1  = (IRange 0 2,   united_airlines, Resolved (uid "Q174769", WC.orgClass))
+    t1' = (IRange 90 92, united_airlines, Resolved (uid "Q174769", WC.orgClass))
+    t2  = (IRange 5 7,   oscar_munoz, Resolved (uid "Q21066734", WC.personClass))
+    t2' = (IRange 95 97, oscar_munoz, Resolved (uid "Q21066734", WC.personClass))
     t3  = (IRange 10 11, fromList ["Munoz"], UnresolvedUID N.Person)
     t4  = (IRange 13 14, fromList ["United"], UnresolvedUID N.Org)
 
@@ -296,8 +296,8 @@ allTest =
 
 
 getOrgs :: EntityMention a -> Maybe (EntityMentionUID, ItemID)
-getOrgs (EL.Self muid (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
-getOrgs (EL.Cite muid _ (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
+getOrgs (EL.Self muid   (_,_, Resolved (wuid, tag))) | tag == WC.orgClass = Just (muid, wuid)
+getOrgs (EL.Cite muid _ (_,_, Resolved (wuid, tag))) | tag == WC.orgClass = Just (muid, wuid)
 getOrgs _ = Nothing
 
 getCompanySymbol :: Map ItemID Symbol -> (EntityMentionUID, ItemID) -> Maybe (EntityMentionUID , ItemID, Symbol)
