@@ -84,6 +84,15 @@ queryProcess config pp apredata emTagger =
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
+isEntity x = case x of
+  MGEntity {..} -> True
+  otherwise     -> False
+
+tagMG mg wikilst =
+  let mg' = map (\x -> if (x ^. mv_range) `elemReverseContained` (map (\(x,y) -> x) wikilst) && isEntity x
+                       then x & mv_text .~ (T.intercalate "" $ [(x ^. mv_text)," | ",(T.intercalate " | " $ map (^. _2) $ filter (\w -> (w ^. _1) `contained` (x ^. mv_range)) wikilst)] )
+                       else id x) (mg ^. mg_vertices)
+  in MeaningGraph mg' (mg ^. mg_edges)
 
 
 printMeaningGraph dstr = do
@@ -97,15 +106,9 @@ printMeaningGraph dstr = do
   print (sstrs1 ^.. traverse . ss_clausetr)
   
   let mgs = map meaningGraph sstrs1
-  forM_ (zip mtokss (zip [1..] mgs)) $ \(mtks,(i,mg'')) -> do
+  forM_ (zip mtokss (zip [1..] mgs)) $ \(mtks,(i,mg')) -> do
     let title = mkTextFromToken mtks
-    let isEntity x = case x of
-          MGEntity {..} -> True
-          otherwise     -> False
-    let mg' = map (\x -> if (x ^. mv_range) `elemReverseContained` (map (\(x,y) -> x) wikilst) && isEntity x
-                        then x & mv_text .~ (T.intercalate "" $ [(x ^. mv_text)," | ",(T.intercalate " | " $ map (^. _2) $ filter (\w -> (w ^. _1) `contained` (x ^. mv_range)) wikilst)] )
-                        else id x) (mg'' ^. mg_vertices) -- (filter isEntity (mg ^. mg_vertices))
-        mg = MeaningGraph mg' (mg'' ^. mg_edges)
+        mg = tagMG mg' wikilst
     mapM_ print (mg^.mg_vertices)
     mapM_ print (mg^.mg_edges)
     putStrLn "-----------------"
