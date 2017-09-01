@@ -262,6 +262,9 @@ main3init = do
   store3 <- newStore mentions3
   store4 <- newStore mentions4
   store5 <- newStore mentions5
+
+  titles <- WEL.loadWikipageMapping wikiTitleMappingFile
+  store6 <- newStore titles
     
   
   print store
@@ -270,6 +273,7 @@ main3init = do
   print store3
   print store4
   print store5
+  print store6
   --print $ M.size tns
   --print $ UV.length (snd sortedTEs)
   --print $ wn  
@@ -280,64 +284,63 @@ main3init = do
   --print store4
   --print store5
 
-type Node = H.WordHash
-type NodesSim = Node -> Node -> Int
 
--- n : Node, s : Score type
-mostSimilar :: (Num s, Ord s, Ord n) => (n->n->s) -> n -> [n] -> Maybe (s,n,n)
-mostSimilar f ref ns = fCutoff maxsim
-  where
-    maxsim = maximum $ map (\n -> (f ref n, ref, n)) ns
-    fCutoff sim@(score,_,_) | score>5 = Just sim
-    fCutoff _ = Nothing
+main3reload = do
+  -- content to be copy&paste to REPL(`cabal new-repl test`)
+  {- Note that one need to copy&paste these import statements, too.
+  import           Main
+  import           Data.Maybe                            (mapMaybe,catMaybes)
+  import qualified Data.Text                     as T
+  import qualified Data.Map                      as M
+  import qualified Data.Vector.Unboxed           as UV
+  import           Foreign.Store
 
-matchToSimilar :: (Num s, Ord s, Ord n) => (n->n->s) -> [n] -> [n] -> Maybe (s,n,n)
-matchToSimilar f refs ns = mayMax ss
-  where
-    ss = mapMaybe (\ref -> mostSimilar f ref ns) refs
-    mayMax [] = Nothing
-    mayMax vs = Just (maximum vs)
+  import qualified Graph.ETL                     as G.E
+  import qualified Graph.Internal.Hash           as H  
+  import qualified WikiEL.Graph                  as G
+  import qualified WikiEL.EntityLinking          as EL
+  import qualified WikiEL                        as WEL
+  import           Test.Data.Filename
+  -}
+  let
+    hash word = H.wordHash (T.pack word)
+    hashT = H.wordHash
+    showPath invs path = catMaybes (UV.foldl' f [] path) where f accum hash = M.lookup hash invs : accum
+    showPathPairs names = mapM_  (print . (\(x,y)-> reverse (showPath names y) ++ tail (showPath names x)))    
+    idx =0
+    idx1=1
+    idx2=2
+  Just store    <- lookupStore idx :: IO (Maybe (Store G.E.Graph))
+  Just store1   <- lookupStore idx1 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
+  cc@(G.E.Graph edges names) <- readStore store
+  sorted@(d,es) <- readStore store1  
+  --Just store2   <- lookupStore idx2 :: IO (Maybe (Store ([(T.Text, N.NamedEntityClass, POS.POSTag)]-> [EL.EntityMention T.Text])))
+  --tagger        <- readStore store2
+  
+  Just s3 <- lookupStore 3 :: IO (Maybe (Store [WEL.EntityMention T.Text]))
+  Just s4 <- lookupStore 4 :: IO (Maybe (Store [WEL.EntityMention T.Text]))
+  Just s5 <- lookupStore 5 :: IO (Maybe (Store [WEL.EntityMention T.Text]))
+  mentions3 <- readStore s3
+  mentions4 <- readStore s4
+  mentions5 <- readStore s5
+  
+  Just store6 <- lookupStore 6 :: IO (Maybe (Store (M.Map WEL.ItemID T.Text, M.Map T.Text WEL.ItemID)))
+  titles@(i2t,t2i) <- readStore store6
+  
+  let
+    --refs = concatMap (WEL.toWikipages titles) (filter WEL.hasResolvedUID mentions5)  
+    pathsT len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hashT wp1) (hashT wp2)
+    f x y = length (pathsT 1 x y)    
+    a = WEL.tryDisambiguate titles (WEL.matchToSimilar f) mentions3
+  mapM_ print a
+
+
+
 
 {-
 -- Script for testing in REPL
-import           Main
-import           Data.Maybe                            (mapMaybe,catMaybes)
-import qualified Data.Text                     as T
-import qualified Data.Map                      as M
-import qualified Data.Vector.Unboxed           as UV
-import           Foreign.Store
-import qualified Graph.ETL                     as G.E
-import qualified WikiEL.Graph                  as G
-import qualified Graph.Internal.Hash           as H
+matchToSimilar f refs (WEL.toWikipages titles (mentions5!!0))
 
-import qualified WikiEL                        as WEL
-import           Test.Data.Filename
-
-hash word = H.wordHash (T.pack word)
-showPath invs path = catMaybes (UV.foldl' f [] path) where f accum hash = M.lookup hash invs : accum
-showPathPairs names = mapM_  (print . (\(x,y)-> reverse (showPath names y) ++ tail (showPath names x)))
-
-idx =0
-idx1=1
-idx2=2
-Just store <- lookupStore idx :: IO (Maybe (Store G.E.Graph))
-Just store1 <- lookupStore idx1 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
-cc@(G.E.Graph edges names) <- readStore store
-sorted@(d,es) <- readStore store1
-
-Just store2 <- lookupStore idx2 :: IO (Maybe (Store ([(T.Text, N.NamedEntityClass, POS.POSTag)]-> [EL.EntityMention T.Text])))
-tagger <- readStore store2
-
-Just s3 <- lookupStore 3 :: IO (Maybe (Store ([EL.EntityMention T.Text])))
-Just s4 <- lookupStore 4 :: IO (Maybe (Store ([EL.EntityMention T.Text])))
-Just s5 <- lookupStore 5 :: IO (Maybe (Store ([EL.EntityMention T.Text])))
-mentions3 <- readStore s3
-mentions4 <- readStore s4
-mentions5 <- readStore s5
-
-mapM_ print mentions3
-mapM_ print mentions4
-mapM_ print mentions5
 
 paths len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hash wp1) (hash wp2)
 f x y = length (paths 1 x y)
