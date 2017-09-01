@@ -39,12 +39,15 @@ import qualified Data.Map.Strict               as M
 import qualified Data.Vector                   as V
 import qualified Data.Vector.Unboxed           as UV
 import qualified Data.Vector.Fusion.Bundle     as B
-import qualified WikiEL.Util.Hash              as H
+--import qualified WikiEL.Util.Hash              as H
+import qualified Graph.Internal.Hash           as H
 import qualified WikiEL.Graph                  as G
 import qualified WikiEL.ETL.RDF.Binary         as BR
 import qualified Data.ByteString.Lazy.Char8    as BL
 
 import qualified Graph.ETL                     as G.E
+import qualified WikiEL                        as WEL
+import           Test.Data.Filename
 
 type LText = T.L.Text
 
@@ -242,9 +245,31 @@ main3init = do
   print $ M.size names
   print $ UV.length (snd sorted)
   store <- newStore cc
-  store2 <- newStore sorted
+  store1 <- newStore sorted
+  
+  tagger <- WEL.loadFEMtagger reprFile classFiles  
+  a3 <- loadNEROutfile nerNewsFile3 posNewsFile3
+  a4 <- loadNEROutfile nerNewsFile4 posNewsFile4
+  a5 <- loadNEROutfile nerNewsFile5 posNewsFile5  
+  let
+    mentions3 = tagger a3
+    mentions4 = tagger a4
+    mentions5 = tagger a5
+  print $ length mentions3
+  print $ length mentions4
+  print $ length mentions5
+  store2 <- newStore tagger
+  store3 <- newStore mentions3
+  store4 <- newStore mentions4
+  store5 <- newStore mentions5
+    
+  
   print store
+  print store1
   print store2
+  print store3
+  print store4
+  print store5
   --print $ M.size tns
   --print $ UV.length (snd sortedTEs)
   --print $ wn  
@@ -255,15 +280,90 @@ main3init = do
   --print store4
   --print store5
 
+type Node = H.WordHash
+type NodesSim = Node -> Node -> Int
+
+-- n : Node, s : Score type
+mostSimilar :: (Num s, Ord s, Ord n) => (n->n->s) -> n -> [n] -> Maybe (s,n,n)
+mostSimilar f ref ns = fCutoff maxsim
+  where
+    maxsim = maximum $ map (\n -> (f ref n, ref, n)) ns
+    fCutoff sim@(score,_,_) | score>5 = Just sim
+    fCutoff _ = Nothing
+
+matchToSimilar :: (Num s, Ord s, Ord n) => (n->n->s) -> [n] -> [n] -> Maybe (s,n,n)
+matchToSimilar f refs ns = mayMax ss
+  where
+    ss = mapMaybe (\ref -> mostSimilar f ref ns) refs
+    mayMax [] = Nothing
+    mayMax vs = Just (maximum vs)
+
 {-
 -- Script for testing in REPL
+import           Main
+import           Data.Maybe                            (mapMaybe,catMaybes)
+import qualified Data.Text                     as T
+import qualified Data.Map                      as M
+import qualified Data.Vector.Unboxed           as UV
+import           Foreign.Store
+import qualified Graph.ETL                     as G.E
+import qualified WikiEL.Graph                  as G
+import qualified Graph.Internal.Hash           as H
 
-idx=2
-idx2=1
-Just store <- lookupStore idx :: IO (Maybe (Store Foo))
-Just store2 <- lookupStore idx2 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
-cc@(Foo edges names) <- readStore store
-sorted@(d,es) <- readStore store2
+import qualified WikiEL                        as WEL
+import           Test.Data.Filename
+
+hash word = H.wordHash (T.pack word)
+showPath invs path = catMaybes (UV.foldl' f [] path) where f accum hash = M.lookup hash invs : accum
+showPathPairs names = mapM_  (print . (\(x,y)-> reverse (showPath names y) ++ tail (showPath names x)))
+
+idx =0
+idx1=1
+idx2=2
+Just store <- lookupStore idx :: IO (Maybe (Store G.E.Graph))
+Just store1 <- lookupStore idx1 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
+cc@(G.E.Graph edges names) <- readStore store
+sorted@(d,es) <- readStore store1
+
+Just store2 <- lookupStore idx2 :: IO (Maybe (Store ([(T.Text, N.NamedEntityClass, POS.POSTag)]-> [EL.EntityMention T.Text])))
+tagger <- readStore store2
+
+Just s3 <- lookupStore 3 :: IO (Maybe (Store ([EL.EntityMention T.Text])))
+Just s4 <- lookupStore 4 :: IO (Maybe (Store ([EL.EntityMention T.Text])))
+Just s5 <- lookupStore 5 :: IO (Maybe (Store ([EL.EntityMention T.Text])))
+mentions3 <- readStore s3
+mentions4 <- readStore s4
+mentions5 <- readStore s5
+
+mapM_ print mentions3
+mapM_ print mentions4
+mapM_ print mentions5
+
+paths len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hash wp1) (hash wp2)
+f x y = length (paths 1 x y)
+
+mostSimilar f "Nike,_Inc." ["Michael_Jordan", "Michael_Jordan_(mycologist)", "Michael_Jordan_(Irish_politician)"]
+matchToSimilar f ["Nike,_Inc.","United_States"] ["Michael_Jordan", "Michael_Jordan_(mycologist)", "Michael_Jordan_(Irish_politician)"]
+
+showPathPairs names $ paths 1 "Michael_Jordan" "United_States"
+showPathPairs names $ paths 1 "Michael_Jordan_(mycologist)" "United_States"
+showPathPairs names $ paths 1 "Michael_Jordan_(Irish_politician)" "United_States"
+
+showPathPairs names $ paths 2 "Michael_Jordan" "Nike,_Inc."
+showPathPairs names $ paths 2 "Michael_Jordan_(mycologist)" "Nike,_Inc."
+showPathPairs names $ paths 2 "Michael_Jordan_(Irish_politician)" "Nike,_Inc."
+
+length $ paths 1 "Michael_Jordan" "Nike,_Inc."
+length $ paths 1 "Michael_Jordan_(mycologist)" "Nike,_Inc."
+length $ paths 1 "Michael_Jordan_(Irish_politician)" "Nike,_Inc."
+
+length $ paths 2 "Michael_Jordan" "Nike,_Inc."
+length $ paths 2 "Michael_Jordan_(mycologist)" "Nike,_Inc."
+length $ paths 2 "Michael_Jordan_(Irish_politician)" "Nike,_Inc."
+
+
+
+
 
 idx3=3
 Just store3 <- lookupStore idx :: IO (Maybe (Store WNTypes))
@@ -277,12 +377,8 @@ taxons@(Foo tes tns) <- readStore store4
 sortedTEs <- readStore store5
 
 
-hash word = H.wordHash (T.pack word)
-
 -- store1~3 takes about 26.5% of memory ~ 34 GB.
-
-
-showPathPairs  names $ G.destOverlapUpto dfe 2 (hash "Larry_Page") (hash "Steve_Jobs")
+showPathPairs names $ G.destOverlapUpto dfe 2 (hash "Larry_Page") (hash "Steve_Jobs")
 
 
 
@@ -299,14 +395,7 @@ aa = map (\((lh,ld),(rh,rd)) -> (M.lookup lh names, ld, rd)) a
 mapM_ print (filter (\(_,ld,rd) -> ld<3 && rd<2) aa)
 
 pNode node cutoff = G.allPathsUpto (G.neighbor sorted) (hash node) cutoff
-
 --paths = G.destOverlap (pNode "Larry_Page" 2) (pNode "Steve_Jobs" 2)
-dfe = G.neighbor sorted
-paths = G.destOverlapUpto dfe 2 (hash "Larry_Page") (hash "Steve_Jobs")
-
-showPaths names paths = mapM_ print (map (showPaths names) paths)
-
-
 
 -- With
 -- hash word = H.wordHash (T.pack word)
@@ -321,6 +410,7 @@ showPaths wns $ synset "football_103378765" 2
 showPathPairs wns $synsetPath "baseball_100471613" "abstraction_100002137" 15
 showPathPairs wns $synsetPath2 "contact_sport_100433458" "field_game_100467719" 10
 -}
+
 
 main3 :: Word32 -> Word32 -> IO ()
 main3 idx idx2 = do
