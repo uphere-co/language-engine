@@ -178,7 +178,7 @@ matchFrame (mcpstr,vstr,paws) = do
                      in if null dps
                         then Nothing
                         else case last dps of
-                               Left SilentPRO -> Nothing
+                               Left _ -> Nothing
                                Right z -> Just z
         -- Just (last dps) --  of  -- resolveDP mcpstr cp
       verb = vstr^.vs_lma
