@@ -23,6 +23,4 @@ siblingsBy dir p = filter (p.current) . unfoldr (\z -> dir z >>= \z' -> return (
 
 
 
-root :: BitreeZipper c t -> BitreeZipper c t
-root z = last (z : unfoldr (\x -> parent x >>= \y -> Just (y,y)) z)
 

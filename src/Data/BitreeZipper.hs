@@ -10,7 +10,7 @@ import           Data.List               (find,unfoldr)
 import           Data.Bitree
 --
 
--- | Surrounding context of the focused item at current level 
+-- | Surrounding context of the focused item at current level
 data BitreeContext c t = TC { _tc_node_content :: c
                           , _tc_prevs :: [Bitree c t]
                           , _tc_nexts :: [Bitree c t]
@@ -20,7 +20,7 @@ data BitreeContext c t = TC { _tc_node_content :: c
 makeLenses ''BitreeContext
 
 
--- | Zipper for tree                 
+-- | Zipper for tree
 data BitreeZipper c t = TZ { _tz_current  :: Bitree c t          -- ^ current item
                          , _tz_contexts :: [BitreeContext c t] -- ^ recusively defined
                                                              --   contexts of current item
@@ -38,11 +38,11 @@ data ListZipper a = LZ { _lz_prevs :: [a]
 
 makeLenses ''ListZipper
 
-                           
+
 genListZippers :: [a] -> [ListZipper a]
 genListZippers [] = error "cannot make a zipper for empty list"
 genListZippers (k:ks) = l1 : unfoldr succ l1
-  where l1 = LZ [] k ks 
+  where l1 = LZ [] k ks
         succ (LZ xs y [])     = Nothing
         succ (LZ xs y (z:zs)) = let w = LZ (y:xs) z zs in Just (w,w)
 
@@ -65,22 +65,30 @@ prev (TZ x (y:ys)) = case y of
                        TC c (z:zs) ws -> Just (TZ z ((TC c zs (x:ws)):ys))
                        _              -> Nothing
 prev _             = Nothing
-                              
+
 next :: BitreeZipper c t -> Maybe (BitreeZipper c t)
 next (TZ x (y:ys)) = case y of
                        TC c zs (w:ws) -> Just (TZ w ((TC c (x:zs) ws):ys))
                        _              -> Nothing
-next _             = Nothing      
+next _             = Nothing
 
 parent :: BitreeZipper c t -> Maybe (BitreeZipper c t)
 parent (TZ x (y:ys)) =
   case y of
     TC c zs ws -> Just (TZ (PN c (f (x:ws))) ys)
-      where f = foldr (\x acc -> acc . (x:)) id zs 
-parent _             = Nothing 
+      where f = foldr (\x acc -> acc . (x:)) id zs
+parent _             = Nothing
 
- 
+
 child1 :: BitreeZipper c t -> Maybe (BitreeZipper c t)
 child1 (TZ (PL _) _) = Nothing
 child1 (TZ (PN c (x:xs)) ys) = Just (TZ x ((TC c [] xs):ys))
 
+
+
+root :: BitreeZipper c t -> BitreeZipper c t
+root z = last (z : unfoldr (\x -> parent x >>= \y -> Just (y,y)) z)
+
+
+toBitree :: BitreeZipper c t -> Bitree c t
+toBitree = current . root
