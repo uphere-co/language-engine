@@ -9,7 +9,7 @@ module NLP.Syntax.Clause where
 
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
-import           Control.Monad                          ((<=<),join,void)
+import           Control.Monad                          ((<=<),guard,join,void)
 import           Control.Monad.IO.Class                 (liftIO)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
@@ -52,8 +52,19 @@ headVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
 headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 
+
+splitDP :: Zipper (Lemma ': as) -> Zipper (Lemma ': as)
+splitDP z = fromMaybe z $ do
+              guard (isChunkAs NP (current z))
+              dp <- child1 z
+              guard (isChunkAs NP (current dp))
+              sbar <- next dp
+              guard (isChunkAs SBAR (current sbar))
+              return dp
+  
+
 complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [Zipper (Lemma ': as)]
-complementsOfVerb vp = maybeToList (headVP vp) >>= siblingsBy next checkNPSBAR
+complementsOfVerb vp = splitDP <$> (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp))
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkNPSBAR z = case tag z of
@@ -127,21 +138,16 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
 
 
 
--- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
---   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
---   of TP of which is marked as silent pronoun.
---
--- resolvePRO :: BitreeZipper (Range,CP as) (Range,CP as) -> [Either NTrace (Zipper as)]
--- resolvePRO z = do cp0 <- snd . getRoot1 . current <$> maybeToList (parent z)
---                  cp0^.complement.specifier
-                  -- return (map Right atnode)
-                  {- case atnode of
-                    [] -> Nothing -- SilentPRO -> Nothing   -- should be changed
-                    lst -> last -- RExp x    -> Just x -}
                     
 
 currentCP = snd . getRoot1 . current
 
+
+
+-- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
+--   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
+--   of TP of which is marked as silent pronoun.
+--
 resolveDP :: forall as.
              Range -> State (Bitree (Range,CP as) (Range,CP as))  [Either NTrace (Zipper as)]
 resolveDP rng = do
