@@ -10,9 +10,9 @@ let
     config1 = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix") { inherit pkgs; };
     config2 = 
       self: super: {
-        mkDerivation = args: super.mkDerivation (args // {
-                         enableLibraryProfiling = true;
-                       });
+#        mkDerivation = args: super.mkDerivation (args // {
+#                         enableLibraryProfiling = true;
+#                       });
         "nlp-types" = self.callPackage (import nlp-types) {};
         "graph-algorithms" = self.callPackage (import graph-algorithms) {};
       };

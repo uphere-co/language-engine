@@ -343,7 +343,8 @@ runEL (tickerMap,uid2tag,wikiTable) rawFile nerFile posFile = do
   mapM_ print wiki_entities
   print "Entity-linked named entities"
   -- mapM_ print all_linked_mentions  
-  mapM_ print (filter EL.hasResolvedUID linked_mentions)
+  --mapM_ print (filter EL.hasResolvedUID linked_mentions)
+  mapM_ print linked_mentions
   --mapM_ print synsets -- takes many minutes
   print "Entity-linked organization entities"
   mapM_ print orgMentions
@@ -353,14 +354,7 @@ runEL (tickerMap,uid2tag,wikiTable) rawFile nerFile posFile = do
 main1 = do
   -- For loading ticker symbol data.
   tickerMap <- loadCompanySymbol listedCompanyFile
-  uid2tag <- fromFiles [ (WC.personClass, personItemFile)
-                       , (WC.orgClass, orgItemFile)
-                       , (WC.brandClass, brandItemFile)
-                       , (WC.occupationClass, occupationItemFile)
-                       , (WC.locationClass, locationItemFile)
-                       , (WC.humanRuleClass, humanRuleItemFile)
-                       , (WC.buildingClass, buildingItemFile)
-                       ]
+  uid2tag   <- fromFiles classFiles
   wikiTable <- loadWETagger reprFile
 
 
