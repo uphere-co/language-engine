@@ -263,8 +263,10 @@ main3init = do
   store4 <- newStore mentions4
   store5 <- newStore mentions5
 
-  titles <- WEL.loadWikipageMapping wikiTitleMappingFile
+  titles@(a,b) <- WEL.loadWikipageMapping wikiTitleMappingFile
   store6 <- newStore titles
+  print $ M.size a
+  print $ M.size b
     
   
   print store
