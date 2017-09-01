@@ -1,5 +1,4 @@
-# Revision history for syntactic-analysis
+# Log for important change (Internal use)
 
-## 0.1.0.0  -- YYYY-mm-dd
-
-* First version. Released on an unsuspecting world.
+2017-08-31 D1599: Recursive silent pronoun resolution
+2017-09-01 D1602: First implementation of resolving subject relative pronoun by movement analysis
