@@ -14,14 +14,14 @@ module WikiEL
   ) where
 
 import           Data.Text                                    (Text)  
-import           Data.Vector                                  (fromList)
+import qualified Data.Vector                        as V
 
 import           NLP.Type.PennTreebankII                      (POSTag(..))
 import           NLP.Type.NamedEntity                         (NamedEntityClass,NamedEntityFrag(..))
 
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,namedEntityAnnotator)
 import           WikiEL.WikiEntityTagger                      (NameUIDTable,loadWETagger)
-import           WikiEL.WikiEntityClass                       (WikiUID2NETag,ItemClass,fromFiles)
+import           WikiEL.WikiEntityClass                       (WikiuidNETag,ItemClass,loadFiles)
 import           WikiEL.EntityLinking                         (EntityMention,entityLinkings,buildEntityMentions)
 import qualified WikiEL.EntityLinking               as EL
 import qualified WikiEL.EntityMentionPruning        as EMP
@@ -37,40 +37,40 @@ import qualified Data.Map                           as M
 import qualified WikiEL.ETL.Parser                  as P
 import qualified NLP.Type.NamedEntity               as NE
 
-extractEntityMentions :: NameUIDTable -> WikiUID2NETag -> [(Text, NamedEntityClass)] -> [EntityMention Text]
-extractEntityMentions wikiTable uid2tag neTokens = linked_mentions
+extractEntityMentions :: NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass)] -> [EntityMention Text]
+extractEntityMentions wikiTable uidNEtags neTokens = linked_mentions
   where    
-    stanford_nefs = map (uncurry NamedEntityFrag) neTokens
-    named_entities =  getStanfordNEs stanford_nefs
-    wiki_entities = namedEntityAnnotator wikiTable uid2tag stanford_nefs
-    wiki_named_entities = resolveNEs named_entities wiki_entities
+    stanford_nefs  = map (uncurry NamedEntityFrag) neTokens
+    named_entities = getStanfordNEs stanford_nefs
+    wiki_entities  = namedEntityAnnotator wikiTable stanford_nefs
+    wiki_named_entities = resolveNEs uidNEtags named_entities wiki_entities
 
-    words = fromList (map fst neTokens)
+    words    = V.fromList (map fst neTokens)
     mentions = buildEntityMentions words wiki_named_entities
     linked_mentions = entityLinkings mentions
 
-extractFilteredEntityMentions :: NameUIDTable -> WikiUID2NETag -> [(Text, NamedEntityClass, POSTag)] -> [EntityMention Text]
-extractFilteredEntityMentions wikiTable uid2tag tokens = filtered_mentions
+extractFilteredEntityMentions :: NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass, POSTag)] -> [EntityMention Text]
+extractFilteredEntityMentions wikiTable uidNEtags tokens = filtered_mentions
   where    
     neTokens = map (\(x,y,z)->(x,y)) tokens
     poss     = map (\(x,y,z)->z)     tokens
-    all_linked_mentions = extractEntityMentions wikiTable uid2tag neTokens
-    filtered_mentions = EMP.filterEMbyPOS (fromList poss) all_linked_mentions
+    all_linked_mentions = extractEntityMentions wikiTable uidNEtags neTokens
+    filtered_mentions   = EMP.filterEMbyPOS (V.fromList poss) all_linked_mentions
     
 loadEMtagger :: EntityReprFile -> [(ItemClass, ItemIDFile)] -> IO( [(Text, NamedEntityClass)] -> [EntityMention Text] )
-loadEMtagger wikiNameFile uid2tagFiles = do
+loadEMtagger wikiNameFile uidTagFiles = do
   wikiTable <- loadWETagger  wikiNameFile
-  uid2tag <- fromFiles uid2tagFiles
+  uidNEtags <- loadFiles uidTagFiles
   let
-    emTagger = extractEntityMentions wikiTable uid2tag
+    emTagger = extractEntityMentions wikiTable uidNEtags
   return emTagger
 
 loadFEMtagger :: EntityReprFile -> [(ItemClass, ItemIDFile)] -> IO( [(Text, NamedEntityClass, POSTag)] -> [EntityMention Text] )
-loadFEMtagger wikiNameFile uid2tagFiles = do
+loadFEMtagger wikiNameFile uidTagFiles = do
   wikiTable <- loadWETagger  wikiNameFile
-  uid2tag <- fromFiles uid2tagFiles
+  uidNEtags <- loadFiles uidTagFiles
   let
-    femTagger = extractFilteredEntityMentions wikiTable uid2tag
+    femTagger = extractFilteredEntityMentions wikiTable uidNEtags
   return femTagger
 
 loadWikipageMapping :: P.WikiTitleMappingFile -> IO (M.Map ItemID Text, M.Map Text ItemID)

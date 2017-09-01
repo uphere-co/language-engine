@@ -7,8 +7,9 @@ import           Data.Aeson
 import           Data.Text                             (Text)
 import           Data.Map                              (Map)
 import           Data.Maybe                            (fromMaybe,fromJust)
-import           Data.List                             (foldl')
+import           Data.List                             (any,foldl')
 import           Control.Arrow                         (second)
+import qualified Data.List                     as L
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 import qualified Data.Map                      as M
@@ -42,11 +43,13 @@ buildItemClass x = ItemClass (itemID x)
 otherClass  = buildItemClass "Q35120" -- maps to entity (Q35120), which means "anything"
 orgClass    = buildItemClass "Q43229"
 personClass = buildItemClass "Q215627"
-brandClass  = buildItemClass "Q431289"
-locationClass  = buildItemClass "Q1496967" -- territorial entity (Q1496967), instead of location (Q17334923)
+locationClass   = buildItemClass "Q1496967" -- territorial entity (Q1496967), instead of location (Q17334923)
+brandClass      = buildItemClass "Q431289"
 occupationClass = buildItemClass "Q12737077"
-humanRuleClass = buildItemClass "Q1151067"
-buildingClass  = buildItemClass "Q41176"
+humanRuleClass  = buildItemClass "Q1151067"
+buildingClass   = buildItemClass "Q41176"
+extednedClasses = [brandClass,occupationClass,humanRuleClass,buildingClass]
+allClasses      = [otherClass, orgClass, personClass, locationClass] ++ extednedClasses
 
 toNEClass :: ItemClass -> NEClass
 toNEClass c | c==orgClass      = N.Org
@@ -54,12 +57,11 @@ toNEClass c | c==personClass   = N.Person
 toNEClass c | c==locationClass = N.Loc
 toNEClass _ = N.Other
 
-neClassMatch :: NEClass -> ItemClass -> Bool
-neClassMatch N.Org    ic | ic==orgClass      = True
-neClassMatch N.Person ic | ic==personClass   = True
-neClassMatch N.Loc    ic | ic==locationClass = True
-neClassMatch N.Other  ic | ic==brandClass || ic==occupationClass = True
-neClassMatch _ _ = False
+fromNEClass :: NEClass -> ItemClass
+fromNEClass N.Org    = orgClass
+fromNEClass N.Person = personClass
+fromNEClass N.Loc    = locationClass
+fromNEClass _        = otherClass
 
 
 loadTypedUIDs :: (ItemClass , ItemIDFile) -> IO [(ItemID, ItemClass)]
@@ -69,27 +71,25 @@ loadTypedUIDs (tag, fileName) = do
     uids = map (\x -> (x, tag)) items
   return uids
 
-data WikiUID2NETag = WikiUID2NETag { _map :: Map ItemID ItemClass}
+data WikiuidNETag = WikiuidNETag { _set :: S.Set (ItemID, ItemClass)}
                    deriving (Show)
 
-fromList :: [(ItemID, ItemClass)] -> WikiUID2NETag
-fromList pairs = WikiUID2NETag (M.fromList pairs)
-
-fromFiles :: [(ItemClass, ItemIDFile)] -> IO WikiUID2NETag
-fromFiles pairs = do
+loadFiles :: [(ItemClass, ItemIDFile)] -> IO WikiuidNETag
+loadFiles pairs = do
   lists <- mapM loadTypedUIDs pairs
-  let
-    table = fromList (mconcat lists)
-  return table
+  return $ WikiuidNETag (S.fromList (mconcat lists))
 
+fromList :: [(ItemID, ItemClass)] -> WikiuidNETag
+fromList pairs = WikiuidNETag (S.fromList pairs)
+  
+hasNETag :: WikiuidNETag -> (ItemID, NEClass) -> Bool
+hasNETag (WikiuidNETag tags) (id,stag) | stag /= N.Other = S.member (id,fromNEClass stag) tags
+hasNETag (WikiuidNETag tags) (id,stag) = any (\x -> S.member (id,x) tags) extednedClasses
 
-
-getNEClass :: WikiUID2NETag -> ItemID -> ItemClass
-getNEClass table uid = f (M.lookup uid (_map table))
-  where 
-    f (Just x) = x
-    f Nothing  = otherClass -- for unknown UID, return "Other" class, instead of emitting errors
-
+guessNETag :: WikiuidNETag -> ItemID -> ItemClass
+guessNETag (WikiuidNETag tags) id = fromMaybe otherClass x
+  where
+    x = L.find (\x -> S.member (id,x) tags) allClasses
 
 newtype SubclassUID   = SubclassUID { _sub :: ItemID}
                       deriving (Show, Ord, Eq)
@@ -118,7 +118,7 @@ getKeys = M.foldlWithKey' (\ks (SubclassUID k) x -> k:ks) []
 allRelationPairs :: [(SubclassUID, SuperclassUID)] -> S.Set (SubclassUID, SuperclassUID)
 allRelationPairs relTuples = pairs
   where
-    unique = S.toList . S.fromList
+    unique  = S.toList . S.fromList
     allUIDs = unique (concatMap (\(SubclassUID x, SuperclassUID y) -> [x,y]) relTuples)
     relations = buildRelations relTuples
     f uid = map (\x -> (SubclassUID uid, SuperclassUID x)) (getAncestors relations uid)
