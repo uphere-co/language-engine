@@ -41,10 +41,10 @@ import           Text.Taggy.Lens
 import           FrameNet.Query.Frame             (frameDB,loadFrameData)
 import           FrameNet.Type.Common             (CoreType(..),fr_frame)
 import           FrameNet.Type.Frame
-import           Lexicon.Format                   (formatArgPatt,formatRoleMap)
+import           Lexicon.Format                   (formatArgPatt,formatRoleMap,formatRoleMapTSV)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query
-import           Lexicon.Type                     (ArgPattern(..),POSVorN(..)
+import           Lexicon.Type                     (ArgPattern(..),POSVorN(..),SenseID
                                                   ,RoleInstance,RolePattInstance)
 import           NLP.Syntax.Type
 import           NLP.Type.SyntaxProperty          (Voice)
@@ -154,20 +154,21 @@ showProblem prob = do
   putStrLn "---------------------------------------------------------------------------------------------------------\n"
 
 
-reformatInput o = T.intercalate " " . map f . T.words
-  where fes0 = numberedFEs (o^._2._3) 
+mkRoleInstance o txt = ("frame",frm) : ((map f . T.words) txt)
+  where frm = o^._2._3.frame_name
+        fes0 = numberedFEs (o^._2._3) 
         fes = fes0^._1 ++ fes0^._2 ++ fes0^._3
 
         f w = let xs = T.splitOn ":" w
               in case xs of
                    (x:y:[]) -> case decimal y of
-                                 Left _ -> w
+                                 Left _ -> (w,"")
                                  Right (n,_) -> case find ((== n) . (^._1)) fes of
-                                                 Just (_,fe) -> x <> ":" <> fe^.fe_name
-                                                 Nothing -> w
+                                                 Just (_,fe) -> (x,fe^.fe_name)
+                                                 Nothing -> (w,"")
                                  
 
-formatResult (i,(lma,_,sid),frm,txt) = printf "%d\t%s\t%s\t%s\t%s\n" i lma sid frm txt
+-- formatResult (i,(lma,_,sid),frm,txt) = printf "%d\t%s\t%s\t%s\t%s\n" i lma sid frm txt
   
 
 prompt = do
@@ -180,10 +181,10 @@ prompt = do
       case m of
         Nothing -> return ()
         Just x -> do
-          let r1 = reformatInput o (T.pack x)
-          liftIO $ T.IO.putStrLn r1
-          let nresult = result ++ [(o^._1,problemID o,o^._2._3.frame_name,r1)]
-          liftIO $ writeFile "temp.txt" (concatMap formatResult nresult)
+          let r1 = mkRoleInstance o (T.pack x)
+          liftIO $ print r1
+          let nresult = result ++ [(o^._1,(problemID o,r1))]
+          liftIO $ writeFile "temp.txt" (concatMap formatRoleMapTSV nresult)
           lift (put (nresult,os))
           prompt
 
@@ -217,10 +218,10 @@ main = do
     "tag" -> do
       let n = fromMaybe 0 (startNum opt)
           indexed_being_processed = (drop (n-1) . take (n+99)) indexed
-      r <- flip execStateT (([] :: [(Int,(Text,POSVorN,Text),Text,Text)]),indexed_being_processed) $ runInputT defaultSettings prompt
+      r <- flip execStateT (([] :: [(Int,RoleInstance)]),indexed_being_processed) $ runInputT defaultSettings prompt
       print (fst r)
       let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
-      writeFile filename (concatMap formatResult (fst r))
+      writeFile filename (concatMap formatRoleMapTSV (fst r))
     "show" -> do
       flip mapM_ indexed $ \prob -> do
         let (headstr,sensestr,framestr,argpattstr,pbinfostr) = formatProblem prob

@@ -24,7 +24,7 @@ import           System.FilePath
 import           System.IO
 --
 import           NLP.Parser.PennTreebankII
-import 	       	 NLP.Type.CoreNLP
+import           NLP.Type.CoreNLP
 import           NLP.Type.PennTreebankII
 import           PropBank.Match
 import           PropBank.Parser.Prop
