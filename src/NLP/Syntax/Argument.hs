@@ -53,7 +53,7 @@ phraseNodeType mtp z
                   dp <- case dplinks of
                           [] -> Nothing
                           _ -> case last dplinks of
-                                 Left SilentPRO -> Nothing
+                                 Left  _        -> Nothing
                                  Right z'       -> Just z'
                   return (getRange (current dp) == rng)
         obj  = do tp <- mtp
