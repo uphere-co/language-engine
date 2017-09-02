@@ -28,6 +28,13 @@ type PBArg = Text
 type FNFrameElement = Text
 
 
+-- | LVSingle = single causation (either with CAUSE or without CAUSE) e.g. rise, raise
+--   LVDual   = dual causation (both with CAUSE and without CAUSE)    e.g. begin
+--
+data LittleV = LVSingle | LVDual
+             deriving (Show,Eq,Ord)
+
+
 -- | Grammatical relation argument type (temporary type for "pseudo"-theta-role)
 --
 data GArg = GASBJ | GA1 | GA2
@@ -105,7 +112,7 @@ instance (Hashable v, Hashable p) => Hashable (ArgPattern v p)
 -----------------
 
 
-type RoleInstance = (SenseID,[(PBArg,FNFrameElement)])
+type RoleInstance = (SenseID,[(Text,Text)])
 
 type RolePattInstance v = (SenseID,[(ArgPattern v GRel,Int)])
 
