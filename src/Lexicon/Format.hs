@@ -3,13 +3,13 @@
 module Lexicon.Format where
 
 import           Control.Lens   ((^.))
-import           Data.List      (intercalate)
+import           Data.List      (intercalate,partition)
 import           Data.Maybe     (fromMaybe)
 import           Data.Monoid    ((<>))
 import           Data.Text      (Text)
 import           Text.Printf    (printf)
 --
-import           Lexicon.Type   (ArgPattern(..),GArg(..),GRel(..)
+import           Lexicon.Type   (ArgPattern(..),GArg(..),GRel(..),RoleInstance
                                 ,patt_property,patt_arg0,patt_arg1,patt_arg2,patt_arg3,patt_arg4)
 
 
@@ -56,3 +56,10 @@ formatRoleMap rolemap =
     (fromMaybe "" (lookup "arg2" rolemap))
     (fromMaybe "" (lookup "arg3" rolemap))
     (fromMaybe "" (lookup "arg4" rolemap))
+
+
+formatRoleMapTSV :: (Int,RoleInstance) -> String
+formatRoleMapTSV (i,((lma,_,sense),m)) =
+  let ([(_,frame)],rest) = partition (\(k,_) -> k == "frame") m
+      txt = intercalate "\t" (map (\(k,v) -> printf "%s:%s" k v) rest) :: String
+  in printf "%d\t%s\t%s\t%s\t%s\n" i lma sense frame txt

@@ -80,7 +80,6 @@ loadRolePattInsts :: (Read v,Hashable v) => FilePath -> IO [RolePattInstance v]
 loadRolePattInsts fp = do
   txt <- T.IO.readFile fp
   let getLemmaSense x = x^._1
-      -- getArgTable x = ArgPattern (x^._2) (x^._3) (x^._4) (x^._5) (x^._6) (x^._7)
   return . map (\xs  -> (getLemmaSense (head xs),map (\x->(x^._2,x^._3)) xs))
          . groupBy ((==) `on` getLemmaSense)
          . map parseRolePattInst
