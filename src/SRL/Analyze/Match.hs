@@ -180,7 +180,6 @@ matchFrame (mcpstr,vstr,paws) = do
                         else case last dps of
                                Left _ -> Nothing
                                Right z -> Just z
-        -- Just (last dps) --  of  -- resolveDP mcpstr cp
       verb = vstr^.vs_lma
   (rm,mtoppatts) <- mrmmtoppatts
   rng <- cpRange cp

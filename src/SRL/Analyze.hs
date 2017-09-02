@@ -29,13 +29,8 @@ import           Lexicon.Type                 (RoleInstance,RolePattInstance)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           NLP.Type.SyntaxProperty      (Voice)
 import           WikiEL                       (loadEMtagger)
-<<<<<<< HEAD
 import           WikiEL.EntityLinking         (EntityMention(..))
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
-=======
-import           WikiEL.EntityLinking         (EntityMention)
-import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass)
->>>>>>> T512
 --
 import           OntoNotes.App.Load           (Config(..),cfgG,cfg_framenet_framedir
                                               ,cfg_rolemap_file
