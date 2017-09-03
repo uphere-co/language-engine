@@ -231,8 +231,8 @@ showMatchedFrame (mcpstr,vstr,paws) = do
       mapM_ putStrLn . map (\(fe,z) -> printf "%-15s: %-7s %s" fe (show (getRange (current z))) (gettokens z)) $ felst
 
 
-dotMeaningGraph :: MeaningGraph -> String
-dotMeaningGraph mg = printf "digraph G {\n  %s\n  %s\n}" vtxt etxt
+dotMeaningGraph :: String -> MeaningGraph -> String
+dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt ttxt
   where
     vtxt :: String
     vtxt =
@@ -240,11 +240,11 @@ dotMeaningGraph mg = printf "digraph G {\n  %s\n  %s\n}" vtxt etxt
           verbs = mapMaybe (\case MGEntity _ _ _ -> Nothing ; MGPredicate i _ f v -> Just (i,f <> ":" <> v)) vertices
           entities = mapMaybe (\case MGEntity i _ t -> Just (i,t); MGPredicate _ _ _ _ -> Nothing) vertices
       in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=box label=\"%s\"];" i t)) verbs ++  "\n  " ++
-         (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=oval label=\"%s\"];" i t)) entities
+         (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=record label=\"{ %s }\"];" i t)) entities
     etxt :: String
     etxt =      
       let edges = mg^.mg_edges
           formatf e = printf "i%d -> i%d [label=\"%s\"];" (e^.me_start) (e^.me_end) (e^.me_relation)
       in (intercalate "\n " . map formatf) edges
-         
-
+    ttxt :: String
+    ttxt = "labelloc=\"t\"; \n " ++ "label=\"" ++ title ++ "\"; \n " 
