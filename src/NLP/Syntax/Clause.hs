@@ -61,7 +61,7 @@ splitDP z = fromMaybe z $ do
               sbar <- next dp
               guard (isChunkAs SBAR (current sbar))
               return dp
-  
+
 
 complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [[Either NTrace (Zipper (Lemma ': as))]]
 complementsOfVerb vp = map (\x -> [Right x]) (splitDP <$> (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
@@ -128,7 +128,7 @@ cpRange cp = (cp^?maximalProjection._Just.to (getRange . current)) <|>
 identifyCPHierarchy :: [VerbProperty (Zipper (Lemma ': as))]
                     -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
 identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
-  where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure cp) <=< constructCP) vps 
+  where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure cp) <=< constructCP) vps
         cpmap = HM.fromList (map (\x->(x^._1,x)) cps)
         rngs = HM.keys cpmap
         rtr = rangeTree rngs
@@ -138,7 +138,7 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
 
 
 
-                    
+
 
 currentCP = snd . getRoot1 . current
 
@@ -158,12 +158,15 @@ whMovement z = do
           z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
           return (xsmov ++ [Left WHPRO, Right z'])
       _ -> do
-        -- let cp' = ((complement.complement.complement) %~ (Left WHPRO :)) cp
-        
-        -- cp^.complement.complement.complement
-        
-
-
+        runMaybeT $ do
+          -- check object position for relative pronoun
+          z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
+          let cp' = ((complement.complement.complement) %~ ([Left WHPRO,Right z'] :)) cp
+              subtr = case z^.tz_current of
+                        PN (rng,cp) ys -> PN (rng,cp') ys
+                        PL (rng,cp)    -> PL (rng,cp')
+              z'' = (tz_current .~ subtr) z
+          lift (put (toBitree z''))
         return xs
 
 
@@ -181,7 +184,7 @@ resolveDP rng = do
       let cp = currentCP z
       if maybe False (isChunkAs WHNP . current) (cp^.headX)
         then whMovement z
-        else 
+        else
           case cp^.complement.specifier of
             [] -> return []
             xs -> case last xs of
@@ -210,12 +213,12 @@ bindingAnalysis cpstr = execState (go rng0) cpstr
                        Just z -> do
                          let subtr = case z^.tz_current of
                                        PN (rng,cp) ys -> PN (rng,(complement.specifier .~ xs) cp) ys
-                                       PL (rng,cp)    -> PL (rng,(complement.specifier .~ xs) cp) 
+                                       PL (rng,cp)    -> PL (rng,(complement.specifier .~ xs) cp)
                          let z' = (tz_current .~ subtr) z
                          put (toBitree z')
                          case child1 z' of
                            Just z'' -> go (getrng z'')
-                           Nothing ->                 
+                           Nothing ->
                              case next z' of
                                Just z'' -> go (getrng z'')
                                Nothing -> return ()
