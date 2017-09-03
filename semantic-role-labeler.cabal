@@ -76,6 +76,7 @@ library
                        --
                        fastText,
                        lexicon,
+                       multi-word-tagger,
                        nlp-types,
                        HCoreNLP,
                        HCoreNLP-Proto,

@@ -4,6 +4,7 @@
 , HFrameNet          ? <HFrameNet>
 , HWordNet           ? <HWordNet>
 , lexicon            ? <lexicon>
+, multi-word-tagger  ? <multi-word-tagger>
 , nlp-types          ? <nlp-types>
 , OntoNotes          ? <OntoNotes>
 , PropBank           ? <PropBank>
@@ -11,6 +12,7 @@
 , syntactic-analysis ? <syntactic-analysis>
 , wiki-ner           ? <wiki-ner>
 , textview           ? <textview>
+, graph-algorithms   ? <graph-algorithms>
 }:
 
 
@@ -45,6 +47,7 @@ let
   hsconfig2 =
     self: super: {
       "lexicon"        = self.callPackage (import lexicon) {};
+      "multi-word-tagger" = self.callPackage (import multi-word-tagger) {};
       "nlp-types"      = self.callPackage (import nlp-types) {};
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
       "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
@@ -57,6 +60,7 @@ let
       "fastText"       = self.callPackage fastTextNix { inherit fasttext; };
       "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
       "textview"       = self.callPackage (import textview) {};
+      "graph-algorithms" = self.callPackage (import graph-algorithms) {};
     };  
   newHaskellPackages = haskellPackages.override {
     overrides = self: super: hsconfig self super // hsconfig2 self super;
@@ -87,6 +91,7 @@ let
             foreign-store
 
             p.lexicon
+            p.multi-word-tagger
             p.nlp-types
             p.OntoNotes
             p.PropBank

@@ -1,9 +1,10 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module SRL.Analyze where
 
-import           Control.Lens                 ((^.),(.~),(&))
+import           Control.Lens                 ((^.),(^..),(.~),(&),(%~),_1,_2,at,to)
 import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
@@ -16,17 +17,20 @@ import           Data.Text                    (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.IO           as T.IO
 import qualified Language.Java          as J
+import           MWE.Util                     (mkTextFromToken)
 import           System.Console.Haskeline     (runInputT,defaultSettings,getInputLine)
 import           System.Environment           (getEnv)
 import           System.Process               (readProcess)
 --
 import           CoreNLP.Simple               (prepare)
 import           CoreNLP.Simple.Type          (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
+import           Data.Range                   (elemRevIsInsideR,isInsideR)
 import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (loadRoleInsts,loadRolePattInsts)
 import           Lexicon.Type                 (RoleInstance,RolePattInstance)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
+import           Text.Format.Dot              (mkLabelText)
 import           NLP.Type.SyntaxProperty      (Voice)
 import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention(..))
@@ -48,9 +52,10 @@ import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructu
 import           SRL.Analyze.Match             (allPAWSTriplesFromDocStructure,meaningGraph)
 import           SRL.Analyze.SentenceStructure (docStructure)
 import           SRL.Analyze.Type
+import           SRL.Analyze.Util              (TagPos(..))
 import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
                                                ,occupationItemFile,orgItemFile,personItemFile,reprFile)
-
+import           SRL.Analyze.WikiEL            (mkWikiList)
 
 -- | main query loop
 --
@@ -75,24 +80,44 @@ queryProcess config pp apredata emTagger =
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
                   (mapM_ showMatchedFrame . concat . allPAWSTriplesFromDocStructure) dstr
                   --
-                  putStrLn "-------------"
-                  putStrLn "meaning graph"
-                  putStrLn "-------------"
-                  let sstrs1 = catMaybes (dstr^.ds_sentStructures)
-                      mgs = map meaningGraph sstrs1
-                  forM_ (zip [1..] mgs) $ \(i,mg) -> do
-                    mapM_ print (mg^.mg_vertices)
-                    mapM_ print (mg^.mg_edges)
-                    putStrLn "-----------------"
-                    putStrLn "meaning graph dot"
-                    putStrLn "-----------------"
-                    let dotstr = dotMeaningGraph mg
-                    putStrLn dotstr
-                    writeFile ("test" ++ (show i) ++ ".dot") dotstr
-                    void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
+                  printMeaningGraph dstr
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
+isEntity x = case x of
+  MGEntity {..} -> True
+  otherwise     -> False
+
+tagMG mg wikilst =
+  let mg' = map (\x -> if (x ^. mv_range) `elemRevIsInsideR` (map (\(x,y) -> x) wikilst) && isEntity x
+                       then x & mv_text .~ (T.intercalate "" $ [(x ^. mv_text)," | ",(T.intercalate " | " $ map (^. _2) $ filter (\w -> (w ^. _1) `isInsideR` (x ^. mv_range)) wikilst)] )
+                       else id x) (mg ^. mg_vertices)
+  in MeaningGraph mg' (mg ^. mg_edges)
+
+
+printMeaningGraph dstr = do
+  putStrLn "-------------"
+  putStrLn "meaning graph"
+  putStrLn "-------------"
+  let sstrs1 = catMaybes (dstr^.ds_sentStructures)
+      mtokss = (dstr ^. ds_mtokenss)
+      wikilst = mkWikiList dstr
+  print (sstrs1 ^.. traverse . ss_ptr)
+  print (sstrs1 ^.. traverse . ss_clausetr)
+  
+  let mgs = map meaningGraph sstrs1
+  forM_ (zip mtokss (zip [1..] mgs)) $ \(mtks,(i,mg')) -> do
+    let title = mkTextFromToken mtks
+        mg = tagMG mg' wikilst
+    mapM_ print (mg^.mg_vertices)
+    mapM_ print (mg^.mg_edges)
+    putStrLn "-----------------"
+    putStrLn "meaning graph dot"
+    putStrLn "-----------------"
+    let dotstr = dotMeaningGraph (T.unpack $ mkLabelText title) mg
+    putStrLn dotstr
+    writeFile ("test" ++ (show i) ++ ".dot") dotstr
+    void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
 
 loadConfig
   :: IO (HashMap Text Inventory
