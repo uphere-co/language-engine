@@ -58,11 +58,11 @@ type instance Property   'X_V t = VerbProperty (Zipper t)
 type instance Maximal    'X_V t = Zipper t
 type instance Specifier  'X_V t = ()
 type instance Adjunct    'X_V t = ()
-type instance Complement 'X_V t = [Zipper t]
+type instance Complement 'X_V t = [[Either NTrace (Zipper t)]]
 
 type VerbP = XP 'X_V
 
-mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [Zipper t] -> VerbP t
+mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [[Either NTrace (Zipper t)]] -> VerbP t
 mkVerbP vp vprop comps = XP vprop vp () () comps
 
 type instance Property   'X_T t = ()

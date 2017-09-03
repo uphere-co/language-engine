@@ -90,7 +90,7 @@ formatPAWS mcpstr pa =
          \              complements   : %s"
          (formatDPTokens (pa^.pa_CP^.complement.specifier)) -- ,resolveDP mcpstr (pa^.pa_CP)))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
-         ((intercalate " | " . map (T.unpack . T.intercalate " ". gettoken)) (pa^.pa_CP.complement.complement.complement))
+         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to formatDPTokens))
                   
   where
     gettoken = map (tokenWord.snd) . toList . current
@@ -114,7 +114,7 @@ formatCP mcpstr cp
                      \Tense Phrase         : %-4s  %s\n\
                      \Determiner Phrase    :       %s\n\
                      \Verb Phrase          : %-4s  %s\n\
-                     \Verb Complements     : %s\n"
+                     \Verb Complements     :       %s\n"
                 (maybe "null" show (getchunk =<< cp^.maximalProjection))
                 (maybe "" (show . gettoken) (cp^.maximalProjection))
                 (maybe "null" formatposchunk (fmap getposchunk (cp^.headX)))
@@ -125,7 +125,7 @@ formatCP mcpstr cp
                 (formatDPTokens (cp^.complement.specifier))  -- ,resolveDP mcpstr cp))
                 (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 ((show . gettoken) (cp^.complement.complement.maximalProjection))
-                ((intercalate " | " . map (show . gettoken)) (cp^.complement.complement.complement))
+                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to formatDPTokens)))
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current

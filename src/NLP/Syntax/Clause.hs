@@ -63,8 +63,8 @@ splitDP z = fromMaybe z $ do
               return dp
   
 
-complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [Zipper (Lemma ': as)]
-complementsOfVerb vp = splitDP <$> (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp))
+complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [[Either NTrace (Zipper (Lemma ': as))]]
+complementsOfVerb vp = map (\x -> [Right x]) (splitDP <$> (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkNPSBAR z = case tag z of
@@ -143,6 +143,29 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
 currentCP = snd . getRoot1 . current
 
 
+whMovement :: BitreeZipper (Range,CP as) (Range,CP as)
+           -> State (Bitree (Range,CP as) (Range,CP as)) [Either NTrace (Zipper as)]
+whMovement z = do
+  let cp = currentCP z
+  case cp^.complement.specifier of
+    [] -> return []
+    xs -> case last xs of
+      Left NULL -> do
+        let xspro = init xs ++ [Left SilentPRO]
+            xsmov = init xs ++ [Left Moved]
+        fmap (fromMaybe xspro) . runMaybeT $ do
+          -- check subject position for relative pronoun
+          z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
+          return (xsmov ++ [Left WHPRO, Right z'])
+      _ -> do
+        -- let cp' = ((complement.complement.complement) %~ (Left WHPRO :)) cp
+        
+        -- cp^.complement.complement.complement
+        
+
+
+        return xs
+
 
 -- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
@@ -156,27 +179,23 @@ resolveDP rng = do
     Nothing -> return []
     Just z -> do
       let cp = currentCP z
-      case cp^.complement.specifier of
-        [] -> return []
-        xs -> case last xs of
-                Left NULL -> do
-                  let xspro = init xs ++ [Left SilentPRO]
-                      xsmov = init xs ++ [Left Moved]
-                  fmap (fromMaybe xspro) . runMaybeT $ do
-                    if maybe False (isChunkAs WHNP . current) (cp^.headX)
-                      then do
-                        z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
-                        return (xsmov ++ [Left WHPRO, Right z'])
-                      else do
-                        cp'  <- (MaybeT . return) (currentCP <$> parent z)
-                        rng' <- (MaybeT . return) (cpRange cp')
-                        (++) <$> pure xspro <*> lift (resolveDP rng')
-                Left SilentPRO -> 
-                  fmap (fromMaybe xs) . runMaybeT $ do
-                    cp'  <- (MaybeT . return) (currentCP <$> parent z)
-                    rng' <- (MaybeT . return) (cpRange cp')
-                    (++) <$> pure xs <*> lift (resolveDP rng')
-                _ -> return xs
+      if maybe False (isChunkAs WHNP . current) (cp^.headX)
+        then whMovement z
+        else 
+          case cp^.complement.specifier of
+            [] -> return []
+            xs -> case last xs of
+                    Left NULL      -> do let xspro = init xs ++ [Left SilentPRO]
+                                             xsmov = init xs ++ [Left Moved]
+                                         fmap (fromMaybe xspro) . runMaybeT $ do
+                                           cp'  <- (MaybeT . return) (currentCP <$> parent z)
+                                           rng' <- (MaybeT . return) (cpRange cp')
+                                           (++) <$> pure xspro <*> lift (resolveDP rng')
+                    Left SilentPRO ->    fmap (fromMaybe xs) . runMaybeT $ do
+                                           cp'  <- (MaybeT . return) (currentCP <$> parent z)
+                                           rng' <- (MaybeT . return) (cpRange cp')
+                                           (++) <$> pure xs <*> lift (resolveDP rng')
+                    _              ->    return xs
 
 
 bindingAnalysis :: Bitree (Range,CP as) (Range,CP as) -> Bitree (Range,CP as) (Range,CP as)
