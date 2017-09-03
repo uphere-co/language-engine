@@ -24,6 +24,7 @@ import           System.Process               (readProcess)
 --
 import           CoreNLP.Simple               (prepare)
 import           CoreNLP.Simple.Type          (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
+import           Data.Range                   (elemRevIsInsideR,isInsideR)
 import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (loadRoleInsts,loadRolePattInsts)
@@ -31,7 +32,6 @@ import           Lexicon.Type                 (RoleInstance,RolePattInstance)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           Text.Format.Dot              (mkLabelText)
 import           NLP.Type.SyntaxProperty      (Voice)
-import           MWE.NamedEntity              (contained,elemReverseContained)
 import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention(..))
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
@@ -89,8 +89,8 @@ isEntity x = case x of
   otherwise     -> False
 
 tagMG mg wikilst =
-  let mg' = map (\x -> if (x ^. mv_range) `elemReverseContained` (map (\(x,y) -> x) wikilst) && isEntity x
-                       then x & mv_text .~ (T.intercalate "" $ [(x ^. mv_text)," | ",(T.intercalate " | " $ map (^. _2) $ filter (\w -> (w ^. _1) `contained` (x ^. mv_range)) wikilst)] )
+  let mg' = map (\x -> if (x ^. mv_range) `elemRevIsInsideR` (map (\(x,y) -> x) wikilst) && isEntity x
+                       then x & mv_text .~ (T.intercalate "" $ [(x ^. mv_text)," | ",(T.intercalate " | " $ map (^. _2) $ filter (\w -> (w ^. _1) `isInsideR` (x ^. mv_range)) wikilst)] )
                        else id x) (mg ^. mg_vertices)
   in MeaningGraph mg' (mg ^. mg_edges)
 
