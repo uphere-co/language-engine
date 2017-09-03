@@ -194,6 +194,26 @@ matchRoles verbp paws rolemap toppattstats dp_resolved =
     eq       = (==) `on` lengthOf (_2.folded)
 
 
+
+-- matchFrameRolesForCauseDual
+matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1) = 
+  let (frame2,rolemap2) = if causetype == LVDual
+                          then extendRoleMapForDual frame1 rolemap1
+                          else (frame1,rolemap1)
+      mselected1 = join (matchRoles verbp paws rolemap1 <$> (case toppatts of [] -> Nothing; xs -> Just xs) <*> mDP)
+      mselected2 = join (matchRoles verbp paws rolemap2 <$> (case toppatts of [] -> Nothing; xs -> Just xs) <*> mDP)
+  in case (mselected1,mselected2) of
+       (Nothing,Nothing) -> (frame1,Nothing)
+       (Just _ ,Nothing) -> (frame1,mselected1)
+       (Nothing,Just _ ) -> (frame2,mselected2)
+       (Just s1,Just s2) -> 
+         case (compare `on` numMatchedRoles) s1 s2 of
+           GT -> (frame1,mselected1)
+           LT -> (frame2,mselected2)
+           EQ -> (frame1,mselected1)   -- choose intransitive because transitive should
+                                       -- have one more argument in general.
+
+
 matchFrame :: (Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
               ,VerbStructure
               ,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
@@ -202,33 +222,18 @@ matchFrame :: (Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
 matchFrame (mcpstr,vstr,paws) = do
   let cp = paws^.pa_CP
       verbp = cp^.complement.complement
-      mdp_resolved = let dps = cp^.complement.specifier
-                     in if null dps
-                        then Nothing
-                        else case last dps of
-                               Left _ -> Nothing
-                               Right z -> Just z
+      mDP = case cp^.complement.specifier of
+              []  -> Nothing
+              dps -> case last dps of
+                       Left _ -> Nothing
+                       Right z -> Just z
       vprop = vstr^.vs_vp
   (rm,toppatts) <- listToMaybe (vstr^.vs_roleTopPatts)
   rng <- cpRange cp
   let rolemap1 = rm^._2
   frame1 <- lookup "frame" rolemap1
   causetype <- (\x -> if x == "dual" then LVDual else LVSingle) <$>  lookup "cause" rolemap1
-  let (frame2,rolemap2) = if causetype == LVDual
-                          then extendRoleMapForDual frame1 rolemap1
-                          else (frame1,rolemap1)
-      mselected1 = join (matchRoles verbp paws rolemap1 <$> (case toppatts of [] -> Nothing; xs -> Just xs) <*> mdp_resolved)
-      mselected2 = join (matchRoles verbp paws rolemap2 <$> (case toppatts of [] -> Nothing; xs -> Just xs) <*> mdp_resolved)
-      (frame,mselected) = case (mselected1,mselected2) of
-                            (Nothing,Nothing) -> (frame1,Nothing)
-                            (Just _ ,Nothing) -> (frame1,mselected1)
-                            (Nothing,Just _ ) -> (frame2,mselected2)
-                            (Just s1,Just s2) -> 
-                              case (compare `on` numMatchedRoles) s1 s2 of
-                                GT -> (frame1,mselected1)
-                                LT -> (frame2,mselected2)
-                                EQ -> (frame1,mselected1)   -- choose intransitive because transitive should
-                                                            -- have one more argument in general.
+  let (frame,mselected) = matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1)
   return (rng,vprop,frame,mselected)
 
 
