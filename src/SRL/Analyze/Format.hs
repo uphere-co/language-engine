@@ -112,17 +112,16 @@ formatFrame t =
 
 formatSenses :: Bool  -- ^ doesShowOtherSense
              -> [(ONSenseFrameNetInstance,Int)]
-             -> Maybe (RoleInstance, Maybe [(ArgPattern () GRel,Int)])
+             -> [(RoleInstance, [(ArgPattern () GRel,Int)])]
              -> String
-formatSenses doesShowOtherSense onfnlst mrmmtoppatts
+formatSenses doesShowOtherSense onfnlst rmtoppatts
   = let t = chooseMostFreqFrame onfnlst
     in "Top frame: "
-       ++ formatFrame t
+       ++ (if (not.null) t then formatFrame (Just (head t)) else formatFrame Nothing)
        ++ "--------------------------------------------------------------------------------------------------\n"
-       ++ flip (maybe "") mrmmtoppatts
-            (\(rm,mtoppatts) ->
-               let margpattstr = fmap formatArgPattStat mtoppatts
-               in (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr))
+       ++ intercalate "\n" (flip map rmtoppatts (\(rm,toppatts) ->
+               let argpattstr = formatArgPattStat toppatts
+               in (formatRoleMap (rm^._2) ++ ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<> argpattstr))))
        ++ "\n--------------------------------------------------------------------------------------------------\n"
        ++ if doesShowOtherSense
           then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense onfnlst)

@@ -34,7 +34,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,VerbStructure
                                               ,ds_sentStructures
                                               ,ss_clausetr,ss_mcpstr,ss_verbStructures
-                                              ,vs_mrmmtoppatts,vs_vp
+                                              ,vs_roleTopPatts,vs_vp
                                               ,mv_range,mv_id
                                               )
 
@@ -202,16 +202,14 @@ matchFrame :: (Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
 matchFrame (mcpstr,vstr,paws) = do
   let cp = paws^.pa_CP
       verbp = cp^.complement.complement
-      mrmmtoppatts = vstr^.vs_mrmmtoppatts
       mdp_resolved = let dps = cp^.complement.specifier
                      in if null dps
                         then Nothing
                         else case last dps of
                                Left _ -> Nothing
                                Right z -> Just z
-      -- verb = vstr^.vs_lma
       vprop = vstr^.vs_vp
-  (rm,mtoppatts) <- mrmmtoppatts
+  (rm,toppatts) <- listToMaybe (vstr^.vs_roleTopPatts)
   rng <- cpRange cp
   let rolemap1 = rm^._2
   frame1 <- lookup "frame" rolemap1
@@ -219,8 +217,8 @@ matchFrame (mcpstr,vstr,paws) = do
   let (frame2,rolemap2) = if causetype == LVDual
                           then extendRoleMapForDual frame1 rolemap1
                           else (frame1,rolemap1)
-      mselected1 = join (matchRoles verbp paws rolemap1 <$> mtoppatts <*> mdp_resolved)
-      mselected2 = join (matchRoles verbp paws rolemap2 <$> mtoppatts <*> mdp_resolved)
+      mselected1 = join (matchRoles verbp paws rolemap1 <$> (case toppatts of [] -> Nothing; xs -> Just xs) <*> mdp_resolved)
+      mselected2 = join (matchRoles verbp paws rolemap2 <$> (case toppatts of [] -> Nothing; xs -> Just xs) <*> mdp_resolved)
       (frame,mselected) = case (mselected1,mselected2) of
                             (Nothing,Nothing) -> (frame1,Nothing)
                             (Just _ ,Nothing) -> (frame1,mselected1)
@@ -229,7 +227,8 @@ matchFrame (mcpstr,vstr,paws) = do
                               case (compare `on` numMatchedRoles) s1 s2 of
                                 GT -> (frame1,mselected1)
                                 LT -> (frame2,mselected2)
-                                EQ -> (frame1,mselected1)   -- choose intransitive because transitive should have one more argument in general.
+                                EQ -> (frame1,mselected1)   -- choose intransitive because transitive should
+                                                            -- have one more argument in general.
   return (rng,vprop,frame,mselected)
 
 

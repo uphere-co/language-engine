@@ -10,7 +10,7 @@ import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
 import           Data.List                                 (find,sortBy)
-import           Data.Maybe                                (fromMaybe,maybeToList)
+import           Data.Maybe                                (fromMaybe,maybeToList,listToMaybe)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
@@ -90,13 +90,13 @@ getSenses lma sensemap sensestat framedb ontomap = do
 getTopPatternsFromONFNInst :: [RoleInstance]
                            -> [RolePattInstance Voice]
                            -> ONSenseFrameNetInstance
-                           -> Maybe (RoleInstance, Maybe [(ArgPattern () GRel,Int)])
+                           -> [(RoleInstance, [(ArgPattern () GRel,Int)])]
 getTopPatternsFromONFNInst rolemap subcats inst = do
   let sid = inst^.onfn_senseID
-  rm <- find (\rm -> rm^._1 == sid) rolemap
-  let msubcat = find ((== sid) . (^._1)) subcats
-      mtoppatts_cut = cutHistogram thresholdPattStat . constructTopPatterns . (^._2) <$> msubcat
-  return (rm,mtoppatts_cut)
+  rm <- maybeToList (find (\rm -> rm^._1 == sid) rolemap)
+  let subcats' = maybeToList (find ((== sid) . (^._1)) subcats)
+      toppatts_cut = cutHistogram thresholdPattStat . constructTopPatterns . (^._2) =<< subcats'
+  return (rm,toppatts_cut)
 
 
 -- | Finding the structure of the sentence and formatting it.
@@ -105,7 +105,7 @@ docStructure :: AnalyzePredata
              -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
              -> DocAnalysisInput
              -> DocStructure
-docStructure apredata emTagger docinput@(DocAnalysisInput sents _sentidxs sentitems _tokss mptrs _deps mtmxs) =
+docStructure apredata emTagger docinput@(DocAnalysisInput sents _ sentitems _ mptrs _ mtmxs) =
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = getWikiResolvedMentions emTagger

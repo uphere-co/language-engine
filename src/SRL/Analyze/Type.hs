@@ -54,9 +54,9 @@ makeLenses ''ONSenseFrameNetInstance
 
 
  
-chooseMostFreqFrame :: [(ONSenseFrameNetInstance,Int)] -> Maybe (ONSenseFrameNetInstance,Int)
-chooseMostFreqFrame [] = Nothing
-chooseMostFreqFrame xs = Just (maximumBy (compare `on` (^._2)) xs)
+chooseMostFreqFrame :: [(ONSenseFrameNetInstance,Int)] -> [(ONSenseFrameNetInstance,Int)]
+chooseMostFreqFrame [] = []
+chooseMostFreqFrame xs = [maximumBy (compare `on` (^._2)) xs]
 
 
 
@@ -71,10 +71,9 @@ data AnalyzePredata = AnalyzePredata { _analyze_sensemap  :: HashMap Text Invent
 makeLenses ''AnalyzePredata
 
 
-data VerbStructure = VerbStructure { _vs_vp           :: VerbProperty (Zipper '[Lemma])
-                                   -- , _vs_lma          :: Text
-                                   , _vs_senses       :: [(ONSenseFrameNetInstance,Int)]
-                                   , _vs_mrmmtoppatts :: Maybe (RoleInstance, Maybe [(ArgPattern () GRel, Int)])
+data VerbStructure = VerbStructure { _vs_vp              :: VerbProperty (Zipper '[Lemma])
+                                   , _vs_senses          :: [(ONSenseFrameNetInstance,Int)]
+                                   , _vs_roleTopPatts :: [(RoleInstance, [(ArgPattern () GRel, Int)])]
                                    }
 
 makeLenses ''VerbStructure
