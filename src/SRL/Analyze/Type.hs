@@ -22,7 +22,7 @@ import           NLP.Syntax.Type.Verb          (VerbProperty(..))
 import           NLP.Syntax.Type.XBar          (Zipper,CP)
 import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
 import           NLP.Type.PennTreebankII       (Lemma,PennTree)
-import           NLP.Type.SyntaxProperty       (Voice)
+import           NLP.Type.SyntaxProperty       (Tense,Aspect,Voice)
 import           WikiEL.EntityLinking          (EntityMention)
 --
 import           OntoNotes.Type.SenseInventory (Inventory)
@@ -72,7 +72,7 @@ makeLenses ''AnalyzePredata
 
 
 data VerbStructure = VerbStructure { _vs_vp           :: VerbProperty (Zipper '[Lemma])
-                                   , _vs_lma          :: Text
+                                   -- , _vs_lma          :: Text
                                    , _vs_senses       :: [(ONSenseFrameNetInstance,Int)]
                                    , _vs_mrmmtoppatts :: Maybe (RoleInstance, Maybe [(ArgPattern () GRel, Int)])
                                    }
@@ -120,7 +120,7 @@ data MGVertex = MGEntity    { _mv_id :: Int
               | MGPredicate { _mv_id    :: Int
                             , _mv_range :: Range
                             , _mv_frame :: Text
-                            , _mv_verb  :: Text
+                            , _mv_verb  :: (Text,Tense,Aspect,Voice,Maybe Text)
                             }
               deriving Show
 

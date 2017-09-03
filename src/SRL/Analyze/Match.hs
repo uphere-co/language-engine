@@ -34,11 +34,10 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,VerbStructure
                                               ,ds_sentStructures
                                               ,ss_clausetr,ss_mcpstr,ss_verbStructures
-                                              ,vs_lma,vs_mrmmtoppatts,vs_vp
+                                              ,vs_mrmmtoppatts,vs_vp
                                               ,mv_range,mv_id
                                               )
---
-import Debug.Trace
+
 
 
 
@@ -198,7 +197,7 @@ matchRoles verbp paws rolemap toppattstats dp_resolved =
 matchFrame :: (Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
               ,VerbStructure
               ,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
-           -> Maybe (Range,Text,FNFrameElement
+           -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FNFrameElement
                     ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, Zipper '[Lemma])]))
 matchFrame (mcpstr,vstr,paws) = do
   let cp = paws^.pa_CP
@@ -210,7 +209,8 @@ matchFrame (mcpstr,vstr,paws) = do
                         else case last dps of
                                Left _ -> Nothing
                                Right z -> Just z
-      verb = vstr^.vs_lma
+      -- verb = vstr^.vs_lma
+      vprop = vstr^.vs_vp
   (rm,mtoppatts) <- mrmmtoppatts
   rng <- cpRange cp
   let rolemap1 = rm^._2
@@ -225,13 +225,12 @@ matchFrame (mcpstr,vstr,paws) = do
                             (Nothing,Nothing) -> (frame1,Nothing)
                             (Just _ ,Nothing) -> (frame1,mselected1)
                             (Nothing,Just _ ) -> (frame2,mselected2)
-                            (Just s1,Just s2) -> trace (show (frame1,frame2,rolemap2)) $
+                            (Just s1,Just s2) -> 
                               case (compare `on` numMatchedRoles) s1 s2 of
                                 GT -> (frame1,mselected1)
                                 LT -> (frame2,mselected2)
                                 EQ -> (frame1,mselected1)   -- choose intransitive because transitive should have one more argument in general.
-  -- trace (show (mselected1,mselected2)) $
-  return (rng,verb,frame,mselected)
+  return (rng,vprop,frame,mselected)
 
 
 meaningGraph :: SentStructure -> MeaningGraph
@@ -240,7 +239,11 @@ meaningGraph sstr =
       matched =  mapMaybe matchFrame pawstriples
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList
 
-      preds = map (\(rng,verb,frame,_mselected) -> (\i -> MGPredicate i rng frame verb)) matched
+      preds = flip map matched $ \(rng,vprop,frame,_mselected) -> \i ->
+                MGPredicate i rng frame
+                            (vprop^.vp_lemma.to unLemma,vprop^.vp_tense,vprop^.vp_aspect,vprop^.vp_voice
+                            ,vprop^?vp_auxiliary._Just._2._2.to unLemma
+                            )
       ipreds = zipWith ($) preds [1..]
       entities0 = do (_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
