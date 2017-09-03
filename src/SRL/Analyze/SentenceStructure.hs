@@ -1,6 +1,7 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 
 module SRL.Analyze.SentenceStructure where
 
@@ -89,14 +90,14 @@ getSenses lma sensemap sensestat framedb ontomap = do
 
 getTopPatternsFromONFNInst :: [RoleInstance]
                            -> [RolePattInstance Voice]
-                           -> ONSenseFrameNetInstance
-                           -> [(RoleInstance, [(ArgPattern () GRel,Int)])]
-getTopPatternsFromONFNInst rolemap subcats inst = do
+                           -> (ONSenseFrameNetInstance,Int)
+                           -> [((RoleInstance,Int), [(ArgPattern () GRel,Int)])]
+getTopPatternsFromONFNInst rolemap subcats (inst,n) = do
   let sid = inst^.onfn_senseID
-  rm <- maybeToList (find (\rm -> rm^._1 == sid) rolemap)
+  rm <- filter (\rm -> rm^._1 == sid) rolemap
   let subcats' = maybeToList (find ((== sid) . (^._1)) subcats)
       toppatts_cut = cutHistogram thresholdPattStat . constructTopPatterns . (^._2) =<< subcats'
-  return (rm,toppatts_cut)
+  return ((rm,n),toppatts_cut)
 
 
 -- | Finding the structure of the sentence and formatting it.
@@ -141,5 +142,6 @@ verbStructure apredata vp =
       subcats = apredata^.analyze_subcats
 
       senses = getSenses lma sensemap sensestat framedb ontomap
-      mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<< fmap (^._1) (chooseMostFreqFrame senses)
-  in VerbStructure vp senses mrmmtoppatts
+      rmtoppatts = do inst <- sortBy (flip compare `on` (^._2)) senses
+                      getTopPatternsFromONFNInst rolemap subcats inst 
+  in VerbStructure vp senses rmtoppatts

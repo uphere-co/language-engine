@@ -39,7 +39,8 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,mv_range,mv_id
                                               )
 
-
+--
+import Debug.Trace
 
 
 allPAWSTriplesFromDocStructure
@@ -218,10 +219,11 @@ matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1) 
 
 matchFrameRolesAll verbp paws mDP rmtoppatts = do
   (rm,toppatts) <- rmtoppatts
-  let rolemap1 = rm^._2
+  let rolemap1 = rm^._1._2
+      stat = rm^._2
   frame1 <- maybeToList (lookup "frame" rolemap1)
   causetype <- (\x -> if x == "dual" then LVDual else LVSingle) <$> maybeToList (lookup "cause" rolemap1)
-  return (matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1))
+  return (matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1),stat)
 
 
   
@@ -241,16 +243,16 @@ matchFrame (mcpstr,vstr,paws) = do
       vprop = vstr^.vs_vp
   rng <- cpRange cp
   let frmsels = matchFrameRolesAll verbp paws mDP (vstr^.vs_roleTopPatts)
-  (frame,mselected) <- listToMaybe frmsels 
-  
-  {-
-  (rm,toppatts) <- listToMaybe (vstr^.vs_roleTopPatts)
-  let rolemap1 = rm^._2
-  frame1 <- lookup "frame" rolemap1
-  causetype <- (\x -> if x == "dual" then LVDual else LVSingle) <$>  lookup "cause" rolemap1
-  let (frame,mselected) = matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1)
-  -}
-  return (rng,vprop,frame,mselected)
+  let total=  sum (frmsels^..traverse._2)
+  ((frame,mselected),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
+
+  trace (show (map (scoreSelectedFrame total) frmsels)) $
+    return (rng,vprop,frame,mselected)
+
+scoreSelectedFrame total ((frame,mselected),n) =
+  let mn = maybe 0 fromIntegral (mselected^?_Just.to numMatchedRoles)
+  in mn * (fromIntegral n) / (fromIntegral total) * 100.0 + (mn*(fromIntegral total))
+--  (frame,n,mselected^?_Just.to numMatchedRoles)
 
 
 meaningGraph :: SentStructure -> MeaningGraph

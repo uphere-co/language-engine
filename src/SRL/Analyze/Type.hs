@@ -60,6 +60,7 @@ chooseMostFreqFrame xs = [maximumBy (compare `on` (^._2)) xs]
 
 
 
+
 data AnalyzePredata = AnalyzePredata { _analyze_sensemap  :: HashMap Text Inventory
                                      , _analyze_sensestat :: HashMap (Text,Text) Int
                                      , _analyze_framedb   :: FrameDB
@@ -73,7 +74,7 @@ makeLenses ''AnalyzePredata
 
 data VerbStructure = VerbStructure { _vs_vp              :: VerbProperty (Zipper '[Lemma])
                                    , _vs_senses          :: [(ONSenseFrameNetInstance,Int)]
-                                   , _vs_roleTopPatts :: [(RoleInstance, [(ArgPattern () GRel, Int)])]
+                                   , _vs_roleTopPatts :: [((RoleInstance,Int), [(ArgPattern () GRel, Int)])]
                                    }
 
 makeLenses ''VerbStructure

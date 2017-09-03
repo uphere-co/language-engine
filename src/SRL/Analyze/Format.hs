@@ -112,14 +112,14 @@ formatFrame t =
 
 formatSenses :: Bool  -- ^ doesShowOtherSense
              -> [(ONSenseFrameNetInstance,Int)]
-             -> [(RoleInstance, [(ArgPattern () GRel,Int)])]
+             -> [((RoleInstance,Int), [(ArgPattern () GRel,Int)])]
              -> String
 formatSenses doesShowOtherSense onfnlst rmtoppatts
   = let t = chooseMostFreqFrame onfnlst
     in "Top frame: "
        ++ (if (not.null) t then formatFrame (Just (head t)) else formatFrame Nothing)
        ++ "--------------------------------------------------------------------------------------------------\n"
-       ++ intercalate "\n" (flip map rmtoppatts (\(rm,toppatts) ->
+       ++ intercalate "\n" (flip map rmtoppatts (\((rm,_),toppatts) ->
                let argpattstr = formatArgPattStat toppatts
                in (formatRoleMap (rm^._2) ++ ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<> argpattstr))))
        ++ "\n--------------------------------------------------------------------------------------------------\n"
