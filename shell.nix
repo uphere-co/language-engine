@@ -9,11 +9,10 @@
 , nlp-types          ? <nlp-types>
 , OntoNotes          ? <OntoNotes>
 , PropBank           ? <PropBank>
-, VerbNet            ? <VerbNet>
 , syntactic-analysis ? <syntactic-analysis>
-, wiki-ner           ? <wiki-ner>
 , textview           ? <textview>
-, graph-algorithms   ? <graph-algorithms>
+, VerbNet            ? <VerbNet>
+, wiki-ner           ? <wiki-ner>
 }:
 
 
@@ -62,7 +61,6 @@ let
       "fastText"       = self.callPackage fastTextNix { inherit fasttext; };
       "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
       "textview"       = self.callPackage (import textview) {};
-      "graph-algorithms" = self.callPackage (import graph-algorithms) {};
     };  
   newHaskellPackages = haskellPackages.override {
     overrides = self: super: hsconfig self super // hsconfig2 self super;
