@@ -161,7 +161,7 @@ whMovement z = do
         runMaybeT $ do
           -- check object position for relative pronoun
           z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
-          let cp' = ((complement.complement.complement) %~ ([Left WHPRO,Right z'] :)) cp
+          let cp' = ((complement.complement.complement) %~ ([Left Moved,Left WHPRO,Right z'] :)) cp
               subtr = case z^.tz_current of
                         PN (rng,cp) ys -> PN (rng,cp') ys
                         PL (rng,cp)    -> PL (rng,cp')

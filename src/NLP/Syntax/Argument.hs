@@ -3,7 +3,7 @@
 
 module NLP.Syntax.Argument where
 
-import           Control.Lens                 ((^.),(^?),_1,_2,_Just,to)
+import           Control.Lens                 ((^.),(^?),_1,_2,_Just,_Right,_head,to)
 import           Control.Monad                (join)
 import           Data.Bifunctor               (bimap)
 import           Data.Foldable                (toList)
@@ -58,7 +58,7 @@ phraseNodeType mtp z
                   return (getRange (current dp) == rng)
         obj  = do tp <- mtp
                   let os = zip [1..] (tp^.complement.complement)
-                  m <- find (\o -> getRange (current (o^._2)) == rng) os
+                  m <- find (\o -> o^?_2._head._Right.to current.to getRange == Just rng) os
                   return (m^._1)
         mgarg :: Maybe GArg
         mgarg = case subj of
