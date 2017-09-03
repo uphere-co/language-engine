@@ -53,10 +53,10 @@ data ONSenseFrameNetInstance = ONFNInstance { _onfn_senseID :: SenseID
 makeLenses ''ONSenseFrameNetInstance
 
 
-
-chooseFrame :: [(ONSenseFrameNetInstance,Int)] -> Maybe (ONSenseFrameNetInstance,Int)
-chooseFrame [] = Nothing
-chooseFrame xs = Just (maximumBy (compare `on` (^._2)) xs)
+ 
+chooseMostFreqFrame :: [(ONSenseFrameNetInstance,Int)] -> Maybe (ONSenseFrameNetInstance,Int)
+chooseMostFreqFrame [] = Nothing
+chooseMostFreqFrame xs = Just (maximumBy (compare `on` (^._2)) xs)
 
 
 

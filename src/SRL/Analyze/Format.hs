@@ -27,8 +27,6 @@ import           Data.BitreeZipper
 
 import           Data.Range
 import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
-import           Lexicon.Merge                           (constructTopPatterns)
-import           Lexicon.Query                           (cutHistogram)
 import           Lexicon.Type                            (ArgPattern(..),RoleInstance
                                                          ,RolePattInstance,GRel(..))
 import           NLP.Syntax.Format
@@ -50,7 +48,7 @@ import           SRL.Analyze.Type                        (ExceptionalFrame(..),O
                                                          ,MGVertex(..),MeaningGraph
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_start,me_end
-                                                         ,chooseFrame
+                                                         ,chooseMostFreqFrame
                                                          ,onfn_senseID,onfn_definition,onfn_frame
                                                          ,tf_frameID,tf_feCore,tf_fePeri
                                                          ,vs_vp
@@ -61,16 +59,6 @@ import           SRL.Analyze.Util                        (CharIdx,TokIdx,TagPos(
 
 
 
-getTopPatternsFromONFNInst :: [RoleInstance]
-                           -> [RolePattInstance Voice]
-                           -> ONSenseFrameNetInstance
-                           -> Maybe (RoleInstance, Maybe [(ArgPattern () GRel,Int)])
-getTopPatternsFromONFNInst rolemap subcats inst = do
-  let sid = inst^.onfn_senseID
-  rm <- find (\rm -> rm^._1 == sid) rolemap
-  let msubcat = find ((== sid) . (^._1)) subcats
-      mtoppatts_cut = cutHistogram 0.9 . constructTopPatterns . (^._2) <$> msubcat
-  return (rm,mtoppatts_cut)
 
 
 formatExFrame :: ExceptionalFrame -> Text
@@ -127,7 +115,7 @@ formatSenses :: Bool  -- ^ doesShowOtherSense
              -> Maybe (RoleInstance, Maybe [(ArgPattern () GRel,Int)])
              -> String
 formatSenses doesShowOtherSense onfnlst mrmmtoppatts
-  = let t = chooseFrame onfnlst
+  = let t = chooseMostFreqFrame onfnlst
     in "Top frame: "
        ++ formatFrame t
        ++ "--------------------------------------------------------------------------------------------------\n"
@@ -227,8 +215,8 @@ showMatchedFrame (mcpstr,vstr,paws) = do
   let gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
   T.IO.putStrLn "---------------------------"
   flip traverse_ (matchFrame (mcpstr,vstr,paws)) $ \(rng,verb,frame,mselected) -> do
-    putStrLn ("predicate: " <> show rng) -- maybe "unidentified CP" show (cpRange cp))
-    T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma)) -- (vstr^.vs_lma))
+    putStrLn ("predicate: " <> show rng)
+    T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> frame)
     flip traverse_ mselected $ \(_,felst) -> do
       mapM_ putStrLn . map (\(fe,z) -> printf "%-15s: %-7s %s" fe (show (getRange (current z))) (gettokens z)) $ felst
@@ -240,7 +228,6 @@ showMatchedFrame (mcpstr,vstr,paws) = do
 dotMeaningGraph :: String -> MeaningGraph -> String
 dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt ttxt
   where
-    -- fmtFrm (f,v) = printf "
     fmtEdge e = printf "i%d -> i%d [label=\"%s\"];" (e^.me_start) (e^.me_end) (e^.me_relation)
     fmtVerb (MGEntity    _ _ _  ) = Nothing
     fmtVerb (MGPredicate i _ f v) = Just (i,f <> " | { "
