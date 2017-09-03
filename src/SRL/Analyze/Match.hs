@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TupleSections         #-}
@@ -186,10 +187,10 @@ numMatchedRoles = lengthOf (_2.folded)
 
 
 matchRoles :: _ -> _ -> _ -> _ -> _ -> Maybe ((ArgPattern () GRel, Int),_)
-matchRoles verbp paws rolemap toppattstats dp_resolved =
+matchRoles verbp paws rolemap toppattstats dp =
     (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy (flip compare `on` numMatchedRoles)) matched
   where
-    matched = map (matchSO rolemap (dp_resolved,verbp,paws)) toppattstats
+    matched = map (matchSO rolemap (dp,verbp,paws)) toppattstats
     cmpstat  = flip compare `on` (^._1._2)
     eq       = (==) `on` lengthOf (_2.folded)
 
@@ -200,8 +201,8 @@ matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1) 
   let (frame2,rolemap2) = if causetype == LVDual
                           then extendRoleMapForDual frame1 rolemap1
                           else (frame1,rolemap1)
-      mselected1 = join (matchRoles verbp paws rolemap1 <$> (case toppatts of [] -> Nothing; xs -> Just xs) <*> mDP)
-      mselected2 = join (matchRoles verbp paws rolemap2 <$> (case toppatts of [] -> Nothing; xs -> Just xs) <*> mDP)
+      mselected1 = join (matchRoles verbp paws rolemap1 toppatts <$> mDP)
+      mselected2 = join (matchRoles verbp paws rolemap2 toppatts <$> mDP)
   in case (mselected1,mselected2) of
        (Nothing,Nothing) -> (frame1,Nothing)
        (Just _ ,Nothing) -> (frame1,mselected1)
@@ -214,6 +215,16 @@ matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1) 
                                        -- have one more argument in general.
 
 
+
+matchFrameRolesAll verbp paws mDP rmtoppatts = do
+  (rm,toppatts) <- rmtoppatts
+  let rolemap1 = rm^._2
+  frame1 <- maybeToList (lookup "frame" rolemap1)
+  causetype <- (\x -> if x == "dual" then LVDual else LVSingle) <$> maybeToList (lookup "cause" rolemap1)
+  return (matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1))
+
+
+  
 matchFrame :: (Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
               ,VerbStructure
               ,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
@@ -228,12 +239,17 @@ matchFrame (mcpstr,vstr,paws) = do
                        Left _ -> Nothing
                        Right z -> Just z
       vprop = vstr^.vs_vp
-  (rm,toppatts) <- listToMaybe (vstr^.vs_roleTopPatts)
   rng <- cpRange cp
+  let frmsels = matchFrameRolesAll verbp paws mDP (vstr^.vs_roleTopPatts)
+  (frame,mselected) <- listToMaybe frmsels 
+  
+  {-
+  (rm,toppatts) <- listToMaybe (vstr^.vs_roleTopPatts)
   let rolemap1 = rm^._2
   frame1 <- lookup "frame" rolemap1
   causetype <- (\x -> if x == "dual" then LVDual else LVSingle) <$>  lookup "cause" rolemap1
   let (frame,mselected) = matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1)
+  -}
   return (rng,vprop,frame,mselected)
 
 
@@ -242,13 +258,14 @@ meaningGraph sstr =
   let pawstriples = mkPAWSTriples sstr
       matched =  mapMaybe matchFrame pawstriples
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList
-
+      --
       preds = flip map matched $ \(rng,vprop,frame,_mselected) -> \i ->
                 MGPredicate i rng frame
                             (vprop^.vp_lemma.to unLemma,vprop^.vp_tense,vprop^.vp_aspect,vprop^.vp_voice
                             ,vprop^?vp_auxiliary._Just._2._2.to unLemma
                             )
       ipreds = zipWith ($) preds [1..]
+      --
       entities0 = do (_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
                      (_fe,z) <- felst
@@ -256,10 +273,8 @@ meaningGraph sstr =
                          rng = getRange x
                          txt = gettokens x
                      return (rng,txt)
-
       filterFrame = filter (\(rng,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
-
-
+      --
       entities = map (\(rng,txt) i -> MGEntity i rng txt)
                . filterFrame
                . map head
@@ -267,6 +282,7 @@ meaningGraph sstr =
                . sortBy (compare `on` (^._1))
                $ entities0
       vertices = ipreds ++ zipWith ($) entities (enumFrom (length ipreds+1))
+      --
       rngidxmap = HM.fromList [(v^.mv_range,v^.mv_id) | v <- vertices ]
       edges = do (rng,_,_,mselected) <- matched
                  i <- maybeToList (HM.lookup rng rngidxmap)
