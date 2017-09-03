@@ -5,8 +5,9 @@
 --
 module Data.Range where
 
-import           Data.Either  (partitionEithers)
-import           Data.List    (inits,mapAccumL)
+import           Data.Either   (partitionEithers)
+import           Data.Foldable (any)
+import           Data.List     (inits,mapAccumL)
 --
 import           Data.Bitree
 
@@ -16,9 +17,15 @@ type Range = (Int,Int)
 isInside :: Int -> Range -> Bool
 x `isInside` (x1,y1) = x1 <= x && x <= y1
 
-
 isInsideR :: Range -> Range -> Bool
 (x0,y0) `isInsideR` (x1,y1) = x1 <= x0 && y0 <= y1
+
+elemIsInsideR :: Foldable t => Range -> t Range -> Bool
+elemIsInsideR x ys = any (\y -> x `isInsideR` y) ys
+
+elemRevIsInsideR :: Foldable t => Range -> t Range -> Bool
+elemRevIsInsideR x ys = any (\y -> y `isInsideR` x) ys
+
 
 rootRange []     = error "rootRange"
 rootRange rs@(r:_) = let res = mapAccumL (\(!rmax) rlst -> go rmax rlst) r (tail (inits rs))
