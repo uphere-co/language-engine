@@ -29,6 +29,7 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 --
+import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,DocStructure
                                               ,SentStructure
@@ -246,13 +247,13 @@ matchFrame (mcpstr,vstr,paws) = do
   let total=  sum (frmsels^..traverse._2)
   ((frame,mselected),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
 
-  trace (show (map (scoreSelectedFrame total) frmsels)) $
+  trace (show (map (\x@((fr,msel),n) -> (fr,n,scoreSelectedFrame total x)) frmsels)) $
     return (rng,vprop,frame,mselected)
+
 
 scoreSelectedFrame total ((frame,mselected),n) =
   let mn = maybe 0 fromIntegral (mselected^?_Just.to numMatchedRoles)
-  in mn * (fromIntegral n) / (fromIntegral total) * 100.0 + (mn*(fromIntegral total))
---  (frame,n,mselected^?_Just.to numMatchedRoles)
+  in mn * (fromIntegral n) / (fromIntegral total) * roleMatchWeightFactor + (mn*(fromIntegral total))
 
 
 meaningGraph :: SentStructure -> MeaningGraph
