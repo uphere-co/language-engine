@@ -117,8 +117,8 @@ formatCP mcpstr cp
                      \Verb Complements     :       %s\n"
                 (maybe "null" show (getchunk =<< cp^.maximalProjection))
                 (maybe "" (show . gettoken) (cp^.maximalProjection))
-                (maybe "null" formatposchunk (fmap getposchunk (cp^.headX)))
-                (maybe "" (show . gettoken) (cp^.headX))
+                (either show formatposchunk (fmap getposchunk (cp^.headX)))
+                (either show (show . gettoken) (cp^.headX))
                 (maybe "null" show (getchunk =<< cp^.complement.maximalProjection))
                 (maybe "" (show . gettoken) (cp^.complement.maximalProjection))
                 (formatDPTokens (cp^.complement.specifier))

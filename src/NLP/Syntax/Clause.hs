@@ -108,14 +108,12 @@ constructCP vprop = do
         cptag' <- N.convert <$> getchunk cp'
         let subj = identifySubject s vp
         case cptag' of
-          N.CL _ -> return $ mkCP (Just cp')
-                                  (prev tp')
-                                  (mkTP (Just tp') subj verbp)
-          N.RT   -> return $ mkCP (Just cp')
-                                  Nothing
-                                  (mkTP (Just tp') subj verbp)
-          _      -> return (mkCP Nothing Nothing (mkTP (Just tp') subj verbp))  -- somewhat problematic case?
-      _ -> return (mkCP Nothing Nothing (mkTP Nothing [] verbp))                -- reduced relative clause
+          N.CL _ -> return $ mkCP (maybe (Left C_NULL) Right (prev tp')) (Just cp') (mkTP (Just tp') subj verbp)
+          N.RT   -> return $ mkCP (Left C_NULL) (Just cp') (mkTP (Just tp') subj verbp)
+          _      -> -- somewhat problematic case?
+                    return (mkCP (Left C_NULL) Nothing (mkTP (Just tp') subj verbp))
+      _ -> -- reduced relative clause
+           return (mkCP (Left C_WH) Nothing (mkTP Nothing [] verbp))
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -184,7 +182,7 @@ resolveDP rng = do
     Nothing -> return []
     Just z -> do
       let cp = currentCP z
-      if maybe False (isChunkAs WHNP . current) (cp^.headX)
+      if either (== C_WH) (isChunkAs WHNP . current) (cp^.headX)
         then whMovement z
         else
           case cp^.complement.specifier of

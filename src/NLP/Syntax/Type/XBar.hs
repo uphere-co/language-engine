@@ -80,8 +80,9 @@ mkTP mtp mdp vp = XP () mtp mdp () vp
 
 
 data NullComplementizer = C_NULL | C_WH
+                        deriving (Show,Eq,Ord)
   
-type instance Property   'X_C t = Maybe (Zipper t) -- Either NullComplementizer (Zipper t)
+type instance Property   'X_C t = Either NullComplementizer (Zipper t)
 
 type instance Maximal    'X_C t = Maybe (Zipper t)
 type instance Specifier  'X_C t = ()
@@ -90,7 +91,7 @@ type instance Complement 'X_C t = TP t
 
 type CP = XP 'X_C
 
-mkCP :: Maybe (Zipper t) -> Maybe (Zipper t) -> TP t -> CP t
-mkCP mcp mc tp = XP mc mcp () () tp
+mkCP :: Either NullComplementizer (Zipper t) -> Maybe (Zipper t) -> TP t -> CP t
+mkCP mc mcp tp = XP mc mcp () () tp
 
          
