@@ -51,7 +51,8 @@ makeLenses ''XP
 --   Empty categories are first identified as NULL and
 --   will be resolved step by step.
 --
-data NTrace = NULL | SilentPRO | Moved | WHPRO  --    | Moved
+data NTrace = NULL | SilentPRO | Moved | WHPRO
+            deriving (Show,Eq,Ord)
 
 type instance Property   'X_V t = VerbProperty (Zipper t)
 
@@ -68,7 +69,7 @@ mkVerbP vp vprop comps = XP vprop vp () () comps
 type instance Property   'X_T t = ()
 
 type instance Maximal    'X_T t = Maybe (Zipper t)
-type instance Specifier  'X_T t = [Either NTrace (Zipper t)] -- Maybe (ATNode (DP (Zipper t)))
+type instance Specifier  'X_T t = [Either NTrace (Zipper t)]
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
@@ -77,8 +78,10 @@ type TP = XP 'X_T
 mkTP :: Maybe (Zipper t) -> [Either NTrace (Zipper t)] -> VerbP t -> TP t
 mkTP mtp mdp vp = XP () mtp mdp () vp 
 
+
+data NullComplementizer = C_NULL | C_WH
   
-type instance Property   'X_C t = Maybe (Zipper t)   -- complementizer
+type instance Property   'X_C t = Maybe (Zipper t) -- Either NullComplementizer (Zipper t)
 
 type instance Maximal    'X_C t = Maybe (Zipper t)
 type instance Specifier  'X_C t = ()
