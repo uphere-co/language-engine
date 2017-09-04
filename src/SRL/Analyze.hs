@@ -56,7 +56,9 @@ import           SRL.Analyze.Util              (TagPos(..))
 import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
                                                ,occupationItemFile,orgItemFile,personItemFile,reprFile)
 import           SRL.Analyze.WikiEL            (mkWikiList)
-import           SRL.Statistics                (numberOfMGPredicate,numberOfPredicate)
+import           SRL.Statistics                (getGraphFromMG
+                                               ,numberOfMGPredicate,numberOfPredicate
+                                               ,testGraph)
 
 
 -- | main query loop
@@ -84,7 +86,8 @@ queryProcess config pp apredata emTagger =
                   --
                   printMeaningGraph dstr
                   -- print $ map numberOfPredicate (catMaybes $ dstr ^. ds_sentStructures)
-                  -- print $ map numberOfMGPredicate $ map meaningGraph (catMaybes $ dstr ^. ds_sentStructures) 
+                  -- print $ map numberOfMGPredicate $ map meaningGraph (catMaybes $ dstr ^. ds_sentStructures)
+                  print $ map getGraphFromMG $ map meaningGraph (catMaybes $ dstr ^. ds_sentStructures)
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
