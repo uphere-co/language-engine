@@ -17,7 +17,7 @@ import qualified Data.Vector                   as V
 
 import           WikiEL.CoreNLP                               (parseNEROutputStr)
 import           WikiEL.WikiEntityTagger                      (loadWETagger,wikiAnnotator)
-import           WikiEL.WikiEntityClass                       (fromFiles,getNEClass)
+import           WikiEL.WikiEntityClass                       (loadFiles)
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,parseStanfordNE,namedEntityAnnotator)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..),resolveNEClass)
 import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention(..),entityLinking,entityLinkings,buildEntityMentions,entityUID)
@@ -54,16 +54,12 @@ uid = itemID
 uids = fromList . map uid
 
 
-other wikiUID  = (uid wikiUID, WC.otherClass)
-org   wikiUID  = (uid wikiUID, WC.orgClass)
-person wikiUID = (uid wikiUID, WC.personClass)
-
-ai1 = other "Q42970"
-ai2 = other "Q11660"
-nlp = other "Q30642"
-google       = org "Q95"
-googleSearch = other "Q9366"
-facebook     = org "Q380"
+ai1 = uid "Q42970"
+ai2 = uid "Q11660"
+nlp = uid "Q30642"
+google       = uid "Q95"
+googleSearch = uid "Q9366"
+facebook     = uid "Q380"
 
 
 testNamedEntityTagging :: TestTree
@@ -72,8 +68,7 @@ testNamedEntityTagging = testCaseSteps "Named entity tagging on CoreNLP NER outp
   let
     ner_text = "Google/ORGANIZATION and/O Facebook/ORGANIZATION Inc./ORGANIZATION are/O famous/O AI/O companies/O ./O NLP/ORGANIZATION stands/O for/O natural/O language/O processing/O ./O"
     stanford_nefs =  map parseStanfordNE (parseNEROutputStr ner_text)
-    uid2tag = WC.fromList [nlp,ai1,ai2,facebook,google,googleSearch]
-    matchedItems  = namedEntityAnnotator entities uid2tag stanford_nefs
+    matchedItems  = namedEntityAnnotator entities stanford_nefs
     expected_matches = [(IRange 0 1,   fromList [google, googleSearch])
                        ,(IRange 2 4,   fromList [facebook])
                        ,(IRange 6 7,   fromList [ai2, ai1])
@@ -83,10 +78,6 @@ testNamedEntityTagging = testCaseSteps "Named entity tagging on CoreNLP NER outp
     tt = getStanfordNEs stanford_nefs
     expected_tt = [(IRange 0 1, N.Org),(IRange 2 4,N.Org),(IRange 9 10, N.Org)]
 
-    -- Other : (uids ["Q11660","Q9366","Q30642"])
-    -- Org  :  (uids ["Q42970","Q380","Q95"])    
-    
-  --print ner_text
   eassertEqual tt expected_tt
   eassertEqual matchedItems expected_matches
 
@@ -106,44 +97,49 @@ testIRangeOps = testCaseSteps "Test operations on IRange" $ \step -> do
 testNEResolution :: TestTree
 testNEResolution = testCaseSteps "Resolving Wiki UID with Stanford NE tag" $ \step -> do
   let
-    ambiguousUID = fromList [org "Q1", org "Q2", person "Q3"]
+    ambiguousUID = fromList [uid "Q1", uid "Q2", uid "Q3"]
     entities = [(IRange 1 4, ambiguousUID)]
+    other wikiUID  = (uid wikiUID, WC.otherClass)
+    org   wikiUID  = (uid wikiUID, WC.orgClass)
+    person wikiUID = (uid wikiUID, WC.personClass)
+    uidTags = WC.fromList [org "Q1", org "Q2", person "Q3"]
   
-  eassertEqual (resolveNEClass N.Org ambiguousUID) (AmbiguousUID ([uid "Q2", uid "Q1"], N.Org))
-  eassertEqual (resolveNEClass N.Person ambiguousUID) (Resolved (uid "Q3", N.Person))
+  eassertEqual (resolveNEClass uidTags N.Org ambiguousUID) (AmbiguousUID ([uid "Q2", uid "Q1"], N.Org))
+  eassertEqual (resolveNEClass uidTags N.Person ambiguousUID) (Resolved (uid "Q3", N.Person))
 
   step "Single entity cases"
-  eassertEqual (resolveNEs [(IRange 1 4, N.Person)] entities) [(IRange 1 4, resolveNEClass N.Person ambiguousUID)]
-  eassertEqual (resolveNEs [(IRange 1 4, N.Org)] entities) [(IRange 1 4, resolveNEClass N.Org ambiguousUID)]
-  eassertEqual (resolveNEs [(IRange 1 2, N.Org)] entities) [(IRange 1 4, UnresolvedClass (toList ambiguousUID))]
-  eassertEqual (resolveNEs [(IRange 0 5, N.Org)] entities) [(IRange 0 5, UnresolvedUID N.Org)]
-  eassertEqual (resolveNEs [(IRange 0 2, N.Org)] entities) [(IRange 0 2, UnresolvedUID N.Org)]
-  eassertEqual (resolveNEs [(IRange 3 5, N.Org)] entities) [(IRange 1 4, UnresolvedClass (toList ambiguousUID))]
+  eassertEqual (resolveNEs uidTags [(IRange 1 4, N.Person)] entities) [(IRange 1 4, resolveNEClass uidTags N.Person ambiguousUID)]
+  eassertEqual (resolveNEs uidTags [(IRange 1 4, N.Org)] entities) [(IRange 1 4, resolveNEClass uidTags N.Org ambiguousUID)]
+  eassertEqual (resolveNEs uidTags [(IRange 1 2, N.Org)] entities) [(IRange 1 4, UnresolvedClass (toList ambiguousUID))]
+  eassertEqual (resolveNEs uidTags [(IRange 0 5, N.Org)] entities) [(IRange 0 5, UnresolvedUID N.Org)]
+  eassertEqual (resolveNEs uidTags [(IRange 0 2, N.Org)] entities) [(IRange 0 2, UnresolvedUID N.Org)]
+  eassertEqual (resolveNEs uidTags [(IRange 3 5, N.Org)] entities) [(IRange 1 4, UnresolvedClass (toList ambiguousUID))]
 
   step "Multiple entities cases"
   let
     input = "A1/PERSON A2/PERSON x/O y/O z/O W1/ORGANIZATION W2/ORGANIZATION W3/ORGANIZATION"
     stanford_nes =  getStanfordNEs (map parseStanfordNE (parseNEROutputStr input))
-    ambiguousUID1 = fromList [org "Q11", org "Q12", person "Q13"]
-    ambiguousUID2 = fromList [org "Q21", org "Q22", person "Q23"]
+    ambiguousUID1 = fromList [uid "Q11", uid "Q12", uid "Q13"]
+    ambiguousUID2 = fromList [uid "Q21", uid "Q22", uid "Q23"]
+    uidTags = WC.fromList ([org "Q11", org "Q12", person "Q13"] ++ [org "Q21", org "Q22", person "Q23"])
     entities1 = [(IRange 0 2, ambiguousUID1),(IRange 5 8, ambiguousUID2)]
     
-    r1 = resolveNEs stanford_nes entities1
+    r1 = resolveNEs uidTags stanford_nes entities1
     expected_r1 = [(IRange 0 2, Resolved (uid "Q13", N.Person)),
                    (IRange 5 8, AmbiguousUID ([uid "Q22", uid "Q21"],N.Org))]
 
     entities2 = [(IRange 0 2, ambiguousUID1),(IRange 5 7, ambiguousUID2)]
-    r2 = resolveNEs stanford_nes entities2
+    r2 = resolveNEs uidTags stanford_nes entities2
     expected_r2 = [(IRange 0 2, Resolved (uid "Q13", N.Person)),
                    (IRange 5 8, UnresolvedUID N.Org)]
 
     entities3 = [(IRange 0 2, ambiguousUID1),(IRange 4 6, ambiguousUID2)]
-    r3 = resolveNEs stanford_nes entities3
+    r3 = resolveNEs uidTags stanford_nes entities3
     expected_r3 = [(IRange 0 2, Resolved (uid "Q13", N.Person)),
                    (IRange 4 6, UnresolvedClass (toList ambiguousUID2))]
 
     entities4 = [(IRange 0 2, ambiguousUID1),(IRange 7 9, ambiguousUID2)]
-    r4 = resolveNEs stanford_nes entities4
+    r4 = resolveNEs uidTags stanford_nes entities4
     expected_r4 = expected_r2
 
   print stanford_nes
@@ -174,22 +170,22 @@ testRunWikiNER :: TestTree
 testRunWikiNER = testCaseSteps "Test run for Wiki named entity annotator" $ \step -> do
   input_raw <- T.IO.readFile rawNewsFile
   input <- T.IO.readFile nerNewsFile
-  uid2tag <- fromFiles [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile)]
+  uidTag   <- loadFiles [(WC.orgClass, orgItemFile), (WC.personClass, personItemFile)]
   wikiTable <- loadWETagger reprFile
   
   let
     stanford_nefs = map parseStanfordNE (parseNEROutputStr input)
     named_entities =  filter (\x -> snd x == N.Org || snd x == N.Person) (getStanfordNEs stanford_nefs)
-    wiki_entities = namedEntityAnnotator wikiTable uid2tag stanford_nefs
-    wiki_named_entities = resolveNEs named_entities wiki_entities
+    wiki_entities = namedEntityAnnotator wikiTable stanford_nefs
+    wiki_named_entities = resolveNEs uidTag named_entities wiki_entities
 
     text = fromList (T.words input_raw)
     mentions = buildEntityMentions text wiki_named_entities
     linked_mentions = entityLinkings mentions
     
     -- constants for testing
-    flag1 = getNEClass uid2tag (uid "Q95")
-    flag2 = getNEClass uid2tag (uid "Q3503829")
+    flag1 = WC.hasNETag uidTag (uid "Q95", N.Org)   -- Google
+    flag2 = WC.hasNETag uidTag (uid "Q3503829", N.Person) -- Sundar Pichai
     united_airlines = fromList ["United","Airlines"]
     oscar_munoz     = fromList ["Oscar","Munoz"]
     t1  = (IRange 0 2,   united_airlines, Resolved (uid "Q174769", N.Org))
@@ -311,7 +307,7 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
       Just symbol -> Just (mentionUID, itemID, symbol)
       Nothing     -> Nothing
 
-runEL (tickerMap,uid2tag,wikiTable) rawFile nerFile posFile = do
+runEL (tickerMap,uidTag,wikiTable) rawFile nerFile posFile = do
   let
     -- Load data for entity mention pruner. Input is a list of PoS tags of the input text.
     input_pos = V.fromList (map fst posFile)
@@ -320,8 +316,8 @@ runEL (tickerMap,uid2tag,wikiTable) rawFile nerFile posFile = do
   let
     stanford_nefs  = map parseStanfordNE (parseNEROutputStr input_ner)
     named_entities = getStanfordNEs stanford_nefs -- filter (\x -> snd x == N.Org || snd x == N.Person) 
-    wiki_entities  = namedEntityAnnotator wikiTable uid2tag stanford_nefs
-    wiki_named_entities = resolveNEs named_entities wiki_entities
+    wiki_entities  = namedEntityAnnotator wikiTable stanford_nefs
+    wiki_named_entities = resolveNEs uidTag named_entities wiki_entities
 
     text = fromList (T.words input_raw)
     mentions = buildEntityMentions text wiki_named_entities
@@ -354,13 +350,13 @@ runEL (tickerMap,uid2tag,wikiTable) rawFile nerFile posFile = do
 main1 = do
   -- For loading ticker symbol data.
   tickerMap <- loadCompanySymbol listedCompanyFile
-  uid2tag   <- fromFiles classFiles
+  uidTag   <-  WC.loadFiles classFiles
   wikiTable <- loadWETagger reprFile
 
 
-  runEL (tickerMap,uid2tag,wikiTable) rawNewsFile3 nerNewsFile3 posNewsFile3
-  runEL (tickerMap,uid2tag,wikiTable) rawNewsFile4 nerNewsFile4 posNewsFile4
-  runEL (tickerMap,uid2tag,wikiTable) rawNewsFile5 nerNewsFile5 posNewsFile5
+  runEL (tickerMap,uidTag,wikiTable) rawNewsFile3 nerNewsFile3 posNewsFile3
+  runEL (tickerMap,uidTag,wikiTable) rawNewsFile4 nerNewsFile4 posNewsFile4
+  runEL (tickerMap,uidTag,wikiTable) rawNewsFile5 nerNewsFile5 posNewsFile5
 
 
   
