@@ -1,16 +1,17 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 
 module SRL.Analyze.SentenceStructure where
 
-import           Control.Lens                              ((^.),(^..),_1,to)
+import           Control.Lens                              ((^.),(^..),_1,_2,to)
 import           Data.Bifunctor                            (bimap)
 import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
-import           Data.List                                 (sortBy)
-import           Data.Maybe                                (fromMaybe,maybeToList)
+import           Data.List                                 (find,sortBy)
+import           Data.Maybe                                (fromMaybe,maybeToList,listToMaybe)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
@@ -19,6 +20,8 @@ import           CoreNLP.Simple.Convert                    (mkLemmaMap')
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
 import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
+import           Lexicon.Merge                             (constructTopPatterns)
+import           Lexicon.Query                             (cutHistogram)
 import           Lexicon.Type                              (POSVorN(..),GRel
                                                            ,RoleInstance,RolePattInstance
                                                            ,ArgPattern)
@@ -37,7 +40,7 @@ import           WikiEL.EntityLinking                      (EntityMention)
 --
 import           OntoNotes.Type.SenseInventory
 --
-import           SRL.Analyze.Format                        (getTopPatternsFromONFNInst)
+import           SRL.Analyze.Parameter                     (thresholdPattStat)
 import           SRL.Analyze.Type
 import           SRL.Analyze.Util                          (TagPos(..))
 import           SRL.Analyze.WikiEL                        (getWikiResolvedMentions
@@ -49,8 +52,6 @@ mergeTagPos xs ys =
   let zs = map (fmap Left) xs ++ map (fmap Right) ys
       idx (TagPos (i,_,_)) = i
   in sortBy (compare `on` idx) zs
-
-
 
 
 getSenses :: Text
@@ -86,14 +87,17 @@ getSenses lma sensemap sensestat framedb ontomap = do
   return ((ONFNInstance sid txt_def tframe),num)
 
 
-getTopPatternsFromSensesAndVP :: [RoleInstance]
-                              -> [RolePattInstance Voice]
-                              -> [(ONSenseFrameNetInstance,Int)]
-                              -> ([(ONSenseFrameNetInstance,Int)]
-                                 ,Maybe (RoleInstance,Maybe [(ArgPattern () GRel,Int)]))
-getTopPatternsFromSensesAndVP rolemap subcats senses =
-  let mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<< fmap (^._1) (chooseFrame senses)
-  in (senses,mrmmtoppatts)
+
+getTopPatternsFromONFNInst :: [RoleInstance]
+                           -> [RolePattInstance Voice]
+                           -> (ONSenseFrameNetInstance,Int)
+                           -> [((RoleInstance,Int), [(ArgPattern () GRel,Int)])]
+getTopPatternsFromONFNInst rolemap subcats (inst,n) = do
+  let sid = inst^.onfn_senseID
+  rm <- filter (\rm -> rm^._1 == sid) rolemap
+  let subcats' = maybeToList (find ((== sid) . (^._1)) subcats)
+      toppatts_cut = cutHistogram thresholdPattStat . constructTopPatterns . (^._2) =<< subcats'
+  return ((rm,n),toppatts_cut)
 
 
 -- | Finding the structure of the sentence and formatting it.
@@ -102,7 +106,7 @@ docStructure :: AnalyzePredata
              -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
              -> DocAnalysisInput
              -> DocStructure
-docStructure apredata emTagger docinput@(DocAnalysisInput sents _sentidxs sentitems _tokss mptrs _deps mtmxs) =
+docStructure apredata emTagger docinput@(DocAnalysisInput sents _ sentitems _ mptrs _ mtmxs) =
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = getWikiResolvedMentions emTagger
@@ -138,5 +142,6 @@ verbStructure apredata vp =
       subcats = apredata^.analyze_subcats
 
       senses = getSenses lma sensemap sensestat framedb ontomap
-      mrmmtoppatts = getTopPatternsFromONFNInst rolemap subcats =<< fmap (^._1) (chooseFrame senses)
-  in VerbStructure vp lma senses mrmmtoppatts
+      rmtoppatts = do inst <- sortBy (flip compare `on` (^._2)) senses
+                      getTopPatternsFromONFNInst rolemap subcats inst 
+  in VerbStructure vp senses rmtoppatts

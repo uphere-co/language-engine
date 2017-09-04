@@ -8,7 +8,7 @@
 
 module SRL.Analyze.Format where
 
-import           Control.Lens                            ((^.),(^?),_1,_2,_3,_Just,_Right,to)
+import           Control.Lens                            ((^.),(^?),_1,_2,_3,_5,_Just,_Right,to)
 import           Data.Foldable
 import           Data.List                               (find,intercalate,intersperse)
 import           Data.Maybe                              (fromMaybe,mapMaybe)
@@ -27,13 +27,12 @@ import           Data.BitreeZipper
 
 import           Data.Range
 import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
-import           Lexicon.Merge                           (constructTopPatterns)
-import           Lexicon.Query                           (cutHistogram)
 import           Lexicon.Type                            (ArgPattern(..),RoleInstance
                                                          ,RolePattInstance,GRel(..))
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
+import           NLP.Syntax.Type.Verb                    (vp_lemma)
 import           NLP.Syntax.Type.XBar                    (CP)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
@@ -49,25 +48,17 @@ import           SRL.Analyze.Type                        (ExceptionalFrame(..),O
                                                          ,MGVertex(..),MeaningGraph
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_start,me_end
-                                                         ,chooseFrame
+                                                         ,chooseMostFreqFrame
                                                          ,onfn_senseID,onfn_definition,onfn_frame
-                                                         ,tf_frameID,tf_feCore,tf_fePeri)
+                                                         ,tf_frameID,tf_feCore,tf_fePeri
+                                                         ,vs_vp
+                                                         )
 import           SRL.Analyze.Util                        (CharIdx,TokIdx,TagPos(..),SentItem
                                                          ,addTag,convertTagPosFromTokenToChar
                                                          ,underlineText)
 
 
 
-getTopPatternsFromONFNInst :: [RoleInstance]
-                           -> [RolePattInstance Voice]
-                           -> ONSenseFrameNetInstance
-                           -> Maybe (RoleInstance, Maybe [(ArgPattern () GRel,Int)])
-getTopPatternsFromONFNInst rolemap subcats inst = do
-  let sid = inst^.onfn_senseID
-  rm <- find (\rm -> rm^._1 == sid) rolemap
-  let msubcat = find ((== sid) . (^._1)) subcats
-      mtoppatts_cut = cutHistogram 0.9 . constructTopPatterns . (^._2) <$> msubcat
-  return (rm,mtoppatts_cut)
 
 
 formatExFrame :: ExceptionalFrame -> Text
@@ -121,17 +112,16 @@ formatFrame t =
 
 formatSenses :: Bool  -- ^ doesShowOtherSense
              -> [(ONSenseFrameNetInstance,Int)]
-             -> Maybe (RoleInstance, Maybe [(ArgPattern () GRel,Int)])
+             -> [((RoleInstance,Int), [(ArgPattern () GRel,Int)])]
              -> String
-formatSenses doesShowOtherSense onfnlst mrmmtoppatts
-  = let t = chooseFrame onfnlst
+formatSenses doesShowOtherSense onfnlst rmtoppatts
+  = let t = chooseMostFreqFrame onfnlst
     in "Top frame: "
-       ++ formatFrame t
+       ++ (if (not.null) t then formatFrame (Just (head t)) else formatFrame Nothing)
        ++ "--------------------------------------------------------------------------------------------------\n"
-       ++ flip (maybe "") mrmmtoppatts
-            (\(rm,mtoppatts) ->
-               let margpattstr = fmap formatArgPattStat mtoppatts
-               in (formatRoleMap (rm^._2) ++ maybe "" ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<>) margpattstr))
+       ++ intercalate "\n" (flip map rmtoppatts (\((rm,_),toppatts) ->
+               let argpattstr = formatArgPattStat toppatts
+               in (formatRoleMap (rm^._2) ++ ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<> argpattstr))))
        ++ "\n--------------------------------------------------------------------------------------------------\n"
        ++ if doesShowOtherSense
           then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense onfnlst)
@@ -207,9 +197,9 @@ formatSentStructure showdetail (SentStructure i ptr vps clausetr mcpstr vstrs) =
 
 
 formatVerbStructure :: ClauseTree -> Maybe [Bitree (Range,CP '[Lemma]) (Range,CP '[Lemma])] -> VerbStructure -> [Text]
-formatVerbStructure clausetr mcpstr (VerbStructure vp lma senses mrmmtoppatts) =
+formatVerbStructure clausetr mcpstr (VerbStructure vp senses mrmmtoppatts) =
   [ formatVPwithPAWS clausetr mcpstr vp
-  , T.pack (printf "Verb: %-20s" lma)
+  , T.pack (printf "Verb: %-20s" (vp^.vp_lemma.to unLemma))
   , T.pack $ (formatSenses False senses mrmmtoppatts)
   ]
 
@@ -224,27 +214,37 @@ showMatchedFrame (mcpstr,vstr,paws) = do
   let gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
   T.IO.putStrLn "---------------------------"
   flip traverse_ (matchFrame (mcpstr,vstr,paws)) $ \(rng,verb,frame,mselected) -> do
-    putStrLn ("predicate: " <> show rng) -- maybe "unidentified CP" show (cpRange cp))
-    T.IO.putStrLn ("Verb: " <> verb) -- (vstr^.vs_lma))
+    putStrLn ("predicate: " <> show rng)
+    T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> frame)
     flip traverse_ mselected $ \(_,felst) -> do
       mapM_ putStrLn . map (\(fe,z) -> printf "%-15s: %-7s %s" fe (show (getRange (current z))) (gettokens z)) $ felst
 
 
+
+
+
 dotMeaningGraph :: String -> MeaningGraph -> String
 dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt ttxt
   where
+    fmtEdge e = printf "i%d -> i%d [label=\"%s\"];" (e^.me_start) (e^.me_end) (e^.me_relation)
+    fmtVerb (MGEntity    _ _ _  ) = Nothing
+    fmtVerb (MGPredicate i _ f v) = Just (i,f <> " | { "
+                                              <> fromMaybe "" (v^._5) <> " | "
+                                              <> v^._1 <> " | "
+                                              <> formatTense (v^._2) <> "." <> formatAspect (v^._3)
+                                              <> " } " )
+    
     vtxt :: String
     vtxt =
       let vertices = mg^.mg_vertices
-          verbs = mapMaybe (\case MGEntity _ _ _ -> Nothing ; MGPredicate i _ f v -> Just (i,f <> ":" <> v)) vertices
+          verbs = mapMaybe fmtVerb vertices
           entities = mapMaybe (\case MGEntity i _ t -> Just (i,t); MGPredicate _ _ _ _ -> Nothing) vertices
-      in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=box label=\"%s\"];" i t)) verbs ++  "\n  " ++
+      in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=record style=filled, fillcolor=grey label=\"{%s}\"];" i t)) verbs ++  "\n  " ++
          (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=record label=\"{ %s }\"];" i t)) entities
     etxt :: String
     etxt =      
       let edges = mg^.mg_edges
-          formatf e = printf "i%d -> i%d [label=\"%s\"];" (e^.me_start) (e^.me_end) (e^.me_relation)
-      in (intercalate "\n " . map formatf) edges
+      in (intercalate "\n " . map fmtEdge) edges
     ttxt :: String
     ttxt = "labelloc=\"t\"; \n " ++ "label=\"" ++ title ++ "\"; \n " 
