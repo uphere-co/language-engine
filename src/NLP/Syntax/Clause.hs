@@ -60,8 +60,8 @@ splitDP z = fromMaybe z $ do
               dp <- child1 z
               guard (isChunkAs NP (current dp))
               sbar <- next dp
-              guard (isChunkAs SBAR (current sbar))
-              return dp
+              ((guard (isChunkAs SBAR (current sbar)) >> return dp) <|>
+               (guard (isChunkAs VP (current sbar)) >> return dp))
 
 
 complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [[Either NTrace (Zipper (Lemma ': as))]]
