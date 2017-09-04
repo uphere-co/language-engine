@@ -54,7 +54,7 @@ getStanfordNEs = dropNonNE . partitonFrags
 
 
 data PreNE = UnresolvedUID NEClass
-           | AmbiguousUID [ItemID]
+           | AmbiguousUID ([ItemID],NEClass)
            | Resolved (ItemID, NEClass)
            | UnresolvedClass [(ItemID, ItemClass)]
            deriving(Show, Eq, Generic)
@@ -82,7 +82,7 @@ resolveNEClass stag xs = g matchedUIDs
                       | otherwise             = accum
     matchedUIDs = foldl' f [] xs
     g [uid] = Resolved (uid, stag)
-    g uids  = AmbiguousUID uids
+    g uids  = AmbiguousUID (uids, stag)
 
 resolveNEsImpl :: [(IRange,PreNE)] -> [(IRange, NEClass)] -> [(IRange, Vector (ItemID, ItemClass))] -> [(IRange,PreNE)]
 resolveNEsImpl accum [] [] = accum

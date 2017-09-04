@@ -84,7 +84,7 @@ loadWikipageMapping filename = do
 toWikipages :: M.Map ItemID Text -> EntityMention a -> [Text]
 toWikipages titles mention = toTitle titles (EL.entityPreNE mention)
   where
-    toTitle titles (AmbiguousUID ids) = mapMaybe (`M.lookup` titles) ids
+    toTitle titles (AmbiguousUID (ids,_)) = mapMaybe (`M.lookup` titles) ids
     toTitle titles (Resolved (id,_))  = mapMaybe (`M.lookup` titles) [id]
     toTitle titles _                  = []
 
@@ -96,12 +96,12 @@ tryDisambiguate :: (M.Map ItemID Text, M.Map Text ItemID) -> ([Text] -> [Text] -
 tryDisambiguate (i2t,t2i) fTD mentions = map (updateNE f) mentions
   where
     refs = concatMap (toWikipages i2t) (filter EL.hasResolvedUID mentions)
-    f x@(AmbiguousUID [])= x
-    f (AmbiguousUID ids) = g (fTD refs titles)
+    f x@(AmbiguousUID ([],_))= x
+    f x@(AmbiguousUID (ids,stag)) = g (fTD refs titles)
       where
         titles = mapMaybe (`M.lookup` i2t) ids
-        g (Just (score,ref,title)) = Resolved (fromJust $ M.lookup title t2i, NE.Other)
-        g Nothing                  = AmbiguousUID ids
+        g (Just (score,ref,title)) = Resolved (fromJust $ M.lookup title t2i, stag)
+        g Nothing                  = x
     f x                  = x
 
 

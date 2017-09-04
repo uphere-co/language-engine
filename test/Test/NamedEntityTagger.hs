@@ -109,7 +109,7 @@ testNEResolution = testCaseSteps "Resolving Wiki UID with Stanford NE tag" $ \st
     ambiguousUID = fromList [org "Q1", org "Q2", person "Q3"]
     entities = [(IRange 1 4, ambiguousUID)]
   
-  eassertEqual (resolveNEClass N.Org ambiguousUID) (AmbiguousUID [uid "Q2", uid "Q1"])
+  eassertEqual (resolveNEClass N.Org ambiguousUID) (AmbiguousUID ([uid "Q2", uid "Q1"], N.Org))
   eassertEqual (resolveNEClass N.Person ambiguousUID) (Resolved (uid "Q3", N.Person))
 
   step "Single entity cases"
@@ -130,7 +130,7 @@ testNEResolution = testCaseSteps "Resolving Wiki UID with Stanford NE tag" $ \st
     
     r1 = resolveNEs stanford_nes entities1
     expected_r1 = [(IRange 0 2, Resolved (uid "Q13", N.Person)),
-                   (IRange 5 8, AmbiguousUID [uid "Q22", uid "Q21"])]
+                   (IRange 5 8, AmbiguousUID ([uid "Q22", uid "Q21"],N.Org))]
 
     entities2 = [(IRange 0 2, ambiguousUID1),(IRange 5 7, ambiguousUID2)]
     r2 = resolveNEs stanford_nes entities2
