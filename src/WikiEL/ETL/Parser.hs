@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module WikiEL.ETL.Parser where
+module WikiEL.ETL.Parser (
+  module WikiEL.ETL.Parser
+, module WikiEL.Type.FileFormat
+) where
 
 import           Data.Text                             (Text)
 import           Control.Applicative                   ((<|>))
@@ -131,7 +134,14 @@ parserWordNetSynsetRow = do
   return (WordNetMappingRow title pageID itemID synset)
 
 
-
+parserWikiTitleMappingRow :: Parser WikiTitleMappingRow
+parserWikiTitleMappingRow = do
+  itemID <- parserBrokenItemID  
+  sep
+  title   <- column
+  return (itemID, title)
+  
+  
 itemID :: Text -> ItemID
 itemID = getParseResult parserWikidataItemID
 
@@ -161,3 +171,6 @@ entityRepr = getParseResult parserEntityRepr
 
 wordNetMapping :: Text -> WordNetMappingRow
 wordNetMapping = getParseResult parserWordNetSynsetRow
+
+wikititleMapping :: Text -> WikiTitleMappingRow
+wikititleMapping = getParseResult parserWikiTitleMappingRow

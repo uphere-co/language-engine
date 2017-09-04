@@ -62,13 +62,17 @@ entityUID m = resolvedUID tag
   where
     (_,_,tag) = _info m
 
+
 entityIRange :: EntityMention a -> IRange
-entityIRange (Cite _ _ (range, _, _)) = range
-entityIRange (Self _   (range, _, _)) = range
+entityIRange mention = range
+  where (range, _, _) = _info mention
+
+entityPreNE :: EntityMention a -> PreNE
+entityPreNE mention = ne
+  where (_,_, ne) = _info mention
 
 hasResolvedUID :: EntityMention a -> Bool
-hasResolvedUID (Cite _ _ (_,_, ne)) = isResolved ne
-hasResolvedUID (Self _   (_,_, ne)) = isResolved ne
+hasResolvedUID mention  = isResolved (entityPreNE mention)
 
 mentionedEntityName :: EntityMention Text -> Text
 mentionedEntityName em = entityName (_info em)

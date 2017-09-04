@@ -63,6 +63,7 @@ reprFile       = EntityReprFile "data/names"
 --reprFile       = EntityReprFile "data/names.1"
 --reprFile       = EntityReprFile "data/names.person.2"
 -- Full data
+wikiTitleMappingFile= WikiTitleMappingFile "data/wiki_id.page_title.txt"
 wordnetMappingFile= WordNetMappingFile "data/page_id.wiki_id.wordnet.tsv"
 propertyNameFile  = PropertyNameFile   "data_full/properties.tsv"
 listedCompanyFile = "enwiki/companies"

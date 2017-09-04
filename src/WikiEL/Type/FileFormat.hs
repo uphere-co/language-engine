@@ -53,3 +53,6 @@ data WordNetMappingRow = WordNetMappingRow { _pageTitle :: Text
                                            }
                        deriving (Show)
 
+newtype WikiTitleMappingFile = WikiTitleMappingFile { unWikiTitleMappingFile :: FilePath}
+                             deriving (Show)
+type WikiTitleMappingRow = (ItemID, Text)

@@ -154,6 +154,11 @@ real	2m17.101s
 join -1 2 -2 1 -t$'\t' <(sort -t$'\t' -k2,2 jel.page) page_id.wiki_id.txt.sorted > jel.wikidata
 ```
 
+#### ETL to get Wikidata - Wikipedia title mapping
+```
+cat enwiki/page_id.wiki_id.txt.sorted | awk -F '\t' '{print $3 "\t" $2}' > data/wiki_id.page_title.txt
+```
+
 #### ETL to get Wikidata - WordNet mapping 
 Download `wordnet_links.ttl.gz` from [here](http://wiki.dbpedia.org/services-resources/datasets/dbpedia-datasets).
 ```
