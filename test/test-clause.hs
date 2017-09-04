@@ -88,7 +88,15 @@ test9 =
   , [(0,("I","I")),(1,("see","saw")),(2,("the","the")),(3,("man","man")),(4,("who","who")),(5,("sit","sat")),(6,("on","on")),(7,("the","the")),(8,("bench","bench")),(9,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","saw"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","man")],PN "SBAR" [PN "WHNP" [PL ("WP","who")],PN "S" [PN "VP" [PL ("VBD","sat"),PN "PP" [PL ("IN","on"),PN "NP" [PL ("DT","the"),PL ("NN","bench")]]]]]]],PL (".",".")]]
   )
-  
+
+
+test10 =
+  ( "I bought the book which Tim Cook read."
+  , [(0,("I","I")),(1,("buy","bought")),(2,("the","the")),(3,("book","book")),(4,("which","which")),(5,("Tim","Tim")),(6,("Cook","Cook")),(7,("read","read")),(8,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","bought"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","book")],PN "SBAR" [PN "WHNP" [PL ("WDT","which")],PN "S" [PN "NP" [PL ("NNP","Tim"),PL ("NNP","Cook")],PN "VP" [PL ("VBD","read")]]]]],PL (".",".")]]
+  )
+
+
 process :: (Text,[(Int,(Text,Text))],PennTree) -> IO ()
 process (txt,lma,pt) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
@@ -112,6 +120,6 @@ process (txt,lma,pt) = do
 
 
 main :: IO ()
-main = mapM_ process [ test1, test6, test7, test8, test9 ]
+main = mapM_ process [ test1, test6, test7, test8, test9, test10 ]
 
 

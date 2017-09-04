@@ -61,10 +61,10 @@ splitDP z = fromMaybe z $ do
               sbar <- next dp
               guard (isChunkAs SBAR (current sbar))
               return dp
-  
 
-complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [Zipper (Lemma ': as)]
-complementsOfVerb vp = splitDP <$> (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp))
+
+complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [[Either NTrace (Zipper (Lemma ': as))]]
+complementsOfVerb vp = map (\x -> [Right x]) (splitDP <$> (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkNPSBAR z = case tag z of
@@ -128,7 +128,7 @@ cpRange cp = (cp^?maximalProjection._Just.to (getRange . current)) <|>
 identifyCPHierarchy :: [VerbProperty (Zipper (Lemma ': as))]
                     -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
 identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
-  where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure cp) <=< constructCP) vps 
+  where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure cp) <=< constructCP) vps
         cpmap = HM.fromList (map (\x->(x^._1,x)) cps)
         rngs = HM.keys cpmap
         rtr = rangeTree rngs
@@ -138,10 +138,36 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
 
 
 
-                    
+
 
 currentCP = snd . getRoot1 . current
 
+
+whMovement :: BitreeZipper (Range,CP as) (Range,CP as)
+           -> State (Bitree (Range,CP as) (Range,CP as)) [Either NTrace (Zipper as)]
+whMovement z = do
+  let cp = currentCP z
+  case cp^.complement.specifier of
+    [] -> return []
+    xs -> case last xs of
+      Left NULL -> do
+        let xspro = init xs ++ [Left SilentPRO]
+            xsmov = init xs ++ [Left Moved]
+        fmap (fromMaybe xspro) . runMaybeT $ do
+          -- check subject position for relative pronoun
+          z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
+          return (xsmov ++ [Left WHPRO, Right z'])
+      _ -> do
+        runMaybeT $ do
+          -- check object position for relative pronoun
+          z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
+          let cp' = ((complement.complement.complement) %~ ([Left Moved,Left WHPRO,Right z'] :)) cp
+              subtr = case z^.tz_current of
+                        PN (rng,cp) ys -> PN (rng,cp') ys
+                        PL (rng,cp)    -> PL (rng,cp')
+              z'' = (tz_current .~ subtr) z
+          lift (put (toBitree z''))
+        return xs
 
 
 -- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
@@ -156,27 +182,23 @@ resolveDP rng = do
     Nothing -> return []
     Just z -> do
       let cp = currentCP z
-      case cp^.complement.specifier of
-        [] -> return []
-        xs -> case last xs of
-                Left NULL -> do
-                  let xspro = init xs ++ [Left SilentPRO]
-                      xsmov = init xs ++ [Left Moved]
-                  fmap (fromMaybe xspro) . runMaybeT $ do
-                    if maybe False (isChunkAs WHNP . current) (cp^.headX)
-                      then do
-                        z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
-                        return (xsmov ++ [Left WHPRO, Right z'])
-                      else do
-                        cp'  <- (MaybeT . return) (currentCP <$> parent z)
-                        rng' <- (MaybeT . return) (cpRange cp')
-                        (++) <$> pure xspro <*> lift (resolveDP rng')
-                Left SilentPRO -> 
-                  fmap (fromMaybe xs) . runMaybeT $ do
-                    cp'  <- (MaybeT . return) (currentCP <$> parent z)
-                    rng' <- (MaybeT . return) (cpRange cp')
-                    (++) <$> pure xs <*> lift (resolveDP rng')
-                _ -> return xs
+      if maybe False (isChunkAs WHNP . current) (cp^.headX)
+        then whMovement z
+        else
+          case cp^.complement.specifier of
+            [] -> return []
+            xs -> case last xs of
+                    Left NULL      -> do let xspro = init xs ++ [Left SilentPRO]
+                                             xsmov = init xs ++ [Left Moved]
+                                         fmap (fromMaybe xspro) . runMaybeT $ do
+                                           cp'  <- (MaybeT . return) (currentCP <$> parent z)
+                                           rng' <- (MaybeT . return) (cpRange cp')
+                                           (++) <$> pure xspro <*> lift (resolveDP rng')
+                    Left SilentPRO ->    fmap (fromMaybe xs) . runMaybeT $ do
+                                           cp'  <- (MaybeT . return) (currentCP <$> parent z)
+                                           rng' <- (MaybeT . return) (cpRange cp')
+                                           (++) <$> pure xs <*> lift (resolveDP rng')
+                    _              ->    return xs
 
 
 bindingAnalysis :: Bitree (Range,CP as) (Range,CP as) -> Bitree (Range,CP as) (Range,CP as)
@@ -191,12 +213,12 @@ bindingAnalysis cpstr = execState (go rng0) cpstr
                        Just z -> do
                          let subtr = case z^.tz_current of
                                        PN (rng,cp) ys -> PN (rng,(complement.specifier .~ xs) cp) ys
-                                       PL (rng,cp)    -> PL (rng,(complement.specifier .~ xs) cp) 
+                                       PL (rng,cp)    -> PL (rng,(complement.specifier .~ xs) cp)
                          let z' = (tz_current .~ subtr) z
                          put (toBitree z')
                          case child1 z' of
                            Just z'' -> go (getrng z'')
-                           Nothing ->                 
+                           Nothing ->
                              case next z' of
                                Just z'' -> go (getrng z'')
                                Nothing -> return ()
