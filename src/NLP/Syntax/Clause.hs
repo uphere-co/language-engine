@@ -113,7 +113,7 @@ constructCP vprop = do
           _      -> -- somewhat problematic case?
                     return (mkCP (Left C_NULL) Nothing (mkTP (Just tp') subj verbp))
       _ -> -- reduced relative clause
-           return (mkCP (Left C_WH) Nothing (mkTP Nothing [] verbp))
+           return (mkCP (Left C_WH) (Just vp) (mkTP (Just vp) [Left NULL] verbp))
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
