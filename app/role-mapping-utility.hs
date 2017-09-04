@@ -1,9 +1,10 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiWayIf            #-}
+{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
 
 module Main where
 
@@ -41,10 +42,10 @@ import           Text.Taggy.Lens
 import           FrameNet.Query.Frame             (frameDB,loadFrameData)
 import           FrameNet.Type.Common             (CoreType(..),fr_frame)
 import           FrameNet.Type.Frame
-import           Lexicon.Format                   (formatArgPatt,formatRoleMap)
+import           Lexicon.Format                   (formatArgPatt,formatRoleMap,formatRoleMapTSV)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query
-import           Lexicon.Type                     (ArgPattern(..),POSVorN(..)
+import           Lexicon.Type                     (ArgPattern(..),POSVorN(..),SenseID
                                                   ,RoleInstance,RolePattInstance)
 import           NLP.Syntax.Type
 import           NLP.Type.SyntaxProperty          (Voice)
@@ -70,14 +71,14 @@ extractPBRoles pb =
 extractPBExamples pb = pb^..roleset_example.traverse.example_text
 
 
-createONFN subcats sensemap framedb rolesetdb = do 
+createONFN subcats sensemap framedb rolesetdb = do
   (lma, senses ) <- mapFromONtoFN
   (sid,frtxt) <- senses
   let g = T.head sid
       n = T.drop 2 sid
   let lmav = lma <> "-v"
   subcat <- maybeToList (find (\c -> c^._1 == (lma,Verb,sid)) subcats)
-  
+
   si <- maybeToList (HM.lookup lmav sensemap)
   osense <- maybeToList $
               find (\s -> T.head (s^.sense_group) == g && s^.sense_n == n)
@@ -91,7 +92,7 @@ createONFN subcats sensemap framedb rolesetdb = do
 
 loadPropBankDB = do
   preddb <- constructPredicateDB <$> constructFrameDB (cfg^.cfg_propbank_framedir)
-  let rolesetdb = constructRoleSetDB preddb 
+  let rolesetdb = constructRoleSetDB preddb
   return (preddb,rolesetdb)
 
 
@@ -100,11 +101,11 @@ formatPBInfos (rid,mname,examples,roles) = printf "%-20s: %s\n" rid (fromMaybe "
                                            ++ "\n-----------\n"
                                            ++ T.unpack (T.intercalate "\n" examples)
                                            ++ "\n-----------"
-                                           
+
   where
     rolestrs = flip map roles $ \(n,mdesc) -> printf "arg%1s: %s" n (fromMaybe "" mdesc)
 
-numberedFEs frame = 
+numberedFEs frame =
   let fes = frame^..frame_FE.traverse
       corefes = filter (\fe -> fe^.fe_coreType == Core || fe^.fe_coreType == CoreUnexpressed) fes
       perifes = filter (\fe -> fe^.fe_coreType == Peripheral) fes
@@ -129,7 +130,7 @@ formatProblem :: (Int,_) -> (String,String,String,String,String)
 formatProblem (i,(lma,osense,frame,pbs,subcat)) =
   let sid = osense^.sense_group <> "." <> osense^.sense_n
       headstr = printf "%d th item: %s %s" i lma sid
-      sensestr = printf "definition: %s\n%s" (osense^.sense_name) (osense^.sense_examples)      
+      sensestr = printf "definition: %s\n%s" (osense^.sense_name) (osense^.sense_examples)
       fes = numberedFEs frame
       framestr = printf "%s" (frame^.frame_name) ++ "\n" ++ formatFEs fes
       argpattstr = intercalate "\n" $ flip map (Prelude.take 10 (subcat^._2)) $ \(patt,n) ->
@@ -142,7 +143,7 @@ formatProblem (i,(lma,osense,frame,pbs,subcat)) =
 showProblem :: (Int,_) -> IO ()
 showProblem prob = do
   let (headstr,sensestr,framestr,argpattstr,pbinfostr) = formatProblem prob
-  putStrLn "========================================================================================================="  
+  putStrLn "========================================================================================================="
   putStrLn headstr
   putStrLn sensestr
   putStrLn "---------------------------------------------------------------------------------------------------------\n"
@@ -154,21 +155,29 @@ showProblem prob = do
   putStrLn "---------------------------------------------------------------------------------------------------------\n"
 
 
-reformatInput o = T.intercalate " " . map f . T.words
-  where fes0 = numberedFEs (o^._2._3) 
+mkRoleInstance o txt =
+    let parsed = (map f . T.words) txt
+        (causes,rest) = partition (\(k,_) -> k == "cause") parsed
+    in if null causes
+       then ("frame",frm):("cause","single"):rest
+       else ("frame",frm):("cause",(head causes)^._2):rest
+
+  where frm = o^._2._3.frame_name
+        fes0 = numberedFEs (o^._2._3)
         fes = fes0^._1 ++ fes0^._2 ++ fes0^._3
 
         f w = let xs = T.splitOn ":" w
               in case xs of
                    (x:y:[]) -> case decimal y of
-                                 Left _ -> w
+                                 Left _ -> (w,"")
                                  Right (n,_) -> case find ((== n) . (^._1)) fes of
-                                                 Just (_,fe) -> x <> ":" <> fe^.fe_name
-                                                 Nothing -> w
-                                 
+                                                 Just (_,fe) -> (x,fe^.fe_name)
+                                                 Nothing -> (w,"")
+                   (x:[]) -> if | x == "dual"   -> ("cause","dual")
+                                | x == "single" -> ("cause","single")
+                                | otherwise     -> (x,"")
 
-formatResult (i,(lma,_,sid),frm,txt) = printf "%d\t%s\t%s\t%s\t%s\n" i lma sid frm txt
-  
+
 
 prompt = do
   (result,olst) <- lift get
@@ -180,10 +189,10 @@ prompt = do
       case m of
         Nothing -> return ()
         Just x -> do
-          let r1 = reformatInput o (T.pack x)
-          liftIO $ T.IO.putStrLn r1
-          let nresult = result ++ [(o^._1,problemID o,o^._2._3.frame_name,r1)]
-          liftIO $ writeFile "temp.txt" (concatMap formatResult nresult)
+          let r1 = mkRoleInstance o (T.pack x)
+          liftIO $ print r1
+          let nresult = result ++ [(o^._1,(problemID o,r1))]
+          liftIO $ writeFile "temp.txt" (concatMap formatRoleMapTSV nresult)
           lift (put (nresult,os))
           prompt
 
@@ -197,7 +206,7 @@ pOptions :: O.Parser ProgOption
 pOptions = ProgOption <$> O.strArgument (O.help "program command show or tag")
                       <*> optional (O.argument O.auto (O.help "starting number"))
 
-progOption :: O.ParserInfo ProgOption 
+progOption :: O.ParserInfo ProgOption
 progOption = O.info pOptions (O.fullDesc <> O.progDesc "role mapping utility program")
 
 
@@ -206,21 +215,21 @@ main = do
   (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (preddb,rolesetdb) <- loadPropBankDB
-  
+
   (subcats :: [RolePattInstance Voice]) <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   (rolemap :: [RoleInstance]) <- loadRoleInsts (cfg^.cfg_rolemap_file)
 
-  let flattened = createONFN subcats sensemap framedb rolesetdb 
+  let flattened = createONFN subcats sensemap framedb rolesetdb
   let indexed = zip [1..] flattened
 
   case progCommand opt of
     "tag" -> do
       let n = fromMaybe 0 (startNum opt)
           indexed_being_processed = (drop (n-1) . take (n+99)) indexed
-      r <- flip execStateT (([] :: [(Int,(Text,POSVorN,Text),Text,Text)]),indexed_being_processed) $ runInputT defaultSettings prompt
+      r <- flip execStateT (([] :: [(Int,RoleInstance)]),indexed_being_processed) $ runInputT defaultSettings prompt
       print (fst r)
       let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
-      writeFile filename (concatMap formatResult (fst r))
+      writeFile filename (concatMap formatRoleMapTSV (fst r))
     "show" -> do
       flip mapM_ indexed $ \prob -> do
         let (headstr,sensestr,framestr,argpattstr,pbinfostr) = formatProblem prob
@@ -228,7 +237,7 @@ main = do
           Nothing -> return ()
           Just rm -> do
             let argmap = rm^._2
-            putStrLn "\n\n\n========================================================================================================="  
+            putStrLn "\n\n\n========================================================================================================="
             putStrLn headstr
             putStrLn sensestr
             putStrLn "---------------------------------------------------------------------------------------------------------"
@@ -237,8 +246,6 @@ main = do
             putStrLn $ formatRoleMap argmap
             putStrLn "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
             putStrLn argpattstr
-            putStrLn "========================================================================================================="  
+            putStrLn "========================================================================================================="
         -- mapM_ showProblem indexed
     cmd -> putStrLn (cmd ++ " cannot be processed")
-
-
