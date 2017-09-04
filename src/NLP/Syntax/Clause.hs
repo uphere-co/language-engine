@@ -23,6 +23,7 @@ import           Data.List                              (minimumBy)
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (First(..),Last(..),(<>))
 import           Data.Text                              (Text)
+import qualified Data.Text                         as T
 --
 import           Data.Bitree
 import           Data.BitreeZipper
@@ -121,7 +122,8 @@ constructCP vprop = do
 
 cpRange :: CP xs -> Maybe Range
 cpRange cp = (cp^?maximalProjection._Just.to (getRange . current)) <|>
-             (cp^?complement.maximalProjection._Just.to (getRange . current))
+             (cp^?complement.maximalProjection._Just.to (getRange . current)) <|>
+             (return (cp^.complement.complement.maximalProjection.to (getRange . current)))
 
 
 
