@@ -1,4 +1,6 @@
 # Log for important change (Internal use)
 
 2017-08-31 D1599: Recursive silent pronoun resolution
-2017-09-01 D1602: First implementation of resolving subject relative pronoun by movement analysis
+2017-09-01 D1602: Resolve subject relative pronoun by movement analysis
+2017-09-03 D1619: Resolve object relative pronoun
+2017-09-04 D1627: Argument identification for reduced relative clause
