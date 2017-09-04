@@ -52,10 +52,10 @@ getStanfordNEs = dropNonNE . partitonFrags
     dropNonNE = filter (\x-> snd x /= Other)
 
 
-data PreNE = UnresolvedUID NEClass
-           | AmbiguousUID ([ItemID],NEClass)
-           | Resolved (ItemID, NEClass)
-           | UnresolvedClass [ItemID]
+data PreNE = UnresolvedUID NEClass             -- Tagged by CoreNLP NER, but no matched Wikidata UID
+           | AmbiguousUID ([ItemID],NEClass)   -- Tagged by CoreNLP NER, and matched Wikidata UIDs of the NEClass
+           | Resolved (ItemID, NEClass)        -- A wikidata UID of a CoreNLP NER Class type.
+           | UnresolvedClass [ItemID]          -- Not tagged by CoreNLP NER, but matched Wikidata UID(s)
            deriving(Show, Eq, Generic)
 
 instance ToJSON PreNE where
