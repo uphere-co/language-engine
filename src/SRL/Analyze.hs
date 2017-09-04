@@ -83,8 +83,8 @@ queryProcess config pp apredata emTagger =
                   (mapM_ showMatchedFrame . concat . allPAWSTriplesFromDocStructure) dstr
                   --
                   printMeaningGraph dstr
-                  print $ map numberOfPredicate (catMaybes $ dstr ^. ds_sentStructures)
-                  print $ map numberOfMGPredicate $ map meaningGraph (catMaybes $ dstr ^. ds_sentStructures) 
+                  -- print $ map numberOfPredicate (catMaybes $ dstr ^. ds_sentStructures)
+                  -- print $ map numberOfMGPredicate $ map meaningGraph (catMaybes $ dstr ^. ds_sentStructures) 
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 

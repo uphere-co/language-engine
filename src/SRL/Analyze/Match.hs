@@ -249,8 +249,7 @@ matchFrame (mcpstr,vstr,paws) = do
   let total=  sum (frmsels^..traverse._2)
   ((frame,mselected),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
 
-  trace (show (map (\x@((fr,msel),n) -> (fr,n,scoreSelectedFrame total x)) frmsels)) $
-    return (rng,vprop,frame,mselected)
+  return (rng,vprop,frame,mselected)
 
 
 scoreSelectedFrame total ((frame,mselected),n) =
