@@ -8,6 +8,7 @@ module WikiEL
   , EL.entityName
   , EL.mentionedEntityName
   , EL.hasResolvedUID
+  , EL.entityLinkings
   , EL.EntityMention
   , EMP.filterEMbyPOS
   , WEC.loadFiles

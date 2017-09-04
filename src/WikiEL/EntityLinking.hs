@@ -13,7 +13,7 @@ import           Data.Text                             (Text)
 import qualified Data.Text                  as T
 import           GHC.Generics                          (Generic)
 
-import           WikiEL.Misc                           (IRange(..),RelativePosition(..),relativePos,isContain,subVector) 
+import           WikiEL.Misc                           (IRange(..),RelativePosition(..),relativePos,strictSubset,subVector) 
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           NLP.Type.NamedEntity                  (NamedEntity, OrderedNamedEntity)
 import           WikiEL.WikiNamedEntityTagger          (PreNE(..),isResolved,resolvedUID,mayCite)
@@ -92,10 +92,15 @@ buildEntityMentions text wikiNEs = zipWith Self uids mentions
 
 
 tryEntityLink :: Eq a => EMInfo a -> EMInfo a -> Maybe (EMInfo a)
-tryEntityLink target@(trange, twords, ttag) src@(srange, swords, stag) =
-  f (relativePos trange srange) (isContain swords twords) ttag stag
-  where 
-    f pos textMatch (Resolved (uid,ttag)) (UnresolvedUID stag) | pos==LbeforeR && textMatch && mayCite stag ttag =
+tryEntityLink target@(trange, twords, tNE) src@(srange, swords, sNE) =
+  f (relativePos trange srange) (strictSubset swords twords) tNE sNE
+  where
+    g ttag (Resolved (_, s))       = s==ttag
+    g ttag (UnresolvedUID stag)    = mayCite stag ttag
+    g ttag (AmbiguousUID (_,stag)) = mayCite stag ttag
+    g ttag _                       = False
+    
+    f pos textMatch (Resolved (uid,ttag)) src | pos==LbeforeR && textMatch && g ttag src =
       Just (srange,swords, Resolved (uid,ttag))
     f _ _ _ _ = Nothing
 
