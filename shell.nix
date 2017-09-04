@@ -3,6 +3,7 @@
 , HCoreNLP           ? <HCoreNLP>
 , HFrameNet          ? <HFrameNet>
 , HWordNet           ? <HWordNet>
+, graph-algorithms   ? <graph-algorithms>
 , lexicon            ? <lexicon>
 , multi-word-tagger  ? <multi-word-tagger>
 , nlp-types          ? <nlp-types>
@@ -53,6 +54,7 @@ let
       "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
       "HFrameNet"      = self.callPackage (import HFrameNet) {};
       "HWordNet"       = self.callPackage (import HWordNet) {};
+      "graph-algorithms" = self.callPackage (import graph-algorithms) {};
       "OntoNotes"      = self.callPackage (import OntoNotes) {};
       "PropBank"       = self.callPackage (import PropBank) {};
       "VerbNet"        = self.callPackage (import VerbNet) {};

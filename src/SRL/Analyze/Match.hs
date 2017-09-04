@@ -1,23 +1,25 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE TupleSections         #-}
 
 module SRL.Analyze.Match where
 
 import           Control.Applicative
 import           Control.Lens
-import           Control.Monad                (guard)
+import           Control.Monad                (guard,join)
 import           Data.Foldable
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
-import           Data.Maybe                   (catMaybes,listToMaybe,mapMaybe,maybeToList)
+import           Data.Maybe                   (catMaybes,fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
 import           Data.Bitree                  (getNodes,getRoot)
 import           Data.BitreeZipper            (current,mkBitreeZipper,root)
---import           Data.BitreeZipper.Util       (root)
+import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
+                                              ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,findPAWS,resolveDP)
 import           NLP.Syntax.Type
@@ -35,7 +37,11 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,vs_lma,vs_mrmmtoppatts,vs_vp
                                               ,mv_range,mv_id
                                               )
- 
+--
+import Debug.Trace
+
+
+
 allPAWSTriplesFromDocStructure
   :: DocStructure
   -> [[(Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
@@ -149,7 +155,7 @@ matchAgentForPassive rolemap paws patt = do
 matchThemeForPassive :: [(PBArg,FNFrameElement)]
                      -> Zipper '[Lemma]
                      -> ArgPattern p GRel
-                     -> Maybe (FNFrameElement, Zipper '[Lemma]) 
+                     -> Maybe (FNFrameElement, Zipper '[Lemma])
 matchThemeForPassive rolemap dp patt = do
   (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
   (,dp) <$> lookup p rolemap
@@ -163,6 +169,30 @@ matchSO rolemap (dp,verbp,paws) (patt,num) =
   case verbp^.headX.vp_voice of
     Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap paws patt )
     Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap paws patt,matchThemeForPassive rolemap dp patt] ++ matchPrepArgs rolemap paws patt)
+
+
+
+extendRoleMapForDual frame rolemap = fromMaybe (frame,rolemap) $ do
+  dualmap <- lookup frame $ map (\c -> (c^.cm_baseFrame,c)) causeDualMap
+  let frame' = dualmap^.cm_causativeFrame
+      rolemap' = filter (\(k,v) -> k /= "frame" && k /= "arg0") rolemap
+      rolemap'' =  map f rolemap'
+        where f (k,v) = maybe (k,v) (k,) (lookup v (dualmap^.cm_extraMapping))
+      rolemap''' = ("arg0",dualmap^.cm_externalAgent) : rolemap''
+  return (frame',rolemap''')
+
+
+
+numMatchedRoles = lengthOf (_2.folded)
+
+
+matchRoles :: _ -> _ -> _ -> _ -> _ -> Maybe ((ArgPattern () GRel, Int),_)
+matchRoles verbp paws rolemap toppattstats dp_resolved =
+    (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy (flip compare `on` numMatchedRoles)) matched
+  where
+    matched = map (matchSO rolemap (dp_resolved,verbp,paws)) toppattstats
+    cmpstat  = flip compare `on` (^._1._2)
+    eq       = (==) `on` lengthOf (_2.folded)
 
 
 matchFrame :: (Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
@@ -183,17 +213,25 @@ matchFrame (mcpstr,vstr,paws) = do
       verb = vstr^.vs_lma
   (rm,mtoppatts) <- mrmmtoppatts
   rng <- cpRange cp
-  let rolemap = rm^._2
-  frame <- lookup "frame" rolemap
-  let selected = do
-        toppattstats <- mtoppatts
-        dp_resolved <- mdp_resolved
-        let matched = map (matchSO rolemap (dp_resolved,verbp,paws)) toppattstats
-            cmpmatch = flip compare `on` lengthOf (_2.folded)
-            cmpstat  = flip compare `on` (^._1._2)
-            eq       = (==) `on` lengthOf (_2.folded)
-        (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy cmpmatch) matched
-  return (rng,verb,frame,selected)
+  let rolemap1 = rm^._2
+  frame1 <- lookup "frame" rolemap1
+  causetype <- (\x -> if x == "dual" then LVDual else LVSingle) <$>  lookup "cause" rolemap1
+  let (frame2,rolemap2) = if causetype == LVDual
+                          then extendRoleMapForDual frame1 rolemap1
+                          else (frame1,rolemap1)
+      mselected1 = join (matchRoles verbp paws rolemap1 <$> mtoppatts <*> mdp_resolved)
+      mselected2 = join (matchRoles verbp paws rolemap2 <$> mtoppatts <*> mdp_resolved)
+      (frame,mselected) = case (mselected1,mselected2) of
+                            (Nothing,Nothing) -> (frame1,Nothing)
+                            (Just _ ,Nothing) -> (frame1,mselected1)
+                            (Nothing,Just _ ) -> (frame2,mselected2)
+                            (Just s1,Just s2) -> trace (show (frame1,frame2,rolemap2)) $
+                              case (compare `on` numMatchedRoles) s1 s2 of
+                                GT -> (frame1,mselected1)
+                                LT -> (frame2,mselected2)
+                                EQ -> (frame1,mselected1)   -- choose intransitive because transitive should have one more argument in general.
+  -- trace (show (mselected1,mselected2)) $
+  return (rng,verb,frame,mselected)
 
 
 meaningGraph :: SentStructure -> MeaningGraph
@@ -215,7 +253,7 @@ meaningGraph sstr =
       filterFrame = filter (\(rng,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
 
 
-      entities = map (\(rng,txt) i -> MGEntity i rng txt) 
+      entities = map (\(rng,txt) i -> MGEntity i rng txt)
                . filterFrame
                . map head
                . groupBy ((==) `on` (^._1))
@@ -231,4 +269,3 @@ meaningGraph sstr =
                  i' <- maybeToList (HM.lookup rng' rngidxmap)
                  return (MGEdge fe i i')
   in MeaningGraph vertices edges
-
