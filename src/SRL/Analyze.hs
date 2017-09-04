@@ -10,12 +10,14 @@ import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
 import           Data.Default                 (def)
+import           Data.Graph
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
 import           Data.Maybe
 import           Data.Text                    (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.IO           as T.IO
+import           Data.Tree                    (flatten,levels)
 import qualified Language.Java          as J
 import           MWE.Util                     (mkTextFromToken)
 import           System.Console.Haskeline     (runInputT,defaultSettings,getInputLine)
@@ -56,7 +58,8 @@ import           SRL.Analyze.Util              (TagPos(..))
 import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
                                                ,occupationItemFile,orgItemFile,personItemFile,reprFile)
 import           SRL.Analyze.WikiEL            (mkWikiList)
-import           SRL.Statistics                (getGraphFromMG
+import           SRL.Statistics                (furthestPath
+                                               ,getGraphFromMG
                                                ,numberOfMGPredicate,numberOfPredicate
                                                ,testGraph)
 
@@ -87,7 +90,9 @@ queryProcess config pp apredata emTagger =
                   printMeaningGraph dstr
                   -- print $ map numberOfPredicate (catMaybes $ dstr ^. ds_sentStructures)
                   -- print $ map numberOfMGPredicate $ map meaningGraph (catMaybes $ dstr ^. ds_sentStructures)
-                  print $ map getGraphFromMG $ map meaningGraph (catMaybes $ dstr ^. ds_sentStructures)
+                  let graphs = catMaybes $ map getGraphFromMG $ map meaningGraph (catMaybes $ dstr ^. ds_sentStructures) 
+                  print graphs
+                  print $ map furthestPath graphs
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 

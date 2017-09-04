@@ -6,7 +6,7 @@ import           Control.Lens      ((^.),(^..),_1,_2,_3,_4,_5,to,traverse)
 import           Data.Graph
 import           Data.Maybe        (fromMaybe,mapMaybe)
 import           Data.Monoid       ((<>))
-
+import           Data.Tree
 --
 import           NLP.Syntax.Format (formatAspect,formatTense)
 import           SRL.Analyze.Type  (MGVertex(..),SentStructure(..)
@@ -31,6 +31,8 @@ numberOfMGPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
   where
     fmtVerb (MGEntity    _ _ _  ) = Nothing
     fmtVerb (MGPredicate i _ f v) = Just i
+
+furthestPath grph = maximum $ map (length . flatten) $ dff grph
 
 testEdges = [(2,3)]
 testBounds = (1,2)
