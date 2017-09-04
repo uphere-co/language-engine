@@ -107,7 +107,9 @@ matchObjects :: [(PBArg,FNFrameElement)]
              -> ArgPattern p GRel
              -> [(FNFrameElement, Zipper '[Lemma])]
 matchObjects rolemap verbp patt = do
-  (garg,obj) <- zip [GA1,GA2] (verbp^.complement)
+  (garg,obj') <- zip [GA1,GA2] (verbp^.complement)
+  guard ((not.null) obj')
+  Right obj <- [last obj']
   ctag <- case getRoot (current obj) of
             Left (_,node) -> [chunkTag node]
             _             -> []
