@@ -71,18 +71,23 @@ test6 =
   , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","The"),PL ("NN","product")],PN "VP" [PL ("VBZ","enables"),PN "S" [PN "NP" [PL ("NNS","people")],PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","create"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("JJ","new"),PL ("NNS","kinds")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("NNS","arts")]],PL (",",","),PN "PP" [PL ("VBG","including"),PN "NP" [PL ("JJ","electronic"),PL ("NN","music")]]]]]]],PL (".",".")]]
   )
 
+
+-- testing silent pronoun
 test7 =
   ( "Republican senators plan to write a health-care bill."
   , [(0,("republican","Republican")),(1,("senator","senators")),(2,("plan","plan")),(3,("to","to")),(4,("write","write")),(5,("a","a")),(6,("health-care","health-care")),(7,("bill","bill")),(8,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("JJ","Republican"),PL ("NNS","senators")],PN "VP" [PL ("VBP","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","health-care"),PL ("NN","bill")]]]]],PL (".",".")]]
   )
-  
+
+
+-- testing multi-level silent pronoun linking
 test8 =
   ( "I want to plan to write a paper."
   , [(0,("I","I")),(1,("want","want")),(2,("to","to")),(3,("plan","plan")),(4,("to","to")),(5,("write","write")),(6,("a","a")),(7,("paper","paper")),(8,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","want"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","paper")]]]]]]]],PL (".",".")]]
   )
 
+-- testing subject relative pronoun
 test9 =
   ( "I saw the man who sat on the bench."
   , [(0,("I","I")),(1,("see","saw")),(2,("the","the")),(3,("man","man")),(4,("who","who")),(5,("sit","sat")),(6,("on","on")),(7,("the","the")),(8,("bench","bench")),(9,(".","."))]
@@ -90,6 +95,7 @@ test9 =
   )
 
 
+-- testing object relative pronoun
 test10 =
   ( "I bought the book which Tim Cook read."
   , [(0,("I","I")),(1,("buy","bought")),(2,("the","the")),(3,("book","book")),(4,("which","which")),(5,("Tim","Tim")),(6,("Cook","Cook")),(7,("read","read")),(8,(".","."))]
@@ -97,17 +103,20 @@ test10 =
   )
 
 
+
+-- testing reduced relative clause 
 test11 =
-  ( "Fantasy author Cecilia Tan thought she was a Ravenclaw - then she had to face facts."
-  , [(0,("Fantasy","Fantasy")),(1,("author","author")),(2,("Cecilia","Cecilia")),(3,("Tan","Tan")),(4,("think","thought")),(5,("she","she")),(6,("be","was")),(7,("a","a")),(8,("ravenclaw","Ravenclaw")),(9,("-","-")),(10,("then","then")),(11,("she","she")),(12,("have","had")),(13,("to","to")),(14,("face","face")),(15,("fact","facts")),(16,(".","."))]
-  , PN "ROOT" [PN "S" [PN "S" [PN "NP" [PL ("NNP","Fantasy"),PL ("NN","author"),PL ("NNP","Cecilia"),PL ("NNP","Tan")],PN "VP" [PL ("VBD","thought"),PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","she")],PN "VP" [PL ("VBD","was"),PN "NP" [PL ("DT","a"),PL ("NN","Ravenclaw")]]]]]],PL (":","-"),PN "S" [PN "ADVP" [PL ("RB","then")],PN "NP" [PL ("PRP","she")],PN "VP" [PL ("VBD","had"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","face"),PN "NP" [PL ("NNS","facts")]]]]]],PL (".",".")]]
-  )
-
-
-test12 =
   ( "I bought the book used by Chomsky."
   , [(0,("I","I")),(1,("buy","bought")),(2,("the","the")),(3,("book","book")),(4,("use","used")),(5,("by","by")),(6,("Chomsky","Chomsky")),(7,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","bought"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","book")],PN "VP" [PL ("VBN","used"),PN "PP" [PL ("IN","by"),PN "NP" [PL ("NNP","Chomsky")]]]]],PL (".",".")]]
+  )
+
+
+-- testing coordination
+test12 =
+  ( "Fantasy author Cecilia Tan thought she was a Ravenclaw - then she had to face facts."
+  , [(0,("Fantasy","Fantasy")),(1,("author","author")),(2,("Cecilia","Cecilia")),(3,("Tan","Tan")),(4,("think","thought")),(5,("she","she")),(6,("be","was")),(7,("a","a")),(8,("ravenclaw","Ravenclaw")),(9,("-","-")),(10,("then","then")),(11,("she","she")),(12,("have","had")),(13,("to","to")),(14,("face","face")),(15,("fact","facts")),(16,(".","."))]
+  , PN "ROOT" [PN "S" [PN "S" [PN "NP" [PL ("NNP","Fantasy"),PL ("NN","author"),PL ("NNP","Cecilia"),PL ("NNP","Tan")],PN "VP" [PL ("VBD","thought"),PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","she")],PN "VP" [PL ("VBD","was"),PN "NP" [PL ("DT","a"),PL ("NN","Ravenclaw")]]]]]],PL (":","-"),PN "S" [PN "ADVP" [PL ("RB","then")],PN "NP" [PL ("PRP","she")],PN "VP" [PL ("VBD","had"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","face"),PN "NP" [PL ("NNS","facts")]]]]]],PL (".",".")]]
   )
 
 
