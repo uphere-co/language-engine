@@ -31,4 +31,6 @@ mkDerivation {
     base containers HCoreNLP lens nlp-types tasty tasty-hunit text
   ];
   license = "unknown";
+  doHaddock = false;
+
 }

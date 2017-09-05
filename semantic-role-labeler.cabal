@@ -27,7 +27,8 @@ library
                        SRL.Analyze.Type
                        SRL.Analyze.Util
                        SRL.Analyze.WikiEL
-
+                       SRL.Statistics
+                  
                        SRL.Old.CoNLL.CoNLL08.Parser
                        SRL.Old.CoNLL.CoNLL08.Type
                        SRL.Old.DataSet.PropBank
