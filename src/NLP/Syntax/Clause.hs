@@ -23,6 +23,7 @@ import           Data.List                              (minimumBy)
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (First(..),Last(..),(<>))
 import           Data.Text                              (Text)
+import qualified Data.Text                         as T
 --
 import           Data.Bitree
 import           Data.BitreeZipper
@@ -59,8 +60,8 @@ splitDP z = fromMaybe z $ do
               dp <- child1 z
               guard (isChunkAs NP (current dp))
               sbar <- next dp
-              guard (isChunkAs SBAR (current sbar))
-              return dp
+              ((guard (isChunkAs SBAR (current sbar)) >> return dp) <|>
+               (guard (isChunkAs VP (current sbar)) >> return dp))
 
 
 complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [[Either NTrace (Zipper (Lemma ': as))]]
@@ -107,21 +108,20 @@ constructCP vprop = do
         cptag' <- N.convert <$> getchunk cp'
         let subj = identifySubject s vp
         case cptag' of
-          N.CL _ -> return $ mkCP (Just cp')
-                                  (prev tp')
-                                  (mkTP (Just tp') subj verbp)
-          N.RT   -> return $ mkCP (Just cp')
-                                  Nothing
-                                  (mkTP (Just tp') subj verbp)
-          _      -> return (mkCP Nothing Nothing (mkTP (Just tp') subj verbp))  -- somewhat problematic case?
-      _ -> return (mkCP Nothing Nothing (mkTP Nothing [] verbp))                -- reduced relative clause
+          N.CL _ -> return $ mkCP (maybe (Left C_NULL) Right (prev tp')) (Just cp') (mkTP (Just tp') subj verbp)
+          N.RT   -> return $ mkCP (Left C_NULL) (Just cp') (mkTP (Just tp') subj verbp)
+          _      -> -- somewhat problematic case?
+                    return (mkCP (Left C_NULL) Nothing (mkTP (Just tp') subj verbp))
+      _ -> -- reduced relative clause
+           return (mkCP (Left C_WH) (Just vp) (mkTP (Just vp) [Left NULL] verbp))
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
 
 cpRange :: CP xs -> Maybe Range
 cpRange cp = (cp^?maximalProjection._Just.to (getRange . current)) <|>
-             (cp^?complement.maximalProjection._Just.to (getRange . current))
+             (cp^?complement.maximalProjection._Just.to (getRange . current)) <|>
+             (return (cp^.complement.complement.maximalProjection.to (getRange . current)))
 
 
 
@@ -182,7 +182,7 @@ resolveDP rng = do
     Nothing -> return []
     Just z -> do
       let cp = currentCP z
-      if maybe False (isChunkAs WHNP . current) (cp^.headX)
+      if either (== C_WH) (isChunkAs WHNP . current) (cp^.headX)
         then whMovement z
         else
           case cp^.complement.specifier of

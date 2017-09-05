@@ -6,8 +6,6 @@ module NLP.Syntax.Format where
 
 import           Control.Lens
 import           Control.Monad                 (void)
--- import           Control.Monad.IO.Class        (liftIO)
--- import           Control.Monad.Trans.State     (State,StateT(..),execState,get,put)
 import           Data.Foldable                 (toList,traverse_)
 import           Data.IntMap                   (IntMap)
 import           Data.List                     (intercalate)
@@ -73,6 +71,7 @@ formatDPTokens xs = T.intercalate " -> " (map fmt xs)
         fmt (Left WHPRO)     = "*WHP*"
         fmt (Right z) = T.pack (show (getRange (current z)))
 
+
 {- 
 formatDPType :: ATNode (DP (Zipper as)) -> Maybe ChunkTag
 formatDPType x = case chooseATNode x of
@@ -81,6 +80,7 @@ formatDPType x = case chooseATNode x of
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 -}
 
+
 formatPAWS :: Maybe [Bitree (Range,CP as) (Range,CP as)]
            -> PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
            -> String
@@ -88,7 +88,7 @@ formatPAWS mcpstr pa =
   printf "              subject       : %s\n\
          \              arg candidates: %s\n\
          \              complements   : %s"
-         (formatDPTokens (pa^.pa_CP^.complement.specifier)) -- ,resolveDP mcpstr (pa^.pa_CP)))
+         (formatDPTokens (pa^.pa_CP^.complement.specifier))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
          (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to formatDPTokens))
                   
@@ -117,12 +117,11 @@ formatCP mcpstr cp
                      \Verb Complements     :       %s\n"
                 (maybe "null" show (getchunk =<< cp^.maximalProjection))
                 (maybe "" (show . gettoken) (cp^.maximalProjection))
-                (maybe "null" formatposchunk (fmap getposchunk (cp^.headX)))
-                (maybe "" (show . gettoken) (cp^.headX))
+                (either show formatposchunk (fmap getposchunk (cp^.headX)))
+                (either show (show . gettoken) (cp^.headX))
                 (maybe "null" show (getchunk =<< cp^.complement.maximalProjection))
                 (maybe "" (show . gettoken) (cp^.complement.maximalProjection))
-                -- (maybe "null" show (cp^.complement.specifier.to (fmap formatDPType)))
-                (formatDPTokens (cp^.complement.specifier))  -- ,resolveDP mcpstr cp))
+                (formatDPTokens (cp^.complement.specifier))
                 (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 ((show . gettoken) (cp^.complement.complement.maximalProjection))
                 ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to formatDPTokens)))
@@ -157,14 +156,13 @@ formatVPwithPAWS :: ClauseTree
                  -> VerbProperty (BitreeZipperICP (Lemma ': as))
                  -> Text
 formatVPwithPAWS clausetr mcpstr vp =
-  let -- rngs = clauseRanges clausetr
-      mpaws = findPAWS clausetr vp mcpstr
+  let mpaws = findPAWS clausetr vp mcpstr
       mrng = cpRange . (^.pa_CP) =<< mpaws
       fmt = either (const "") (tokenWord.snd) . getRoot . current
   in case (,) <$> mpaws <*> mrng of
        Nothing -> "fail in identifying PAWS"
        Just (paws,rng) -> T.pack (printf "%7s:%-50s\n%s\n"
-                                   (show rng) -- (maybe "" show (clauseForVerb rngs vp))
+                                   (show rng)
                                    (formatVerbProperty fmt vp)
                                    (maybe "" (formatPAWS mcpstr) mpaws))
                           <> "\n"
@@ -181,7 +179,7 @@ showClauseStructure lemmamap ptree  = do
   traverse_ (mapM_ (T.IO.putStrLn . formatCPHierarchy)) mcpstr
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
 
-  -- traverse_ (mapM_ bindingAnalysis) mcpstr
+
 
 
 
