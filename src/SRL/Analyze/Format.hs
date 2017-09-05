@@ -218,7 +218,12 @@ showMatchedFrame (mcpstr,vstr,paws) = do
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> frame)
     flip traverse_ mselected $ \(_,felst) -> do
-      mapM_ putStrLn . map (\(fe,z) -> printf "%-15s: %-7s %s" fe (show (getRange (current z))) (gettokens z)) $ felst
+      mapM_ putStrLn . map (\(fe,(mp,z)) -> printf "%-15s: %-7s %3s %s"
+                                                   fe
+                                                   (show (getRange (current z)))
+                                                   (fromMaybe "" mp)
+                                                   (gettokens z))
+        $ felst
 
 
 
