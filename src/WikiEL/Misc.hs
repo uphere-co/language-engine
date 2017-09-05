@@ -50,15 +50,17 @@ untilOverlapOrNo f ranges@(r:rs) = case f r of
 
 
 -- Vector algorithms
-strictSubset,isContain :: Eq a => Vector a -> Vector a -> Bool
+-- isContain : check whether a slice of a 2nd input vector is a 1st input vector.
+isContain :: Eq a => Vector a -> Vector a -> Bool
 isContain = f 
   where
     zipEq x y = V.all (uncurry (==)) (V.zip x y)
     f sub vec | V.length sub > V.length vec = False
     f sub vec | zipEq sub vec = True
     f sub vec                 = f sub (V.tail vec)
-
-strictSubset sub vec = isContain sub vec && (V.length sub < V.length vec)
+--
+strictSlice :: Eq a => Vector a -> Vector a -> Bool
+strictSlice sub vec = isContain sub vec && (V.length sub < V.length vec)
 
 subVector :: IRange -> Vector a -> Vector a
 subVector (IRange beg end) = V.slice beg (end-beg)

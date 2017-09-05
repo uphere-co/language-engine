@@ -13,7 +13,7 @@ import           Data.Text                             (Text)
 import qualified Data.Text                  as T
 import           GHC.Generics                          (Generic)
 
-import           WikiEL.Misc                           (IRange(..),RelativePosition(..),relativePos,strictSubset,subVector) 
+import           WikiEL.Misc                           (IRange(..),RelativePosition(..),relativePos,strictSlice,subVector) 
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           NLP.Type.NamedEntity                  (NamedEntity, OrderedNamedEntity)
 import           WikiEL.WikiNamedEntityTagger          (PreNE(..),isResolved,resolvedUID,mayCite)
@@ -93,7 +93,7 @@ buildEntityMentions text wikiNEs = zipWith Self uids mentions
 
 tryEntityLink :: Eq a => EMInfo a -> EMInfo a -> Maybe (EMInfo a)
 tryEntityLink target@(trange, twords, tNE) src@(srange, swords, sNE) =
-  f (relativePos trange srange) (strictSubset swords twords) tNE sNE
+  f (relativePos trange srange) (strictSlice swords twords) tNE sNE
   where
     g ttag (Resolved (_, s))       = s==ttag
     g ttag (UnresolvedUID stag)    = mayCite stag ttag
