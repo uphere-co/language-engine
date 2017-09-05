@@ -16,7 +16,7 @@ import           GHC.Generics                          (Generic)
 import           WikiEL.Misc                           (IRange(..),RelativePosition(..),relativePos,isContain,subVector) 
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           NLP.Type.NamedEntity                  (NamedEntity, OrderedNamedEntity)
-import           WikiEL.WikiNamedEntityTagger          (PreNE(..),isResolved,resolvedUID)
+import           WikiEL.WikiNamedEntityTagger          (PreNE(..),isResolved,resolvedUID,mayCite)
 import qualified NLP.Type.NamedEntity       as N
 
 mayRefer :: NamedEntity -> NamedEntity -> Bool
@@ -95,7 +95,7 @@ tryEntityLink :: Eq a => EMInfo a -> EMInfo a -> Maybe (EMInfo a)
 tryEntityLink target@(trange, twords, ttag) src@(srange, swords, stag) =
   f (relativePos trange srange) (isContain swords twords) ttag stag
   where 
-    f pos textMatch (Resolved (uid,ttag)) (UnresolvedUID stag) | pos==LbeforeR && textMatch && ttag==stag =
+    f pos textMatch (Resolved (uid,ttag)) (UnresolvedUID stag) | pos==LbeforeR && textMatch && mayCite stag ttag =
       Just (srange,swords, Resolved (uid,ttag))
     f _ _ _ _ = Nothing
 
