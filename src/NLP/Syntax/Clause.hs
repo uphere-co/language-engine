@@ -36,7 +36,7 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                        (isChunkAs)
+import           NLP.Syntax.Util                        (isChunkAs,isPOSAs)
 --
 import           Debug.Trace
 
@@ -54,9 +54,9 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 
 
-splitDP :: Zipper (Lemma ': as) -> Zipper (Lemma ': as)
-splitDP z = fromMaybe z $ do
-              guard (isChunkAs NP (current z))
+splitDP :: Zipper (Lemma ': as) -> Maybe (Zipper (Lemma ': as))
+splitDP z = -- fromMaybe z $ do
+           do guard (isChunkAs NP (current z))
               dp <- child1 z
               guard (isChunkAs NP (current dp))
               sbar <- next dp
@@ -64,8 +64,20 @@ splitDP z = fromMaybe z $ do
                (guard (isChunkAs VP (current sbar)) >> return dp))
 
 
+-- | this function is very ad hoc. Later we should have PP according to X-bar theory
+splitPP :: Zipper (Lemma ': as) -> Maybe (Zipper (Lemma ': as))
+splitPP z = -- fromMaybe z $ do
+           do guard (isChunkAs PP (current z))
+              p <- child1 z
+              guard (isPOSAs TO (current p) || isPOSAs IN (current p))
+              dp <- next p
+              return (fromMaybe dp (splitDP dp))
+
+
+
 complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [[Either NTrace (Zipper (Lemma ': as))]]
-complementsOfVerb vp = map (\x -> [Right x]) (splitDP <$> (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
+complementsOfVerb vp = map (\x -> [Right x]) ((\z -> fromMaybe z (splitDP z)) <$>
+                                              (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkNPSBAR z = case tag z of
