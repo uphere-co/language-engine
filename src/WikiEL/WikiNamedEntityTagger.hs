@@ -82,8 +82,8 @@ resolveNEClass :: WEC.WikiuidNETag -> NEClass -> Vector ItemID -> PreNE
 resolveNEClass ts stag xs = g matchedUIDs
   where
     u = WEC.guessItemClass2 ts stag
-    f accum uid | WEC.mayCite stag (u uid)  = uid:accum
-                | otherwise             = accum
+    f !accum uid | WEC.mayCite stag (u uid)  = uid:accum
+                 | otherwise             = accum
     matchedUIDs = foldl' f [] xs
     g [uid] = Resolved     (uid, u uid)
     g []    = UnresolvedUID stag
