@@ -24,6 +24,7 @@ prettyPrint n (PL ("``",_)) = "\n" <> indent n <> "(``   ``)"
 prettyPrint n (PL ("''",_)) = "\n" <> indent n <> "(''   '')"
 prettyPrint n (PL ("!", _)) = "\n" <> indent n <> "(!     !)"
 prettyPrint n (PL ("?", _)) = "\n" <> indent n <> "(?     ?)"
+prettyPrint n (PL (":", t)) = "\n" <> indent n <> "(:    " <> t <> ")"
 prettyPrint _ (PL (t, txt)) = fmttag t <> " " <> txt
 
 
