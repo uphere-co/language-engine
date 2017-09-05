@@ -36,7 +36,7 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                        (isChunkAs)
+import           NLP.Syntax.Util                        (isChunkAs,isPOSAs)
 --
 import           Debug.Trace
 
@@ -69,14 +69,14 @@ splitPP :: Zipper (Lemma ': as) -> Maybe (Zipper (Lemma ': as))
 splitPP z = -- fromMaybe z $ do
            do guard (isChunkAs PP (current z))
               p <- child1 z
-              guard (isChunkAs PP (current p))
+              guard (isPOSAs TO (current p) || isPOSAs IN (current p))
               dp <- next p
-              splitDP dp
+              return (fromMaybe dp (splitDP dp))
 
 
 
 complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [[Either NTrace (Zipper (Lemma ': as))]]
-complementsOfVerb vp = map (\x -> [Right x]) ((\z -> fromMaybe z (splitPP z <|> splitDP z)) <$>
+complementsOfVerb vp = map (\x -> [Right x]) ((\z -> fromMaybe z (splitDP z)) <$>
                                               (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
