@@ -33,8 +33,4 @@ numberOfMGPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
     fmtVerb (MGPredicate i _ f v) = Just i
 
 furthestPath grph = maximum $ map (length . flatten) $ dff grph
-
-testEdges = [(2,3)]
-testBounds = (1,2)
-
-testGraph = buildG testBounds testEdges
+numberOfIsland grph = length $ components $ grph

@@ -58,10 +58,6 @@ import           SRL.Analyze.Util              (TagPos(..))
 import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
                                                ,occupationItemFile,orgItemFile,personItemFile,reprFile)
 import           SRL.Analyze.WikiEL            (mkWikiList)
-import           SRL.Statistics                (furthestPath
-                                               ,getGraphFromMG
-                                               ,numberOfMGPredicate,numberOfPredicate
-                                               ,testGraph)
 
 
 -- | main query loop
@@ -88,11 +84,6 @@ queryProcess config pp apredata emTagger =
                   (mapM_ showMatchedFrame . concat . allPAWSTriplesFromDocStructure) dstr
                   --
                   printMeaningGraph dstr
-                  -- print $ map numberOfPredicate (catMaybes $ dstr ^. ds_sentStructures)
-                  -- print $ map numberOfMGPredicate $ map meaningGraph (catMaybes $ dstr ^. ds_sentStructures)
-                  let graphs = catMaybes $ map getGraphFromMG $ map meaningGraph (catMaybes $ dstr ^. ds_sentStructures) 
-                  print graphs
-                  print $ map furthestPath graphs
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
