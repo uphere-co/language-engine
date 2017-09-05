@@ -4,6 +4,8 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TupleSections         #-}
 
+{-# LANGUAGE TypeOperators #-}
+
 module SRL.Analyze.Match where
 
 import           Control.Applicative
@@ -22,7 +24,11 @@ import           Data.BitreeZipper            (current,mkBitreeZipper,root)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
-import           NLP.Syntax.Clause            (cpRange,findPAWS,resolveDP)
+
+import Data.BitreeZipper
+import NLP.Syntax.Util
+
+import           NLP.Syntax.Clause            (cpRange,findPAWS,resolveDP,splitPP  ,splitDP)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -96,16 +102,16 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
 matchSubject :: [(PBArg,FNFrameElement)]
              -> Zipper '[Lemma]
              -> ArgPattern p GRel
-             -> Maybe (FNFrameElement, Zipper '[Lemma])
+             -> Maybe (FNFrameElement, (Maybe Text, Zipper '[Lemma]))
 matchSubject rolemap dp patt = do
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
-  (,dp) <$> lookup p rolemap
+  (,(Nothing,dp)) <$> lookup p rolemap
 
 
 matchObjects :: [(PBArg,FNFrameElement)]
              -> VerbP '[Lemma]
              -> ArgPattern p GRel
-             -> [(FNFrameElement, Zipper '[Lemma])]
+             -> [(FNFrameElement, (Maybe Text, Zipper '[Lemma]))]
 matchObjects rolemap verbp patt = do
   (garg,obj') <- zip [GA1,GA2] (verbp^.complement)
   guard ((not.null) obj')
@@ -120,7 +126,8 @@ matchObjects rolemap verbp patt = do
     SBAR -> guard (a == GR_SBAR (Just garg))
     _    -> []
   fe <- maybeToList (lookup p rolemap)
-  return (fe,obj)
+  return (fe,(Nothing,obj))
+
 
 
 matchPP :: PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
@@ -129,7 +136,8 @@ matchPP :: PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
 matchPP paws prep = do
     Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
     tr <- current . root <$> paws^.pa_CP.maximalProjection
-    find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
+    z' <- find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
+    splitPP z'
   where
     ppcheck (Left (_,S_PP prep')) = prep == prep'
     ppcheck _                     = False
@@ -138,37 +146,37 @@ matchPP paws prep = do
 matchPrepArgs :: [(PBArg,FNFrameElement)]
               -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
               -> ArgPattern p GRel
-              -> [(FNFrameElement, Zipper '[Lemma])]
+              -> [(FNFrameElement, (Maybe Text, Zipper '[Lemma]))]
 matchPrepArgs rolemap paws patt = do
   (p,prep) <- pbArgForPP patt
   z <- maybeToList (matchPP paws prep)
-  (,z) <$> maybeToList (lookup p rolemap)
+  (,(Just prep,z)) <$> maybeToList (lookup p rolemap)
 
 
 matchAgentForPassive :: [(PBArg,FNFrameElement)]
                      -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
                      -> ArgPattern p GRel
-                     -> Maybe (FNFrameElement, Zipper '[Lemma])
+                     -> Maybe (FNFrameElement, (Maybe Text, Zipper '[Lemma]))
 matchAgentForPassive rolemap paws patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
     z <- matchPP paws "by"
-    (,z) <$> lookup p rolemap
+    (,(Just "by",z)) <$> lookup p rolemap
 
 
 
 matchThemeForPassive :: [(PBArg,FNFrameElement)]
                      -> Zipper '[Lemma]
                      -> ArgPattern p GRel
-                     -> Maybe (FNFrameElement, Zipper '[Lemma])
+                     -> Maybe (FNFrameElement, (Maybe Text,Zipper '[Lemma]))
 matchThemeForPassive rolemap dp patt = do
   (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
-  (,dp) <$> lookup p rolemap
+  (,(Nothing,dp)) <$> lookup p rolemap
 
 
 matchSO :: [(PBArg,FNFrameElement)]
         -> (Zipper '[Lemma], VerbP '[Lemma], PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
         -> (ArgPattern p GRel, Int)
-        -> ((ArgPattern p GRel, Int), [(FNFrameElement, Zipper '[Lemma])])
+        -> ((ArgPattern p GRel, Int), [(FNFrameElement, (Maybe Text, Zipper '[Lemma]))])
 matchSO rolemap (dp,verbp,paws) (patt,num) =
   case verbp^.headX.vp_voice of
     Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap paws patt )
@@ -234,7 +242,7 @@ matchFrame :: (Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
               ,VerbStructure
               ,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
            -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FNFrameElement
-                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, Zipper '[Lemma])]))
+                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, Zipper '[Lemma]))]))
 matchFrame (mcpstr,vstr,paws) = do
   let cp = paws^.pa_CP
       verbp = cp^.complement.complement
@@ -248,7 +256,6 @@ matchFrame (mcpstr,vstr,paws) = do
   let frmsels = matchFrameRolesAll verbp paws mDP (vstr^.vs_roleTopPatts)
   let total=  sum (frmsels^..traverse._2)
   ((frame,mselected),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
-
   return (rng,vprop,frame,mselected)
 
 
@@ -272,7 +279,7 @@ meaningGraph sstr =
       --
       entities0 = do (_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
-                     (_fe,z) <- felst
+                     (_fe,(_,z)) <- felst
                      let x = current z
                          rng = getRange x
                          txt = gettokens x
@@ -291,7 +298,7 @@ meaningGraph sstr =
       edges = do (rng,_,_,mselected) <- matched
                  i <- maybeToList (HM.lookup rng rngidxmap)
                  (_,felst) <- maybeToList mselected
-                 (fe,z) <- felst
+                 (fe,(_,z)) <- felst
                  let rng' = getRange (current z)
                  i' <- maybeToList (HM.lookup rng' rngidxmap)
                  return (MGEdge fe i i')
