@@ -17,6 +17,7 @@ import qualified Data.Text.Lazy.IO             as T.L.IO
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 
+
 import           WikiEL.ETL.RDF
 import           WikiEL.ETL.Util
 import           WikiEL.ETL.RDF.Binary
@@ -34,7 +35,7 @@ import           System.Environment                    (getArgs)
 
 -- For Wiki interlinks
 --import           Data.Text                             (Text)
-import           Data.List                             (foldl')
+import qualified Data.List                     as L
 import qualified Data.Map.Strict               as M
 import qualified Data.Vector                   as V
 import qualified Data.Vector.Unboxed           as UV
@@ -48,6 +49,12 @@ import qualified Data.ByteString.Lazy.Char8    as BL
 import qualified Graph.ETL                     as G.E
 import qualified WikiEL                        as WEL
 import           Test.Data.Filename
+
+
+-- For path scoring
+import qualified Data.Char                     as C
+import qualified Data.Text.Encoding            as T.E
+
 
 type LText = T.L.Text
 
@@ -105,12 +112,15 @@ loadEdges lines  = Foo edges names
     es = map parseInterlinks lines
     edges = UV.fromList (map (H.wordHash *** H.wordHash) es)
     f accum (from, to) = tryAdd (tryAdd accum from) to
-    names = foldl' f M.empty es
+    names = L.foldl' f M.empty es
 
 showPath :: HashInvs -> UV.Vector H.WordHash -> [ Text]
 showPath invs path = catMaybes (UV.foldl' f [] path)
   where
     f accum hash = M.lookup hash invs : accum
+
+showPathPair :: HashInvs -> (UV.Vector H.WordHash, UV.Vector H.WordHash) -> [Text]
+showPathPair names (x,y) = reverse (showPath names y) ++ tail (showPath names x)
 
 showPaths :: Foldable t => HashInvs -> t (UV.Vector H.WordHash) -> IO ()
 showPaths names = mapM_ (print . showPath names)
@@ -125,7 +135,7 @@ loadInterlinks (prevState, prevPartialBlock) block = do
     (mainBlock,partialBlock) = T.breakOnEnd "\n" block
     lines = T.lines (T.append prevPartialBlock mainBlock)
     edges    = map parseInterlinks lines
-    state = foldl' addEdge prevState edges
+    state = L.foldl' addEdge prevState edges
   --mapM_ print edges
   return (state,partialBlock)
 
@@ -150,7 +160,7 @@ instance Show WNTypes where
 
 -- Stack-overflowed version. Left for profiling exercise.
 loadWordnetTypes :: [Text] -> WNTypes
-loadWordnetTypes lines = foldl' addKey (WNTypes M.empty M.empty) edges
+loadWordnetTypes lines = L.foldl' addKey (WNTypes M.empty M.empty) edges
   where
     edges    = map parseInterlinks lines
     addKey foo@(WNTypes types names) edge = WNTypes (f types edge) (g names edge)
@@ -341,8 +351,55 @@ main3reload = do
   mapM_ print (filter WEL.hasResolvedUID a4)
   mapM_ print (filter WEL.hasResolvedUID a5)
 
+stripEdges :: [a] -> Maybe [a]
+stripEdges vs | length vs <2 = Nothing
+stripEdges vs = Just ((tail . init) vs)
 
+consume :: M.Map Text Int -> [Text] -> IO (M.Map Text Int)
+consume cs ns | length ns < 2 = return cs
+consume cs (a:b:ns) = do
+  let
+    --hash word = H.wordHash (T.pack word)
+    hashT = H.wordHash
+    --showPath invs path = catMaybes (UV.foldl' f [] path) where f accum hash = M.lookup hash invs : accum
+    --showPathPairs names = mapM_  (print . (\(x,y)-> reverse (showPath names y) ++ tail (showPath names x)))    
+    idx =0
+    idx1=1
+    idx2=2
+  Just store    <- lookupStore idx  :: IO (Maybe (Store G.E.Graph))
+  Just store1   <- lookupStore idx1 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
+  cc@(G.E.Graph edges names) <- readStore store
+  sorted@(d,es) <- readStore store1  
 
+  let
+    showPath invs path = map T.E.decodeUtf8 (catMaybes (UV.foldl' f [] path))
+      where
+        f accum hash = (M.lookup hash invs) : accum
+    showPathPair names (x,y) = reverse (showPath names y) ++ tail (showPath names x)
+  
+    getPaths len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hashT wp1) (hashT wp2)
+    paths = map (showPathPair names) (getPaths 1 a b)
+    fs = L.foldl' f
+      where f accum v = M.insertWith (+) v 1 accum
+    cs' = L.foldl' fs cs (mapMaybe stripEdges paths)
+  consume cs' ns
+
+countNodes :: FilePath -> Int -> IO [(T.Text, Int)]
+countNodes filepath cutoff = do
+  lines <- readlines filepath
+  cs <- consume M.empty (take 1000000 lines)
+  let 
+    vs = L.sortOn ((\x -> -x) . snd) (M.toList cs)
+    filters = take cutoff vs
+  -- mapM_ print filters
+  mapM_ T.IO.putStrLn $ filter (not . C.isLower . T.head ) (map fst filters)
+  mapM_ T.IO.putStrLn $ filter (C.isLower . T.head ) (map fst filters)  
+  
+  return filters
+
+{-
+filters <- countNodes "nodes.weighted.ran"
+-}
 
 {-
 -- Script for testing in REPL
@@ -351,6 +408,24 @@ matchToSimilar f refs (WEL.toWikipages titles (mentions5!!0))
 
 paths len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hash wp1) (hash wp2)
 f x y = length (paths 1 x y)
+
+
+
+WEL.mostSimilar f 5 "Paul_Ryan" ["United_States_Senate","Senate_of_Ceylon","Senate_(Netherlands)"] 
+WEL.matchToSimilar f 5 ["Paul_Ryan","Donald_Trump","Republican_Party_(United_States)"] ["United_States_Senate","Senate_of_Ceylon","Senate_(Netherlands)"]
+
+refs = concatMap (WEL.toWikipages i2t) (filter WEL.hasResolvedUID mentions4)
+mapM_ print $ mapMaybe (\ref -> WEL.mostSimilar f 1 ref ["United_States_Senate","Senate_of_Ceylon","Senate_(Netherlands)"]) (map T.unpack refs)
+mapM_ print $ mapMaybe (\ref -> WEL.mostSimilar f 1 ref ["House,_New_Mexico","Peterhouse_Girls%27_School","Peterhouse_Boys%27_School"]) (map T.unpack refs)
+showPathPairs names $ paths 1 "Donald_Trump" "House,_New_Mexico"
+showPathPairs names $ paths 1 "Susan_Collins" "House,_New_Mexico"
+showPathPairs names $ paths 1 "Republican_Party_(United_States)" "United_States_Senate"
+showPathPairs names $ paths 2 "Paul_Ryan" "United_States_Senate"
+
+
+refs5 = concatMap (WEL.toWikipages i2t) (filter EL.hasResolvedUID mentions5)
+mapM_ print $ mapMaybe (\ref -> WEL.mostSimilar f 1 ref ["Gao_Feng_(judoka)","Gao_Feng_(footballer)"]) (map T.unpack refs5)
+
 
 WEL.mostSimilar f 5 ("Nike,_Inc.") ["Michael_Jordan", "Michael_Jordan_(mycologist)", "Michael_Jordan_(Irish_politician)"]
 WEL.matchToSimilar f 5 ["Nike,_Inc.","United_States"] ["Michael_Jordan","Michael_Jordan_(mycologist)","Michael_Jordan_(Irish_politician)"]
