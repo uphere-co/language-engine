@@ -352,8 +352,8 @@ matchToSimilar f refs (WEL.toWikipages titles (mentions5!!0))
 paths len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hash wp1) (hash wp2)
 f x y = length (paths 1 x y)
 
-mostSimilar f "Nike,_Inc." ["Michael_Jordan", "Michael_Jordan_(mycologist)", "Michael_Jordan_(Irish_politician)"]
-matchToSimilar f ["Nike,_Inc.","United_States"] ["Michael_Jordan", "Michael_Jordan_(mycologist)", "Michael_Jordan_(Irish_politician)"]
+WEL.mostSimilar f 5 ("Nike,_Inc.") ["Michael_Jordan", "Michael_Jordan_(mycologist)", "Michael_Jordan_(Irish_politician)"]
+WEL.matchToSimilar f 5 ["Nike,_Inc.","United_States"] ["Michael_Jordan","Michael_Jordan_(mycologist)","Michael_Jordan_(Irish_politician)"]
 
 showPathPairs names $ paths 1 "Michael_Jordan" "United_States"
 showPathPairs names $ paths 1 "Michael_Jordan_(mycologist)" "United_States"
