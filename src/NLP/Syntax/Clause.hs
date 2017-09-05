@@ -99,19 +99,23 @@ constructCP :: VerbProperty (Zipper (Lemma ': as))
             -> Maybe (CP (Lemma ': as))
 constructCP vprop = do
     vp <- maximalProjectionVP vprop
-    tp' <- parentOfVP vprop
-    tptag' <- N.convert <$> getchunk tp'
+    tp <- parentOfVP vprop
+    tptag' <- N.convert <$> getchunk tp
     let verbp = mkVerbP vp vprop (complementsOfVerb vprop)
     case tptag' of
       N.CL s -> do
-        cp' <- parent tp'
+        cp' <- parent tp
         cptag' <- N.convert <$> getchunk cp'
         let subj = identifySubject s vp
         case cptag' of
-          N.CL _ -> return $ mkCP (maybe (Left C_NULL) Right (prev tp')) (Just cp') (mkTP (Just tp') subj verbp)
-          N.RT   -> return $ mkCP (Left C_NULL) (Just cp') (mkTP (Just tp') subj verbp)
+          N.CL N.SBAR ->
+            return $ mkCP (maybe (Left C_NULL) Right (prev tp)) (Just cp') (mkTP (Just tp) subj verbp)
+          N.CL _ ->
+            return $ mkCP (Left C_NULL) (Just tp) (mkTP (Just tp) subj verbp)
+          N.RT   ->
+            return $ mkCP (Left C_NULL) (Just cp') (mkTP (Just tp) subj verbp)
           _      -> -- somewhat problematic case?
-                    return (mkCP (Left C_NULL) Nothing (mkTP (Just tp') subj verbp))
+            return (mkCP (Left C_NULL) Nothing (mkTP (Just tp) subj verbp))
       _ -> -- reduced relative clause
            return (mkCP (Left C_WH) (Just vp) (mkTP (Just vp) [Left NULL] verbp))
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
@@ -133,10 +137,6 @@ identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
         rngs = HM.keys cpmap
         rtr = rangeTree rngs
         tofull rng = HM.lookup rng cpmap
-
-
-
-
 
 
 
