@@ -85,3 +85,48 @@ $ hp2ps testApp.hp
 $ ps2pdf testApp.ps testApp.pdf
 ```
 
+### Running WikiEL with disambiguation.
+#### Getting Wikipedia interlinks and WordNet synsets from YAGO
+```
+$ lbzcat yago/yago3_entire_tsv.bz2 | grep "<linksTo>" > yago/wikilinks
+$ time cat yago/wikilinks | runhaskell -i./src/ test/testApp.hs > enwiki/interlinks
+real	60m40.005s
+
+-- using `yago-bin` with `wordnetTypes`
+cabal build yago-bin --builddir=../dists/wiki-ner
+$ time grep subclassOf yago/wordnet | ../dists/wiki-ner/build/yago-bin/yago-bin > enwiki/wnTypes
+-- using `yago-bin` with `wordnetTaxonomy`
+cabal build yago-bin --builddir=../dists/wiki-ner
+$ time grep subclassOf yago/wordnet | ../dists/wiki-ner/build/yago-bin/yago-bin > enwiki/taxonomies
+real	0m3.048s
+
+cp enwiki/wnTypes enwiki/synsets
+cat enwiki/taxonomies >> enwiki/synsets
+```
+
+#### Getting noisy hub nodes to filter out
+```
+cat enwiki/wnTypes | grep person_ | awk -F '\t' '{print $1}' > persons
+cat enwiki/wnTypes | grep organization_ | awk -F '\t' '{print $1}' > orgs
+
+$ time cat enwiki/interlinks | grep -Ff persons > interlinks.persons
+real	0m37.966s
+$ time cat enwiki/interlinks | grep -Ff orgs > interlinks.orgs
+real	0m42.248s
+$ time cat enwiki/interlinks | sort -R > interlinks.ran
+real	43m7.016s
+
+$ time cat enwiki/interlinks | awk -F '\t' '{print $1 "\n" $2}' > nodes.weighted
+real	0m49.166s
+$ time cat nodes.weighted | shuf > nodes.weighted.ran
+real	0m35.332s
+$ time cat nodes.weighted.ran | grep -Fxf persons > nodes.weighted.ran.persons
+real	1m49.687s
+$ time cat nodes.weighted.ran | grep -Fxf orgs > nodes.weighted.ran.orgs
+real	0m58.049s
+
+
+# Generate filter.page by running Main.filterGen in test/testApp
+$ time awk -F"\t" 'NR == FNR { a[$1]; next } !(($1 in a)||($2 in a)) {print}' filter.page enwiki/interlinks > interlinks.filtered
+```
+

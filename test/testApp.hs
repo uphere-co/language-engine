@@ -180,43 +180,6 @@ wordnetType table@(WNTypes types names) name = f ts
     f (Just ts) = mapMaybe (\t -> M.lookup t names) ts
     ts = M.lookup key types
 
-{-
---For preparing test data:
-$ lbzcat yago/yago3_entire_tsv.bz2 | grep "<linksTo>" > yago/wikilinks
-$ time cat yago/wikilinks | runhaskell -i./src/ test/testApp.hs > enwiki/interlinks
-real	60m40.005s
-
--- using `yago-bin` with `wordnetTypes`
-cabal build yago-bin --builddir=../dists/wiki-ner
-$ time grep subclassOf yago/wordnet | ../dists/wiki-ner/build/yago-bin/yago-bin > enwiki/wnTypes
--- using `yago-bin` with `wordnetTaxonomy`
-cabal build yago-bin --builddir=../dists/wiki-ner
-$ time grep subclassOf yago/wordnet | ../dists/wiki-ner/build/yago-bin/yago-bin > enwiki/taxonomies
-real	0m3.048s
-
-cp enwiki/wnTypes enwiki/synsets
-cat enwiki/taxonomies >> enwiki/synsets
-
--}
-
-
-
-{--------remove this
-edgeOrdering :: Ord a => ((a,a)->a) -> (a,a) -> (a,a) -> Ordering
-edgeOrdering direction left right = compare (direction left) (direction right)
-
-fff, ttt :: Ord a => (a,a)->a
-fff  (x,_) = x
-ttt  (_,x) = x
-
-tt,ff ::  Ord a => (a,a) -> (a,a) -> Ordering
-ff = edgeOrdering fff
-tt = edgeOrdering ttt
-
--- 17s for 1M vs 12s for sortEdges
-sortEdges2 G.From edges = (G.From, UV.modify (sortBy ff) edges)
-sortEdges2 G.To   edges = (G.To,   UV.modify (sortBy tt) edges)
--}
 
 
 test1 :: (G.Direction, UV.Vector (H.WordHash, H.WordHash)) -> HashInvs -> IO ()
@@ -244,7 +207,8 @@ test1 sorted@(d,edges) names = do
   --print $ dEdges (H.wordHash "Germany")
 
 main3init = do
-  cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph "enwiki/edges" -- ~40min to sort in REPL. ~10min with a compiled binary.
+  cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph "enwiki/interlinks.filtered"
+  --cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph "enwiki/edges" -- ~40min to sort in REPL. ~10min with a compiled binary.
   --cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph "enwiki/wnTypes.1M"
   --wn <- foo loadWordnetTypes "enwiki/synsets"
   --taxons@(Foo tes tns) <- foo loadEdges "enwiki/synsets" -- ~16min to sort
@@ -347,9 +311,15 @@ main3reload = do
     a3 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 5) mentions3
     a4 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 5) mentions4
     a5 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 5) mentions5
-  mapM_ print (filter WEL.hasResolvedUID a3)
-  mapM_ print (filter WEL.hasResolvedUID a4)
-  mapM_ print (filter WEL.hasResolvedUID a5)
+    b3 = WEL.entityLinkings a3
+    b4 = WEL.entityLinkings a4
+    b5 = WEL.entityLinkings a5
+  --mapM_ print (filter WEL.hasResolvedUID a3)
+  --mapM_ print (filter WEL.hasResolvedUID a4)
+  --mapM_ print (filter WEL.hasResolvedUID a5)
+  mapM_ print (filter WEL.hasResolvedUID b3)
+  mapM_ print (filter WEL.hasResolvedUID b4)
+  mapM_ print (filter WEL.hasResolvedUID b5)
 
 stripEdges :: [a] -> Maybe [a]
 stripEdges vs | length vs <2 = Nothing
@@ -397,6 +367,9 @@ countNodes filepath cutoff = do
   
   return filters
 
+filterGen = do
+  countNodes "nodes.weighted.ran" 100
+
 {-
 filters <- countNodes "nodes.weighted.ran"
 -}
@@ -410,8 +383,10 @@ paths len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hash wp1) (hash w
 f x y = length (paths 1 x y)
 
 
-
 WEL.mostSimilar f 5 "Paul_Ryan" ["United_States_Senate","Senate_of_Ceylon","Senate_(Netherlands)"] 
+WEL.matchToSimilar f 5 ["Paul_Ryan","Donald_Trump","Republican_Party_(United_States)"] ["United_States_Senate","Senate_of_Ceylon","Senate_(Netherlands)"]
+
+
 WEL.matchToSimilar f 5 ["Paul_Ryan","Donald_Trump","Republican_Party_(United_States)"] ["United_States_Senate","Senate_of_Ceylon","Senate_(Netherlands)"]
 
 refs = concatMap (WEL.toWikipages i2t) (filter WEL.hasResolvedUID mentions4)
@@ -445,8 +420,6 @@ length $ paths 1 "Michael_Jordan_(Irish_politician)" "Nike,_Inc."
 length $ paths 2 "Michael_Jordan" "Nike,_Inc."
 length $ paths 2 "Michael_Jordan_(mycologist)" "Nike,_Inc."
 length $ paths 2 "Michael_Jordan_(Irish_politician)" "Nike,_Inc."
-
-
 
 
 
