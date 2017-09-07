@@ -69,6 +69,12 @@ instance ToJSON PreNE where
 instance FromJSON PreNE where
   parseJSON = genericParseJSON defaultOptions
 
+uidCandidates :: PreNE -> [ItemID]
+uidCandidates (UnresolvedUID _)      = []
+uidCandidates (AmbiguousUID (ids,_)) = ids
+uidCandidates (Resolved     (id,_))  = [id]
+uidCandidates (UnresolvedClass ids)  = ids
+
 isResolved :: PreNE -> Bool
 isResolved (Resolved _ ) = True
 isResolved _ = False

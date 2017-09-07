@@ -6,6 +6,7 @@ module WikiEL
   ( module WikiEL
   , module WikiEL.WordNet
   , EL.entityName
+  , EL.entityUIDcandidates
   , EL.mentionedEntityName
   , EL.hasResolvedUID
   , EL.entityLinkings

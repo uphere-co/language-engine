@@ -1,3 +1,5 @@
+cd data_full
+
 DIR=/scratch/groups/uphere/wikidata
 tail -n +2 $DIR/public_companies.csv| awk -F ',' '{print $1}' | awk -F "/" '{print $NF}' > ne.company
 tail -n +2 $DIR/businesspersons.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}' > ne.business_person   
@@ -24,7 +26,8 @@ grep -Fwf brand_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.brand.
 grep -Fwf human_rule_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.human_rule.2
 grep -Fwf building_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.building.2
 
-cp ne.business_person ne.person.2
+# Without disambiguation, person should be limited to a much smaller set, such as business_person
+#cp ne.business_person ne.person.2
 cat ne.*.2 | sort | uniq > uid
 cat ../enwiki/names | sed 's/q/Q/g' | grep -Fwf uid  > tmp
 cat ../wikidata/wikidata.all_entities | grep -Fwf uid >> tmp
