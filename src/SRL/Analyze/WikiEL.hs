@@ -25,13 +25,13 @@ import qualified WikiEL.EntityMentionPruning   as EMP
 import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
 import           NLP.Type.CoreNLP
 import qualified NLP.Type.NamedEntity          as N
+import           NLP.Type.TagPos                              (TagPos(..),TokIdx(..))
 import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Equity
 import           WikiEL.Type.FileFormat
 import qualified WikiEL.EntityLinking          as EL
 --
 import           SRL.Analyze.Type
-import           SRL.Analyze.Util                             (TagPos(..),TokIdx(..))
 
 
 groupupheredir' :: FilePath

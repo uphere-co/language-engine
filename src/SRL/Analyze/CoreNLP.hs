@@ -15,14 +15,13 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
 import qualified CoreNLP.Proto.HCoreNLPProto.ListTimex as T
 import           CoreNLP.Simple                               (annotate,serializeTimex)
 import           CoreNLP.Simple.Convert                       (convertPsent,convertSentence,convertToken
-                                                              ,decodeToPennTree
-                                                              ,sentToDep)
+                                                              ,decodeToPennTree,sentToDep)
 import           CoreNLP.Simple.Util                          (getDoc,getProtoDoc,getTKTokens)
 import           NLP.Type.CoreNLP                             (Sentence)
+import           NLP.Type.TagPos                              (BeginEnd,SentIdx,CharIdx)
 --
 import           SRL.Analyze.Type                             (DocAnalysisInput(..))
-import           SRL.Analyze.Util                             (BeginEnd,SentIdx,CharIdx
-                                                              ,addText,listTimexToTagPos)
+import           SRL.Analyze.Util                             (addText,listTimexToTagPos)
 
 
 getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd CharIdx)]

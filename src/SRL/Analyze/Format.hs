@@ -37,6 +37,7 @@ import           NLP.Syntax.Type.XBar                    (CP)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty                 (Voice)
+import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
 import qualified WikiEL                        as WEL
 import           WikiEL.EntityLinking                    (UIDCite(..),_emuid)
 import qualified WikiEL.EntityLinking          as EL
@@ -53,9 +54,7 @@ import           SRL.Analyze.Type                        (ExceptionalFrame(..),O
                                                          ,tf_frameID,tf_feCore,tf_fePeri
                                                          ,vs_vp
                                                          )
-import           SRL.Analyze.Util                        (CharIdx,TokIdx,TagPos(..),SentItem
-                                                         ,addTag,convertTagPosFromTokenToChar
-                                                         ,underlineText)
+import           SRL.Analyze.Util                        (addTag,convertTagPosFromTokenToChar,underlineText)
 
 
 

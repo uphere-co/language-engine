@@ -36,13 +36,13 @@ import           NLP.Type.CoreNLP                          (NERSentence(..),Toke
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,mkPennTreeIdx)
 import qualified NLP.Type.PennTreebankII.Separated as PS
 import           NLP.Type.SyntaxProperty                   (Voice)
+import           NLP.Type.TagPos                           (TagPos(..))
 import           WikiEL.EntityLinking                      (EntityMention)
 --
 import           OntoNotes.Type.SenseInventory
 --
 import           SRL.Analyze.Parameter                     (thresholdPattStat)
 import           SRL.Analyze.Type
-import           SRL.Analyze.Util                          (TagPos(..))
 import           SRL.Analyze.WikiEL                        (getWikiResolvedMentions
                                                            ,linkedMentionToTagPos)
 

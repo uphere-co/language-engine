@@ -30,8 +30,9 @@ import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (loadRoleInsts,loadRolePattInsts)
 import           Lexicon.Type                 (RoleInstance,RolePattInstance)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
-import           Text.Format.Dot              (mkLabelText)
 import           NLP.Type.SyntaxProperty      (Voice)
+import           NLP.Type.TagPos              (TagPos(..))
+import           Text.Format.Dot              (mkLabelText)
 import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention(..))
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
@@ -52,7 +53,6 @@ import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructu
 import           SRL.Analyze.Match             (allPAWSTriplesFromDocStructure,meaningGraph)
 import           SRL.Analyze.SentenceStructure (docStructure)
 import           SRL.Analyze.Type
-import           SRL.Analyze.Util              (TagPos(..))
 import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
                                                ,occupationItemFile,orgItemFile,personItemFile,reprFile)
 import           SRL.Analyze.WikiEL            (mkWikiList)
