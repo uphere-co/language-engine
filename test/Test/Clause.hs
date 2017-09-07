@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
-module Main where
+module Test.Clause where
 
 import           Control.Lens               hiding (levels)
 import           Data.Foldable

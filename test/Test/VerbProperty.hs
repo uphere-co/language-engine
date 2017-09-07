@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
-module Main where
+module Test.VerbProperty where
 
 import           Control.Lens               hiding (levels)
 import qualified Data.IntMap                as IM
@@ -316,10 +316,6 @@ fmtfunc = either (const "") (tokenWord.snd) . getRoot . current
 
 unitTests :: TestTree
 unitTests = testGroup "All Unit tests" [unitTestsVerbProperty]
-
-
-main :: IO ()
-main = defaultMain unitTests
 
 
 mainShow :: IO ()
