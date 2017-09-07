@@ -10,7 +10,7 @@ module SRL.Analyze.Format where
 
 import           Control.Lens                            ((^.),(^?),_1,_2,_3,_5,_Just,_Right,to)
 import           Data.Foldable
-import           Data.List                               (find,intercalate,intersperse)
+import           Data.List                               (intercalate,intersperse)
 import           Data.Maybe                              (fromMaybe,mapMaybe)
 import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
@@ -27,8 +27,7 @@ import           Data.BitreeZipper
 
 import           Data.Range
 import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
-import           Lexicon.Type                            (ArgPattern(..),RoleInstance
-                                                         ,RolePattInstance,GRel(..))
+import           Lexicon.Type                            (ArgPattern(..),RoleInstance,GRel(..))
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
@@ -36,7 +35,6 @@ import           NLP.Syntax.Type.Verb                    (vp_lemma)
 import           NLP.Syntax.Type.XBar                    (CP)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
-import           NLP.Type.SyntaxProperty                 (Voice)
 import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
 import qualified WikiEL                        as WEL
 import           WikiEL.EntityLinking                    (UIDCite(..),_emuid)
@@ -183,7 +181,7 @@ formatDocStructure showdetail (DocStructure mtokenss sentitems mergedtags sstrs)
 
 
 formatSentStructure :: Bool -> SentStructure -> [Text]
-formatSentStructure showdetail (SentStructure i ptr vps clausetr mcpstr vstrs) =
+formatSentStructure showdetail (SentStructure i ptr _ clausetr mcpstr vstrs) =
    let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                   , formatIndexTokensFromTree 0 ptr
                   ]
@@ -209,10 +207,10 @@ showMatchedFrame :: (Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
                     ,VerbStructure
                     ,PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
                  -> IO ()
-showMatchedFrame (mcpstr,vstr,paws) = do
+showMatchedFrame (_,vstr,paws) = do
   let gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame (mcpstr,vstr,paws)) $ \(rng,verb,frame,mselected) -> do
+  flip traverse_ (matchFrame (vstr,paws)) $ \(rng,_,frame,mselected) -> do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> frame)

@@ -11,7 +11,7 @@ import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
 import           Data.List                                 (find,sortBy)
-import           Data.Maybe                                (fromMaybe,maybeToList,listToMaybe)
+import           Data.Maybe                                (fromMaybe,maybeToList)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
@@ -30,8 +30,7 @@ import           NLP.Syntax.Verb                           (verbPropertyFromPenn
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
 import           NLP.Syntax.Type.XBar                      (Zipper)
 import qualified NLP.Type.NamedEntity              as N
-import           NLP.Type.CoreNLP                          (NERSentence(..),Token,Dependency,Sentence,SentenceIndex
-                                                           ,sentenceNER,sentenceWord,sentenceToken,sentenceLemma)
+import           NLP.Type.CoreNLP                          (sentenceToken,sentenceLemma)
 
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,mkPennTreeIdx)
 import qualified NLP.Type.PennTreebankII.Separated as PS

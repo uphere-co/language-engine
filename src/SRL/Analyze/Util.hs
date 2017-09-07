@@ -1,10 +1,5 @@
--- {-# LANGUAGE FlexibleInstances          #-}
--- {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
--- {-# LANGUAGE ScopedTypeVariables        #-}
--- {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TemplateHaskell            #-}
--- {-# LANGUAGE TypeSynonymInstances       #-}
 
 -- the functions in this module will be relocated to a more common package like textview
 --
@@ -12,12 +7,8 @@ module SRL.Analyze.Util where
 
 import           Control.Lens
 import           Control.Monad                                 (guard)
-import           Data.Aeson
-import           Data.Aeson.Types                              (typeMismatch)
 import           Data.Maybe                                    (fromJust,mapMaybe)
-import           Data.Scientific                               (floatingOrInteger)
 import           Data.Text                                     (Text)
-import           GHC.Generics                                  (Generic)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK

@@ -10,7 +10,6 @@ import           Data.Foldable                                (toList)
 import           Data.Map                                     (Map)
 import qualified Data.Map                               as M
 import           Data.Text                                    (Text)
-import qualified Data.Text                              as T
 import qualified Data.Vector                            as V
 import           System.FilePath                              ((</>))
 --
@@ -22,7 +21,7 @@ import           WikiEL.WikiNamedEntityTagger                 (PreNE(..))
 import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention,UIDCite(..))
 import qualified WikiEL.EntityMentionPruning   as EMP
 -- For testing:
-import           WikiEL.Misc                                  (IRange(..),untilOverlapOrNo,untilNoOverlap,relativePos, isContain,subVector)
+import           WikiEL.Misc                                  (IRange(..))
 import           NLP.Type.CoreNLP
 import qualified NLP.Type.NamedEntity          as N
 import           NLP.Type.TagPos                              (TagPos(..),TokIdx(..))
@@ -102,14 +101,20 @@ brandItemFile :: ItemIDFile
 brandItemFile  = ItemIDFile (wikinerdir </> "data/ne.brand")
 
 
+locationItemFile :: ItemIDFile
 locationItemFile = ItemIDFile (wikinerdir </> "data/ne.loc")
 
+
+occupationItemFile :: ItemIDFile
 occupationItemFile = ItemIDFile (wikinerdir </> "data/ne.occupation")
 
+
+humanRuleItemFile :: ItemIDFile
 humanRuleItemFile = ItemIDFile (wikinerdir </> "data/ne.human_rule")
 
-buildingItemFile = ItemIDFile (wikinerdir </> "data/ne.building")
 
+buildingItemFile :: ItemIDFile
+buildingItemFile = ItemIDFile (wikinerdir </> "data/ne.building")
 
 
 wordnetMappingFile :: WordNetMappingFile

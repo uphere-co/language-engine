@@ -43,8 +43,8 @@ levelMap dep =
 
 
 motherMap :: Dependency -> IntMap (Int,DependencyRelation)
-motherMap (Dependency root _nods edgs0) =
-  let edgs = ((0,root),UD.ROOT) : edgs0
+motherMap (Dependency rootnode _nods edgs0) =
+  let edgs = ((0,rootnode),UD.ROOT) : edgs0
   in IM.fromList (map (\((mother,daughter),rel) -> (daughter-1,(mother-1,rel))) edgs)
 
 
