@@ -105,11 +105,8 @@ formatPAWS mcpstr pa =
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
 
-formatCP :: Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
-         -> CP (Lemma ': as)
-         -> String
-formatCP mcpstr cp
-            = printf "Complementizer Phrase: %-4s  %s\n\
+formatCP :: CP (Lemma ': as) -> String
+formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
                      \Complementizer       : %-4s  %s\n\
                      \Tense Phrase         : %-4s  %s\n\
                      \Determiner Phrase    :       %s\n\
@@ -166,7 +163,7 @@ formatVPwithPAWS clausetr mcpstr vp =
                                    (formatVerbProperty fmt vp)
                                    (maybe "" (formatPAWS mcpstr) mpaws))
                           <> "\n"
-                          <> T.pack (formatCP mcpstr (paws^.pa_CP))
+                          <> T.pack (formatCP (paws^.pa_CP))
                           <> "\n"
                           
 
