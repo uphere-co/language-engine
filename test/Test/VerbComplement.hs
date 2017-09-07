@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
-module Main where
+module Test.VerbComplement where
 
 import           Control.Lens               hiding (levels)
 import           Control.Monad                     ((<=<))
@@ -27,7 +27,8 @@ import           NLP.Type.UniversalDependencies2.Syntax
 --
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
-import           NLP.Syntax.Type
+import           NLP.Syntax.Type.Verb
+import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Verb
 --
 import           Test.Tasty.HUnit

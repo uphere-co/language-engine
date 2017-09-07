@@ -25,7 +25,7 @@ import           NLP.Syntax.Format
 import           NLP.Syntax.Verb
 
 
-test1, test6, test7, test8 :: (Text,[(Int,(Text,Text))],PennTree)
+{-
 test1 =
   ( "The man, it seems, have a lichtenstein corporation, license in Libya and sheltered in the Bahamas."
    , [(0,("the","The")),(1,("man","man")),(2,(",",",")),(3,("it","it")),(4,("seem","seems")),(5,(",",",")),(6,("have","have")),(7,("a","a")),(8,("lichtenstein","lichtenstein")),(9,("corporation","corporation")),(10,(",",",")),(11,("license","licensed")),(12,("in","in")),(13,("Libya","Libya")),(14,("and","and")),(15,("sheltered","sheltered")),(16,("in","in")),(17,("the","the")),(18,("Bahamas","Bahamas")),(19,(".","."))]    
@@ -70,33 +70,44 @@ test6 =
   , [(0,("the","The")),(1,("product","product")),(2,("enable","enables")),(3,("people","people")),(4,("to","to")),(5,("create","create")),(6,("a","a")),(7,("new","new")),(8,("kind","kinds")),(9,("of","of")),(10,("art","arts")),(11,(",",",")),(12,("include","including")),(13,("electronic","electronic")),(14,("music","music")),(15,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","The"),PL ("NN","product")],PN "VP" [PL ("VBZ","enables"),PN "S" [PN "NP" [PL ("NNS","people")],PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","create"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("JJ","new"),PL ("NNS","kinds")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("NNS","arts")]],PL (",",","),PN "PP" [PL ("VBG","including"),PN "NP" [PL ("JJ","electronic"),PL ("NN","music")]]]]]]],PL (".",".")]]
   )
+-}
 
 
--- testing silent pronoun
-test7 =
+
+
+-- | silent pronoun
+--
+test_silent_pronoun :: (Text,[(Int,(Text,Text))],PennTree)
+test_silent_pronoun =
   ( "Republican senators plan to write a health-care bill."
   , [(0,("republican","Republican")),(1,("senator","senators")),(2,("plan","plan")),(3,("to","to")),(4,("write","write")),(5,("a","a")),(6,("health-care","health-care")),(7,("bill","bill")),(8,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("JJ","Republican"),PL ("NNS","senators")],PN "VP" [PL ("VBP","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","health-care"),PL ("NN","bill")]]]]],PL (".",".")]]
   )
 
 
--- testing multi-level silent pronoun linking
-test8 =
+-- | multi-level silent pronoun linking
+--
+test_multi_silent_pronoun :: (Text,[(Int,(Text,Text))],PennTree)
+test_multi_silent_pronoun =
   ( "I want to plan to write a paper."
   , [(0,("I","I")),(1,("want","want")),(2,("to","to")),(3,("plan","plan")),(4,("to","to")),(5,("write","write")),(6,("a","a")),(7,("paper","paper")),(8,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","want"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","paper")]]]]]]]],PL (".",".")]]
   )
 
--- testing subject relative pronoun
-test9 =
+-- | relative WH-pronoun subject linking
+--
+test_relative_pronoun_subject :: (Text,[(Int,(Text,Text))],PennTree)
+test_relative_pronoun_subject =
   ( "I saw the man who sat on the bench."
   , [(0,("I","I")),(1,("see","saw")),(2,("the","the")),(3,("man","man")),(4,("who","who")),(5,("sit","sat")),(6,("on","on")),(7,("the","the")),(8,("bench","bench")),(9,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","saw"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","man")],PN "SBAR" [PN "WHNP" [PL ("WP","who")],PN "S" [PN "VP" [PL ("VBD","sat"),PN "PP" [PL ("IN","on"),PN "NP" [PL ("DT","the"),PL ("NN","bench")]]]]]]],PL (".",".")]]
   )
 
 
--- testing object relative pronoun
-test10 =
+-- | relative WH-pronoun object linking
+--
+test_relative_pronoun_object :: (Text,[(Int,(Text,Text))],PennTree)
+test_relative_pronoun_object =
   ( "I bought the book which Tim Cook read."
   , [(0,("I","I")),(1,("buy","bought")),(2,("the","the")),(3,("book","book")),(4,("which","which")),(5,("Tim","Tim")),(6,("Cook","Cook")),(7,("read","read")),(8,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","bought"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","book")],PN "SBAR" [PN "WHNP" [PL ("WDT","which")],PN "S" [PN "NP" [PL ("NNP","Tim"),PL ("NNP","Cook")],PN "VP" [PL ("VBD","read")]]]]],PL (".",".")]]
@@ -104,30 +115,38 @@ test10 =
 
 
 
--- testing reduced relative clause 
-test11 =
+-- | reduced relative clause
+--
+test_reduced_relative_clause :: (Text,[(Int,(Text,Text))],PennTree)
+test_reduced_relative_clause =
   ( "I bought the book used by Chomsky."
   , [(0,("I","I")),(1,("buy","bought")),(2,("the","the")),(3,("book","book")),(4,("use","used")),(5,("by","by")),(6,("Chomsky","Chomsky")),(7,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","bought"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","book")],PN "VP" [PL ("VBN","used"),PN "PP" [PL ("IN","by"),PN "NP" [PL ("NNP","Chomsky")]]]]],PL (".",".")]]
   )
 
 
--- testing coordination
-test12 =
+-- | coordination
+--
+test_coordination :: (Text,[(Int,(Text,Text))],PennTree)
+test_coordination =
   ( "Fantasy author Cecilia Tan thought she was a Ravenclaw - then she had to face facts."
   , [(0,("Fantasy","Fantasy")),(1,("author","author")),(2,("Cecilia","Cecilia")),(3,("Tan","Tan")),(4,("think","thought")),(5,("she","she")),(6,("be","was")),(7,("a","a")),(8,("ravenclaw","Ravenclaw")),(9,("-","-")),(10,("then","then")),(11,("she","she")),(12,("have","had")),(13,("to","to")),(14,("face","face")),(15,("fact","facts")),(16,(".","."))]
   , PN "ROOT" [PN "S" [PN "S" [PN "NP" [PL ("NNP","Fantasy"),PL ("NN","author"),PL ("NNP","Cecilia"),PL ("NNP","Tan")],PN "VP" [PL ("VBD","thought"),PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","she")],PN "VP" [PL ("VBD","was"),PN "NP" [PL ("DT","a"),PL ("NN","Ravenclaw")]]]]]],PL (":","-"),PN "S" [PN "ADVP" [PL ("RB","then")],PN "NP" [PL ("PRP","she")],PN "VP" [PL ("VBD","had"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","face"),PN "NP" [PL ("NNS","facts")]]]]]],PL (".",".")]]
   )
 
-test13 =
+
+-- | complex noun phrase
+--
+test_complex_noun_phrase :: (Text,[(Int,(Text,Text))],PennTree) 
+test_complex_noun_phrase =
   ( "Brewery executive Kosuke Kuji brought his best sake to a New York booze snowcase 16 years ago hoping to promote high-end Japanese rice wine to a new generation of sophisticated foreign drinkers."
   , [(0,("Brewery","Brewery")),(1,("executive","executive")),(2,("Kosuke","Kosuke")),(3,("Kuji","Kuji")),(4,("bring","brought")),(5,("he","his")),(6,("best","best")),(7,("sake","sake")),(8,("to","to")),(9,("a","a")),(10,("New","New")),(11,("York","York")),(12,("booze","booze")),(13,("snowcase","snowcase")),(14,("16","16")),(15,("year","years")),(16,("ago","ago")),(17,("hope","hoping")),(18,("to","to")),(19,("promote","promote")),(20,("high-end","high-end")),(21,("japanese","Japanese")),(22,("rice","rice")),(23,("wine","wine")),(24,("to","to")),(25,("a","a")),(26,("new","new")),(27,("generation","generation")),(28,("of","of")),(29,("sophisticated","sophisticated")),(30,("foreign","foreign")),(31,("drinker","drinkers")),(32,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","Brewery"),PL ("NN","executive"),PL ("NNP","Kosuke"),PL ("NNP","Kuji")],PN "VP" [PL ("VBD","brought"),PN "NP" [PL ("PRP$","his"),PL ("JJS","best"),PL ("NN","sake")],PN "PP" [PL ("TO","to"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("NNP","New"),PL ("NNP","York"),PL ("NN","booze"),PL ("NN","snowcase")],PN "VP" [PN "ADVP" [PN "NP" [PL ("CD","16"),PL ("NNS","years")],PL ("IN","ago")],PL ("VBG","hoping"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","promote"),PN "NP" [PL ("JJ","high-end"),PL ("JJ","Japanese"),PL ("NN","rice"),PL ("NN","wine")],PN "PP" [PL ("TO","to"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("JJ","new"),PL ("NN","generation")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("JJ","sophisticated"),PL ("JJ","foreign"),PL ("NNS","drinkers")]]]]]]]]]]],PL (".",".")]]
   )
 
 
-process :: (Text,[(Int,(Text,Text))],PennTree) -> IO ()
-process (txt,lma,pt) = do
+showDetail :: (Text,[(Int,(Text,Text))],PennTree) -> IO ()
+showDetail (txt,lma,pt) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
   T.IO.putStrLn txt 
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
@@ -148,7 +167,12 @@ process (txt,lma,pt) = do
   -}
 
 
-main :: IO ()
-main = mapM_ process [ test1, test6, test7, test8, test9, test10, test11, test12, test13 ]
-
-
+mainShow :: IO ()
+mainShow = mapM_ showDetail [ test_silent_pronoun
+                            , test_multi_silent_pronoun
+                            , test_relative_pronoun_subject
+                            , test_relative_pronoun_object
+                            , test_reduced_relative_clause
+                            , test_coordination
+                            , test_complex_noun_phrase
+                            ]
