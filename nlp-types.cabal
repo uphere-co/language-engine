@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                nlp-types
-version:             0.1.3.0
+version:             0.1.4.0
 -- synopsis:            
 -- description:         
 license:             OtherLicense
@@ -29,6 +29,7 @@ library
                        NLP.Type.PennTreebankII
                        NLP.Type.PennTreebankII.Separated
                        NLP.Type.SyntaxProperty
+                       NLP.Type.TagPos
                        NLP.Type.UniversalDependencies2.Morphology
                        NLP.Type.UniversalDependencies2.Syntax
                        Text.Taggy.Lens.Util
@@ -47,6 +48,7 @@ library
                        hashable,
                        lens,
                        monad-loops,
+                       scientific,
                        taggy-lens,
                        text,
                        transformers
