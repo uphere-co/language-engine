@@ -55,7 +55,7 @@ test-suite test-syntax-property
   type: exitcode-stdio-1.0
   hs-source-dirs: test
   other-modules:       Test.Clause
-                       -- Test.VerbComplement
+                       Test.VerbComplement
                        Test.VerbProperty
   main-is: test-syntax-property.hs
   build-depends:       base
