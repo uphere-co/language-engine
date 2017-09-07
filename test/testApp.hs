@@ -308,9 +308,9 @@ main3reload = do
     --refs = concatMap (WEL.toWikipages titles) (filter WEL.hasResolvedUID mentions5)  
     pathsT len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hashT wp1) (hashT wp2)
     f x y = length (pathsT 1 x y)    
-    a3 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 5) mentions3
-    a4 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 5) mentions4
-    a5 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 5) mentions5
+    a3 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 3) mentions3
+    a4 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 3) mentions4
+    a5 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 3) mentions5
     b3 = WEL.entityLinkings a3
     b4 = WEL.entityLinkings a4
     b5 = WEL.entityLinkings a5
@@ -379,9 +379,9 @@ filters <- countNodes "nodes.weighted.ran"
 matchToSimilar f refs (WEL.toWikipages titles (mentions5!!0))
 
 
-paths len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hash wp1) (hash wp2)
+paths len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hashT wp1) (hashT wp2)
 f x y = length (paths 1 x y)
-
+t = T.pack
 
 WEL.mostSimilar f 5 "Paul_Ryan" ["United_States_Senate","Senate_of_Ceylon","Senate_(Netherlands)"] 
 WEL.matchToSimilar f 5 ["Paul_Ryan","Donald_Trump","Republican_Party_(United_States)"] ["United_States_Senate","Senate_of_Ceylon","Senate_(Netherlands)"]

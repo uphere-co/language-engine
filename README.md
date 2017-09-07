@@ -127,6 +127,7 @@ real	0m58.049s
 
 
 # Generate filter.page by running Main.filterGen in test/testApp
-$ time awk -F"\t" 'NR == FNR { a[$1]; next } !(($1 in a)||($2 in a)) {print}' filter.page enwiki/interlinks > interlinks.filtered
+$ time awk -F"\t" 'NR == FNR { a[$1]; next } !($2 in a) {print}' filter.page enwiki/interlinks > interlinks.filtered
+real	0m47.716s
 ```
 
