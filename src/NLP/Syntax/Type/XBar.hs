@@ -52,12 +52,12 @@ makeLenses ''XP
 --   Empty categories are first identified as NULL and
 --   will be resolved step by step.
 --
-data NTrace = NULL | SilentPRO | Moved | WHPRO
-            deriving (Show,Eq,Ord)
+data TraceType = NULL | SilentPRO | Moved | WHPRO
+               deriving (Show,Eq,Ord)
 
 
 
-newtype TraceChain a = TraceChain { _trChain :: [Either NTrace a] }
+newtype TraceChain a = TraceChain { _trChain :: [Either TraceType a] }
                      deriving (Show,Eq,Ord,Monoid)
 
 makeLenses ''TraceChain
