@@ -5,13 +5,13 @@
 
 module SRL.Analyze.SentenceStructure where
 
-import           Control.Lens                              ((^.),(^..),_1,_2,to)
+import           Control.Lens                              ((^?),(^.),(^..),_Left,_Right,_1,_2,to)
 import           Data.Bifunctor                            (bimap)
 import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
 import           Data.List                                 (find,sortBy)
-import           Data.Maybe                                (fromMaybe,maybeToList)
+import           Data.Maybe                                (fromMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
@@ -35,7 +35,7 @@ import           NLP.Type.CoreNLP                          (sentenceToken,senten
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,mkPennTreeIdx)
 import qualified NLP.Type.PennTreebankII.Separated as PS
 import           NLP.Type.SyntaxProperty                   (Voice)
-import           NLP.Type.TagPos                           (TagPos(..))
+import           NLP.Type.TagPos                           (TagPos(..),TokIdx)
 import           WikiEL.EntityLinking                      (EntityMention)
 --
 import           OntoNotes.Type.SenseInventory
@@ -51,6 +51,14 @@ mergeTagPos xs ys =
   let zs = map (fmap Left) xs ++ map (fmap Right) ys
       idx (TagPos (i,_,_)) = i
   in sortBy (compare `on` idx) zs
+
+
+leftTagPos :: [TagPos i (Either a b)] -> [TagPos i a]
+leftTagPos xs = mapMaybe (\(TagPos (b,e,x)) -> TagPos . (b,e,) <$> (x^?_Left)) xs
+
+
+rightTagPos :: [TagPos i (Either a b)] -> [TagPos i b]
+rightTagPos xs = mapMaybe (\(TagPos (b,e,x)) -> TagPos . (b,e,) <$> (x^?_Right)) xs
 
 
 getSenses :: Text
@@ -114,18 +122,19 @@ docStructure apredata emTagger docinput@(DocAnalysisInput sents _ sentitems _ mp
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
-      sentStructures = map (sentStructure apredata) (zip3 ([0..]::[Int]) lmass mptrs)
+      tagged = fromMaybe [] mtmxs
+      sentStructures = map (sentStructure apredata tagged) (zip3 ([0..]::[Int]) lmass mptrs)
   in DocStructure mtokenss sentitems mergedtags sentStructures
 
 
 
-sentStructure :: AnalyzePredata -> (Int,[Lemma],Maybe PennTree) -> Maybe SentStructure
-sentStructure apredata (i,lmas,mptr) =
+sentStructure :: AnalyzePredata -> [TagPos TokIdx (Maybe Text)] -> (Int,[Lemma],Maybe PennTree) -> Maybe SentStructure
+sentStructure apredata tagged (i,lmas,mptr) =
   flip fmap mptr $ \ptr ->
     let lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
-        mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy [] ) vps    -- for the time being
+        mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy tagged) vps    -- for the time being
         verbStructures = map (verbStructure apredata) vps
     in SentStructure i ptr vps clausetr mcpstr verbStructures
 
