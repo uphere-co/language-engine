@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TupleSections         #-}
@@ -65,7 +66,7 @@ mkPAWSTriples sstr = do
       mcpstr = sstr^.ss_mcpstr
   vstr <- sstr ^.ss_verbStructures
   let vp = vstr^.vs_vp
-  paws <- maybeToList (findPAWS clausetr vp mcpstr)
+  paws <- maybeToList (findPAWS [] clausetr vp mcpstr)  -- for the time being
   return (mcpstr,vstr,paws)
 
 
@@ -108,7 +109,7 @@ matchObjects :: [(PBArg,FNFrameElement)]
              -> ArgPattern p GRel
              -> [(FNFrameElement, (Maybe Text, Zipper '[Lemma]))]
 matchObjects rolemap verbp patt = do
-  (garg,obj') <- zip [GA1,GA2] (verbp^..complement.traverse.trChain)
+  (garg,obj') <- zip [GA1,GA2] (map (mapMaybe (\case Left tr -> Just (Left tr); Right (DP z) -> Just (Right z); _ -> Nothing)) (verbp^..complement.traverse.trChain))
   guard ((not.null) obj')
   Right obj <- [last obj']
   ctag <- case getRoot (current obj) of

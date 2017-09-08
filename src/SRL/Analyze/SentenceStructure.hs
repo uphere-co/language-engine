@@ -125,7 +125,7 @@ sentStructure apredata (i,lmas,mptr) =
     let lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
-        mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy) vps
+        mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy [] ) vps    -- for the time being
         verbStructures = map (verbStructure apredata) vps
     in SentStructure i ptr vps clausetr mcpstr verbStructures
 

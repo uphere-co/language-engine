@@ -195,7 +195,7 @@ formatSentStructure showdetail (SentStructure i ptr _ clausetr mcpstr vstrs) =
 
 formatVerbStructure :: ClauseTree -> Maybe [Bitree (Range,CP '[Lemma]) (Range,CP '[Lemma])] -> VerbStructure -> [Text]
 formatVerbStructure clausetr mcpstr (VerbStructure vp senses mrmmtoppatts) =
-  [ formatVPwithPAWS clausetr mcpstr vp
+  [ formatVPwithPAWS [] clausetr mcpstr vp        -- for the time being
   , T.pack (printf "Verb: %-20s" (vp^.vp_lemma.to unLemma))
   , T.pack $ (formatSenses False senses mrmmtoppatts)
   ]
