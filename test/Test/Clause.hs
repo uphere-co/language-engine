@@ -23,8 +23,9 @@ import           Text.Format.Tree
 --
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
+import           NLP.Syntax.Preposition
 import           NLP.Syntax.Verb
-
+import           NLP.Syntax.Util
 
 {-
 test1 =
@@ -177,7 +178,10 @@ showDetail (txt,lma,pt,tmxs) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
   T.IO.putStrLn $ prettyPrint 0 pt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
-  print tmxs
+  flip mapM_ tmxs $ \(TagPos (b,e,tag)) -> do
+    let lemmapt = mkBitreeICP lmap1 pt
+    print $ hasEmptyPreposition (beginEndToRange (b,e)) lemmapt
+    
   {- let vps = verbPropertyFromPennTree lmap1 pt
       mcpstr = identifyCPHierarchy vps
   case mcpstr of

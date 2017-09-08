@@ -186,7 +186,7 @@ verbProperty z = do
 
 verbPropertyFromPennTree :: IntMap Lemma -> PennTree -> [VerbProperty (BitreeZipperICP '[Lemma])]
 verbPropertyFromPennTree lemmamap pt = 
-  let lemmapt = lemmatize lemmamap (mkAnnotatable (mkPennTreeIdx pt))
+  let lemmapt = mkBitreeICP lemmamap pt --  lemmatize lemmamap (mkAnnotatable (mkPennTreeIdx pt))
       phase1 z = case getRoot (current z) of
                   Right (_,ALeaf (pos,_) annot)
                     -> if isVerb pos && ahead annot /= "be" && ahead annot /= "have" && ahead annot /= "do"
