@@ -32,6 +32,7 @@ import           Data.Range                             (rangeTree)
 import           Lexicon.Type                           (chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
+import           NLP.Type.TagPos                        (TagPos,TokIdx)
 --
 import           NLP.Syntax.Preposition                 (beginEndToRange,hasEmptyPreposition)
 import           NLP.Syntax.Type
@@ -76,10 +77,12 @@ splitPP z = do
 
 
 
-complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [TraceChain (DPorPP (Zipper (Lemma ': as)))]
-complementsOfVerb vp = map (\x -> TraceChain [Right (DP x)])  -- for the time being
-                           ((\z -> fromMaybe z (splitDP z)) <$>
-                            (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
+complementsOfVerb :: [TagPos TokIdx (Maybe Text)]
+                  -> VerbProperty (Zipper (Lemma ': as))
+                  -> [TraceChain (DPorPP (Zipper (Lemma ': as)))]
+complementsOfVerb tagged vp = map (\x -> TraceChain [Right (checkEmptyPrep tagged x)])  -- for the time being
+                                  ((\z -> fromMaybe z (splitDP z)) <$>
+                                   (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkNPSBAR z = case tag z of
@@ -92,6 +95,7 @@ complementsOfVerb vp = map (\x -> TraceChain [Right (DP x)])  -- for the time be
                       Right p    -> case isNoun p of
                                       Yes -> True
                                       _   -> False
+    checkEmptyPrep _ = DP
 
 
 identifySubject :: N.ClauseTag
@@ -109,13 +113,14 @@ identifySubject tag vp =
 
 -- | Constructing CP umbrella and all of its ingrediant.
 --
-constructCP :: VerbProperty (Zipper (Lemma ': as))
+constructCP :: [TagPos TokIdx (Maybe Text)]
+            -> VerbProperty (Zipper (Lemma ': as))
             -> Maybe (CP (Lemma ': as))
-constructCP vprop = do
+constructCP tagged vprop = do
     vp <- maximalProjectionVP vprop
     tp <- parentOfVP vprop
     tptag' <- N.convert <$> getchunk tp
-    let verbp = mkVerbP vp vprop (complementsOfVerb vprop)
+    let verbp = mkVerbP vp vprop (complementsOfVerb tagged vprop)
     case tptag' of
       N.CL s -> do
         cp' <- parent tp
@@ -143,10 +148,11 @@ cpRange cp = (cp^?maximalProjection._Just.to (getRange . current)) <|>
 
 
 
-identifyCPHierarchy :: [VerbProperty (Zipper (Lemma ': as))]
+identifyCPHierarchy :: [TagPos TokIdx (Maybe Text)]
+                    -> [VerbProperty (Zipper (Lemma ': as))]
                     -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
-identifyCPHierarchy vps = traverse (bitraverse tofull tofull) rtr
-  where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure cp) <=< constructCP) vps
+identifyCPHierarchy tagged vps = traverse (bitraverse tofull tofull) rtr
+  where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure cp) <=< constructCP tagged) vps
         cpmap = HM.fromList (map (\x->(x^._1,x)) cps)
         rngs = HM.keys cpmap
         rtr = rangeTree rngs
@@ -261,12 +267,13 @@ predicateArgWS cp z =
             Just x' -> x': iterateMaybe f x'
 
 
-findPAWS :: ClauseTree
+findPAWS :: [TagPos TokIdx (Maybe Text)]
+         -> ClauseTree
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
          -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
          -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
-findPAWS tr vp mcpstr = do
-  cp <- constructCP vp   -- very inefficient. but for testing.
+findPAWS tagged tr vp mcpstr = do
+  cp <- constructCP tagged vp   -- very inefficient. but for testing.
   rng <- cpRange cp
   cpstr <- mcpstr
   cp' <- snd . getRoot1 . current <$> ((getFirst . foldMap (First . extractZipperById rng)) cpstr)

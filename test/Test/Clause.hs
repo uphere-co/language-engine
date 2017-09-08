@@ -16,6 +16,7 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 --
 import           Data.Bitree
+import           Data.BitreeZipper                 (current,mkBitreeZipper)
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos
@@ -174,13 +175,16 @@ showDetail (txt,lma,pt,tmxs) = do
   T.IO.putStrLn  . T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList $ pt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
   let lmap1 = IM.fromList (map (_2 %~ (\x -> Lemma (x^._1)))  lma)
-  showClauseStructure lmap1 pt
+  showClauseStructure tmxs lmap1 pt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
   T.IO.putStrLn $ prettyPrint 0 pt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
   flip mapM_ tmxs $ \(TagPos (b,e,tag)) -> do
     let lemmapt = mkBitreeICP lmap1 pt
-    print $ hasEmptyPreposition (beginEndToRange (b,e)) lemmapt
+        rng = beginEndToRange (b,e)
+    case find (\z -> getRoot (current z) ^? _Left . _1  == Just rng) $ getNodes (mkBitreeZipper [] lemmapt) of
+      Nothing -> return ()
+      Just z -> print $ hasEmptyPreposition z
     
   {- let vps = verbPropertyFromPennTree lmap1 pt
       mcpstr = identifyCPHierarchy vps

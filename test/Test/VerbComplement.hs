@@ -153,7 +153,7 @@ formatTP (txt,i,_,lmatknlst,pt) =
                       (vp^.vp_index)
                       (vp^.vp_lemma.to unLemma)
                       (fromMaybe "null" (vp^?vp_auxiliary._Just._2._2.to unLemma))
-                  ] ++ case constructCP vp of
+                  ] ++ case constructCP [] vp of   -- for the time being
                          Nothing -> ["not successful in constructing CP"]
                          Just cp -> [formatCP cp]
                     ++ [T.unpack cltxts]
@@ -165,7 +165,7 @@ checkComplement :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> Boo
 checkComplement c  = fromMaybe False $ do
   let vps = mkVPS (c^._4) (c^._5)
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-  cp <- constructCP vp
+  cp <- constructCP [] vp  -- for the time being
   let getcomp [] = Nothing
       getcomp xs = case last xs of
                      Left  _ -> Nothing

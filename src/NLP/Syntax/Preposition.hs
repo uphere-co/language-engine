@@ -14,20 +14,21 @@ import           NLP.Type.PennTreebankII (ChunkTag(..),Lemma)
 import           NLP.Type.TagPos         (TokIdx(..),BeginEnd)
 --
 import           NLP.Syntax.Util         (isChunkAs)
-import           NLP.Syntax.Type.XBar    (BitreeICP)
+import           NLP.Syntax.Type.XBar    (BitreeICP,Zipper)
 
 
 beginEndToRange :: BeginEnd TokIdx -> Range
 beginEndToRange (TokIdx b,TokIdx e) = (b,e-1)
 
 
-hasEmptyPreposition :: Range -> BitreeICP '[Lemma] -> Bool
-hasEmptyPreposition rng tr =
+hasEmptyPreposition :: Zipper '[Lemma] -> Bool
+hasEmptyPreposition z =
   fromMaybe False $ do
-    z <- find (\z -> getRoot (current z) ^? _Left . _1  == Just rng) $ getNodes (mkBitreeZipper [] tr)
     guard (isChunkAs NP (current z))
     case parent z of
       Nothing -> return True
       Just z' -> do
         guard (not (isChunkAs PP (current z')) && not (isChunkAs ADVP (current z')))
         return True 
+
+
