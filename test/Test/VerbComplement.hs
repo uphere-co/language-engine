@@ -169,7 +169,8 @@ checkComplement c  = fromMaybe False $ do
   let getcomp [] = Nothing
       getcomp xs = case last xs of
                      Left  _ -> Nothing
-                     Right z -> (Just . T.intercalate " " . map (tokenWord.snd) . toList . current) z
+                     Right (DP z) -> (Just . T.intercalate " " . map (tokenWord.snd) . toList . current) z
+                     Right (PrepP _ z) ->  (Just . T.intercalate " " . map (tokenWord.snd) . toList . current) z
   let lst :: [Maybe Text]
       lst = cp^..complement.complement.complement.traverse.trChain.to getcomp
 

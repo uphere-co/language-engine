@@ -33,6 +33,7 @@ import           Lexicon.Type                           (chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 --
+import           NLP.Syntax.Preposition                 (beginEndToRange,hasEmptyPreposition)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -75,9 +76,10 @@ splitPP z = do
 
 
 
-complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [TraceChain (Zipper (Lemma ': as))]
-complementsOfVerb vp = map (\x -> TraceChain [Right x]) ((\z -> fromMaybe z (splitDP z)) <$>
-                                                         (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
+complementsOfVerb :: VerbProperty (Zipper (Lemma ': as)) -> [TraceChain (DPorPP (Zipper (Lemma ': as)))]
+complementsOfVerb vp = map (\x -> TraceChain [Right (DP x)])  -- for the time being
+                           ((\z -> fromMaybe z (splitDP z)) <$>
+                            (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkNPSBAR z = case tag z of
@@ -173,7 +175,7 @@ whMovement z = do
         runMaybeT $ do
           -- check object position for relative pronoun
           z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
-          let cp' = ((complement.complement.complement) %~ (TraceChain ([Left Moved,Left WHPRO,Right z']) :)) cp
+          let cp' = ((complement.complement.complement) %~ (TraceChain ([Left Moved,Left WHPRO,Right (DP z')]) :)) cp
               subtr = case z^.tz_current of
                         PN (rng,cp) ys -> PN (rng,cp') ys
                         PL (rng,cp)    -> PL (rng,cp')

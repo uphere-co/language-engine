@@ -16,10 +16,6 @@ import           NLP.Type.TagPos         (TokIdx(..),BeginEnd)
 import           NLP.Syntax.Util         (isChunkAs)
 import           NLP.Syntax.Type.XBar    (BitreeICP)
 
-import Debug.Trace
-
--- data InvPrepP = InvPrepP (Maybe Text) (Zipper '[Lemma])
-
 
 beginEndToRange :: BeginEnd TokIdx -> Range
 beginEndToRange (TokIdx b,TokIdx e) = (b,e-1)

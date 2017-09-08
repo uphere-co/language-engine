@@ -81,7 +81,7 @@ formatPAWS mcpstr pa =
          \              complements   : %s"
          (formatDPTokens (pa^.pa_CP^.complement.specifier))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
-         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to formatDPTokens))
+         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (fmap removeDPorPP).to formatDPTokens))
                   
   where
     gettoken = map (tokenWord.snd) . toList . current
@@ -112,7 +112,7 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
                 (formatDPTokens (cp^.complement.specifier))
                 (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 ((show . gettoken) (cp^.complement.complement.maximalProjection))
-                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to formatDPTokens)))
+                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (fmap removeDPorPP).to formatDPTokens)))
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
