@@ -63,22 +63,13 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
                             (T.intercalate " " (vp^..vp_words.traverse.to (f.fst)))
 
 
-formatDPTokens :: [Either NTrace (Zipper as)] -> Text
-formatDPTokens xs = T.intercalate " -> " (map fmt xs)
+formatDPTokens :: TraceChain (Zipper as) -> Text
+formatDPTokens (TraceChain xs) = T.intercalate " -> " (map fmt xs)
   where fmt (Left NULL)      = "*NUL*"
         fmt (Left SilentPRO) = "*PRO*"
         fmt (Left Moved)     = "*MOV*"
         fmt (Left WHPRO)     = "*WHP*"
         fmt (Right z) = T.pack (show (getRange (current z)))
-
-
-{- 
-formatDPType :: ATNode (DP (Zipper as)) -> Maybe ChunkTag
-formatDPType x = case chooseATNode x of
-                   SilentPRO -> Just NP
-                   RExp z -> getchunk z
-  where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
--}
 
 
 formatPAWS :: Maybe [Bitree (Range,CP as) (Range,CP as)]
