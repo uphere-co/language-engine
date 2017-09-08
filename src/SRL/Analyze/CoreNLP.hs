@@ -21,7 +21,7 @@ import           NLP.Type.CoreNLP                             (Sentence)
 import           NLP.Type.TagPos                              (BeginEnd,SentIdx,CharIdx)
 --
 import           SRL.Analyze.Type                             (DocAnalysisInput(..))
-import           SRL.Analyze.Util                             (addText,listTimexToTagPos,getSentenceOffsets,getSentenceTokOffsets)
+import           SRL.Analyze.Util                             (addText,listTimexToTagPos,getSentenceOffsets)
 
 {-
 getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd CharIdx)]
