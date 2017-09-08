@@ -1,5 +1,6 @@
 { pkgs               ? import <nixpkgs> {}
 , uphere-nix-overlay ? <uphere-nix-overlay>
+, graph-algorithms   ? <graph-algorithms>
 , HCoreNLP           ? <HCoreNLP>
 , HFrameNet          ? <HFrameNet>
 , HWordNet           ? <HWordNet>
@@ -26,6 +27,7 @@ let
 
   config2 =
     self: super: {
+      "graph-algorithms" = self.callPackage (import graph-algorithms) {};
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
       "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
       "HFrameNet"      = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HFrameNet)) {};

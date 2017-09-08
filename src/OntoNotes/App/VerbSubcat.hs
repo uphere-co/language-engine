@@ -147,13 +147,13 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
       coretr = proptr  -- this is an extreme solution
       minst = dummyMatch proptr inst
       nlemmamap = adjustedLemmaMap lemmamap proptr
-      verbprops = verbPropertyFromPennTree nlemmamap proptr  -- lemmamap coretr 
+      verbprops = verbPropertyFromPennTree nlemmamap proptr
       clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
       mvpmva =  matchVerbPropertyWithRelation verbprops clausetr minst
       mtp = do (vp,_) <- mvpmva
-               (constructCP vp^?_Just.complement)
+               (constructCP [] vp^?_Just.complement)       -- for the time being
       argtable0 = mkArgTable iproptr l2p filesidtid args
       argtable1 = zipperArgTable iproptr argtable0
       -- argtable :: ArgTable (ATNode GRel)
@@ -167,7 +167,6 @@ formatInst doesShowDetail margmap (filesidtid,corenlp,proptr,inst,_sense) =
             T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
             "\n"                                                                   ++
             "\n================================================================\n" ++
-            -- formatMatchedVerb minst mvpmva ++ "\n" -- for the time being
             T.unpack (prettyPrint 0 proptr) ++ "\n" ++
             intercalate "\n" (map (formatVerbProperty fmtfunc) verbprops) ++ "\n"
        else ""
@@ -253,15 +252,13 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                         clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr {- coretr -}))
                         mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
                         mtp = do (vp,_) <- mvpmva
-                                 (constructCP vp^?_Just.complement)
+                                 (constructCP [] vp^?_Just.complement)      -- for the time being
                         argtable0 = mkArgTable iproptr l2p filesidtid args
                         argtable1 = zipperArgTable iproptr argtable0
                         -- argtable :: ArgTable Text
                         argtable = fmap f argtable1
                           where f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> ATNode GRel
-                                f = fmap (phraseNodeType mtp) --  . chooseATNode
-                        
-                        --   where f = fmap phraseNodeType
+                                f = fmap (phraseNodeType mtp)
                         argpatt = mkArgPattern mtp argtable
                     in HM.alter (\case Nothing -> Just 1 ; Just n -> Just (n+1)) argpatt acc
           statlst = (sortBy (flip compare `on` snd) . HM.toList) statmap
