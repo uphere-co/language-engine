@@ -5,13 +5,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
-module Main where
+module Test.VerbComplement where
 
 import           Control.Lens               hiding (levels)
 import           Control.Monad                     ((<=<))
+import           Data.Foldable                     (toList)
 import qualified Data.IntMap                as IM
 import           Data.List                         (find,intercalate)
 import           Data.Maybe                        (fromMaybe)
+import           Data.Monoid                       (All(All,getAll),mconcat)
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
@@ -27,12 +29,13 @@ import           NLP.Type.UniversalDependencies2.Syntax
 --
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
-import           NLP.Syntax.Type
+import           NLP.Syntax.Type.Verb
+import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Verb
 --
 import           Test.Tasty.HUnit
 import           Test.Tasty
-
+import Debug.Trace
 
 main_finite_1
   = ( "He will be fined $25,000.", 3
@@ -115,20 +118,20 @@ ditransitive_4
     )
 
 
-testcases = [ main_finite_1
-            , main_finite_2
-            , rrc_passive_1
-            , embedded_that_1
+testcases = [ -- main_finite_1
+              -- , main_finite_2
+              -- , rrc_passive_1
+              embedded_that_1
             , restr_rel_1
             , ditransitive_1
-            , ditransitive_2
+            -- , ditransitive_2
             , ditransitive_3
-            , ditransitive_4
+            -- , ditransitive_4
             ]
             
 
 
-mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty (BitreeZipperICP '[Lemma])]
+mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty (Zipper '[Lemma])]
 mkVPS lmatknlst pt =
   let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
   in verbPropertyFromPennTree lemmamap pt
@@ -136,38 +139,49 @@ mkVPS lmatknlst pt =
 
 formatTP :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> [String]
 formatTP (txt,i,_,lmatknlst,pt) =
-  let
-      lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
+  let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
       vps = mkVPS lmatknlst pt
       ipt = mkPennTreeIdx pt
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id ipt)
-      cltxts = formatClauseStructure vps clausetr
-  in
-  case find (\vp -> vp^.vp_index == i) vps of
-    Nothing -> [ "nothing"]
-    Just vp -> [ "--------------------------------------------------------------"
-               , T.unpack txt
-               , T.unpack (prettyPrint 0 pt)
-               , printf "\nTesting Lemma: %2d-%-15s\nModal: %-15s"
-                   (vp^.vp_index)
-                   (vp^.vp_lemma.to unLemma)
-                   (fromMaybe "null" (vp^?vp_auxiliary._Just._2._2.to unLemma))
-               ] ++ case constructCP vp of
-                      Nothing -> ["not successful in constructing CP"]
-                      Just cp -> [formatCP cp]
-                 ++ map T.unpack cltxts
+      cltxts = formatClauseStructure clausetr
+  in case find (\vp -> vp^.vp_index == i) vps of
+       Nothing -> [ "nothing"]
+       Just vp -> [ "--------------------------------------------------------------"
+                  , T.unpack txt
+                  , T.unpack (prettyPrint 0 pt)
+                  , printf "\nTesting Lemma: %2d-%-15s\nModal: %-15s"
+                      (vp^.vp_index)
+                      (vp^.vp_lemma.to unLemma)
+                      (fromMaybe "null" (vp^?vp_auxiliary._Just._2._2.to unLemma))
+                  ] ++ case constructCP vp of
+                         Nothing -> ["not successful in constructing CP"]
+                         Just cp -> [formatCP cp]
+                    ++ [T.unpack cltxts]
 
 
 showTP = mapM_ putStrLn . formatTP
 
+checkComplement :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> Bool
+checkComplement c  = fromMaybe False $ do
+  let vps = mkVPS (c^._4) (c^._5)
+  vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
+  cp <- constructCP vp
+  let getcomp [] = Nothing
+      getcomp xs = case last xs of
+                     Left  _ -> Nothing
+                     Right z -> (Just . T.intercalate " " . map (tokenWord.snd) . toList . current) z
+  let lst :: [Maybe Text]
+      lst = cp^..complement.complement.complement.traverse.to getcomp
 
-checkVP c = False
+      lst2 :: [Text]
+      lst2 = c^._3._2
+  return (getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst lst2)) && (length lst == length lst2))
 
 
 unitTests :: TestTree
 unitTests = testGroup "Subject and direct/indirect object identification" . flip map testcases $ \c ->
               testCase (T.unpack (c^._1)) $
-                (checkVP c == True) @? (intercalate "\n" (formatTP c))
+                (checkComplement c == True) @? (intercalate "\n" (formatTP c))
 
 
 mainShow :: IO ()
@@ -183,5 +197,5 @@ mainShow = do
   showTP ditransitive_3
   showTP ditransitive_4
 
-main :: IO ()
-main = defaultMain unitTests
+
+

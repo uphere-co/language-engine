@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
-module Main where
+module Test.VerbProperty where
 
 import           Control.Lens               hiding (levels)
 import qualified Data.IntMap                as IM
@@ -303,8 +303,8 @@ checkVP (_txt,i,expresult,lmatknlst,pt,_dep) =
        _       -> False
 
 
-unitTestsVerbProperty :: TestTree
-unitTestsVerbProperty =
+unitTests :: TestTree
+unitTests =
   testGroup "verb property" . flip map testcases $ \c ->
     testCase (T.unpack (c^._1) ++ show (c^._3)) $
       (checkVP c == True) @? (intercalate "\n" ((mkVPS (c^._4) (c^._5))^..traverse.to (formatVerbProperty fmtfunc))  ++ "\n" ++ T.unpack (prettyPrint 0 (c^._5)))
@@ -314,12 +314,8 @@ fmtfunc :: Zipper as -> Text
 fmtfunc = either (const "") (tokenWord.snd) . getRoot . current
 
 
-unitTests :: TestTree
-unitTests = testGroup "All Unit tests" [unitTestsVerbProperty]
-
-
-main :: IO ()
-main = defaultMain unitTests
+-- unitTests :: TestTree
+-- unitTests = testGroup "All Unit tests" [unitTestsVerbProperty]
 
 
 mainShow :: IO ()

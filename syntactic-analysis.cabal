@@ -51,40 +51,44 @@ library
   ghc-options:  -Wall -O2
 
 
-test-suite test-verb-property
+test-suite test-syntax-property
   type: exitcode-stdio-1.0
   hs-source-dirs: test
-  main-is: test-verb-property.hs
+  other-modules:       Test.Clause
+                       Test.VerbComplement
+                       Test.VerbProperty
+  main-is: test-syntax-property.hs
   build-depends:       base
                      , containers
                      , lens
                      , text
-                     --
-                     , tasty
-                     , tasty-hunit
-                     --
-                     , HCoreNLP
-                     , nlp-types
-                     , syntactic-analysis
-  default-language:    Haskell2010
-  ghc-options:  -Wall -O2
-
-
-test-suite test-clause
-  type: exitcode-stdio-1.0
-  hs-source-dirs: test
-  main-is: test-clause.hs
-  build-depends:       base
-                     , containers
-                     , lens
-                     , text
-                     --
-                     , tasty
-                     , tasty-hunit
                      --
                      , HCoreNLP
                      , nlp-types
                      , syntactic-analysis
                      , textview
+                     --
+                     , tasty
+                     , tasty-hunit
   default-language:    Haskell2010
   ghc-options:  -Wall -O2
+
+
+-- test-suite test-clause
+--   type: exitcode-stdio-1.0
+--   hs-source-dirs: test
+--   main-is: test-clause.hs
+--   build-depends:       base
+--                      , containers
+--                      , lens
+--                      , text
+--                      --
+--                      , tasty
+--                      , tasty-hunit
+--                      --
+--                      , HCoreNLP
+--                      , nlp-types
+--                      , syntactic-analysis
+--                      , textview
+--   default-language:    Haskell2010
+--   ghc-options:  -Wall -O2
