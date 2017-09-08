@@ -21,7 +21,7 @@ beginEndToRange :: BeginEnd TokIdx -> Range
 beginEndToRange (TokIdx b,TokIdx e) = (b,e-1)
 
 
-hasEmptyPreposition :: Zipper '[Lemma] -> Bool
+hasEmptyPreposition :: Zipper as -> Bool
 hasEmptyPreposition z =
   fromMaybe False $ do
     guard (isChunkAs NP (current z))

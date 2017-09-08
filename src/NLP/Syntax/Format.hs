@@ -64,13 +64,21 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
                             (T.intercalate " " (vp^..vp_words.traverse.to (f.fst)))
 
 
-formatDPTokens :: TraceChain (Zipper as) -> Text
-formatDPTokens (TraceChain xs) = T.intercalate " -> " (map fmt xs)
+formatTraceChain :: (a -> Text) -> TraceChain a -> Text
+formatTraceChain f (TraceChain xs) = T.intercalate " -> " (map fmt xs)
   where fmt (Left NULL)      = "*NUL*"
         fmt (Left SilentPRO) = "*PRO*"
         fmt (Left Moved)     = "*MOV*"
         fmt (Left WHPRO)     = "*WHP*"
-        fmt (Right z) = T.pack (show (getRange (current z)))
+        fmt (Right z) = f z
+
+
+rangeText = T.pack . show . getRange . current
+
+formatDPorPP :: DPorPP (Zipper as) -> Text
+formatDPorPP (DP z)         = "DP" <> rangeText z
+formatDPorPP (PrepP mtxt z) = "PP" <> rangeText z
+
 
 
 formatPAWS :: Maybe [Bitree (Range,CP as) (Range,CP as)]
@@ -80,9 +88,9 @@ formatPAWS mcpstr pa =
   printf "              subject       : %s\n\
          \              arg candidates: %s\n\
          \              complements   : %s"
-         (formatDPTokens (pa^.pa_CP^.complement.specifier))
+         (formatTraceChain rangeText (pa^.pa_CP^.complement.specifier))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
-         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (fmap removeDPorPP).to formatDPTokens))
+         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatTraceChain formatDPorPP)))
                   
   where
     gettoken = map (tokenWord.snd) . toList . current
@@ -110,10 +118,10 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
                 (either show (show . gettoken) (cp^.headX))
                 (maybe "null" show (getchunk =<< cp^.complement.maximalProjection))
                 (maybe "" (show . gettoken) (cp^.complement.maximalProjection))
-                (formatDPTokens (cp^.complement.specifier))
+                (formatTraceChain rangeText (cp^.complement.specifier))
                 (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 ((show . gettoken) (cp^.complement.complement.maximalProjection))
-                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (fmap removeDPorPP).to formatDPTokens)))
+                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain formatDPorPP))))
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current

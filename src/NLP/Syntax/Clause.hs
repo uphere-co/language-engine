@@ -19,7 +19,7 @@ import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
 import           Data.Function                          (on)
 import qualified Data.HashMap.Strict               as HM
-import           Data.List                              (minimumBy)
+import           Data.List                              (find,minimumBy)
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (First(..),Last(..),(<>))
 import           Data.Text                              (Text)
@@ -32,7 +32,7 @@ import           Data.Range                             (rangeTree)
 import           Lexicon.Type                           (chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
-import           NLP.Type.TagPos                        (TagPos,TokIdx)
+import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Preposition                 (beginEndToRange,hasEmptyPreposition)
 import           NLP.Syntax.Type
@@ -80,7 +80,7 @@ splitPP z = do
 complementsOfVerb :: [TagPos TokIdx (Maybe Text)]
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> [TraceChain (DPorPP (Zipper (Lemma ': as)))]
-complementsOfVerb tagged vp = map (\x -> TraceChain [Right (checkEmptyPrep tagged x)])  -- for the time being
+complementsOfVerb tagged vp = map (\x -> TraceChain [Right (checkEmptyPrep tagged x)])
                                   ((\z -> fromMaybe z (splitDP z)) <$>
                                    (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
@@ -95,7 +95,11 @@ complementsOfVerb tagged vp = map (\x -> TraceChain [Right (checkEmptyPrep tagge
                       Right p    -> case isNoun p of
                                       Yes -> True
                                       _   -> False
-    checkEmptyPrep _ = DP
+    checkEmptyPrep tagged z = let b = fromMaybe False $ do
+                                        let rng = getRange (current z)
+                                        find (\(TagPos (b,e,tag)) -> beginEndToRange (b,e) == rng) tagged
+                                        return (hasEmptyPreposition z)
+                              in if b then PrepP Nothing z else DP z
 
 
 identifySubject :: N.ClauseTag
