@@ -23,11 +23,11 @@ import           NLP.Syntax.Type.XBar          (Zipper,CP)
 import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
 import           NLP.Type.PennTreebankII       (Lemma,PennTree)
 import           NLP.Type.SyntaxProperty       (Tense,Aspect,Voice)
+import           NLP.Type.TagPos               (CharIdx,SentItem,TagPos,TokIdx)
 import           WikiEL.EntityLinking          (EntityMention)
 --
 import           OntoNotes.Type.SenseInventory (Inventory)
 --
-import           SRL.Analyze.Util              (CharIdx,SentItem,TagPos,TokIdx)
 
 
 data ExceptionalFrame = FrameCopula  | FrameIdiom | FrameLightVerb | FrameNone

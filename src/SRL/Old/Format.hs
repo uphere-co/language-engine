@@ -40,9 +40,9 @@ formatPTP = foldMap f
 
 
 formatDRP :: ListZipper DepInfo -> String
-formatDRP (LZ tostart root totarget) = foldMap f lst
+formatDRP (LZ tostart rootnode totarget) = foldMap f lst
   where
-    lst1 = (view dinfo_rel root,Down):map ((,Down).view dinfo_rel) totarget
+    lst1 = (view dinfo_rel rootnode,Down):map ((,Down).view dinfo_rel) totarget
     lst2 = map ((,Up). view dinfo_rel) . reverse $ tostart
     lst = lst2 ++ lst1
     f (r,Up  ) = show r ++ "↑"

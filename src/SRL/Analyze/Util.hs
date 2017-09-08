@@ -1,12 +1,5 @@
-{-# LANGUAGE DeriveFunctor              #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeSynonymInstances       #-}
 
 -- the functions in this module will be relocated to a more common package like textview
 --
@@ -14,12 +7,8 @@ module SRL.Analyze.Util where
 
 import           Control.Lens
 import           Control.Monad                                 (guard)
-import           Data.Aeson
-import           Data.Aeson.Types                              (typeMismatch)
 import           Data.Maybe                                    (fromJust,mapMaybe)
-import           Data.Scientific                               (floatingOrInteger)
 import           Data.Text                                     (Text)
-import           GHC.Generics                                  (Generic)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
@@ -29,49 +18,10 @@ import qualified CoreNLP.Proto.HCoreNLPProto.TimexWithOffset as T
 import           CoreNLP.Simple.Convert                        (cutf8)
 import           Data.Range                                    (isInsideR)
 import           NLP.Type.CoreNLP
+import           NLP.Type.TagPos
 import           Text.Annotation.Type
 import           Text.Annotation.Util.Doc
 import           Text.Annotation.View
-
-type SentIdx = Int
-
-newtype TokIdx = TokIdx { unTokIdx :: Int } deriving (Num,Eq,Ord,Show,Generic)
-
-newtype CharIdx = ChIdx { unChIdx :: Int } deriving (Num,Eq,Ord,Show,Generic)
-
-type BeginEnd i = (i,i) -- (CharIdx,CharIdx)
-
-newtype TagPos i a = TagPos (i,i,a) deriving (Show,Generic)
-
-instance Functor (TagPos i) where
-  fmap f (TagPos (i,j,x)) = TagPos (i,j,f x)
-
-instance FromJSON CharIdx where
-  parseJSON x@(Number n) = case floatingOrInteger n :: Either Double Int of
-                             Right i -> return (ChIdx i)
-                             Left  _ -> typeMismatch "error in CharIdx" x
-  parseJSON o            = typeMismatch "error in CharIdx" o
-
-instance ToJSON CharIdx where
-  toJSON x = toJSON (unChIdx x)
-
-instance FromJSON TokIdx where
-  parseJSON x@(Number n) = case floatingOrInteger n :: Either Double Int of
-                             Right i -> return (TokIdx i)
-                             Left  _ -> typeMismatch "error in TokIdx" x
-  parseJSON o            = typeMismatch "error in TokIdx" o
-
-instance ToJSON TokIdx where
-  toJSON x = toJSON (unTokIdx x)
-
-instance FromJSON (TagPos TokIdx (Maybe Text)) where
-  parseJSON = genericParseJSON defaultOptions
-
-instance ToJSON (TagPos TokIdx (Maybe Text)) where
-  toJSON = genericToJSON defaultOptions
-
-
-type SentItem i = (SentIdx,BeginEnd i,Text)
 
 
 addText :: Text -> (SentIdx,BeginEnd CharIdx) -> SentItem CharIdx

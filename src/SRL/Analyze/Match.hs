@@ -24,11 +24,7 @@ import           Data.BitreeZipper            (current,mkBitreeZipper,root)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
-
-import Data.BitreeZipper
-import NLP.Syntax.Util
-
-import           NLP.Syntax.Clause            (cpRange,findPAWS,resolveDP,splitPP  ,splitDP)
+import           NLP.Syntax.Clause            (cpRange,findPAWS,splitPP)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -46,8 +42,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,mv_range,mv_id
                                               )
 
---
-import Debug.Trace
+
 
 
 allPAWSTriplesFromDocStructure
@@ -183,22 +178,27 @@ matchSO rolemap (dp,verbp,paws) (patt,num) =
     Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap paws patt,matchThemeForPassive rolemap dp patt] ++ matchPrepArgs rolemap paws patt)
 
 
-
+extendRoleMapForDual :: Text -> [(PBArg,FNFrameElement)] -> (Text, [(PBArg,FNFrameElement)])
 extendRoleMapForDual frame rolemap = fromMaybe (frame,rolemap) $ do
   dualmap <- lookup frame $ map (\c -> (c^.cm_baseFrame,c)) causeDualMap
   let frame' = dualmap^.cm_causativeFrame
-      rolemap' = filter (\(k,v) -> k /= "frame" && k /= "arg0") rolemap
+      rolemap' = filter (\(k,_v) -> k /= "frame" && k /= "arg0") rolemap
       rolemap'' =  map f rolemap'
         where f (k,v) = maybe (k,v) (k,) (lookup v (dualmap^.cm_extraMapping))
       rolemap''' = ("arg0",dualmap^.cm_externalAgent) : rolemap''
   return (frame',rolemap''')
 
 
-
+numMatchedRoles :: ((ArgPattern () GRel, Int), [(FNFrameElement, (Maybe Text, Zipper '[Lemma]))]) -> Int
 numMatchedRoles = lengthOf (_2.folded)
 
 
-matchRoles :: _ -> _ -> _ -> _ -> _ -> Maybe ((ArgPattern () GRel, Int),_)
+matchRoles :: VerbP '[Lemma]
+           -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
+           -> [(PBArg,FNFrameElement)]
+           -> [(ArgPattern () GRel, Int)]
+           -> Zipper '[Lemma]
+           -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, (Maybe Text, Zipper '[Lemma]))])
 matchRoles verbp paws rolemap toppattstats dp =
     (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy (flip compare `on` numMatchedRoles)) matched
   where
@@ -208,7 +208,13 @@ matchRoles verbp paws rolemap toppattstats dp =
 
 
 
--- matchFrameRolesForCauseDual
+matchFrameRolesForCauseDual :: VerbP '[Lemma]
+                            -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
+                            -> [(ArgPattern () GRel,Int)]
+                            -> Maybe (Zipper '[Lemma])
+                            -> LittleV
+                            -> (Text, [(PBArg, FNFrameElement)])
+                            -> (Text, Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, Zipper '[Lemma]))]))
 matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1) = 
   let (frame2,rolemap2) = if causetype == LVDual
                           then extendRoleMapForDual frame1 rolemap1
@@ -227,7 +233,11 @@ matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1) 
                                        -- have one more argument in general.
 
 
-
+matchFrameRolesAll :: VerbP '[Lemma]
+                   -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
+                   -> Maybe (Zipper '[Lemma])
+                   -> [((RoleInstance,Int),[(ArgPattern () GRel,Int)])]
+                   -> [((Text,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,(Maybe Text,Zipper '[Lemma]))])),Int)]
 matchFrameRolesAll verbp paws mDP rmtoppatts = do
   (rm,toppatts) <- rmtoppatts
   let rolemap1 = rm^._1._2
@@ -238,12 +248,10 @@ matchFrameRolesAll verbp paws mDP rmtoppatts = do
 
 
   
-matchFrame :: (Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
-              ,VerbStructure
-              ,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
+matchFrame :: (VerbStructure,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
            -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FNFrameElement
                     ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, Zipper '[Lemma]))]))
-matchFrame (mcpstr,vstr,paws) = do
+matchFrame (vstr,paws) = do
   let cp = paws^.pa_CP
       verbp = cp^.complement.complement
       mDP = case cp^.complement.specifier of
@@ -259,7 +267,13 @@ matchFrame (mcpstr,vstr,paws) = do
   return (rng,vprop,frame,mselected)
 
 
-scoreSelectedFrame total ((frame,mselected),n) =
+-- | A scoring algorithm for selecting a frame among candidates.
+--   This version is ad hoc, so it will be updated when we come up with a better algorithm.
+--
+scoreSelectedFrame :: Int
+                   -> ((Text,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, Zipper '[Lemma]))])),Int)
+                   -> Double
+scoreSelectedFrame total ((_,mselected),n) =
   let mn = maybe 0 fromIntegral (mselected^?_Just.to numMatchedRoles)
   in mn * (fromIntegral n) / (fromIntegral total) * roleMatchWeightFactor + (mn*(fromIntegral total))
 
@@ -267,7 +281,7 @@ scoreSelectedFrame total ((frame,mselected),n) =
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
   let pawstriples = mkPAWSTriples sstr
-      matched =  mapMaybe matchFrame pawstriples
+      matched =  mapMaybe (\(_,vstr,paws) -> matchFrame (vstr,paws)) pawstriples
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList
       --
       preds = flip map matched $ \(rng,vprop,frame,_mselected) -> \i ->
