@@ -21,16 +21,16 @@ import           NLP.Type.CoreNLP                             (Sentence)
 import           NLP.Type.TagPos                              (BeginEnd,SentIdx,CharIdx)
 --
 import           SRL.Analyze.Type                             (DocAnalysisInput(..))
-import           SRL.Analyze.Util                             (addText,listTimexToTagPos)
+import           SRL.Analyze.Util                             (addText,listTimexToTagPos,getSentenceOffsets)
 
-
+{-
 getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd CharIdx)]
 getSentenceOffsets psents =
   zip ([1..] :: [Int]) $ flip map psents $ \s ->
     let b = fromJust $ fromJust $ firstOf (S.token . traverse . TK.beginChar) s
         e = fromJust $ fromJust $ lastOf  (S.token . traverse . TK.endChar) s
     in (fromIntegral b+1,fromIntegral e)
-
+-}
 
 runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> Text

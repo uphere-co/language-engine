@@ -5,13 +5,13 @@
 
 module SRL.Analyze.SentenceStructure where
 
-import           Control.Lens                              ((^.),(^..),_1,_2,to)
+import           Control.Lens                              ((^?),(^.),(^..),_Left,_Right,_1,_2,to)
 import           Data.Bifunctor                            (bimap)
 import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
-import           Data.List                                 (find,sortBy)
-import           Data.Maybe                                (fromMaybe,maybeToList)
+import           Data.List                                 (find,sortBy,zip4)
+import           Data.Maybe                                (fromMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
@@ -30,12 +30,12 @@ import           NLP.Syntax.Verb                           (verbPropertyFromPenn
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
 import           NLP.Syntax.Type.XBar                      (Zipper)
 import qualified NLP.Type.NamedEntity              as N
-import           NLP.Type.CoreNLP                          (sentenceToken,sentenceLemma)
+import           NLP.Type.CoreNLP                          (SentenceIndex,sentenceToken,sentenceLemma,sent_tokenRange)
 
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,mkPennTreeIdx)
 import qualified NLP.Type.PennTreebankII.Separated as PS
 import           NLP.Type.SyntaxProperty                   (Voice)
-import           NLP.Type.TagPos                           (TagPos(..))
+import           NLP.Type.TagPos                           (SentItem,TagPos(..),TokIdx(..))
 import           WikiEL.EntityLinking                      (EntityMention)
 --
 import           OntoNotes.Type.SenseInventory
@@ -44,6 +44,8 @@ import           SRL.Analyze.Parameter                     (thresholdPattStat)
 import           SRL.Analyze.Type
 import           SRL.Analyze.WikiEL                        (getWikiResolvedMentions
                                                            ,linkedMentionToTagPos)
+--
+import Debug.Trace
 
 
 mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]
@@ -51,6 +53,14 @@ mergeTagPos xs ys =
   let zs = map (fmap Left) xs ++ map (fmap Right) ys
       idx (TagPos (i,_,_)) = i
   in sortBy (compare `on` idx) zs
+
+
+leftTagPos :: [TagPos i (Either a b)] -> [TagPos i a]
+leftTagPos xs = mapMaybe (\(TagPos (b,e,x)) -> TagPos . (b,e,) <$> (x^?_Left)) xs
+
+
+rightTagPos :: [TagPos i (Either a b)] -> [TagPos i b]
+rightTagPos xs = mapMaybe (\(TagPos (b,e,x)) -> TagPos . (b,e,) <$> (x^?_Right)) xs
 
 
 getSenses :: Text
@@ -105,7 +115,7 @@ docStructure :: AnalyzePredata
              -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
              -> DocAnalysisInput
              -> DocStructure
-docStructure apredata emTagger docinput@(DocAnalysisInput sents _ sentitems _ mptrs _ mtmxs) =
+docStructure apredata emTagger docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) =
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = getWikiResolvedMentions emTagger
@@ -114,18 +124,25 @@ docStructure apredata emTagger docinput@(DocAnalysisInput sents _ sentitems _ mp
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
-      sentStructures = map (sentStructure apredata) (zip3 ([0..]::[Int]) lmass mptrs)
+      tagged = fromMaybe [] mtmxs
+      sentStructures = map (sentStructure apredata tagged) (zip4 ([1..] :: [Int]) sentidxs lmass mptrs)
   in DocStructure mtokenss sentitems mergedtags sentStructures
 
 
 
-sentStructure :: AnalyzePredata -> (Int,[Lemma],Maybe PennTree) -> Maybe SentStructure
-sentStructure apredata (i,lmas,mptr) =
+sentStructure :: AnalyzePredata -> [TagPos TokIdx (Maybe Text)] -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree) -> Maybe SentStructure
+sentStructure apredata tagged (i,midx,lmas,mptr) =
   flip fmap mptr $ \ptr ->
-    let lemmamap = (mkLemmaMap' . map unLemma) lmas
+    let tagged' = fromMaybe [] $ do
+                    (b0,e0) <- (^.sent_tokenRange) <$> midx
+                    return $ flip mapMaybe tagged $ \(TagPos (TokIdx b,TokIdx e,t)) ->
+                                                      if b0 <= b && e <= e0
+                                                      then Just (TagPos (TokIdx (b-b0),TokIdx (e-b0),t))
+                                                      else Nothing
+        lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
-        mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy) vps
+        mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy tagged') vps
         verbStructures = map (verbStructure apredata) vps
     in SentStructure i ptr vps clausetr mcpstr verbStructures
 

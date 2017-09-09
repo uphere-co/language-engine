@@ -51,7 +51,6 @@ getSentenceOffsets psents =
     in (fromIntegral b+1,fromIntegral e)
 
 
-
 listTimexToTagPos :: T.ListTimex -> [TagPos TokIdx (Maybe Text)]
 listTimexToTagPos tmxs = tmxs^..
                            T.timexes . traverse
@@ -68,8 +67,6 @@ addSUTime sents toks tmxs =
       tagposs' = flip mapMaybe tagposs $ \(TagPos (i,j,x)) -> do
                    (cstart,cend) <- convertRangeFromTokenToChar toks (i,j)
                    return $ TagPos (cstart,cend,x)
-
-      -- cvt = map (\(x,xs) -> (x,map (fmap (fmap cutf8)) xs))
   in (filter (not.null.(^._2)) . map (addTag tagposs')) sents
 
 
