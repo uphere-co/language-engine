@@ -3,7 +3,7 @@
 
 module NLP.Syntax.Argument where
 
-import           Control.Lens                 ((^.),(^?),_1,_2,_Just,_Right,_head,to)
+import           Control.Lens                 ((^..),(^.),(^?),_1,_2,_Just,_Right,_head,to)
 import           Control.Monad                (join)
 import           Data.Bifunctor               (bimap)
 import           Data.Foldable                (toList)
@@ -49,7 +49,7 @@ phraseNodeType :: Maybe (TP as) -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Te
 phraseNodeType mtp z
   = let rng = getRange (current z)
         subj = do tp <- mtp
-                  let dplinks = tp^.specifier -- .to (fmap chooseATNode)
+                  let dplinks = tp^.specifier.trChain -- .to (fmap chooseATNode)
                   dp <- case dplinks of
                           [] -> Nothing
                           _ -> case last dplinks of
@@ -57,7 +57,7 @@ phraseNodeType mtp z
                                  Right z'       -> Just z'
                   return (getRange (current dp) == rng)
         obj  = do tp <- mtp
-                  let os = zip [1..] (tp^.complement.complement)
+                  let os = zip [1..] (tp^..complement.complement.traverse.trChain)
                   m <- find (\o -> o^?_2._head._Right.to current.to getRange == Just rng) os
                   return (m^._1)
         mgarg :: Maybe GArg

@@ -171,7 +171,7 @@ checkComplement c  = fromMaybe False $ do
                      Left  _ -> Nothing
                      Right z -> (Just . T.intercalate " " . map (tokenWord.snd) . toList . current) z
   let lst :: [Maybe Text]
-      lst = cp^..complement.complement.complement.traverse.to getcomp
+      lst = cp^..complement.complement.complement.traverse.trChain.to getcomp
 
       lst2 :: [Text]
       lst2 = c^._3._2
