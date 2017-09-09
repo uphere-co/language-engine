@@ -22,6 +22,7 @@ import           Lexicon.Type                           (chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
+import           NLP.Type.TagPos                        (TagPos,TokIdx)
 import           Text.Format.Tree
 --
 import           NLP.Syntax.Clause
@@ -63,13 +64,21 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
                             (T.intercalate " " (vp^..vp_words.traverse.to (f.fst)))
 
 
-formatDPTokens :: TraceChain (Zipper as) -> Text
-formatDPTokens (TraceChain xs) = T.intercalate " -> " (map fmt xs)
+formatTraceChain :: (a -> Text) -> TraceChain a -> Text
+formatTraceChain f (TraceChain xs) = T.intercalate " -> " (map fmt xs)
   where fmt (Left NULL)      = "*NUL*"
         fmt (Left SilentPRO) = "*PRO*"
         fmt (Left Moved)     = "*MOV*"
         fmt (Left WHPRO)     = "*WHP*"
-        fmt (Right z) = T.pack (show (getRange (current z)))
+        fmt (Right z) = f z
+
+
+rangeText = T.pack . show . getRange . current
+
+formatDPorPP :: DPorPP (Zipper as) -> Text
+formatDPorPP (DP z)         = "DP" <> rangeText z
+formatDPorPP (PrepP mtxt z) = "PP" <> rangeText z
+
 
 
 formatPAWS :: Maybe [Bitree (Range,CP as) (Range,CP as)]
@@ -79,9 +88,9 @@ formatPAWS mcpstr pa =
   printf "              subject       : %s\n\
          \              arg candidates: %s\n\
          \              complements   : %s"
-         (formatDPTokens (pa^.pa_CP^.complement.specifier))
+         (formatTraceChain rangeText (pa^.pa_CP^.complement.specifier))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
-         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to formatDPTokens))
+         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatTraceChain formatDPorPP)))
                   
   where
     gettoken = map (tokenWord.snd) . toList . current
@@ -109,10 +118,10 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
                 (either show (show . gettoken) (cp^.headX))
                 (maybe "null" show (getchunk =<< cp^.complement.maximalProjection))
                 (maybe "" (show . gettoken) (cp^.complement.maximalProjection))
-                (formatDPTokens (cp^.complement.specifier))
+                (formatTraceChain rangeText (cp^.complement.specifier))
                 (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 ((show . gettoken) (cp^.complement.complement.maximalProjection))
-                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to formatDPTokens)))
+                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain formatDPorPP))))
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
@@ -139,12 +148,13 @@ formatClauseStructure clausetr =
   in formatBitree id tr'
 
 
-formatVPwithPAWS :: ClauseTree
+formatVPwithPAWS :: [TagPos TokIdx (Maybe Text)]
+                 -> ClauseTree
                  -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
                  -> VerbProperty (BitreeZipperICP (Lemma ': as))
                  -> Text
-formatVPwithPAWS clausetr mcpstr vp =
-  let mpaws = findPAWS clausetr vp mcpstr
+formatVPwithPAWS tagged clausetr mcpstr vp =
+  let mpaws = findPAWS tagged clausetr vp mcpstr
       mrng = cpRange . (^.pa_CP) =<< mpaws
       fmt = either (const "") (tokenWord.snd) . getRoot . current
   in case (,) <$> mpaws <*> mrng of
@@ -158,12 +168,12 @@ formatVPwithPAWS clausetr mcpstr vp =
                           <> "\n"
                           
 
-showClauseStructure :: IntMap Lemma -> PennTree -> IO ()
-showClauseStructure lemmamap ptree  = do
+showClauseStructure :: [TagPos TokIdx (Maybe Text)] -> IntMap Lemma -> PennTree -> IO ()
+showClauseStructure tagged lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy) vps
-      xs = map (formatVPwithPAWS clausetr mcpstr) vps
+      mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy tagged) vps
+      xs = map (formatVPwithPAWS tagged clausetr mcpstr) vps
   traverse_ (mapM_ (T.IO.putStrLn . formatCPHierarchy)) mcpstr
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
 

@@ -57,7 +57,7 @@ phraseNodeType mtp z
                                  Right z'       -> Just z'
                   return (getRange (current dp) == rng)
         obj  = do tp <- mtp
-                  let os = zip [1..] (tp^..complement.complement.traverse.trChain)
+                  let os = zip [1..] (tp^..complement.complement.traverse.trChain.to (fmap (fmap removeDPorPP)))         -- this must be changed to accommodate PP
                   m <- find (\o -> o^?_2._head._Right.to current.to getRange == Just rng) os
                   return (m^._1)
         mgarg :: Maybe GArg

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE KindSignatures             #-}
@@ -9,6 +10,7 @@
 module NLP.Syntax.Type.XBar where
 
 import           Control.Lens
+import           Data.Text               (Text)
 --
 import           Data.Bitree
 import           Data.BitreeZipper
@@ -58,11 +60,16 @@ data TraceType = NULL | SilentPRO | Moved | WHPRO
 
 
 newtype TraceChain a = TraceChain { _trChain :: [Either TraceType a] }
-                     deriving (Show,Eq,Ord,Monoid)
+                     deriving (Show,Eq,Ord,Functor,Monoid)
 
 makeLenses ''TraceChain
 
+data DPorPP a = DP a | PrepP (Maybe Text) a
 
+makePrisms ''DPorPP
+
+removeDPorPP (DP x) = x
+removeDPorPP (PrepP _ x) = x
 
 
 type instance Property   'X_V t = VerbProperty (Zipper t)
@@ -70,11 +77,11 @@ type instance Property   'X_V t = VerbProperty (Zipper t)
 type instance Maximal    'X_V t = Zipper t
 type instance Specifier  'X_V t = ()
 type instance Adjunct    'X_V t = ()
-type instance Complement 'X_V t = [TraceChain (Zipper t)]
+type instance Complement 'X_V t = [TraceChain (DPorPP (Zipper t))]
 
 type VerbP = XP 'X_V
 
-mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [TraceChain (Zipper t)] -> VerbP t
+mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [TraceChain (DPorPP (Zipper t))] -> VerbP t
 mkVerbP vp vprop comps = XP vprop vp () () comps
 
 type instance Property   'X_T t = ()
