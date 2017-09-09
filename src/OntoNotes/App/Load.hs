@@ -10,7 +10,6 @@ import           Control.Lens
 import           Data.Binary
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Foldable
-import           Data.Function                      (on)
 import           Data.HashMap.Strict                (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import           Data.List
@@ -18,15 +17,12 @@ import           Data.Text                          (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import qualified Data.Text.Lazy.IO          as T.L.IO
-import           Data.Text.Read                   (decimal)
 import           System.Directory
 import           System.FilePath
 import           Text.Taggy.Lens
 --
 import           FrameNet.Query.LexUnit
 import           FrameNet.Type.LexUnit
-import           Lexicon.Type
-import           NLP.Syntax.Type
 import           VerbNet.Parser.SemLink
 import           VerbNet.Type.SemLink
 import           WordNet.Query

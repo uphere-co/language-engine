@@ -10,75 +10,62 @@ module Main where
 
 import           Control.Applicative
 import           Control.Lens              hiding (para)
-import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.State.Strict
-import           Data.Either                      (rights)
-import           Data.Either.Extra                (maybeToEither)
-import           Data.Function                    (on)
 import           Data.Foldable
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
-import qualified Data.IntMap                as IM
 import           Data.List
-import qualified Data.List.Split            as L.S
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                        (Text)
 import qualified Data.Text                  as T
-import qualified Data.Text.IO               as T.IO
-import qualified Data.Text.Lazy.IO          as T.L.IO
 import           Data.Text.Read                   (decimal)
 import qualified Options.Applicative        as O
 import           System.Console.Haskeline
-import           System.Console.Haskeline.MonadException
-import           System.Environment
-import           System.IO
-import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
-import           Text.Taggy.Lens
 --
-import           FrameNet.Query.Frame             (frameDB,loadFrameData)
-import           FrameNet.Type.Common             (CoreType(..),fr_frame)
+import           FrameNet.Query.Frame             (FrameDB,frameDB,loadFrameData)
+import           FrameNet.Type.Common             (CoreType(..))
 import           FrameNet.Type.Frame
 import           Lexicon.Format                   (formatArgPatt,formatRoleMap,formatRoleMapTSV)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query
-import           Lexicon.Type                     (ArgPattern(..),POSVorN(..),SenseID
-                                                  ,RoleInstance,RolePattInstance)
-import           NLP.Syntax.Type
+import           Lexicon.Type                     (POSVorN(..),RoleInstance,RolePattInstance,SenseID)
 import           NLP.Type.SyntaxProperty          (Voice)
-import           PropBank.Query                   (constructPredicateDB, constructFrameDB
+import           PropBank.Query                   (PredicateDB,RoleSetDB
+                                                  ,constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB
                                                   )
 import           PropBank.Type.Frame       hiding (Voice,ProgOption)
-import           VerbNet.Parser.SemLink
-import           VerbNet.Type.SemLink
-import           WordNet.Format
-import           WordNet.Query
-import           WordNet.Type
 --
 import           OntoNotes.App.Load
-import           OntoNotes.Corpus.Load
 import           OntoNotes.Type.SenseInventory
 
 
 
+extractPBRoles :: RoleSet -> [(Text,Maybe Text)]
 extractPBRoles pb =
   pb^..roleset_roles.roles_role.traverse.to ((,) <$> (^.role_n) <*> (^.role_descr))
 
+
+extractPBExamples :: RoleSet -> [Text]
 extractPBExamples pb = pb^..roleset_example.traverse.example_text
 
 
+createONFN :: [RolePattInstance Voice]
+           -> HashMap Text Inventory
+           -> FrameDB
+           -> RoleSetDB
+           -> [(Text,Sense,Frame,[RoleSet],RolePattInstance Voice)]
 createONFN subcats sensemap framedb rolesetdb = do
   (lma, senses ) <- mapFromONtoFN
   (sid,frtxt) <- senses
   let g = T.head sid
       n = T.drop 2 sid
-  let lmav = lma <> "-v"
+      lmav = lma <> "-v"
   subcat <- maybeToList (find (\c -> c^._1 == (lma,Verb,sid)) subcats)
-
   si <- maybeToList (HM.lookup lmav sensemap)
   osense <- maybeToList $
               find (\s -> T.head (s^.sense_group) == g && s^.sense_n == n)
@@ -86,16 +73,17 @@ createONFN subcats sensemap framedb rolesetdb = do
   frame <- maybeToList $ HM.lookup frtxt (framedb^.frameDB)
   let pbids = T.splitOn "," (osense^.sense_mappings.mappings_pb)
       pbs = mapMaybe (\pb -> HM.lookup pb (rolesetdb^.rolesetDB)) pbids
-      -- pbroles = map (\pb -> (pb^.roleset_id,pb^.roleset_name,extractPBRoles pb)) pbs
   return (lma,osense,frame,pbs,subcat)
 
 
+loadPropBankDB :: IO (PredicateDB,RoleSetDB)
 loadPropBankDB = do
   preddb <- constructPredicateDB <$> constructFrameDB (cfg^.cfg_propbank_framedir)
   let rolesetdb = constructRoleSetDB preddb
   return (preddb,rolesetdb)
 
 
+formatPBInfos :: (Text,Maybe Text,[Text],[(Text,Maybe Text)]) -> String
 formatPBInfos (rid,mname,examples,roles) = printf "%-20s: %s\n" rid (fromMaybe "" mname)
                                            ++ intercalate "\n" rolestrs
                                            ++ "\n-----------\n"
@@ -105,6 +93,8 @@ formatPBInfos (rid,mname,examples,roles) = printf "%-20s: %s\n" rid (fromMaybe "
   where
     rolestrs = flip map roles $ \(n,mdesc) -> printf "arg%1s: %s" n (fromMaybe "" mdesc)
 
+
+numberedFEs :: Frame -> ([(Int,FE)],[(Int,FE)],[(Int,FE)])
 numberedFEs frame =
   let fes = frame^..frame_FE.traverse
       corefes = filter (\fe -> fe^.fe_coreType == Core || fe^.fe_coreType == CoreUnexpressed) fes
@@ -116,17 +106,18 @@ numberedFEs frame =
   in (icorefes,iperifes,iextrafes)
 
 
-
-
+formatFEs :: ([(Int,FE)],[(Int,FE)],[(Int,FE)]) -> String
 formatFEs (icorefes,iperifes,iextrafes) = formatf icorefes ++ " | " ++ formatf iperifes ++ " | " ++ formatf iextrafes
   where formatf fes = intercalate ", " (map (\(i,fe) -> printf "%2d-%s" (i :: Int) (fe^.fe_name)) fes)
 
 
-problemID (i,(lma,osense,frame,pbs,_)) = let sid = osense^.sense_group <> "." <> osense^.sense_n
-                                         in (lma,Verb,sid)
+problemID :: (Int,(Text,Sense,Frame,[RoleSet],RolePattInstance Voice)) -> SenseID
+problemID (_,(lma,osense,_frame,_pbs,_)) = let sid = osense^.sense_group <> "." <> osense^.sense_n
+                                           in (lma,Verb,sid)
 
 
-formatProblem :: (Int,_) -> (String,String,String,String,String)
+formatProblem :: (Int,(Text,Sense,Frame,[RoleSet],RolePattInstance Voice))
+              -> (String,String,String,String,String)
 formatProblem (i,(lma,osense,frame,pbs,subcat)) =
   let sid = osense^.sense_group <> "." <> osense^.sense_n
       headstr = printf "%d th item: %s %s" i lma sid
@@ -140,7 +131,7 @@ formatProblem (i,(lma,osense,frame,pbs,subcat)) =
   in (headstr,sensestr,framestr,argpattstr,pbinfostr)
 
 
-showProblem :: (Int,_) -> IO ()
+showProblem :: (Int,(Text,Sense,Frame,[RoleSet],RolePattInstance Voice)) -> IO ()
 showProblem prob = do
   let (headstr,sensestr,framestr,argpattstr,pbinfostr) = formatProblem prob
   putStrLn "========================================================================================================="
@@ -155,6 +146,7 @@ showProblem prob = do
   putStrLn "---------------------------------------------------------------------------------------------------------\n"
 
 
+mkRoleInstance :: (Int,(Text,Sense,Frame,[RoleSet],RolePattInstance Voice)) -> Text -> [(Text,Text)]
 mkRoleInstance o txt =
     let parsed = (map f . T.words) txt
         (causes,rest) = partition (\(k,_) -> k == "cause") parsed
@@ -176,9 +168,10 @@ mkRoleInstance o txt =
                    (x:[]) -> if | x == "dual"   -> ("cause","dual")
                                 | x == "single" -> ("cause","single")
                                 | otherwise     -> (x,"")
+                   _ -> error "mkRoleInstance"
 
 
-
+prompt :: InputT (StateT ([(Int,(SenseID,[(Text,Text)]))],[(Int,(Text,Sense,Frame,[RoleSet],RolePattInstance Voice))]) IO) ()
 prompt = do
   (result,olst) <- lift get
   case olst of
@@ -210,29 +203,30 @@ progOption :: O.ParserInfo ProgOption
 progOption = O.info pOptions (O.fullDesc <> O.progDesc "role mapping utility program")
 
 
+main :: IO ()
 main = do
   opt <- O.execParser progOption
-  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
+  (_ludb,_sensestat,_semlinkmap,sensemap,_ws,_) <- loadAllexceptPropBank
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
-  (preddb,rolesetdb) <- loadPropBankDB
+  (_preddb,rolesetdb) <- loadPropBankDB
 
   (subcats :: [RolePattInstance Voice]) <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   (rolemap :: [RoleInstance]) <- loadRoleInsts (cfg^.cfg_rolemap_file)
 
   let flattened = createONFN subcats sensemap framedb rolesetdb
-  let indexed = zip [1..] flattened
+  let iflattened = zip [1..] flattened
 
   case progCommand opt of
     "tag" -> do
       let n = fromMaybe 0 (startNum opt)
-          indexed_being_processed = (drop (n-1) . take (n+99)) indexed
-      r <- flip execStateT (([] :: [(Int,RoleInstance)]),indexed_being_processed) $ runInputT defaultSettings prompt
+          iflattened_being_processed = (drop (n-1) . take (n+99)) iflattened
+      r <- flip execStateT (([] :: [(Int,RoleInstance)]),iflattened_being_processed) $ runInputT defaultSettings prompt
       print (fst r)
-      let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt" -- ) (show (fst r))
+      let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt"
       writeFile filename (concatMap formatRoleMapTSV (fst r))
     "show" -> do
-      flip mapM_ indexed $ \prob -> do
-        let (headstr,sensestr,framestr,argpattstr,pbinfostr) = formatProblem prob
+      flip mapM_ iflattened $ \prob -> do
+        let (headstr,sensestr,framestr,argpattstr,_pbinfostr) = formatProblem prob
         case find (\rm -> let rmid = rm^._1 in rmid == problemID prob) rolemap of
           Nothing -> return ()
           Just rm -> do
@@ -247,5 +241,4 @@ main = do
             putStrLn "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
             putStrLn argpattstr
             putStrLn "========================================================================================================="
-        -- mapM_ showProblem indexed
     cmd -> putStrLn (cmd ++ " cannot be processed")

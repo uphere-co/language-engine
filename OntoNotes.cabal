@@ -89,25 +89,17 @@ Executable role-mapping-utility
   other-modules:
   build-depends:       base,
                        --
-                       boxes,
-                       containers,
-                       extra,
                        haskeline,
                        lens,
                        optparse-applicative,
-                       split,
-                       taggy-lens,
                        text,
                        transformers,
                        unordered-containers,
                        --
                        HFrameNet,
-                       HWordNet,
                        lexicon,
                        nlp-types,
                        PropBank,
-                       syntactic-analysis,
-                       VerbNet,
                        --
                        OntoNotes
 
