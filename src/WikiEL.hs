@@ -74,3 +74,15 @@ loadFEMtagger wikiNameFile uidTagFiles = do
     femTagger = extractFilteredEntityMentions wikiTable uidNEtags
   return femTagger
 
+
+{-
+disambiguateMentions : a high level function for client use to perform the entity mention disambiguation.
+-}
+disambiguateMentions (ED.SortedGraph sorted names) uidTag titles mentions = filter EL.hasResolvedUID disambiguated
+where
+  hash = H.wordHash
+  paths len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hash wp1) (hash wp2)
+  f x y = length (paths 1 x y)    
+  dms = ED.tryDisambiguate uidTag titles (ED.matchToSimilar f 3) mentions
+  disambiguated = EL.entityLinkings dms
+

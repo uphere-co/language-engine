@@ -26,6 +26,16 @@ type SortedEdges = (G.Direction, UV.Vector (H.WordHash, H.WordHash))
 type NodeNames   = M.Map H.WordHash G.E.BString
 data SortedGraph = SortedGraph SortedEdges NodeNames
 
+
+{-
+loadAndSortEdges 
+Input format : a text file of a list of directed edges. Node names are Wikipedia title
+Input arguments :
+- edgeFiles : a fullpath of an input text file.
+Output arguments :
+- sorted : a unboxed vector of (int,int), sorted by a first and then a second element.
+- names : a hash map from int(hash values of nodes) to text(Wikipedia title)
+-}
 loadAndSortEdges :: FilePath -> IO SortedGraph
 loadAndSortEdges edgeFiles = do
     cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph edgeFiles
@@ -33,6 +43,14 @@ loadAndSortEdges edgeFiles = do
       sorted = G.sortEdges G.From edges
     return (SortedGraph sorted names)
 
+{-
+loadWikipageMapping
+Input format : See WikiEL.ETL.Parser.WikiTitleMappingFile
+Output : a mapping between Wikidata UIDs and Wikipedia titles
+Output arguments :
+- id2title : UID to title
+- title2uid : title to UID
+-}
 loadWikipageMapping :: P.WikiTitleMappingFile -> IO (M.Map ItemID Text, M.Map Text ItemID)
 loadWikipageMapping filename = do
   lines <- U.readlines (P.unWikiTitleMappingFile filename)
@@ -41,17 +59,36 @@ loadWikipageMapping filename = do
     title2id = map (\(x,y)->(y,x)) id2title
   return (M.fromList id2title, M.fromList title2id)
 
+{-
+Entity linking aims to map each entity mention to Wikipedia UID. 
+Until an entity mention is fully resolved, it has UID candidates(one if resolved, many if ambiguous or unresolved).
+toWikipages returns Wikipedia titles of UID candidates.
+-}
 toWikipages :: M.Map ItemID Text -> EntityMention a -> [Text]
 toWikipages titles mention = toTitle titles (EL.entityPreNE mention)
   where
-    toTitle titles (NET.AmbiguousUID (ids,_)) = mapMaybe (`M.lookup` titles) ids
-    toTitle titles (NET.Resolved (id,_))      = mapMaybe (`M.lookup` titles) [id]
-    toTitle titles _                      = []
+    toTitle titles ne = mapMaybe (`M.lookup` titles) (NET.uidCandidates ne)
 
 updateNE :: (NET.PreNE->NET.PreNE) -> EntityMention a -> EntityMention a
 updateNE f (EL.Self id     info@(range,vec,ne)) = EL.Self id     (range,vec,f ne)
 updateNE f (EL.Cite id ref info@(range,vec,ne)) = EL.Cite id ref (range,vec,f ne)
 
+{-
+tryDisambiguate : a main funtion that does the named entity disambiguation.
+1. Each entity mention is mapped to `[Text]`, a list of Wikipedia titles (of UID candidates)
+2. fTD is a scoring function 
+ - input : a pair of `[Text]` 
+ - output : a similarity score and a most similar pair of Text, one from each input list.
+3. Wikidata UID has types such as "Person", "Location", "Brand", and so on; listed in `WikiEL.WikiEntityClass`.
+4. fTD only considers similarity. Types of Wikipedia UID(i.e. Title) is also considered for disambiguation.
+
+Input arguments:
+- uidNEtags : contains types of Wikidata UIDs
+- (i2t,t2i) : Wikipeida title <-> Wikidata UID mapping
+- fTD : the scoring function
+- mentions : input entity mentions
+Output : disambiguated entity mentions.
+-}
 tryDisambiguate :: WEC.WikiuidNETag -> (M.Map ItemID Text, M.Map Text ItemID) -> ([Text] -> [Text] -> Maybe (a,Text,Text)) -> [EntityMention b] -> [EntityMention b]
 tryDisambiguate uidNEtags (i2t,t2i) fTD mentions = map (updateNE f) mentions
   where
@@ -83,14 +120,3 @@ matchToSimilar f cutoff refs ns = mayMax ss
     ss = mapMaybe (\ref -> mostSimilar f cutoff ref ns) refs
     mayMax [] = Nothing
     mayMax vs = Just (maximum vs)
-
-
-disambiguateMentions (SortedGraph sorted names) uidTag titles mentions = filter EL.hasResolvedUID disambiguated
-  where
-
-    hash = H.wordHash
-    paths len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hash wp1) (hash wp2)
-    f x y = length (paths 1 x y)    
-    dms = tryDisambiguate uidTag titles (matchToSimilar f 3) mentions
-    disambiguated = EL.entityLinkings dms
-
