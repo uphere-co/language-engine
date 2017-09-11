@@ -13,6 +13,9 @@ module WikiEL
   , EL.EntityMention
   , EMP.filterEMbyPOS
   , WEC.loadFiles
+  , ED.loadWikipageMapping
+  , ED.matchToSimilar
+  , ED.tryDisambiguate
   , ItemID
   ) where
 
@@ -22,6 +25,7 @@ import qualified Data.Vector                        as V
 import           NLP.Type.PennTreebankII                      (POSTag(..))
 import           NLP.Type.NamedEntity                         (NamedEntityClass,NamedEntityFrag(..))
 
+import           WikiEL.Type.Wikidata                         (ItemID)
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,namedEntityAnnotator)
 import           WikiEL.WikiEntityTagger                      (NameUIDTable,loadWETagger)
 import           WikiEL.WikiEntityClass                       (WikiuidNETag,ItemClass)
@@ -30,16 +34,9 @@ import qualified WikiEL.EntityLinking               as EL
 import qualified WikiEL.EntityMentionPruning        as EMP
 import qualified WikiEL.ETL.Util                    as U
 import qualified WikiEL.WikiEntityClass             as WEC
+import qualified WikiEL.EntityDisambiguation        as ED
 import           WikiEL.Type.FileFormat
 import           WikiEL.WordNet -- for WordNet synset lookup. 
-
--- To be saparated out with the disambiguation module
-import           Data.Maybe                                   (fromJust,mapMaybe)
-import           WikiEL.Type.Wikidata                         (ItemID)
-import           WikiEL.WikiNamedEntityTagger                 (PreNE(..))
-import qualified Data.Map                           as M
-import qualified WikiEL.ETL.Parser                  as P
-import qualified NLP.Type.NamedEntity               as NE
 
 extractEntityMentions :: NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass)] -> [EntityMention Text]
 extractEntityMentions wikiTable uidNEtags neTokens = linked_mentions
@@ -77,54 +74,3 @@ loadFEMtagger wikiNameFile uidTagFiles = do
     femTagger = extractFilteredEntityMentions wikiTable uidNEtags
   return femTagger
 
-loadWikipageMapping :: P.WikiTitleMappingFile -> IO (M.Map ItemID Text, M.Map Text ItemID)
-loadWikipageMapping filename = do
-  lines <- U.readlines (P.unWikiTitleMappingFile filename)
-  let
-    id2title = map P.wikititleMapping lines
-    title2id = map (\(x,y)->(y,x)) id2title
-  return (M.fromList id2title, M.fromList title2id)
-
-toWikipages :: M.Map ItemID Text -> EntityMention a -> [Text]
-toWikipages titles mention = toTitle titles (EL.entityPreNE mention)
-  where
-    toTitle titles (AmbiguousUID (ids,_)) = mapMaybe (`M.lookup` titles) ids
-    toTitle titles (Resolved (id,_))      = mapMaybe (`M.lookup` titles) [id]
-    toTitle titles _                      = []
-
-updateNE :: (PreNE->PreNE) -> EntityMention a -> EntityMention a
-updateNE f (EL.Self id     info@(range,vec,ne)) = EL.Self id     (range,vec,f ne)
-updateNE f (EL.Cite id ref info@(range,vec,ne)) = EL.Cite id ref (range,vec,f ne)
-
-tryDisambiguate :: WikiuidNETag -> (M.Map ItemID Text, M.Map Text ItemID) -> ([Text] -> [Text] -> Maybe (a,Text,Text)) -> [EntityMention b] -> [EntityMention b]
-tryDisambiguate uidNEtags (i2t,t2i) fTD mentions = map (updateNE f) mentions
-  where
-    refs = concatMap (toWikipages i2t) (filter EL.hasResolvedUID mentions)
-    f x@(AmbiguousUID ([],_))= x
-    f x@(AmbiguousUID (ids,stag)) = g (fTD refs titles)
-      where
-        titles = mapMaybe (`M.lookup` i2t) ids
-        g (Just (score,ref,title)) | WEC.mayCite stag tag = Resolved (uid,tag)
-          where
-            uid  = fromJust $ M.lookup title t2i
-            tag = WEC.guessItemClass2 uidNEtags stag uid        
-        g _                  = x
-          
-    f x                  = x
-
-
--- n : Node, s : Score type
-mostSimilar :: (Num s, Ord s, Ord n) => (n->n->s) -> s-> n -> [n] -> Maybe (s,n,n)
-mostSimilar f cutoff ref ns = fCutoff maxsim
-  where
-    maxsim = maximum $ map (\n -> (f ref n, ref, n)) ns
-    fCutoff sim@(score,_,_) | score>cutoff = Just sim
-    fCutoff _ = Nothing
-
-matchToSimilar :: (Num s, Ord s, Ord n) => (n->n->s) -> s -> [n] -> [n] -> Maybe (s,n,n)
-matchToSimilar f cutoff refs ns = mayMax ss
-  where
-    ss = mapMaybe (\ref -> mostSimilar f cutoff ref ns) refs
-    mayMax [] = Nothing
-    mayMax vs = Just (maximum vs)
-    

@@ -47,6 +47,7 @@ import qualified WikiEL.ETL.RDF.Binary         as BR
 import qualified Data.ByteString.Lazy.Char8    as BL
 
 import qualified Graph.ETL                     as G.E
+import qualified WikiEL.EntityDisambiguation   as ED
 import qualified WikiEL                        as WEL
 import           Test.Data.Filename
 
@@ -325,23 +326,18 @@ stripEdges :: [a] -> Maybe [a]
 stripEdges vs | length vs <2 = Nothing
 stripEdges vs = Just ((tail . init) vs)
 
-consume :: M.Map Text Int -> [Text] -> IO (M.Map Text Int)
-consume cs ns | length ns < 2 = return cs
-consume cs (a:b:ns) = do
+type ToBString   = M.Map H.WordHash G.E.BString
+type SortedEdges = (G.Direction, UV.Vector (H.WordHash, H.WordHash))
+type NodeCounts  = M.Map Text Int
+type Path        = [Text]
+consume :: ED.NodeNames -> SortedEdges -> NodeCounts -> Path -> IO NodeCounts
+consume _ _ cs ns | length ns < 2 = return cs
+consume names sorted cs (a:b:ns) = do
   let
     --hash word = H.wordHash (T.pack word)
     hashT = H.wordHash
     --showPath invs path = catMaybes (UV.foldl' f [] path) where f accum hash = M.lookup hash invs : accum
-    --showPathPairs names = mapM_  (print . (\(x,y)-> reverse (showPath names y) ++ tail (showPath names x)))    
-    idx =0
-    idx1=1
-    idx2=2
-  Just store    <- lookupStore idx  :: IO (Maybe (Store G.E.Graph))
-  Just store1   <- lookupStore idx1 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
-  cc@(G.E.Graph edges names) <- readStore store
-  sorted@(d,es) <- readStore store1  
-
-  let
+    --showPathPairs names = mapM_  (print . (\(x,y)-> reverse (showPath names y) ++ tail (showPath names x)))
     showPath invs path = map T.E.decodeUtf8 (catMaybes (UV.foldl' f [] path))
       where
         f accum hash = (M.lookup hash invs) : accum
@@ -352,12 +348,20 @@ consume cs (a:b:ns) = do
     fs = L.foldl' f
       where f accum v = M.insertWith (+) v 1 accum
     cs' = L.foldl' fs cs (mapMaybe stripEdges paths)
-  consume cs' ns
+  consume names sorted cs' ns
 
 countNodes :: FilePath -> Int -> IO [(T.Text, Int)]
 countNodes filepath cutoff = do
+  let
+    idx =0
+    idx1=1
+    idx2=2
+  Just store    <- lookupStore idx  :: IO (Maybe (Store G.E.Graph))
+  Just store1   <- lookupStore idx1 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
+  cc@(G.E.Graph edges names) <- readStore store
+  sortedEdges@(d,es) <- readStore store1  
   lines <- readlines filepath
-  cs <- consume M.empty (take 1000000 lines)
+  cs    <- consume names sortedEdges M.empty (take 1000000 lines)
   let 
     vs = L.sortOn ((\x -> -x) . snd) (M.toList cs)
     filters = take cutoff vs
@@ -509,7 +513,6 @@ main5 = do
   --(33.73 secs, 25,536,287,552 bytes) -- Without Maybe
 
 
-  
 main :: IO ()
 --main = main5
 main = main3init
