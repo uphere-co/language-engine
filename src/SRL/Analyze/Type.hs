@@ -122,24 +122,30 @@ data MGVertex = MGEntity    { _mv_id :: Int
                             , _mv_frame :: Text
                             , _mv_verb  :: (Text,Tense,Aspect,Voice,Maybe Text)
                             }
-              deriving Show
+              deriving (Generic, Show)
 
 makeLenses ''MGVertex
 
+instance ToJSON MGVertex
+instance FromJSON MGVertex
 
 data MGEdge = MGEdge { _me_relation :: Text
                      , _me_start :: Int
                      , _me_end :: Int }
 
-            deriving Show
+            deriving (Generic, Show)
 
 makeLenses ''MGEdge
 
+instance ToJSON MGEdge
+instance FromJSON MGEdge
 
 data MeaningGraph = MeaningGraph { _mg_vertices :: [MGVertex]
                                  , _mg_edges :: [MGEdge]
                                  }
-                  deriving Show
+                  deriving (Generic, Show)
 
 makeLenses ''MeaningGraph
 
+instance ToJSON MeaningGraph
+instance FromJSON MeaningGraph
