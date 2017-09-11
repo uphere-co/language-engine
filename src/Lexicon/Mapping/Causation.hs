@@ -38,4 +38,6 @@ causeDualMap =
   , CauseDual "Make_noise"       "Cause_to_make_noise"  "Agent" [("Sound_source","Sound_maker")]
   , CauseDual "Being_attached"   "Attaching"            "Agent" []
   , CauseDual "Emotion_directed" "Cause_emotion"        "Agent" []
+  , CauseDual "Separating"       "Separating"           "Agent" []
+  , CauseDual "Being_located"    "Placing"              "Agent" []
   ]
