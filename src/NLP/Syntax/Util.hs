@@ -5,6 +5,8 @@
 
 module NLP.Syntax.Util where
 
+import           Data.IntMap                       (IntMap)
+--
 import           CoreNLP.Simple.Convert            (lemmatize)
 import           Data.Attribute
 import           Data.Bitree
@@ -79,4 +81,5 @@ getIdxPOS :: BitreeICP a -> Maybe (Int,POSTag)
 getIdxPOS w = (,) <$> getLeafIndex w <*> fmap posTag (getLeaf w)
 
 
+mkBitreeICP :: IntMap Lemma -> PennTree -> BitreeICP '[Lemma]
 mkBitreeICP lemmamap = lemmatize lemmamap . mkAnnotatable . mkPennTreeIdx

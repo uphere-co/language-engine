@@ -5,7 +5,7 @@
 module NLP.Syntax.Format where
 
 import           Control.Lens
-import           Control.Monad                 (void)
+-- import           Control.Monad                 (void)
 import           Data.Foldable                 (toList,traverse_)
 import           Data.IntMap                   (IntMap)
 import           Data.List                     (intercalate)
@@ -18,7 +18,7 @@ import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
-import           Lexicon.Type                           (chooseATNode)
+-- import           Lexicon.Type                           (chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
@@ -73,28 +73,27 @@ formatTraceChain f (TraceChain xs) = T.intercalate " -> " (map fmt xs)
         fmt (Right z) = f z
 
 
+rangeText :: Zipper as -> Text
 rangeText = T.pack . show . getRange . current
 
+
 formatDPorPP :: DPorPP (Zipper as) -> Text
-formatDPorPP (DP z)         = "DP" <> rangeText z
-formatDPorPP (PrepP mtxt z) = "PP" <> rangeText z
+formatDPorPP (DP z)          = "DP" <> rangeText z
+formatDPorPP (PrepP _mtxt z) = "PP" <> rangeText z
 
 
 
-formatPAWS :: Maybe [Bitree (Range,CP as) (Range,CP as)]
-           -> PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
+formatPAWS :: PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
            -> String
-formatPAWS mcpstr pa =
+formatPAWS pa =
   printf "              subject       : %s\n\
          \              arg candidates: %s\n\
          \              complements   : %s"
          (formatTraceChain rangeText (pa^.pa_CP^.complement.specifier))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
          (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatTraceChain formatDPorPP)))
-                  
   where
-    gettoken = map (tokenWord.snd) . toList . current
-    
+    -- gettoken = map (tokenWord.snd) . toList . current
     fmtArg a = case a of
                  Right (_  ,p)           -> show p
                  Left  (_  ,(S_RT))      -> "ROOT"
@@ -162,7 +161,7 @@ formatVPwithPAWS tagged clausetr mcpstr vp =
        Just (paws,rng) -> T.pack (printf "%7s:%-50s\n%s\n"
                                    (show rng)
                                    (formatVerbProperty fmt vp)
-                                   (maybe "" (formatPAWS mcpstr) mpaws))
+                                   (maybe "" formatPAWS mpaws))
                           <> "\n"
                           <> T.pack (formatCP (paws^.pa_CP))
                           <> "\n"

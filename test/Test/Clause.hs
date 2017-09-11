@@ -20,12 +20,9 @@ import           Data.BitreeZipper                 (current,mkBitreeZipper)
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos
-import           Text.Format.Tree
 --
-import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
 import           NLP.Syntax.Preposition
-import           NLP.Syntax.Verb
 import           NLP.Syntax.Util
 
 {-
@@ -179,7 +176,7 @@ showDetail (txt,lma,pt,tmxs) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
   T.IO.putStrLn $ prettyPrint 0 pt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
-  flip mapM_ tmxs $ \(TagPos (b,e,tag)) -> do
+  flip mapM_ tmxs $ \(TagPos (b,e,_tag)) -> do
     let lemmapt = mkBitreeICP lmap1 pt
         rng = beginEndToRange (b,e)
     case find (\z -> getRoot (current z) ^? _Left . _1  == Just rng) $ getNodes (mkBitreeZipper [] lemmapt) of

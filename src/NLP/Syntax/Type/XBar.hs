@@ -16,7 +16,6 @@ import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.Range
 --
-import           Lexicon.Type
 import           NLP.Type.PennTreebankII
 --
 import           NLP.Syntax.Type.Verb
@@ -68,6 +67,8 @@ data DPorPP a = DP a | PrepP (Maybe Text) a
 
 makePrisms ''DPorPP
 
+
+removeDPorPP :: DPorPP a -> a
 removeDPorPP (DP x) = x
 removeDPorPP (PrepP _ x) = x
 

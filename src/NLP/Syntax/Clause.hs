@@ -9,27 +9,23 @@ module NLP.Syntax.Clause where
 
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
-import           Control.Monad                          ((<=<),guard,join,void)
-import           Control.Monad.IO.Class                 (liftIO)
+import           Control.Monad                          ((<=<),guard)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
-import           Data.Function                          (on)
 import qualified Data.HashMap.Strict               as HM
-import           Data.List                              (find,minimumBy)
+import           Data.List                              (find)
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (First(..),Last(..),(<>))
 import           Data.Text                              (Text)
-import qualified Data.Text                         as T
 --
 import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.BitreeZipper.Util
 import           Data.Range                             (rangeTree)
-import           Lexicon.Type                           (chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
@@ -40,7 +36,7 @@ import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs)
 --
-import           Debug.Trace
+
 
 
 maximalProjectionVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
@@ -80,7 +76,7 @@ splitPP z = do
 complementsOfVerb :: [TagPos TokIdx (Maybe Text)]
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> [TraceChain (DPorPP (Zipper (Lemma ': as)))]
-complementsOfVerb tagged vp = map (\x -> TraceChain [Right (checkEmptyPrep tagged x)])
+complementsOfVerb tagged vp = map (\x -> TraceChain [Right (checkEmptyPrep x)])
                                   ((\z -> fromMaybe z (splitDP z)) <$>
                                    (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
@@ -95,11 +91,11 @@ complementsOfVerb tagged vp = map (\x -> TraceChain [Right (checkEmptyPrep tagge
                       Right p    -> case isNoun p of
                                       Yes -> True
                                       _   -> False
-    checkEmptyPrep tagged z = let b = fromMaybe False $ do
-                                        let rng = getRange (current z)
-                                        find (\(TagPos (b,e,tag)) -> beginEndToRange (b,e) == rng) tagged
-                                        return (hasEmptyPreposition z)
-                              in if b then PrepP Nothing z else DP z
+    checkEmptyPrep z = let r = fromMaybe False $ do
+                                 let rng = getRange (current z)
+                                 find (\(TagPos (b,e,_tag)) -> beginEndToRange (b,e) == rng) tagged
+                                 return (hasEmptyPreposition z)
+                       in if r then PrepP Nothing z else DP z
 
 
 identifySubject :: N.ClauseTag
@@ -163,7 +159,7 @@ identifyCPHierarchy tagged vps = traverse (bitraverse tofull tofull) rtr
         tofull rng = HM.lookup rng cpmap
 
 
-
+currentCP :: BitreeZipper (Range,CP as) (Range,CP as) -> CP as
 currentCP = snd . getRoot1 . current
 
 
@@ -187,8 +183,8 @@ whMovement z = do
           z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
           let cp' = ((complement.complement.complement) %~ (TraceChain ([Left Moved,Left WHPRO,Right (DP z')]) :)) cp
               subtr = case z^.tz_current of
-                        PN (rng,cp) ys -> PN (rng,cp') ys
-                        PL (rng,cp)    -> PL (rng,cp')
+                        PN (rng,_) ys -> PN (rng,cp') ys
+                        PL (rng,_)    -> PL (rng,cp')
               z'' = (tz_current .~ subtr) z
           lift (put (toBitree z''))
         return (TraceChain xs)
@@ -212,7 +208,7 @@ resolveDP rng = do
             [] -> return (TraceChain [])
             xs -> case last xs of
                     Left NULL      -> do let xspro = TraceChain (init xs ++ [Left SilentPRO])
-                                             xsmov = TraceChain (init xs ++ [Left Moved])
+                                             -- xsmov = TraceChain (init xs ++ [Left Moved])
                                          fmap (fromMaybe xspro) . runMaybeT $ do
                                            cp'  <- (MaybeT . return) (currentCP <$> parent z)
                                            rng' <- (MaybeT . return) (cpRange cp')
@@ -228,7 +224,7 @@ resolveDP rng = do
 
 bindingAnalysis :: Bitree (Range,CP as) (Range,CP as) -> Bitree (Range,CP as) (Range,CP as)
 bindingAnalysis cpstr = execState (go rng0) cpstr
-   where z0 = either id id . getRoot . mkBitreeZipper [] $ cpstr
+   where -- z0 = either id id . getRoot . mkBitreeZipper [] $ cpstr
          getrng = either fst fst . getRoot . current
          rng0 = (either fst fst . getRoot) cpstr
          go rng = do xs <- resolveDP rng
@@ -237,8 +233,8 @@ bindingAnalysis cpstr = execState (go rng0) cpstr
                        Nothing -> return ()
                        Just z -> do
                          let subtr = case z^.tz_current of
-                                       PN (rng,cp) ys -> PN (rng,(complement.specifier .~ xs) cp) ys
-                                       PL (rng,cp)    -> PL (rng,(complement.specifier .~ xs) cp)
+                                       PN (rng',cp) ys -> PN (rng',(complement.specifier .~ xs) cp) ys
+                                       PL (rng',cp)    -> PL (rng',(complement.specifier .~ xs) cp)
                          let z' = (tz_current .~ subtr) z
                          put (toBitree z')
                          case child1 z' of
