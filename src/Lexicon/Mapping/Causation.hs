@@ -40,4 +40,6 @@ causeDualMap =
   , CauseDual "Emotion_directed" "Cause_emotion"        "Agent" []
   , CauseDual "Separating"       "Separating"           "Agent" []
   , CauseDual "Being_located"    "Placing"              "Agent" []
+  , CauseDual "Locative_relation" "Placing"             "Agent" [("Figure","Theme"),("Ground","Place")]
+  , CauseDual "Abundance"        "Cause_proliferation_in_number" "Agent" [("Collection","Attribute")]
   ]
