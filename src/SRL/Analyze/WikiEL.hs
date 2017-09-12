@@ -21,7 +21,7 @@ import           WikiEL.EntityLinking                         (EntityMentionUID,
 import qualified WikiEL.EntityMentionPruning   as EMP
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..))
-import           WikiEL.WikiEntityClass                       (ItemClass(..))
+import           WikiEL.WikiEntityClass                       (ItemClass(..),orgClass)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..))
 import           NLP.Type.CoreNLP
 import qualified NLP.Type.NamedEntity          as N
@@ -124,11 +124,11 @@ wordnetMappingFile = WordNetMappingFile (wikinerdir </> "data/page_id.wiki_id.wo
 
 getOrgs :: EntityMention a -> Maybe (EntityMentionUID, ItemID)
 getOrgs (EL.Self muid (_,_, Resolved (wuid, c {- N.Org -})))
-  | _strName c == "Organization" = Just (muid, wuid)
-  | otherwise                    = Nothing
+  | c == orgClass = Just (muid, wuid)
+  | otherwise     = Nothing
 getOrgs (EL.Cite muid _ (_,_, Resolved (wuid, c {-  N.Org -})))
-  | _strName c == "Organization" = Just (muid, wuid)
-  | otherwise                    = Nothing
+  | c == orgClass = Just (muid, wuid)
+  | otherwise     = Nothing
 getOrgs _ = Nothing
 
 
