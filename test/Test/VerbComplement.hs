@@ -8,7 +8,6 @@
 module Test.VerbComplement where
 
 import           Control.Lens               hiding (levels)
-import           Control.Monad                     ((<=<))
 import           Data.Foldable                     (toList)
 import qualified Data.IntMap                as IM
 import           Data.List                         (find,intercalate)
@@ -16,7 +15,6 @@ import           Data.Maybe                        (fromMaybe)
 import           Data.Monoid                       (All(All,getAll),mconcat)
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
-import qualified Data.Text.IO               as T.IO
 import           Text.Printf
 --
 import           Data.Bitree
@@ -24,8 +22,6 @@ import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated      as N
-import           NLP.Type.CoreNLP
-import           NLP.Type.UniversalDependencies2.Syntax
 --
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
@@ -35,8 +31,10 @@ import           NLP.Syntax.Verb
 --
 import           Test.Tasty.HUnit
 import           Test.Tasty
-import Debug.Trace
 
+
+
+main_finite_1 :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)
 main_finite_1
   = ( "He will be fined $25,000.", 3
     , ("", ["He","$ 25,000"])
@@ -44,7 +42,7 @@ main_finite_1
     , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","He")],PN "VP" [PL ("MD","will"),PN "VP" [PL ("VB","be"),PN "VP" [PL ("VBN","fined"),PN "NP" [PL ("$","$"),PL ("CD","25,000")]]]],PL (".",".")]]
     )
 
-
+main_finite_2 :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)
 main_finite_2
   = ( "The move had been widely expected.", 5
     , ("", ["The move"])
@@ -54,6 +52,7 @@ main_finite_2
 
 
 -- | Reduced relative clause.
+rrc_passive_1 :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)
 rrc_passive_1
   = ( "NASA enhances online scientific tool used by hundreds of scientists.", 5
     , ("by hundreds of scientists", ["online scientific tool"])
@@ -63,6 +62,7 @@ rrc_passive_1
 
 
 -- | control movement
+inf_control_1 :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)
 inf_control_1
   = ( "Jean is reluctant to leave.", 4
     , ("Jean", [])
@@ -71,6 +71,7 @@ inf_control_1
     )
 
 -- | embedded
+embedded_that_1 :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)
 embedded_that_1
   = ( "The cat thinks that he is out of the bag.", 5
     , ("he", [])
@@ -79,6 +80,7 @@ embedded_that_1
     )
 
 -- | restrictive relative clause
+restr_rel_1 :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)
 restr_rel_1
   = ( "The guy who is wearing the red hat just hit me!", 4
     , ("who", ["the red hat"])
@@ -87,6 +89,7 @@ restr_rel_1
     )
 
 
+ditransitive_1 :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)
 ditransitive_1
   = ( "I gave the guy an apple.", 1
     , ("I", ["the guy","an apple"])
@@ -94,6 +97,8 @@ ditransitive_1
     , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","gave"),PN "NP" [PL ("DT","the"),PL ("NN","guy")],PN "NP" [PL ("DT","an"),PL ("NN","apple")]],PL (".",".")]]
     )
 
+
+ditransitive_2 :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)
 ditransitive_2
   = ( "I gave the guy what I got from her.", 1
     , ("I", ["the guy", "what I got from her"])
@@ -102,6 +107,7 @@ ditransitive_2
     )
 
 
+ditransitive_3 :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)
 ditransitive_3
   = ( "I told you that we would not pass the exam.", 1
     , ("I", ["you", "that we would not pass the exam"])
@@ -110,6 +116,7 @@ ditransitive_3
     )
 
 
+ditransitive_4 :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)
 ditransitive_4
   = ( "I told the student he would not pass the exam.", 1
     , ("I", ["the student", "he would not pass the exam"])
@@ -117,7 +124,7 @@ ditransitive_4
     , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","told"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","student")],PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","he")],PN "VP" [PL ("MD","would"),PL ("RB","not"),PN "VP" [PL ("VB","pass"),PN "NP" [PL ("DT","the"),PL ("NN","exam")]]]]]]],PL (".",".")]]
     )
 
-
+testcases :: [(Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)]
 testcases = [ -- main_finite_1
               -- , main_finite_2
               -- , rrc_passive_1
@@ -130,7 +137,6 @@ testcases = [ -- main_finite_1
             ]
             
 
-
 mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty (Zipper '[Lemma])]
 mkVPS lmatknlst pt =
   let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
@@ -139,7 +145,7 @@ mkVPS lmatknlst pt =
 
 formatTP :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> [String]
 formatTP (txt,i,_,lmatknlst,pt) =
-  let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
+  let -- lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
       vps = mkVPS lmatknlst pt
       ipt = mkPennTreeIdx pt
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id ipt)
@@ -158,8 +164,9 @@ formatTP (txt,i,_,lmatknlst,pt) =
                          Just cp -> [formatCP cp]
                     ++ [T.unpack cltxts]
 
-
+showTP :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> IO ()
 showTP = mapM_ putStrLn . formatTP
+
 
 checkComplement :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> Bool
 checkComplement c  = fromMaybe False $ do
@@ -197,6 +204,3 @@ mainShow = do
   showTP ditransitive_2
   showTP ditransitive_3
   showTP ditransitive_4
-
-
-
