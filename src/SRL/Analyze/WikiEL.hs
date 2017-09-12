@@ -17,11 +17,12 @@ import           CoreNLP.Simple.Convert                       (sentToNER')
 import           NLP.Type.NamedEntity                         (NamedEntityClass)
 
 import           WikiEL.Convert                               (getNEFromEntityMention,getRangeFromEntityMention)
-import           WikiEL.WikiNamedEntityTagger                 (PreNE(..))
 import           WikiEL.EntityLinking                         (EntityMentionUID,EntityMention,UIDCite(..))
 import qualified WikiEL.EntityMentionPruning   as EMP
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..))
+import           WikiEL.WikiEntityClass                       (ItemClass(..),orgClass)
+import           WikiEL.WikiNamedEntityTagger                 (PreNE(..))
 import           NLP.Type.CoreNLP
 import qualified NLP.Type.NamedEntity          as N
 import           NLP.Type.TagPos                              (TagPos(..),TokIdx(..))
@@ -122,8 +123,12 @@ wordnetMappingFile = WordNetMappingFile (wikinerdir </> "data/page_id.wiki_id.wo
 
 
 getOrgs :: EntityMention a -> Maybe (EntityMentionUID, ItemID)
-getOrgs (EL.Self muid (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
-getOrgs (EL.Cite muid _ (_,_, Resolved (wuid, N.Org))) = Just (muid, wuid)
+getOrgs (EL.Self muid (_,_, Resolved (wuid, c {- N.Org -})))
+  | c == orgClass = Just (muid, wuid)
+  | otherwise     = Nothing
+getOrgs (EL.Cite muid _ (_,_, Resolved (wuid, c {-  N.Org -})))
+  | c == orgClass = Just (muid, wuid)
+  | otherwise     = Nothing
 getOrgs _ = Nothing
 
 
