@@ -47,7 +47,7 @@ import           WikiEL.Type.FileFormat
 import           WikiEL.WordNet -- for WordNet synset lookup. 
 
 
-{-
+{-|
 This is a module for Wikipedia entity linking. 
 Two high-level functions for client uses.
 
@@ -61,7 +61,6 @@ Two high-level functions for client uses.
   - a relatedness score of a pair of entities is based on paths of Wikipedia interlinks
   - See `WikiEL.EntityDisambiguation` for details.
 -}
-
 
 
 extractEntityMentions :: WET.NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass)] -> [EntityMention Text]
@@ -84,9 +83,7 @@ extractFilteredEntityMentions wikiTable uidNEtags tokens = filtered_mentions
     all_linked_mentions = extractEntityMentions wikiTable uidNEtags neTokens
     filtered_mentions   = EMP.filterEMbyPOS (V.fromList poss) all_linked_mentions
 
-{-
-loadEMtagger : a high level function for entity linking module
--}
+-- |loadEMtagger : a high level function for entity linking module
 loadEMtagger :: EntityReprFile -> [(ItemClass, ItemIDFile)] -> IO( [(Text, NamedEntityClass)] -> [EntityMention Text] )
 loadEMtagger wikiNameFile uidTagFiles = do
   wikiTable <- WET.loadWETagger  wikiNameFile
@@ -95,9 +92,7 @@ loadEMtagger wikiNameFile uidTagFiles = do
     emTagger = extractEntityMentions wikiTable uidNEtags
   return emTagger
 
-{-
-loadFEMtagger : loadEMtagger + POS-based filtering for entity mentions
--}
+-- |loadFEMtagger : loadEMtagger + POS-based filtering for entity mentions
 loadFEMtagger :: EntityReprFile -> [(ItemClass, ItemIDFile)] -> IO( [(Text, NamedEntityClass, POSTag)] -> [EntityMention Text] )
 loadFEMtagger wikiNameFile uidTagFiles = do
   wikiTable <- WET.loadWETagger  wikiNameFile
@@ -107,9 +102,7 @@ loadFEMtagger wikiNameFile uidTagFiles = do
   return femTagger
 
 
-{-
-disambiguateMentions : a high level function for client use to perform the entity mention disambiguation.
--}
+-- |disambiguateMentions : a high level function for client use to perform the entity mention disambiguation.
 disambiguateMentions :: Eq a => ED.SortedGraph -> WikiuidNETag -> ED.NameMappings -> [EntityMention a] -> [EntityMention a]
 disambiguateMentions (ED.SortedGraph sorted names) uidTag titles mentions = filter EL.hasResolvedUID outputs
   where
