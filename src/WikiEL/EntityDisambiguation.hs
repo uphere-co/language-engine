@@ -89,7 +89,9 @@ Input arguments:
 - mentions : input entity mentions
 Output : disambiguated entity mentions.
 -}
-tryDisambiguate :: WEC.WikiuidNETag -> (M.Map ItemID Text, M.Map Text ItemID) -> ([Text] -> [Text] -> Maybe (a,Text,Text)) -> [EntityMention b] -> [EntityMention b]
+
+type NameMappings = (M.Map ItemID Text, M.Map Text ItemID)
+tryDisambiguate :: WEC.WikiuidNETag -> NameMappings -> ([Text] -> [Text] -> Maybe (a,Text,Text)) -> [EntityMention b] -> [EntityMention b]
 tryDisambiguate uidNEtags (i2t,t2i) fTD mentions = map (updateNE f) mentions
   where
     refs = concatMap (toWikipages i2t) (filter EL.hasResolvedUID mentions)

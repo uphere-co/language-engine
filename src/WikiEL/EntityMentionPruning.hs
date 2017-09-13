@@ -30,3 +30,5 @@ filterEMbyPOS :: V.Vector POSTag -> [EntityMention w] -> [EntityMention w]
 filterEMbyPOS wholeTags = filter f
   where
     f mention = isEntityLinkable wholeTags (EL.entityIRange mention)
+
+filterEM = filterEMbyPOS
