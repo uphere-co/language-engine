@@ -75,7 +75,7 @@ findMWAux withto z
                         p'' <- maybeToList (parent p')
                         guard (isChunkAs VP (current p''))
                         c <- maybeToList (child1 p'')
-                        let i = current c in guard (isLemmaAs "have" i || isLemmaAs "ought" i || isLemmaAs "used" i) 
+                        let i = current c in guard (isLemmaAs "have" i || isLemmaAs "ought" i || isLemmaAs "use" i) 
                         mapMaybe (\x -> (x,) <$> intLemma x) [c,z] 
   | otherwise      = (z,) <$> maybeToList (intLemma z)   -- not implemented yet
 
@@ -196,7 +196,7 @@ verbPropertyFromPennTree lemmamap pt =
       --
       phase1 z = case getRoot (current z) of
                   Right (_,ALeaf (pos,_) annot)
-                    -> if isVerb pos && ahead annot /= "be" && ahead annot /= "have" && ahead annot /= "do" && ahead annot /= "used"
+                    -> if isVerb pos && ahead annot /= "be" && ahead annot /= "have" && ahead annot /= "do" && ahead annot /= "use"
                        then verbProperty z
                        else Nothing
                   _ -> Nothing 

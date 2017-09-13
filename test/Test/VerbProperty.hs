@@ -32,7 +32,7 @@ import           Test.Tasty
 
 
 -- | (Tense,Aspect,Voice,Maybe Text,Maybe Text) == (tense,aspect,voice,auxiliary,negation)
-ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24,ex25,ex26,ex27,ex28
+ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24,ex25,ex26,ex27,ex28,ex29,ex30
   :: (Text,Int,(Tense,Aspect,Voice,[Text],Maybe Text),[(Int,(Lemma,Text))],PennTree)
 ex1 = ( "He was fined $25,000."
       , 2
@@ -264,9 +264,27 @@ ex28 = ( "I have to write a book."
        , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","have"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","book")]]]]],PL (".",".")]]
        )
 
+
+ex29 = ( "I ought to write a book."
+       , 3
+       , (Present, Simple, Active, ["ought", "to"], Nothing)
+       , [(0,("I","I")),(1,("ought","ought")),(2,("to","to")),(3,("write","write")),(4,("a","a")),(5,("book","book")),(6,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("MD","ought"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","book")]]]]],PL (".",".")]]
+       )
+
+ex30 = ( "I used to write a book."
+       , 3
+       , (Present, Simple, Active, ["use", "to"], Nothing)
+       , [(0,("I","I")),(1,("use","used")),(2,("to","to")),(3,("write","write")),(4,("a","a")),(5,("book","book")),(6,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","used"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","book")]]]]],PL (".",".")]]
+       )
+
+
 testcases :: [(Text,Int,(Tense,Aspect,Voice,[Text],Maybe Text),[(Int,(Lemma,Text))],PennTree)]
-testcases = [ ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20
-            ,ex21,ex22,ex23,ex24,ex25,ex26,ex27,ex28]
+testcases = [ ex1, ex2, ex3, ex4, ex5, ex6, ex7, ex8, ex9,ex10
+            ,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20
+            ,ex21,ex22,ex23,ex24,ex25,ex26,ex27,ex28,ex29,ex30
+            ]
 
 
 
