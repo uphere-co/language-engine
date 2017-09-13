@@ -143,6 +143,7 @@ instance ToJSON MGVertex
 instance FromJSON MGVertex
 
 data MGEdge = MGEdge { _me_relation :: Text
+                     , _me_prep :: Maybe Text
                      , _me_start :: Int
                      , _me_end :: Int }
 
