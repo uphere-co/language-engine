@@ -3,9 +3,10 @@
 module NLP.Syntax.Type.Verb where
 
 import           Control.Lens
+import           Data.Text                 (Text)
 --
-import           NLP.Type.PennTreebankII                (Lemma(..))
-import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
+import           NLP.Type.PennTreebankII   (Lemma(..))
+import           NLP.Type.SyntaxProperty   (Tense(..),Voice(..),Aspect(..))
 
 
 data VerbProperty w = VerbProperty { _vp_index  :: Int
@@ -20,3 +21,18 @@ data VerbProperty w = VerbProperty { _vp_index  :: Int
                     deriving (Show)
 
 makeLenses ''VerbProperty
+
+
+
+
+simplifyVProp :: VerbProperty w -> VerbProperty Text
+simplifyVProp vprop = VerbProperty { _vp_index     = _vp_index vprop
+                                   , _vp_lemma     = _vp_lemma vprop
+                                   , _vp_tense     = _vp_tense vprop
+                                   , _vp_aspect    = _vp_aspect vprop
+                                   , _vp_voice     = _vp_voice vprop
+                                   , _vp_auxiliary = fmap f (_vp_auxiliary vprop)
+                                   , _vp_negation  = fmap f (_vp_negation vprop)
+                                   , _vp_words     = fmap f (_vp_words vprop)
+                                   }
+  where f (z,(i,lma)) = (unLemma lma,(i,lma))
