@@ -216,7 +216,7 @@ matchFrameRolesForCauseDual :: VerbP '[Lemma]
                             -> LittleV
                             -> (Text, [(PBArg, FNFrameElement)])
                             -> (Text, Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, Zipper '[Lemma]))]))
-matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1) = 
+matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1) =
   let (frame2,rolemap2) = if causetype == LVDual
                           then extendRoleMapForDual frame1 rolemap1
                           else (frame1,rolemap1)
@@ -226,7 +226,7 @@ matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1) 
        (Nothing,Nothing) -> (frame1,Nothing)
        (Just _ ,Nothing) -> (frame1,mselected1)
        (Nothing,Just _ ) -> (frame2,mselected2)
-       (Just s1,Just s2) -> 
+       (Just s1,Just s2) ->
          case (compare `on` numMatchedRoles) s1 s2 of
            GT -> (frame1,mselected1)
            LT -> (frame2,mselected2)
@@ -248,7 +248,7 @@ matchFrameRolesAll verbp paws mDP rmtoppatts = do
   return (matchFrameRolesForCauseDual verbp paws toppatts mDP causetype (frame1,rolemap1),stat)
 
 
-  
+
 matchFrame :: (VerbStructure,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
            -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FNFrameElement
                     ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, Zipper '[Lemma]))]))
@@ -279,6 +279,20 @@ scoreSelectedFrame total ((_,mselected),n) =
   in mn * (fromIntegral n) / (fromIntegral total) * roleMatchWeightFactor + (mn*(fromIntegral total))
 
 
+
+simplifyVProp :: VerbProperty (Zipper '[Lemma]) -> VerbProperty Text
+simplifyVProp vprop = VerbProperty { _vp_index     = _vp_index vprop
+                                   , _vp_lemma     = _vp_lemma vprop
+                                   , _vp_tense     = _vp_tense vprop
+                                   , _vp_aspect    = _vp_aspect vprop
+                                   , _vp_voice     = _vp_voice vprop
+                                   , _vp_auxiliary = fmap f (_vp_auxiliary vprop)
+                                   , _vp_negation  = fmap f (_vp_negation vprop)
+                                   , _vp_words     = fmap f (_vp_words vprop)
+                                   }
+  where f (z,(i,lma)) = (unLemma lma,(i,lma))
+
+
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
   let pawstriples = mkPAWSTriples sstr
@@ -286,10 +300,10 @@ meaningGraph sstr =
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList
       --
       preds = flip map matched $ \(rng,vprop,frame,_mselected) -> \i ->
-                MGPredicate i rng frame
-                            (vprop^.vp_lemma.to unLemma,vprop^.vp_tense,vprop^.vp_aspect,vprop^.vp_voice
-                            ,vprop^?vp_auxiliary._Just._2._2.to unLemma
-                            )
+                MGPredicate i rng frame (simplifyVProp vprop)
+                            -- (vprop^.vp_lemma.to unLemma,vprop^.vp_tense,vprop^.vp_aspect,vprop^.vp_voice
+                            -- ,vprop^?vp_auxiliary._Just._2._2.to unLemma
+                            -- )
       ipreds = zipWith ($) preds [1..]
       --
       entities0 = do (_,_,_,mselected) <- matched

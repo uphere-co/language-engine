@@ -1,7 +1,9 @@
-{-# LANGUAGE DataKinds       #-}
-{-# LANGUAGE DeriveGeneric   #-}
-{-# LANGUAGE KindSignatures  #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE KindSignatures     #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell    #-}
 
 module SRL.Analyze.Type where
 
@@ -53,7 +55,7 @@ data ONSenseFrameNetInstance = ONFNInstance { _onfn_senseID :: SenseID
 makeLenses ''ONSenseFrameNetInstance
 
 
- 
+
 chooseMostFreqFrame :: [(ONSenseFrameNetInstance,Int)] -> [(ONSenseFrameNetInstance,Int)]
 chooseMostFreqFrame [] = []
 chooseMostFreqFrame xs = [maximumBy (compare `on` (^._2)) xs]
@@ -120,11 +122,22 @@ data MGVertex = MGEntity    { _mv_id :: Int
               | MGPredicate { _mv_id    :: Int
                             , _mv_range :: Range
                             , _mv_frame :: Text
-                            , _mv_verb  :: (Text,Tense,Aspect,Voice,Maybe Text)
+                            , _mv_verb  :: VerbProperty Text -- (Text,Tense,Aspect,Voice,Maybe Text)
                             }
               deriving (Generic, Show)
 
 makeLenses ''MGVertex
+
+
+-- orphan
+deriving instance Generic (VerbProperty Text)
+
+-- orphan
+instance ToJSON (VerbProperty Text)
+
+-- orphan
+instance FromJSON (VerbProperty Text)
+
 
 instance ToJSON MGVertex
 instance FromJSON MGVertex
