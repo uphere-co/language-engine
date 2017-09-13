@@ -67,10 +67,12 @@ data DPorPP a = DP a | PrepP (Maybe Text) a
 
 makePrisms ''DPorPP
 
-
 removeDPorPP :: DPorPP a -> a
 removeDPorPP (DP x) = x
 removeDPorPP (PrepP _ x) = x
+
+
+
 
 
 type instance Property   'X_V t = VerbProperty (Zipper t)
@@ -112,3 +114,8 @@ type CP = XP 'X_C
 
 mkCP :: Either NullComplementizer (Zipper t) -> Maybe (Zipper t) -> TP t -> CP t
 mkCP mc mcp tp = XP mc mcp () () tp
+
+
+data CPDP a = CPCase { _cpcase :: CP a }
+
+makeLenses ''CPDP
