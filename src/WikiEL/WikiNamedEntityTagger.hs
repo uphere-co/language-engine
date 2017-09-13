@@ -30,9 +30,17 @@ import qualified NLP.Type.NamedEntity          as NE
 
 type NEClass = NamedEntityClass
 
+
 parseStanfordNE :: C.EntityToken -> NamedEntityFrag
 parseStanfordNE (C.EntityToken (C.WordToken word) (C.NETag tag)) =  parseStr word tag
 
+loadStanfordNERoutput :: Text -> [NamedEntityFrag]
+loadStanfordNERoutput content = map parseStanfordNE (C.parseNEROutputStr content)
+
+getWords :: [NamedEntityFrag] -> [Text]
+getWords  = map _fstr
+getNETags :: [NamedEntityFrag] -> [NamedEntityClass]
+getNETags = map _ftype
 
 namedEntityAnnotator:: NameUIDTable -> [NamedEntityFrag] -> [(IRange, Vector ItemID)]
 namedEntityAnnotator entities frags = reverse matchedItems

@@ -71,3 +71,5 @@ wikiTitleMappingFile= WikiTitleMappingFile "data/wiki_id.page_title.txt"
 wordnetMappingFile= WordNetMappingFile "data/page_id.wiki_id.wordnet.tsv"
 propertyNameFile  = PropertyNameFile   "data_full/properties.tsv"
 listedCompanyFile = "enwiki/companies"
+
+graphFiles = "enwiki/interlinks.filtered"
