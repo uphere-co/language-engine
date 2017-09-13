@@ -160,14 +160,14 @@ identifyCPHierarchy tagged vps = traverse (bitraverse tofull tofull) rtr
         tofull rng = HM.lookup rng cpmap
 
 
-currentCP :: BitreeZipper (Range,CPDP as) (Range,CPDP as) -> CP as
-currentCP = (\case CPCase x -> x) . snd . getRoot1 . current
+currentCPDP :: BitreeZipper (Range,CPDP as) (Range,CPDP as) -> CPDP as
+currentCPDP = snd . getRoot1 . current
 
 
 whMovement :: BitreeZipper (Range,CPDP as) (Range,CPDP as)
            -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
 whMovement z = do
-  let cp = currentCP z
+  let cp = (\case CPCase x -> x) (currentCPDP z)
   case cp^.complement.specifier.trChain of
     [] -> return (TraceChain [])
     xs -> case last xs of
@@ -201,7 +201,7 @@ resolveDP rng = do
   case extractZipperById rng tr of
     Nothing -> return (TraceChain [])
     Just z -> do
-      let cp = currentCP z
+      let cp = (\case CPCase x -> x) (currentCPDP z)
       if either (== C_WH) (isChunkAs WHNP . current) (cp^.headX)
         then whMovement z
         else
@@ -210,12 +210,12 @@ resolveDP rng = do
             xs -> case last xs of
                     Left NULL      -> do let xspro = TraceChain (init xs ++ [Left SilentPRO])
                                          fmap (fromMaybe xspro) . runMaybeT $ do
-                                           cp'  <- (MaybeT . return) (currentCP <$> parent z)
+                                           cp'  <- (MaybeT . return) ((\case CPCase x -> x) . currentCPDP <$> parent z)
                                            rng' <- (MaybeT . return) (cpRange cp')
                                            dp <- lift (resolveDP rng')
                                            return (xspro <> dp)
                     Left SilentPRO ->    fmap (fromMaybe (TraceChain xs)) . runMaybeT $ do
-                                           cp'  <- (MaybeT . return) (currentCP <$> parent z)
+                                           cp'  <- (MaybeT . return) ((\case CPCase x -> x) . currentCPDP <$> parent z)
                                            rng' <- (MaybeT . return) (cpRange cp')
                                            dp <- lift (resolveDP rng')
                                            return (TraceChain xs <> dp)
@@ -275,7 +275,7 @@ findPAWS tagged tr vp mcpstr = do
   cp <- constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
   rng <- cpRange cp
   cpstr <- mcpstr
-  cp' <- currentCP <$> ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
+  cp' <- (\case CPCase x -> x) . currentCPDP <$> ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
   predicateArgWS cp' <$> findVerb (vp^.vp_index) tr
 
 
