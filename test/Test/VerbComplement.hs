@@ -145,8 +145,7 @@ mkVPS lmatknlst pt =
 
 formatTP :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> [String]
 formatTP (txt,i,_,lmatknlst,pt) =
-  let -- lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
-      vps = mkVPS lmatknlst pt
+  let vps = mkVPS lmatknlst pt
       ipt = mkPennTreeIdx pt
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id ipt)
       cltxts = formatClauseStructure clausetr
@@ -158,7 +157,7 @@ formatTP (txt,i,_,lmatknlst,pt) =
                   , printf "\nTesting Lemma: %2d-%-15s\nModal: %-15s"
                       (vp^.vp_index)
                       (vp^.vp_lemma.to unLemma)
-                      (fromMaybe "null" (vp^?vp_auxiliary._Just._2._2.to unLemma))
+                      (T.intercalate " " (vp^..vp_auxiliary.traverse._2._2.to unLemma))
                   ] ++ case constructCP [] vp of   -- for the time being
                          Nothing -> ["not successful in constructing CP"]
                          Just cp -> [formatCP cp]

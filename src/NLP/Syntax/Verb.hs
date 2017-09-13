@@ -63,17 +63,22 @@ findPrevVerb z = do
     prevVerbInSiblings = firstSiblingBy prev (\x -> case getIdxPOS x of {Nothing -> False; Just (_,pos) -> isVerb pos})
 
 
+-- findMWAux withto z
+--   | withto == True = findHaveTo z
+--   | otherwise = 
+
+
 findAux :: (GetIntLemma tag) =>
            Lemma
         -> BitreeZipperICP tag
-        -> Maybe (BitreeZipperICP tag, (Int,Lemma))
+        -> [(BitreeZipperICP tag, (Int,Lemma))]
 findAux lma z = do
-  p <- parent z
+  p <- maybeToList (parent z)
   guard (isChunkAs VP (current p))
-  c <- child1 p
-  if | isPOSAs MD (current c)     -> (c,) <$> intLemma c
-     | isPOSAs TO (current c)     -> (c,) <$> intLemma c  
-     | isLemmaAs "do" (current c) && unLemma lma /= "do" -> (c,) <$> intLemma c
+  c <- maybeToList (child1 p)
+  if | isPOSAs MD (current c)     -> (c,) <$> maybeToList (intLemma c)
+     | isPOSAs TO (current c)     -> (c,) <$> maybeToList (intLemma c)
+     | isLemmaAs "do" (current c) && unLemma lma /= "do" -> (c,) <$> maybeToList (intLemma c)
      | otherwise                  -> findAux lma p
 
 
@@ -93,10 +98,11 @@ auxNegWords
   -> AuxNegWords (BitreeZipperICP tag)
 auxNegWords lma z zs =
   let zis = map (\z'->(z',)<$>intLemma z') zs
-      (au,ne) = case findAux lma z of
-                  Nothing -> (Nothing,findNeg z)
-                  Just (c,il) -> (Just (c,il),findNeg c)
-      ws = sortBy (compare `on` (^._2._1)) (catMaybes ([au,ne] ++ zis))
+      au = findAux lma z
+      ne = case au of
+             []       -> findNeg z
+             (c,il):_ -> findNeg c
+      ws = sortBy (compare `on` (^._2._1)) (au ++ catMaybes (ne:zis))
   in (au,ne,ws)
 
 
