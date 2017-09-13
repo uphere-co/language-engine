@@ -8,7 +8,7 @@
 
 module SRL.Analyze.Format where
 
-import           Control.Lens                            ((^.),(^?),_1,_2,_3,_4,_5,_Just,_Right,to)
+import           Control.Lens                            ((^..),(^.),(^?),_1,_2,_3,_4,_5,_Just,_Right,to)
 import           Data.Foldable
 import           Data.List                               (intercalate,intersperse)
 import           Data.Maybe                              (fromMaybe,mapMaybe)
@@ -232,7 +232,7 @@ dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt t
     fmtEdge e = printf "i%d -> i%d [label=\"%s\"];" (e^.me_start) (e^.me_end) (e^.me_relation)
     fmtVerb (MGEntity    _ _ _  ) = Nothing
     fmtVerb (MGPredicate i _ f v) = Just (i,f <> " | { "
-                                              <> fromMaybe "" (v^?vp_auxiliary._Just._1) <> " | "
+                                              <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> " | "
                                               <> fromMaybe "" (v^?vp_negation._Just._1) <> " | "
                                               <> v^.vp_lemma.to unLemma <> " | "
                                               <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect)
