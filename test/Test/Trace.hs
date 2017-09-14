@@ -1,4 +1,5 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Trace where
@@ -164,25 +165,15 @@ checkTrace c =
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
     paws <- findPAWS [] clausetr vp mcpstr
     let cp = paws^.pa_CP
-    -- cp <- constructCP [] vp  -- for the time being
-    
-    let gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
-
+        gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
     case c^._3._1 of
-      Subj -> let dp :: TraceChain Text
-                  dp = fmap gettokens (cp ^.complement.specifier)
-              in return (dp == c ^._3._2)
-      _    -> return False
-    {- 
-    let 
-      --
-      lst :: [Maybe Text]
-      lst = cp^..complement.complement.complement.traverse.trResolved.to (fmap gettokens)
-      --
-      lst2 :: [Text]
-      lst2 = c^._3._2
-    return (getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst lst2)) && (length lst == length lst2)) -}
-    -- return False
+      Subj   -> let dp = fmap gettokens (cp ^.complement.specifier)
+                in return (dp == c ^._3._2)
+      Comp n -> do let comps = cp ^.complement.complement.complement
+                   comp <- comps ^? ix (n-1)
+                   let dp = fmap (\case DP z -> gettokens z; PrepP _ z -> gettokens z) comp
+                   return (dp == c ^._3._2)
+      _      -> return False
 
 
 unitTests :: TestTree
