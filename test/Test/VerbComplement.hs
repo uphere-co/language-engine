@@ -124,17 +124,6 @@ ditransitive_4
     , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","told"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","student")],PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","he")],PN "VP" [PL ("MD","would"),PL ("RB","not"),PN "VP" [PL ("VB","pass"),PN "NP" [PL ("DT","the"),PL ("NN","exam")]]]]]]],PL (".",".")]]
     )
 
-testcases :: [(Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)]
-testcases = [ -- main_finite_1
-              -- , main_finite_2
-              -- , rrc_passive_1
-              embedded_that_1
-            , restr_rel_1
-            , ditransitive_1
-            -- , ditransitive_2
-            , ditransitive_3
-            -- , ditransitive_4
-            ]
             
 
 mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty (Zipper '[Lemma])]
@@ -167,6 +156,20 @@ showTP :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> IO ()
 showTP = mapM_ putStrLn . formatTP
 
 
+mainShow :: IO ()
+mainShow = do
+  showTP main_finite_1
+  showTP main_finite_2
+  showTP rrc_passive_1
+  showTP inf_control_1
+  showTP embedded_that_1
+  showTP restr_rel_1
+  showTP ditransitive_1
+  showTP ditransitive_2
+  showTP ditransitive_3
+  showTP ditransitive_4
+
+
 checkComplement :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> Bool
 checkComplement c  = fromMaybe False $ do
   let vps = mkVPS (c^._4) (c^._5)
@@ -185,21 +188,20 @@ checkComplement c  = fromMaybe False $ do
   return (getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst lst2)) && (length lst == length lst2))
 
 
+testcases :: [(Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)]
+testcases = [ -- main_finite_1
+              -- , main_finite_2
+              -- , rrc_passive_1
+              embedded_that_1
+            , restr_rel_1
+            , ditransitive_1
+            -- , ditransitive_2
+            , ditransitive_3
+            -- , ditransitive_4
+            ]
+
 unitTests :: TestTree
 unitTests = testGroup "Subject and direct/indirect object identification" . flip map testcases $ \c ->
               testCase (T.unpack (c^._1)) $
                 (checkComplement c == True) @? (intercalate "\n" (formatTP c))
 
-
-mainShow :: IO ()
-mainShow = do
-  showTP main_finite_1
-  showTP main_finite_2
-  showTP rrc_passive_1
-  showTP inf_control_1
-  showTP embedded_that_1
-  showTP restr_rel_1
-  showTP ditransitive_1
-  showTP ditransitive_2
-  showTP ditransitive_3
-  showTP ditransitive_4

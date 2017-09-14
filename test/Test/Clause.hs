@@ -141,12 +141,7 @@ showDetail (txt,lma,pt,tmxs) = do
 
 
 mainShow :: IO ()
-mainShow = mapM_ showDetail [ test_silent_pronoun
-                            , test_multi_silent_pronoun
-                            , test_relative_pronoun_subject
-                            , test_relative_pronoun_object
-                            , test_reduced_relative_clause
-                            , test_coordination
+mainShow = mapM_ showDetail [ test_coordination
                             , test_complex_noun_phrase
                             , test_bare_noun_adverb
                             ]

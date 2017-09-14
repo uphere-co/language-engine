@@ -166,6 +166,7 @@ formatVPwithPAWS tagged clausetr mcpstr vp =
                           <> "\n"
                           
 
+
 showClauseStructure :: [TagPos TokIdx (Maybe Text)] -> IntMap Lemma -> PennTree -> IO ()
 showClauseStructure tagged lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree

@@ -12,6 +12,7 @@ import           Test.Tasty
 tests :: TestTree
 tests = testGroup "Syntax property unit tests" [ T.V.P.unitTests
                                                , T.V.C.unitTests
+                                               , T.T.unitTests
                                                ]
 
 

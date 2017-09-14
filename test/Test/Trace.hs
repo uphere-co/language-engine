@@ -10,6 +10,7 @@ module Test.Trace where
 import           Control.Lens               hiding (levels)
 import           Data.Foldable
 import qualified Data.IntMap                as IM
+import           Data.List                         (intercalate)
 import           Data.Monoid
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
@@ -19,11 +20,17 @@ import           Data.Bitree
 import           Data.BitreeZipper                 (current,mkBitreeZipper)
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
+import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos
 --
+import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
 import           NLP.Syntax.Preposition
 import           NLP.Syntax.Util
+import           NLP.Syntax.Verb
+--
+import           Test.Tasty.HUnit
+import           Test.Tasty
 
 
 -- | silent pronoun
@@ -81,25 +88,34 @@ test_reduced_relative_clause =
   )
 
 
-showDetail :: (Text,[(Int,(Text,Text))],PennTree,[TagPos TokIdx (Maybe Text)]) -> IO ()
-showDetail (txt,lma,pt,tmxs) = do
-  putStrLn "--------------------------------------------------------------------------------------------------------------------"
-  T.IO.putStrLn txt
-  putStrLn "--------------------------------------------------------------------------------------------------------------------"
-  T.IO.putStrLn  . T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList $ pt
-  putStrLn "--------------------------------------------------------------------------------------------------------------------"
+formatDetail :: (Text,[(Int,(Text,Text))],PennTree,[TagPos TokIdx (Maybe Text)]) -> [Text]
+formatDetail (txt,lma,pt,tmxs) =
   let lmap1 = IM.fromList (map (_2 %~ (\x -> Lemma (x^._1)))  lma)
-  showClauseStructure tmxs lmap1 pt
-  putStrLn "--------------------------------------------------------------------------------------------------------------------"
-  T.IO.putStrLn $ prettyPrint 0 pt
-  putStrLn "--------------------------------------------------------------------------------------------------------------------"
-  flip mapM_ tmxs $ \(TagPos (b,e,_tag)) -> do
-    let lemmapt = mkBitreeICP lmap1 pt
-        rng = beginEndToRange (b,e)
-    case find (\z -> getRoot (current z) ^? _Left . _1  == Just rng) $ getNodes (mkBitreeZipper [] lemmapt) of
-      Nothing -> return ()
-      Just z -> print $ hasEmptyPreposition z
-    
+      vps  = verbPropertyFromPennTree lmap1 pt
+      clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
+      mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy tmxs) vps
+      
+  in   
+  [ "--------------------------------------------------------------------------------------------------------------------"
+  , txt
+  , "--------------------------------------------------------------------------------------------------------------------"
+  , (T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList) pt
+  , "--------------------------------------------------------------------------------------------------------------------"
+  ]
+  ++ maybe [] (map formatCPHierarchy) mcpstr
+  ++
+  [ "--------------------------------------------------------------------------------------------------------------------"
+  , prettyPrint 0 pt
+  , "--------------------------------------------------------------------------------------------------------------------"
+  ]
+  {- ++ (flip concatMap tmxs $ \(TagPos (b,e,_tag)) -> 
+       let lemmapt = mkBitreeICP lmap1 pt
+           rng = beginEndToRange (b,e)
+       in case find (\z -> getRoot (current z) ^? _Left . _1  == Just rng) $ getNodes (mkBitreeZipper [] lemmapt) of
+            Nothing -> []
+            Just z -> [T.pack (show (hasEmptyPreposition z))]
+     )
+  -}
   {- let vps = verbPropertyFromPennTree lmap1 pt
       mcpstr = identifyCPHierarchy vps
   case mcpstr of
@@ -110,6 +126,9 @@ showDetail (txt,lma,pt,tmxs) = do
   -}
 
 
+showDetail = mapM_ T.IO.putStrLn . formatDetail
+
+
 mainShow :: IO ()
 mainShow = mapM_ showDetail [ test_silent_pronoun
                             , test_multi_silent_pronoun
@@ -117,3 +136,18 @@ mainShow = mapM_ showDetail [ test_silent_pronoun
                             , test_relative_pronoun_object
                             , test_reduced_relative_clause
                             ]
+
+
+testcases :: [(Text,[(Int,(Text,Text))],PennTree,[TagPos TokIdx (Maybe Text)])]
+testcases = [ test_silent_pronoun
+            , test_multi_silent_pronoun
+            , test_relative_pronoun_subject
+            , test_relative_pronoun_object
+            , test_reduced_relative_clause
+            ]
+
+
+unitTests :: TestTree
+unitTests = testGroup "Trace identification test" . flip map testcases $ \c ->
+              testCase (T.unpack (c^._1)) $
+                {- (checkTrace c == True) -} False @? (T.unpack (T.intercalate "\n" (formatDetail c)))
