@@ -29,6 +29,7 @@ import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Verb
 --
+import           Test.Common
 import           Test.Tasty.HUnit
 import           Test.Tasty
 
@@ -126,10 +127,6 @@ ditransitive_4
 
             
 
-mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty (Zipper '[Lemma])]
-mkVPS lmatknlst pt =
-  let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
-  in verbPropertyFromPennTree lemmamap pt
 
 
 formatTP :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> [String]
