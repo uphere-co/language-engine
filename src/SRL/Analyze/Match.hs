@@ -280,30 +280,13 @@ scoreSelectedFrame total ((_,mselected),n) =
 
 
 
-simplifyVProp :: VerbProperty (Zipper '[Lemma]) -> VerbProperty Text
-simplifyVProp vprop = VerbProperty { _vp_index     = _vp_index vprop
-                                   , _vp_lemma     = _vp_lemma vprop
-                                   , _vp_tense     = _vp_tense vprop
-                                   , _vp_aspect    = _vp_aspect vprop
-                                   , _vp_voice     = _vp_voice vprop
-                                   , _vp_auxiliary = fmap f (_vp_auxiliary vprop)
-                                   , _vp_negation  = fmap f (_vp_negation vprop)
-                                   , _vp_words     = fmap f (_vp_words vprop)
-                                   }
-  where f (z,(i,lma)) = (unLemma lma,(i,lma))
-
-
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
   let pawstriples = mkPAWSTriples sstr
       matched =  mapMaybe (\(_,vstr,paws) -> matchFrame (vstr,paws)) pawstriples
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList
       --
-      preds = flip map matched $ \(rng,vprop,frame,_mselected) -> \i ->
-                MGPredicate i rng frame (simplifyVProp vprop)
-                            -- (vprop^.vp_lemma.to unLemma,vprop^.vp_tense,vprop^.vp_aspect,vprop^.vp_voice
-                            -- ,vprop^?vp_auxiliary._Just._2._2.to unLemma
-                            -- )
+      preds = flip map matched $ \(rng,vprop,frame,_mselected) i -> MGPredicate i rng frame (simplifyVProp vprop)
       ipreds = zipWith ($) preds [1..]
       --
       entities0 = do (_,_,_,mselected) <- matched
