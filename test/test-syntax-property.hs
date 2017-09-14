@@ -2,6 +2,7 @@ module Main where
 
 --
 -- import qualified Test.Clause         as T.C
+import qualified Test.Trace          as T.T
 import qualified Test.VerbComplement as T.V.C 
 import qualified Test.VerbProperty   as T.V.P
 --
