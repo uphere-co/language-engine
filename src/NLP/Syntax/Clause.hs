@@ -16,12 +16,14 @@ import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
+import           Data.Foldable                          (toList)
 import           Data.Either                            (partitionEithers)
 import qualified Data.HashMap.Strict               as HM
 import           Data.List                              (find)
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (First(..),Last(..),(<>))
 import           Data.Text                              (Text)
+import qualified Data.Text                         as T
 --
 import           Data.Bitree
 import           Data.BitreeZipper
@@ -36,8 +38,6 @@ import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs)
---
-
 
 
 maximalProjectionVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
@@ -169,27 +169,33 @@ whMovement :: BitreeZipper (Range,CPDP as) (Range,CPDP as)
 whMovement z = do
   let cp = (\case CPCase x -> x) (currentCPDP z)
       spec = cp^.complement.specifier
-  case spec^.trChain of
-    [] -> return spec
-    xs -> case last xs of
-      NULL -> do
-        let xspro = init xs ++ [SilentPRO]
-            xsmov = init xs ++ [Moved]
-        fmap (fromMaybe (TraceChain xspro Nothing)) . runMaybeT $ do
-          -- check subject position for relative pronoun
-          z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
-          return (TraceChain (xsmov ++ [WHPRO]) (Just z'))
-      _ -> do
-        runMaybeT $ do
-          -- check object position for relative pronoun
-          z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
-          let cp' = CPCase (((complement.complement.complement) %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)) cp)
-              subtr = case z^.tz_current of
-                        PN (rng,_) ys -> PN (rng,cp') ys
-                        PL (rng,_)    -> PL (rng,cp')
-              z'' = (tz_current .~ subtr) z
-          lift (put (toBitree z''))
-        return spec
+  -- whMovement process starts with cheking trace in subject
+  let xs = spec^.trChain
+  if (not . null) xs
+    then
+      -- with trace in subject
+      -- check subject for relative pronoun
+      case last xs of
+        NULL -> do
+          let xspro = init xs ++ [SilentPRO]
+              xsmov = init xs ++ [Moved]
+          fmap (fromMaybe (TraceChain xspro Nothing)) . runMaybeT $ do
+            -- check subject position for relative pronoun
+            z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
+            return (TraceChain (xsmov ++ [WHPRO]) (Just z'))
+        _    -> return spec -- do
+    else do
+      -- without trace in subject
+      -- check object for relative pronoun
+      runMaybeT $ do
+        z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
+        let cp' = CPCase (((complement.complement.complement) %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)) cp)
+            subtr = case z^.tz_current of
+                      PN (rng,_) ys -> PN (rng,cp') ys
+                      PL (rng,_)    -> PL (rng,cp')
+            z'' = (tz_current .~ subtr) z
+        lift (put (toBitree z''))
+      return spec
 
 
 -- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
