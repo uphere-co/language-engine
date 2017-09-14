@@ -65,12 +65,11 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
 
 
 formatTraceChain :: (a -> Text) -> TraceChain a -> Text
-formatTraceChain f (TraceChain xs) = T.intercalate " -> " (map fmt xs)
-  where fmt (Left NULL)      = "*NUL*"
-        fmt (Left SilentPRO) = "*PRO*"
-        fmt (Left Moved)     = "*MOV*"
-        fmt (Left WHPRO)     = "*WHP*"
-        fmt (Right z) = f z
+formatTraceChain f (TraceChain xs x) = T.concat (map ((<> " -> ") . fmt) xs) <> maybe "NOT_RESOLVED" f x
+  where fmt NULL      = "*NUL*"
+        fmt SilentPRO = "*PRO*"
+        fmt Moved     = "*MOV*"
+        fmt WHPRO     = "*WHP*"
 
 
 rangeText :: Zipper as -> Text

@@ -172,14 +172,14 @@ checkComplement c  = fromMaybe False $ do
   let vps = mkVPS (c^._4) (c^._5)
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
   cp <- constructCP [] vp  -- for the time being
-  let getcomp [] = Nothing
-      getcomp xs = case last xs of
-                     Left  _ -> Nothing
-                     Right (DP z) -> (Just . T.intercalate " " . map (tokenWord.snd) . toList . current) z
-                     Right (PrepP _ z) ->  (Just . T.intercalate " " . map (tokenWord.snd) . toList . current) z
-  let lst :: [Maybe Text]
-      lst = cp^..complement.complement.complement.traverse.trChain.to getcomp
-
+  let gettokens x = let z = case x of
+                              DP z      -> z
+                              PrepP _ z -> z
+                    in (T.intercalate " " . map (tokenWord.snd) . toList . current) z
+      --
+      lst :: [Maybe Text]
+      lst = cp^..complement.complement.complement.traverse.trResolved.to (fmap gettokens)
+      --
       lst2 :: [Text]
       lst2 = c^._3._2
   return (getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst lst2)) && (length lst == length lst2))
