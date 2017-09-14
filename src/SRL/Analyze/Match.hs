@@ -310,8 +310,8 @@ meaningGraph sstr =
       edges = do (rng,_,_,mselected) <- matched
                  i <- maybeToList (HM.lookup rng rngidxmap)
                  (_,felst) <- maybeToList mselected
-                 (fe,(_,z)) <- felst
+                 (fe,(mprep,z)) <- felst
                  let rng' = getRange (current z)
                  i' <- maybeToList (HM.lookup rng' rngidxmap)
-                 return (MGEdge fe i i')
+                 return (MGEdge fe mprep i i')
   in MeaningGraph vertices edges

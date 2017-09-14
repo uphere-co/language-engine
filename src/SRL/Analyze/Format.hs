@@ -46,7 +46,7 @@ import           SRL.Analyze.Type                        (ExceptionalFrame(..),O
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,MGVertex(..),MeaningGraph
                                                          ,mg_vertices,mg_edges
-                                                         ,me_relation,me_start,me_end
+                                                         ,me_relation,me_prep,me_start,me_end
                                                          ,chooseMostFreqFrame
                                                          ,onfn_senseID,onfn_definition,onfn_frame
                                                          ,tf_frameID,tf_feCore,tf_fePeri
@@ -229,7 +229,8 @@ showMatchedFrame (_,vstr,paws) = do
 dotMeaningGraph :: String -> MeaningGraph -> String
 dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt ttxt
   where
-    fmtEdge e = printf "i%d -> i%d [label=\"%s\"];" (e^.me_start) (e^.me_end) (e^.me_relation)
+    fmtEdge e = printf "i%d -> i%d [label=\"%s\" fontsize=12.0];"
+                  (e^.me_start) (e^.me_end) (e^.me_relation <> maybe "" (":" <>) (e^.me_prep))
     fmtVerb (MGEntity    _ _ _  ) = Nothing
     fmtVerb (MGPredicate i _ f v) = Just (i,f <> " | { "
                                               <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> " | "
