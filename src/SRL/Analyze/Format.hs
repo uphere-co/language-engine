@@ -8,7 +8,7 @@
 
 module SRL.Analyze.Format where
 
-import           Control.Lens                            ((^.),(^?),_1,_2,_3,_5,_Just,_Right,to)
+import           Control.Lens                            ((^.),(^?),_1,_2,_3,_4,_5,_Just,_Right,to)
 import           Data.Foldable
 import           Data.List                               (intercalate,intersperse)
 import           Data.Maybe                              (fromMaybe,mapMaybe)
@@ -31,7 +31,7 @@ import           Lexicon.Type                            (ArgPattern(..),RoleIns
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
-import           NLP.Syntax.Type.Verb                    (vp_lemma)
+import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
 import           NLP.Syntax.Type.XBar                    (CP)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
@@ -232,16 +232,17 @@ dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt t
     fmtEdge e = printf "i%d -> i%d [label=\"%s\"];" (e^.me_start) (e^.me_end) (e^.me_relation)
     fmtVerb (MGEntity    _ _ _  ) = Nothing
     fmtVerb (MGPredicate i _ f v) = Just (i,f <> " | { "
-                                              <> fromMaybe "" (v^._5) <> " | "
-                                              <> v^._1 <> " | "
-                                              <> formatTense (v^._2) <> "." <> formatAspect (v^._3)
+                                              <> fromMaybe "" (v^?vp_auxiliary._Just._1) <> " | "
+                                              <> fromMaybe "" (v^?vp_negation._Just._1) <> " | "
+                                              <> v^.vp_lemma.to unLemma <> " | "
+                                              <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect)
                                               <> " } " )
     
     vtxt :: String
     vtxt =
       let vertices = mg^.mg_vertices
           verbs = mapMaybe fmtVerb vertices
-          entities = mapMaybe (\case MGEntity i _ t -> Just (i,t); MGPredicate _ _ _ _ -> Nothing) vertices
+          entities = mapMaybe (\case MGEntity i _ t -> Just (i,T.replace "\"" "\\\"" t); MGPredicate _ _ _ _ -> Nothing) vertices
       in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=record style=filled, fillcolor=grey label=\"{%s}\"];" i t)) verbs ++  "\n  " ++
          (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=record label=\"{ %s }\"];" i t)) entities
     etxt :: String
