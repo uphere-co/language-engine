@@ -59,7 +59,7 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
                             (formatTense  (vp^.vp_tense)  <> "." <>
                              formatAspect (vp^.vp_aspect) <> "." <>
                              formatVoice  (vp^.vp_voice))
-                            (fromMaybe "" (vp^?vp_auxiliary._Just._2._2.to unLemma))
+                            (T.intercalate " " (vp^..vp_auxiliary.traverse._2._2.to unLemma))
                             (fromMaybe "" (vp^?vp_negation._Just._2._2.to unLemma))
                             (T.intercalate " " (vp^..vp_words.traverse.to (f.fst)))
 

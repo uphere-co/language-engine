@@ -16,10 +16,6 @@ import           NLP.Type.PennTreebankII
 import           NLP.Syntax.Type.XBar
 
 
-
-type AuxNegWords w = (Maybe (w,(Int,Lemma)),Maybe (w,(Int,Lemma)),[(w,(Int,Lemma))])
-
-
 class GetIntLemma tag where
   intLemma :: BitreeZipperICP tag -> Maybe (Int,Lemma)
   intLemma0 :: BitreeICP tag -> Maybe (Int,Lemma)
