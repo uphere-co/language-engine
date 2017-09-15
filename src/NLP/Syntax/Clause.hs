@@ -16,14 +16,12 @@ import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
-import           Data.Foldable                          (toList)
 import           Data.Either                            (partitionEithers)
 import qualified Data.HashMap.Strict               as HM
 import           Data.List                              (find)
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (First(..),Last(..),(<>))
 import           Data.Text                              (Text)
-import qualified Data.Text                         as T
 --
 import           Data.Bitree
 import           Data.BitreeZipper
@@ -190,8 +188,8 @@ whMovement z =
                 z'  <- hoistMaybe (prev =<< cp^.maximalProjection)
                 let dprng = getRange (current z')
                     -- adjust CPDP hierarchy by modifier relation.
-                    newtr (PN x xs) = PN (dprng,DPCase z') [PN x xs]
-                    newtr (PL x)    = PN (dprng,DPCase z') [PL x]
+                    newtr (PN y ys) = PN (dprng,DPCase z') [PN y ys]
+                    newtr (PL y)    = PN (dprng,DPCase z') [PL y]
                     z'' = replaceTree newtr z
                 lift (put (toBitree z''))
                 return (TraceChain (xsmov ++ [WHPRO]) (Just z'))
@@ -205,8 +203,8 @@ whMovement z =
                 rf0 = _2._CPCase.complement.complement.complement %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)
                 dprng = getRange (current z')
                 -- adjust CPDP hierarchy by modifier relation.
-                newtr (PN x xs) = PN (dprng,DPCase z') [PN (rf0 x) xs]
-                newtr (PL x)    = PN (dprng,DPCase z') [PL (rf0 x)]
+                newtr (PN y ys) = PN (dprng,DPCase z') [PN (rf0 y) ys]
+                newtr (PL y)    = PN (dprng,DPCase z') [PL (rf0 y)]
                 z'' = replaceTree newtr z
             lift (put (toBitree z''))
           return spec
@@ -229,14 +227,14 @@ resolveDP rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
         [] -> return spec
         xs -> case last xs of
                 NULL      -> do let xspro = init xs ++ [SilentPRO]
-                                ((do cp'  <- hoistMaybe ((\case CPCase x -> x) . currentCPDP <$> parent z)
+                                ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDP =<< parent z)
                                      rng' <- hoistMaybe (cpRange cp')
                                      TraceChain xs' x' <- lift (resolveDP rng')
                                      return (TraceChain (xspro <> xs') x'))
                                  <|>
                                  return (TraceChain xspro Nothing))
 
-                SilentPRO ->    ((do cp'  <- hoistMaybe ((\case CPCase x -> x) . currentCPDP <$> parent z)
+                SilentPRO ->    ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDP =<< parent z)
                                      rng' <- hoistMaybe (cpRange cp')
                                      TraceChain xs' x' <- lift (resolveDP rng')
                                      return (TraceChain (xs <> xs') x'))
@@ -292,7 +290,7 @@ findPAWS tagged tr vp mcpstr = do
   cp <- constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
   rng <- cpRange cp
   cpstr <- mcpstr
-  cp' <- (\case CPCase x -> x) . currentCPDP <$> ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
+  cp' <- (^? _CPCase) . currentCPDP =<< ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
   predicateArgWS cp' <$> findVerb (vp^.vp_index) tr
 
 
