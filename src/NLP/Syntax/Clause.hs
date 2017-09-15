@@ -10,7 +10,7 @@ module NLP.Syntax.Clause where
 
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
-import           Control.Monad                          ((<=<),guard)
+import           Control.Monad                          ((<=<),guard,void)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
@@ -236,20 +236,13 @@ bindingAnalysis cpstr = execState (go rng0) cpstr
          rng0 = (either fst fst . getRoot) cpstr
          go rng = do xs <- resolveDP rng
                      tr <- get
-                     case extractZipperById rng tr of
-                       Nothing -> return ()
-                       Just z -> do
-                         let subtr = case z^.tz_current of
-                                       PN (rng',cp) ys -> PN (rng', (cpcase.complement.specifier .~ xs) cp) ys
-                                       PL (rng',cp)    -> PL (rng', (cpcase.complement.specifier .~ xs) cp)
-                         let z' = (tz_current .~ subtr) z
-                         put (toBitree z')
-                         case child1 z' of
-                           Just z'' -> go (getrng z'')
-                           Nothing ->
-                             case next z' of
-                               Just z'' -> go (getrng z'')
-                               Nothing -> return ()
+                     void . runMaybeT $ do
+                       z <- (MaybeT . return) (extractZipperById rng tr)
+                       let z' = replaceItem (_2.cpcase.complement.specifier .~ xs) (_2.cpcase.complement.specifier .~ xs) z
+                       lift (put (toBitree z'))
+                       (((MaybeT . return) (child1 z') >>= \z'' -> lift (go (getrng z'')))
+                        <|>
+                        ((MaybeT . return) (next z') >>= \z'' -> lift (go (getrng z''))))
 
 
 
