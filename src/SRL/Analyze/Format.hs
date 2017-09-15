@@ -226,17 +226,27 @@ formatMGEdge e = printf "i%d -> i%d [label=\"%s\" style=\"%s\" fontsize=12.0];"
                    (e^.me_start)
                    (e^.me_end)
                    (e^.me_relation <> maybe "" (":" <>) (e^.me_prep))
-                   (if (e^.me_ismodifier) then "bold" else "solid" :: Text) 
+                   (if (e^.me_ismodifier) then "bold" else "solid" :: Text)
                  ++
-                 if (e^.me_ismodifier) then printf "\n  {rank=same; i%d; i%d};" (e^.me_start) (e^.me_end) else ""
+                 if (e^.me_ismodifier) then printf "\n  {rankdir=TB; i%d -> i%d [style=invis]};" (e^.me_end) (e^.me_start) else ""
 
-formatMGVerb (MGEntity    _ _ _  ) = Nothing
-formatMGVerb (MGPredicate i _ f v) = Just (i,f <> " | { "
-                                               <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> " | "
-                                               <> fromMaybe "" (v^?vp_negation._Just._1) <> " | "
-                                               <> v^.vp_lemma.to unLemma <> " | "
-                                               <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect)
-                                               <> " } " )
+formatMGVerb (MGEntity    _ _ _ _) = Nothing
+formatMGVerb (MGPredicate i _ f v) = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+                                              "<tr><td colspan=\"4\">" <> f <> "</td></tr>" <>
+                                              "<tr>" <>
+                                              "<td width=\"20\">" <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> "</td>" <>
+                                              "<td width=\"20\">" <> fromMaybe "" (v^?vp_negation._Just._1)           <> "</td>" <>
+                                              "<td>" <> v^.vp_lemma.to unLemma                           <> "</td>" <>
+                                              "<td>" <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect) <> "</td>" <>
+                                              "</tr>" <>
+                                              "</table>" )
+
+formatMGEntity (MGEntity i _ t ns  ) = Just (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+                                               "<tr><td>" <> t <> "</td></tr>" <>
+                                               T.concat (map (\x -> "<tr><td>"<> x <>"</td></tr>") ns) <>
+                                               "</table>")
+  where escquote = T.replace "\"" "\\\""
+formatMGEntity (MGPredicate _ _ _ _) = Nothing
 
 
 dotMeaningGraph :: String -> MeaningGraph -> String
@@ -245,12 +255,13 @@ dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt t
     -- vtxt :: String
     vtxt = let vertices = mg^.mg_vertices
                verbs = mapMaybe formatMGVerb vertices
-               entities = mapMaybe (\case MGEntity i _ t -> Just (i,T.replace "\"" "\\\"" t); MGPredicate _ _ _ _ -> Nothing) vertices
-           in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=record style=filled, fillcolor=grey label=\"{%s}\"];" i t)) verbs ++  "\n  " ++
-              (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=record label=\"{ %s }\"];" i t)) entities
+               entities = mapMaybe formatMGEntity vertices
+
+           in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=plaintext, margin=0, style=filled, fillcolor=grey label=<%s>];" i t)) verbs ++  "\n  " ++
+              (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=plaintext, margin=0, label=<%s>];" i t)) entities
     --
     -- etxt :: String
     etxt = let edges = mg^.mg_edges in (intercalate "\n  " . map formatMGEdge) edges
     --
     -- ttxt :: String
-    ttxt = "labelloc=\"t\"; \n " ++ "label=\"" ++ title ++ "\"; \n " 
+    ttxt = "labelloc=\"t\"; \n " ++ "label=\"" ++ title ++ "\"; \n "

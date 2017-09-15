@@ -29,7 +29,7 @@ numberOfPredicate (SentStructure _i _ptr _vps _clausetr _mcpstr vstrs) = length 
 numberOfMGPredicate :: MeaningGraph -> Int
 numberOfMGPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
   where
-    fmtVerb (MGEntity    _ _ _  )   = Nothing
+    fmtVerb (MGEntity    _ _ _  _ )  = Nothing
     fmtVerb (MGPredicate i _ _f _v) = Just i
 
 

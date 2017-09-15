@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE TypeOperators         #-}
 
@@ -20,6 +21,7 @@ import           Data.Text                    (Text)
 --
 import           Data.Bitree                  (getNodes,getRoot,getRoot1)
 import           Data.BitreeZipper            (current,mkBitreeZipper,root)
+import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
@@ -38,7 +40,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,ds_sentStructures
                                               ,ss_clausetr,ss_mcpstr,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
-                                              ,mv_range,mv_id
+                                              ,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges
                                               )
 --
 import Debug.Trace
@@ -296,7 +298,7 @@ meaningGraph sstr =
                      return (rng,txt)
       filterFrame = filter (\(rng,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
-      entities = map (\(rng,txt) i -> MGEntity i rng txt)
+      entities = map (\(rng,txt) i -> MGEntity i rng txt [])
                . filterFrame
                . map head
                . groupBy ((==) `on` (^._1))
@@ -314,3 +316,19 @@ meaningGraph sstr =
                  let b = isJust (find (== (rng',rng)) depmap) 
                  return (MGEdge fe b mprep i i')
   in trace (show depmap) $ MeaningGraph vertices edges
+
+
+isEntity :: MGVertex -> Bool
+isEntity x = case x of
+               MGEntity {..} -> True
+               _             -> False
+
+
+tagMG :: MeaningGraph -> [(Range,Text)] -> MeaningGraph
+tagMG mg wikilst =
+  let mg' = mg ^.. mg_vertices
+                 . traverse
+                 . to (\x -> if (x ^. mv_range) `elemRevIsInsideR` (map fst wikilst) && isEntity x
+                             then x & (mv_resolved_entities .~ map (^. _2) (filter (\w -> (w ^. _1) `isInsideR` (x ^. mv_range)) wikilst))
+                             else x )
+  in MeaningGraph mg' (mg ^. mg_edges)

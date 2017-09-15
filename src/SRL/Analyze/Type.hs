@@ -118,7 +118,9 @@ instance FromJSON DocAnalysisInput where
 
 data MGVertex = MGEntity    { _mv_id :: Int
                             , _mv_range :: Range
-                            , _mv_text :: Text }
+                            , _mv_text :: Text
+                            , _mv_resolved_entities :: [Text]   -- resolved named entity candidates
+                            }
               | MGPredicate { _mv_id    :: Int
                             , _mv_range :: Range
                             , _mv_frame :: Text
