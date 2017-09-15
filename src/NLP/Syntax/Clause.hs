@@ -188,6 +188,12 @@ whMovement z =
               fmap (fromMaybe (TraceChain xspro Nothing)) . runMaybeT $ do
                 -- check subject position for relative pronoun
                 z'  <- hoistMaybe (prev =<< cp^.maximalProjection)
+                let dprng = getRange (current z')
+                    -- adjust CPDP hierarchy by modifier relation.
+                    newtr (PN x xs) = PN (dprng,DPCase z') [PN x xs]
+                    newtr (PL x)    = PN (dprng,DPCase z') [PL x]
+                    z'' = replaceTree newtr z
+                lift (put (toBitree z''))
                 return (TraceChain (xsmov ++ [WHPRO]) (Just z'))
             _    -> return spec -- do
         else do
@@ -195,13 +201,13 @@ whMovement z =
           -- check object for relative pronoun
           runMaybeT $ do
             z'  <- hoistMaybe (prev =<< cp^.maximalProjection)
-            let rf = _2._CPCase.complement.complement.complement %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)
-                z'' = replaceItem rf rf z
-            {- let cp' = CPCase (((complement.complement.complement) %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)) cp)
-                subtr = case z^.tz_current of
-                          PN (rng,_) ys -> PN (rng,cp') ys
-                          PL (rng,_)    -> PL (rng,cp')
-                z'' = (tz_current .~ subtr) z -}
+            let -- adjust function for complement with relative pronoun resolution
+                rf0 = _2._CPCase.complement.complement.complement %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)
+                dprng = getRange (current z')
+                -- adjust CPDP hierarchy by modifier relation.
+                newtr (PN x xs) = PN (dprng,DPCase z') [PN (rf0 x) xs]
+                newtr (PL x)    = PN (dprng,DPCase z') [PL (rf0 x)]
+                z'' = replaceTree newtr z
             lift (put (toBitree z''))
           return spec
 
