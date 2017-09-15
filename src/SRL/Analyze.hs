@@ -74,11 +74,11 @@ queryProcess config pp apredata emTagger =
                   dstr <- docStructure apredata emTagger <$> runParser pp txt
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  (mapM_ showMatchedFrame . concat . allPAWSTriplesFromDocStructure) dstr
+                  (mapM_ showMatchedFrame . concatMap snd . allPAWSTriplesFromDocStructure) dstr
       ":v " -> do dstr <- docStructure apredata emTagger <$> runParser pp rest
                   when (config^.Analyze.showDetail) $ 
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  (mapM_ showMatchedFrame . concat . allPAWSTriplesFromDocStructure) dstr
+                  (mapM_ showMatchedFrame . concatMap snd . allPAWSTriplesFromDocStructure) dstr
                   --
                   printMeaningGraph dstr
       _     ->    putStrLn "cannot understand the command"

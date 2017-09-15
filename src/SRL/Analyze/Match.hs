@@ -47,9 +47,8 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 
 allPAWSTriplesFromDocStructure
   :: DocStructure
-  -> [[(Maybe [Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
-       ,VerbStructure
-       ,PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))]]
+  -> [(Maybe [Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
+      ,[(VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))])]
 allPAWSTriplesFromDocStructure dstr = do
   msstr <- dstr^.ds_sentStructures
   sstr <- maybeToList msstr
@@ -57,16 +56,14 @@ allPAWSTriplesFromDocStructure dstr = do
 
 
 mkPAWSTriples :: SentStructure
-              -> [(Maybe [Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
-                  ,VerbStructure
-                  ,PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))]
-mkPAWSTriples sstr = do
+              -> (Maybe [Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
+                 ,[(VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))])
+mkPAWSTriples sstr = 
   let clausetr = sstr^.ss_clausetr
       mcpstr = sstr^.ss_mcpstr
-  vstr <- sstr ^.ss_verbStructures
-  let vp = vstr^.vs_vp
-  paws <- maybeToList (findPAWS [] clausetr vp mcpstr)  -- for the time being
-  return (mcpstr,vstr,paws)
+  in ( mcpstr
+     , [(vstr,paws)| vstr <- sstr ^.ss_verbStructures, let vp = vstr^.vs_vp, paws <- maybeToList (findPAWS [] clausetr vp mcpstr) ]) -- for the time being
+  -- return (mcpstr,vstr,paws)
 
 
 
@@ -277,7 +274,7 @@ scoreSelectedFrame total ((_,mselected),n) =
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
   let pawstriples = mkPAWSTriples sstr
-      matched =  mapMaybe (\(_,vstr,paws) -> matchFrame (vstr,paws)) pawstriples
+      matched =  mapMaybe (\(vstr,paws) -> matchFrame (vstr,paws)) . snd $ pawstriples
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList
       --
       preds = flip map matched $ \(rng,vprop,frame,_mselected) i -> MGPredicate i rng frame (simplifyVProp vprop)

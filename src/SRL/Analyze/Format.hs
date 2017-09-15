@@ -203,11 +203,9 @@ formatVerbStructure clausetr mcpstr (VerbStructure vp senses mrmmtoppatts) =
 
 
 
-showMatchedFrame :: (Maybe [Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
-                    ,VerbStructure
-                    ,PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
+showMatchedFrame :: (VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
                  -> IO ()
-showMatchedFrame (_,vstr,paws) = do
+showMatchedFrame (vstr,paws) = do
   let gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
   T.IO.putStrLn "---------------------------"
   flip traverse_ (matchFrame (vstr,paws)) $ \(rng,_,frame,mselected) -> do
