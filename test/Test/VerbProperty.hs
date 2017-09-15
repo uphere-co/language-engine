@@ -8,7 +8,6 @@
 module Test.VerbProperty where
 
 import           Control.Lens               hiding (levels)
-import qualified Data.IntMap                as IM
 import           Data.List                         (find, intercalate)
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
@@ -17,15 +16,12 @@ import qualified Data.Text.IO               as T.IO
 import           Data.Bitree                       (getRoot)
 import           Data.BitreeZipper                 (current)
 import           NLP.Printer.PennTreebankII
-import           NLP.Type.CoreNLP
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty
-import           NLP.Type.UniversalDependencies2.Syntax
 --
 import           NLP.Syntax.Format
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Verb
 --
 import           Test.Common
 import           Test.Tasty.HUnit

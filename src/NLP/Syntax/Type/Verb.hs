@@ -37,4 +37,4 @@ simplifyVProp vprop = VerbProperty { _vp_index     = _vp_index vprop
                                    , _vp_negation  = fmap f (_vp_negation vprop)
                                    , _vp_words     = fmap f (_vp_words vprop)
                                    }
-  where f (z,(i,lma)) = (unLemma lma,(i,lma))
+  where f (_z,(i,lma)) = (unLemma lma,(i,lma))

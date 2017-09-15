@@ -6,7 +6,6 @@ module Test.Trace where
 
 import           Control.Lens               hiding (levels)
 import           Data.Foldable
-import qualified Data.IntMap                as IM
 import           Data.Maybe                        (fromMaybe)
 import           Data.Monoid
 import           Data.Text                         (Text)
@@ -25,13 +24,12 @@ import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Verb
 --
 import           Test.Common
 import           Test.Tasty.HUnit
 import           Test.Tasty
 --
-import Debug.Trace
+
 
 data TracePos = Subj | Comp Int
 
@@ -172,7 +170,7 @@ checkTrace c =
                    comp <- comps ^? ix (n-1)
                    let dp = fmap (\case DP z -> gettokens z; PrepP _ z -> gettokens z) comp
                    return (dp == c ^._3._2)
-      _      -> return False
+
 
 
 unitTests :: TestTree
