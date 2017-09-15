@@ -99,8 +99,7 @@ test_reduced_relative_clause =
 
 formatDetail :: TestTrace -> [Text]
 formatDetail (_txt,_,_,lma,pt,tmxs) =
-  let -- lmap1 = IM.fromList (map (_2 %~ (\x -> x^._1))  lma)
-      vps  = mkVPS lma pt -- verbPropertyFromPennTree lmap1 pt
+  let vps  = mkVPS lma pt
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
       mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy tmxs) vps
  
@@ -156,8 +155,7 @@ testcases = [ test_silent_pronoun
             ]
 
 checkTrace :: TestTrace -> Bool
-checkTrace c = False
-{- 
+checkTrace c = 
   fromMaybe False $ do
     let vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
@@ -175,7 +173,7 @@ checkTrace c = False
                    let dp = fmap (\case DP z -> gettokens z; PrepP _ z -> gettokens z) comp
                    return (dp == c ^._3._2)
       _      -> return False
--}
+
 
 unitTests :: TestTree
 unitTests = testGroup "Trace identification test" . flip map testcases $ \c ->
