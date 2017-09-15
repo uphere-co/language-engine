@@ -2,35 +2,41 @@
 
 module SRL.Statistics where
 
-import           Control.Lens      ((^.),(^..),_1,_2,_3,_4,_5,to,traverse)
+import           Control.Lens      ((^.),(^..),to,traverse)
 import           Data.Graph
-import           Data.Maybe        (fromMaybe,mapMaybe)
-import           Data.Monoid       ((<>))
+import           Data.Maybe        (mapMaybe)
 import           Data.Tree
 --
-import           NLP.Syntax.Format (formatAspect,formatTense)
-import           SRL.Analyze.Type  (MGVertex(..),SentStructure(..)
-                                   ,me_start,me_end
-                                   ,mg_edges,mg_vertices,mv_id)
+import           SRL.Analyze.Type  (MGVertex(..),SentStructure(..),MeaningGraph
+                                   ,me_start,me_end,mg_edges,mg_vertices,mv_id)
 
 
 -- DocStructure mtokenss sentitems mergedtags sstrs
 
+getGraphFromMG :: MeaningGraph -> Maybe Graph
 getGraphFromMG mg =
-  let vertices = mg ^. mg_vertices ^.. traverse . mv_id  
-      edges    = mg ^. mg_edges ^.. traverse . to (\x -> (x ^. me_start, x ^. me_end))
-  in case vertices of
+  let vtxs = mg ^. mg_vertices ^.. traverse . mv_id  
+      edgs = mg ^. mg_edges ^.. traverse . to (\x -> (x ^. me_start, x ^. me_end))
+  in case vtxs of
     [] -> Nothing
     v  -> let bounds = (minimum v, maximum v)
-              graph  = buildG bounds edges
+              graph  = buildG bounds edgs
           in (Just graph)
 
-numberOfPredicate (SentStructure i ptr vps clausetr mcpstr vstrs) = length vstrs
+numberOfPredicate :: SentStructure -> Int
+numberOfPredicate (SentStructure _i _ptr _vps _clausetr _mcpstr vstrs) = length vstrs
 
+numberOfMGPredicate :: MeaningGraph -> Int
 numberOfMGPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
   where
-    fmtVerb (MGEntity    _ _ _  ) = Nothing
-    fmtVerb (MGPredicate i _ f v) = Just i
+    fmtVerb (MGEntity    _ _ _  )   = Nothing
+    fmtVerb (MGPredicate i _ _f _v) = Just i
 
-furthestPath grph = maximum $ map (length . flatten) $ dff grph
+
+-- I change the name to farthest, not furthest
+farthestPath :: Graph -> Int
+farthestPath grph = maximum $ map (length . flatten) $ dff grph
+
+
+numberOfIsland :: Graph -> Int
 numberOfIsland grph = length $ components $ grph

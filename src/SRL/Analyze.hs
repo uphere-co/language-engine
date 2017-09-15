@@ -10,14 +10,12 @@ import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
 import           Data.Default                 (def)
-import           Data.Graph
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
 import           Data.Maybe
 import           Data.Text                    (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.IO           as T.IO
-import           Data.Tree                    (flatten,levels)
 import qualified Language.Java          as J
 import           MWE.Util                     (mkTextFromToken)
 import           System.Console.Haskeline     (runInputT,defaultSettings,getInputLine)

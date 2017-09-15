@@ -110,8 +110,6 @@ matchObjects :: [(PBArg,FNFrameElement)]
 matchObjects rolemap verbp patt = do
   (garg,obj') <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved.to (\x -> x >>= \case DP z -> Just z; _ -> Nothing))
   obj <- maybeToList obj'
-  -- guard ((not.null) obj')
-  -- Right obj <- [last obj']
   ctag <- case getRoot (current obj) of
             Left (_,node) -> [chunkTag node]
             _             -> []
@@ -309,5 +307,5 @@ meaningGraph sstr =
                  (fe,(mprep,z)) <- felst
                  let rng' = getRange (current z)
                  i' <- maybeToList (HM.lookup rng' rngidxmap)
-                 return (MGEdge fe mprep i i')
+                 return (MGEdge fe False mprep i i')
   in MeaningGraph vertices edges

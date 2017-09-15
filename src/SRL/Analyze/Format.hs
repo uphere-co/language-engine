@@ -8,7 +8,7 @@
 
 module SRL.Analyze.Format where
 
-import           Control.Lens                            ((^..),(^.),(^?),_1,_2,_3,_4,_5,_Just,_Right,to)
+import           Control.Lens                            ((^..),(^.),(^?),_1,_2,_3,_Just,_Right,to)
 import           Data.Foldable
 import           Data.List                               (intercalate,intersperse)
 import           Data.Maybe                              (fromMaybe,mapMaybe)

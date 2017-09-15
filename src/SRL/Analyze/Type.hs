@@ -21,10 +21,10 @@ import           FrameNet.Query.Frame          (FrameDB)
 import           Lexicon.Type                  (ArgPattern,GRel,RoleInstance,RolePattInstance,SenseID)
 import           NLP.Syntax.Type               (ClauseTree)
 import           NLP.Syntax.Type.Verb          (VerbProperty(..))
-import           NLP.Syntax.Type.XBar          (Zipper,CP,CPDP)
+import           NLP.Syntax.Type.XBar          (Zipper,CPDP)
 import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
 import           NLP.Type.PennTreebankII       (Lemma,PennTree)
-import           NLP.Type.SyntaxProperty       (Tense,Aspect,Voice)
+import           NLP.Type.SyntaxProperty       (Voice)
 import           NLP.Type.TagPos               (CharIdx,SentItem,TagPos,TokIdx)
 import           WikiEL.EntityLinking          (EntityMention)
 --
@@ -143,6 +143,7 @@ instance ToJSON MGVertex
 instance FromJSON MGVertex
 
 data MGEdge = MGEdge { _me_relation :: Text
+                     , _me_ismodifier :: Bool
                      , _me_prep :: Maybe Text
                      , _me_start :: Int
                      , _me_end :: Int }
