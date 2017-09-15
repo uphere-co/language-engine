@@ -98,8 +98,8 @@ toBitree = current . root
 
 -- | replace the whole subtree focused by zipper
 --
-replaceTree :: Bitree c t -> BitreeZipper c t -> BitreeZipper c t
-replaceTree tr = tz_current .~ tr
+replaceTree :: (Bitree c t -> Bitree c t) -> BitreeZipper c t -> BitreeZipper c t
+replaceTree f = tz_current %~ f
 
 
 -- | replace the root item of the subtree focused by zipper. 
@@ -108,4 +108,4 @@ replaceItem :: (c -> c) -> (t -> t) -> BitreeZipper c t -> BitreeZipper c t
 replaceItem f g z = let tr = case z^.tz_current of
                                  PN c xs -> PN (f c) xs
                                  PL t    -> PL (g t)
-                    in replaceTree tr z
+                    in replaceTree (const tr) z
