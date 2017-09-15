@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
@@ -150,23 +151,23 @@ cpRange cp = (cp^?maximalProjection._Just.to (getRange . current)) <|>
 
 identifyCPHierarchy :: [TagPos TokIdx (Maybe Text)]
                     -> [VerbProperty (Zipper (Lemma ': as))]
-                    -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
+                    -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
 identifyCPHierarchy tagged vps = traverse (bitraverse tofull tofull) rtr
-  where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure cp) <=< constructCP tagged) vps
+  where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure (CPCase cp)) <=< constructCP tagged) vps
         cpmap = HM.fromList (map (\x->(x^._1,x)) cps)
         rngs = HM.keys cpmap
         rtr = rangeTree rngs
         tofull rng = HM.lookup rng cpmap
 
 
-currentCP :: BitreeZipper (Range,CP as) (Range,CP as) -> CP as
-currentCP = snd . getRoot1 . current
+currentCPDP :: BitreeZipper (Range,CPDP as) (Range,CPDP as) -> CPDP as
+currentCPDP = snd . getRoot1 . current
 
 
-whMovement :: BitreeZipper (Range,CP as) (Range,CP as)
-           -> State (Bitree (Range,CP as) (Range,CP as)) (TraceChain (Zipper as))
+whMovement :: BitreeZipper (Range,CPDP as) (Range,CPDP as)
+           -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
 whMovement z = do
-  let cp = currentCP z
+  let cp = (\case CPCase x -> x) (currentCPDP z)
   case cp^.complement.specifier.trChain of
     [] -> return (TraceChain [])
     xs -> case last xs of
@@ -181,7 +182,7 @@ whMovement z = do
         runMaybeT $ do
           -- check object position for relative pronoun
           z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
-          let cp' = ((complement.complement.complement) %~ (TraceChain ([Left Moved,Left WHPRO,Right (DP z')]) :)) cp
+          let cp' = CPCase (((complement.complement.complement) %~ (TraceChain ([Left Moved,Left WHPRO,Right (DP z')]) :)) cp)
               subtr = case z^.tz_current of
                         PN (rng,_) ys -> PN (rng,cp') ys
                         PL (rng,_)    -> PL (rng,cp')
@@ -194,13 +195,13 @@ whMovement z = do
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
-resolveDP :: forall as. Range -> State (Bitree (Range,CP as) (Range,CP as)) (TraceChain (Zipper as))
+resolveDP :: forall as. Range -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
 resolveDP rng = do
   tr <- get
   case extractZipperById rng tr of
     Nothing -> return (TraceChain [])
     Just z -> do
-      let cp = currentCP z
+      let cp = (\case CPCase x -> x) (currentCPDP z)
       if either (== C_WH) (isChunkAs WHNP . current) (cp^.headX)
         then whMovement z
         else
@@ -208,24 +209,22 @@ resolveDP rng = do
             [] -> return (TraceChain [])
             xs -> case last xs of
                     Left NULL      -> do let xspro = TraceChain (init xs ++ [Left SilentPRO])
-                                             -- xsmov = TraceChain (init xs ++ [Left Moved])
                                          fmap (fromMaybe xspro) . runMaybeT $ do
-                                           cp'  <- (MaybeT . return) (currentCP <$> parent z)
+                                           cp'  <- (MaybeT . return) ((\case CPCase x -> x) . currentCPDP <$> parent z)
                                            rng' <- (MaybeT . return) (cpRange cp')
                                            dp <- lift (resolveDP rng')
                                            return (xspro <> dp)
                     Left SilentPRO ->    fmap (fromMaybe (TraceChain xs)) . runMaybeT $ do
-                                           cp'  <- (MaybeT . return) (currentCP <$> parent z)
+                                           cp'  <- (MaybeT . return) ((\case CPCase x -> x) . currentCPDP <$> parent z)
                                            rng' <- (MaybeT . return) (cpRange cp')
                                            dp <- lift (resolveDP rng')
                                            return (TraceChain xs <> dp)
                     _              ->    return (TraceChain xs)
 
 
-bindingAnalysis :: Bitree (Range,CP as) (Range,CP as) -> Bitree (Range,CP as) (Range,CP as)
+bindingAnalysis :: Bitree (Range,CPDP as) (Range,CPDP as) -> Bitree (Range,CPDP as) (Range,CPDP as)
 bindingAnalysis cpstr = execState (go rng0) cpstr
-   where -- z0 = either id id . getRoot . mkBitreeZipper [] $ cpstr
-         getrng = either fst fst . getRoot . current
+   where getrng = either fst fst . getRoot . current
          rng0 = (either fst fst . getRoot) cpstr
          go rng = do xs <- resolveDP rng
                      tr <- get
@@ -233,8 +232,8 @@ bindingAnalysis cpstr = execState (go rng0) cpstr
                        Nothing -> return ()
                        Just z -> do
                          let subtr = case z^.tz_current of
-                                       PN (rng',cp) ys -> PN (rng',(complement.specifier .~ xs) cp) ys
-                                       PL (rng',cp)    -> PL (rng',(complement.specifier .~ xs) cp)
+                                       PN (rng',cp) ys -> PN (rng', (cpcase.complement.specifier .~ xs) cp) ys
+                                       PL (rng',cp)    -> PL (rng', (cpcase.complement.specifier .~ xs) cp)
                          let z' = (tz_current .~ subtr) z
                          put (toBitree z')
                          case child1 z' of
@@ -270,13 +269,13 @@ predicateArgWS cp z =
 findPAWS :: [TagPos TokIdx (Maybe Text)]
          -> ClauseTree
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
-         -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
+         -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
          -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
 findPAWS tagged tr vp mcpstr = do
-  cp <- constructCP tagged vp   -- very inefficient. but for testing.
+  cp <- constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
   rng <- cpRange cp
   cpstr <- mcpstr
-  cp' <- snd . getRoot1 . current <$> ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
+  cp' <- (\case CPCase x -> x) . currentCPDP <$> ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
   predicateArgWS cp' <$> findVerb (vp^.vp_index) tr
 
 

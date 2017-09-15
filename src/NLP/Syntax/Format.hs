@@ -129,7 +129,7 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
         formatposchunk (Right p) = "(" ++ show p ++ ")"
 
 
-formatCPHierarchy :: Bitree (Range,CP as) (Range,CP as) -> Text
+formatCPHierarchy :: Bitree (Range,CPDP as) (Range,CPDP as) -> Text
 formatCPHierarchy tr = formatBitree (\(rng,_cp) -> T.pack (printf "%-7s" (show rng))) tr
 
 
@@ -149,7 +149,7 @@ formatClauseStructure clausetr =
 
 formatVPwithPAWS :: [TagPos TokIdx (Maybe Text)]
                  -> ClauseTree
-                 -> Maybe [Bitree (Range,CP (Lemma ': as)) (Range,CP (Lemma ': as))]
+                 -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
                  -> VerbProperty (BitreeZipperICP (Lemma ': as))
                  -> Text
 formatVPwithPAWS tagged clausetr mcpstr vp =
