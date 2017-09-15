@@ -46,7 +46,7 @@ import           SRL.Analyze.Type                        (ExceptionalFrame(..),O
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,MGVertex(..),MeaningGraph
                                                          ,mg_vertices,mg_edges
-                                                         ,me_relation,me_prep,me_start,me_end
+                                                         ,me_relation,me_ismodifier,me_prep,me_start,me_end
                                                          ,chooseMostFreqFrame
                                                          ,onfn_senseID,onfn_definition,onfn_frame
                                                          ,tf_frameID,tf_feCore,tf_fePeri
@@ -222,31 +222,35 @@ showMatchedFrame (vstr,paws) = do
 
 
 
+formatMGEdge e = printf "i%d -> i%d [label=\"%s\" style=\"%s\" fontsize=12.0];"
+                   (e^.me_start)
+                   (e^.me_end)
+                   (e^.me_relation <> maybe "" (":" <>) (e^.me_prep))
+                   (if (e^.me_ismodifier) then "bold" else "solid" :: Text) 
+                 ++
+                 if (e^.me_ismodifier) then printf "\n  {rank=same; i%d; i%d};" (e^.me_start) (e^.me_end) else ""
+
+formatMGVerb (MGEntity    _ _ _  ) = Nothing
+formatMGVerb (MGPredicate i _ f v) = Just (i,f <> " | { "
+                                               <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> " | "
+                                               <> fromMaybe "" (v^?vp_negation._Just._1) <> " | "
+                                               <> v^.vp_lemma.to unLemma <> " | "
+                                               <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect)
+                                               <> " } " )
 
 
 dotMeaningGraph :: String -> MeaningGraph -> String
 dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt ttxt
   where
-    fmtEdge e = printf "i%d -> i%d [label=\"%s\" fontsize=12.0];"
-                  (e^.me_start) (e^.me_end) (e^.me_relation <> maybe "" (":" <>) (e^.me_prep))
-    fmtVerb (MGEntity    _ _ _  ) = Nothing
-    fmtVerb (MGPredicate i _ f v) = Just (i,f <> " | { "
-                                              <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> " | "
-                                              <> fromMaybe "" (v^?vp_negation._Just._1) <> " | "
-                                              <> v^.vp_lemma.to unLemma <> " | "
-                                              <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect)
-                                              <> " } " )
-    
-    vtxt :: String
-    vtxt =
-      let vertices = mg^.mg_vertices
-          verbs = mapMaybe fmtVerb vertices
-          entities = mapMaybe (\case MGEntity i _ t -> Just (i,T.replace "\"" "\\\"" t); MGPredicate _ _ _ _ -> Nothing) vertices
-      in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=record style=filled, fillcolor=grey label=\"{%s}\"];" i t)) verbs ++  "\n  " ++
-         (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=record label=\"{ %s }\"];" i t)) entities
-    etxt :: String
-    etxt =      
-      let edges = mg^.mg_edges
-      in (intercalate "\n " . map fmtEdge) edges
-    ttxt :: String
+    -- vtxt :: String
+    vtxt = let vertices = mg^.mg_vertices
+               verbs = mapMaybe formatMGVerb vertices
+               entities = mapMaybe (\case MGEntity i _ t -> Just (i,T.replace "\"" "\\\"" t); MGPredicate _ _ _ _ -> Nothing) vertices
+           in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=record style=filled, fillcolor=grey label=\"{%s}\"];" i t)) verbs ++  "\n  " ++
+              (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=record label=\"{ %s }\"];" i t)) entities
+    --
+    -- etxt :: String
+    etxt = let edges = mg^.mg_edges in (intercalate "\n  " . map formatMGEdge) edges
+    --
+    -- ttxt :: String
     ttxt = "labelloc=\"t\"; \n " ++ "label=\"" ++ title ++ "\"; \n " 

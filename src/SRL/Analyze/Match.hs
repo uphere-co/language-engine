@@ -2,9 +2,8 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE OverloadedStrings     #-}
--- {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module SRL.Analyze.Match where
 
@@ -15,11 +14,11 @@ import           Data.Foldable
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
-import           Data.Maybe                   (catMaybes,fromMaybe,listToMaybe,mapMaybe,maybeToList)
+import           Data.Maybe                   (catMaybes,fromMaybe,isJust,listToMaybe,mapMaybe,maybeToList)
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
-import           Data.Bitree                  (getNodes,getRoot)
+import           Data.Bitree                  (getNodes,getRoot,getRoot1)
 import           Data.BitreeZipper            (current,mkBitreeZipper,root)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
@@ -41,7 +40,8 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,vs_roleTopPatts,vs_vp
                                               ,mv_range,mv_id
                                               )
-
+--
+import Debug.Trace
 
 
 
@@ -270,12 +270,19 @@ scoreSelectedFrame total ((_,mselected),n) =
   in mn * (fromIntegral n) / (fromIntegral total) * roleMatchWeightFactor + (mn*(fromIntegral total))
 
 
+depCPDP :: Bitree (Range,a) (Range,a) -> [(Range,Range)]
+depCPDP (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap depCPDP xs 
+depCPDP (PL _)           = []
+
 
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
-  let pawstriples = mkPAWSTriples sstr
-      matched =  mapMaybe (\(vstr,paws) -> matchFrame (vstr,paws)) . snd $ pawstriples
+  let (mcpstr,lst_vstrpaws) = mkPAWSTriples sstr
+      matched = mapMaybe matchFrame lst_vstrpaws
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList
+      depmap = depCPDP =<< join (maybeToList mcpstr)
+
+      
       --
       preds = flip map matched $ \(rng,vprop,frame,_mselected) i -> MGPredicate i rng frame (simplifyVProp vprop)
       ipreds = zipWith ($) preds [1..]
@@ -304,5 +311,6 @@ meaningGraph sstr =
                  (fe,(mprep,z)) <- felst
                  let rng' = getRange (current z)
                  i' <- maybeToList (HM.lookup rng' rngidxmap)
-                 return (MGEdge fe False mprep i i')
-  in MeaningGraph vertices edges
+                 let b = isJust (find (== (rng',rng)) depmap) 
+                 return (MGEdge fe b mprep i i')
+  in trace (show depmap) $ MeaningGraph vertices edges
