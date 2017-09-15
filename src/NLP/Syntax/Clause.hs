@@ -16,12 +16,14 @@ import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
+import           Data.Foldable                          (toList)
 import           Data.Either                            (partitionEithers)
 import qualified Data.HashMap.Strict               as HM
 import           Data.List                              (find)
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (First(..),Last(..),(<>))
 import           Data.Text                              (Text)
+import qualified Data.Text                         as T
 --
 import           Data.Bitree
 import           Data.BitreeZipper
@@ -36,8 +38,6 @@ import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs)
---
-
 
 
 maximalProjectionVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
@@ -77,7 +77,7 @@ splitPP z = do
 complementsOfVerb :: [TagPos TokIdx (Maybe Text)]
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> [TraceChain (DPorPP (Zipper (Lemma ': as)))]
-complementsOfVerb tagged vp = map (\x -> TraceChain [Right (checkEmptyPrep x)])
+complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep x)))
                                   ((\z -> fromMaybe z (splitDP z)) <$>
                                    (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
@@ -107,8 +107,8 @@ identifySubject tag vp =
             N.SINV -> firstSiblingBy next (isChunkAs NP) vp
             _      -> firstSiblingBy prev (isChunkAs NP) vp
   in case r of
-       Nothing -> TraceChain [Left NULL]
-       Just z  -> TraceChain [Right z]
+       Nothing -> TraceChain [NULL] Nothing
+       Just z  -> TraceChain []     (Just z)
 
 
 
@@ -137,7 +137,7 @@ constructCP tagged vprop = do
           _      -> -- somewhat problematic case?
             return (mkCP (Left C_NULL) Nothing (mkTP (Just tp) subj verbp))
       _ -> -- reduced relative clause
-           return (mkCP (Left C_WH) (Just vp) (mkTP (Just vp) (TraceChain [Left NULL]) verbp))
+           return (mkCP (Left C_WH) (Just vp) (mkTP (Just vp) (TraceChain [NULL] Nothing) verbp))
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -168,27 +168,34 @@ whMovement :: BitreeZipper (Range,CPDP as) (Range,CPDP as)
            -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
 whMovement z = do
   let cp = (\case CPCase x -> x) (currentCPDP z)
-  case cp^.complement.specifier.trChain of
-    [] -> return (TraceChain [])
-    xs -> case last xs of
-      Left NULL -> do
-        let xspro = init xs ++ [Left SilentPRO]
-            xsmov = init xs ++ [Left Moved]
-        fmap (TraceChain . fromMaybe xspro) . runMaybeT $ do
-          -- check subject position for relative pronoun
-          z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
-          return (xsmov ++ [Left WHPRO, Right z'])
-      _ -> do
-        runMaybeT $ do
-          -- check object position for relative pronoun
-          z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
-          let cp' = CPCase (((complement.complement.complement) %~ (TraceChain ([Left Moved,Left WHPRO,Right (DP z')]) :)) cp)
-              subtr = case z^.tz_current of
-                        PN (rng,_) ys -> PN (rng,cp') ys
-                        PL (rng,_)    -> PL (rng,cp')
-              z'' = (tz_current .~ subtr) z
-          lift (put (toBitree z''))
-        return (TraceChain xs)
+      spec = cp^.complement.specifier
+  -- whMovement process starts with cheking trace in subject
+  let xs = spec^.trChain
+  if (not . null) xs
+    then
+      -- with trace in subject
+      -- check subject for relative pronoun
+      case last xs of
+        NULL -> do
+          let xspro = init xs ++ [SilentPRO]
+              xsmov = init xs ++ [Moved]
+          fmap (fromMaybe (TraceChain xspro Nothing)) . runMaybeT $ do
+            -- check subject position for relative pronoun
+            z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
+            return (TraceChain (xsmov ++ [WHPRO]) (Just z'))
+        _    -> return spec -- do
+    else do
+      -- without trace in subject
+      -- check object for relative pronoun
+      runMaybeT $ do
+        z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
+        let cp' = CPCase (((complement.complement.complement) %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)) cp)
+            subtr = case z^.tz_current of
+                      PN (rng,_) ys -> PN (rng,cp') ys
+                      PL (rng,_)    -> PL (rng,cp')
+            z'' = (tz_current .~ subtr) z
+        lift (put (toBitree z''))
+      return spec
 
 
 -- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
@@ -199,27 +206,28 @@ resolveDP :: forall as. Range -> State (Bitree (Range,CPDP as) (Range,CPDP as)) 
 resolveDP rng = do
   tr <- get
   case extractZipperById rng tr of
-    Nothing -> return (TraceChain [])
+    Nothing -> return (TraceChain [] Nothing)
     Just z -> do
       let cp = (\case CPCase x -> x) (currentCPDP z)
       if either (== C_WH) (isChunkAs WHNP . current) (cp^.headX)
         then whMovement z
-        else
-          case cp^.complement.specifier.trChain of
-            [] -> return (TraceChain [])
+        else do
+          let spec = cp^.complement.specifier
+          case spec^.trChain of
+            [] -> return spec
             xs -> case last xs of
-                    Left NULL      -> do let xspro = TraceChain (init xs ++ [Left SilentPRO])
-                                         fmap (fromMaybe xspro) . runMaybeT $ do
-                                           cp'  <- (MaybeT . return) ((\case CPCase x -> x) . currentCPDP <$> parent z)
-                                           rng' <- (MaybeT . return) (cpRange cp')
-                                           dp <- lift (resolveDP rng')
-                                           return (xspro <> dp)
-                    Left SilentPRO ->    fmap (fromMaybe (TraceChain xs)) . runMaybeT $ do
-                                           cp'  <- (MaybeT . return) ((\case CPCase x -> x) . currentCPDP <$> parent z)
-                                           rng' <- (MaybeT . return) (cpRange cp')
-                                           dp <- lift (resolveDP rng')
-                                           return (TraceChain xs <> dp)
-                    _              ->    return (TraceChain xs)
+                    NULL      -> do let xspro = init xs ++ [SilentPRO]
+                                    fmap (fromMaybe (TraceChain xspro Nothing)) . runMaybeT $ do
+                                      cp'  <- (MaybeT . return) ((\case CPCase x -> x) . currentCPDP <$> parent z)
+                                      rng' <- (MaybeT . return) (cpRange cp')
+                                      TraceChain xs' x' <- lift (resolveDP rng')
+                                      return (TraceChain (xspro <> xs') x')
+                    SilentPRO ->    fmap (fromMaybe (TraceChain xs Nothing)) . runMaybeT $ do
+                                      cp'  <- (MaybeT . return) ((\case CPCase x -> x) . currentCPDP <$> parent z)
+                                      rng' <- (MaybeT . return) (cpRange cp')
+                                      TraceChain xs' x' <- lift (resolveDP rng')
+                                      return (TraceChain (xs <> xs') x')
+                    _         ->    return spec
 
 
 bindingAnalysis :: Bitree (Range,CPDP as) (Range,CPDP as) -> Bitree (Range,CPDP as) (Range,CPDP as)

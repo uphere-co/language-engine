@@ -49,16 +49,12 @@ phraseNodeType :: Maybe (TP as) -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Te
 phraseNodeType mtp z
   = let rng = getRange (current z)
         subj = do tp <- mtp
-                  let dplinks = tp^.specifier.trChain -- .to (fmap chooseATNode)
-                  dp <- case dplinks of
-                          [] -> Nothing
-                          _ -> case last dplinks of
-                                 Left  _        -> Nothing
-                                 Right z'       -> Just z'
+                  dp <- tp^.specifier.trResolved
                   return (getRange (current dp) == rng)
         obj  = do tp <- mtp
-                  let os = zip [1..] (tp^..complement.complement.traverse.trChain.to (fmap (fmap removeDPorPP)))         -- this must be changed to accommodate PP
-                  m <- find (\o -> o^?_2._head._Right.to current.to getRange == Just rng) os
+                  -- The following must be changed to accommodate PP
+                  let os = zip [1..] (tp^..complement.complement.traverse.trResolved.to (fmap removeDPorPP))
+                  m <- find (\o -> o^?_2._Just.to current.to getRange == Just rng) os
                   return (m^._1)
         mgarg :: Maybe GArg
         mgarg = case subj of

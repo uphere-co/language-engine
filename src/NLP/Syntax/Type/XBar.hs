@@ -58,8 +58,10 @@ data TraceType = NULL | SilentPRO | Moved | WHPRO
 
 
 
-newtype TraceChain a = TraceChain { _trChain :: [Either TraceType a] }
-                     deriving (Show,Eq,Ord,Functor,Monoid)
+data TraceChain a = TraceChain { _trChain    :: [TraceType]
+                               , _trResolved :: Maybe a
+                               }
+                     deriving (Show,Eq,Ord,Functor)
 
 makeLenses ''TraceChain
 
