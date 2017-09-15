@@ -65,6 +65,10 @@ data TraceChain a = TraceChain { _trChain    :: [TraceType]
 
 makeLenses ''TraceChain
 
+emptyTraceChain :: TraceChain a
+emptyTraceChain = TraceChain [] Nothing
+
+
 data DPorPP a = DP a | PrepP (Maybe Text) a
 
 makePrisms ''DPorPP
@@ -119,5 +123,8 @@ mkCP mc mcp tp = XP mc mcp () () tp
 
 
 data CPDP a = CPCase { _cpcase :: CP a }
+            | DPCase { _dpcase :: Zipper a }
+
+makePrisms ''CPDP
 
 makeLenses ''CPDP

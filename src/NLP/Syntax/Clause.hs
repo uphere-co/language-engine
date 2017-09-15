@@ -40,6 +40,10 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs)
 
 
+hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
+hoistMaybe = MaybeT . return
+
+
 maximalProjectionVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
 maximalProjectionVP vp = listToMaybe (vp^.vp_words) >>= parent . fst
 
@@ -166,36 +170,38 @@ currentCPDP = snd . getRoot1 . current
 
 whMovement :: BitreeZipper (Range,CPDP as) (Range,CPDP as)
            -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
-whMovement z = do
-  let cp = (\case CPCase x -> x) (currentCPDP z)
-      spec = cp^.complement.specifier
-  -- whMovement process starts with cheking trace in subject
-  let xs = spec^.trChain
-  if (not . null) xs
-    then
-      -- with trace in subject
-      -- check subject for relative pronoun
-      case last xs of
-        NULL -> do
-          let xspro = init xs ++ [SilentPRO]
-              xsmov = init xs ++ [Moved]
-          fmap (fromMaybe (TraceChain xspro Nothing)) . runMaybeT $ do
-            -- check subject position for relative pronoun
-            z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
-            return (TraceChain (xsmov ++ [WHPRO]) (Just z'))
-        _    -> return spec -- do
-    else do
-      -- without trace in subject
-      -- check object for relative pronoun
-      runMaybeT $ do
-        z'  <- (MaybeT . return) (prev =<< cp^.maximalProjection)
-        let cp' = CPCase (((complement.complement.complement) %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)) cp)
-            subtr = case z^.tz_current of
-                      PN (rng,_) ys -> PN (rng,cp') ys
-                      PL (rng,_)    -> PL (rng,cp')
-            z'' = (tz_current .~ subtr) z
-        lift (put (toBitree z''))
-      return spec
+whMovement z =
+  case currentCPDP z of
+    DPCase _  -> return emptyTraceChain
+    CPCase cp -> do
+      let spec = cp^.complement.specifier
+      -- whMovement process starts with cheking trace in subject
+      let xs = spec^.trChain
+      if (not . null) xs
+        then
+          -- with trace in subject
+          -- check subject for relative pronoun
+          case last xs of
+            NULL -> do
+              let xspro = init xs ++ [SilentPRO]
+                  xsmov = init xs ++ [Moved]
+              fmap (fromMaybe (TraceChain xspro Nothing)) . runMaybeT $ do
+                -- check subject position for relative pronoun
+                z'  <- hoistMaybe (prev =<< cp^.maximalProjection)
+                return (TraceChain (xsmov ++ [WHPRO]) (Just z'))
+            _    -> return spec -- do
+        else do
+          -- without trace in subject
+          -- check object for relative pronoun
+          runMaybeT $ do
+            z'  <- hoistMaybe (prev =<< cp^.maximalProjection)
+            let cp' = CPCase (((complement.complement.complement) %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)) cp)
+                subtr = case z^.tz_current of
+                          PN (rng,_) ys -> PN (rng,cp') ys
+                          PL (rng,_)    -> PL (rng,cp')
+                z'' = (tz_current .~ subtr) z
+            lift (put (toBitree z''))
+          return spec
 
 
 -- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
@@ -203,10 +209,10 @@ whMovement z = do
 --   of TP of which is marked as silent pronoun.
 --
 resolveDP :: forall as. Range -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
-resolveDP rng = do
+resolveDP rng = {- runMaybeT emptyTraceChain $ -} do
   tr <- get
   case extractZipperById rng tr of
-    Nothing -> return (TraceChain [] Nothing)
+    Nothing -> return emptyTraceChain
     Just z -> do
       let cp = (\case CPCase x -> x) (currentCPDP z)
       if either (== C_WH) (isChunkAs WHNP . current) (cp^.headX)
@@ -218,13 +224,13 @@ resolveDP rng = do
             xs -> case last xs of
                     NULL      -> do let xspro = init xs ++ [SilentPRO]
                                     fmap (fromMaybe (TraceChain xspro Nothing)) . runMaybeT $ do
-                                      cp'  <- (MaybeT . return) ((\case CPCase x -> x) . currentCPDP <$> parent z)
-                                      rng' <- (MaybeT . return) (cpRange cp')
+                                      cp'  <- hoistMaybe ((\case CPCase x -> x) . currentCPDP <$> parent z)
+                                      rng' <- hoistMaybe (cpRange cp')
                                       TraceChain xs' x' <- lift (resolveDP rng')
                                       return (TraceChain (xspro <> xs') x')
                     SilentPRO ->    fmap (fromMaybe (TraceChain xs Nothing)) . runMaybeT $ do
-                                      cp'  <- (MaybeT . return) ((\case CPCase x -> x) . currentCPDP <$> parent z)
-                                      rng' <- (MaybeT . return) (cpRange cp')
+                                      cp'  <- hoistMaybe ((\case CPCase x -> x) . currentCPDP <$> parent z)
+                                      rng' <- hoistMaybe (cpRange cp')
                                       TraceChain xs' x' <- lift (resolveDP rng')
                                       return (TraceChain (xs <> xs') x')
                     _         ->    return spec
@@ -237,12 +243,12 @@ bindingAnalysis cpstr = execState (go rng0) cpstr
          go rng = do xs <- resolveDP rng
                      tr <- get
                      void . runMaybeT $ do
-                       z <- (MaybeT . return) (extractZipperById rng tr)
+                       z <- hoistMaybe (extractZipperById rng tr)
                        let z' = replaceItem (_2.cpcase.complement.specifier .~ xs) (_2.cpcase.complement.specifier .~ xs) z
                        lift (put (toBitree z'))
-                       (((MaybeT . return) (child1 z') >>= \z'' -> lift (go (getrng z'')))
+                       ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
                         <|>
-                        ((MaybeT . return) (next z') >>= \z'' -> lift (go (getrng z''))))
+                        (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
 
 
 
