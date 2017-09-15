@@ -246,7 +246,7 @@ bindingAnalysis cpstr = execState (go rng0) cpstr
                      tr <- get
                      void . runMaybeT $ do
                        z <- hoistMaybe (extractZipperById rng tr)
-                       let z' = replaceItem (_2.cpcase.complement.specifier .~ xs) (_2.cpcase.complement.specifier .~ xs) z
+                       let z' = replaceItem (_2._CPCase.complement.specifier .~ xs) (_2._CPCase.complement.specifier .~ xs) z
                        lift (put (toBitree z'))
                        ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
                         <|>

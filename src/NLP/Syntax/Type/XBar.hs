@@ -122,9 +122,9 @@ mkCP :: Either NullComplementizer (Zipper t) -> Maybe (Zipper t) -> TP t -> CP t
 mkCP mc mcp tp = XP mc mcp () () tp
 
 
-data CPDP a = CPCase { _cpcase :: CP a }
-            | DPCase { _dpcase :: Zipper a }
+data CPDP a = CPCase (CP a)
+            | DPCase (Zipper a)
 
 makePrisms ''CPDP
 
-makeLenses ''CPDP
+-- makeLenses ''CPDP

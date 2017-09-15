@@ -156,7 +156,8 @@ testcases = [ test_silent_pronoun
             ]
 
 checkTrace :: TestTrace -> Bool
-checkTrace c =
+checkTrace c = False
+{-
   fromMaybe False $ do
     let vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
@@ -174,9 +175,9 @@ checkTrace c =
                    let dp = fmap (\case DP z -> gettokens z; PrepP _ z -> gettokens z) comp
                    return (dp == c ^._3._2)
       _      -> return False
-
+-}
 
 unitTests :: TestTree
 unitTests = testGroup "Trace identification test" . flip map testcases $ \c ->
               testCase (T.unpack (c^._1)) $
-                (checkTrace c) @? (T.unpack (T.intercalate "\n" (formatDetail c)))
+                checkTrace c @? (T.unpack (T.intercalate "\n" (formatDetail c)))

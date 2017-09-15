@@ -129,8 +129,10 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
 
 
 formatCPHierarchy :: Bitree (Range,CPDP as) (Range,CPDP as) -> Text
-formatCPHierarchy tr = formatBitree (\(rng,_cp) -> T.pack (printf "%-7s" (show rng))) tr
-
+formatCPHierarchy tr = formatBitree fmt tr
+  where showRange rng = T.pack (printf "%-7s" (show rng))
+        fmt (rng,CPCase _) = "CP" <> showRange rng
+        fmt (rng,DPCase _) = "DP" <> showRange rng  
 
 formatClauseStructure :: ClauseTree -> Text
 formatClauseStructure clausetr =
