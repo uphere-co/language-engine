@@ -2,9 +2,8 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE PartialTypeSignatures #-}
+-- {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TupleSections         #-}
-
 {-# LANGUAGE TypeOperators #-}
 
 module SRL.Analyze.Match where
@@ -48,7 +47,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 
 allPAWSTriplesFromDocStructure
   :: DocStructure
-  -> [[(Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
+  -> [[(Maybe [Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
        ,VerbStructure
        ,PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))]]
 allPAWSTriplesFromDocStructure dstr = do
@@ -58,7 +57,7 @@ allPAWSTriplesFromDocStructure dstr = do
 
 
 mkPAWSTriples :: SentStructure
-              -> [(Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
+              -> [(Maybe [Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
                   ,VerbStructure
                   ,PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))]
 mkPAWSTriples sstr = do
@@ -109,9 +108,10 @@ matchObjects :: [(PBArg,FNFrameElement)]
              -> ArgPattern p GRel
              -> [(FNFrameElement, (Maybe Text, Zipper '[Lemma]))]
 matchObjects rolemap verbp patt = do
-  (garg,obj') <- zip [GA1,GA2] (map (mapMaybe (\case Left tr -> Just (Left tr); Right (DP z) -> Just (Right z); _ -> Nothing)) (verbp^..complement.traverse.trChain))
-  guard ((not.null) obj')
-  Right obj <- [last obj']
+  (garg,obj') <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved.to (\x -> x >>= \case DP z -> Just z; _ -> Nothing))
+  obj <- maybeToList obj'
+  -- guard ((not.null) obj')
+  -- Right obj <- [last obj']
   ctag <- case getRoot (current obj) of
             Left (_,node) -> [chunkTag node]
             _             -> []
@@ -255,11 +255,7 @@ matchFrame :: (VerbStructure,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int
 matchFrame (vstr,paws) = do
   let cp = paws^.pa_CP
       verbp = cp^.complement.complement
-      mDP = case cp^.complement.specifier.trChain of
-              []  -> Nothing
-              dps -> case last dps of
-                       Left _ -> Nothing
-                       Right z -> Just z
+      mDP = cp^.complement.specifier.trResolved
       vprop = vstr^.vs_vp
   rng <- cpRange cp
   let frmsels = matchFrameRolesAll verbp paws mDP (vstr^.vs_roleTopPatts)

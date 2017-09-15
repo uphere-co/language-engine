@@ -32,7 +32,7 @@ import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CP)
+import           NLP.Syntax.Type.XBar                    (CPDP)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
@@ -193,7 +193,7 @@ formatSentStructure showdetail (SentStructure i ptr _ clausetr mcpstr vstrs) =
    in subline1 ++ (if showdetail then subline1_1 else []) ++ concat subline2
 
 
-formatVerbStructure :: ClauseTree -> Maybe [Bitree (Range,CP '[Lemma]) (Range,CP '[Lemma])] -> VerbStructure -> [Text]
+formatVerbStructure :: ClauseTree -> Maybe [Bitree (Range,CPDP '[Lemma]) (Range,CPDP '[Lemma])] -> VerbStructure -> [Text]
 formatVerbStructure clausetr mcpstr (VerbStructure vp senses mrmmtoppatts) =
   [ formatVPwithPAWS [] clausetr mcpstr vp        -- for the time being
   , T.pack (printf "Verb: %-20s" (vp^.vp_lemma.to unLemma))
@@ -203,7 +203,7 @@ formatVerbStructure clausetr mcpstr (VerbStructure vp senses mrmmtoppatts) =
 
 
 
-showMatchedFrame :: (Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
+showMatchedFrame :: (Maybe [Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
                     ,VerbStructure
                     ,PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
                  -> IO ()
