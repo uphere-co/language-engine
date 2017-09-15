@@ -209,31 +209,33 @@ whMovement z =
 --   of TP of which is marked as silent pronoun.
 --
 resolveDP :: forall as. Range -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
-resolveDP rng = {- runMaybeT emptyTraceChain $ -} do
-  tr <- get
-  case extractZipperById rng tr of
-    Nothing -> return emptyTraceChain
-    Just z -> do
-      let cp = (\case CPCase x -> x) (currentCPDP z)
-      if either (== C_WH) (isChunkAs WHNP . current) (cp^.headX)
-        then whMovement z
-        else do
-          let spec = cp^.complement.specifier
-          case spec^.trChain of
-            [] -> return spec
-            xs -> case last xs of
-                    NULL      -> do let xspro = init xs ++ [SilentPRO]
-                                    fmap (fromMaybe (TraceChain xspro Nothing)) . runMaybeT $ do
-                                      cp'  <- hoistMaybe ((\case CPCase x -> x) . currentCPDP <$> parent z)
-                                      rng' <- hoistMaybe (cpRange cp')
-                                      TraceChain xs' x' <- lift (resolveDP rng')
-                                      return (TraceChain (xspro <> xs') x')
-                    SilentPRO ->    fmap (fromMaybe (TraceChain xs Nothing)) . runMaybeT $ do
-                                      cp'  <- hoistMaybe ((\case CPCase x -> x) . currentCPDP <$> parent z)
-                                      rng' <- hoistMaybe (cpRange cp')
-                                      TraceChain xs' x' <- lift (resolveDP rng')
-                                      return (TraceChain (xs <> xs') x')
-                    _         ->    return spec
+resolveDP rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
+  tr <- lift get
+  z <- hoistMaybe (extractZipperById rng tr)
+  cp <- hoistMaybe (currentCPDP z ^? _CPCase) 
+  if either (== C_WH) (isChunkAs WHNP . current) (cp^.headX)
+    then lift (whMovement z)
+    else do
+      let spec = cp^.complement.specifier
+      case spec^.trChain of
+        [] -> return spec
+        xs -> case last xs of
+                NULL      -> do let xspro = init xs ++ [SilentPRO]
+                                ((do cp'  <- hoistMaybe ((\case CPCase x -> x) . currentCPDP <$> parent z)
+                                     rng' <- hoistMaybe (cpRange cp')
+                                     TraceChain xs' x' <- lift (resolveDP rng')
+                                     return (TraceChain (xspro <> xs') x'))
+                                 <|>
+                                 return (TraceChain xspro Nothing))
+
+                SilentPRO ->    ((do cp'  <- hoistMaybe ((\case CPCase x -> x) . currentCPDP <$> parent z)
+                                     rng' <- hoistMaybe (cpRange cp')
+                                     TraceChain xs' x' <- lift (resolveDP rng')
+                                     return (TraceChain (xs <> xs') x'))
+                                 <|>
+                                 return (TraceChain xs Nothing))
+
+                _         ->    return spec
 
 
 bindingAnalysis :: Bitree (Range,CPDP as) (Range,CPDP as) -> Bitree (Range,CPDP as) (Range,CPDP as)
