@@ -134,6 +134,7 @@ formatCPHierarchy tr = formatBitree fmt tr
         fmt (rng,CPCase _) = "CP" <> showRange rng
         fmt (rng,DPCase _) = "DP" <> showRange rng  
 
+
 formatClauseStructure :: ClauseTree -> Text
 formatClauseStructure clausetr =
   let tr' = bimap (\(_rng,x)->f x) g (cutOutLevel0 clausetr)

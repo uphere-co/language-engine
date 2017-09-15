@@ -195,11 +195,13 @@ whMovement z =
           -- check object for relative pronoun
           runMaybeT $ do
             z'  <- hoistMaybe (prev =<< cp^.maximalProjection)
-            let cp' = CPCase (((complement.complement.complement) %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)) cp)
+            let rf = _2._CPCase.complement.complement.complement %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)
+                z'' = replaceItem rf rf z
+            {- let cp' = CPCase (((complement.complement.complement) %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)) cp)
                 subtr = case z^.tz_current of
                           PN (rng,_) ys -> PN (rng,cp') ys
                           PL (rng,_)    -> PL (rng,cp')
-                z'' = (tz_current .~ subtr) z
+                z'' = (tz_current .~ subtr) z -}
             lift (put (toBitree z''))
           return spec
 
