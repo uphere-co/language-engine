@@ -27,6 +27,7 @@ import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Verb
 --
+import           Test.Common
 import           Test.Tasty.HUnit
 import           Test.Tasty
 
@@ -287,11 +288,6 @@ testcases = [ ex1, ex2, ex3, ex4, ex5, ex6, ex7, ex8, ex9,ex10
             ]
 
 
-
-mkVPS :: [(Int,(Lemma,Text))] -> PennTree -> [VerbProperty (Zipper '[Lemma])]
-mkVPS lmatknlst pt =
-  let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) lmatknlst)
-  in verbPropertyFromPennTree lemmamap pt
 
 
 checkVP :: (Text,Int,(Tense,Aspect,Voice,[Text],Maybe Text),[(Int,(Lemma,Text))],PennTree) -> Bool

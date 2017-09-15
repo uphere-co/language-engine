@@ -47,7 +47,7 @@ library
                        PropBank,
                        textview
 
-  hs-source-dirs:      src
+  hs-source-dirs:      src, test
   default-language:    Haskell2010
   ghc-options:  -Wall -O2 -fno-warn-unused-do-bind
 
@@ -55,7 +55,9 @@ library
 test-suite test-syntax-property
   type: exitcode-stdio-1.0
   hs-source-dirs: test
-  other-modules:       Test.Clause
+  other-modules:       Test.Common
+                       Test.Clause
+                       Test.Trace
                        Test.VerbComplement
                        Test.VerbProperty
   main-is: test-syntax-property.hs
