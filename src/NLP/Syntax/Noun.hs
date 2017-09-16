@@ -5,12 +5,16 @@ module NLP.Syntax.Noun where
 
 import           Control.Applicative      ((<|>))
 import           Control.Monad            (guard)
+import           Data.List                (find)
 import           Data.Maybe               (fromMaybe)
 --
 import           Data.BitreeZipper        (child1,current,next)
-import           NLP.Type.PennTreebankII  (ChunkTag(..),Lemma,POSTag(..))
+import           NLP.Type.PennTreebankII  (ChunkTag(..),Lemma,POSTag(..)
+                                          ,getRange)
+import           NLP.Type.TagPos          (TagPos(..),TokIdx)
 --
-import           NLP.Syntax.Type.XBar
+import           NLP.Syntax.Type          (MarkType(..))
+import           NLP.Syntax.Type.XBar     (Zipper)
 import           NLP.Syntax.Util          (isChunkAs, isPOSAs)
 
 
@@ -34,5 +38,9 @@ splitPP z = do
   return (fromMaybe dp (splitDP dp))
 
 
-splitOutModifierDP :: Zipper (Lemma ': as) -> Maybe (Zipper (Lemma ': as),Zipper (Lemma ': as))
-splitOutModifierDP z = Nothing
+
+
+splitOutModifierDP :: [TagPos TokIdx MarkType]
+                   -> Zipper (Lemma ': as)
+                   -> Maybe (Zipper (Lemma ': as),Zipper (Lemma ': as))
+splitOutModifierDP tagged z = Nothing

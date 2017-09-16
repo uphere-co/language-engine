@@ -32,7 +32,7 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Noun                        (splitDP)
-import           NLP.Syntax.Preposition                 (beginEndToRange,hasEmptyPreposition)
+import           NLP.Syntax.Preposition                 (beginEndToRange,checkEmptyPrep,hasEmptyPreposition)
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -58,7 +58,7 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> [TraceChain (DPorPP (Zipper (Lemma ': as)))]
-complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep x)))
+complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep tagged x)))
                                   ((\z -> fromMaybe z (splitDP z)) <$>
                                    (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
@@ -73,12 +73,6 @@ complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep x))
                       Right p    -> case isNoun p of
                                       Yes -> True
                                       _   -> False
-    checkEmptyPrep z = let r = fromMaybe False $ do
-                                 let rng = getRange (current z)
-                                 -- check bare noun adverb
-                                 find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) == rng && t == MarkTime) tagged
-                                 return (hasEmptyPreposition z)
-                       in if r then PrepP Nothing z else DP z
 
 
 identifySubject :: N.ClauseTag
