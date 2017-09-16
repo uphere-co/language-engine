@@ -10,7 +10,7 @@ module NLP.Syntax.Clause where
 
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
-import           Control.Monad                          ((<=<),guard,void)
+import           Control.Monad                          ((<=<),void)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
@@ -31,11 +31,12 @@ import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
+import           NLP.Syntax.Noun                        (splitDP)
 import           NLP.Syntax.Preposition                 (beginEndToRange,hasEmptyPreposition)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                        (isChunkAs,isPOSAs)
+import           NLP.Syntax.Util                        (isChunkAs)
 
 
 hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
@@ -55,24 +56,6 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 
 
-splitDP :: Zipper (Lemma ': as) -> Maybe (Zipper (Lemma ': as))
-splitDP z = do
-  guard (isChunkAs NP (current z))
-  dp <- child1 z
-  guard (isChunkAs NP (current dp))
-  sbar <- next dp
-  ((guard (isChunkAs SBAR (current sbar)) >> return dp) <|>
-   (guard (isChunkAs VP (current sbar)) >> return dp))
-
-
--- | this function is very ad hoc. Later we should have PP according to X-bar theory
-splitPP :: Zipper (Lemma ': as) -> Maybe (Zipper (Lemma ': as))
-splitPP z = do
-  guard (isChunkAs PP (current z))
-  p <- child1 z
-  guard (isPOSAs TO (current p) || isPOSAs IN (current p))
-  dp <- next p
-  return (fromMaybe dp (splitDP dp))
 
 
 
