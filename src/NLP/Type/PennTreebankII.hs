@@ -132,7 +132,7 @@ isVerb VBN = True
 isVerb VBG = True
 isVerb _   = False
 
-data TernaryLogic = Yes | No | Unclear
+data TernaryLogic = Yes | No | Unclear deriving (Show,Eq,Ord)
 
 isNoun :: POSTag -> TernaryLogic
 isNoun CD   = Unclear
