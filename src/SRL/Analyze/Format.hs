@@ -99,12 +99,13 @@ formatSense (onfninst,num) =
 
 
 
-formatFrame :: Maybe (ONSenseFrameNetInstance, Int) -> String
+formatFrame :: (ONSenseFrameNetInstance, Int) -> String
 formatFrame t =
-  printf " %-20s | %-40s      ------      %-30s\n"
-    (fromMaybe "" (t ^? _Just . _1 . onfn_frame . to (either formatExFrame (^.tf_frameID))))
-    (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_feCore))
-    (maybe "" (T.intercalate ", ") (t^?_Just._1.onfn_frame._Right.tf_fePeri))
+  printf " %-20s %-4d | %-40s      ------      %-30s\n"
+    (t ^. _1 . onfn_frame . to (either formatExFrame (^.tf_frameID)))
+    (t ^. _2)
+    (maybe "" (T.intercalate ", ") (t^?_1.onfn_frame._Right.tf_feCore))
+    (maybe "" (T.intercalate ", ") (t^?_1.onfn_frame._Right.tf_fePeri))
 
 
 formatSenses :: Bool  -- ^ doesShowOtherSense
@@ -112,13 +113,16 @@ formatSenses :: Bool  -- ^ doesShowOtherSense
              -> [((RoleInstance,Int), [(ArgPattern () GRel,Int)])]
              -> String
 formatSenses doesShowOtherSense onfnlst rmtoppatts
-  = let t = chooseMostFreqFrame onfnlst
-    in "Top frame: "
-       ++ (if (not.null) t then formatFrame (Just (head t)) else formatFrame Nothing)
-       ++ "--------------------------------------------------------------------------------------------------\n"
-       ++ intercalate "\n" (flip map rmtoppatts (\((rm,_),toppatts) ->
+  = 
+       -- ++ map(if (not.null) t then formatFrame (Just (head t)) else formatFrame Nothing)
+       "--------------------------------------------------------------------------------------------------\n"
+       ++ intercalate "\n--------------------------------------------------------------------------------------------------\n" (flip map rmtoppatts (\((rm,_),toppatts) ->
                let argpattstr = formatArgPattStat toppatts
-               in (formatRoleMap (rm^._2) ++ ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<> argpattstr))))
+                   mfrm = find (\x -> x^._1.onfn_senseID == rm^._1 ) onfnlst
+                   framestr = "Frames: " ++ maybe "" formatFrame mfrm
+               in 
+                   framestr ++
+                   (formatRoleMap (rm^._2) ++ ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<> argpattstr))))
        ++ "\n--------------------------------------------------------------------------------------------------\n"
        ++ if doesShowOtherSense
           then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense onfnlst)
@@ -197,7 +201,7 @@ formatVerbStructure :: ClauseTree -> Maybe [Bitree (Range,CPDP '[Lemma]) (Range,
 formatVerbStructure clausetr mcpstr (VerbStructure vp senses mrmmtoppatts) =
   [ formatVPwithPAWS [] clausetr mcpstr vp        -- for the time being
   , T.pack (printf "Verb: %-20s" (vp^.vp_lemma.to unLemma))
-  , T.pack $ (formatSenses False senses mrmmtoppatts)
+  , T.pack (formatSenses False senses mrmmtoppatts)
   ]
 
 
