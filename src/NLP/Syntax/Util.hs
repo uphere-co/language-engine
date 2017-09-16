@@ -12,6 +12,8 @@ import           Data.Attribute
 import           Data.Bitree
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
+import           NLP.Type.TagPos                   (TagPos(..),TokIdx,BeginEnd)
+import           NLP.Type.TagPos                   
 --
 import           NLP.Syntax.Type.XBar
 
@@ -79,3 +81,7 @@ getIdxPOS w = (,) <$> getLeafIndex w <*> fmap posTag (getLeaf w)
 
 mkBitreeICP :: IntMap Lemma -> PennTree -> BitreeICP '[Lemma]
 mkBitreeICP lemmamap = lemmatize lemmamap . mkAnnotatable . mkPennTreeIdx
+
+
+beginEndToRange :: BeginEnd TokIdx -> Range
+beginEndToRange (TokIdx b,TokIdx e) = (b,e-1)

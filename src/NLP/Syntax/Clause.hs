@@ -32,7 +32,7 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Noun                        (splitDP)
-import           NLP.Syntax.Preposition                 (beginEndToRange,checkEmptyPrep,hasEmptyPreposition)
+import           NLP.Syntax.Preposition                 (checkEmptyPrep,hasEmptyPreposition)
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar

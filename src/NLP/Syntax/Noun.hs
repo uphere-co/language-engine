@@ -9,13 +9,14 @@ import           Data.List                (find)
 import           Data.Maybe               (fromMaybe)
 --
 import           Data.BitreeZipper        (child1,current,next)
+import           Data.Range               (Range)
 import           NLP.Type.PennTreebankII  (ChunkTag(..),Lemma,POSTag(..)
                                           ,getRange)
 import           NLP.Type.TagPos          (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper)
-import           NLP.Syntax.Util          (isChunkAs, isPOSAs)
+import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 
 
 splitDP :: Zipper (Lemma ': as) -> Maybe (Zipper (Lemma ': as))
@@ -40,7 +41,15 @@ splitPP z = do
 
 
 
-splitOutModifierDP :: [TagPos TokIdx MarkType]
-                   -> Zipper (Lemma ': as)
-                   -> Maybe (Zipper (Lemma ': as),Zipper (Lemma ': as))
-splitOutModifierDP tagged z = Nothing
+bareNounModifier :: [TagPos TokIdx MarkType]
+                 -> Zipper (Lemma ': as)
+                 -> Maybe (Range,Range)
+bareNounModifier tagged z = do
+  guard (isChunkAs NP (current z))
+  let rng@(b0,e0) = getRange (current z)
+  -- check entity for the last words
+  let f (b0,e0) (b1,e1) = e0 == e1 && b0 < b1
+  TagPos (b1'',e1'',t) <- find (\(TagPos (b1',e1',t)) -> f rng (beginEndToRange (b1',e1')) && t == MarkEntity) tagged
+  let (b1,e1) = beginEndToRange (b1'',e1'')
+
+  return ((b0,b1-1),(b1,e1))
