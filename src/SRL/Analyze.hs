@@ -4,7 +4,7 @@
 
 module SRL.Analyze where
 
-import           Control.Lens                 ((^.),(^..),(.~),(&),_1,_2)
+import           Control.Lens                 ((^.),(^..),(.~),(&))
 import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
