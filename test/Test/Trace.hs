@@ -33,7 +33,7 @@ import           Test.Tasty
 
 data TracePos = Subj | Comp Int
 
-type TestTrace = (Text,Int,(TracePos,TraceChain Text),[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx (Maybe Text)])
+type TestTrace = (Text,Int,(TracePos,TraceChain Text),[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
 
 -- | silent pronoun
 --

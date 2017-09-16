@@ -59,8 +59,8 @@ test-suite test-syntax-property
   other-modules:       Test.Common
                        Test.Clause
                        Test.Trace
-                       Test.VerbComplement
-                       Test.VerbProperty
+                       Test.Verb.Complement
+                       Test.Verb.Property
   main-is: test-syntax-property.hs
   build-depends:       base
                      , containers

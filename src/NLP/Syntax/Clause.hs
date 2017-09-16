@@ -55,10 +55,6 @@ headVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
 headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 
-
-
-
-
 complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> [TraceChain (DPorPP (Zipper (Lemma ': as)))]
@@ -79,6 +75,7 @@ complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep x))
                                       _   -> False
     checkEmptyPrep z = let r = fromMaybe False $ do
                                  let rng = getRange (current z)
+                                 -- check bare noun adverb
                                  find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) == rng && t == MarkTime) tagged
                                  return (hasEmptyPreposition z)
                        in if r then PrepP Nothing z else DP z

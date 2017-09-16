@@ -32,3 +32,7 @@ splitPP z = do
   guard (isPOSAs TO (current p) || isPOSAs IN (current p))
   dp <- next p
   return (fromMaybe dp (splitDP dp))
+
+
+splitOutModifierDP :: Zipper (Lemma ': as) -> Maybe (Zipper (Lemma ': as),Zipper (Lemma ': as))
+splitOutModifierDP z = Nothing

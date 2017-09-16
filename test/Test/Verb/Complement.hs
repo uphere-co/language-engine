@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
-module Test.VerbComplement where
+module Test.Verb.Complement where
 
 import           Control.Lens               hiding (levels)
 import           Data.Foldable                     (toList)
