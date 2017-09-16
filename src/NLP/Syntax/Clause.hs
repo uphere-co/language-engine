@@ -33,7 +33,7 @@ import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Noun                        (splitDP)
 import           NLP.Syntax.Preposition                 (beginEndToRange,hasEmptyPreposition)
-import           NLP.Syntax.Type
+import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs)
@@ -59,7 +59,7 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 
 
-complementsOfVerb :: [TagPos TokIdx (Maybe Text)]
+complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> [TraceChain (DPorPP (Zipper (Lemma ': as)))]
 complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep x)))
@@ -79,7 +79,7 @@ complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep x))
                                       _   -> False
     checkEmptyPrep z = let r = fromMaybe False $ do
                                  let rng = getRange (current z)
-                                 find (\(TagPos (b,e,_tag)) -> beginEndToRange (b,e) == rng) tagged
+                                 find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) == rng && t == MarkTime) tagged
                                  return (hasEmptyPreposition z)
                        in if r then PrepP Nothing z else DP z
 
@@ -99,7 +99,7 @@ identifySubject tag vp =
 
 -- | Constructing CP umbrella and all of its ingrediant.
 --
-constructCP :: [TagPos TokIdx (Maybe Text)]
+constructCP :: [TagPos TokIdx MarkType]
             -> VerbProperty (Zipper (Lemma ': as))
             -> Maybe (CP (Lemma ': as))
 constructCP tagged vprop = do
@@ -134,7 +134,7 @@ cpRange cp = (cp^?maximalProjection._Just.to (getRange . current)) <|>
 
 
 
-identifyCPHierarchy :: [TagPos TokIdx (Maybe Text)]
+identifyCPHierarchy :: [TagPos TokIdx MarkType]
                     -> [VerbProperty (Zipper (Lemma ': as))]
                     -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
 identifyCPHierarchy tagged vps = traverse (bitraverse tofull tofull) rtr
@@ -264,7 +264,7 @@ predicateArgWS cp z =
             Just x' -> x': iterateMaybe f x'
 
 
-findPAWS :: [TagPos TokIdx (Maybe Text)]
+findPAWS :: [TagPos TokIdx MarkType]
          -> ClauseTree
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
          -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]

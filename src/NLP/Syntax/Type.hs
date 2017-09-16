@@ -16,7 +16,10 @@ module NLP.Syntax.Type
 
   -- * Predicate Argument Workspace
   PredArgWorkspace(..), pa_CP, pa_candidate_args
-
+  
+  -- * mark
+, MarkType(..)
+  
   -- * old types
 , SBARType(..)
 , STag(..)
@@ -41,6 +44,10 @@ data PredArgWorkspace as a = PAWS { _pa_CP :: CP as
                                   }
 
 makeLenses ''PredArgWorkspace
+
+
+data MarkType = MarkTime | MarkEntity
+              deriving (Show,Eq,Ord)
 
 
 ---------------
