@@ -58,6 +58,7 @@ test-suite test-syntax-property
   hs-source-dirs: test
   other-modules:       Test.Common
                        Test.Clause
+                       Test.Noun
                        Test.Trace
                        Test.Verb.Complement
                        Test.Verb.Property
