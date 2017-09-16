@@ -2,10 +2,9 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TupleSections         #-}
-
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module SRL.Analyze.Match where
 
@@ -16,12 +15,13 @@ import           Data.Foldable
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
-import           Data.Maybe                   (catMaybes,fromMaybe,listToMaybe,mapMaybe,maybeToList)
+import           Data.Maybe                   (catMaybes,fromMaybe,isJust,listToMaybe,mapMaybe,maybeToList)
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
-import           Data.Bitree                  (getNodes,getRoot)
+import           Data.Bitree                  (getNodes,getRoot,getRoot1)
 import           Data.BitreeZipper            (current,mkBitreeZipper,root)
+import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
@@ -40,17 +40,17 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,ds_sentStructures
                                               ,ss_clausetr,ss_mcpstr,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
-                                              ,mv_range,mv_id
+                                              ,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges
                                               )
-
+--
+import Debug.Trace
 
 
 
 allPAWSTriplesFromDocStructure
   :: DocStructure
-  -> [[(Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
-       ,VerbStructure
-       ,PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))]]
+  -> [(Maybe [Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
+      ,[(VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))])]
 allPAWSTriplesFromDocStructure dstr = do
   msstr <- dstr^.ds_sentStructures
   sstr <- maybeToList msstr
@@ -58,16 +58,14 @@ allPAWSTriplesFromDocStructure dstr = do
 
 
 mkPAWSTriples :: SentStructure
-              -> [(Maybe [Bitree (Range, CP '[Lemma]) (Range, CP '[Lemma])]
-                  ,VerbStructure
-                  ,PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))]
-mkPAWSTriples sstr = do
+              -> (Maybe [Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
+                 ,[(VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))])
+mkPAWSTriples sstr = 
   let clausetr = sstr^.ss_clausetr
       mcpstr = sstr^.ss_mcpstr
-  vstr <- sstr ^.ss_verbStructures
-  let vp = vstr^.vs_vp
-  paws <- maybeToList (findPAWS [] clausetr vp mcpstr)  -- for the time being
-  return (mcpstr,vstr,paws)
+  in ( mcpstr
+     , [(vstr,paws)| vstr <- sstr ^.ss_verbStructures, let vp = vstr^.vs_vp, paws <- maybeToList (findPAWS [] clausetr vp mcpstr) ]) -- for the time being
+  -- return (mcpstr,vstr,paws)
 
 
 
@@ -109,9 +107,8 @@ matchObjects :: [(PBArg,FNFrameElement)]
              -> ArgPattern p GRel
              -> [(FNFrameElement, (Maybe Text, Zipper '[Lemma]))]
 matchObjects rolemap verbp patt = do
-  (garg,obj') <- zip [GA1,GA2] (map (mapMaybe (\case Left tr -> Just (Left tr); Right (DP z) -> Just (Right z); _ -> Nothing)) (verbp^..complement.traverse.trChain))
-  guard ((not.null) obj')
-  Right obj <- [last obj']
+  (garg,obj') <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved.to (\x -> x >>= \case DP z -> Just z; _ -> Nothing))
+  obj <- maybeToList obj'
   ctag <- case getRoot (current obj) of
             Left (_,node) -> [chunkTag node]
             _             -> []
@@ -255,11 +252,7 @@ matchFrame :: (VerbStructure,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int
 matchFrame (vstr,paws) = do
   let cp = paws^.pa_CP
       verbp = cp^.complement.complement
-      mDP = case cp^.complement.specifier.trChain of
-              []  -> Nothing
-              dps -> case last dps of
-                       Left _ -> Nothing
-                       Right z -> Just z
+      mDP = cp^.complement.specifier.trResolved
       vprop = vstr^.vs_vp
   rng <- cpRange cp
   let frmsels = matchFrameRolesAll verbp paws mDP (vstr^.vs_roleTopPatts)
@@ -279,12 +272,19 @@ scoreSelectedFrame total ((_,mselected),n) =
   in mn * (fromIntegral n) / (fromIntegral total) * roleMatchWeightFactor + (mn*(fromIntegral total))
 
 
+depCPDP :: Bitree (Range,a) (Range,a) -> [(Range,Range)]
+depCPDP (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap depCPDP xs 
+depCPDP (PL _)           = []
+
 
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
-  let pawstriples = mkPAWSTriples sstr
-      matched =  mapMaybe (\(_,vstr,paws) -> matchFrame (vstr,paws)) pawstriples
+  let (mcpstr,lst_vstrpaws) = mkPAWSTriples sstr
+      matched = mapMaybe matchFrame lst_vstrpaws
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList
+      depmap = depCPDP =<< join (maybeToList mcpstr)
+
+      
       --
       preds = flip map matched $ \(rng,vprop,frame,_mselected) i -> MGPredicate i rng frame (simplifyVProp vprop)
       ipreds = zipWith ($) preds [1..]
@@ -298,7 +298,7 @@ meaningGraph sstr =
                      return (rng,txt)
       filterFrame = filter (\(rng,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
-      entities = map (\(rng,txt) i -> MGEntity i rng txt)
+      entities = map (\(rng,txt) i -> MGEntity i rng txt [])
                . filterFrame
                . map head
                . groupBy ((==) `on` (^._1))
@@ -313,5 +313,22 @@ meaningGraph sstr =
                  (fe,(mprep,z)) <- felst
                  let rng' = getRange (current z)
                  i' <- maybeToList (HM.lookup rng' rngidxmap)
-                 return (MGEdge fe mprep i i')
-  in MeaningGraph vertices edges
+                 let b = isJust (find (== (rng',rng)) depmap) 
+                 return (MGEdge fe b mprep i i')
+  in trace (show depmap) $ MeaningGraph vertices edges
+
+
+isEntity :: MGVertex -> Bool
+isEntity x = case x of
+               MGEntity {..} -> True
+               _             -> False
+
+
+tagMG :: MeaningGraph -> [(Range,Text)] -> MeaningGraph
+tagMG mg wikilst =
+  let mg' = mg ^.. mg_vertices
+                 . traverse
+                 . to (\x -> if (x ^. mv_range) `elemRevIsInsideR` (map fst wikilst) && isEntity x
+                             then x & (mv_resolved_entities .~ map (^. _2) (filter (\w -> (w ^. _1) `isInsideR` (x ^. mv_range)) wikilst))
+                             else x )
+  in MeaningGraph mg' (mg ^. mg_edges)

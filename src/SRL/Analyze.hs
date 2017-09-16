@@ -4,20 +4,18 @@
 
 module SRL.Analyze where
 
-import           Control.Lens                 ((^.),(^..),(.~),(&),_1,_2)
+import           Control.Lens                 ((^.),(^..),(.~),(&))
 import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
 import           Data.Default                 (def)
-import           Data.Graph
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
 import           Data.Maybe
 import           Data.Text                    (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.IO           as T.IO
-import           Data.Tree                    (flatten,levels)
 import qualified Language.Java          as J
 import           MWE.Util                     (mkTextFromToken)
 import           System.Console.Haskeline     (runInputT,defaultSettings,getInputLine)
@@ -26,7 +24,6 @@ import           System.Process               (readProcess)
 --
 import           CoreNLP.Simple               (prepare)
 import           CoreNLP.Simple.Type          (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
-import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (loadRoleInsts,loadRolePattInsts)
@@ -51,7 +48,7 @@ import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP           (runParser)
 import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructure,showMatchedFrame)
-import           SRL.Analyze.Match             (allPAWSTriplesFromDocStructure,meaningGraph)
+import           SRL.Analyze.Match             (allPAWSTriplesFromDocStructure,meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure (docStructure)
 import           SRL.Analyze.Type
 import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
@@ -76,29 +73,17 @@ queryProcess config pp apredata emTagger =
                   dstr <- docStructure apredata emTagger <$> runParser pp txt
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  (mapM_ showMatchedFrame . concat . allPAWSTriplesFromDocStructure) dstr
+                  (mapM_ showMatchedFrame . concatMap snd . allPAWSTriplesFromDocStructure) dstr
       ":v " -> do dstr <- docStructure apredata emTagger <$> runParser pp rest
                   when (config^.Analyze.showDetail) $ 
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  (mapM_ showMatchedFrame . concat . allPAWSTriplesFromDocStructure) dstr
+                  (mapM_ showMatchedFrame . concatMap snd . allPAWSTriplesFromDocStructure) dstr
                   --
                   printMeaningGraph dstr
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
 
-isEntity :: MGVertex -> Bool
-isEntity x = case x of
-               MGEntity {..} -> True
-               _             -> False
-
-
-tagMG :: MeaningGraph -> [(Range,Text)] -> MeaningGraph
-tagMG mg wikilst =
-  let mg' = map (\x -> if (x ^. mv_range) `elemRevIsInsideR` (map fst wikilst) && isEntity x
-                       then x & mv_text .~ (T.intercalate "" $ [(x ^. mv_text)," | ",(T.intercalate " | " $ map (^. _2) $ filter (\w -> (w ^. _1) `isInsideR` (x ^. mv_range)) wikilst)] )
-                       else id x) (mg ^. mg_vertices)
-  in MeaningGraph mg' (mg ^. mg_edges)
 
 
 printMeaningGraph :: DocStructure -> IO ()
@@ -125,6 +110,7 @@ printMeaningGraph dstr = do
     putStrLn dotstr
     writeFile ("test" ++ (show i) ++ ".dot") dotstr
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
+
 
 loadConfig
   :: IO (HashMap Text Inventory

@@ -35,7 +35,7 @@ import           NLP.Type.CoreNLP                          (SentenceIndex,senten
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,mkPennTreeIdx)
 import qualified NLP.Type.PennTreebankII.Separated as PS
 import           NLP.Type.SyntaxProperty                   (Voice)
-import           NLP.Type.TagPos                           (SentItem,TagPos(..),TokIdx(..))
+import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..))
 import           WikiEL.EntityLinking                      (EntityMention)
 --
 import           OntoNotes.Type.SenseInventory
@@ -44,8 +44,6 @@ import           SRL.Analyze.Parameter                     (thresholdPattStat)
 import           SRL.Analyze.Type
 import           SRL.Analyze.WikiEL                        (getWikiResolvedMentions
                                                            ,linkedMentionToTagPos)
---
-import Debug.Trace
 
 
 mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]

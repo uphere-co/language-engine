@@ -21,10 +21,9 @@ import           WikiEL.EntityLinking                         (EntityMentionUID,
 import qualified WikiEL.EntityMentionPruning   as EMP
 -- For testing:
 import           WikiEL.Misc                                  (IRange(..))
-import           WikiEL.WikiEntityClass                       (ItemClass(..),orgClass)
+import           WikiEL.WikiEntityClass                       (orgClass)
 import           WikiEL.WikiNamedEntityTagger                 (PreNE(..))
 import           NLP.Type.CoreNLP
-import qualified NLP.Type.NamedEntity          as N
 import           NLP.Type.TagPos                              (TagPos(..),TokIdx(..))
 import           WikiEL.Type.Wikidata
 import           WikiEL.Type.Equity

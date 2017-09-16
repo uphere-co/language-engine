@@ -2,35 +2,25 @@
 
 module SRL.Analyze.CoreNLP where
 
-import           Control.Lens                                 ((^.),firstOf,lastOf,toListOf)
+import           Control.Lens                                 ((^.),toListOf)
 import qualified Data.ByteString.Lazy.Char8            as BL
-import           Data.Maybe                                   (fromJust,mapMaybe)
+import           Data.Maybe                                   (mapMaybe)
 import           Data.Text                                    (Text)
 import qualified Language.Java                         as J
 import           Text.ProtocolBuffers.WireMessage             (messageGet)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
-import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
 import qualified CoreNLP.Proto.HCoreNLPProto.ListTimex as T
 import           CoreNLP.Simple                               (annotate,serializeTimex)
 import           CoreNLP.Simple.Convert                       (convertPsent,convertSentence,convertToken
                                                               ,decodeToPennTree,sentToDep)
 import           CoreNLP.Simple.Util                          (getDoc,getProtoDoc,getTKTokens)
 import           NLP.Type.CoreNLP                             (Sentence)
-import           NLP.Type.TagPos                              (BeginEnd,SentIdx,CharIdx)
 --
 import           SRL.Analyze.Type                             (DocAnalysisInput(..))
 import           SRL.Analyze.Util                             (addText,listTimexToTagPos,getSentenceOffsets)
 
-{-
-getSentenceOffsets :: [S.Sentence] -> [(SentIdx,BeginEnd CharIdx)]
-getSentenceOffsets psents =
-  zip ([1..] :: [Int]) $ flip map psents $ \s ->
-    let b = fromJust $ fromJust $ firstOf (S.token . traverse . TK.beginChar) s
-        e = fromJust $ fromJust $ lastOf  (S.token . traverse . TK.endChar) s
-    in (fromIntegral b+1,fromIntegral e)
--}
 
 runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> Text
