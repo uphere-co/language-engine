@@ -9,7 +9,6 @@ module Test.VerbComplement where
 
 import           Control.Lens               hiding (levels)
 import           Data.Foldable                     (toList)
-import qualified Data.IntMap                as IM
 import           Data.List                         (find,intercalate)
 import           Data.Maybe                        (fromMaybe)
 import           Data.Monoid                       (All(All,getAll),mconcat)
@@ -27,7 +26,6 @@ import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Verb
 --
 import           Test.Common
 import           Test.Tasty.HUnit
@@ -173,8 +171,8 @@ checkComplement c  = fromMaybe False $ do
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
   cp <- constructCP [] vp  -- for the time being
   let gettokens x = let z = case x of
-                              DP z      -> z
-                              PrepP _ z -> z
+                              DP y      -> y
+                              PrepP _ y -> y
                     in (T.intercalate " " . map (tokenWord.snd) . toList . current) z
       --
       lst :: [Maybe Text]

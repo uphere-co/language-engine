@@ -113,8 +113,8 @@ auxNegWords lma z zs =
   let zis = map (\z'->(z',)<$>intLemma z') zs
       au = findAux lma z
       ne = case au of
-             []       -> findNeg z
-             (c,il):_ -> findNeg c
+             []        -> findNeg z
+             (c,_il):_ -> findNeg c
       ws = sortBy (compare `on` (^._2._1)) (au ++ catMaybes (ne:zis))
   in (au,ne,ws)
 

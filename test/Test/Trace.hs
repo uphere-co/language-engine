@@ -6,7 +6,6 @@ module Test.Trace where
 
 import           Control.Lens               hiding (levels)
 import           Data.Foldable
-import qualified Data.IntMap                as IM
 import           Data.Maybe                        (fromMaybe)
 import           Data.Monoid
 import           Data.Text                         (Text)
@@ -25,13 +24,12 @@ import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Verb
 --
 import           Test.Common
 import           Test.Tasty.HUnit
 import           Test.Tasty
 --
-import Debug.Trace
+
 
 data TracePos = Subj | Comp Int
 
@@ -99,8 +97,7 @@ test_reduced_relative_clause =
 
 formatDetail :: TestTrace -> [Text]
 formatDetail (_txt,_,_,lma,pt,tmxs) =
-  let -- lmap1 = IM.fromList (map (_2 %~ (\x -> x^._1))  lma)
-      vps  = mkVPS lma pt -- verbPropertyFromPennTree lmap1 pt
+  let vps  = mkVPS lma pt
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
       mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy tmxs) vps
  
@@ -156,7 +153,7 @@ testcases = [ test_silent_pronoun
             ]
 
 checkTrace :: TestTrace -> Bool
-checkTrace c =
+checkTrace c = 
   fromMaybe False $ do
     let vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
@@ -173,10 +170,10 @@ checkTrace c =
                    comp <- comps ^? ix (n-1)
                    let dp = fmap (\case DP z -> gettokens z; PrepP _ z -> gettokens z) comp
                    return (dp == c ^._3._2)
-      _      -> return False
+
 
 
 unitTests :: TestTree
 unitTests = testGroup "Trace identification test" . flip map testcases $ \c ->
               testCase (T.unpack (c^._1)) $
-                (checkTrace c) @? (T.unpack (T.intercalate "\n" (formatDetail c)))
+                checkTrace c @? (T.unpack (T.intercalate "\n" (formatDetail c)))
