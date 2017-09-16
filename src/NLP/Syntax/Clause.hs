@@ -70,9 +70,7 @@ complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep tag
                       Left SBARQ -> True
                       Left SQ    -> True
                       Left _     -> False
-                      Right p    -> case isNoun p of
-                                      Yes -> True
-                                      _   -> False
+                      Right p    -> isNoun p == Yes
 
 
 identifySubject :: N.ClauseTag
@@ -84,7 +82,7 @@ identifySubject tag vp =
             _      -> firstSiblingBy prev (isChunkAs NP) vp
   in case r of
        Nothing -> TraceChain [NULL] Nothing
-       Just z  -> TraceChain []     (Just z)
+       Just z  -> TraceChain []     (Just (fromMaybe z (splitDP z)))
 
 
 
