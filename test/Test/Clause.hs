@@ -75,11 +75,13 @@ test6 =
 
 
 -- |
--- test_noun_modifier :: (Text,[(Int,(Text,Text))],PennTree,[TagPos TokIdx (Maybe Text)])
--- test_noun_modifier
-
-
-
+test_noun_modifier :: (Text,[(Int,(Text,Text))],PennTree,[TagPos TokIdx (Maybe Text)])
+test_noun_modifier =
+  ( "Billionaire environmentalist Tom Steyer said the idea is a political pipe dream anyway." )
+  , [(0,("billionaire","Billionaire")),(1,("environmentalist","environmentalist")),(2,("Tom","Tom")),(3,("Steyer","Steyer")),(4,("say","said")),(5,("the","the")),(6,("idea","idea")),(7,("be","is")),(8,("a","a")),(9,("political","political")),(10,("pipe","pipe")),(11,("dream","dream")),(12,("anyway","anyway")),(13,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("NN","Billionaire"),PL ("NN","environmentalist"),PL ("NNP","Tom"),PL ("NNP","Steyer")],PN "VP" [PL ("VBD","said"),PN "SBAR" [PN "S" [PN "NP" [PL ("DT","the"),PL ("NN","idea")],PN "VP" [PL ("VBZ","is"),PN "NP" [PL ("DT","a"),PL ("JJ","political"),PL ("NN","pipe"),PL ("NN","dream")],PN "ADVP" [PL ("RB","anyway")]]]]],PL (".",".")]]
+  , []
+  )
 
 -- | coordination
 --
