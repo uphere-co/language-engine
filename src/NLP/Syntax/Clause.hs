@@ -133,62 +133,17 @@ cpRange cp = (cp^?maximalProjection._Just.to (getRange . current)) <|>
 hierarchyBits (cp,zs) = do
   rng <- cpRange cp
   let cpbit = (rng,(rng,CPCase cp))
-  
+
   let f z = let rng' = (getRange . current) z in (rng',(rng',DPCase z))
   return (cpbit:map f zs)
 
 
--- test
-{- 
-rootRange []     = error "rootRange"
-rootRange rs@(r:_) = let res = mapAccumL (\(!rmax) rlst -> trace (show (rmax,rlst)) $mapAccumL f rmax rlst) r (tail (inits rs ++ [rs]))
-                     in trace (show res) (fst res, last (snd res))
-  where
-    -- go r rs = mapAccumL f r rs
-    
-    f !rmax r | r `isInsideR` rmax = trace ("t:"++show (rmax,r)++"\n") $ (rmax, Right r)
-              | rmax `isInsideR` r = trace ("t:"++show (rmax,r)++"\n") $ (r   , Right r)
-              | otherwise          = trace ("t:"++show (rmax,r)++"\n") $ (rmax, Left r )
-
-
-
-partitionRanges :: [Range] -> [(Range,[Range])]
-partitionRanges rngs = let (rmax,rngs') = rootRange rngs
-                           (outside,inside') = partitionEithers rngs'
-                           inside = filter (not . (== rmax)) inside'
-                       in case outside of
-                            [] -> [(rmax,inside)]
-                            _  -> (rmax,inside) : partitionRanges outside
-
-
-
-rangeTree :: [Range] -> [Bitree Range Range]
--- rangeTree []   = error "rangeTree"
-rangeTree rngs = let ps = partitionRanges rngs
-                     f (rmax,[]) = PL rmax
-                     f (rmax,rs) = PN rmax (rangeTree rs)
-                 in map f ps
--}
--- up to here
 
 identifyCPHierarchy :: [TagPos TokIdx MarkType]
                     -> [VerbProperty (Zipper (Lemma ': as))]
                     -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
-identifyCPHierarchy tagged vps = {- trace (let (rmax,rngs') = rootRange rngs
-                                            (outside,inside') = partitionEithers rngs'
-                                            inside= filter (not . (== rmax)) inside'
-                                        in show rngs ++ "\n" {- ++
-                                           show (rmax,rngs') ++ "\n" ++
-                                           show inside       ++ "\n" ++
-                                           show (partitionRanges outside) -}
-
-                                       )
-
-
-
-                                   $ -} traverse (bitraverse tofull tofull) rtr
+identifyCPHierarchy tagged vps = traverse (bitraverse tofull tofull) rtr
   where cpmap = (HM.fromList . concat . mapMaybe (hierarchyBits <=< constructCP tagged)) vps
-        -- cpmap = HM.fromList (map (\x->(x^._1,x)) cps)
         rngs = HM.keys cpmap
         rtr = rangeTree rngs
         tofull rng = HM.lookup rng cpmap
@@ -198,10 +153,12 @@ currentCPDP :: BitreeZipper (Range,CPDP as) (Range,CPDP as) -> CPDP as
 currentCPDP = snd . getRoot1 . current
 
 
+
 whMovement :: BitreeZipper (Range,CPDP as) (Range,CPDP as)
            -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
-whMovement z =
-  case currentCPDP z of
+whMovement w =
+  -- letter z denotes zipper for PennTree, w denotes zipper for Bitree (Range,CPDP as) (Range,CPDP as)
+  case currentCPDP w of
     DPCase _  -> return emptyTraceChain
     CPCase cp -> do
       let spec = cp^.complement.specifier
@@ -220,10 +177,19 @@ whMovement z =
                 z'  <- hoistMaybe (prev =<< cp^.maximalProjection)
                 let dprng = getRange (current z')
                     -- adjust CPDP hierarchy by modifier relation.
-                    newtr (PN y ys) = PN (dprng,DPCase z') [PN y ys]
-                    newtr (PL y)    = PN (dprng,DPCase z') [PL y]
-                    z'' = replaceTree newtr z
-                lift (put (toBitree z''))
+                case extractZipperById dprng (toBitree w) of
+                  Nothing -> do let newtr (PN y ys) = PN (dprng,DPCase z') [PN y ys]
+                                    newtr (PL y)    = PN (dprng,DPCase z') [PL y]
+                                    w'' = replaceTree newtr w
+                                lift (put (toBitree w''))
+
+                  Just _  -> do let otr = current w
+                                lift . put =<< hoistMaybe (remove w)
+                                w' <- MaybeT (extractZipperById dprng <$> get)
+                                let newtr (PN y ys) = PN y (ys ++ [otr])
+                                    newtr (PL y)    = PN y [otr]
+                                    w'' =replaceTree newtr w'
+                                lift (put (toBitree w''))
                 return (TraceChain (xsmov ++ [WHPRO]) (Just z'))
             _    -> return spec -- do
         else do
@@ -237,8 +203,8 @@ whMovement z =
                 -- adjust CPDP hierarchy by modifier relation.
                 newtr (PN y ys) = PN (dprng,DPCase z') [PN (rf0 y) ys]
                 newtr (PL y)    = PN (dprng,DPCase z') [PL (rf0 y)]
-                z'' = replaceTree newtr z
-            lift (put (toBitree z''))
+                w'' = replaceTree newtr w
+            lift (put (toBitree w''))
           return spec
 
 
@@ -250,7 +216,7 @@ resolveDP :: forall as. Range -> State (Bitree (Range,CPDP as) (Range,CPDP as)) 
 resolveDP rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   tr <- lift get
   z <- hoistMaybe (extractZipperById rng tr)
-  cp <- hoistMaybe (currentCPDP z ^? _CPCase) 
+  cp <- hoistMaybe (currentCPDP z ^? _CPCase)
   if either (== C_WH) (isChunkAs WHNP . current) (cp^.headX)
     then lift (whMovement z)
     else do
