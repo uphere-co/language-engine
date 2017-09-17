@@ -39,7 +39,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,SentStructure
                                               ,VerbStructure
                                               ,ds_sentStructures
-                                              ,ss_clausetr,ss_mcpstr,ss_tagged,ss_verbStructures
+                                              ,ss_clausetr,ss_cpstr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
                                               ,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges
                                               )
@@ -50,7 +50,7 @@ import Debug.Trace
 
 allPAWSTriplesFromDocStructure
   :: DocStructure
-  -> [(Maybe [Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
+  -> [([Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
       ,[(VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))])]
 allPAWSTriplesFromDocStructure dstr = do
   msstr <- dstr^.ds_sentStructures
@@ -59,15 +59,15 @@ allPAWSTriplesFromDocStructure dstr = do
 
 
 mkPAWSTriples :: SentStructure
-              -> (Maybe [Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
+              -> ([Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
                  ,[(VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))])
 mkPAWSTriples sstr = 
   let clausetr = sstr^.ss_clausetr
-      mcpstr = sstr^.ss_mcpstr
-  in ( mcpstr
+      cpstr = sstr^.ss_cpstr
+  in ( cpstr
      , [(vstr,paws)| vstr <- sstr ^.ss_verbStructures
                    , let vp = vstr^.vs_vp
-                   , paws <- maybeToList (findPAWS (sstr^.ss_tagged) clausetr vp mcpstr) ]
+                   , paws <- maybeToList (findPAWS (sstr^.ss_tagged) clausetr vp cpstr) ]
      ) 
 
 
@@ -281,10 +281,10 @@ depCPDP (PL _)           = []
 
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
-  let (mcpstr,lst_vstrpaws) = mkPAWSTriples sstr
+  let (cpstr,lst_vstrpaws) = mkPAWSTriples sstr
       matched = mapMaybe matchFrame lst_vstrpaws
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList
-      depmap = depCPDP =<< join (maybeToList mcpstr)
+      depmap = depCPDP =<< cpstr
       --
       preds = flip map matched $ \(rng,vprop,frame,_mselected) i -> MGPredicate i rng frame (simplifyVProp vprop)
       ipreds = zipWith ($) preds [1..]

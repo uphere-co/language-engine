@@ -141,9 +141,9 @@ sentStructure apredata tagged (i,midx,lmas,mptr) =
         lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
-        mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy tagged') vps
+        cpstr = (map bindingAnalysis . identifyCPHierarchy tagged') vps
         verbStructures = map (verbStructure apredata) vps
-    in SentStructure i ptr vps clausetr mcpstr tagged' verbStructures 
+    in SentStructure i ptr vps clausetr cpstr tagged' verbStructures 
 
 
 verbStructure :: AnalyzePredata -> VerbProperty (Zipper '[Lemma]) -> VerbStructure

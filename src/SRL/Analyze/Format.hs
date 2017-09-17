@@ -185,7 +185,7 @@ formatDocStructure showdetail (DocStructure mtokenss sentitems mergedtags sstrs)
 
 
 formatSentStructure :: Bool -> SentStructure -> [Text]
-formatSentStructure showdetail (SentStructure i ptr _ clausetr mcpstr _ vstrs) =
+formatSentStructure showdetail (SentStructure i ptr _ clausetr cpstr _ vstrs) =
    let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                   , formatIndexTokensFromTree 0 ptr
                   ]
@@ -193,13 +193,13 @@ formatSentStructure showdetail (SentStructure i ptr _ clausetr mcpstr _ vstrs) =
                     , formatClauseStructure clausetr
                     , "================================================================================================="
                     ]
-       subline2 = map (formatVerbStructure clausetr mcpstr) vstrs
+       subline2 = map (formatVerbStructure clausetr cpstr) vstrs
    in subline1 ++ (if showdetail then subline1_1 else []) ++ concat subline2
 
 
-formatVerbStructure :: ClauseTree -> Maybe [Bitree (Range,CPDP '[Lemma]) (Range,CPDP '[Lemma])] -> VerbStructure -> [Text]
-formatVerbStructure clausetr mcpstr (VerbStructure vp senses mrmmtoppatts) =
-  [ formatVPwithPAWS [] clausetr mcpstr vp        -- for the time being
+formatVerbStructure :: ClauseTree -> [Bitree (Range,CPDP '[Lemma]) (Range,CPDP '[Lemma])] -> VerbStructure -> [Text]
+formatVerbStructure clausetr cpstr (VerbStructure vp senses mrmmtoppatts) =
+  [ formatVPwithPAWS [] clausetr cpstr vp        -- for the time being
   , T.pack (printf "Verb: %-20s" (vp^.vp_lemma.to unLemma))
   , T.pack (formatSenses False senses mrmmtoppatts)
   ]

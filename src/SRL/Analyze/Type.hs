@@ -86,7 +86,7 @@ data SentStructure = SentStructure { _ss_i              :: Int
                                    , _ss_ptr            :: PennTree
                                    , _ss_vps            :: [VerbProperty (Zipper '[Lemma])]
                                    , _ss_clausetr       :: ClauseTree
-                                   , _ss_mcpstr         :: Maybe [Bitree (Range,CPDP '[Lemma]) (Range,CPDP '[Lemma])]
+                                   , _ss_cpstr          :: [Bitree (Range,CPDP '[Lemma]) (Range,CPDP '[Lemma])]
                                    , _ss_tagged         :: [TagPos TokIdx MarkType]
                                    , _ss_verbStructures :: [VerbStructure]
                                    }
