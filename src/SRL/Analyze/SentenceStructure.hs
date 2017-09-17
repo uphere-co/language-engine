@@ -25,7 +25,7 @@ import           Lexicon.Query                             (cutHistogram)
 import           Lexicon.Type                              (POSVorN(..),GRel
                                                            ,RoleInstance,RolePattInstance
                                                            ,ArgPattern)
-import           NLP.Syntax.Clause                         (bindingAnalysis,clauseStructure,identifyCPHierarchy)
+import           NLP.Syntax.Clause                         ({- apposAnalysis, -} bindingAnalysis,clauseStructure,identifyCPHierarchy)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (MarkType(..))
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
@@ -45,6 +45,9 @@ import           SRL.Analyze.Parameter                     (thresholdPattStat)
 import           SRL.Analyze.Type
 import           SRL.Analyze.WikiEL                        (getWikiResolvedMentions
                                                            ,linkedMentionToTagPos)
+
+--
+import Debug.Trace
 
 
 mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]
@@ -74,7 +77,7 @@ getSenses lma sensemap sensestat framedb ontomap = do
   s <- si^.inventory_senses
   let sid = (lma,Verb, s^.sense_group <> "." <> s^.sense_n)
   let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
-      txt_def = {- T.take 40 -} (s^.sense_name)       
+      txt_def = {- T.take 40 -} (s^.sense_name)
       tframe = fromMaybe (Left FrameNone) $ do
         lst <- HM.lookup lma ontomap
         frtxt <- lookup (s^.sense_group <> "." <> s^.sense_n) lst
@@ -145,9 +148,9 @@ sentStructure apredata tagged (i,midx,lmas,mptr) =
         lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
-        cpstr = (map bindingAnalysis . identifyCPHierarchy tagged') vps
+        cpstr = (map ({- apposAnalysis tagged' . -} bindingAnalysis) . identifyCPHierarchy tagged') vps
         verbStructures = map (verbStructure apredata) vps
-    in SentStructure i ptr vps clausetr cpstr tagged' verbStructures 
+    in trace (show tagged') $ SentStructure i ptr vps clausetr cpstr tagged' verbStructures
 
 
 verbStructure :: AnalyzePredata -> VerbProperty (Zipper '[Lemma]) -> VerbStructure
@@ -162,5 +165,5 @@ verbStructure apredata vp =
 
       senses = getSenses lma sensemap sensestat framedb ontomap
       rmtoppatts = do inst <- sortBy (flip compare `on` (^._2)) senses
-                      getTopPatternsFromONFNInst rolemap subcats inst 
+                      getTopPatternsFromONFNInst rolemap subcats inst
   in VerbStructure vp senses rmtoppatts

@@ -32,7 +32,7 @@ import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CPDP)
+import           NLP.Syntax.Type.XBar                    (CPDP,getHeadRange,getHeadTokens)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
@@ -53,9 +53,6 @@ import           SRL.Analyze.Type                        (ExceptionalFrame(..),O
                                                          ,vs_vp
                                                          )
 import           SRL.Analyze.Util                        (addTag,convertTagPosFromTokenToChar,underlineText)
-
-
-
 
 
 formatExFrame :: ExceptionalFrame -> Text
@@ -210,7 +207,7 @@ formatVerbStructure clausetr cpstr (VerbStructure vp senses mrmmtoppatts) =
 showMatchedFrame :: (VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
                  -> IO ()
 showMatchedFrame (vstr,paws) = do
-  let gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
+  -- let gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
   T.IO.putStrLn "---------------------------"
   flip traverse_ (matchFrame (vstr,paws)) $ \(rng,_,frame,mselected) -> do
     putStrLn ("predicate: " <> show rng)
@@ -219,9 +216,9 @@ showMatchedFrame (vstr,paws) = do
     flip traverse_ mselected $ \(_,felst) -> do
       mapM_ putStrLn . map (\(fe,(mp,z)) -> printf "%-15s: %-7s %3s %s"
                                                    fe
-                                                   (show (getRange (current z)))
+                                                   (show (getHeadRange z))
                                                    (fromMaybe "" mp)
-                                                   (gettokens z))
+                                                   (getHeadTokens z))
         $ felst
 
 
