@@ -31,7 +31,7 @@ import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
-import           NLP.Syntax.Noun                        (splitDP)
+import           NLP.Syntax.Noun                        (bareNounModifier,splitDP)
 import           NLP.Syntax.Preposition                 (checkEmptyPrep,hasEmptyPreposition)
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
@@ -180,7 +180,6 @@ whMovement :: BitreeZipper (Range,CPDP as) (Range,CPDP as)
 whMovement w =
   -- letter z denotes zipper for PennTree, w denotes zipper for Bitree (Range,CPDP as) (Range,CPDP as)
   case currentCPDP w of
-    DPCase _  -> return emptyTraceChain
     CPCase cp -> do
       let spec = cp^.complement.specifier
       -- whMovement process starts with cheking trace in subject
@@ -210,13 +209,14 @@ whMovement w =
             -- adjust CPDP hierarchy by modifier relation.
             adjustXBarTree rf0 w z'
           return spec
+    _  -> return emptyTraceChain
 
 
 -- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
-resolveDP :: forall as. Range -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
+resolveDP :: Range -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
 resolveDP rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   tr <- lift get
   z <- hoistMaybe (extractZipperById rng tr)
@@ -260,6 +260,13 @@ bindingAnalysis cpstr = execState (go rng0) cpstr
                         <|>
                         (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
 
+
+apposAnalysis :: [TagPos TokIdx MarkType]
+              -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
+              -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
+apposAnalysis tagged tr = bimap (_2 %~ f) (_2 %~ f) tr
+  where f (DPCase z) = maybe (DPCase z) (\rng -> DPCase' rng z) (bareNounModifier tagged z)
+        f x          = x
 
 
 

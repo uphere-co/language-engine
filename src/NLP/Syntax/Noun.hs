@@ -56,6 +56,4 @@ bareNounModifier tagged z = do
       idx_last_modifier_word = b1-1
   last_modifier_word <- find (\x -> x^._1 == idx_last_modifier_word) (toList (current z))
   guard (last_modifier_word^._2.to posTag.to isNoun == Yes)
-  -- find (b1-1toList (current z)
-  
   return ((b0,idx_last_modifier_word),(b1,e1))

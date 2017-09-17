@@ -124,7 +124,6 @@ mkCP mc mcp tp = XP mc mcp () () tp
 
 data CPDP a = CPCase (CP a)
             | DPCase (Zipper a)
+            | DPCase' (Range,Range) (Zipper a)    -- this is "appositional" case. will be treated more properly later.
 
 makePrisms ''CPDP
-
--- makeLenses ''CPDP
