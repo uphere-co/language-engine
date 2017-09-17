@@ -110,6 +110,9 @@ headRange (Unsplitted z) = getRange (current z)
 headRange (Splitted x) = x^.sdp_head
 
 
+modifierRange z = z ^? _Splitted.sdp_modifier
+
+
 tokensByRange rng = map snd . filter (^._1.to (\i -> i `isInside` rng)) . map (\(i,x)->(i,tokenWord x)) . toList
 
 
