@@ -26,8 +26,8 @@ mkSplittedDP typ h m o = SplittedDP typ (rf h) (rf m) o
   where rf = getRange . current 
 
 
-splitDP :: Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
-splitDP z = fromMaybe (Unsplitted z) $ do
+splitDP :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
+splitDP tagged z = bareNounModifier tagged . fromMaybe (Unsplitted z) $ do
   guard (isChunkAs NP (current z))
   dp <- child1 z
   guard (isChunkAs NP (current dp))
@@ -38,13 +38,13 @@ splitDP z = fromMaybe (Unsplitted z) $ do
 
 -- | This function is very ad hoc. Later we should have PP according to X-bar theory
 --
-splitPP :: Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
-splitPP z = fromMaybe (Unsplitted z) $ do
+splitPP :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
+splitPP tagged z = fromMaybe (Unsplitted z) $ do
   guard (isChunkAs PP (current z))
   p <- child1 z
   guard (isPOSAs TO (current p) || isPOSAs IN (current p))
   dp <- next p
-  return (splitDP dp)
+  return (splitDP tagged dp)
 
 
 -- | Identify bare noun subexpression inside noun phrase as modifier.
