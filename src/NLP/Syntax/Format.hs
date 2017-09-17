@@ -70,11 +70,12 @@ formatTraceChain f (TraceChain xs x) = T.concat (map ((<> " -> ") . fmt) xs) <> 
         fmt WHPRO     = "*WHP*"
 
 
-rangeText :: Zipper as -> Text
-rangeText = T.pack . show . getRange . current
+rangeText :: SplitDP (Zipper as) -> Text
+rangeText (Unsplitted z) = (T.pack . show . getRange . current) z
+rangeText (Splitted x)   = (T.pack . show) (x ^. sdp_head)
 
 
-formatDPorPP :: DPorPP (Zipper as) -> Text
+formatDPorPP :: DPorPP (SplitDP (Zipper as)) -> Text
 formatDPorPP (DP z)          = "DP" <> rangeText z
 formatDPorPP (PrepP _mtxt z) = "PP" <> rangeText z
 
@@ -131,7 +132,7 @@ formatCPHierarchy tr = formatBitree fmt tr
   where showRange rng = T.pack (printf "%-7s" (show rng))
         fmt (rng,CPCase _) = "CP" <> showRange rng
         fmt (rng,DPCase _) = "DP" <> showRange rng  
-        fmt (rng,DPCase' rng2 _) = "DP" <> showRange (rng2^._1) <> showRange (rng2^._2)  
+        -- fmt (rng,DPCase' rng2 _) = "DP" <> showRange (rng2^._1) <> showRange (rng2^._2)  
 
 
 formatClauseStructure :: ClauseTree -> Text
@@ -173,7 +174,7 @@ showClauseStructure :: [TagPos TokIdx MarkType] -> IntMap Lemma -> PennTree -> I
 showClauseStructure tagged lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      cpstr = (map ((apposAnalysis tagged) . bindingAnalysis) . identifyCPHierarchy tagged) vps
+      cpstr = (map ({- (apposAnalysis tagged) . -} bindingAnalysis) . identifyCPHierarchy tagged) vps
       xs = map (formatVPwithPAWS tagged clausetr cpstr) vps
   mapM_ (T.IO.putStrLn . formatCPHierarchy) cpstr
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)

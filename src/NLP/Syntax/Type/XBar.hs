@@ -79,6 +79,23 @@ removeDPorPP (PrepP _ x) = x
 
 
 
+data SplitType = CLMod | BNMod
+
+data SplittedDP a = SplittedDP { _sdp_type     :: SplitType
+                               , _sdp_head     :: Range
+                               , _sdp_modifier :: Range
+                               , _sdp_original :: a }
+
+makeLenses ''SplittedDP
+
+
+data SplitDP a = Unsplitted a
+               | Splitted (SplittedDP a)
+
+makePrisms ''SplitDP
+
+getOriginal (Unsplitted z) = z
+getOriginal (Splitted x) = x^.sdp_original
 
 
 type instance Property   'X_V t = VerbProperty (Zipper t)
@@ -86,23 +103,23 @@ type instance Property   'X_V t = VerbProperty (Zipper t)
 type instance Maximal    'X_V t = Zipper t
 type instance Specifier  'X_V t = ()
 type instance Adjunct    'X_V t = ()
-type instance Complement 'X_V t = [TraceChain (DPorPP (Zipper t))]
+type instance Complement 'X_V t = [TraceChain (DPorPP (SplitDP (Zipper t)))]
 
 type VerbP = XP 'X_V
 
-mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [TraceChain (DPorPP (Zipper t))] -> VerbP t
+mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [TraceChain (DPorPP (SplitDP (Zipper t)))] -> VerbP t
 mkVerbP vp vprop comps = XP vprop vp () () comps
 
 type instance Property   'X_T t = ()
 
 type instance Maximal    'X_T t = Maybe (Zipper t)
-type instance Specifier  'X_T t = TraceChain (Zipper t)
+type instance Specifier  'X_T t = TraceChain (SplitDP (Zipper t))
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Maybe (Zipper t) -> TraceChain (Zipper t) -> VerbP t -> TP t
+mkTP :: Maybe (Zipper t) -> TraceChain (SplitDP (Zipper t)) -> VerbP t -> TP t
 mkTP mtp mdp vp = XP () mtp mdp () vp
 
 
@@ -123,7 +140,7 @@ mkCP mc mcp tp = XP mc mcp () () tp
 
 
 data CPDP a = CPCase (CP a)
-            | DPCase (Zipper a)
-            | DPCase' (Range,Range) (Zipper a)    -- this is "appositional" case. will be treated more properly later.
+            | DPCase (SplitDP (Zipper a))
+            --  | DPCase' (Range,Range) (Zipper a)    -- this is "appositional" case. will be treated more properly later.
 
 makePrisms ''CPDP

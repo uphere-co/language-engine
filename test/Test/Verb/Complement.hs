@@ -173,7 +173,7 @@ checkComplement c  = fromMaybe False $ do
   let gettokens x = let z = case x of
                               DP y      -> y
                               PrepP _ y -> y
-                    in (T.intercalate " " . map (tokenWord.snd) . toList . current) z
+                    in (T.intercalate " " . map (tokenWord.snd) . toList . current . getOriginal) z
       --
       lst :: [Maybe Text]
       lst = cp^..complement.complement.complement.traverse.trResolved.to (fmap gettokens)

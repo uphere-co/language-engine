@@ -17,36 +17,44 @@ import           NLP.Type.PennTreebankII  (ChunkTag(..),Lemma,POSTag(..),Ternary
 import           NLP.Type.TagPos          (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Type          (MarkType(..))
-import           NLP.Syntax.Type.XBar     (Zipper)
+import           NLP.Syntax.Type.XBar     (Zipper,SplitDP(..),SplittedDP(..),SplitType(..))
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 
 
-splitDP :: Zipper (Lemma ': as) -> Maybe (Zipper (Lemma ': as))
-splitDP z = do
+mkSplittedDP :: SplitType -> Zipper a -> Zipper a -> Zipper a -> SplittedDP (Zipper a)
+mkSplittedDP typ h m o = SplittedDP typ (rf h) (rf m) o
+  where rf = getRange . current 
+
+
+splitDP :: Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
+splitDP z = fromMaybe (Unsplitted z) $ do
   guard (isChunkAs NP (current z))
   dp <- child1 z
   guard (isChunkAs NP (current dp))
   sbar <- next dp
-  ((guard (isChunkAs SBAR (current sbar)) >> return dp) <|>
-   (guard (isChunkAs VP (current sbar)) >> return dp))
+  ((guard (isChunkAs SBAR (current sbar)) >> return (Splitted (mkSplittedDP CLMod dp sbar z))) <|>
+   (guard (isChunkAs VP (current sbar)) >> return (Splitted (mkSplittedDP CLMod dp sbar z))))
 
 
 -- | this function is very ad hoc. Later we should have PP according to X-bar theory
-splitPP :: Zipper (Lemma ': as) -> Maybe (Zipper (Lemma ': as))
-splitPP z = do
+--
+splitPP :: Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
+splitPP z = fromMaybe (Unsplitted z) $ do
   guard (isChunkAs PP (current z))
   p <- child1 z
   guard (isPOSAs TO (current p) || isPOSAs IN (current p))
   dp <- next p
-  return (fromMaybe dp (splitDP dp))
+  return (splitDP dp)
+
+  -- return (fromMaybe dp (splitDP dp))
 
 
 
 
 bareNounModifier :: [TagPos TokIdx MarkType]
                  -> Zipper (Lemma ': as)
-                 -> Maybe (Range,Range)
-bareNounModifier tagged z = do
+                 -> SplitDP (Zipper (Lemma ': as))
+bareNounModifier tagged z = fromMaybe (Unsplitted z) $ do
   guard (isChunkAs NP (current z))
   let rng@(b0,e0) = getRange (current z)
   -- check entity for the last words
@@ -56,4 +64,4 @@ bareNounModifier tagged z = do
       idx_last_modifier_word = b1-1
   last_modifier_word <- find (\x -> x^._1 == idx_last_modifier_word) (toList (current z))
   guard (last_modifier_word^._2.to posTag.to isNoun == Yes)
-  return ((b0,idx_last_modifier_word),(b1,e1))
+  return (Splitted (SplittedDP BNMod (b0,idx_last_modifier_word) (b1,e1) z))

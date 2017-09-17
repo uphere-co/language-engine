@@ -13,7 +13,7 @@ import           NLP.Type.TagPos         (TagPos(..),TokIdx,BeginEnd)
 --
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
-import           NLP.Syntax.Type.XBar    (Zipper,DPorPP(..))
+import           NLP.Syntax.Type.XBar    (Zipper,DPorPP(..),SplitDP(..))
 
 
 
@@ -29,13 +29,15 @@ hasEmptyPreposition z =
         return True 
 
 
-checkEmptyPrep tagged z =
+checkEmptyPrep tagged x@(Splitted _) = DP x
+checkEmptyPrep tagged (Unsplitted z) =
   let r = fromMaybe False $ do
             let rng = getRange (current z)
             -- check bare noun adverb
             find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) == rng && t == MarkTime) tagged
             return (hasEmptyPreposition z)
-  in if r then PrepP Nothing z else DP z
+  in if r then PrepP Nothing (Unsplitted z) else DP (Unsplitted z)
+                                                 
 
 
 

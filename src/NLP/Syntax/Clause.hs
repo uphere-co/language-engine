@@ -59,10 +59,9 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
-                  -> [TraceChain (DPorPP (Zipper (Lemma ': as)))]
+                  -> [TraceChain (DPorPP (SplitDP (Zipper (Lemma ': as))))]
 complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep tagged x)))
-                                  ((\z -> fromMaybe z (splitDP z)) <$>
-                                   (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
+                                  (splitDP <$> (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkNPSBAR z = case tag z of
@@ -77,14 +76,14 @@ complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep tag
 
 identifySubject :: N.ClauseTag
                 -> Zipper (Lemma ': as)
-                -> TraceChain (Zipper (Lemma ': as))
+                -> TraceChain (SplitDP (Zipper (Lemma ': as)))
 identifySubject tag vp =
   let r = case tag of
             N.SINV -> firstSiblingBy next (isChunkAs NP) vp
             _      -> firstSiblingBy prev (isChunkAs NP) vp
   in case r of
        Nothing -> TraceChain [NULL] Nothing
-       Just z  -> TraceChain []     (Just z)
+       Just z  -> TraceChain []     (Just (splitDP z))
 
 
 
@@ -93,7 +92,7 @@ identifySubject tag vp =
 --
 constructCP :: [TagPos TokIdx MarkType]
             -> VerbProperty (Zipper (Lemma ': as))
-            -> Maybe (CP (Lemma ': as),[Zipper (Lemma ': as)])
+            -> Maybe (CP (Lemma ': as),[SplitDP (Zipper (Lemma ': as))])
 constructCP tagged vprop = do
     vp <- maximalProjectionVP vprop
     tp <- parentOfVP vprop
@@ -134,7 +133,7 @@ hierarchyBits (cp,zs) = do
   rng <- cpRange cp
   let cpbit = (rng,(rng,CPCase cp))
 
-  let f z = let rng' = (getRange . current) z in (rng',(rng',DPCase z))
+  let f z = let rng' = (getRange . current. getOriginal) z in (rng',(rng',DPCase z))
   return (cpbit:map f zs)
 
 
@@ -155,7 +154,7 @@ currentCPDP = snd . getRoot1 . current
 
 
 adjustXBarTree f w z = do
-  let dprng = getRange (current z)
+  let dprng = (getRange . current . getOriginal) z
       -- adjust CPDP hierarchy by modifier relation.
   case extractZipperById dprng (toBitree w) of
     Nothing -> do let newtr (PN y ys) = PN (dprng,DPCase z) [PN (f y) ys]
@@ -175,8 +174,9 @@ adjustXBarTree f w z = do
 
 
 
-whMovement :: BitreeZipper (Range,CPDP as) (Range,CPDP as)
-           -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
+whMovement :: forall as.
+              BitreeZipper (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
+           -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))) (TraceChain (SplitDP (Zipper (Lemma ': as))))
 whMovement w =
   -- letter z denotes zipper for PennTree, w denotes zipper for Bitree (Range,CPDP as) (Range,CPDP as)
   case currentCPDP w of
@@ -194,20 +194,21 @@ whMovement w =
                   xsmov = init xs ++ [Moved]
               fmap (fromMaybe (TraceChain xspro Nothing)) . runMaybeT $ do
                 -- check subject position for relative pronoun
-                z'  <- hoistMaybe (prev =<< cp^.maximalProjection)
+                z' <- splitDP <$> hoistMaybe (prev =<< cp^.maximalProjection)
                 adjustXBarTree id w z'
                 return (TraceChain (xsmov ++ [WHPRO]) (Just z'))
-            _    -> return spec -- do
+            _    -> return spec
         else do
           -- without trace in subject
           -- check object for relative pronoun
           runMaybeT $ do
-            z'  <- hoistMaybe (prev =<< cp^.maximalProjection)
+            z'  <- splitDP <$> hoistMaybe (prev =<< cp^.maximalProjection)
             let -- adjust function for complement with relative pronoun resolution
                 rf0 = _2._CPCase.complement.complement.complement %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)
-                dprng = getRange (current z')
+                dprng = (getRange . current . getOriginal) z'
             -- adjust CPDP hierarchy by modifier relation.
             adjustXBarTree rf0 w z'
+            return ()
           return spec
     _  -> return emptyTraceChain
 
@@ -216,7 +217,7 @@ whMovement w =
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
-resolveDP :: Range -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
+resolveDP :: Range -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))) (TraceChain (SplitDP (Zipper (Lemma ': as))))
 resolveDP rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   tr <- lift get
   z <- hoistMaybe (extractZipperById rng tr)
@@ -246,7 +247,8 @@ resolveDP rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
                 _         ->    return spec
 
 
-bindingAnalysis :: Bitree (Range,CPDP as) (Range,CPDP as) -> Bitree (Range,CPDP as) (Range,CPDP as)
+bindingAnalysis :: Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
+                -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
 bindingAnalysis cpstr = execState (go rng0) cpstr
    where getrng = either fst fst . getRoot . current
          rng0 = (either fst fst . getRoot) cpstr
@@ -260,14 +262,14 @@ bindingAnalysis cpstr = execState (go rng0) cpstr
                         <|>
                         (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
 
-
+{-
 apposAnalysis :: [TagPos TokIdx MarkType]
               -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
               -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
 apposAnalysis tagged tr = bimap (_2 %~ f) (_2 %~ f) tr
   where f (DPCase z) = maybe (DPCase z) (\rng -> DPCase' rng z) (bareNounModifier tagged z)
         f x          = x
-
+-}
 
 
 predicateArgWS :: CP xs
