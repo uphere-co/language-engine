@@ -27,6 +27,7 @@ import           Lexicon.Type                              (POSVorN(..),GRel
                                                            ,ArgPattern)
 import           NLP.Syntax.Clause                         (bindingAnalysis,clauseStructure,identifyCPHierarchy)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
+import           NLP.Syntax.Type                           (MarkType(..))
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
 import           NLP.Syntax.Type.XBar                      (Zipper)
 import qualified NLP.Type.NamedEntity              as N
@@ -135,7 +136,7 @@ sentStructure apredata tagged (i,midx,lmas,mptr) =
                     (b0,e0) <- (^.sent_tokenRange) <$> midx
                     return $ flip mapMaybe tagged $ \(TagPos (TokIdx b,TokIdx e,t)) ->
                                                       if b0 <= b && e <= e0
-                                                      then Just (TagPos (TokIdx (b-b0),TokIdx (e-b0),t))
+                                                      then Just (TagPos (TokIdx (b-b0),TokIdx (e-b0),MarkTime))
                                                       else Nothing
         lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
