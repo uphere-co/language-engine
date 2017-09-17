@@ -28,7 +28,7 @@ elemRevIsInsideR x ys = any (\y -> y `isInsideR` x) ys
 
 
 rootRange []     = error "rootRange"
-rootRange rs@(r:_) = let res = mapAccumL (\(!rmax) rlst -> go rmax rlst) r (tail (inits rs))
+rootRange rs@(r:_) = let res = mapAccumL (\(!rmax) rlst -> go rmax rlst) r (tail (inits rs ++ [rs]))
                      in (fst res, last (snd res))
   where
     go r rs = mapAccumL f r rs
@@ -50,7 +50,7 @@ partitionRanges rngs = let (rmax,rngs') = rootRange rngs
 
 
 rangeTree :: [Range] -> [Bitree Range Range]
-rangeTree []   = error "rangeTree"
+-- rangeTree []   = error "rangeTree"
 rangeTree rngs = let ps = partitionRanges rngs
                      f (rmax,[]) = PL rmax
                      f (rmax,rs) = PN rmax (rangeTree rs)
