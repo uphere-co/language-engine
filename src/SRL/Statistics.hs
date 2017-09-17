@@ -24,7 +24,7 @@ getGraphFromMG mg =
           in (Just graph)
 
 numberOfPredicate :: SentStructure -> Int
-numberOfPredicate (SentStructure _i _ptr _vps _clausetr _mcpstr vstrs) = length vstrs
+numberOfPredicate (SentStructure _ _ _ _ _ _ vstrs) = length vstrs
 
 numberOfMGPredicate :: MeaningGraph -> Int
 numberOfMGPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)

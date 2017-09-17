@@ -94,8 +94,8 @@ printMeaningGraph dstr = do
   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
       mtokss = (dstr ^. ds_mtokenss)
       wikilst = mkWikiList dstr
-  print (sstrs1 ^.. traverse . ss_ptr)
-  print (sstrs1 ^.. traverse . ss_clausetr)
+  -- print (sstrs1 ^.. traverse . ss_ptr)
+  -- print (sstrs1 ^.. traverse . ss_clausetr)
   
   let mgs = map meaningGraph sstrs1
   forM_ (zip mtokss (zip ([1..] :: [Int]) mgs)) $ \(mtks,(i,mg')) -> do
@@ -128,6 +128,7 @@ loadConfig = do
                                     , (humanRuleClass, humanRuleItemFile), (buildingClass, buildingItemFile) ]
   return (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats)
 
+
 loadAnalyzePredata :: IO AnalyzePredata
 loadAnalyzePredata = do
   let cfg = cfgG
@@ -139,6 +140,7 @@ loadAnalyzePredata = do
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
   subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats)
+
 
 getAnalysis :: DocAnalysisInput
             -> (HashMap Text Inventory

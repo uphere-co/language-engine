@@ -39,7 +39,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,SentStructure
                                               ,VerbStructure
                                               ,ds_sentStructures
-                                              ,ss_clausetr,ss_mcpstr,ss_verbStructures
+                                              ,ss_clausetr,ss_mcpstr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
                                               ,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges
                                               )
@@ -65,9 +65,10 @@ mkPAWSTriples sstr =
   let clausetr = sstr^.ss_clausetr
       mcpstr = sstr^.ss_mcpstr
   in ( mcpstr
-     , [(vstr,paws)| vstr <- sstr ^.ss_verbStructures, let vp = vstr^.vs_vp, paws <- maybeToList (findPAWS [] clausetr vp mcpstr) ]) -- for the time being
-  -- return (mcpstr,vstr,paws)
-
+     , [(vstr,paws)| vstr <- sstr ^.ss_verbStructures
+                   , let vp = vstr^.vs_vp
+                   , paws <- maybeToList (findPAWS (sstr^.ss_tagged) clausetr vp mcpstr) ]
+     ) 
 
 
 pbArgForGArg :: GArg -> ArgPattern p GRel -> Maybe (Text,GRel)
@@ -284,8 +285,6 @@ meaningGraph sstr =
       matched = mapMaybe matchFrame lst_vstrpaws
       gettokens = T.intercalate " " . map (tokenWord.snd) . toList
       depmap = depCPDP =<< join (maybeToList mcpstr)
-
-      
       --
       preds = flip map matched $ \(rng,vprop,frame,_mselected) i -> MGPredicate i rng frame (simplifyVProp vprop)
       ipreds = zipWith ($) preds [1..]
@@ -316,7 +315,7 @@ meaningGraph sstr =
                  i' <- maybeToList (HM.lookup rng' rngidxmap)
                  let b = isJust (find (== (rng',rng)) depmap) 
                  return (MGEdge fe b mprep i i')
-  in trace (show depmap) $ MeaningGraph vertices edges
+  in MeaningGraph vertices edges
 
 
 isEntity :: MGVertex -> Bool

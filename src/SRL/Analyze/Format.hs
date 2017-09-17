@@ -185,7 +185,7 @@ formatDocStructure showdetail (DocStructure mtokenss sentitems mergedtags sstrs)
 
 
 formatSentStructure :: Bool -> SentStructure -> [Text]
-formatSentStructure showdetail (SentStructure i ptr _ clausetr mcpstr vstrs) =
+formatSentStructure showdetail (SentStructure i ptr _ clausetr mcpstr _ vstrs) =
    let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                   , formatIndexTokensFromTree 0 ptr
                   ]

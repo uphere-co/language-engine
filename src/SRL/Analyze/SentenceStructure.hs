@@ -74,7 +74,7 @@ getSenses lma sensemap sensestat framedb ontomap = do
   s <- si^.inventory_senses
   let sid = (lma,Verb, s^.sense_group <> "." <> s^.sense_n)
   let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
-      txt_def = T.take 40 (s^.sense_name)
+      txt_def = {- T.take 40 -} (s^.sense_name)       
       tframe = fromMaybe (Left FrameNone) $ do
         lst <- HM.lookup lma ontomap
         frtxt <- lookup (s^.sense_group <> "." <> s^.sense_n) lst
@@ -143,7 +143,7 @@ sentStructure apredata tagged (i,midx,lmas,mptr) =
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
         mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy tagged') vps
         verbStructures = map (verbStructure apredata) vps
-    in SentStructure i ptr vps clausetr mcpstr verbStructures
+    in SentStructure i ptr vps clausetr mcpstr tagged' verbStructures 
 
 
 verbStructure :: AnalyzePredata -> VerbProperty (Zipper '[Lemma]) -> VerbStructure
