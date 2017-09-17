@@ -70,17 +70,23 @@ formatTraceChain f (TraceChain xs x) = T.concat (map ((<> " -> ") . fmt) xs) <> 
         fmt WHPRO     = "*WHP*"
 
 
+showRange rng = T.pack (printf "%-7s" (show rng))
+
+
 rangeText :: SplitDP (Zipper as) -> Text
 rangeText (Unsplitted z) = (T.pack . show . getRange . current) z
 rangeText (Splitted x)   = (T.pack . show) (x ^. sdp_head)
 
 
+formatDP x@(Unsplitted z) = "DP" <> rangeText x
+formatDP x@(Splitted y)   = "DP-split" <> rangeText x <> " " <> formatSplittedDP y
+
+
 formatDPorPP :: DPorPP (SplitDP (Zipper as)) -> Text
-formatDPorPP (DP z)          = "DP" <> rangeText z
-formatDPorPP (PrepP _mtxt z) = "PP" <> rangeText z
+formatDPorPP (DP z)          = formatDP z
+formatDPorPP (PrepP _mtxt z) = "PP-" <> formatDP z
 
 
-showRange rng = T.pack (printf "%-7s" (show rng))
 
 formatSplittedDP x = let typtxt = case x^.sdp_type of
                                     CLMod -> "clmod"
@@ -133,15 +139,13 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
         formatposchunk (Right p) = "(" ++ show p ++ ")"
 
 
+
+
 formatCPHierarchy :: Bitree (Range,CPDP as) (Range,CPDP as) -> Text
 formatCPHierarchy tr = formatBitree fmt tr
   where
         fmt (rng,CPCase _) = "CP" <> showRange rng
-        fmt (rng,DPCase x) = "DP" <> case x of
-                                       Unsplitted z -> (showRange rng)
-                                       Splitted y   -> "-split" <> showRange rng <> " " <> formatSplittedDP y
-        -- fmt (rng,DPCase' rng2 _) = "DP" <> showRange (rng2^._1) <> showRange (rng2^._2)
-
+        fmt (rng,DPCase x) = "DP" <> formatDP x
 
 formatClauseStructure :: ClauseTree -> Text
 formatClauseStructure clausetr =
