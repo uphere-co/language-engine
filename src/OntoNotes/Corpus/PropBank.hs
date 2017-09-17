@@ -77,7 +77,7 @@ matchVerbPropertyWithRelation :: [VerbProperty (BitreeZipperICP '[Lemma])]
 matchVerbPropertyWithRelation verbprops clausetr minst = do
   relidx <- findRelNode (minst^.mi_arguments)
   vp <- find (\vp->vp^.vp_index==relidx) verbprops
-  let cpstr = (map bindingAnalysis . identifyCPHierarchy []) verbprops   -- for the time being
+  let cpstr = (map (bindingAnalysis []) . identifyCPHierarchy []) verbprops   -- for the time being
       mpa = findPAWS [] clausetr vp cpstr                                -- for the time being
   return (vp,mpa)
 
