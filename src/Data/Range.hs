@@ -27,8 +27,12 @@ elemRevIsInsideR :: Foldable t => Range -> t Range -> Bool
 elemRevIsInsideR x ys = any (\y -> y `isInsideR` x) ys
 
 
+-- | Bubble sort of ranges. Since a list of range is a partially ordered set,
+--   we mark non-included ranges as Left.
+--
 rootRange []     = error "rootRange"
-rootRange rs@(r:_) = let res = mapAccumL (\(!rmax) rlst -> go rmax rlst) r (tail (inits rs ++ [rs]))
+rootRange rs@(r:_) = 
+                     let res = mapAccumL (\(!rmax) rlst -> go rmax rlst) r (tail (inits rs ++ [rs]))
                      in (fst res, last (snd res))
   where
     go r rs = mapAccumL f r rs
@@ -39,6 +43,9 @@ rootRange rs@(r:_) = let res = mapAccumL (\(!rmax) rlst -> go rmax rlst) r (tail
 
 
 
+-- | Recursively apply range bubble sort to get all partial ordering relations
+--   that exists in a range list.
+--   
 partitionRanges :: [Range] -> [(Range,[Range])]
 partitionRanges rngs = let (rmax,rngs') = rootRange rngs
                            (outside,inside') = partitionEithers rngs'
@@ -48,7 +55,8 @@ partitionRanges rngs = let (rmax,rngs') = rootRange rngs
                             _  -> (rmax,inside) : partitionRanges outside
 
 
-
+-- | Tree structure out of a list of ranges by inclusion relation.
+--
 rangeTree :: [Range] -> [Bitree Range Range]
 -- rangeTree []   = error "rangeTree"
 rangeTree rngs = let ps = partitionRanges rngs
