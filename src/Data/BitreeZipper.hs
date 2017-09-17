@@ -109,3 +109,8 @@ replaceItem f g z = let tr = case z^.tz_current of
                                  PN c xs -> PN (f c) xs
                                  PL t    -> PL (g t)
                     in replaceTree (const tr) z
+
+remove :: BitreeZipper c t -> Maybe (Bitree c t)
+remove (TZ _ [])     = Nothing
+remove (TZ _ (x:xs)) = Just (toBitree (TZ x xs))
+
