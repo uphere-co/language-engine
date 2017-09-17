@@ -154,6 +154,27 @@ currentCPDP = snd . getRoot1 . current
 
 
 
+adjustXBarTree f w z = do
+  let dprng = getRange (current z)
+      -- adjust CPDP hierarchy by modifier relation.
+  case extractZipperById dprng (toBitree w) of
+    Nothing -> do let newtr (PN y ys) = PN (dprng,DPCase z) [PN (f y) ys]
+                      newtr (PL y)    = PN (dprng,DPCase z) [PL (f y)]
+                      w'' = replaceTree newtr w
+                  lift (put (toBitree w''))
+
+    Just _  -> do let otr = case current w of
+                              PN y ys -> PN (f y) ys
+                              PL y    -> PL (f y)
+                  lift . put =<< hoistMaybe (remove w)
+                  w' <- MaybeT (extractZipperById dprng <$> get)
+                  let newtr (PN y ys) = PN y (ys ++ [otr])
+                      newtr (PL y)    = PN y [otr]
+                      w'' =replaceTree newtr w'
+                  lift (put (toBitree w''))
+
+
+
 whMovement :: BitreeZipper (Range,CPDP as) (Range,CPDP as)
            -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
 whMovement w =
@@ -175,21 +196,7 @@ whMovement w =
               fmap (fromMaybe (TraceChain xspro Nothing)) . runMaybeT $ do
                 -- check subject position for relative pronoun
                 z'  <- hoistMaybe (prev =<< cp^.maximalProjection)
-                let dprng = getRange (current z')
-                    -- adjust CPDP hierarchy by modifier relation.
-                case extractZipperById dprng (toBitree w) of
-                  Nothing -> do let newtr (PN y ys) = PN (dprng,DPCase z') [PN y ys]
-                                    newtr (PL y)    = PN (dprng,DPCase z') [PL y]
-                                    w'' = replaceTree newtr w
-                                lift (put (toBitree w''))
-
-                  Just _  -> do let otr = current w
-                                lift . put =<< hoistMaybe (remove w)
-                                w' <- MaybeT (extractZipperById dprng <$> get)
-                                let newtr (PN y ys) = PN y (ys ++ [otr])
-                                    newtr (PL y)    = PN y [otr]
-                                    w'' =replaceTree newtr w'
-                                lift (put (toBitree w''))
+                adjustXBarTree id w z'
                 return (TraceChain (xsmov ++ [WHPRO]) (Just z'))
             _    -> return spec -- do
         else do
@@ -200,11 +207,8 @@ whMovement w =
             let -- adjust function for complement with relative pronoun resolution
                 rf0 = _2._CPCase.complement.complement.complement %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)
                 dprng = getRange (current z')
-                -- adjust CPDP hierarchy by modifier relation.
-                newtr (PN y ys) = PN (dprng,DPCase z') [PN (rf0 y) ys]
-                newtr (PL y)    = PN (dprng,DPCase z') [PL (rf0 y)]
-                w'' = replaceTree newtr w
-            lift (put (toBitree w''))
+            -- adjust CPDP hierarchy by modifier relation.
+            adjustXBarTree rf0 w z'
           return spec
 
 
