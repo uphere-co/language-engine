@@ -170,10 +170,7 @@ checkComplement c  = fromMaybe False $ do
   let vps = mkVPS (c^._4) (c^._5)
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
   (cp,_) <- constructCP [] vp  -- for the time being
-  let gettokens x = let z = case x of
-                              DP y      -> y
-                              PrepP _ y -> y
-                    in (T.intercalate " " . map (tokenWord.snd) . toList . current . getOriginal) z
+  let gettokens x = case x of DP y -> getHeadTokens y; PrepP _ y -> getHeadTokens y
       --
       lst :: [Maybe Text]
       lst = cp^..complement.complement.complement.traverse.trResolved.to (fmap gettokens)

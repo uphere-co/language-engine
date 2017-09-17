@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE KindSignatures             #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE StandaloneDeriving         #-}
@@ -10,7 +11,9 @@
 module NLP.Syntax.Type.XBar where
 
 import           Control.Lens
-import           Data.Text               (Text)
+import           Data.Foldable               (toList)
+import           Data.Text                   (Text)
+import qualified Data.Text              as T
 --
 import           Data.Bitree
 import           Data.BitreeZipper
@@ -96,6 +99,20 @@ makePrisms ''SplitDP
 
 getOriginal (Unsplitted z) = z
 getOriginal (Splitted x) = x^.sdp_original
+
+
+getTokens :: BitreeICP as -> Text
+getTokens = T.intercalate " " . map (tokenWord.snd) . toList
+
+
+getHeadRange (Unsplitted z) = getRange (current z)
+getHeadRange (Splitted x) = x^.sdp_head
+
+
+getHeadTokens (Unsplitted z) = getTokens (current z)
+getHeadTokens (Splitted x) = let rng = x^.sdp_head
+                                 f (i,x) = (i,tokenWord x) 
+                             in (T.intercalate " " . map snd . filter (^._1.to (\i -> i `isInside` rng)) . map f . toList . current) (x^.sdp_original)
 
 
 type instance Property   'X_V t = VerbProperty (Zipper t)

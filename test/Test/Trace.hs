@@ -162,13 +162,13 @@ checkTrace c = -- False
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
     paws <- findPAWS [] clausetr vp cpstr
     let cp = paws^.pa_CP
-        gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current . getOriginal
+        -- gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current . getOriginal
     case c^._3._1 of
-      Subj   -> let dp = fmap gettokens (cp ^.complement.specifier)
+      Subj   -> let dp = fmap getHeadTokens (cp ^.complement.specifier)
                 in return (dp == c ^._3._2)
       Comp n -> do let comps = cp ^.complement.complement.complement
                    comp <- comps ^? ix (n-1)
-                   let dp = fmap (\case DP z -> gettokens z; PrepP _ z -> gettokens z) comp
+                   let dp = fmap (\case DP z -> getHeadTokens z; PrepP _ z -> getHeadTokens z) comp
                    return (dp == c ^._3._2)
 
 

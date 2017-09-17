@@ -53,6 +53,8 @@ getLeafIndex (PL (i,_)) = Just i
 getLeafIndex _          = Nothing
 
 
+
+
 isLemmaAs :: (GetIntLemma tag) => Lemma -> BitreeICP tag -> Bool
 isLemmaAs lma c = maybe False ((==lma).snd) (intLemma0 c)
 
