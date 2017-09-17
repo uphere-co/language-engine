@@ -36,7 +36,7 @@ splitDP z = fromMaybe (Unsplitted z) $ do
    (guard (isChunkAs VP (current sbar)) >> return (Splitted (mkSplittedDP CLMod dp sbar z))))
 
 
--- | this function is very ad hoc. Later we should have PP according to X-bar theory
+-- | This function is very ad hoc. Later we should have PP according to X-bar theory
 --
 splitPP :: Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
 splitPP z = fromMaybe (Unsplitted z) $ do
@@ -46,15 +46,16 @@ splitPP z = fromMaybe (Unsplitted z) $ do
   dp <- next p
   return (splitDP dp)
 
-  -- return (fromMaybe dp (splitDP dp))
 
-
-
-
+-- | Identify bare noun subexpression inside noun phrase as modifier.
+--   I did not implement the already-splitted case. We need multiple-adjunct
+--   structure. 
+--
 bareNounModifier :: [TagPos TokIdx MarkType]
-                 -> Zipper (Lemma ': as)
                  -> SplitDP (Zipper (Lemma ': as))
-bareNounModifier tagged z = fromMaybe (Unsplitted z) $ do
+                 -> SplitDP (Zipper (Lemma ': as))
+bareNounModifier _      x@(Splitted   _) = x                 -- for the time being
+bareNounModifier tagged x@(Unsplitted z) = fromMaybe x $ do
   guard (isChunkAs NP (current z))
   let rng@(b0,e0) = getRange (current z)
   -- check entity for the last words

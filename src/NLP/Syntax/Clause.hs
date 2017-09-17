@@ -262,14 +262,14 @@ bindingAnalysis cpstr = execState (go rng0) cpstr
                         <|>
                         (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
 
-{-
-apposAnalysis :: [TagPos TokIdx MarkType]
+ 
+nounModifierAnalysis :: [TagPos TokIdx MarkType]
               -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
               -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
-apposAnalysis tagged tr = bimap (_2 %~ f) (_2 %~ f) tr
-  where f (DPCase z) = maybe (DPCase z) (\rng -> DPCase' rng z) (bareNounModifier tagged z)
+nounModifierAnalysis tagged tr = bimap (_2 %~ f) (_2 %~ f) tr
+  where f (DPCase z) = DPCase (bareNounModifier tagged z)
         f x          = x
--}
+
 
 
 predicateArgWS :: CP xs
