@@ -110,7 +110,12 @@ replaceItem f g z = let tr = case z^.tz_current of
                                  PL t    -> PL (g t)
                     in replaceTree (const tr) z
 
+
+-- | Remove currently focused item and return tree.
+--   If it is a single leaf tree, then Nothing.
+--
 remove :: BitreeZipper c t -> Maybe (Bitree c t)
-remove (TZ _ [])     = Nothing
-remove (TZ _ (x:xs)) = Just (toBitree (TZ x xs))
+remove (TZ _ [])                = Nothing
+remove (TZ _ ((TC c ps ns):xs)) = let x = PN c (reverse ps ++ ns)
+                                  in Just (toBitree (TZ x xs))
 
