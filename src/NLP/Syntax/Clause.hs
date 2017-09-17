@@ -82,7 +82,8 @@ identifySubject tag vp =
             _      -> firstSiblingBy prev (isChunkAs NP) vp
   in case r of
        Nothing -> TraceChain [NULL] Nothing
-       Just z  -> TraceChain []     (Just (fromMaybe z (splitDP z)))
+       Just z  -> TraceChain []     (Just z)
+
 
 
 
@@ -90,28 +91,33 @@ identifySubject tag vp =
 --
 constructCP :: [TagPos TokIdx MarkType]
             -> VerbProperty (Zipper (Lemma ': as))
-            -> Maybe (CP (Lemma ': as))
+            -> Maybe (CP (Lemma ': as),[Zipper (Lemma ': as)])
 constructCP tagged vprop = do
     vp <- maximalProjectionVP vprop
     tp <- parentOfVP vprop
     tptag' <- N.convert <$> getchunk tp
-    let verbp = mkVerbP vp vprop (complementsOfVerb tagged vprop)
+    let comps = complementsOfVerb tagged vprop
+        comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to removeDPorPP)
+        verbp = mkVerbP vp vprop comps
+        nullsubj = TraceChain [NULL] Nothing
     case tptag' of
       N.CL s -> do
         cp' <- parent tp
         cptag' <- N.convert <$> getchunk cp'
         let subj = identifySubject s vp
+            subj_dps = maybeToList (subj ^? trResolved._Just)
+            dps = (subj_dps++comps_dps)
         case cptag' of
           N.CL N.SBAR ->
-            return $ mkCP (maybe (Left C_NULL) Right (prev tp)) (Just cp') (mkTP (Just tp) subj verbp)
+            return (mkCP (maybe (Left C_NULL) Right (prev tp)) (Just cp') (mkTP (Just tp) subj verbp),dps)
           N.CL _ ->
-            return $ mkCP (Left C_NULL) (Just tp) (mkTP (Just tp) subj verbp)
+            return (mkCP (Left C_NULL) (Just tp) (mkTP (Just tp) subj verbp),dps)
           N.RT   ->
-            return $ mkCP (Left C_NULL) (Just cp') (mkTP (Just tp) subj verbp)
+            return (mkCP (Left C_NULL) (Just cp') (mkTP (Just tp) subj verbp),dps)
           _      -> -- somewhat problematic case?
-            return (mkCP (Left C_NULL) Nothing (mkTP (Just tp) subj verbp))
+            return (mkCP (Left C_NULL) Nothing (mkTP (Just tp) subj verbp),dps)
       _ -> -- reduced relative clause
-           return (mkCP (Left C_WH) (Just vp) (mkTP (Just vp) (TraceChain [NULL] Nothing) verbp))
+           return (mkCP (Left C_WH) (Just vp) (mkTP (Just vp) nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -122,13 +128,31 @@ cpRange cp = (cp^?maximalProjection._Just.to (getRange . current)) <|>
              (return (cp^.complement.complement.maximalProjection.to (getRange . current)))
 
 
+hierarchyBits (cp,zs) = do
+  rng <- cpRange cp
+  let cpbit = (rng,(rng,CPCase cp))
+  
+  let f z = let rng' = (getRange . current) z
+            in (rng',(rng',DPCase z))
+  return (cpbit:map f zs)
+
+{-  if null zs
+    then return (rng,(rng,CPCase cp))
+    else return (rng,(rng,CPCase cp))
+-}
+{- 
+  return
+  
+  let mrngcp = (,) <$>  <*> pure (CPCase cp)
+                       in if null zs then PL <$> mrngcp else PL <$> mrngcp
+-}
 
 identifyCPHierarchy :: [TagPos TokIdx MarkType]
                     -> [VerbProperty (Zipper (Lemma ': as))]
                     -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
 identifyCPHierarchy tagged vps = traverse (bitraverse tofull tofull) rtr
-  where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure (CPCase cp)) <=< constructCP tagged) vps
-        cpmap = HM.fromList (map (\x->(x^._1,x)) cps)
+  where cpmap = (HM.fromList . concat . mapMaybe (hierarchyBits <=< constructCP tagged)) vps
+        -- cpmap = HM.fromList (map (\x->(x^._1,x)) cps)
         rngs = HM.keys cpmap
         rtr = rangeTree rngs
         tofull rng = HM.lookup rng cpmap
@@ -259,7 +283,7 @@ findPAWS :: [TagPos TokIdx MarkType]
          -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
          -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
 findPAWS tagged tr vp mcpstr = do
-  cp <- constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
+  cp <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
   rng <- cpRange cp
   cpstr <- mcpstr
   cp' <- (^? _CPCase) . currentCPDP =<< ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
