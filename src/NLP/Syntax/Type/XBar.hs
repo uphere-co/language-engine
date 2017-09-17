@@ -121,7 +121,7 @@ headText (Splitted y)   = (T.intercalate " " . tokensByRange (y^.sdp_head) . cur
 
 
 modifierText (Unsplitted z) = Nothing
-modifierText (Splitted y)   = (Just . T.intercalate " " . tokensByRange (y^.sdp_head) . current) (y^.sdp_original)
+modifierText (Splitted y)   = (Just . T.intercalate " " . tokensByRange (y^.sdp_modifier) . current) (y^.sdp_original)
 
 
 
