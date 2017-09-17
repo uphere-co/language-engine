@@ -126,7 +126,6 @@ docStructure apredata emTagger docinput@(DocAnalysisInput sents sentidxs sentite
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
-      -- tagged = fromMaybe [] mtmxs
       sentStructures = map (sentStructure apredata mergedtags) (zip4 ([1..] :: [Int]) sentidxs lmass mptrs)
   in DocStructure mtokenss sentitems mergedtags sentStructures
 

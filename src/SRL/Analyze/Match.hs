@@ -294,37 +294,53 @@ meaningGraph sstr =
                          mrngtxt' = do y <- z ^? _Splitted
                                        guard (y^.sdp_type == BNMod)
                                        (,) <$> modifierRange z <*> modifierText z
-                         txt = formatDP z -- headText z
+                         txt = headText z -- formatDP z
                      return (rng,txt,mrngtxt')
-      {--
-      etts_mod = do (_,_,_,mselected) <- matched
-                    (_,felst) <- maybeToList mselected
-                    (_fe,(_,z)) <- felst
-                    let rng = getHeadRange z
-                        txt = getHeadTokens z
-                    return (rng,txt)
-      -}
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
-      entities = concatMap (\(rng,txt,mrngtxt') -> (\i -> MGEntity i rng txt []) : maybe [] (\(rng',txt') -> [\i' -> MGEntity i' rng' txt' []]) mrngtxt')
-               . filterFrame
-               . map head
-               . groupBy ((==) `on` (^._1))
-               . sortBy (compare `on` (^._1))
-               $ entities0
+
+      entities1 = filterFrame
+                . map head
+                . groupBy ((==) `on` (^._1))
+                . sortBy (compare `on` (^._1))
+                $ entities0
+
+      mkEntityFun (rng,txt,mrngtxt') =
+        (\i -> MGEntity i rng txt []) :
+          flip (maybe []) mrngtxt' (\(rng',txt') -> [ \i'  -> MGEntity i' rng' txt' []
+                                                    , \i'' -> MGNominalPredicate i'' rng' "Instance"
+                                                    ]
+
+
+                                   )
+
+
+      entities = concatMap mkEntityFun entities1
+
       vertices = ipreds ++ zipWith ($) entities (enumFrom (length ipreds+1))
       --
-      rngidxmap = HM.fromList [(v^.mv_range,v^.mv_id) | v <- vertices ]
-      edges = do (rng,_,_,mselected) <- matched
-                 i <- maybeToList (HM.lookup rng rngidxmap)
-                 (_,felst) <- maybeToList mselected
-                 (fe,(mprep,z)) <- felst
-                 let rng' = headRange z
-                 i' <- maybeToList (HM.lookup rng' rngidxmap)
-                 let b = isJust (find (== (rng',rng)) depmap)
-                 return (MGEdge fe b mprep i i')
-  in MeaningGraph vertices edges
+      rangeid :: MGVertex -> (Int,Range)
+      rangeid (MGEntity _ rng _ _)         = (0,rng)
+      rangeid (MGPredicate _ rng _ _)      = (0,rng)
+      rangeid (MGNominalPredicate _ rng _) = (1,rng)
+      rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
+      edges0 = do (rng,_,_,mselected) <- matched
+                  i <- maybeToList (HM.lookup (0,rng) rngidxmap)   -- frame
+                  (_,felst) <- maybeToList mselected
+                  (fe,(mprep,z)) <- felst
+                  let rng' = headRange z
+                  i' <- maybeToList (HM.lookup (0,rng') rngidxmap)  -- frame element
+                  let b = isJust (find (== (rng',rng)) depmap)
+                  return (MGEdge fe b mprep i i')
+      edges1 = do (rng,_,mrngtxt') <- entities1
+                  (rng',_) <- maybeToList mrngtxt'
+                  i_frame <- maybeToList (HM.lookup (1,rng') rngidxmap)
+                  i_instance <- maybeToList (HM.lookup (0,rng) rngidxmap)
+                  i_type     <- maybeToList (HM.lookup (0,rng') rngidxmap)
+                  [MGEdge "Instance" True Nothing i_frame i_instance, MGEdge "Type" False Nothing i_frame i_type]
+
+  in MeaningGraph vertices (edges0 ++ edges1)
 
 
 isEntity :: MGVertex -> Bool
