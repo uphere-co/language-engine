@@ -25,8 +25,7 @@ import           Lexicon.Query                             (cutHistogram)
 import           Lexicon.Type                              (POSVorN(..),GRel
                                                            ,RoleInstance,RolePattInstance
                                                            ,ArgPattern)
-import           NLP.Syntax.Clause                         (nounModifierAnalysis, bindingAnalysis,clauseStructure
-                                                           ,identifyCPHierarchy)
+import           NLP.Syntax.Clause                         (bindingAnalysis,clauseStructure,identifyCPHierarchy)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (MarkType(..))
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
@@ -149,7 +148,7 @@ sentStructure apredata tagged (i,midx,lmas,mptr) =
         lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
-        cpstr = (map (nounModifierAnalysis tagged' . bindingAnalysis) . identifyCPHierarchy tagged') vps
+        cpstr = (map (bindingAnalysis tagged') . identifyCPHierarchy tagged') vps
         verbStructures = map (verbStructure apredata) vps
     in trace (show tagged') $ SentStructure i ptr vps clausetr cpstr tagged' verbStructures
 

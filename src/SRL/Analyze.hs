@@ -4,8 +4,8 @@
 
 module SRL.Analyze where
 
-import           Control.Lens                 ((^.),(^..),(.~),(&),_Just)
-import           Control.Monad                (forM_,void,when)
+import           Control.Lens                 ((^.),(^..),(.~),(&),_Just,to)
+import           Control.Monad                (forM_,join,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
@@ -49,7 +49,7 @@ import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP           (runParser)
 import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructure,showMatchedFrame)
-import           SRL.Analyze.Match             (allPAWSTriplesFromDocStructure,meaningGraph,tagMG)
+import           SRL.Analyze.Match             ({- allPAWSTriplesFromDocStructure,-}mkPAWSTriples,meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure (docStructure)
 import           SRL.Analyze.Type
 import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
@@ -74,13 +74,14 @@ queryProcess config pp apredata emTagger =
                   dstr <- docStructure apredata emTagger <$> runParser pp txt
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  (mapM_ showMatchedFrame . concatMap snd . allPAWSTriplesFromDocStructure) dstr
+                  mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkPAWSTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
+
       ":v " -> do dstr <- docStructure apredata emTagger <$> runParser pp rest
                   mapM_ (T.IO.putStrLn . formatCPHierarchy) (dstr ^.. ds_sentStructures . traverse . _Just . ss_cpstr . traverse)
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
 
-                  (mapM_ showMatchedFrame . concatMap snd . allPAWSTriplesFromDocStructure) dstr
+                  mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkPAWSTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
                   --
                   printMeaningGraph dstr
       _     ->    putStrLn "cannot understand the command"
