@@ -33,7 +33,7 @@ import           NLP.Syntax.Verb
 formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
 
-        
+
 formatTense :: Tense -> Text
 formatTense Present = "Pres"
 formatTense Past    = "Past"
@@ -80,6 +80,12 @@ formatDPorPP (DP z)          = "DP" <> rangeText z
 formatDPorPP (PrepP _mtxt z) = "PP" <> rangeText z
 
 
+showRange rng = T.pack (printf "%-7s" (show rng))
+
+formatSplittedDP x = let typtxt = case x^.sdp_type of
+                                    CLMod -> "clmod"
+                                    BNMod -> "bnmod"
+                     in "head:" <>  showRange (x^.sdp_head) <> "," <> typtxt <> ":" <> showRange (x^.sdp_modifier)
 
 formatPAWS :: PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
            -> String
@@ -129,10 +135,12 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
 
 formatCPHierarchy :: Bitree (Range,CPDP as) (Range,CPDP as) -> Text
 formatCPHierarchy tr = formatBitree fmt tr
-  where showRange rng = T.pack (printf "%-7s" (show rng))
+  where
         fmt (rng,CPCase _) = "CP" <> showRange rng
-        fmt (rng,DPCase _) = "DP" <> showRange rng  
-        -- fmt (rng,DPCase' rng2 _) = "DP" <> showRange (rng2^._1) <> showRange (rng2^._2)  
+        fmt (rng,DPCase x) = "DP" <> case x of
+                                       Unsplitted z -> (showRange rng)
+                                       Splitted y   -> "-split" <> showRange rng <> " " <> formatSplittedDP y
+        -- fmt (rng,DPCase' rng2 _) = "DP" <> showRange (rng2^._1) <> showRange (rng2^._2)
 
 
 formatClauseStructure :: ClauseTree -> Text
@@ -167,7 +175,7 @@ formatVPwithPAWS tagged clausetr cpstr vp =
                           <> "\n"
                           <> T.pack (formatCP (paws^.pa_CP))
                           <> "\n"
-                          
+
 
 
 showClauseStructure :: [TagPos TokIdx MarkType] -> IntMap Lemma -> PennTree -> IO ()
@@ -178,8 +186,3 @@ showClauseStructure tagged lemmamap ptree  = do
       xs = map (formatVPwithPAWS tagged clausetr cpstr) vps
   mapM_ (T.IO.putStrLn . formatCPHierarchy) cpstr
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
-
-
-
-
-
