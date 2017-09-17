@@ -149,11 +149,11 @@ formatClauseStructure clausetr =
 
 formatVPwithPAWS :: [TagPos TokIdx MarkType]
                  -> ClauseTree
-                 -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
+                 -> [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
                  -> VerbProperty (BitreeZipperICP (Lemma ': as))
                  -> Text
-formatVPwithPAWS tagged clausetr mcpstr vp =
-  let mpaws = findPAWS tagged clausetr vp mcpstr
+formatVPwithPAWS tagged clausetr cpstr vp =
+  let mpaws = findPAWS tagged clausetr vp cpstr
       mrng = cpRange . (^.pa_CP) =<< mpaws
       fmt = either (const "") (tokenWord.snd) . getRoot . current
   in case (,) <$> mpaws <*> mrng of
@@ -172,9 +172,9 @@ showClauseStructure :: [TagPos TokIdx MarkType] -> IntMap Lemma -> PennTree -> I
 showClauseStructure tagged lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy tagged) vps
-      xs = map (formatVPwithPAWS tagged clausetr mcpstr) vps
-  traverse_ (mapM_ (T.IO.putStrLn . formatCPHierarchy)) mcpstr
+      cpstr = (map bindingAnalysis . identifyCPHierarchy tagged) vps
+      xs = map (formatVPwithPAWS tagged clausetr cpstr) vps
+  mapM_ (T.IO.putStrLn . formatCPHierarchy) cpstr
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
 
 

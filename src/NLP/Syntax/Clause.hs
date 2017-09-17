@@ -141,8 +141,8 @@ hierarchyBits (cp,zs) = do
 
 identifyCPHierarchy :: [TagPos TokIdx MarkType]
                     -> [VerbProperty (Zipper (Lemma ': as))]
-                    -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
-identifyCPHierarchy tagged vps = traverse (bitraverse tofull tofull) rtr
+                    -> [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
+identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
   where cpmap = (HM.fromList . concat . mapMaybe (hierarchyBits <=< constructCP tagged)) vps
         rngs = HM.keys cpmap
         rtr = rangeTree rngs
@@ -286,12 +286,11 @@ predicateArgWS cp z =
 findPAWS :: [TagPos TokIdx MarkType]
          -> ClauseTree
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
-         -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
+         -> [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
          -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
-findPAWS tagged tr vp mcpstr = do
+findPAWS tagged tr vp cpstr = do
   cp <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
   rng <- cpRange cp
-  cpstr <- mcpstr
   cp' <- (^? _CPCase) . currentCPDP =<< ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
   predicateArgWS cp' <$> findVerb (vp^.vp_index) tr
 
