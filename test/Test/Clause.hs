@@ -120,6 +120,18 @@ test_noun_modifier =
   )
 
 
+-- | relative WH-pronoun subject linking
+--
+test_relative_pronoun_subject :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
+test_relative_pronoun_subject =
+  ( "I saw the man who sat on the bench."
+  -- , 5, (Subj,TraceChain [Moved,WHPRO] (Just "the man"))  
+  , [(0,("I","I")),(1,("see","saw")),(2,("the","the")),(3,("man","man")),(4,("who","who")),(5,("sit","sat")),(6,("on","on")),(7,("the","the")),(8,("bench","bench")),(9,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","saw"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","man")],PN "SBAR" [PN "WHNP" [PL ("WP","who")],PN "S" [PN "VP" [PL ("VBD","sat"),PN "PP" [PL ("IN","on"),PN "NP" [PL ("DT","the"),PL ("NN","bench")]]]]]]],PL (".",".")]]
+  , []
+  )
+
+
 showDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType]) -> IO ()
 showDetail (txt,lma,pt,tmxs) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
@@ -150,8 +162,9 @@ showDetail (txt,lma,pt,tmxs) = do
 
 
 mainShow :: IO ()
-mainShow = mapM_ showDetail [ test_coordination
-                            , test_complex_noun_phrase
-                            , test_bare_noun_adverb
-                            , test_noun_modifier
+mainShow = mapM_ showDetail [ -- test_coordination
+                            -- , test_complex_noun_phrase
+                              --, test_bare_noun_adverb
+                             --  , test_noun_modifier
+                              test_relative_pronoun_subject
                             ]
