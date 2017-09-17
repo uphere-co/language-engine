@@ -65,4 +65,4 @@ bareNounModifier tagged x@(Unsplitted z) = fromMaybe x $ do
       idx_last_modifier_word = b1-1
   last_modifier_word <- find (\x -> x^._1 == idx_last_modifier_word) (toList (current z))
   guard (last_modifier_word^._2.to posTag.to isNoun == Yes)
-  return (Splitted (SplittedDP BNMod (b0,idx_last_modifier_word) (b1,e1) z))
+  return (Splitted (SplittedDP BNMod (b1,e1) (b0,idx_last_modifier_word) z))
