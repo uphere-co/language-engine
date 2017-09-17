@@ -123,21 +123,25 @@ docStructure apredata emTagger docinput@(DocAnalysisInput sents sentidxs sentite
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
-      tagged = fromMaybe [] mtmxs
-      sentStructures = map (sentStructure apredata tagged) (zip4 ([1..] :: [Int]) sentidxs lmass mptrs)
+      -- tagged = fromMaybe [] mtmxs
+      sentStructures = map (sentStructure apredata mergedtags) (zip4 ([1..] :: [Int]) sentidxs lmass mptrs)
   in DocStructure mtokenss sentitems mergedtags sentStructures
 
 
 
-sentStructure :: AnalyzePredata -> [TagPos TokIdx (Maybe Text)] -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree) -> Maybe SentStructure
+sentStructure :: AnalyzePredata
+              -> [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text))]
+              -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree)
+              -> Maybe SentStructure
 sentStructure apredata tagged (i,midx,lmas,mptr) =
   flip fmap mptr $ \ptr ->
     let tagged' = fromMaybe [] $ do
                     (b0,e0) <- (^.sent_tokenRange) <$> midx
                     return $ flip mapMaybe tagged $ \(TagPos (TokIdx b,TokIdx e,t)) ->
-                                                      if b0 <= b && e <= e0
-                                                      then Just (TagPos (TokIdx (b-b0),TokIdx (e-b0),MarkTime))
-                                                      else Nothing
+                                                      let t' = case t of Left _ -> MarkEntity ; Right _ -> MarkTime
+                                                      in if b0 <= b && e <= e0
+                                                         then Just (TagPos (TokIdx (b-b0),TokIdx (e-b0),t'))
+                                                         else Nothing
         lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
