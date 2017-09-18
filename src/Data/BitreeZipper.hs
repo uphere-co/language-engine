@@ -108,7 +108,7 @@ replaceFocusItem :: (c -> c) -> (t -> t) -> BitreeZipper c t -> BitreeZipper c t
 replaceFocusItem f g z = let tr = case z^.tz_current of
                                  PN c xs -> PN (f c) xs
                                  PL t    -> PL (g t)
-                    in replaceTree (const tr) z
+                    in replaceFocusTree (const tr) z
 
 
 -- | Remove currently focused item and return tree.
