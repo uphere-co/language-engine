@@ -157,7 +157,7 @@ formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,_sense) =
       iproptr = mkPennTreeIdx proptr
       mvpmva =  matchVerbPropertyWithRelation verbprops clausetr minst
       mtp = do (vp,_) <- mvpmva
-               (constructCP [] vp^?_Just.complement)       -- for the time being
+               constructCP [] vp ^? _Just._1.complement      -- for the time being
       argtable0 = mkArgTable iproptr l2p filesidtid args
       argtable1 = zipperArgTable iproptr argtable0
       -- argtable :: ArgTable (ATNode GRel)
@@ -253,7 +253,7 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                         clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr))
                         mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
                         mtp = do (vp,_) <- mvpmva
-                                 (constructCP [] vp^?_Just.complement)      -- for the time being
+                                 constructCP [] vp^? _Just._1.complement      -- for the time being
                         argtable0 = mkArgTable iproptr l2p filesidtid args
                         argtable1 = zipperArgTable iproptr argtable0
                         -- argtable :: ArgTable Text
