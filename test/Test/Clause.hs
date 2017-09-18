@@ -23,6 +23,7 @@ import           NLP.Type.TagPos
 --
 import           NLP.Syntax.Format
 import           NLP.Syntax.Preposition
+import           NLP.Syntax.Type                   (MarkType(..))
 import           NLP.Syntax.Util
 
 {-
@@ -75,11 +76,9 @@ test6 =
 
 
 
-
-
 -- | coordination
 --
-test_coordination :: (Text,[(Int,(Text,Text))],PennTree,[TagPos TokIdx (Maybe Text)])
+test_coordination :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
 test_coordination =
   ( "Fantasy author Cecilia Tan thought she was a Ravenclaw - then she had to face facts."
   , [(0,("Fantasy","Fantasy")),(1,("author","author")),(2,("Cecilia","Cecilia")),(3,("Tan","Tan")),(4,("think","thought")),(5,("she","she")),(6,("be","was")),(7,("a","a")),(8,("ravenclaw","Ravenclaw")),(9,("-","-")),(10,("then","then")),(11,("she","she")),(12,("have","had")),(13,("to","to")),(14,("face","face")),(15,("fact","facts")),(16,(".","."))]
@@ -90,7 +89,7 @@ test_coordination =
 
 -- | complex noun phrase
 --
-test_complex_noun_phrase :: (Text,[(Int,(Text,Text))],PennTree,[TagPos TokIdx (Maybe Text)])
+test_complex_noun_phrase :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
 test_complex_noun_phrase =
   ( "Brewery executive Kosuke Kuji brought his best sake to a New York booze snowcase 16 years ago hoping to promote high-end Japanese rice wine to a new generation of sophisticated foreign drinkers."
   , [(0,("Brewery","Brewery")),(1,("executive","executive")),(2,("Kosuke","Kosuke")),(3,("Kuji","Kuji")),(4,("bring","brought")),(5,("he","his")),(6,("best","best")),(7,("sake","sake")),(8,("to","to")),(9,("a","a")),(10,("New","New")),(11,("York","York")),(12,("booze","booze")),(13,("snowcase","snowcase")),(14,("16","16")),(15,("year","years")),(16,("ago","ago")),(17,("hope","hoping")),(18,("to","to")),(19,("promote","promote")),(20,("high-end","high-end")),(21,("japanese","Japanese")),(22,("rice","rice")),(23,("wine","wine")),(24,("to","to")),(25,("a","a")),(26,("new","new")),(27,("generation","generation")),(28,("of","of")),(29,("sophisticated","sophisticated")),(30,("foreign","foreign")),(31,("drinker","drinkers")),(32,(".","."))]
@@ -102,23 +101,45 @@ test_complex_noun_phrase =
 
 -- | bare noun adverb
 --
-test_bare_noun_adverb :: (Text,[(Int,(Text,Text))],PennTree,[TagPos TokIdx (Maybe Text)])
+test_bare_noun_adverb :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
 test_bare_noun_adverb =
   ( "The project began this year."
   , [(0,("the","The")),(1,("project","project")),(2,("begin","began")),(3,("this","this")),(4,("year","year")),(5,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","The"),PL ("NN","project")],PN "VP" [PL ("VBD","began"),PN "NP-TMP" [PL ("DT","this"),PL ("NN","year")]],PL (".",".")]]
-  , [TagPos (TokIdx {unTokIdx = 3},TokIdx {unTokIdx = 5},Just "2017")]
+  , [TagPos (TokIdx {unTokIdx = 3},TokIdx {unTokIdx = 5},MarkTime)]
   )
 
 
-showDetail :: (Text,[(Int,(Text,Text))],PennTree,[TagPos TokIdx (Maybe Text)]) -> IO ()
+-- |
+test_noun_modifier :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
+test_noun_modifier =
+  ( "Billionaire environmentalist Tom Steyer said the idea is a political pipe dream anyway." 
+  , [(0,("billionaire","Billionaire")),(1,("environmentalist","environmentalist")),(2,("Tom","Tom")),(3,("Steyer","Steyer")),(4,("say","said")),(5,("the","the")),(6,("idea","idea")),(7,("be","is")),(8,("a","a")),(9,("political","political")),(10,("pipe","pipe")),(11,("dream","dream")),(12,("anyway","anyway")),(13,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("NN","Billionaire"),PL ("NN","environmentalist"),PL ("NNP","Tom"),PL ("NNP","Steyer")],PN "VP" [PL ("VBD","said"),PN "SBAR" [PN "S" [PN "NP" [PL ("DT","the"),PL ("NN","idea")],PN "VP" [PL ("VBZ","is"),PN "NP" [PL ("DT","a"),PL ("JJ","political"),PL ("NN","pipe"),PL ("NN","dream")],PN "ADVP" [PL ("RB","anyway")]]]]],PL (".",".")]]
+  , [TagPos (TokIdx {unTokIdx = 2},TokIdx {unTokIdx = 4},MarkEntity)]
+  )
+
+
+-- | relative WH-pronoun subject linking
+--
+test_relative_pronoun_subject :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
+test_relative_pronoun_subject =
+  ( "I saw the man who sat on the bench."
+  -- , 5, (Subj,TraceChain [Moved,WHPRO] (Just "the man"))  
+  , [(0,("I","I")),(1,("see","saw")),(2,("the","the")),(3,("man","man")),(4,("who","who")),(5,("sit","sat")),(6,("on","on")),(7,("the","the")),(8,("bench","bench")),(9,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","saw"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","man")],PN "SBAR" [PN "WHNP" [PL ("WP","who")],PN "S" [PN "VP" [PL ("VBD","sat"),PN "PP" [PL ("IN","on"),PN "NP" [PL ("DT","the"),PL ("NN","bench")]]]]]]],PL (".",".")]]
+  , []
+  )
+
+
+showDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType]) -> IO ()
 showDetail (txt,lma,pt,tmxs) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
   T.IO.putStrLn txt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
   T.IO.putStrLn  . T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList $ pt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
-  let lmap1 = IM.fromList (map (_2 %~ (\x -> Lemma (x^._1)))  lma)
+  let lmap1 = IM.fromList (map (_2 %~ (^._1)) lma)
   showClauseStructure tmxs lmap1 pt
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
   T.IO.putStrLn $ prettyPrint 0 pt
@@ -141,7 +162,9 @@ showDetail (txt,lma,pt,tmxs) = do
 
 
 mainShow :: IO ()
-mainShow = mapM_ showDetail [ test_coordination
-                            , test_complex_noun_phrase
-                            , test_bare_noun_adverb
+mainShow = mapM_ showDetail [ -- test_coordination
+                            -- , test_complex_noun_phrase
+                              --, test_bare_noun_adverb
+                             --  , test_noun_modifier
+                              test_relative_pronoun_subject
                             ]

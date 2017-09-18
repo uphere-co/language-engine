@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
-module Test.VerbComplement where
+module Test.Verb.Complement where
 
 import           Control.Lens               hiding (levels)
 import           Data.Foldable                     (toList)
@@ -144,7 +144,7 @@ formatTP (txt,i,_,lmatknlst,pt) =
                       (T.intercalate " " (vp^..vp_auxiliary.traverse._2._2.to unLemma))
                   ] ++ case constructCP [] vp of   -- for the time being
                          Nothing -> ["not successful in constructing CP"]
-                         Just cp -> [formatCP cp]
+                         Just (cp,_) -> [formatCP cp]
                     ++ [T.unpack cltxts]
 
 showTP :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> IO ()
@@ -169,7 +169,7 @@ checkComplement :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> Boo
 checkComplement c  = fromMaybe False $ do
   let vps = mkVPS (c^._4) (c^._5)
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-  cp <- constructCP [] vp  -- for the time being
+  (cp,_) <- constructCP [] vp  -- for the time being
   let gettokens x = let z = case x of
                               DP y      -> y
                               PrepP _ y -> y

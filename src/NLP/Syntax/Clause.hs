@@ -10,7 +10,7 @@ module NLP.Syntax.Clause where
 
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
-import           Control.Monad                          ((<=<),guard,void)
+import           Control.Monad                          ((<=<),void)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
@@ -18,7 +18,7 @@ import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
 import qualified Data.HashMap.Strict               as HM
-import           Data.List                              (find)
+import           Data.List                              (find,mapAccumL,inits)
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (First(..),Last(..),(<>))
 import           Data.Text                              (Text)
@@ -31,11 +31,14 @@ import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
-import           NLP.Syntax.Preposition                 (beginEndToRange,hasEmptyPreposition)
-import           NLP.Syntax.Type
+import           NLP.Syntax.Noun                        (splitDP)
+import           NLP.Syntax.Preposition                 (checkEmptyPrep,hasEmptyPreposition)
+import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                        (isChunkAs,isPOSAs)
+import           NLP.Syntax.Util                        (isChunkAs)
+--
+import Debug.Trace
 
 
 hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
@@ -54,32 +57,10 @@ headVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
 headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 
-
-splitDP :: Zipper (Lemma ': as) -> Maybe (Zipper (Lemma ': as))
-splitDP z = do
-  guard (isChunkAs NP (current z))
-  dp <- child1 z
-  guard (isChunkAs NP (current dp))
-  sbar <- next dp
-  ((guard (isChunkAs SBAR (current sbar)) >> return dp) <|>
-   (guard (isChunkAs VP (current sbar)) >> return dp))
-
-
--- | this function is very ad hoc. Later we should have PP according to X-bar theory
-splitPP :: Zipper (Lemma ': as) -> Maybe (Zipper (Lemma ': as))
-splitPP z = do
-  guard (isChunkAs PP (current z))
-  p <- child1 z
-  guard (isPOSAs TO (current p) || isPOSAs IN (current p))
-  dp <- next p
-  return (fromMaybe dp (splitDP dp))
-
-
-
-complementsOfVerb :: [TagPos TokIdx (Maybe Text)]
+complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> [TraceChain (DPorPP (Zipper (Lemma ': as)))]
-complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep x)))
+complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep tagged x)))
                                   ((\z -> fromMaybe z (splitDP z)) <$>
                                    (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
@@ -91,14 +72,7 @@ complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep x))
                       Left SBARQ -> True
                       Left SQ    -> True
                       Left _     -> False
-                      Right p    -> case isNoun p of
-                                      Yes -> True
-                                      _   -> False
-    checkEmptyPrep z = let r = fromMaybe False $ do
-                                 let rng = getRange (current z)
-                                 find (\(TagPos (b,e,_tag)) -> beginEndToRange (b,e) == rng) tagged
-                                 return (hasEmptyPreposition z)
-                       in if r then PrepP Nothing z else DP z
+                      Right p    -> isNoun p == Yes
 
 
 identifySubject :: N.ClauseTag
@@ -114,32 +88,38 @@ identifySubject tag vp =
 
 
 
+
 -- | Constructing CP umbrella and all of its ingrediant.
 --
-constructCP :: [TagPos TokIdx (Maybe Text)]
+constructCP :: [TagPos TokIdx MarkType]
             -> VerbProperty (Zipper (Lemma ': as))
-            -> Maybe (CP (Lemma ': as))
+            -> Maybe (CP (Lemma ': as),[Zipper (Lemma ': as)])
 constructCP tagged vprop = do
     vp <- maximalProjectionVP vprop
     tp <- parentOfVP vprop
     tptag' <- N.convert <$> getchunk tp
-    let verbp = mkVerbP vp vprop (complementsOfVerb tagged vprop)
+    let comps = complementsOfVerb tagged vprop
+        comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to removeDPorPP)
+        verbp = mkVerbP vp vprop comps
+        nullsubj = TraceChain [NULL] Nothing
     case tptag' of
       N.CL s -> do
         cp' <- parent tp
         cptag' <- N.convert <$> getchunk cp'
         let subj = identifySubject s vp
+            subj_dps = maybeToList (subj ^? trResolved._Just)
+            dps = (subj_dps++comps_dps)
         case cptag' of
           N.CL N.SBAR ->
-            return $ mkCP (maybe (Left C_NULL) Right (prev tp)) (Just cp') (mkTP (Just tp) subj verbp)
+            return (mkCP (maybe (Left C_NULL) Right (prev tp)) (Just cp') (mkTP (Just tp) subj verbp),dps)
           N.CL _ ->
-            return $ mkCP (Left C_NULL) (Just tp) (mkTP (Just tp) subj verbp)
+            return (mkCP (Left C_NULL) (Just tp) (mkTP (Just tp) subj verbp),dps)
           N.RT   ->
-            return $ mkCP (Left C_NULL) (Just cp') (mkTP (Just tp) subj verbp)
+            return (mkCP (Left C_NULL) (Just cp') (mkTP (Just tp) subj verbp),dps)
           _      -> -- somewhat problematic case?
-            return (mkCP (Left C_NULL) Nothing (mkTP (Just tp) subj verbp))
+            return (mkCP (Left C_NULL) Nothing (mkTP (Just tp) subj verbp),dps)
       _ -> -- reduced relative clause
-           return (mkCP (Left C_WH) (Just vp) (mkTP (Just vp) (TraceChain [NULL] Nothing) verbp))
+           return (mkCP (Left C_WH) (Just vp) (mkTP (Just vp) nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -150,13 +130,20 @@ cpRange cp = (cp^?maximalProjection._Just.to (getRange . current)) <|>
              (return (cp^.complement.complement.maximalProjection.to (getRange . current)))
 
 
+hierarchyBits (cp,zs) = do
+  rng <- cpRange cp
+  let cpbit = (rng,(rng,CPCase cp))
 
-identifyCPHierarchy :: [TagPos TokIdx (Maybe Text)]
+  let f z = let rng' = (getRange . current) z in (rng',(rng',DPCase z))
+  return (cpbit:map f zs)
+
+
+
+identifyCPHierarchy :: [TagPos TokIdx MarkType]
                     -> [VerbProperty (Zipper (Lemma ': as))]
                     -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
 identifyCPHierarchy tagged vps = traverse (bitraverse tofull tofull) rtr
-  where cps = mapMaybe ((\cp -> (,) <$> cpRange cp <*> pure (CPCase cp)) <=< constructCP tagged) vps
-        cpmap = HM.fromList (map (\x->(x^._1,x)) cps)
+  where cpmap = (HM.fromList . concat . mapMaybe (hierarchyBits <=< constructCP tagged)) vps
         rngs = HM.keys cpmap
         rtr = rangeTree rngs
         tofull rng = HM.lookup rng cpmap
@@ -166,10 +153,33 @@ currentCPDP :: BitreeZipper (Range,CPDP as) (Range,CPDP as) -> CPDP as
 currentCPDP = snd . getRoot1 . current
 
 
+
+adjustXBarTree f w z = do
+  let dprng = getRange (current z)
+      -- adjust CPDP hierarchy by modifier relation.
+  case extractZipperById dprng (toBitree w) of
+    Nothing -> do let newtr (PN y ys) = PN (dprng,DPCase z) [PN (f y) ys]
+                      newtr (PL y)    = PN (dprng,DPCase z) [PL (f y)]
+                      w'' = replaceTree newtr w
+                  lift (put (toBitree w''))
+
+    Just _  -> do let otr = case current w of
+                              PN y ys -> PN (f y) ys
+                              PL y    -> PL (f y)
+                  lift . put =<< hoistMaybe (remove w)
+                  w' <- MaybeT (extractZipperById dprng <$> get)
+                  let newtr (PN y ys) = PN y (ys ++ [otr])
+                      newtr (PL y)    = PN y [otr]
+                      w'' =replaceTree newtr w'
+                  lift (put (toBitree w''))
+
+
+
 whMovement :: BitreeZipper (Range,CPDP as) (Range,CPDP as)
            -> State (Bitree (Range,CPDP as) (Range,CPDP as)) (TraceChain (Zipper as))
-whMovement z =
-  case currentCPDP z of
+whMovement w =
+  -- letter z denotes zipper for PennTree, w denotes zipper for Bitree (Range,CPDP as) (Range,CPDP as)
+  case currentCPDP w of
     DPCase _  -> return emptyTraceChain
     CPCase cp -> do
       let spec = cp^.complement.specifier
@@ -186,12 +196,7 @@ whMovement z =
               fmap (fromMaybe (TraceChain xspro Nothing)) . runMaybeT $ do
                 -- check subject position for relative pronoun
                 z'  <- hoistMaybe (prev =<< cp^.maximalProjection)
-                let dprng = getRange (current z')
-                    -- adjust CPDP hierarchy by modifier relation.
-                    newtr (PN y ys) = PN (dprng,DPCase z') [PN y ys]
-                    newtr (PL y)    = PN (dprng,DPCase z') [PL y]
-                    z'' = replaceTree newtr z
-                lift (put (toBitree z''))
+                adjustXBarTree id w z'
                 return (TraceChain (xsmov ++ [WHPRO]) (Just z'))
             _    -> return spec -- do
         else do
@@ -202,11 +207,8 @@ whMovement z =
             let -- adjust function for complement with relative pronoun resolution
                 rf0 = _2._CPCase.complement.complement.complement %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)
                 dprng = getRange (current z')
-                -- adjust CPDP hierarchy by modifier relation.
-                newtr (PN y ys) = PN (dprng,DPCase z') [PN (rf0 y) ys]
-                newtr (PL y)    = PN (dprng,DPCase z') [PL (rf0 y)]
-                z'' = replaceTree newtr z
-            lift (put (toBitree z''))
+            -- adjust CPDP hierarchy by modifier relation.
+            adjustXBarTree rf0 w z'
           return spec
 
 
@@ -218,7 +220,7 @@ resolveDP :: forall as. Range -> State (Bitree (Range,CPDP as) (Range,CPDP as)) 
 resolveDP rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   tr <- lift get
   z <- hoistMaybe (extractZipperById rng tr)
-  cp <- hoistMaybe (currentCPDP z ^? _CPCase) 
+  cp <- hoistMaybe (currentCPDP z ^? _CPCase)
   if either (== C_WH) (isChunkAs WHNP . current) (cp^.headX)
     then lift (whMovement z)
     else do
@@ -281,13 +283,13 @@ predicateArgWS cp z =
             Just x' -> x': iterateMaybe f x'
 
 
-findPAWS :: [TagPos TokIdx (Maybe Text)]
+findPAWS :: [TagPos TokIdx MarkType]
          -> ClauseTree
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
          -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
          -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
 findPAWS tagged tr vp mcpstr = do
-  cp <- constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
+  cp <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
   rng <- cpRange cp
   cpstr <- mcpstr
   cp' <- (^? _CPCase) . currentCPDP =<< ((getFirst . foldMap (First . extractZipperById rng)) cpstr)

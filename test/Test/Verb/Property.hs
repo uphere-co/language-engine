@@ -1,17 +1,15 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections #-}
 
-module Test.VerbProperty where
+module Test.Verb.Property where
 
 import           Control.Lens               hiding (levels)
 import           Data.List                         (find, intercalate)
+import           Data.Maybe                        (fromMaybe)
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
+import           Text.Printf
 --
 import           Data.Bitree                       (getRoot)
 import           Data.BitreeZipper                 (current)
@@ -294,10 +292,19 @@ checkVP (_txt,i,expresult,lmatknlst,pt) =
        _       -> False
 
 
+formatTitle c = printf "- %-80s %4s%4s%4s: %-10s: %-5s"
+                 (c^._1)
+                 (formatTense  (c^._3._1))
+                 (formatAspect (c^._3._2))
+                 (formatVoice  (c^._3._3))
+                 (T.intercalate " " (c^._3._4))
+                 (fromMaybe "" (c^._3._5)) 
+
+
 unitTests :: TestTree
 unitTests =
   testGroup "verb property" . flip map testcases $ \c ->
-    testCase (T.unpack (c^._1) ++ show (c^._3)) $
+    testCase (formatTitle c) $
       (checkVP c == True) @? (intercalate "\n" ((mkVPS (c^._4) (c^._5))^..traverse.to (formatVerbProperty fmtfunc))  ++ "\n" ++ T.unpack (prettyPrint 0 (c^._5)))
 
 

@@ -21,6 +21,7 @@ library
                        NLP.Syntax.Argument
                        NLP.Syntax.Clause
                        NLP.Syntax.Format
+                       NLP.Syntax.Noun
                        NLP.Syntax.Preposition
                        NLP.Syntax.Type
                        NLP.Syntax.Type.Verb
@@ -57,9 +58,10 @@ test-suite test-syntax-property
   hs-source-dirs: test
   other-modules:       Test.Common
                        Test.Clause
+                       Test.Noun
                        Test.Trace
-                       Test.VerbComplement
-                       Test.VerbProperty
+                       Test.Verb.Complement
+                       Test.Verb.Property
   main-is: test-syntax-property.hs
   build-depends:       base
                      , containers

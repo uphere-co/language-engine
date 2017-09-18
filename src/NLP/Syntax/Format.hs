@@ -5,7 +5,6 @@
 module NLP.Syntax.Format where
 
 import           Control.Lens
--- import           Control.Monad                 (void)
 import           Data.Foldable                 (toList,traverse_)
 import           Data.IntMap                   (IntMap)
 import           Data.List                     (intercalate)
@@ -18,7 +17,6 @@ import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
--- import           Lexicon.Type                           (chooseATNode)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
@@ -149,7 +147,7 @@ formatClauseStructure clausetr =
   in formatBitree id tr'
 
 
-formatVPwithPAWS :: [TagPos TokIdx (Maybe Text)]
+formatVPwithPAWS :: [TagPos TokIdx MarkType]
                  -> ClauseTree
                  -> Maybe [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
                  -> VerbProperty (BitreeZipperICP (Lemma ': as))
@@ -170,7 +168,7 @@ formatVPwithPAWS tagged clausetr mcpstr vp =
                           
 
 
-showClauseStructure :: [TagPos TokIdx (Maybe Text)] -> IntMap Lemma -> PennTree -> IO ()
+showClauseStructure :: [TagPos TokIdx MarkType] -> IntMap Lemma -> PennTree -> IO ()
 showClauseStructure tagged lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
