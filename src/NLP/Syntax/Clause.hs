@@ -160,17 +160,17 @@ adjustXBarTree f w z = do
   case extractZipperById dprng (toBitree w) of
     Nothing -> do let newtr (PN y ys) = PN (dprng,DPCase z) [PN (f y) ys]
                       newtr (PL y)    = PN (dprng,DPCase z) [PL (f y)]
-                      w'' = replaceTree newtr w
+                      w'' = replaceFocusTree newtr w
                   lift (put (toBitree w''))
 
     Just _  -> do let otr = case current w of
                               PN y ys -> PN (f y) ys
                               PL y    -> PL (f y)
-                  lift . put =<< hoistMaybe (remove w)
+                  lift . put =<< hoistMaybe (removeFocusTree w)
                   w' <- MaybeT (extractZipperById dprng <$> get)
                   let newtr (PN y ys) = PN y (ys ++ [otr])
                       newtr (PL y)    = PN y [otr]
-                      w'' =replaceTree newtr w'
+                      w'' =replaceFocusTree newtr w'
                   lift (put (toBitree w''))
 
 
@@ -260,7 +260,7 @@ bindingAnalysis tagged cpstr = execState (go rng0) cpstr
                      tr <- get
                      void . runMaybeT $ do
                        z <- hoistMaybe (extractZipperById rng tr)
-                       let z' = replaceItem (_2._CPCase.complement.specifier .~ xs) (_2._CPCase.complement.specifier .~ xs) z
+                       let z' = replaceFocusItem (_2._CPCase.complement.specifier .~ xs) (_2._CPCase.complement.specifier .~ xs) z
                        lift (put (toBitree z'))
                        ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
                         <|>
