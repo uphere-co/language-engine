@@ -19,7 +19,7 @@ import           Data.Bitree                   (Bitree)
 import           Data.Range                    (Range)
 import           FrameNet.Query.Frame          (FrameDB)
 import           Lexicon.Type                  (ArgPattern,GRel,RoleInstance,RolePattInstance,SenseID)
-import           NLP.Syntax.Type               (ClauseTree)
+import           NLP.Syntax.Type               (ClauseTree,MarkType(..))
 import           NLP.Syntax.Type.Verb          (VerbProperty(..))
 import           NLP.Syntax.Type.XBar          (Zipper,CPDP)
 import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
@@ -74,18 +74,20 @@ data AnalyzePredata = AnalyzePredata { _analyze_sensemap  :: HashMap Text Invent
 makeLenses ''AnalyzePredata
 
 
-data VerbStructure = VerbStructure { _vs_vp              :: VerbProperty (Zipper '[Lemma])
-                                   , _vs_senses          :: [(ONSenseFrameNetInstance,Int)]
+data VerbStructure = VerbStructure { _vs_vp           :: VerbProperty (Zipper '[Lemma])
+                                   , _vs_senses       :: [(ONSenseFrameNetInstance,Int)]
                                    , _vs_roleTopPatts :: [((RoleInstance,Int), [(ArgPattern () GRel, Int)])]
                                    }
 
 makeLenses ''VerbStructure
 
-data SentStructure = SentStructure { _ss_i :: Int
-                                   , _ss_ptr  :: PennTree
-                                   , _ss_vps  :: [VerbProperty (Zipper '[Lemma])]
-                                   , _ss_clausetr :: ClauseTree
-                                   , _ss_mcpstr :: Maybe [Bitree (Range,CPDP '[Lemma]) (Range,CPDP '[Lemma])]
+
+data SentStructure = SentStructure { _ss_i              :: Int
+                                   , _ss_ptr            :: PennTree
+                                   , _ss_vps            :: [VerbProperty (Zipper '[Lemma])]
+                                   , _ss_clausetr       :: ClauseTree
+                                   , _ss_cpstr          :: [Bitree (Range,CPDP '[Lemma]) (Range,CPDP '[Lemma])]
+                                   , _ss_tagged         :: [TagPos TokIdx MarkType]
                                    , _ss_verbStructures :: [VerbStructure]
                                    }
 
@@ -99,13 +101,13 @@ data DocStructure = DocStructure { _ds_mtokenss :: [[Maybe Token]]
 
 makeLenses ''DocStructure
 
-data DocAnalysisInput = DocAnalysisInput { _dainput_sents :: [Sentence]
-                                         , _dainput_sentidxs :: [Maybe SentenceIndex]
+data DocAnalysisInput = DocAnalysisInput { _dainput_sents     :: [Sentence]
+                                         , _dainput_sentidxs  :: [Maybe SentenceIndex]
                                          , _dainput_sentitems :: [SentItem CharIdx]
-                                         , _dainput_tokss :: [[Token]]
-                                         , _dainput_mptrs :: [Maybe PennTree]
-                                         , _dainput_deps :: [Dependency]
-                                         , _dainput_mtmxs :: Maybe [TagPos TokIdx (Maybe Text)]
+                                         , _dainput_tokss     :: [[Token]]
+                                         , _dainput_mptrs     :: [Maybe PennTree]
+                                         , _dainput_deps      :: [Dependency]
+                                         , _dainput_mtmxs     :: Maybe [TagPos TokIdx (Maybe Text)]
                                          } deriving (Show, Generic)
 
 makeLenses ''DocAnalysisInput

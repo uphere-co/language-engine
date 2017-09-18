@@ -25,8 +25,9 @@ import           Lexicon.Query                             (cutHistogram)
 import           Lexicon.Type                              (POSVorN(..),GRel
                                                            ,RoleInstance,RolePattInstance
                                                            ,ArgPattern)
-import           NLP.Syntax.Clause                         (bindingAnalysis,clauseStructure,identifyCPHierarchy)
+import           NLP.Syntax.Clause                         ({- apposAnalysis, -} bindingAnalysis,clauseStructure,identifyCPHierarchy)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
+import           NLP.Syntax.Type                           (MarkType(..))
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
 import           NLP.Syntax.Type.XBar                      (Zipper)
 import qualified NLP.Type.NamedEntity              as N
@@ -44,6 +45,9 @@ import           SRL.Analyze.Parameter                     (thresholdPattStat)
 import           SRL.Analyze.Type
 import           SRL.Analyze.WikiEL                        (getWikiResolvedMentions
                                                            ,linkedMentionToTagPos)
+
+--
+import Debug.Trace
 
 
 mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]
@@ -73,7 +77,7 @@ getSenses lma sensemap sensestat framedb ontomap = do
   s <- si^.inventory_senses
   let sid = (lma,Verb, s^.sense_group <> "." <> s^.sense_n)
   let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
-      txt_def = T.take 40 (s^.sense_name)
+      txt_def = {- T.take 40 -} (s^.sense_name)
       tframe = fromMaybe (Left FrameNone) $ do
         lst <- HM.lookup lma ontomap
         frtxt <- lookup (s^.sense_group <> "." <> s^.sense_n) lst
@@ -122,27 +126,31 @@ docStructure apredata emTagger docinput@(DocAnalysisInput sents sentidxs sentite
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
-      tagged = fromMaybe [] mtmxs
-      sentStructures = map (sentStructure apredata tagged) (zip4 ([1..] :: [Int]) sentidxs lmass mptrs)
+      -- tagged = fromMaybe [] mtmxs
+      sentStructures = map (sentStructure apredata mergedtags) (zip4 ([1..] :: [Int]) sentidxs lmass mptrs)
   in DocStructure mtokenss sentitems mergedtags sentStructures
 
 
 
-sentStructure :: AnalyzePredata -> [TagPos TokIdx (Maybe Text)] -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree) -> Maybe SentStructure
+sentStructure :: AnalyzePredata
+              -> [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text))]
+              -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree)
+              -> Maybe SentStructure
 sentStructure apredata tagged (i,midx,lmas,mptr) =
   flip fmap mptr $ \ptr ->
     let tagged' = fromMaybe [] $ do
                     (b0,e0) <- (^.sent_tokenRange) <$> midx
                     return $ flip mapMaybe tagged $ \(TagPos (TokIdx b,TokIdx e,t)) ->
-                                                      if b0 <= b && e <= e0
-                                                      then Just (TagPos (TokIdx (b-b0),TokIdx (e-b0),t))
-                                                      else Nothing
+                                                      let t' = case t of Left _ -> MarkEntity ; Right _ -> MarkTime
+                                                      in if b0 <= b && e <= e0
+                                                         then Just (TagPos (TokIdx (b-b0),TokIdx (e-b0),t'))
+                                                         else Nothing
         lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
-        mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy tagged') vps
+        cpstr = (map ({- apposAnalysis tagged' . -} bindingAnalysis) . identifyCPHierarchy tagged') vps
         verbStructures = map (verbStructure apredata) vps
-    in SentStructure i ptr vps clausetr mcpstr verbStructures
+    in trace (show tagged') $ SentStructure i ptr vps clausetr cpstr tagged' verbStructures
 
 
 verbStructure :: AnalyzePredata -> VerbProperty (Zipper '[Lemma]) -> VerbStructure
@@ -157,5 +165,5 @@ verbStructure apredata vp =
 
       senses = getSenses lma sensemap sensestat framedb ontomap
       rmtoppatts = do inst <- sortBy (flip compare `on` (^._2)) senses
-                      getTopPatternsFromONFNInst rolemap subcats inst 
+                      getTopPatternsFromONFNInst rolemap subcats inst
   in VerbStructure vp senses rmtoppatts

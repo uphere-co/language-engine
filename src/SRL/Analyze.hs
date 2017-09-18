@@ -4,7 +4,7 @@
 
 module SRL.Analyze where
 
-import           Control.Lens                 ((^.),(^..),(.~),(&))
+import           Control.Lens                 ((^.),(^..),(.~),(&),_Just)
 import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
@@ -28,6 +28,7 @@ import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (loadRoleInsts,loadRolePattInsts)
 import           Lexicon.Type                 (RoleInstance,RolePattInstance)
+import           NLP.Syntax.Format            (formatCPHierarchy)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           NLP.Type.SyntaxProperty      (Voice)
 import           Text.Format.Dot              (mkLabelText)
@@ -75,8 +76,10 @@ queryProcess config pp apredata emTagger =
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
                   (mapM_ showMatchedFrame . concatMap snd . allPAWSTriplesFromDocStructure) dstr
       ":v " -> do dstr <- docStructure apredata emTagger <$> runParser pp rest
-                  when (config^.Analyze.showDetail) $ 
+                  mapM_ (T.IO.putStrLn . formatCPHierarchy) (dstr ^.. ds_sentStructures . traverse . _Just . ss_cpstr . traverse)
+                  when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
+
                   (mapM_ showMatchedFrame . concatMap snd . allPAWSTriplesFromDocStructure) dstr
                   --
                   printMeaningGraph dstr
@@ -94,9 +97,9 @@ printMeaningGraph dstr = do
   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
       mtokss = (dstr ^. ds_mtokenss)
       wikilst = mkWikiList dstr
-  print (sstrs1 ^.. traverse . ss_ptr)
-  print (sstrs1 ^.. traverse . ss_clausetr)
-  
+  -- print (sstrs1 ^.. traverse . ss_ptr)
+  -- print (sstrs1 ^.. traverse . ss_clausetr)
+
   let mgs = map meaningGraph sstrs1
   forM_ (zip mtokss (zip ([1..] :: [Int]) mgs)) $ \(mtks,(i,mg')) -> do
     let title = mkTextFromToken mtks
@@ -128,6 +131,7 @@ loadConfig = do
                                     , (humanRuleClass, humanRuleItemFile), (buildingClass, buildingItemFile) ]
   return (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats)
 
+
 loadAnalyzePredata :: IO AnalyzePredata
 loadAnalyzePredata = do
   let cfg = cfgG
@@ -139,6 +143,7 @@ loadAnalyzePredata = do
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
   subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats)
+
 
 getAnalysis :: DocAnalysisInput
             -> (HashMap Text Inventory
