@@ -33,7 +33,7 @@ import           NLP.Syntax.Verb
 formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
 
-        
+
 formatTense :: Tense -> Text
 formatTense Present = "Pres"
 formatTense Past    = "Past"
@@ -70,16 +70,28 @@ formatTraceChain f (TraceChain xs x) = T.concat (map ((<> " -> ") . fmt) xs) <> 
         fmt WHPRO     = "*WHP*"
 
 
+showRange rng = T.pack (printf "%-7s" (show rng))
+
+
 rangeText :: SplitDP (Zipper as) -> Text
 rangeText (Unsplitted z) = (T.pack . show . getRange . current) z
 rangeText (Splitted x)   = (T.pack . show) (x ^. sdp_head)
 
 
+formatDP x@(Unsplitted z) = "DP" <> rangeText x
+formatDP x@(Splitted y)   = "DP-split" <> rangeText x <> " " <> formatSplittedDP y
+
+
 formatDPorPP :: DPorPP (SplitDP (Zipper as)) -> Text
-formatDPorPP (DP z)          = "DP" <> rangeText z
-formatDPorPP (PrepP _mtxt z) = "PP" <> rangeText z
+formatDPorPP (DP z)          = formatDP z
+formatDPorPP (PrepP _mtxt z) = "PP-" <> formatDP z
 
 
+
+formatSplittedDP x = let typtxt = case x^.sdp_type of
+                                    CLMod -> "clmod"
+                                    BNMod -> "bnmod"
+                     in "head:" <>  showRange (x^.sdp_head) <> "," <> typtxt <> ":" <> showRange (x^.sdp_modifier)
 
 formatPAWS :: PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
            -> String
@@ -127,13 +139,13 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
         formatposchunk (Right p) = "(" ++ show p ++ ")"
 
 
+
+
 formatCPHierarchy :: Bitree (Range,CPDP as) (Range,CPDP as) -> Text
 formatCPHierarchy tr = formatBitree fmt tr
-  where showRange rng = T.pack (printf "%-7s" (show rng))
+  where
         fmt (rng,CPCase _) = "CP" <> showRange rng
-        fmt (rng,DPCase _) = "DP" <> showRange rng  
-        -- fmt (rng,DPCase' rng2 _) = "DP" <> showRange (rng2^._1) <> showRange (rng2^._2)  
-
+        fmt (rng,DPCase x) = "DP" <> formatDP x
 
 formatClauseStructure :: ClauseTree -> Text
 formatClauseStructure clausetr =
@@ -167,19 +179,14 @@ formatVPwithPAWS tagged clausetr cpstr vp =
                           <> "\n"
                           <> T.pack (formatCP (paws^.pa_CP))
                           <> "\n"
-                          
+
 
 
 showClauseStructure :: [TagPos TokIdx MarkType] -> IntMap Lemma -> PennTree -> IO ()
 showClauseStructure tagged lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      cpstr = (map ({- (apposAnalysis tagged) . -} bindingAnalysis) . identifyCPHierarchy tagged) vps
+      cpstr = (map (bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
       xs = map (formatVPwithPAWS tagged clausetr cpstr) vps
   mapM_ (T.IO.putStrLn . formatCPHierarchy) cpstr
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
-
-
-
-
-

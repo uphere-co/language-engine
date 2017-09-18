@@ -83,6 +83,7 @@ removeDPorPP (PrepP _ x) = x
 
 
 data SplitType = CLMod | BNMod
+               deriving (Show,Eq,Ord)
 
 data SplittedDP a = SplittedDP { _sdp_type     :: SplitType
                                , _sdp_head     :: Range
@@ -105,14 +106,24 @@ getTokens :: BitreeICP as -> Text
 getTokens = T.intercalate " " . map (tokenWord.snd) . toList
 
 
-getHeadRange (Unsplitted z) = getRange (current z)
-getHeadRange (Splitted x) = x^.sdp_head
+headRange (Unsplitted z) = getRange (current z)
+headRange (Splitted x) = x^.sdp_head
 
 
-getHeadTokens (Unsplitted z) = getTokens (current z)
-getHeadTokens (Splitted x) = let rng = x^.sdp_head
-                                 f (i,x) = (i,tokenWord x) 
-                             in (T.intercalate " " . map snd . filter (^._1.to (\i -> i `isInside` rng)) . map f . toList . current) (x^.sdp_original)
+modifierRange z = z ^? _Splitted.sdp_modifier
+
+
+tokensByRange rng = map snd . filter (^._1.to (\i -> i `isInside` rng)) . map (\(i,x)->(i,tokenWord x)) . toList
+
+
+headText (Unsplitted z) = getTokens (current z)
+headText (Splitted y)   = (T.intercalate " " . tokensByRange (y^.sdp_head) . current) (y^.sdp_original)
+
+
+modifierText (Unsplitted z) = Nothing
+modifierText (Splitted y)   = (Just . T.intercalate " " . tokensByRange (y^.sdp_modifier) . current) (y^.sdp_original)
+
+
 
 
 type instance Property   'X_V t = VerbProperty (Zipper t)

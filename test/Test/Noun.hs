@@ -54,7 +54,7 @@ testfunc x = do
               g = (^._1.to show.to T.pack)
       z :: Zipper '[Lemma]
       z = getRoot1 $ mkBitreeZipper [] lemmapt
-      y = bareNounModifier (x^._4) z
+      -- y = bareNounModifier (x^._4) z
   -- print y
   T.IO.putStrLn (linePrint id tr)
 

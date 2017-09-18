@@ -26,8 +26,8 @@ mkSplittedDP typ h m o = SplittedDP typ (rf h) (rf m) o
   where rf = getRange . current 
 
 
-splitDP :: Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
-splitDP z = fromMaybe (Unsplitted z) $ do
+splitDP :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
+splitDP tagged z = bareNounModifier tagged . fromMaybe (Unsplitted z) $ do
   guard (isChunkAs NP (current z))
   dp <- child1 z
   guard (isChunkAs NP (current dp))
@@ -36,25 +36,26 @@ splitDP z = fromMaybe (Unsplitted z) $ do
    (guard (isChunkAs VP (current sbar)) >> return (Splitted (mkSplittedDP CLMod dp sbar z))))
 
 
--- | this function is very ad hoc. Later we should have PP according to X-bar theory
+-- | This function is very ad hoc. Later we should have PP according to X-bar theory
 --
-splitPP :: Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
-splitPP z = fromMaybe (Unsplitted z) $ do
+splitPP :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
+splitPP tagged z = fromMaybe (Unsplitted z) $ do
   guard (isChunkAs PP (current z))
   p <- child1 z
   guard (isPOSAs TO (current p) || isPOSAs IN (current p))
   dp <- next p
-  return (splitDP dp)
-
-  -- return (fromMaybe dp (splitDP dp))
+  return (splitDP tagged dp)
 
 
-
-
+-- | Identify bare noun subexpression inside noun phrase as modifier.
+--   I did not implement the already-splitted case. We need multiple-adjunct
+--   structure. 
+--
 bareNounModifier :: [TagPos TokIdx MarkType]
-                 -> Zipper (Lemma ': as)
                  -> SplitDP (Zipper (Lemma ': as))
-bareNounModifier tagged z = fromMaybe (Unsplitted z) $ do
+                 -> SplitDP (Zipper (Lemma ': as))
+bareNounModifier _      x@(Splitted   _) = x                 -- for the time being
+bareNounModifier tagged x@(Unsplitted z) = fromMaybe x $ do
   guard (isChunkAs NP (current z))
   let rng@(b0,e0) = getRange (current z)
   -- check entity for the last words
@@ -64,4 +65,4 @@ bareNounModifier tagged z = fromMaybe (Unsplitted z) $ do
       idx_last_modifier_word = b1-1
   last_modifier_word <- find (\x -> x^._1 == idx_last_modifier_word) (toList (current z))
   guard (last_modifier_word^._2.to posTag.to isNoun == Yes)
-  return (Splitted (SplittedDP BNMod (b0,idx_last_modifier_word) (b1,e1) z))
+  return (Splitted (SplittedDP BNMod (b1,e1) (b0,idx_last_modifier_word) z))

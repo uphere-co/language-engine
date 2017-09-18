@@ -99,7 +99,7 @@ formatDetail :: TestTrace -> [Text]
 formatDetail (_txt,_,_,lma,pt,tmxs) =
   let vps  = mkVPS lma pt
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
-      cpstr = (map bindingAnalysis . identifyCPHierarchy tmxs) vps
+      cpstr = (map (bindingAnalysis tmxs) . identifyCPHierarchy tmxs) vps
  
   in   
   [ "===================================================================================================================="
@@ -113,22 +113,6 @@ formatDetail (_txt,_,_,lma,pt,tmxs) =
   , prettyPrint 0 pt
   , "--------------------------------------------------------------------------------------------------------------------"
   ]
-  {- ++ (flip concatMap tmxs $ \(TagPos (b,e,_tag)) -> 
-       let lemmapt = mkBitreeICP lmap1 pt
-           rng = beginEndToRange (b,e)
-       in case find (\z -> getRoot (current z) ^? _Left . _1  == Just rng) $ getNodes (mkBitreeZipper [] lemmapt) of
-            Nothing -> []
-            Just z -> [T.pack (show (hasEmptyPreposition z))]
-     )
-  -}
-  {- let vps = verbPropertyFromPennTree lmap1 pt
-      mcpstr = identifyCPHierarchy vps
-  case mcpstr of
-    Nothing -> putStrLn "CP Hierarchy not identified..."
-    Just cpstr -> do
-      let fmt x = T.pack (show (x^._1))
-      mapM_ (T.IO.putStrLn . linePrint fmt . toTree) cpstr
-  -}
 
 
 showDetail :: TestTrace -> IO ()
@@ -157,18 +141,17 @@ checkTrace c = -- False
   fromMaybe False $ do
     let vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
-        cpstr = (map bindingAnalysis . identifyCPHierarchy (c^._6)) vps
+        cpstr = (map (bindingAnalysis (c^._6)) . identifyCPHierarchy (c^._6)) vps
     
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
     paws <- findPAWS [] clausetr vp cpstr
     let cp = paws^.pa_CP
-        -- gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current . getOriginal
     case c^._3._1 of
-      Subj   -> let dp = fmap getHeadTokens (cp ^.complement.specifier)
+      Subj   -> let dp = fmap headText (cp ^.complement.specifier)
                 in return (dp == c ^._3._2)
       Comp n -> do let comps = cp ^.complement.complement.complement
                    comp <- comps ^? ix (n-1)
-                   let dp = fmap (\case DP z -> getHeadTokens z; PrepP _ z -> getHeadTokens z) comp
+                   let dp = fmap (\case DP z -> headText z; PrepP _ z -> headText z) comp
                    return (dp == c ^._3._2)
 
 
