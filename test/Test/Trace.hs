@@ -99,15 +99,15 @@ formatDetail :: TestTrace -> [Text]
 formatDetail (_txt,_,_,lma,pt,tmxs) =
   let vps  = mkVPS lma pt
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
-      mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy tmxs) vps
+      cpstr = (map bindingAnalysis . identifyCPHierarchy tmxs) vps
  
   in   
   [ "===================================================================================================================="
   , (T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList) pt
   , "--------------------------------------------------------------------------------------------------------------------"
   ]
-  ++ maybe [] (map formatCPHierarchy) mcpstr
-  ++ map (formatVPwithPAWS tmxs clausetr mcpstr) vps
+  ++ map formatCPHierarchy cpstr
+  ++ map (formatVPwithPAWS tmxs clausetr cpstr) vps
   ++
   [ "--------------------------------------------------------------------------------------------------------------------"
   , prettyPrint 0 pt
@@ -157,18 +157,18 @@ checkTrace c = -- False
   fromMaybe False $ do
     let vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
-        mcpstr = (fmap (map bindingAnalysis) . identifyCPHierarchy (c^._6)) vps
+        cpstr = (map bindingAnalysis . identifyCPHierarchy (c^._6)) vps
     
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-    paws <- findPAWS [] clausetr vp mcpstr
+    paws <- findPAWS [] clausetr vp cpstr
     let cp = paws^.pa_CP
-        gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
+        -- gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current . getOriginal
     case c^._3._1 of
-      Subj   -> let dp = fmap gettokens (cp ^.complement.specifier)
+      Subj   -> let dp = fmap getHeadTokens (cp ^.complement.specifier)
                 in return (dp == c ^._3._2)
       Comp n -> do let comps = cp ^.complement.complement.complement
                    comp <- comps ^? ix (n-1)
-                   let dp = fmap (\case DP z -> gettokens z; PrepP _ z -> gettokens z) comp
+                   let dp = fmap (\case DP z -> getHeadTokens z; PrepP _ z -> getHeadTokens z) comp
                    return (dp == c ^._3._2)
 
 

@@ -110,14 +110,6 @@ test_bare_noun_adverb =
   )
 
 
--- |
-test_noun_modifier :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
-test_noun_modifier =
-  ( "Billionaire environmentalist Tom Steyer said the idea is a political pipe dream anyway." 
-  , [(0,("billionaire","Billionaire")),(1,("environmentalist","environmentalist")),(2,("Tom","Tom")),(3,("Steyer","Steyer")),(4,("say","said")),(5,("the","the")),(6,("idea","idea")),(7,("be","is")),(8,("a","a")),(9,("political","political")),(10,("pipe","pipe")),(11,("dream","dream")),(12,("anyway","anyway")),(13,(".","."))]
-  , PN "ROOT" [PN "S" [PN "NP" [PL ("NN","Billionaire"),PL ("NN","environmentalist"),PL ("NNP","Tom"),PL ("NNP","Steyer")],PN "VP" [PL ("VBD","said"),PN "SBAR" [PN "S" [PN "NP" [PL ("DT","the"),PL ("NN","idea")],PN "VP" [PL ("VBZ","is"),PN "NP" [PL ("DT","a"),PL ("JJ","political"),PL ("NN","pipe"),PL ("NN","dream")],PN "ADVP" [PL ("RB","anyway")]]]]],PL (".",".")]]
-  , [TagPos (TokIdx {unTokIdx = 2},TokIdx {unTokIdx = 4},MarkEntity)]
-  )
 
 
 -- | relative WH-pronoun subject linking
@@ -125,10 +117,20 @@ test_noun_modifier =
 test_relative_pronoun_subject :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
 test_relative_pronoun_subject =
   ( "I saw the man who sat on the bench."
-  -- , 5, (Subj,TraceChain [Moved,WHPRO] (Just "the man"))  
+  -- , 5, (Subj,TraceChain [Moved,WHPRO] (Just "the man"))
   , [(0,("I","I")),(1,("see","saw")),(2,("the","the")),(3,("man","man")),(4,("who","who")),(5,("sit","sat")),(6,("on","on")),(7,("the","the")),(8,("bench","bench")),(9,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","saw"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","man")],PN "SBAR" [PN "WHNP" [PL ("WP","who")],PN "S" [PN "VP" [PL ("VBD","sat"),PN "PP" [PL ("IN","on"),PN "NP" [PL ("DT","the"),PL ("NN","bench")]]]]]]],PL (".",".")]]
   , []
+  )
+
+
+-- |
+test_noun_modifier :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
+test_noun_modifier =
+  ( "Billionaire environmentalist Tom Steyer said the idea is a political pipe dream anyway."
+  , [(0,("billionaire","Billionaire")),(1,("environmentalist","environmentalist")),(2,("Tom","Tom")),(3,("Steyer","Steyer")),(4,("say","said")),(5,("the","the")),(6,("idea","idea")),(7,("be","is")),(8,("a","a")),(9,("political","political")),(10,("pipe","pipe")),(11,("dream","dream")),(12,("anyway","anyway")),(13,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("NN","Billionaire"),PL ("NN","environmentalist"),PL ("NNP","Tom"),PL ("NNP","Steyer")],PN "VP" [PL ("VBD","said"),PN "SBAR" [PN "S" [PN "NP" [PL ("DT","the"),PL ("NN","idea")],PN "VP" [PL ("VBZ","is"),PN "NP" [PL ("DT","a"),PL ("JJ","political"),PL ("NN","pipe"),PL ("NN","dream")],PN "ADVP" [PL ("RB","anyway")]]]]],PL (".",".")]]
+  , [TagPos (TokIdx {unTokIdx = 2},TokIdx {unTokIdx = 4},MarkEntity)]
   )
 
 
@@ -150,7 +152,7 @@ showDetail (txt,lma,pt,tmxs) = do
     case find (\z -> getRoot (current z) ^? _Left . _1  == Just rng) $ getNodes (mkBitreeZipper [] lemmapt) of
       Nothing -> return ()
       Just z -> print $ hasEmptyPreposition z
-    
+
   {- let vps = verbPropertyFromPennTree lmap1 pt
       mcpstr = identifyCPHierarchy vps
   case mcpstr of
@@ -162,9 +164,10 @@ showDetail (txt,lma,pt,tmxs) = do
 
 
 mainShow :: IO ()
-mainShow = mapM_ showDetail [ -- test_coordination
-                            -- , test_complex_noun_phrase
-                              --, test_bare_noun_adverb
-                             --  , test_noun_modifier
-                              test_relative_pronoun_subject
+mainShow = mapM_ showDetail [ test_coordination
+                            , test_complex_noun_phrase
+                            , test_bare_noun_adverb
+                            , test_relative_pronoun_subject
+                            , test_noun_modifier
+
                             ]
