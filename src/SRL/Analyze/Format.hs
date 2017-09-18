@@ -32,7 +32,7 @@ import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CPDP,getHeadRange,getHeadTokens)
+import           NLP.Syntax.Type.XBar                    (CPDP,headRange,headText)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
@@ -110,20 +110,17 @@ formatSenses :: Bool  -- ^ doesShowOtherSense
              -> [((RoleInstance,Int), [(ArgPattern () GRel,Int)])]
              -> String
 formatSenses doesShowOtherSense onfnlst rmtoppatts
-  = 
-       -- ++ map(if (not.null) t then formatFrame (Just (head t)) else formatFrame Nothing)
-       "--------------------------------------------------------------------------------------------------\n"
-       ++ intercalate "\n--------------------------------------------------------------------------------------------------\n" (flip map rmtoppatts (\((rm,_),toppatts) ->
-               let argpattstr = formatArgPattStat toppatts
-                   mfrm = find (\x -> x^._1.onfn_senseID == rm^._1 ) onfnlst
-                   framestr = "Frames: " ++ maybe "" formatFrame mfrm
-               in 
-                   framestr ++
-                   (formatRoleMap (rm^._2) ++ ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<> argpattstr))))
-       ++ "\n--------------------------------------------------------------------------------------------------\n"
-       ++ if doesShowOtherSense
-          then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense onfnlst)
-          else ""
+  =  "--------------------------------------------------------------------------------------------------\n"
+     ++ intercalate "\n--------------------------------------------------------------------------------------------------\n" (flip map rmtoppatts (\((rm,_),toppatts) ->
+          let argpattstr = formatArgPattStat toppatts
+              mfrm = find (\x -> x^._1.onfn_senseID == rm^._1 ) onfnlst
+              framestr = "Frames: " ++ maybe "" formatFrame mfrm
+          in framestr ++
+             (formatRoleMap (rm^._2) ++ ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<> argpattstr))))
+     ++ "\n--------------------------------------------------------------------------------------------------\n"
+     ++ if doesShowOtherSense
+        then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense onfnlst)
+        else ""
 
 
 formatLinkedMention :: EL.EntityMention Text -> String
@@ -204,21 +201,21 @@ formatVerbStructure clausetr cpstr (VerbStructure vp senses mrmmtoppatts) =
 
 
 
-showMatchedFrame :: (VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
+showMatchedFrame :: [TagPos TokIdx MarkType]
+                 -> (VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
                  -> IO ()
-showMatchedFrame (vstr,paws) = do
-  -- let gettokens = T.intercalate " " . map (tokenWord.snd) . toList . current
+showMatchedFrame tagged (vstr,paws) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame (vstr,paws)) $ \(rng,_,frame,mselected) -> do
+  flip traverse_ (matchFrame tagged (vstr,paws)) $ \(rng,_,frame,mselected) -> do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> frame)
     flip traverse_ mselected $ \(_,felst) -> do
       mapM_ putStrLn . map (\(fe,(mp,z)) -> printf "%-15s: %-7s %3s %s"
                                                    fe
-                                                   (show (getHeadRange z))
+                                                   (show (headRange z))
                                                    (fromMaybe "" mp)
-                                                   (getHeadTokens z))
+                                                   (headText z))
         $ felst
 
 
@@ -233,15 +230,28 @@ formatMGEdge e = printf "i%d -> i%d [label=\"%s\" style=\"%s\" fontsize=12.0 %s]
                  if (e^.me_ismodifier) then printf "\n  {rankdir=TB; i%d -> i%d [style=invis]};" (e^.me_end) (e^.me_start) else ""
 
 formatMGVerb (MGEntity    _ _ _ _) = Nothing
-formatMGVerb (MGPredicate i _ f v) = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-                                              "<tr><td colspan=\"4\">" <> f <> "</td></tr>" <>
-                                              "<tr>" <>
-                                              "<td width=\"20\">" <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> "</td>" <>
-                                              "<td width=\"20\">" <> fromMaybe "" (v^?vp_negation._Just._1)           <> "</td>" <>
-                                              "<td>" <> v^.vp_lemma.to unLemma                           <> "</td>" <>
-                                              "<td>" <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect) <> "</td>" <>
-                                              "</tr>" <>
-                                              "</table>" )
+formatMGVerb (MGPredicate i _ f v)
+  = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+             "<tr><td colspan=\"4\">" <> f <> "</td></tr>" <>
+             "<tr>" <>
+             "<td width=\"20\">" <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> "</td>" <>
+             "<td width=\"20\">" <> fromMaybe "" (v^?vp_negation._Just._1)           <> "</td>" <>
+             "<td>" <> v^.vp_lemma.to unLemma                           <> "</td>" <>
+             "<td>" <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect) <> "</td>" <>
+             "</tr>" <>
+             "</table>" )
+formatMGVerb (MGNominalPredicate i _ f)
+  = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+             "<tr><td colspan=\"4\">" <> f <> "</td></tr>" <>
+             "<tr>" <>
+             "<td width=\"20\">" <> " </td>" <>
+             "<td width=\"20\">" <> " </td>" <>
+             "<td> </td>" <>
+             "<td> Nom.Mod </td>" <>
+             "</tr>" <>
+             "</table>" )
+
+
 
 formatMGEntity (MGEntity i _ t ns  ) = Just (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
                                                "<tr><td>" <> t <> "</td></tr>" <>
@@ -249,6 +259,7 @@ formatMGEntity (MGEntity i _ t ns  ) = Just (i,"<table border=\"0\" cellborder=\
                                                "</table>")
   where escquote = T.replace "\"" "\\\""
 formatMGEntity (MGPredicate _ _ _ _) = Nothing
+formatMGEntity (MGNominalPredicate _ _ _) = Nothing
 
 
 dotMeaningGraph :: String -> MeaningGraph -> String

@@ -25,7 +25,7 @@ import           Lexicon.Query                             (cutHistogram)
 import           Lexicon.Type                              (POSVorN(..),GRel
                                                            ,RoleInstance,RolePattInstance
                                                            ,ArgPattern)
-import           NLP.Syntax.Clause                         ({- apposAnalysis, -} bindingAnalysis,clauseStructure,identifyCPHierarchy)
+import           NLP.Syntax.Clause                         (bindingAnalysis,clauseStructure,identifyCPHierarchy)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (MarkType(..))
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
@@ -126,7 +126,6 @@ docStructure apredata emTagger docinput@(DocAnalysisInput sents sentidxs sentite
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
-      -- tagged = fromMaybe [] mtmxs
       sentStructures = map (sentStructure apredata mergedtags) (zip4 ([1..] :: [Int]) sentidxs lmass mptrs)
   in DocStructure mtokenss sentitems mergedtags sentStructures
 
@@ -148,7 +147,7 @@ sentStructure apredata tagged (i,midx,lmas,mptr) =
         lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
-        cpstr = (map ({- apposAnalysis tagged' . -} bindingAnalysis) . identifyCPHierarchy tagged') vps
+        cpstr = (map (bindingAnalysis tagged') . identifyCPHierarchy tagged') vps
         verbStructures = map (verbStructure apredata) vps
     in trace (show tagged') $ SentStructure i ptr vps clausetr cpstr tagged' verbStructures
 
