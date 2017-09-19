@@ -323,8 +323,8 @@ mergePropSense proptr insts senses =
   in map toTuple (joinAttrib (\x -> (either id id . adj) (x^.inst_predicate_id)) insts lst)
 
 
-process :: (Bool,Bool,Bool) -> HashMap Text Inventory -> [FilePath] -> IO ()
-process (statonly,tsv,showdetail) sensedb fps = do
+process :: LexDataConfig -> (Bool,Bool,Bool) -> HashMap Text Inventory -> [FilePath] -> IO ()
+process cfg (statonly,tsv,showdetail) sensedb fps = do
   let parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps

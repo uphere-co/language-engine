@@ -9,6 +9,7 @@ module Lexicon.Data where
 
 import           Control.Lens
 import           Data.Aeson
+import           Data.Aeson.Types
 import qualified Data.Binary                as Bi
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Foldable
@@ -52,40 +53,14 @@ data LexDataConfig = LexDataConfig { _cfg_sense_inventory_file :: FilePath
 makeLenses ''LexDataConfig
 
 instance FromJSON LexDataConfig where
-  parseJSON = genericParseJSON defaultOptions 
+  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 5}
+
 instance ToJSON LexDataConfig where
-  toJSON = genericToJSON defaultOptions
-  
+  toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 5}
 
-cfg :: LexDataConfig              
-cfg = LexDataConfig { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
-             , _cfg_semlink_file         = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
-             , _cfg_statistics           = "/scratch/wavewave/run/20170717/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
-             , _cfg_wsj_directory        = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-             , _cfg_framenet_lubin       = "/scratch/wavewave/run/20170717/FrameNet_ListOfLexUnit.bin"
-             , _cfg_framenet_framedir    = "/scratch/wavewave/FrameNet/1.7/fndata/fndata-1.7/frame"
-             , _cfg_wordnet_dict         = "/scratch/wavewave/wordnet/WordNet-3.0/dict"
-             , _cfg_propbank_framedir    = "/home/wavewave/repo/srcc/propbank-frames/frames"
-             , _cfg_wsj_corenlp_directory = "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
-             , _cfg_rolemap_file         = "/home/wavewave/repo/srcp/OntoNotes/mapping/final.txt"
-             , _cfg_verb_subcat_file     = "/scratch/wavewave/run/20170820/verbsubcat_propbank_ontonotes_statonly.tsv"
-             }
 
--- | This is the global config.
---
-cfgG :: LexDataConfig              
-cfgG = LexDataConfig { _cfg_sense_inventory_file  = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
-                     , _cfg_semlink_file          = "/data/groups/uphere/data/NLP/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
-                     , _cfg_statistics            = "/data/groups/uphere/data/NLP/run/20170717/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
-                     , _cfg_wsj_directory         = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-                     , _cfg_framenet_lubin        = "/data/groups/uphere/data/NLP/run/FrameNet_ListOfLexUnit.bin"
-                     , _cfg_framenet_framedir     = "/data/groups/uphere/data/NLP/FrameNet/1.7/fndata/fndata-1.7/frame" 
-                     , _cfg_wordnet_dict          = "/data/groups/uphere/data/NLP/dict"
-                     , _cfg_propbank_framedir     = "/data/groups/uphere/data/NLP/frames"
-                     , _cfg_wsj_corenlp_directory = "/data/groups/uphere/data/NLP/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
-                     , _cfg_rolemap_file          = "/home/modori/repo/src/OntoNotes/mapping/final.txt"
-                     , _cfg_verb_subcat_file      = "/data/groups/uphere/data/NLP/run/20170817/verbsubcat_propbank_ontonotes_statonly.tsv"
-                     }
+loadLexDataConfig :: FilePath -> IO (Either String (LexDataConfig))
+loadLexDataConfig fp = eitherDecode' <$> BL.readFile fp
 
 
 loadSenseInventory :: FilePath -> IO [Inventory]

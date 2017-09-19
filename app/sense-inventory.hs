@@ -1,6 +1,7 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Main where
 
@@ -173,4 +174,7 @@ listSenseWordNet cfg = do
 
 
 main :: IO ()
-main = listSenseWordNet cfg
+main = do
+  cfg  <- loadLexDataConfig "config.json" >>= \case Left err -> error err
+                                                    Right x  -> return x
+  listSenseWordNet cfg

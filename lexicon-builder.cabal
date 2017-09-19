@@ -125,6 +125,7 @@ Executable verb-subcat-propbank-stat
   other-modules:       Lexicon.App.VerbSubcat
   build-depends:       base,
                        --
+                       aeson,
                        attoparsec,
                        containers,
                        directory,
