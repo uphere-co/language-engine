@@ -6,7 +6,7 @@ import           Control.Lens                            ((^.))
 import           Data.Monoid                             ((<>))
 import qualified Options.Applicative          as O
 --
-import           OntoNotes.App.Load                      (cfg,cfgG)
+import           Lexicon.App.Load                        (cfg,cfgG)
 --
 import           SRL.Analyze                             (runAnalysis)
 import qualified SRL.Analyze.Config           as Analyze

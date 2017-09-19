@@ -5,6 +5,7 @@
 , HWordNet           ? <HWordNet>
 , graph-algorithms   ? <graph-algorithms>
 , lexicon            ? <lexicon>
+, lexicon-builder    ? <lexicon-builder>
 , multi-word-tagger  ? <multi-word-tagger>
 , nlp-types          ? <nlp-types>
 , OntoNotes          ? <OntoNotes>
@@ -54,6 +55,7 @@ let
       "HFrameNet"      = self.callPackage (import HFrameNet) {};
       "HWordNet"       = self.callPackage (import HWordNet) {};
       "graph-algorithms" = self.callPackage (import graph-algorithms) {};
+      "lexicon-builder" = self.callPackage (import lexicon-builder) {};
       "OntoNotes"      = self.callPackage (import OntoNotes) {};
       "PropBank"       = self.callPackage (import PropBank) {};
       "VerbNet"        = self.callPackage (import VerbNet) {};
@@ -91,6 +93,7 @@ let
             foreign-store
 
             p.lexicon
+            p.lexicon-builder
             p.multi-word-tagger
             p.nlp-types
             p.OntoNotes
