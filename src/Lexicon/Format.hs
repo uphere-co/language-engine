@@ -23,7 +23,7 @@ formatGRel :: GRel -> Text
 formatGRel (GR_NP   mgarg) = "NP"   <> maybe "" (\a -> "-" <> formatGArg a) mgarg
 formatGRel (GR_S    mgarg) = "S"    <> maybe "" (\a -> "-" <> formatGArg a) mgarg
 formatGRel (GR_SBAR mgarg) = "SBAR" <> maybe "" (\a -> "-" <> formatGArg a) mgarg
-formatGRel (GR_PP   mtxt)  = "PP"   <> maybe "" (\a -> "-" <> a) mtxt
+formatGRel (GR_PP   mparg) = "PP"   <> maybe "" (\(p,b) -> "-" <> p <> if b then "-ing" else "") mparg
 formatGRel (GR_ADVP mtxt)  = "ADVP" <> maybe "" (\a -> "-" <> a) mtxt
 formatGRel GR_ADJP         = "ADJP"
 formatGRel (GR_X    txt)   = "??"   <> "(" <> txt <> ")"

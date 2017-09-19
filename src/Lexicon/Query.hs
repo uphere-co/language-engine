@@ -42,7 +42,10 @@ parseGRel w = case T.splitOn "-" w of
                           "NP"   -> GR_NP   (listToMaybe ts >>= identifyGA)
                           "S"    -> GR_S    (listToMaybe ts >>= identifyGA)
                           "SBAR" -> GR_SBAR (listToMaybe ts >>= identifyGA)
-                          "PP"   -> GR_PP   (listToMaybe ts)
+                          "PP"   -> case ts of
+                                      prep:"ing":_ -> GR_PP (Just (prep,True))
+                                      prep:[]      -> GR_PP (Just (prep,False))
+                                      []           -> GR_PP Nothing
                           "ADVP" -> GR_ADVP (listToMaybe ts)
                           "ADJP" -> GR_ADJP
                           x      -> GR_X w

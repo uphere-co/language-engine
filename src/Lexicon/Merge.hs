@@ -43,9 +43,9 @@ convertPassive patt =
                         (patt^.patt_arg4)
 
   where
-    conv (GR_PP (Just "by"))  = GR_NP (Just GASBJ)
-    conv (GR_NP (Just GASBJ)) = GR_NP (Just GA1)
-    conv x                    = x
+    conv (GR_PP (Just ("by",_))) = GR_NP (Just GASBJ)
+    conv (GR_NP (Just GASBJ))    = GR_NP (Just GA1)
+    conv x                       = x
 
 
 
