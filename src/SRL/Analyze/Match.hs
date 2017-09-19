@@ -43,7 +43,8 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,ds_sentStructures
                                               ,ss_clausetr,ss_cpstr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
-                                              ,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges
+                                              ,me_relation
+                                              ,mv_text,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges
                                               )
 --
 import Debug.Trace
@@ -357,3 +358,16 @@ tagMG mg wikilst =
                              then x & (mv_resolved_entities .~ map (^. _2) (filter (\w -> (w ^. _1) `isInsideR` (x ^. mv_range)) wikilst))
                              else x )
   in MeaningGraph mg' (mg ^. mg_edges)
+
+changeMGText mg =
+  let mg' = mg ^.. mg_edges
+                 . traverse
+                 . to (\x -> x & (me_relation .~ (T.replace "&" "-AND-" (x ^. me_relation))))
+      mg'' = mg ^.. mg_vertices
+                  . traverse
+                  . to (\x -> case x of
+                           MGEntity {..} -> x & (mv_text .~ (T.replace "&" "-AND-" (x ^. mv_text)))
+                           MGPredicate {..} -> x
+                           MGNominalPredicate {..} -> x
+                       )
+  in MeaningGraph mg'' mg'
