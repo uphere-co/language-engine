@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 
-module OntoNotes.App.Serializer where
+module Lexicon.App.Serializer where
 
 import           Control.Lens
 import           Data.Aeson

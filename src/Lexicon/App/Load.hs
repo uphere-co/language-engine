@@ -4,7 +4,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
 
-module OntoNotes.App.Load where
+module Lexicon.App.Load where
 
 import           Control.Lens
 import           Data.Binary

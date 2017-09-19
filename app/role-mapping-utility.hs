@@ -34,14 +34,14 @@ import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query
 import           Lexicon.Type                     (POSVorN(..),RoleInstance,RolePattInstance,SenseID)
 import           NLP.Type.SyntaxProperty          (Voice)
+import           OntoNotes.Type.SenseInventory
 import           PropBank.Query                   (PredicateDB,RoleSetDB
                                                   ,constructPredicateDB, constructFrameDB
                                                   ,constructRoleSetDB, rolesetDB
                                                   )
 import           PropBank.Type.Frame       hiding (Voice,ProgOption)
 --
-import           OntoNotes.App.Load
-import           OntoNotes.Type.SenseInventory
+import           Lexicon.App.Load
 
 
 

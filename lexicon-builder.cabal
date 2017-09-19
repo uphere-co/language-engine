@@ -17,9 +17,9 @@ extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     OntoNotes.App.Load
-                       OntoNotes.App.Serializer
-                       OntoNotes.App.VerbSubcat
+  exposed-modules:     Lexicon.App.Load
+                       Lexicon.App.Serializer
+                       Lexicon.App.VerbSubcat
   -- other-modules:
   -- other-extensions:
   build-depends:       base,

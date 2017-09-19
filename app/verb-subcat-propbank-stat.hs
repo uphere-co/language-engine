@@ -17,9 +17,10 @@ import           Data.Monoid
 import           Options.Applicative         hiding (str)
 import           System.Directory.Tree
 --
-import           OntoNotes.App.Load
-import           OntoNotes.App.VerbSubcat
 import           OntoNotes.Type.SenseInventory
+--
+import           Lexicon.App.Load
+import           Lexicon.App.VerbSubcat
 
 
 data ProgOption = ProgOption { showDetail :: Bool

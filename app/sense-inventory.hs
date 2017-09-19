@@ -27,14 +27,14 @@ import           FrameNet.Query.LexUnit
 import           FrameNet.Type.Common             (fr_frame)
 import           FrameNet.Type.LexUnit
 import           Lexicon.Type                     (POSVorN(..))
+import           OntoNotes.Corpus.Load
+import           OntoNotes.Type.SenseInventory
 import           WordNet.Format
 import           WordNet.Query
 import           WordNet.Type
 import           WordNet.Type.POS                 (POS(..))
 --
-import           OntoNotes.App.Load
-import           OntoNotes.Corpus.Load
-import           OntoNotes.Type.SenseInventory
+import           Lexicon.App.Load
 
 
 verbnet :: HashMap (Text,Text) [Text] -> Text -> Text -> Box

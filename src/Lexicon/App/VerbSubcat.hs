@@ -6,7 +6,7 @@
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TupleSections         #-}
 
-module OntoNotes.App.VerbSubcat where
+module Lexicon.App.VerbSubcat where
 
 import           Control.Lens
 import           Control.Monad
@@ -45,19 +45,18 @@ import           NLP.Syntax.Verb
 import           NLP.Type.CoreNLP                       (Dependency)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
+import           OntoNotes.Corpus.Load
+import           OntoNotes.Corpus.PropBank
+import           OntoNotes.Parser.Sense
+import           OntoNotes.Type.Sense
+import           OntoNotes.Type.SenseInventory
 import           PropBank.Match
 import           PropBank.Query
 import           PropBank.Type.Frame             hiding (ProgOption)
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
 --
-import           OntoNotes.App.Load              hiding (Config)
-import           OntoNotes.Corpus.Load
-import           OntoNotes.Corpus.PropBank
-import           OntoNotes.Parser.Sense
-import           OntoNotes.Type.Sense
-import           OntoNotes.Type.SenseInventory
---
+import           Lexicon.App.Load              hiding (Config)
 
 
 
