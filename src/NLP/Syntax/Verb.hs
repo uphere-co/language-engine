@@ -69,7 +69,7 @@ findMWAux :: (GetIntLemma tag) =>
           -> [(BitreeZipperICP tag, (Int,Lemma))]
 findMWAux withto z
   | withto         = do p <- maybeToList (parent z)
-                        guard (isChunkAs VP (current p))
+                        guard (isChunkAs VP (current p) && isNothing (prev p))
                         p' <- maybeToList (parent p)
                         guard (isChunkAs S (current p'))
                         p'' <- maybeToList (parent p')
