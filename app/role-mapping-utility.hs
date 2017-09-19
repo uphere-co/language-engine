@@ -41,7 +41,7 @@ import           PropBank.Query                   (PredicateDB,RoleSetDB
                                                   )
 import           PropBank.Type.Frame       hiding (Voice,ProgOption)
 --
-import           Lexicon.App.Load
+import           Lexicon.Data
 
 
 
@@ -206,7 +206,7 @@ progOption = O.info pOptions (O.fullDesc <> O.progDesc "role mapping utility pro
 main :: IO ()
 main = do
   opt <- O.execParser progOption
-  (_ludb,_sensestat,_semlinkmap,sensemap,_ws,_) <- loadAllexceptPropBank
+  (_ludb,_sensestat,_semlinkmap,sensemap,_ws,_) <- loadAllexceptPropBank cfg
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (_preddb,rolesetdb) <- loadPropBankDB
 

@@ -1,13 +1,15 @@
 {-# LANGUAGE BangPatterns       #-}
 {-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
 
-module Lexicon.App.Load where
+module Lexicon.Data where
 
 import           Control.Lens
-import           Data.Binary
+import           Data.Aeson
+import qualified Data.Binary                as Bi
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Foldable
 import           Data.HashMap.Strict                (HashMap)
@@ -17,6 +19,7 @@ import           Data.Text                          (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import qualified Data.Text.Lazy.IO          as T.L.IO
+import           GHC.Generics
 import           System.Directory
 import           System.FilePath
 import           Text.Taggy.Lens
@@ -32,23 +35,30 @@ import           OntoNotes.Parser.SenseInventory
 import           OntoNotes.Type.SenseInventory
 
 
-data Config = Config { _cfg_sense_inventory_file :: FilePath
-                     , _cfg_semlink_file         :: FilePath
-                     , _cfg_statistics           :: FilePath
-                     , _cfg_wsj_directory        :: FilePath
-                     , _cfg_framenet_lubin       :: FilePath
-                     , _cfg_framenet_framedir    :: FilePath
-                     , _cfg_wordnet_dict         :: FilePath
-                     , _cfg_propbank_framedir    :: FilePath
-                     , _cfg_wsj_corenlp_directory :: FilePath
-                     , _cfg_rolemap_file         :: FilePath
-                     , _cfg_verb_subcat_file     :: FilePath
-                     }
+data LexDataConfig = LexDataConfig { _cfg_sense_inventory_file :: FilePath
+                                   , _cfg_semlink_file         :: FilePath
+                                   , _cfg_statistics           :: FilePath
+                                   , _cfg_wsj_directory        :: FilePath
+                                   , _cfg_framenet_lubin       :: FilePath
+                                   , _cfg_framenet_framedir    :: FilePath
+                                   , _cfg_wordnet_dict         :: FilePath
+                                   , _cfg_propbank_framedir    :: FilePath
+                                   , _cfg_wsj_corenlp_directory :: FilePath
+                                   , _cfg_rolemap_file         :: FilePath
+                                   , _cfg_verb_subcat_file     :: FilePath
+                                   }
+                   deriving (Show,Eq,Ord,Generic)
 
-makeLenses ''Config
+makeLenses ''LexDataConfig
 
-cfg :: Config              
-cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
+instance FromJSON LexDataConfig where
+  parseJSON = genericParseJSON defaultOptions 
+instance ToJSON LexDataConfig where
+  toJSON = genericToJSON defaultOptions
+  
+
+cfg :: LexDataConfig              
+cfg = LexDataConfig { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
              , _cfg_semlink_file         = "/scratch/wavewave/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
              , _cfg_statistics           = "/scratch/wavewave/run/20170717/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
              , _cfg_wsj_directory        = "/scratch/wavewave/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
@@ -63,19 +73,19 @@ cfg = Config { _cfg_sense_inventory_file = "/scratch/wavewave/LDC/ontonotes/b/da
 
 -- | This is the global config.
 --
-cfgG :: Config              
-cfgG = Config { _cfg_sense_inventory_file  = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
-              , _cfg_semlink_file          = "/data/groups/uphere/data/NLP/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
-              , _cfg_statistics            = "/data/groups/uphere/data/NLP/run/20170717/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
-              , _cfg_wsj_directory         = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
-              , _cfg_framenet_lubin        = "/data/groups/uphere/data/NLP/run/FrameNet_ListOfLexUnit.bin"
-              , _cfg_framenet_framedir     = "/data/groups/uphere/data/NLP/FrameNet/1.7/fndata/fndata-1.7/frame" 
-              , _cfg_wordnet_dict          = "/data/groups/uphere/data/NLP/dict"
-              , _cfg_propbank_framedir     = "/data/groups/uphere/data/NLP/frames"
-              , _cfg_wsj_corenlp_directory = "/data/groups/uphere/data/NLP/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
-              , _cfg_rolemap_file          = "/home/modori/repo/src/OntoNotes/mapping/final.txt"
-              , _cfg_verb_subcat_file      = "/data/groups/uphere/data/NLP/run/20170817/verbsubcat_propbank_ontonotes_statonly.tsv"
-              }
+cfgG :: LexDataConfig              
+cfgG = LexDataConfig { _cfg_sense_inventory_file  = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/metadata/sense-inventories"
+                     , _cfg_semlink_file          = "/data/groups/uphere/data/NLP/SemLink/1.2.2c/vn-fn/VNC-FNF.s"
+                     , _cfg_statistics            = "/data/groups/uphere/data/NLP/run/20170717/OntoNotes_propbank_statistics_only_wall_street_journal_verbonly.txt"
+                     , _cfg_wsj_directory         = "/data/groups/uphere/data/NLP/LDC/ontonotes/b/data/files/data/english/annotations/nw/wsj"
+                     , _cfg_framenet_lubin        = "/data/groups/uphere/data/NLP/run/FrameNet_ListOfLexUnit.bin"
+                     , _cfg_framenet_framedir     = "/data/groups/uphere/data/NLP/FrameNet/1.7/fndata/fndata-1.7/frame" 
+                     , _cfg_wordnet_dict          = "/data/groups/uphere/data/NLP/dict"
+                     , _cfg_propbank_framedir     = "/data/groups/uphere/data/NLP/frames"
+                     , _cfg_wsj_corenlp_directory = "/data/groups/uphere/data/NLP/run/ontonotes_corenlp_ptree_udep_lemma_20170710"
+                     , _cfg_rolemap_file          = "/home/modori/repo/src/OntoNotes/mapping/final.txt"
+                     , _cfg_verb_subcat_file      = "/data/groups/uphere/data/NLP/run/20170817/verbsubcat_propbank_ontonotes_statonly.tsv"
+                     }
 
 
 loadSenseInventory :: FilePath -> IO [Inventory]
@@ -111,7 +121,7 @@ loadStatistics fp = do
 loadFrameNet :: FilePath -> IO LexUnitDB
 loadFrameNet fp = do
   bstr <- BL.readFile fp
-  let lst = decode bstr :: [LexUnit]
+  let lst = Bi.decode bstr :: [LexUnit]
       lexunitdb = foldl' insertLU emptyDB lst
   return lexunitdb
 
@@ -124,8 +134,8 @@ createVNFNDB semlink =
 
 
 
-loadAllexceptPropBank :: IO (LexUnitDB, HashMap (Text,Text) Int, HashMap (Text,Text) [Text], HashMap Text Inventory, [(Text,Text)], WordNetDB)
-loadAllexceptPropBank = do
+loadAllexceptPropBank :: LexDataConfig -> IO (LexUnitDB, HashMap (Text,Text) Int, HashMap (Text,Text) [Text], HashMap Text Inventory, [(Text,Text)], WordNetDB)
+loadAllexceptPropBank cfg = do
   ludb <- loadFrameNet (cfg^.cfg_framenet_lubin)
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   semlink <- loadSemLink (cfg^.cfg_semlink_file)

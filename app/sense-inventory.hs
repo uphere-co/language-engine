@@ -34,7 +34,7 @@ import           WordNet.Query
 import           WordNet.Type
 import           WordNet.Type.POS                 (POS(..))
 --
-import           Lexicon.App.Load
+import           Lexicon.Data
 
 
 verbnet :: HashMap (Text,Text) [Text] -> Text -> Text -> Box
@@ -142,9 +142,9 @@ formatStat :: ((Text,Text),Int) -> String
 formatStat ((lma,sens),num) = printf "%20s.%-5s : %5d" lma sens num
 
 
-listSenseDetail :: IO ()
-listSenseDetail = do
-  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank
+listSenseDetail :: LexDataConfig -> IO ()
+listSenseDetail cfg = do
+  (ludb,sensestat,semlinkmap,sensemap,ws,_) <- loadAllexceptPropBank cfg
 
   let merged = mergeStatPB2Lemma ws
   forM_ merged $ \(lma,f) -> do
@@ -157,9 +157,9 @@ listSenseDetail = do
     putStrLn (render doc)
 
 
-listSenseWordNet :: IO ()
-listSenseWordNet = do
-  (_ludb,sensestat,_semlinkmap,sensemap,ws,wndb) <- loadAllexceptPropBank
+listSenseWordNet :: LexDataConfig -> IO ()
+listSenseWordNet cfg = do
+  (_ludb,sensestat,_semlinkmap,sensemap,ws,wndb) <- loadAllexceptPropBank cfg
 
   let merged = mergeStatPB2Lemma ws
 
@@ -173,4 +173,4 @@ listSenseWordNet = do
 
 
 main :: IO ()
-main = listSenseWordNet
+main = listSenseWordNet cfg

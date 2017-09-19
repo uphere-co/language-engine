@@ -56,7 +56,7 @@ import           PropBank.Type.Frame             hiding (ProgOption)
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
 --
-import           Lexicon.App.Load              hiding (Config)
+import           Lexicon.Data
 
 
 

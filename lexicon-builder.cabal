@@ -17,9 +17,9 @@ extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Lexicon.App.Load
-                       Lexicon.App.Serializer
+  exposed-modules:     Lexicon.App.Serializer
                        Lexicon.App.VerbSubcat
+                       Lexicon.Data
   -- other-modules:
   -- other-extensions:
   build-depends:       base,
@@ -48,9 +48,7 @@ library
                        OntoNotes,
                        PropBank,
                        syntactic-analysis,
-                       -- textview,
                        VerbNet
-                       -- wiki-ner
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -O2 -Wall

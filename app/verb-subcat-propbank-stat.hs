@@ -19,7 +19,7 @@ import           System.Directory.Tree
 --
 import           OntoNotes.Type.SenseInventory
 --
-import           Lexicon.App.Load
+import           Lexicon.Data
 import           Lexicon.App.VerbSubcat
 
 
