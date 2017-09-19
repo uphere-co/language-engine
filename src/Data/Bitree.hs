@@ -1,12 +1,13 @@
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE DeriveFoldable    #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE DeriveTraversable #-}
-
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Data.Bitree where
 
 import           Control.Applicative
+import           Control.Lens
 import           Data.Aeson
 import           Data.Bifoldable
 import           Data.Bifunctor
@@ -24,6 +25,8 @@ import           GHC.Generics
 data Bitree n l = PN n [Bitree n l]
                 | PL l
                 deriving (Show, Eq, Functor, Foldable, Traversable, Generic)
+
+makePrisms ''Bitree
 
 instance Bifunctor Bitree where
   bimap f g (PN x xs) = PN (f x) (map (bimap f g) xs)
