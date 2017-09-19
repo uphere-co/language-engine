@@ -28,23 +28,22 @@ import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (loadRoleInsts,loadRolePattInsts)
 import           Lexicon.Type                 (RoleInstance,RolePattInstance)
-import           NLP.Syntax.Format            (formatCPHierarchy)
-import           NLP.Type.NamedEntity         (NamedEntityClass)
-import           NLP.Type.SyntaxProperty      (Voice)
-import           Text.Format.Dot              (mkLabelText)
-import           WikiEL                       (loadEMtagger)
-import           WikiEL.EntityLinking         (EntityMention)
-import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
---
-import           OntoNotes.App.Load           (Config(..),cfgG,cfg_framenet_framedir
+import           Lexicon.App.Load             (Config(..),cfgG,cfg_framenet_framedir
                                               ,cfg_rolemap_file
                                               ,cfg_sense_inventory_file
                                               ,cfg_verb_subcat_file
                                               ,cfg_wsj_directory
                                               ,loadSenseInventory
                                               )
+import           NLP.Syntax.Format            (formatCPHierarchy)
+import           NLP.Type.NamedEntity         (NamedEntityClass)
+import           NLP.Type.SyntaxProperty      (Voice)
 import           OntoNotes.Corpus.Load        (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
+import           Text.Format.Dot              (mkLabelText)
+import           WikiEL                       (loadEMtagger)
+import           WikiEL.EntityLinking         (EntityMention)
+import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
 --
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP           (runParser)
