@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TupleSections     #-}
 
 module NLP.Syntax.Argument where
 
@@ -8,12 +9,15 @@ import           Control.Monad                (join)
 import           Data.Bifunctor               (bimap)
 import           Data.Foldable                (toList)
 import           Data.List                    (find)
-import           Data.Monoid                  ((<>),First(..),Last(..))
+import           Data.Maybe                   (fromMaybe)
+import           Data.Monoid                  ((<>),Last(..))
 import           Data.Text                    (Text)
 import qualified Data.Text               as T
 --
-import           Data.Bitree                  (Bitree(..),getLeaves,getNodes,getRoot)
-import           Data.BitreeZipper            (BitreeZipper(..),current,parent,mkBitreeZipper)
+import           Data.Bitree                  (Bitree(..),getLeaves,getNodes,getRoot,_PL,_PN)
+import           Data.BitreeZipper            (BitreeZipper(..),child1,current,next,parent
+                                              ,mkBitreeZipper)
+import           Data.BitreeZipper.Util       (firstSiblingBy)
 import           NLP.Type.PennTreebankII      (PennTreeIdx,Range,POSTag(..),ChunkTag(..)
                                               ,LinkID,TernaryLogic(..)
                                               ,getRange
@@ -31,16 +35,16 @@ import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 
 
-headPreposition :: [PennTreeIdx] -> Maybe Text
-headPreposition xs = getFirst (foldMap (First . f) xs)   
-  where f (PN _ _)        = Nothing
-        f (PL (_,(IN,t))) = Just (T.toLower t)
-        f (PL (_,(TO,t))) = Just (T.toLower t)
-        f (PL _         ) = Nothing        
+headPreposition :: BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text)) -> Maybe (Text,Bool)
+headPreposition z = do
+    p <- child1 z >>= firstSiblingBy next (\x -> let y = x^?_PL._2._1 in (y == Just IN) || (y == Just TO))
+    t <- (current p)^? _PL . _2 . _2
+    let b = fromMaybe False (fmap (== S) . (^?_PN._1._2) . current =<< next p)
+    return (T.toLower t,b)
 
 
 headAdverb :: [PennTreeIdx] -> Maybe Text
-headAdverb xs = getLast (foldMap (Last . f) xs)   
+headAdverb xs = getLast (foldMap (Last . f) xs)
   where f (PN _ _)         = Nothing
         f (PL (_,(pos,t))) = if isAdverb pos then Just (T.toLower t) else Nothing
 
@@ -63,16 +67,16 @@ phraseNodeType mtp z
                          Just 1 -> Just GA1
                          Just 2 -> Just GA2
                          _ -> Nothing
-                                                              
+
         phrase = case current z of
                    PN (_,c) xs       -> case c of
-                                          PP   -> GR_PP (headPreposition xs)
+                                          PP   -> GR_PP (headPreposition z)
                                           ADVP -> case headAdverb xs of
                                                     Just t -> GR_ADVP (Just t)
-                                                    Nothing -> case headPreposition xs of
+                                                    Nothing -> case fst <$> headPreposition z of
                                                                  Just t -> GR_ADVP (Just t)
                                                                  Nothing -> GR_X "??ADVP"
-                                          PRT  -> GR_PP (headAdverb xs)
+                                          PRT  -> GR_PP ((,False) <$> headAdverb xs)
                                           WHNP -> GR_NP mgarg
                                           NP   -> GR_NP mgarg
                                           S    -> GR_S  mgarg
@@ -122,7 +126,7 @@ mkArgTable itr l2p (file,sid,tid) args  =
              (file,sid,tid)
   where
     adj x@(PL (_i,(D_NONE,t))) = let (_trc,mlid) = identifyTrace t
-                                     mlnk = do lid <-mlid 
+                                     mlnk = do lid <-mlid
                                                rng <- lookup lid l2p
                                                return rng
                                  in case mlnk of
@@ -133,7 +137,7 @@ mkArgTable itr l2p (file,sid,tid) args  =
     findArg lcond = do a <- find (\a -> lcond (a^.arg_label)) args
                        let ns = a^.arg_terminals
                        case ns of
-                         n:_ -> snd <$> findNode n itr 
+                         n:_ -> snd <$> findNode n itr
                          _   -> Nothing
 
 
@@ -146,4 +150,3 @@ mkArgPattern mtp ArgTable {..} =
              , _patt_arg3 = fmap chooseATNode _tbl_arg3
              , _patt_arg4 = fmap chooseATNode _tbl_arg4
              }
-
