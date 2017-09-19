@@ -58,7 +58,7 @@ partitionRanges rngs = let (rmax,rngs') = rootRange rngs
 -- | Tree structure out of a list of ranges by inclusion relation.
 --
 rangeTree :: [Range] -> [Bitree Range Range]
--- rangeTree []   = error "rangeTree"
+rangeTree []   = []
 rangeTree rngs = let ps = partitionRanges rngs
                      f (rmax,[]) = PL rmax
                      f (rmax,rs) = PN rmax (rangeTree rs)
