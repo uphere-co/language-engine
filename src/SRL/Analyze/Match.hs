@@ -16,6 +16,7 @@ import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
 import           Data.Maybe                   (catMaybes,fromMaybe,isJust,listToMaybe,mapMaybe,maybeToList)
+import           Data.Monoid                  ((<>))
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
@@ -74,7 +75,7 @@ pbArgForGArg garg patt = check patt_arg0 "arg0" <|>
                            if garg==garg' then Just (label,a) else Nothing
 
 
-pbArgForPP :: ArgPattern p GRel -> [(Text,Text)]
+pbArgForPP :: ArgPattern p GRel -> [(Text,(Text,Maybe Bool))]
 pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
                             , check patt_arg1 "arg1"
                             , check patt_arg2 "arg2"
@@ -83,7 +84,7 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
                             ]
   where check l label = do a <- patt^.l
                            case a of
-                             GR_PP mprep -> (label,) <$> mprep
+                             GR_PP (Just (prep,ising)) -> return (label,(prep,Just ising)) -- <$> mprep
                              _           -> Nothing
 
 
@@ -119,16 +120,16 @@ matchObjects rolemap verbp patt = do
 
 matchPP :: [TagPos TokIdx MarkType]
         -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
-        -> Text
+        -> (Text,Maybe Bool)
         -> Maybe (SplitDP (Zipper '[Lemma]))
-matchPP tagged paws prep = do
+matchPP tagged paws (prep,mising) = do
     Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
     tr <- current . root <$> paws^.pa_CP.maximalProjection
     z' <- find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
     return (splitPP tagged z')
   where
-    ppcheck (Left (_,S_PP prep')) = prep == prep'
-    ppcheck _                     = False
+    ppcheck (Left (_,S_PP prep' ising')) = prep == prep' && maybe True (\ising -> ising == ising') mising
+    ppcheck _                            = False
 
 
 matchPrepArgs :: [(PBArg,FNFrameElement)]
@@ -137,8 +138,8 @@ matchPrepArgs :: [(PBArg,FNFrameElement)]
               -> ArgPattern p GRel
               -> [(FNFrameElement, (Maybe Text, (SplitDP (Zipper '[Lemma]))))]
 matchPrepArgs rolemap tagged paws patt = do
-  (p,prep) <- pbArgForPP patt
-  z <- maybeToList (matchPP tagged paws prep)
+  (p,(prep,mising)) <- pbArgForPP patt
+  z <- maybeToList (matchPP tagged paws (prep,mising))
   (,(Just prep,z)) <$> maybeToList (lookup p rolemap)
 
 
@@ -149,7 +150,7 @@ matchAgentForPassive :: [(PBArg,FNFrameElement)]
                      -> Maybe (FNFrameElement, (Maybe Text, (SplitDP (Zipper '[Lemma]))))
 matchAgentForPassive rolemap tagged paws patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
-    z <- matchPP tagged paws "by"
+    z <- matchPP tagged paws ("by",Nothing)
     (,(Just "by",z)) <$> lookup p rolemap
 
 
