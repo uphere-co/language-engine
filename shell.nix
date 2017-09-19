@@ -6,6 +6,7 @@
 , HWordNet           ? <HWordNet>
 , lexicon            ? <lexicon>
 , nlp-types          ? <nlp-types>
+, OntoNotes          ? <OntoNotes>
 , PropBank           ? <PropBank>
 , syntactic-analysis ? <syntactic-analysis>
 , VerbNet            ? <VerbNet>
@@ -34,12 +35,13 @@ let
       "HWordNet"       = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HWordNet)) {};
       "lexicon"        = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "dist") lexicon)) {};
       "nlp-types" = self.callPackage (import nlp-types) {};
-      "PropBank" = self.callPackage (import PropBank) {};
+      "OntoNotes" = self.callPackage (import OntoNotes) {};
+      "PropBank"  = self.callPackage (import PropBank) {};
       "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
-      "textview" = self.callPackage (import textview) {};      
-      "VerbNet" = self.callPackage (import VerbNet) {};
+      "textview"  = self.callPackage (import textview) {};
+      "VerbNet"   = self.callPackage (import VerbNet) {};
       "wiki-ner"  = self.callPackage (import wiki-ner) {};
-      
+
     };
   newHaskellPackages = haskellPackages.override {
     overrides = self: super: hsconfig self super // config2 self super;
@@ -53,7 +55,7 @@ let
             attoparsec
             bifunctors
             bindings-DSL
-            
+
             boxes
             discrimination
             directory-tree
@@ -75,9 +77,9 @@ let
             p.HWordNet
             p.lexicon
             p.nlp-types
-            p.syntactic-analysis
-            
+            p.OntoNotes
             p.PropBank
+            p.syntactic-analysis
             p.VerbNet
             p.wiki-ner
           ]);
@@ -91,5 +93,5 @@ stdenv.mkDerivation {
     export OMP_NUM_THREADS=12
     export CLASSPATH="${corenlp_models}:${corenlp}/stanford-corenlp-3.7.0.jar:${corenlp}/protobuf.jar:${corenlp}/joda-time.jar:${corenlp}/jollyday.jar:${hsenv}/share/x86_64-linux-ghc-8.0.2/HCoreNLP-0.1.0.0/HCoreNLPProto.jar";
   '';
-  
+
 }
