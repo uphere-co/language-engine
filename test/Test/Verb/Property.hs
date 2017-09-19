@@ -26,9 +26,16 @@ import           Test.Tasty.HUnit
 import           Test.Tasty
 
 
+type TestVerbProp = (Text,Int,(Tense,Aspect,Voice,[Text],Maybe Text),[(Int,(Lemma,Text))],PennTree)
+
 -- | (Tense,Aspect,Voice,Maybe Text,Maybe Text) == (tense,aspect,voice,auxiliary,negation)
-ex1,ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20,ex21,ex22,ex23,ex24,ex25,ex26,ex27,ex28,ex29,ex30
-  :: (Text,Int,(Tense,Aspect,Voice,[Text],Maybe Text),[(Int,(Lemma,Text))],PennTree)
+--
+ex1 ,ex2 ,ex3 ,ex4 ,ex5 ,ex6 ,ex7 ,ex8 ,ex9 ,ex10 :: TestVerbProp
+ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20 :: TestVerbProp
+ex21,ex22,ex23,ex24,ex25,ex26,ex27,ex28,ex29,ex30 :: TestVerbProp
+ex31 :: TestVerbProp
+
+
 ex1 = ( "He was fined $25,000."
       , 2
       , (Past,Simple,Passive,[],Nothing)
@@ -274,17 +281,26 @@ ex30 = ( "I used to write a book."
        , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","used"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","book")]]]]],PL (".",".")]]
        )
 
+ 
+ex31 = ( "They will have the votes to pass it as soon as next week."
+       , 2
+       , (Present, Simple, Active, ["will"], Nothing)
+       , [(0,("they","They")),(1,("will","will")),(2,("have","have")),(3,("the","the")),(4,("vote","votes")),(5,("to","to")),(6,("pass","pass")),(7,("it","it")),(8,("as","as")),(9,("soon","soon")),(10,("as","as")),(11,("next","next")),(12,("week","week")),(13,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","They")],PN "VP" [PL ("MD","will"),PN "VP" [PL ("VB","have"),PN "S" [PN "NP" [PL ("DT","the"),PL ("NNS","votes")],PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","pass"),PN "NP" [PL ("PRP","it")],PN "ADVP" [PN "ADVP" [PL ("RB","as"),PL ("RB","soon")],PN "PP" [PL ("IN","as"),PN "NP-TMP" [PL ("JJ","next"),PL ("NN","week")]]]]]]]],PL (".",".")]]
+       )
 
-testcases :: [(Text,Int,(Tense,Aspect,Voice,[Text],Maybe Text),[(Int,(Lemma,Text))],PennTree)]
+
+testcases :: [TestVerbProp]
 testcases = [ ex1, ex2, ex3, ex4, ex5, ex6, ex7, ex8, ex9,ex10
             ,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20
             ,ex21,ex22,ex23,ex24,ex25,ex26,ex27,ex28,ex29,ex30
+            ,ex31
             ]
 
 
 
 
-checkVP :: (Text,Int,(Tense,Aspect,Voice,[Text],Maybe Text),[(Int,(Lemma,Text))],PennTree) -> Bool
+checkVP :: TestVerbProp -> Bool
 checkVP (_txt,i,expresult,lmatknlst,pt) =
   let vps = mkVPS lmatknlst pt
   in case find (\vp -> vp^.vp_index == i) vps of
