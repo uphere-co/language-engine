@@ -17,11 +17,9 @@ extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Lexicon.App.Serializer
-                       Lexicon.App.VerbSubcat
-                       Lexicon.Data
-  -- other-modules:
-  -- other-extensions:
+  exposed-modules:     Lexicon.Data
+  other-modules:
+  other-extensions:
   build-depends:       base,
                        aeson,
                        binary,
@@ -124,7 +122,7 @@ Executable verb-subcat-propbank-stat
                        -fno-warn-partial-type-signatures
                        -threaded
   ghc-prof-options:    -caf-all -auto-all
-  other-modules:
+  other-modules:       Lexicon.App.VerbSubcat
   build-depends:       base,
                        --
                        attoparsec,
@@ -139,6 +137,7 @@ Executable verb-subcat-propbank-stat
                        text,
                        unordered-containers,
                        --
+                       lexicon,
                        nlp-types,
                        OntoNotes,
                        PropBank,
