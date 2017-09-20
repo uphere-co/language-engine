@@ -15,7 +15,7 @@ import           Data.Foldable
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
-import           Data.Maybe                   (catMaybes,fromMaybe,isJust,listToMaybe,mapMaybe,maybeToList)
+import           Data.Maybe                   (catMaybes,fromMaybe,isJust,isNothing,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                  ((<>))
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
@@ -84,7 +84,7 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
                             ]
   where check l label = do a <- patt^.l
                            case a of
-                             GR_PP (Just (prep,ising)) -> return (label,(prep,Just ising)) -- <$> mprep
+                             GR_PP (Just (prep,ising)) -> return (label,(prep,Just ising))
                              _           -> Nothing
 
 
@@ -246,11 +246,24 @@ matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   causetype <- (\x -> if x == "dual" then LVDual else LVSingle) <$> maybeToList (lookup "cause" rolemap1)
   return (matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,rolemap1),stat)
 
+-- | this function should be generalized. this is a kind of simple placeholder now.
+matchExtraRoles :: [TagPos TokIdx MarkType]
+                -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
+                -> [(FNFrameElement,(Maybe Text, SplitDP (Zipper '[Lemma])))]
+                -> [(FNFrameElement,(Maybe Text, SplitDP (Zipper '[Lemma])))]
+matchExtraRoles tagged paws felst =
+  let mmeans = do
+        guard (isNothing (find (\x -> x^._1 == "Means") felst))
+        z <-matchPP tagged paws ("by",Just True)
+        let rng = headRange z
+        guard (isNothing (find (\x -> headRange (x^._2._2) == rng) felst))
+        return ("Means",(Just "by",z))
+  in maybe felst (\means -> means : felst) mmeans
 
 
 matchFrame :: [TagPos TokIdx MarkType]
            -> (VerbStructure,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
-           -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FNFrameElement
+           -> Maybe (Range,VerbProperty (Zipper '[Lemma]),Text
                     ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, SplitDP (Zipper '[Lemma])))]))
 matchFrame tagged (vstr,paws) = do
   let cp = paws^.pa_CP
@@ -259,8 +272,9 @@ matchFrame tagged (vstr,paws) = do
       vprop = vstr^.vs_vp
   rng <- cpRange cp
   let frmsels = matchFrameRolesAll tagged verbp paws mDP (vstr^.vs_roleTopPatts)
-  let total=  sum (frmsels^..traverse._2)
-  ((frame,mselected),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
+      total=  sum (frmsels^..traverse._2)
+  ((frame,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
+  let mselected = (_Just . _2 %~ matchExtraRoles tagged paws) mselected0
   return (rng,vprop,frame,mselected)
 
 
