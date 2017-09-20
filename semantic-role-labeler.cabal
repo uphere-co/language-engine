@@ -63,6 +63,7 @@ library
                        either,
                        filepath,
                        haskeline,
+                       html-entities,
                        jni,
                        jvm,
                        lens,

@@ -26,6 +26,7 @@ import           Data.Bitree
 import           Data.BitreeZipper
 
 import           Data.Range
+import qualified HTMLEntities.Text             as HTMLT               
 import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
 import           Lexicon.Type                            (ArgPattern(..),RoleInstance,GRel(..))
 import           NLP.Syntax.Format
@@ -257,7 +258,6 @@ formatMGEntity (MGEntity i _ t ns  ) = Just (i,"<table border=\"0\" cellborder=\
                                                "<tr><td>" <> t <> "</td></tr>" <>
                                                T.concat (map (\x -> "<tr><td>"<> x <>"</td></tr>") ns) <>
                                                "</table>")
-  where escquote = T.replace "\"" "\\\""
 formatMGEntity (MGPredicate _ _ _ _) = Nothing
 formatMGEntity (MGNominalPredicate _ _ _) = Nothing
 
@@ -267,8 +267,9 @@ dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt t
   where
     -- vtxt :: String
     vtxt = let vertices = mg^.mg_vertices
-               verbs = mapMaybe formatMGVerb vertices
-               entities = mapMaybe formatMGEntity vertices
+               replaceTxt (a,b) = (a, HTMLT.text b)
+               verbs = mapMaybe (fmap replaceTxt . formatMGVerb) vertices
+               entities = mapMaybe (fmap replaceTxt . formatMGEntity) vertices
 
            in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=plaintext, margin=0, style=filled, fillcolor=grey label=<%s>];" i t)) verbs ++  "\n  " ++
               (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=plaintext, margin=0, label=<%s>];" i t)) entities

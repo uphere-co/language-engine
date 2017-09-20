@@ -76,6 +76,7 @@ let
             cabal-install
             either
             haskeline
+            html-entities
             lens
             monad-loops
             optparse-applicative
