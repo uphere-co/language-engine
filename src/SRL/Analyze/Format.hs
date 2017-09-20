@@ -45,6 +45,7 @@ import           SRL.Analyze.Match                       (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,MGVertex(..),MeaningGraph
+                                                         ,AdjustedDetP(..)
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
                                                          ,chooseMostFreqFrame
@@ -211,7 +212,7 @@ showMatchedFrame tagged (vstr,paws) = do
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> frame)
     flip traverse_ mselected $ \(_,felst) -> do
-      mapM_ putStrLn . map (\(fe,(mp,z)) -> printf "%-15s: %-7s %3s %s"
+      mapM_ putStrLn . map (\(fe,WithPrep mp z) -> printf "%-15s: %-7s %3s %s"
                                                    fe
                                                    (show (headRange z))
                                                    (fromMaybe "" mp)
