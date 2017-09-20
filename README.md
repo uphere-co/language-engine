@@ -131,3 +131,6 @@ $ time awk -F"\t" 'NR == FNR { a[$1]; next } !($2 in a) {print}' filter.page enw
 real	0m47.716s
 ```
 
+#### Prepare data and run the executable for entity linking
+First, See "Wikidata entity annotation" section of `rnn++/README.md` to produce `wikidata.items` file. (Caution : as noted in the rnn++/README.md, must use wavewave's fork of nixpkgs; don't have clue why clang cannot find the standard header files, otherwise.)
+Second, to prepare data, follow a 'Run CoreNLP NER' section of `scripts/WikipediaETL.md` 
