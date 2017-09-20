@@ -17,29 +17,39 @@ import           NLP.Type.PennTreebankII  (ChunkTag(..),Lemma,POSTag(..),Ternary
 import           NLP.Type.TagPos          (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Type          (MarkType(..))
-import           NLP.Syntax.Type.XBar     (Zipper,SplitDP(..),SplittedDP(..),SplitType(..))
+import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,XP(..),maximalProjection)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 
 
-mkSplittedDP :: SplitType -> Zipper a -> Zipper a -> Zipper a -> SplittedDP (Zipper a)
-mkSplittedDP typ h m o = SplittedDP typ (rf h) (rf m) o
+mkOrdDP :: Zipper a -> DetP a
+mkOrdDP z = XP (rf z,rf z) z () Nothing Nothing
   where rf = getRange . current 
 
 
-splitDP :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
-splitDP tagged z = bareNounModifier tagged . fromMaybe (Unsplitted z) $ do
+mkSplittedDP :: SplitType -> Range -> Range -> Zipper a -> DetP a
+mkSplittedDP typ h m o = case typ of
+                           CLMod -> XP (rf o,h) o () Nothing  (Just m)
+                           BNMod -> XP (rf o,h) o () (Just m) Nothing
+  where rf = getRange . current 
+
+
+splitDP :: [TagPos TokIdx MarkType]
+        -> Zipper (Lemma ': as)
+        -> DetP (Lemma ': as) -- SplitDP (Zipper (Lemma ': as))
+splitDP tagged z = bareNounModifier tagged . fromMaybe (mkOrdDP z) $ do
   guard (isChunkAs NP (current z))
   dp <- child1 z
   guard (isChunkAs NP (current dp))
   sbar <- next dp
-  ((guard (isChunkAs SBAR (current sbar)) >> return (Splitted (mkSplittedDP CLMod dp sbar z))) <|>
-   (guard (isChunkAs VP (current sbar)) >> return (Splitted (mkSplittedDP CLMod dp sbar z))))
+  let rf = getRange . current
+  ((guard (isChunkAs SBAR (current sbar)) >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
+   (guard (isChunkAs VP (current sbar))   >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)))
 
 
 -- | This function is very ad hoc. Later we should have PP according to X-bar theory
 --
-splitPP :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> SplitDP (Zipper (Lemma ': as))
-splitPP tagged z = fromMaybe (Unsplitted z) $ do
+splitPP :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> DetP (Lemma ': as)
+splitPP tagged z = fromMaybe (mkOrdDP z) $ do
   guard (isChunkAs PP (current z))
   p <- child1 z
   guard (isPOSAs TO (current p) || isPOSAs IN (current p))
@@ -52,10 +62,11 @@ splitPP tagged z = fromMaybe (Unsplitted z) $ do
 --   structure. 
 --
 bareNounModifier :: [TagPos TokIdx MarkType]
-                 -> SplitDP (Zipper (Lemma ': as))
-                 -> SplitDP (Zipper (Lemma ': as))
-bareNounModifier _      x@(Splitted   _) = x                 -- for the time being
-bareNounModifier tagged x@(Unsplitted z) = fromMaybe x $ do
+                 -> DetP (Lemma ': as)
+                 -> DetP (Lemma ': as)
+-- bareNounModifier _      x@(Splitted   _) = x                 -- for the time being
+bareNounModifier tagged x = fromMaybe x $ do
+  let z = x^.maximalProjection
   guard (isChunkAs NP (current z))
   let rng@(b0,e0) = getRange (current z)
   -- check entity for the last words
@@ -65,4 +76,4 @@ bareNounModifier tagged x@(Unsplitted z) = fromMaybe x $ do
       idx_last_modifier_word = b1-1
   last_modifier_word <- find (\x -> x^._1 == idx_last_modifier_word) (toList (current z))
   guard (last_modifier_word^._2.to posTag.to isNoun == Yes)
-  return (Splitted (SplittedDP BNMod (b1,e1) (b0,idx_last_modifier_word) z))
+  return (mkSplittedDP BNMod (b1,e1) (b0,idx_last_modifier_word) z)
