@@ -255,8 +255,8 @@ formatMGVerb (MGNominalPredicate i _ f)
 
 
 formatMGEntity (MGEntity i _ t ns  ) = Just (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-                                               "<tr><td>" <> t <> "</td></tr>" <>
-                                               T.concat (map (\x -> "<tr><td>"<> x <>"</td></tr>") ns) <>
+                                               "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
+                                               T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>
                                                "</table>")
 formatMGEntity (MGPredicate _ _ _ _) = Nothing
 formatMGEntity (MGNominalPredicate _ _ _) = Nothing
@@ -267,9 +267,8 @@ dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt t
   where
     -- vtxt :: String
     vtxt = let vertices = mg^.mg_vertices
-               replaceTxt (a,b) = (a, HTMLT.text b)
-               verbs = mapMaybe (fmap replaceTxt . formatMGVerb) vertices
-               entities = mapMaybe (fmap replaceTxt . formatMGEntity) vertices
+               verbs = mapMaybe formatMGVerb vertices
+               entities = mapMaybe formatMGEntity vertices
 
            in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=plaintext, margin=0, style=filled, fillcolor=grey label=<%s>];" i t)) verbs ++  "\n  " ++
               (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=plaintext, margin=0, label=<%s>];" i t)) entities
