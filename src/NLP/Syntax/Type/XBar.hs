@@ -90,7 +90,12 @@ getTokens = T.intercalate " " . map (tokenWord.snd) . toList
 tokensByRange rng = map snd . filter (^._1.to (\i -> i `isInside` rng)) . map (\(i,x)->(i,tokenWord x)) . toList
 
 
-headText x = (T.intercalate " " . tokensByRange (x^.headX._2) . current) (x^.maximalProjection)
+headRange x = x^.headX._2
+
+
+headText x = (T.intercalate " " . tokensByRange (headRange x) . current) (x^.maximalProjection)
+
+
 
 {- 
   getTokens (current z)
@@ -119,8 +124,6 @@ getOriginal (Splitted x) = x^.sdp_original
 
 
 
-headRange (Unsplitted z) = getRange (current z)
-headRange (Splitted x) = x^.sdp_head
 
 
 modifierRange z = z ^? _Splitted.sdp_modifier
