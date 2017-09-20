@@ -55,5 +55,5 @@ classify _              = Nothing
 parseStr :: Text -> Text -> NamedEntityFrag
 parseStr str t =
   case classify t of
-    Nothing -> error ("Unknown named entity class: " ++ T.unpack t)
+    Nothing -> error ("Unknown named entity class: " ++ T.unpack str ++ " of " ++ T.unpack t)
     Just c  -> NamedEntityFrag str c
