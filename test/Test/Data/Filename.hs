@@ -34,6 +34,10 @@ rawNewsFile5 = "data/article.china_trump.ptb"
 nerNewsFile5 = "data/article.china_trump.ner"
 posNewsFile5 = POS.chinaTrump
 
+rawNewsSet1 = "data/bloomberg.ptb"
+nerNewsSet1 = "data/bloomberg.ner"
+posNewsSet1 = POS.bloombergSet
+
 loadNEROutfile :: FilePath -> [(POS.POSTag, T.Text)] -> IO [(T.Text, N.NamedEntityClass, POS.POSTag)]
 loadNEROutfile file poss = do
   text <- T.IO.readFile file
