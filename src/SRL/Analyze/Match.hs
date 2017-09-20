@@ -20,7 +20,7 @@ import           Data.Monoid                  ((<>))
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
-import           Data.Bitree                  (getNodes,getRoot,getRoot1)
+import           Data.Bitree                  (getNodes,getRoot,getRoot1,_PN)
 import           Data.BitreeZipper            (current,mkBitreeZipper,root)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
@@ -125,7 +125,7 @@ matchPP :: [TagPos TokIdx MarkType]
 matchPP tagged paws (prep,mising) = do
     Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
     tr <- current . root <$> paws^.pa_CP.maximalProjection
-    z' <- find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
+    z' <- (find (\z -> z^?to current._PN._1._1 == Just rng) . getNodes .mkBitreeZipper []) tr
     return (splitPP tagged z')
   where
     ppcheck (Left (_,S_PP prep' ising')) = prep == prep' && maybe True (\ising -> ising == ising') mising
@@ -246,7 +246,9 @@ matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   causetype <- (\x -> if x == "dual" then LVDual else LVSingle) <$> maybeToList (lookup "cause" rolemap1)
   return (matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,rolemap1),stat)
 
--- | this function should be generalized. this is a kind of simple placeholder now.
+
+-- | this function should be generalized.
+--
 matchExtraRoles :: [TagPos TokIdx MarkType]
                 -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
                 -> [(FNFrameElement,(Maybe Text, DetP '[Lemma]))]
