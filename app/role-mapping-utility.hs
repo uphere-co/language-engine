@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns          #-}
 {-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiWayIf            #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE PartialTypeSignatures #-}
@@ -41,7 +42,7 @@ import           PropBank.Query                   (PredicateDB,RoleSetDB
                                                   )
 import           PropBank.Type.Frame       hiding (Voice,ProgOption)
 --
-import           Lexicon.App.Load
+import           Lexicon.Data
 
 
 
@@ -76,8 +77,8 @@ createONFN subcats sensemap framedb rolesetdb = do
   return (lma,osense,frame,pbs,subcat)
 
 
-loadPropBankDB :: IO (PredicateDB,RoleSetDB)
-loadPropBankDB = do
+loadPropBankDB :: LexDataConfig -> IO (PredicateDB,RoleSetDB)
+loadPropBankDB cfg = do
   preddb <- constructPredicateDB <$> constructFrameDB (cfg^.cfg_propbank_framedir)
   let rolesetdb = constructRoleSetDB preddb
   return (preddb,rolesetdb)
@@ -206,9 +207,11 @@ progOption = O.info pOptions (O.fullDesc <> O.progDesc "role mapping utility pro
 main :: IO ()
 main = do
   opt <- O.execParser progOption
-  (_ludb,_sensestat,_semlinkmap,sensemap,_ws,_) <- loadAllexceptPropBank
+  cfg  <- loadLexDataConfig "config.json" >>= \case Left err -> error err
+                                                    Right x  -> return x
+  (_ludb,_sensestat,_semlinkmap,sensemap,_ws,_) <- loadAllexceptPropBank cfg
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
-  (_preddb,rolesetdb) <- loadPropBankDB
+  (_preddb,rolesetdb) <- loadPropBankDB cfg
 
   (subcats :: [RolePattInstance Voice]) <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   (rolemap :: [RoleInstance]) <- loadRoleInsts (cfg^.cfg_rolemap_file)

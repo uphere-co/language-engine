@@ -56,7 +56,7 @@ import           PropBank.Type.Frame             hiding (ProgOption)
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
 --
-import           Lexicon.App.Load              hiding (Config)
+import           Lexicon.Data
 
 
 
@@ -143,11 +143,11 @@ formatInst :: Bool  -- ^ show detail?
            -> ((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)
            -> String
 formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,_sense) =
-  let 
-      args = inst^.inst_arguments
+  let args = inst^.inst_arguments
       lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
+      -- no more use of CoreNLP result. we directly extract information from PropBank instances.
       -- coretr = corenlp^._1
-      coretr = proptr  -- this is an extreme solution
+      coretr = proptr
       minst = dummyMatch proptr inst
       nlemmamap = adjustedLemmaMap lemmamap proptr
       verbprops = verbPropertyFromPennTree nlemmamap proptr
@@ -159,7 +159,6 @@ formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,_sense) =
                constructCP [] vp ^? _Just._1.complement      -- for the time being
       argtable0 = mkArgTable iproptr l2p filesidtid args
       argtable1 = zipperArgTable iproptr argtable0
-      -- argtable :: ArgTable (ATNode GRel)
       argtable = fmap f argtable1
         where f :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> GRel
               f = phraseNodeType mtp . chooseATNode
@@ -255,7 +254,6 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                                  constructCP [] vp^? _Just._1.complement      -- for the time being
                         argtable0 = mkArgTable iproptr l2p filesidtid args
                         argtable1 = zipperArgTable iproptr argtable0
-                        -- argtable :: ArgTable Text
                         argtable = fmap pnt argtable1
                           where pnt :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> ATNode GRel
                                 pnt = fmap (phraseNodeType mtp)
@@ -323,8 +321,8 @@ mergePropSense proptr insts senses =
   in map toTuple (joinAttrib (\x -> (either id id . adj) (x^.inst_predicate_id)) insts lst)
 
 
-process :: (Bool,Bool,Bool) -> HashMap Text Inventory -> [FilePath] -> IO ()
-process (statonly,tsv,showdetail) sensedb fps = do
+process :: LexDataConfig -> (Bool,Bool,Bool) -> HashMap Text Inventory -> [FilePath] -> IO ()
+process cfg (statonly,tsv,showdetail) sensedb fps = do
   let parsefiles = filter (\x -> takeExtensions x == ".parse") fps
       propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps

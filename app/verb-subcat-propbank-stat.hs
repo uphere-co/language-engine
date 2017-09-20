@@ -19,7 +19,7 @@ import           System.Directory.Tree
 --
 import           OntoNotes.Type.SenseInventory
 --
-import           Lexicon.App.Load
+import           Lexicon.Data
 import           Lexicon.App.VerbSubcat
 
 
@@ -40,9 +40,11 @@ progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant t
 main :: IO ()
 main = do
   opt <- execParser progOption
+  cfg  <- loadLexDataConfig "config.json" >>= \case Left err -> error err
+                                                    Right x  -> return x
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
   let fps = sort (toList (dirTree dtr))
-  process (statOnly opt,tsvFormat opt,showDetail opt) sensedb fps
+  process cfg (statOnly opt,tsvFormat opt,showDetail opt) sensedb fps
 
