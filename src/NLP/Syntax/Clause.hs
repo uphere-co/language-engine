@@ -331,7 +331,7 @@ promoteToVP x@(PN _ _)               = Right x
 promote_PP_CP_from_NP :: Bitree (Range,(STag,Int)) t -> [Bitree (Range,(STag,Int)) t]
 promote_PP_CP_from_NP x@(PN (_rng,(S_OTHER N.NP,_lvl)) [x1,x2]) =
   case (getRoot x1, getRoot x2) of
-    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_PP _,_)))   ->  [x1,x2]
+    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_PP _ _,_)))   ->  [x1,x2]
     (Left (_,(S_OTHER N.NP,_)), Left (_,(S_SBAR _,_))) ->  [x1,x2]
     (Left (_,(S_OTHER N.NP,_)), Left (_,(S_CL _,_)))   ->  [x1,x2]
     _ -> [x]
@@ -373,15 +373,26 @@ clauseStructure vps  (PN (rng,tag) xs)
                          _  -> PN (rng,(S_VP verbs,lvl)) nonverbs
                      N.PP ->
                        case xs of
-                         PL (_,(IN,t)):_ ->
-                           case tail ys of
-                             [] -> PL (Left (rng,(S_PP t,lvl)))
-                             _  -> PN (rng,(S_PP t,lvl)) (tail ys)
-                         PL (_,(TO,t)):_ ->
-                           case tail ys of
-                             [] -> PL (Left (rng,(S_PP t,lvl)))
-                             _  -> PN (rng,(S_PP t,lvl)) (tail ys)
-                         _               -> PL (Left (rng,(S_PP "",lvl)))
+                         -- prepositional case 1
+                         PL (_,(IN,t)):os ->
+                           -- we need to rewrite this whole functions using zipper later.
+                           let prep = case os of
+                                        PN (_,(N.CL N.S)) _lst : _ -> S_PP t True
+                                        _                          -> S_PP t False
+                           in case tail ys of
+                                [] -> PL (Left (rng,(prep,lvl)))
+                                _  -> PN (rng,(prep,lvl)) (tail ys)
+                         -- prepositional case 2
+                         PL (_,(TO,t)):os ->
+                           -- we need to rewrite this whole functions using zipper later.
+                           let prep = case os of
+                                        PN (_,(N.CL N.S)) _lst : _ -> S_PP t True
+                                        _                          -> S_PP t False
+                           in case tail ys of
+                                [] -> PL (Left (rng,(prep,lvl)))
+                                _ -> PN (rng,(prep,lvl)) (tail ys)
+                         -- non-prepositional case
+                         _ -> PL (Left (rng,(S_PP "" False,lvl)))
                      N.PRT ->
                        case xs of
                          PL (i,(p1,t)):_  -> PN (rng,(S_OTHER N.PRT,lvl)) [PL (Right (i,(p1,t)))]
@@ -414,7 +425,7 @@ cutOutLevel0 x@(PL _             ) = x
 cutOutLevel0 (PN (rng,(p,lvl)) xs) =
   if lvl == 0
   then case p of
-         S_PP    _ -> PL (Left (rng,(p,lvl)))
-         S_OTHER _ -> PL (Left (rng,(p,lvl)))
-         _         -> PN (rng,(p,lvl)) (map cutOutLevel0 xs)
+         S_PP    _ _ -> PL (Left (rng,(p,lvl)))
+         S_OTHER _   -> PL (Left (rng,(p,lvl)))
+         _           -> PN (rng,(p,lvl)) (map cutOutLevel0 xs)
   else PN (rng,(p,lvl)) (map cutOutLevel0 xs)
