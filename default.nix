@@ -1,6 +1,6 @@
 { mkDerivation, attoparsec, base, bifunctors, bindings-svm, boxes
 , bytestring, containers, data-default, discrimination, either
-, fastText, filepath, foreign-store, HCoreNLP, HCoreNLP-Proto, HFrameNet, jni
+, fastText, filepath, foreign-store, html-entities, HCoreNLP, HCoreNLP-Proto, HFrameNet, jni
 , jvm, lens, lexicon-builder, multi-word-tagger, nlp-types, optparse-applicative, OntoNotes, PropBank, split
 , stdenv
 , syntactic-analysis
@@ -16,7 +16,7 @@ mkDerivation {
   libraryHaskellDepends = [
     attoparsec base bifunctors bindings-svm boxes bytestring containers
     data-default discrimination either fastText filepath foreign-store
-    HCoreNLP HCoreNLP-Proto HFrameNet jni jvm lens lexicon-builder multi-word-tagger nlp-types OntoNotes PropBank
+    html-entities HCoreNLP HCoreNLP-Proto HFrameNet jni jvm lens lexicon-builder multi-word-tagger nlp-types OntoNotes PropBank
     syntactic-analysis
     split text time vector textview wiki-ner
   ];
