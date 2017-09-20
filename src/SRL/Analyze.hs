@@ -28,7 +28,7 @@ import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (loadRoleInsts,loadRolePattInsts)
 import           Lexicon.Type                 (RoleInstance,RolePattInstance)
-import           Lexicon.App.Load             (Config(..),cfgG,cfg_framenet_framedir
+import           Lexicon.Data                 (LexDataConfig(..),cfg_framenet_framedir
                                               ,cfg_rolemap_file
                                               ,cfg_sense_inventory_file
                                               ,cfg_verb_subcat_file
@@ -115,26 +115,26 @@ printMeaningGraph dstr = do
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
 
 
-loadConfig
-  :: IO (HashMap Text Inventory
-        ,HashMap (Text, Text) Int
-        ,FrameDB
-        ,HashMap Text [(Text, Text)]
-        ,[(Text, NamedEntityClass)] -> [EntityMention Text]
-        ,[RoleInstance]
-        ,[RolePattInstance Voice]
-        )
-loadConfig = do
-  (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats) <- loadAnalyzePredata
+loadConfig :: LexDataConfig
+           -> IO (HashMap Text Inventory
+                 ,HashMap (Text, Text) Int
+                 ,FrameDB
+                 ,HashMap Text [(Text, Text)]
+                 ,[(Text, NamedEntityClass)] -> [EntityMention Text]
+                 ,[RoleInstance]
+                 ,[RolePattInstance Voice]
+                 )
+loadConfig cfg = do
+  (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats) <- loadAnalyzePredata cfg
   emTagger <- loadEMtagger reprFile [ (orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)
                                     , (locationClass, locationItemFile), (occupationClass, occupationItemFile)
                                     , (humanRuleClass, humanRuleItemFile), (buildingClass, buildingItemFile) ]
   return (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats)
 
 
-loadAnalyzePredata :: IO AnalyzePredata
-loadAnalyzePredata = do
-  let cfg = cfgG
+loadAnalyzePredata :: LexDataConfig -> IO AnalyzePredata
+loadAnalyzePredata cfg = do
+  -- let cfg = cfgG
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
@@ -172,7 +172,7 @@ loadJVM = prepare (def & (tokenizer .~ True)
 
 -- | main program entry point
 --
-runAnalysis :: Config -> Analyze.Config -> IO ()
+runAnalysis :: LexDataConfig -> Analyze.Config -> IO ()
 runAnalysis cfg acfg = do
   subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
