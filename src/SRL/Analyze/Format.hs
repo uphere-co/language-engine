@@ -26,6 +26,7 @@ import           Data.Bitree
 import           Data.BitreeZipper
 
 import           Data.Range
+import qualified HTMLEntities.Text             as HTMLT               
 import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
 import           Lexicon.Type                            (ArgPattern(..),RoleInstance,GRel(..))
 import           NLP.Syntax.Format
@@ -255,10 +256,9 @@ formatMGVerb (MGNominalPredicate i _ f)
 
 
 formatMGEntity (MGEntity i _ t ns  ) = Just (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-                                               "<tr><td>" <> t <> "</td></tr>" <>
-                                               T.concat (map (\x -> "<tr><td>"<> x <>"</td></tr>") ns) <>
+                                               "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
+                                               T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>
                                                "</table>")
-  where escquote = T.replace "\"" "\\\""
 formatMGEntity (MGPredicate _ _ _ _) = Nothing
 formatMGEntity (MGNominalPredicate _ _ _) = Nothing
 
