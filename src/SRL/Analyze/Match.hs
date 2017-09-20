@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 
 module SRL.Analyze.Match where
@@ -263,6 +264,45 @@ matchExtraRoles tagged paws felst =
   in maybe felst (\means -> means : felst) mmeans
 
 
+-- | A scoring algorithm for selecting a frame among candidates.
+--   This version is ad hoc, so it will be updated when we come up with a better algorithm.
+--
+scoreSelectedFrame :: Int
+                   -> ((Text,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, a))])),Int)
+                   -> Double
+scoreSelectedFrame total ((_,mselected),n) =
+  let mn = maybe 0 fromIntegral (mselected^?_Just.to numMatchedRoles)
+  in mn * (fromIntegral n) / (fromIntegral total) * roleMatchWeightFactor + (mn*(fromIntegral total))
+
+
+
+-- | Resolve PP ambiguity for matched PP
+--   This algorithm is ad hoc but practically works for PP embedded in DP by CoreNLP. 
+--   We need to have a systematic treatment and tests for PP ambiguity.
+--
+resolveAmbiguityInDP :: [(FNFrameElement, (Maybe Text, DetP '[Lemma]))]
+                     -> [(FNFrameElement, (Maybe Text, DetP '[Lemma]))]
+resolveAmbiguityInDP lst = let r = foldr1 (.) (map go lst) lst
+                           in trace
+                                (show (r ^.. traverse . _2 . _2 . to formatDP))
+                                r
+  where
+    go :: (FNFrameElement,(Maybe Text, DetP '[Lemma]))
+       -> [(FNFrameElement, (Maybe Text, DetP '[Lemma]))]
+       -> [(FNFrameElement, (Maybe Text, DetP '[Lemma]))]
+    go (fe,(_,z)) lst = map (f (fe,z^.headX._2)) lst
+
+    f (fe,rng@(b,e)) (fe',(mtxt',z'))
+      = let rng'@(b',e') = z'^.headX._1
+        in -- for the time being, use this ad hoc algorithm
+         trace (show (fe,rng,fe',rng')) $
+          if fe /= fe' && rng `isInsideR` rng' && b /= b'  
+          then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ (Just (b,e)))) z'
+               in (fe',(mtxt',z''))
+          else (fe',(mtxt',z'))
+
+
+
 matchFrame :: [TagPos TokIdx MarkType]
            -> (VerbStructure,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
            -> Maybe (Range,VerbProperty (Zipper '[Lemma]),Text
@@ -276,19 +316,11 @@ matchFrame tagged (vstr,paws) = do
   let frmsels = matchFrameRolesAll tagged verbp paws mDP (vstr^.vs_roleTopPatts)
       total=  sum (frmsels^..traverse._2)
   ((frame,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
-  let mselected = (_Just . _2 %~ matchExtraRoles tagged paws) mselected0
+  let mselected1 = (_Just . _2 %~ matchExtraRoles tagged paws) mselected0
+      mselected  = (_Just . _2 %~ resolveAmbiguityInDP) mselected1
   return (rng,vprop,frame,mselected)
 
 
--- | A scoring algorithm for selecting a frame among candidates.
---   This version is ad hoc, so it will be updated when we come up with a better algorithm.
---
-scoreSelectedFrame :: Int
-                   -> ((Text,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, a))])),Int)
-                   -> Double
-scoreSelectedFrame total ((_,mselected),n) =
-  let mn = maybe 0 fromIntegral (mselected^?_Just.to numMatchedRoles)
-  in mn * (fromIntegral n) / (fromIntegral total) * roleMatchWeightFactor + (mn*(fromIntegral total))
 
 
 depCPDP :: Bitree (Range,a) (Range,a) -> [(Range,Range)]
@@ -361,7 +393,7 @@ meaningGraph sstr =
                   i_type     <- maybeToList (HM.lookup (0,rng') rngidxmap)
                   [MGEdge "Instance" True Nothing i_frame i_instance, MGEdge "Type" False Nothing i_frame i_type]
 
-  in MeaningGraph vertices (edges0 ++ edges1)
+  in trace (show (matched ^.. traverse . _4 . _Just . _2 . traverse . _2 . _2 . to formatDP)) $ MeaningGraph vertices (edges0 ++ edges1)
 
 
 isEntity :: MGVertex -> Bool
