@@ -47,7 +47,7 @@ instance Hashable GArg
 data GRel = GR_NP    (Maybe GArg)
           | GR_S     (Maybe GArg)
           | GR_SBAR  (Maybe GArg)
-          | GR_PP    (Maybe Text)
+          | GR_PP    (Maybe (Text,Bool))   -- ^ isIng?
           | GR_ADVP  (Maybe Text)
           | GR_ADJP
           | GR_X     Text
