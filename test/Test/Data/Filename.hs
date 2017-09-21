@@ -22,17 +22,17 @@ rawNewsFile2 = "data/iphone.ptb"
 nerNewsFile2 = "data/iphone.ner"
 
 -- https://www.bloomberg.com/news/articles/2017-06-21/amazon-said-to-sell-nike-shoes-directly-through-brand-registry
-rawNewsFile3 = "data/article.amazon_nike.ptb"
 nerNewsFile3 = "data/article.amazon_nike.ner"
 posNewsFile3 = POS.amazonNike
 -- https://www.bloomberg.com/news/articles/2017-05-07/senate-republicans-plan-health-bill-that-keeps-some-f-obamacare
-rawNewsFile4 = "data/article.health_bill.ptb"
 nerNewsFile4 = "data/article.health_bill.ner"
 posNewsFile4 = POS.healthBill
 -- https://www.bloomberg.com/news/articles/2017-08-24/china-says-u-s-probe-sabotages-existing-global-trade-system
-rawNewsFile5 = "data/article.china_trump.ptb"
 nerNewsFile5 = "data/article.china_trump.ner"
 posNewsFile5 = POS.chinaTrump
+
+nerNewsSet1 = "data/bloomberg.ner"
+posNewsSet1 = POS.bloombergSet
 
 loadNEROutfile :: FilePath -> [(POS.POSTag, T.Text)] -> IO [(T.Text, N.NamedEntityClass, POS.POSTag)]
 loadNEROutfile file poss = do
