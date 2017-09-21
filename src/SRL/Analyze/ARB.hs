@@ -5,10 +5,11 @@
 
 module SRL.Analyze.ARB where
 
-import           Control.Lens     ((^.),(^..),_2,_3,to)
+import           Control.Lens              ((^.),(^..),_2,_3,to)
+import           Control.Monad.Loops       (unfoldM)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Control.Monad.Trans.State (State,runState,get,put,modify')
+import           Control.Monad.Trans.State (State,runState,execState,evalState,get,put,modify')
 import           Data.Array                ((!))
 import           Data.Graph                (Graph,Vertex,topSort)
 import           Data.List                 (delete,find,elem)
@@ -92,11 +93,10 @@ findLabel mvs i = do
     MGNominalPredicate {..} -> Just (v ^. mv_frame)
 
 
--- findSubjectObjects :: MeaningGraph -> Graph -> Vertex -> Maybe ((Text,Text),[MGEdge])
 findSubjectObjects :: MeaningGraph
                    -> Graph
                    -> Vertex
-                   -> MaybeT (State [Vertex]) ARB -- ((Text,Text),(Text,Text),[Either (Text,Text) (Text,Text)])
+                   -> MaybeT (State [Vertex]) ARB
 findSubjectObjects mg grph frmid = do
   let children = grph ! frmid
   v <- hoistMaybe $ findVertex (mg^.mg_vertices) frmid
@@ -117,35 +117,37 @@ findSubjectObjects mg grph frmid = do
         v <- hoistMaybe (findVertex (mg^.mg_vertices) oidx)
         if isFrame v
           then do
-            -- olabel <- hoistMaybe (findLabel (mg^.mg_vertices) oidx)
             lift (modify' (delete oidx))
             arb <- findSubjectObjects mg grph oidx
-            -- return (Left arb)
-            hoistMaybe Nothing
+            return (Left arb)
           else do
             olabel <- hoistMaybe (findLabel (mg^.mg_vertices) oidx)
             return (Right (o^.me_relation,olabel))
   return (ARB frmtxt subject (frmtxt,verbtxt) objs [])
 
-mkARB1 :: (MeaningGraph,Graph) -> State [Vertex] (Maybe ARB)
+
+mkARB1 :: (MeaningGraph,Graph) -> State [Vertex] (Maybe (Maybe ARB))
 mkARB1 (mg,graph) = do
   xs <- get
   case xs of
     [] -> return Nothing
     (y:ys) -> do
       put ys
-      x <- runMaybeT $ findSubjectObjects mg graph y
-      trace ("mkARB1:" ++ show x) $ return Nothing
+      r <- runMaybeT $ findSubjectObjects mg graph y
+      return (Just r)
+
 
 mkARB :: MeaningGraph -> [ARB]
-mkARB mg = do
+mkARB mg = catMaybes $ do
   let mgraph = getGraphFromMG mg
   graph <- maybeToList mgraph 
   let framelst = map (^.mv_id) $ filter isFrame $ mg^. mg_vertices
 
       vs = filter (`elem` framelst) $ topSort graph
-      s = runState (mkARB1 (mg,graph)) vs
-  trace (show graph ++ ":" ++ show s) []
+  evalState (unfoldM (mkARB1 (mg,graph))) vs
+
+
+  -- trace (show graph ++ ":" ++ show s) []
   -- trace (show graph ++ ":" ++ show vs) [] 
 {-   in case mgraph of
     Nothing    -> []
