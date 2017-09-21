@@ -290,32 +290,26 @@ scoreSelectedFrame total ((_,mselected),n) =
 --
 resolveAmbiguityInDP :: [(FNFrameElement, AdjustedDetP)]
                      -> [(FNFrameElement, AdjustedDetP)]
-resolveAmbiguityInDP lst = let r = foldr1 (.) (map go lst) lst
-                           in trace
-                                (show (r ^.. traverse . _2 . to formatAdjustedDetP))
-                                r
+resolveAmbiguityInDP lst = foldr1 (.) (map go lst) lst
   where
     go :: (FNFrameElement,AdjustedDetP)
        -> [(FNFrameElement,AdjustedDetP)]
        -> [(FNFrameElement,AdjustedDetP)]
-    go (fe,WithPrep _ o z) lst = map (f (fe,getRange (current o){- z^.headX._2 -} )) lst
+    go (fe,WithPrep _ o z) lst = map (f (fe,getRange (current o))) lst
     go (fe,WithoutPrep z) lst = map (f (fe,z^.headX._2)) lst
-
-
-   -- x      trace (show (fe,rng,fe',rng')) $
 
     f (fe,rng@(b,e)) (fe',WithPrep prep' o' z')
       = let rng'@(b',e') = z'^.headX._1
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
-          then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ (Just (b,e)))) z'
+          then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ Nothing {- (Just (b,e)) -} )) z'
                in (fe', WithPrep prep' o' z'')
           else (fe',WithPrep prep' o' z')
     f (fe,rng@(b,e)) (fe',WithoutPrep z')
       = let rng'@(b',e') = z'^.headX._1
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
-          then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ (Just (b,e)))) z'
+          then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ Nothing {- (Just (b,e)) -} )) z'
                in (fe', WithoutPrep z'')
           else (fe',WithoutPrep z')
 
@@ -357,7 +351,6 @@ meaningGraph sstr =
       --
       entities0 = do (_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
-                     -- (_fe,WithPrep _ z) <- felst
                      z <- (^._2 . to getDetP) <$> felst
                      let rng = headRange z
                          mrngtxt' = do rng <- case (z^.adjunct, z^.complement) of
@@ -414,9 +407,7 @@ meaningGraph sstr =
                   i_type     <- maybeToList (HM.lookup (0,rng') rngidxmap)
                   [MGEdge "Instance" True Nothing i_frame i_instance, MGEdge "Type" False Nothing i_frame i_type]
 
-  in trace
-       (show (matched ^.. traverse . _4 . _Just . _2 . traverse . _2 . to formatAdjustedDetP))
-       (MeaningGraph vertices (edges0 ++ edges1))
+  in MeaningGraph vertices (edges0 ++ edges1)
 
 
 isEntity :: MGVertex -> Bool
