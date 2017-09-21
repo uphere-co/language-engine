@@ -92,7 +92,7 @@ getParseResult :: Parser a -> Text -> a
 getParseResult parser input = f (parseOnly parser input) 
   where
     f (Right r)   = r
-    f (Left msg ) = error ("Error : "++msg)
+    f (Left msg ) = error ("Error : " ++ msg ++ " from input, " ++ T.unpack input)
 
 
 parseItemID :: Text -> Either String ItemID
