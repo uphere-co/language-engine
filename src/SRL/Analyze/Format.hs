@@ -45,7 +45,7 @@ import           SRL.Analyze.Match                       (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,MGVertex(..),MeaningGraph
-                                                         ,AdjustedDetP(..)
+                                                         ,AdjustedDetP(..), getDetP, _WithPrep
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
                                                          ,chooseMostFreqFrame
@@ -212,11 +212,11 @@ showMatchedFrame tagged (vstr,paws) = do
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> frame)
     flip traverse_ mselected $ \(_,felst) -> do
-      mapM_ putStrLn . map (\(fe,WithPrep mp z) -> printf "%-15s: %-7s %3s %s"
-                                                   fe
-                                                   (show (headRange z))
-                                                   (fromMaybe "" mp)
-                                                   (headText z))
+      mapM_ putStrLn . map (\(fe,x) -> printf "%-15s: %-7s %3s %s"
+                                         fe
+                                         (show (headRange (getDetP x)))
+                                         (fromMaybe "" (x^?_WithPrep._1))
+                                         (headText (getDetP x)))
         $ felst
 
 
@@ -279,3 +279,5 @@ dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt t
     --
     -- ttxt :: String
     ttxt = "labelloc=\"t\"; \n " ++ "label=\"" ++ title ++ "\"; \n "
+
+

@@ -40,7 +40,7 @@ import           NLP.Type.TagPos              (TagPos,TokIdx)
 --
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
-                                              ,AdjustedDetP(..), _WithPrep
+                                              ,AdjustedDetP(..), _WithPrep, getDetP
                                               ,DocStructure
                                               ,SentStructure
                                               ,VerbStructure
@@ -52,6 +52,11 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               )
 --
 import Debug.Trace
+
+
+
+formatAdjustedDetP (WithPrep p _ z)  = "prep:"  <> p <> ", " <> formatDP z
+formatAdjustedDetP (WithoutPrep z) = formatDP z
 
 
 
@@ -98,7 +103,7 @@ matchSubject :: [(PBArg,FNFrameElement)]
              -> Maybe (FNFrameElement, AdjustedDetP)
 matchSubject rolemap dp patt = do
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
-  (,WithPrep Nothing dp) <$> lookup p rolemap
+  (,WithoutPrep dp) <$> lookup p rolemap
 
 
 matchObjects :: [(PBArg,FNFrameElement)]
@@ -118,19 +123,19 @@ matchObjects rolemap verbp patt = do
     SBAR -> guard (a == GR_SBAR (Just garg))
     _    -> []
   fe <- maybeToList (lookup p rolemap)
-  return (fe, WithPrep Nothing obj)
+  return (fe, WithoutPrep obj)
 
 
 
 matchPP :: [TagPos TokIdx MarkType]
         -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
         -> (Text,Maybe Bool)
-        -> Maybe (DetP '[Lemma])
+        -> Maybe (Zipper '[Lemma],DetP '[Lemma])
 matchPP tagged paws (prep,mising) = do
     Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
     tr <- current . root <$> paws^.pa_CP.maximalProjection
     z' <- (find (\z -> z^?to current._PN._1._1 == Just rng) . getNodes .mkBitreeZipper []) tr
-    return (splitPP tagged z')
+    return (z',splitPP tagged z')
   where
     ppcheck (Left (_,S_PP prep' ising')) = prep == prep' && maybe True (\ising -> ising == ising') mising
     ppcheck _                            = False
@@ -143,8 +148,8 @@ matchPrepArgs :: [(PBArg,FNFrameElement)]
               -> [(FNFrameElement, AdjustedDetP)]
 matchPrepArgs rolemap tagged paws patt = do
   (p,(prep,mising)) <- pbArgForPP patt
-  z <- maybeToList (matchPP tagged paws (prep,mising))
-  (,WithPrep (Just prep) z) <$> maybeToList (lookup p rolemap)
+  (o,z) <- maybeToList (matchPP tagged paws (prep,mising))
+  (,WithPrep prep o z) <$> maybeToList (lookup p rolemap)
 
 
 matchAgentForPassive :: [(PBArg,FNFrameElement)]
@@ -154,8 +159,8 @@ matchAgentForPassive :: [(PBArg,FNFrameElement)]
                      -> Maybe (FNFrameElement, AdjustedDetP)
 matchAgentForPassive rolemap tagged paws patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
-    z <- matchPP tagged paws ("by",Nothing)
-    (,WithPrep (Just "by") z) <$> lookup p rolemap
+    (o,z) <- matchPP tagged paws ("by",Nothing)
+    (,WithPrep "by" o z) <$> lookup p rolemap
 
 
 
@@ -165,7 +170,7 @@ matchThemeForPassive :: [(PBArg,FNFrameElement)]
                      -> Maybe (FNFrameElement, AdjustedDetP)
 matchThemeForPassive rolemap dp patt = do
   (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
-  (,WithPrep Nothing dp) <$> lookup p rolemap
+  (,WithoutPrep dp) <$> lookup p rolemap
 
 
 matchSO :: [(PBArg,FNFrameElement)]
@@ -260,10 +265,10 @@ matchExtraRoles :: [TagPos TokIdx MarkType]
 matchExtraRoles tagged paws felst =
   let mmeans = do
         guard (isNothing (find (\x -> x^._1 == "Means") felst))
-        z <-matchPP tagged paws ("by",Just True)
+        (o,z) <-matchPP tagged paws ("by",Just True)
         let rng = headRange z
-        guard (isNothing (find (\x -> x^?_2._WithPrep._2.to headRange == Just rng) felst))
-        return ("Means",WithPrep (Just "by") z)
+        guard (isNothing (find (\x -> x^?_2._WithPrep._3.to headRange == Just rng) felst))
+        return ("Means",WithPrep "by" o z)
   in maybe felst (\means -> means : felst) mmeans
 
 
@@ -280,29 +285,39 @@ scoreSelectedFrame total ((_,mselected),n) =
 
 
 -- | Resolve PP ambiguity for matched PP
---   This algorithm is ad hoc but practically works for PP embedded in DP by CoreNLP. 
+--   This algorithm is ad hoc but practically works for PP embedded in DP by CoreNLP.
 --   We need to have a systematic treatment and tests for PP ambiguity.
 --
 resolveAmbiguityInDP :: [(FNFrameElement, AdjustedDetP)]
                      -> [(FNFrameElement, AdjustedDetP)]
 resolveAmbiguityInDP lst = let r = foldr1 (.) (map go lst) lst
                            in trace
-                                (show (r ^.. traverse . _2 . _WithPrep . _2 . to formatDP))
+                                (show (r ^.. traverse . _2 . to formatAdjustedDetP))
                                 r
   where
     go :: (FNFrameElement,AdjustedDetP)
        -> [(FNFrameElement,AdjustedDetP)]
        -> [(FNFrameElement,AdjustedDetP)]
-    go (fe,WithPrep _ z) lst = map (f (fe,z^.headX._2)) lst
+    go (fe,WithPrep _ o z) lst = map (f (fe,getRange (current o){- z^.headX._2 -} )) lst
+    go (fe,WithoutPrep z) lst = map (f (fe,z^.headX._2)) lst
 
-    f (fe,rng@(b,e)) (fe',WithPrep mtxt' z')
+
+   -- x      trace (show (fe,rng,fe',rng')) $
+
+    f (fe,rng@(b,e)) (fe',WithPrep prep' o' z')
       = let rng'@(b',e') = z'^.headX._1
         in -- for the time being, use this ad hoc algorithm
-         trace (show (fe,rng,fe',rng')) $
-          if fe /= fe' && rng `isInsideR` rng' && b /= b'  
+          if fe /= fe' && rng `isInsideR` rng' && b /= b'
           then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ (Just (b,e)))) z'
-               in (fe',WithPrep mtxt' z'')
-          else (fe',WithPrep mtxt' z')
+               in (fe', WithPrep prep' o' z'')
+          else (fe',WithPrep prep' o' z')
+    f (fe,rng@(b,e)) (fe',WithoutPrep z')
+      = let rng'@(b',e') = z'^.headX._1
+        in -- for the time being, use this ad hoc algorithm
+          if fe /= fe' && rng `isInsideR` rng' && b /= b'
+          then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ (Just (b,e)))) z'
+               in (fe', WithoutPrep z'')
+          else (fe',WithoutPrep z')
 
 
 
@@ -342,7 +357,8 @@ meaningGraph sstr =
       --
       entities0 = do (_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
-                     (_fe,WithPrep _ z) <- felst
+                     -- (_fe,WithPrep _ z) <- felst
+                     z <- (^._2 . to getDetP) <$> felst
                      let rng = headRange z
                          mrngtxt' = do rng <- case (z^.adjunct, z^.complement) of
                                                 (Just r,_) -> return r -- for the time being
@@ -384,7 +400,9 @@ meaningGraph sstr =
       edges0 = do (rng,_,_,mselected) <- matched
                   i <- maybeToList (HM.lookup (0,rng) rngidxmap)   -- frame
                   (_,felst) <- maybeToList mselected
-                  (fe,WithPrep mprep z) <- felst
+                  (fe,x) <- felst
+                  let z = getDetP x
+                      mprep = x ^? _WithPrep . _1
                   let rng' = headRange z
                   i' <- maybeToList (HM.lookup (0,rng') rngidxmap)  -- frame element
                   let b = isJust (find (== (rng',rng)) depmap)
@@ -396,7 +414,9 @@ meaningGraph sstr =
                   i_type     <- maybeToList (HM.lookup (0,rng') rngidxmap)
                   [MGEdge "Instance" True Nothing i_frame i_instance, MGEdge "Type" False Nothing i_frame i_type]
 
-  in trace (show (matched ^.. traverse . _4 . _Just . _2 . traverse . _2 . _WithPrep . _2 . to formatDP)) $ MeaningGraph vertices (edges0 ++ edges1)
+  in trace
+       (show (matched ^.. traverse . _4 . _Just . _2 . traverse . _2 . to formatAdjustedDetP))
+       (MeaningGraph vertices (edges0 ++ edges1))
 
 
 isEntity :: MGVertex -> Bool

@@ -120,13 +120,16 @@ instance FromJSON DocAnalysisInput where
 
 
 
-data AdjustedDetP = WithPrep { _adj_prep :: Maybe Text
+data AdjustedDetP = WithPrep { _adj_prep :: Text
+                             , _adj_pp   :: Zipper '[Lemma]
                              , _adj_dp   :: DetP '[Lemma]
                              }
+                  | WithoutPrep { _adj_dp :: DetP '[Lemma] }
 
 makePrisms ''AdjustedDetP
 
-
+getDetP (WithPrep _ _ z) = z
+getDetP (WithoutPrep z ) = z
 
 
 
