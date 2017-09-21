@@ -20,7 +20,7 @@ import           Data.Monoid                  ((<>))
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
-import           Data.Bitree                  (getNodes,getRoot,getRoot1)
+import           Data.Bitree                  (getNodes,getRoot,getRoot1,_PN)
 import           Data.BitreeZipper            (current,mkBitreeZipper,root)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
@@ -89,9 +89,9 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
 
 
 matchSubject :: [(PBArg,FNFrameElement)]
-             -> SplitDP (Zipper '[Lemma])
+             -> DetP '[Lemma]
              -> ArgPattern p GRel
-             -> Maybe (FNFrameElement, (Maybe Text, SplitDP (Zipper '[Lemma])))
+             -> Maybe (FNFrameElement, (Maybe Text, DetP '[Lemma]))
 matchSubject rolemap dp patt = do
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
   (,(Nothing,dp)) <$> lookup p rolemap
@@ -100,11 +100,11 @@ matchSubject rolemap dp patt = do
 matchObjects :: [(PBArg,FNFrameElement)]
              -> VerbP '[Lemma]
              -> ArgPattern p GRel
-             -> [(FNFrameElement, (Maybe Text, SplitDP (Zipper '[Lemma])))]
+             -> [(FNFrameElement, (Maybe Text, DetP '[Lemma]))]
 matchObjects rolemap verbp patt = do
   (garg,obj') <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved.to (\x -> x >>= \case DP z -> Just z; _ -> Nothing))
   obj <- maybeToList obj'
-  ctag <- case (getRoot . current . getOriginal) obj of
+  ctag <- case obj ^. maximalProjection.to current.to getRoot of
             Left (_,node) -> [chunkTag node]
             _             -> []
   (p,a) <- maybeToList (pbArgForGArg garg patt)
@@ -121,11 +121,11 @@ matchObjects rolemap verbp patt = do
 matchPP :: [TagPos TokIdx MarkType]
         -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
         -> (Text,Maybe Bool)
-        -> Maybe (SplitDP (Zipper '[Lemma]))
+        -> Maybe (DetP '[Lemma])
 matchPP tagged paws (prep,mising) = do
     Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
     tr <- current . root <$> paws^.pa_CP.maximalProjection
-    z' <- find (\z -> case getRoot (current z) of Left (rng',_) -> rng' == rng; _ -> False) $ getNodes (mkBitreeZipper [] tr)
+    z' <- (find (\z -> z^?to current._PN._1._1 == Just rng) . getNodes .mkBitreeZipper []) tr
     return (splitPP tagged z')
   where
     ppcheck (Left (_,S_PP prep' ising')) = prep == prep' && maybe True (\ising -> ising == ising') mising
@@ -136,7 +136,7 @@ matchPrepArgs :: [(PBArg,FNFrameElement)]
               -> [TagPos TokIdx MarkType]
               -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
               -> ArgPattern p GRel
-              -> [(FNFrameElement, (Maybe Text, (SplitDP (Zipper '[Lemma]))))]
+              -> [(FNFrameElement, (Maybe Text, DetP '[Lemma]))]
 matchPrepArgs rolemap tagged paws patt = do
   (p,(prep,mising)) <- pbArgForPP patt
   z <- maybeToList (matchPP tagged paws (prep,mising))
@@ -147,7 +147,7 @@ matchAgentForPassive :: [(PBArg,FNFrameElement)]
                      -> [TagPos TokIdx MarkType]
                      -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
                      -> ArgPattern p GRel
-                     -> Maybe (FNFrameElement, (Maybe Text, (SplitDP (Zipper '[Lemma]))))
+                     -> Maybe (FNFrameElement, (Maybe Text, DetP '[Lemma]))
 matchAgentForPassive rolemap tagged paws patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
     z <- matchPP tagged paws ("by",Nothing)
@@ -156,9 +156,9 @@ matchAgentForPassive rolemap tagged paws patt = do
 
 
 matchThemeForPassive :: [(PBArg,FNFrameElement)]
-                     -> SplitDP (Zipper '[Lemma])
+                     -> DetP '[Lemma]
                      -> ArgPattern p GRel
-                     -> Maybe (FNFrameElement, (Maybe Text,(SplitDP (Zipper '[Lemma]))))
+                     -> Maybe (FNFrameElement, (Maybe Text, DetP '[Lemma]))
 matchThemeForPassive rolemap dp patt = do
   (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
   (,(Nothing,dp)) <$> lookup p rolemap
@@ -166,9 +166,9 @@ matchThemeForPassive rolemap dp patt = do
 
 matchSO :: [(PBArg,FNFrameElement)]
         -> [TagPos TokIdx MarkType]
-        -> (SplitDP (Zipper '[Lemma]), VerbP '[Lemma], PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
+        -> (DetP '[Lemma], VerbP '[Lemma], PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
         -> (ArgPattern p GRel, Int)
-        -> ((ArgPattern p GRel, Int), [(FNFrameElement, (Maybe Text, SplitDP (Zipper '[Lemma])))])
+        -> ((ArgPattern p GRel, Int), [(FNFrameElement, (Maybe Text, DetP '[Lemma]))])
 matchSO rolemap tagged (dp,verbp,paws) (patt,num) =
   case verbp^.headX.vp_voice of
     Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap tagged paws patt )
@@ -195,8 +195,8 @@ matchRoles :: [(PBArg,FNFrameElement)]
            -> VerbP '[Lemma]
            -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
            -> [(ArgPattern () GRel, Int)]
-           -> SplitDP (Zipper '[Lemma])
-           -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, (Maybe Text, SplitDP (Zipper '[Lemma])))])
+           -> DetP '[Lemma]
+           -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, (Maybe Text, DetP '[Lemma]))])
 matchRoles rolemap tagged verbp paws toppattstats dp =
     (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy (flip compare `on` numMatchedRoles)) matched
   where
@@ -210,10 +210,10 @@ matchFrameRolesForCauseDual :: [TagPos TokIdx MarkType]
                             -> VerbP '[Lemma]
                             -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
                             -> [(ArgPattern () GRel,Int)]
-                            -> Maybe (SplitDP (Zipper '[Lemma]))
+                            -> Maybe (DetP '[Lemma])
                             -> LittleV
                             -> (Text, [(PBArg, FNFrameElement)])
-                            -> (Text, Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, SplitDP (Zipper '[Lemma])))]))
+                            -> (Text, Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, DetP '[Lemma]))]))
 matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,rolemap1) =
   let (frame2,rolemap2) = if causetype == LVDual
                           then extendRoleMapForDual frame1 rolemap1
@@ -235,9 +235,9 @@ matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,rol
 matchFrameRolesAll :: [TagPos TokIdx MarkType]
                    -> VerbP '[Lemma]
                    -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
-                   -> Maybe (SplitDP (Zipper '[Lemma]))
+                   -> Maybe (DetP '[Lemma])
                    -> [((RoleInstance,Int),[(ArgPattern () GRel,Int)])]
-                   -> [((Text,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,(Maybe Text, SplitDP (Zipper '[Lemma])))])),Int)]
+                   -> [((Text,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,(Maybe Text, DetP '[Lemma]))])),Int)]
 matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   (rm,toppatts) <- rmtoppatts
   let rolemap1 = rm^._1._2
@@ -246,11 +246,13 @@ matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   causetype <- (\x -> if x == "dual" then LVDual else LVSingle) <$> maybeToList (lookup "cause" rolemap1)
   return (matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,rolemap1),stat)
 
--- | this function should be generalized. this is a kind of simple placeholder now.
+
+-- | this function should be generalized.
+--
 matchExtraRoles :: [TagPos TokIdx MarkType]
                 -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
-                -> [(FNFrameElement,(Maybe Text, SplitDP (Zipper '[Lemma])))]
-                -> [(FNFrameElement,(Maybe Text, SplitDP (Zipper '[Lemma])))]
+                -> [(FNFrameElement,(Maybe Text, DetP '[Lemma]))]
+                -> [(FNFrameElement,(Maybe Text, DetP '[Lemma]))]
 matchExtraRoles tagged paws felst =
   let mmeans = do
         guard (isNothing (find (\x -> x^._1 == "Means") felst))
@@ -264,7 +266,7 @@ matchExtraRoles tagged paws felst =
 matchFrame :: [TagPos TokIdx MarkType]
            -> (VerbStructure,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
            -> Maybe (Range,VerbProperty (Zipper '[Lemma]),Text
-                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, SplitDP (Zipper '[Lemma])))]))
+                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, (Maybe Text, DetP '[Lemma]))]))
 matchFrame tagged (vstr,paws) = do
   let cp = paws^.pa_CP
       verbp = cp^.complement.complement
@@ -307,10 +309,15 @@ meaningGraph sstr =
                      (_,felst) <- maybeToList mselected
                      (_fe,(_,z)) <- felst
                      let rng = headRange z
-                         mrngtxt' = do y <- z ^? _Splitted
-                                       guard (y^.sdp_type == BNMod)
-                                       (,) <$> modifierRange z <*> modifierText z
-                         txt = headText z -- formatDP z
+                         mrngtxt' = do rng <- case (z^.adjunct, z^.complement) of
+                                                (Just r,_) -> return r -- for the time being
+                                                _          -> Nothing
+                                       let txt = z ^.  maximalProjection
+                                                      .to current
+                                                      .to (tokensByRange rng)
+                                                      .to (T.intercalate " ")
+                                       return (rng,txt)
+                         txt = headText z
                      return (rng,txt,mrngtxt')
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
@@ -327,8 +334,6 @@ meaningGraph sstr =
           flip (maybe []) mrngtxt' (\(rng',txt') -> [ \i'  -> MGEntity i' rng' txt' []
                                                     , \i'' -> MGNominalPredicate i'' rng' "Instance"
                                                     ]
-
-
                                    )
 
 
