@@ -7,7 +7,7 @@
 
 module SRL.Analyze.Type where
 
-import           Control.Lens                  ((^.),_2,makeLenses)
+import           Control.Lens                  ((^.),_2,makeLenses,makePrisms)
 import           Data.Aeson
 import           Data.Function                 (on)
 import           Data.HashMap.Strict           (HashMap)
@@ -21,7 +21,7 @@ import           FrameNet.Query.Frame          (FrameDB)
 import           Lexicon.Type                  (ArgPattern,GRel,RoleInstance,RolePattInstance,SenseID)
 import           NLP.Syntax.Type               (ClauseTree,MarkType(..))
 import           NLP.Syntax.Type.Verb          (VerbProperty(..))
-import           NLP.Syntax.Type.XBar          (Zipper,CPDP)
+import           NLP.Syntax.Type.XBar          (Zipper,CPDP,DetP)
 import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
 import           NLP.Type.PennTreebankII       (Lemma,PennTree)
 import           NLP.Type.SyntaxProperty       (Voice)
@@ -117,6 +117,22 @@ instance ToJSON DocAnalysisInput where
 
 instance FromJSON DocAnalysisInput where
   parseJSON = genericParseJSON defaultOptions
+
+
+
+data AdjustedDetP = WithPrep { _adj_prep :: Text
+                             , _adj_pp   :: Zipper '[Lemma]
+                             , _adj_dp   :: DetP '[Lemma]
+                             }
+                  | WithoutPrep { _adj_dp :: DetP '[Lemma] }
+
+makePrisms ''AdjustedDetP
+
+getDetP (WithPrep _ _ z) = z
+getDetP (WithoutPrep z ) = z
+
+
+
 
 data MGVertex = MGEntity    { _mv_id :: Int
                             , _mv_range :: Range
