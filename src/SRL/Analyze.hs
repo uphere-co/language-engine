@@ -45,6 +45,7 @@ import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention)
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
 --
+import           SRL.Analyze.ARB               (mkARB)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP           (runParser)
 import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructure,showMatchedFrame)
@@ -55,6 +56,7 @@ import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,h
                                                ,occupationItemFile,orgItemFile,personItemFile,reprFile)
 import           SRL.Analyze.WikiEL            (mkWikiList)
 
+import SRL.Statistics (getGraphFromMG)
 
 -- | main query loop
 --
@@ -106,6 +108,13 @@ printMeaningGraph dstr = do
         mg = tagMG mg' wikilst
     mapM_ print (mg^.mg_vertices)
     mapM_ print (mg^.mg_edges)
+    putStrLn "-----------------"
+    putStrLn "meaning graph ARB"
+    putStrLn "-----------------"
+
+    print (getGraphFromMG mg)
+    mapM_ print (mkARB mg)
+    
     putStrLn "-----------------"
     putStrLn "meaning graph dot"
     putStrLn "-----------------"
