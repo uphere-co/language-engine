@@ -53,6 +53,7 @@ library
   build-depends:       base,
                        --
                        aeson,
+                       array,
                        attoparsec,
                        bifunctors,
                        bindings-svm,
@@ -74,6 +75,7 @@ library
                        split,
                        text,
                        time,
+                       transformers,
                        unordered-containers,
                        vector,
                        --

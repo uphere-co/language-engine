@@ -153,7 +153,7 @@ data MGVertex = MGEntity    { _mv_id :: Int
               deriving (Generic, Show)
 
 makeLenses ''MGVertex
-
+makePrisms ''MGVertex
 
 -- orphan
 deriving instance Generic (VerbProperty Text)
