@@ -73,25 +73,36 @@ formatTraceChain f (TraceChain xs x) = T.concat (map ((<> " -> ") . fmt) xs) <> 
 showRange rng = T.pack (printf "%-7s" (show rng))
 
 
-rangeText :: SplitDP (Zipper as) -> Text
-rangeText (Unsplitted z) = (T.pack . show . getRange . current) z
-rangeText (Splitted x)   = (T.pack . show) (x ^. sdp_head)
+rangeText :: DetP as -> Text
+rangeText x = x ^. headX . _2 . to show . to T.pack 
+
+--   (T.pack . show . getRange . current) z
+-- rangeText (Splitted x)   = (T.pack . show) (x ^. sdp_head)
 
 
-formatDP x@(Unsplitted z) = "DP" <> rangeText x
-formatDP x@(Splitted y)   = "DP-split" <> rangeText x <> " " <> formatSplittedDP y
+formatDP x = case (x^.adjunct,x^.complement) of
+               (Nothing,Nothing)    -> "DP"          <> rangeText x
+               (Nothing,Just rng)   -> "DP-comp"     <> rangeText x
+                                                     <> T.pack (show rng)
+               (Just rng,Nothing)   -> "DP-adj"      <> rangeText x
+                                                     <> T.pack (show rng)
+               (Just rng,Just rng') -> "DP-comp-adj" <> rangeText x
+                                                     <> T.pack (show rng')
+                                                     <> T.pack (show rng)
 
 
-formatDPorPP :: DPorPP (SplitDP (Zipper as)) -> Text
+
+formatDPorPP :: DPorPP (DetP as) -> Text
 formatDPorPP (DP z)          = formatDP z
 formatDPorPP (PrepP _mtxt z) = "PP-" <> formatDP z
 
 
-
+{- 
 formatSplittedDP x = let typtxt = case x^.sdp_type of
                                     CLMod -> "clmod"
                                     BNMod -> "bnmod"
                      in "head:" <>  showRange (x^.sdp_head) <> "," <> typtxt <> ":" <> showRange (x^.sdp_modifier)
+-}
 
 formatPAWS :: PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
            -> String

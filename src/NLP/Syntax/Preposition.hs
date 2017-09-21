@@ -1,7 +1,9 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds    #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module NLP.Syntax.Preposition where
 
+import           Control.Lens            ((^.))
 import           Control.Monad           (guard)
 import           Data.List               (find)
 import           Data.Maybe              (fromMaybe)
@@ -13,7 +15,7 @@ import           NLP.Type.TagPos         (TagPos(..),TokIdx,BeginEnd)
 --
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
-import           NLP.Syntax.Type.XBar    (Zipper,DPorPP(..),SplitDP(..))
+import           NLP.Syntax.Type.XBar    (Zipper,DPorPP(..),maximalProjection)
 
 
 
@@ -26,19 +28,15 @@ hasEmptyPreposition z =
       Nothing -> return True
       Just z' -> do
         guard (not (isChunkAs PP (current z')) && not (isChunkAs ADVP (current z')))
-        return True 
+        return True
 
 
-checkEmptyPrep tagged x@(Splitted _) = DP x
-checkEmptyPrep tagged (Unsplitted z) =
-  let r = fromMaybe False $ do
+-- checkEmptyPrep tagged x@(Splitted _) = DP x
+checkEmptyPrep tagged dp =
+  let z = dp^.maximalProjection
+      r = fromMaybe False $ do
             let rng = getRange (current z)
             -- check bare noun adverb
             find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) == rng && t == MarkTime) tagged
             return (hasEmptyPreposition z)
-  in if r then PrepP Nothing (Unsplitted z) else DP (Unsplitted z)
-                                                 
-
-
-
-
+  in if r then PrepP Nothing dp else DP dp

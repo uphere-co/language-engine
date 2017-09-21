@@ -59,7 +59,8 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
-                  -> [TraceChain (DPorPP (SplitDP (Zipper (Lemma ': as))))]
+                  -> [TraceChain (DPorPP (DetP (Lemma ': as)))]
+                     -- [TraceChain (DPorPP (SplitDP (Zipper (Lemma ': as))))]
 complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep tagged x)))
                                   (splitDP tagged <$> (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
@@ -77,7 +78,7 @@ complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep tag
 identifySubject :: [TagPos TokIdx MarkType]
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)
-                -> TraceChain (SplitDP (Zipper (Lemma ': as)))
+                -> TraceChain (DetP (Lemma ': as))
 identifySubject tagged tag vp =
   let r = case tag of
             N.SINV -> firstSiblingBy next (isChunkAs NP) vp
@@ -93,7 +94,7 @@ identifySubject tagged tag vp =
 --
 constructCP :: [TagPos TokIdx MarkType]
             -> VerbProperty (Zipper (Lemma ': as))
-            -> Maybe (CP (Lemma ': as),[SplitDP (Zipper (Lemma ': as))])
+            -> Maybe (CP (Lemma ': as),[DetP (Lemma ': as)]) -- [SplitDP (Zipper (Lemma ': as))])
 constructCP tagged vprop = do
     vp <- maximalProjectionVP vprop
     tp <- parentOfVP vprop
@@ -134,7 +135,7 @@ hierarchyBits (cp,zs) = do
   rng <- cpRange cp
   let cpbit = (rng,(rng,CPCase cp))
 
-  let f z = let rng' = (getRange . current. getOriginal) z in (rng',(rng',DPCase z))
+  let f z = let rng' = z^.maximalProjection.to current.to getRange in (rng',(rng',DPCase z))
   return (cpbit:map f zs)
 
 
@@ -155,7 +156,7 @@ currentCPDP = snd . getRoot1 . current
 
 
 adjustXBarTree f w z = do
-  let dprng = (getRange . current . getOriginal) z
+  let dprng = z ^. maximalProjection.to current.to getRange
       -- adjust CPDP hierarchy by modifier relation.
   case extractZipperById dprng (toBitree w) of
     Nothing -> do let newtr (PN y ys) = PN (dprng,DPCase z) [PN (f y) ys]
@@ -177,7 +178,7 @@ adjustXBarTree f w z = do
 
 whMovement :: [TagPos TokIdx MarkType]
            -> BitreeZipper (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
-           -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))) (TraceChain (SplitDP (Zipper (Lemma ': as))))
+           -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))) (TraceChain (DetP (Lemma ': as)))
 whMovement tagged w =
   -- letter z denotes zipper for PennTree, w denotes zipper for Bitree (Range,CPDP as) (Range,CPDP as)
   case currentCPDP w of
@@ -206,7 +207,7 @@ whMovement tagged w =
             z'  <- splitDP tagged <$> hoistMaybe (prev =<< cp^.maximalProjection)
             let -- adjust function for complement with relative pronoun resolution
                 rf0 = _2._CPCase.complement.complement.complement %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)
-                dprng = (getRange . current . getOriginal) z'
+                dprng = z' ^. maximalProjection.to current.to getRange
             -- adjust CPDP hierarchy by modifier relation.
             adjustXBarTree rf0 w z'
             return ()
@@ -220,7 +221,7 @@ whMovement tagged w =
 --
 resolveDP :: [TagPos TokIdx MarkType]
           -> Range
-          -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))) (TraceChain (SplitDP (Zipper (Lemma ': as))))
+          -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))) (TraceChain (DetP (Lemma ': as)))
 resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   tr <- lift get
   z <- hoistMaybe (extractZipperById rng tr)
@@ -266,14 +267,6 @@ bindingAnalysis tagged cpstr = execState (go rng0) cpstr
                         <|>
                         (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
 
-{- 
-nounModifierAnalysis :: [TagPos TokIdx MarkType]
-              -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
-              -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
-nounModifierAnalysis tagged tr = bimap (_2 %~ f) (_2 %~ f) tr
-  where f (DPCase z) = DPCase (bareNounModifier tagged z)
-        f x          = x
--}
 
 
 predicateArgWS :: CP xs

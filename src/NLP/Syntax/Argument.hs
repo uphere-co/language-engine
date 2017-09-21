@@ -54,11 +54,11 @@ phraseNodeType mtp z
   = let rng = getRange (current z)
         subj = do tp <- mtp
                   dp <- tp^.specifier.trResolved
-                  return (getRange (current (getOriginal dp)) == rng)
+                  return (dp^.maximalProjection.to current.to getRange == rng)
         obj  = do tp <- mtp
                   -- The following must be changed to accommodate PP
                   let os = zip [1..] (tp^..complement.complement.traverse.trResolved.to (fmap removeDPorPP))
-                  m <- find (\o -> o^?_2._Just.to getOriginal.to current.to getRange == Just rng) os
+                  m <- find (\o -> o^?_2._Just.maximalProjection.to current.to getRange == Just rng) os
                   return (m^._1)
         mgarg :: Maybe GArg
         mgarg = case subj of

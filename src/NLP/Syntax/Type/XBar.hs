@@ -29,7 +29,7 @@ type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
 type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 
-data XType = X_V | X_T | X_C
+data XType = X_V | X_T | X_C | X_D
 
 type family Property   (x :: XType) (tag :: [*]) :: *
 
@@ -81,9 +81,30 @@ removeDPorPP (DP x) = x
 removeDPorPP (PrepP _ x) = x
 
 
-
 data SplitType = CLMod | BNMod
                deriving (Show,Eq,Ord)
+
+getTokens :: BitreeICP as -> Text
+getTokens = T.intercalate " " . map (tokenWord.snd) . toList
+
+tokensByRange rng = map snd . filter (^._1.to (\i -> i `isInside` rng)) . map (\(i,x)->(i,tokenWord x)) . toList
+
+
+headRange x = x^.headX._2
+
+
+headText x = (T.intercalate " " . tokensByRange (headRange x) . current) (x^.maximalProjection)
+
+
+
+{- 
+  getTokens (current z)
+headText (Splitted y)   = 
+-}
+
+
+{- 
+
 
 data SplittedDP a = SplittedDP { _sdp_type     :: SplitType
                                , _sdp_head     :: Range
@@ -102,52 +123,51 @@ getOriginal (Unsplitted z) = z
 getOriginal (Splitted x) = x^.sdp_original
 
 
-getTokens :: BitreeICP as -> Text
-getTokens = T.intercalate " " . map (tokenWord.snd) . toList
 
-
-headRange (Unsplitted z) = getRange (current z)
-headRange (Splitted x) = x^.sdp_head
 
 
 modifierRange z = z ^? _Splitted.sdp_modifier
 
 
-tokensByRange rng = map snd . filter (^._1.to (\i -> i `isInside` rng)) . map (\(i,x)->(i,tokenWord x)) . toList
-
-
-headText (Unsplitted z) = getTokens (current z)
-headText (Splitted y)   = (T.intercalate " " . tokensByRange (y^.sdp_head) . current) (y^.sdp_original)
-
 
 modifierText (Unsplitted z) = Nothing
 modifierText (Splitted y)   = (Just . T.intercalate " " . tokensByRange (y^.sdp_modifier) . current) (y^.sdp_original)
 
+-}
 
+
+--
+-- this definition is not truly X-bar-theoretic, but for the time being
+--
+type instance Property   'X_D t = (Range,Range)   -- (original,head)
+type instance Maximal    'X_D t = Zipper t
+type instance Specifier  'X_D t = ()
+type instance Adjunct    'X_D t = Maybe Range
+type instance Complement 'X_D t = Maybe Range
+
+type DetP = XP 'X_D
 
 
 type instance Property   'X_V t = VerbProperty (Zipper t)
-
 type instance Maximal    'X_V t = Zipper t
 type instance Specifier  'X_V t = ()
 type instance Adjunct    'X_V t = ()
-type instance Complement 'X_V t = [TraceChain (DPorPP (SplitDP (Zipper t)))]
+type instance Complement 'X_V t = [TraceChain (DPorPP (DetP t))] -- [TraceChain (DPorPP (SplitDP (Zipper t)))]
 
 type VerbP = XP 'X_V
 
-mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [TraceChain (DPorPP (SplitDP (Zipper t)))] -> VerbP t
+mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [TraceChain (DPorPP (DetP t))] -> VerbP t
 mkVerbP vp vprop comps = XP vprop vp () () comps
 
 type instance Property   'X_T t = ()
-
 type instance Maximal    'X_T t = Maybe (Zipper t)
-type instance Specifier  'X_T t = TraceChain (SplitDP (Zipper t))
+type instance Specifier  'X_T t = TraceChain (DetP t)
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Maybe (Zipper t) -> TraceChain (SplitDP (Zipper t)) -> VerbP t -> TP t
+mkTP :: Maybe (Zipper t) -> TraceChain (DetP t) -> VerbP t -> TP t
 mkTP mtp mdp vp = XP () mtp mdp () vp
 
 
@@ -155,7 +175,6 @@ data NullComplementizer = C_NULL | C_WH
                         deriving (Show,Eq,Ord)
 
 type instance Property   'X_C t = Either NullComplementizer (Zipper t)
-
 type instance Maximal    'X_C t = Maybe (Zipper t)
 type instance Specifier  'X_C t = ()
 type instance Adjunct    'X_C t = ()
@@ -168,7 +187,7 @@ mkCP mc mcp tp = XP mc mcp () () tp
 
 
 data CPDP a = CPCase (CP a)
-            | DPCase (SplitDP (Zipper a))
+            | DPCase (DetP a)
             --  | DPCase' (Range,Range) (Zipper a)    -- this is "appositional" case. will be treated more properly later.
 
 makePrisms ''CPDP
