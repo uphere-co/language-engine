@@ -29,15 +29,15 @@ numberOfPredicate (SentStructure _ _ _ _ _ _ vstrs) = length vstrs
 numberOfMGVerbPredicate :: MeaningGraph -> Int
 numberOfMGVerbPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
   where
-    fmtVerb (MGEntity    _ _ _  _ )  = Nothing
-    fmtVerb (MGPredicate i _ _f _v) = Just i
+    fmtVerb (MGEntity    _ _ _  _ )    = Nothing
+    fmtVerb (MGPredicate i _ _  _ _)   = Just i
     fmtVerb (MGNominalPredicate i _ _) = Nothing
 
 numberOfMGPredicate :: MeaningGraph -> Int
 numberOfMGPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
   where
-    fmtVerb (MGEntity    _ _ _  _ )  = Nothing
-    fmtVerb (MGPredicate i _ _f _v) = Just i
+    fmtVerb (MGEntity    _ _ _  _ )    = Nothing
+    fmtVerb (MGPredicate i _ _ _ _)    = Just i
     fmtVerb (MGNominalPredicate i _ _) = Just i 
 
 -- I change the name to farthest, not furthest

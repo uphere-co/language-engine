@@ -184,15 +184,16 @@ matchSO rolemap tagged (dp,verbp,paws) (patt,num) =
     Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap tagged paws patt,matchThemeForPassive rolemap dp patt] ++ matchPrepArgs rolemap tagged paws patt)
 
 
-extendRoleMapForDual :: Text -> [(PBArg,FNFrameElement)] -> (Text, [(PBArg,FNFrameElement)])
-extendRoleMapForDual frame rolemap = fromMaybe (frame,rolemap) $ do
+extendRoleMapForDual :: (Text,SenseID,[(PBArg,FNFrameElement)])
+                     -> (Text,SenseID,[(PBArg,FNFrameElement)])
+extendRoleMapForDual (frame,sense,rolemap) = fromMaybe (frame,sense,rolemap) $ do
   dualmap <- lookup frame $ map (\c -> (c^.cm_baseFrame,c)) causeDualMap
   let frame' = dualmap^.cm_causativeFrame
       rolemap' = filter (\(k,_v) -> k /= "frame" && k /= "arg0") rolemap
       rolemap'' =  map f rolemap'
         where f (k,v) = maybe (k,v) (k,) (lookup v (dualmap^.cm_extraMapping))
       rolemap''' = ("arg0",dualmap^.cm_externalAgent) : rolemap''
-  return (frame',rolemap''')
+  return (frame',sense,rolemap''')
 
 
 numMatchedRoles :: ((ArgPattern () GRel, Int), [(FNFrameElement, a)]) -> Int
@@ -221,24 +222,24 @@ matchFrameRolesForCauseDual :: [TagPos TokIdx MarkType]
                             -> [(ArgPattern () GRel,Int)]
                             -> Maybe (DetP '[Lemma])
                             -> LittleV
-                            -> (Text, [(PBArg, FNFrameElement)])
-                            -> (Text, Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, AdjustedDetP)]))
-matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,rolemap1) =
-  let (frame2,rolemap2) = if causetype == LVDual
-                          then extendRoleMapForDual frame1 rolemap1
-                          else (frame1,rolemap1)
+                            -> (Text, SenseID, [(PBArg, FNFrameElement)])
+                            -> (Text, SenseID, Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, AdjustedDetP)]))
+matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sense1,rolemap1) =
+  let (frame2,sense2,rolemap2) = if causetype == LVDual
+                                 then extendRoleMapForDual (frame1,sense1,rolemap1)
+                                 else (frame1,sense1,rolemap1)
       mselected1 = join (matchRoles rolemap1 tagged verbp paws toppatts <$> mDP)
       mselected2 = join (matchRoles rolemap2 tagged verbp paws toppatts <$> mDP)
   in case (mselected1,mselected2) of
-       (Nothing,Nothing) -> (frame1,Nothing)
-       (Just _ ,Nothing) -> (frame1,mselected1)
-       (Nothing,Just _ ) -> (frame2,mselected2)
+       (Nothing,Nothing) -> (frame1,sense1,Nothing)
+       (Just _ ,Nothing) -> (frame1,sense2,mselected1)
+       (Nothing,Just _ ) -> (frame2,sense2,mselected2)
        (Just s1,Just s2) ->
          case (compare `on` numMatchedRoles) s1 s2 of
-           GT -> (frame1,mselected1)
-           LT -> (frame2,mselected2)
-           EQ -> (frame1,mselected1)   -- choose intransitive because transitive should
-                                       -- have one more argument in general.
+           GT -> (frame1,sense1,mselected1)
+           LT -> (frame2,sense2,mselected2)
+           EQ -> (frame1,sense1,mselected1)   -- choose intransitive because transitive should
+                                              -- have one more argument in general.
 
 
 matchFrameRolesAll :: [TagPos TokIdx MarkType]
@@ -246,14 +247,15 @@ matchFrameRolesAll :: [TagPos TokIdx MarkType]
                    -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
                    -> Maybe (DetP '[Lemma])
                    -> [((RoleInstance,Int),[(ArgPattern () GRel,Int)])]
-                   -> [((Text,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,AdjustedDetP)])),Int)]
+                   -> [((Text,SenseID,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,AdjustedDetP)])),Int)]
 matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   (rm,toppatts) <- rmtoppatts
-  let rolemap1 = rm^._1._2
+  let sense1 = rm^._1._1
+      rolemap1 = rm^._1._2
       stat = rm^._2
   frame1 <- maybeToList (lookup "frame" rolemap1)
   causetype <- (\x -> if x == "dual" then LVDual else LVSingle) <$> maybeToList (lookup "cause" rolemap1)
-  return (matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,rolemap1),stat)
+  return (matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sense1,rolemap1),stat)
 
 
 -- | this function should be generalized.
@@ -276,9 +278,9 @@ matchExtraRoles tagged paws felst =
 --   This version is ad hoc, so it will be updated when we come up with a better algorithm.
 --
 scoreSelectedFrame :: Int
-                   -> ((Text,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,a)])),Int)
+                   -> ((Text,SenseID,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,a)])),Int)
                    -> Double
-scoreSelectedFrame total ((_,mselected),n) =
+scoreSelectedFrame total ((_,_,mselected),n) =
   let mn = maybe 0 fromIntegral (mselected^?_Just.to numMatchedRoles)
   in mn * (fromIntegral n) / (fromIntegral total) * roleMatchWeightFactor + (mn*(fromIntegral total))
 
@@ -302,14 +304,14 @@ resolveAmbiguityInDP lst = foldr1 (.) (map go lst) lst
       = let rng'@(b',e') = z'^.headX._1
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
-          then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ Nothing {- (Just (b,e)) -} )) z'
+          then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ Nothing)) z'
                in (fe', WithPrep prep' o' z'')
           else (fe',WithPrep prep' o' z')
     f (fe,rng@(b,e)) (fe',WithoutPrep z')
       = let rng'@(b',e') = z'^.headX._1
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
-          then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ Nothing {- (Just (b,e)) -} )) z'
+          then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ Nothing)) z'
                in (fe', WithoutPrep z'')
           else (fe',WithoutPrep z')
 
@@ -317,7 +319,9 @@ resolveAmbiguityInDP lst = foldr1 (.) (map go lst) lst
 
 matchFrame :: [TagPos TokIdx MarkType]
            -> (VerbStructure,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
-           -> Maybe (Range,VerbProperty (Zipper '[Lemma]),Text
+           -> Maybe (Range,VerbProperty (Zipper '[Lemma])
+                    ,Text
+                    ,SenseID
                     ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, AdjustedDetP)]))
 matchFrame tagged (vstr,paws) = do
   let cp = paws^.pa_CP
@@ -327,10 +331,10 @@ matchFrame tagged (vstr,paws) = do
   rng <- cpRange cp
   let frmsels = matchFrameRolesAll tagged verbp paws mDP (vstr^.vs_roleTopPatts)
       total=  sum (frmsels^..traverse._2)
-  ((frame,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
+  ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
   let mselected1 = (_Just . _2 %~ matchExtraRoles tagged paws) mselected0
       mselected  = (_Just . _2 %~ resolveAmbiguityInDP) mselected1
-  return (rng,vprop,frame,mselected)
+  return (rng,vprop,frame,sense,mselected)
 
 
 
@@ -346,10 +350,11 @@ meaningGraph sstr =
       matched = mapMaybe (matchFrame (sstr^.ss_tagged)) lst_vstrpaws
       depmap = depCPDP =<< cpstr
       --
-      preds = flip map matched $ \(rng,vprop,frame,_mselected) i -> MGPredicate i rng frame (simplifyVProp vprop)
+      preds = flip map matched $ \(rng,vprop,frame,sense,_mselected) i
+                                   -> MGPredicate i rng frame sense (simplifyVProp vprop)
       ipreds = zipWith ($) preds [1..]
       --
-      entities0 = do (_,_,_,mselected) <- matched
+      entities0 = do (_,_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
                      z <- (^._2 . to getDetP) <$> felst
                      let rng = headRange z
@@ -387,10 +392,10 @@ meaningGraph sstr =
       --
       rangeid :: MGVertex -> (Int,Range)
       rangeid (MGEntity _ rng _ _)         = (0,rng)
-      rangeid (MGPredicate _ rng _ _)      = (0,rng)
+      rangeid (MGPredicate _ rng _ _ _)    = (0,rng)
       rangeid (MGNominalPredicate _ rng _) = (1,rng)
       rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
-      edges0 = do (rng,_,_,mselected) <- matched
+      edges0 = do (rng,_,_,_,mselected) <- matched
                   i <- maybeToList (HM.lookup (0,rng) rngidxmap)   -- frame
                   (_,felst) <- maybeToList mselected
                   (fe,x) <- felst
