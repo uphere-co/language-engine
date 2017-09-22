@@ -223,7 +223,7 @@ matchFrameRolesForCauseDual :: [TagPos TokIdx MarkType]
                             -> Maybe (DetP '[Lemma])
                             -> LittleV
                             -> (Text, SenseID, [(PBArg, FNFrameElement)])
-                            -> (Text, SenseID, Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, AdjustedDetP)]))
+                            -> (Text, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, AdjustedDetP)]))
 matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sense1,rolemap1) =
   let (frame2,sense2,rolemap2) = if causetype == LVDual
                                  then extendRoleMapForDual (frame1,sense1,rolemap1)
@@ -231,14 +231,14 @@ matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sen
       mselected1 = join (matchRoles rolemap1 tagged verbp paws toppatts <$> mDP)
       mselected2 = join (matchRoles rolemap2 tagged verbp paws toppatts <$> mDP)
   in case (mselected1,mselected2) of
-       (Nothing,Nothing) -> (frame1,sense1,Nothing)
-       (Just _ ,Nothing) -> (frame1,sense2,mselected1)
-       (Nothing,Just _ ) -> (frame2,sense2,mselected2)
+       (Nothing,Nothing) -> (frame1,(sense1,False),Nothing)
+       (Just _ ,Nothing) -> (frame1,(sense1,False),mselected1)
+       (Nothing,Just _ ) -> (frame2,(sense2,True),mselected2)
        (Just s1,Just s2) ->
          case (compare `on` numMatchedRoles) s1 s2 of
-           GT -> (frame1,sense1,mselected1)
-           LT -> (frame2,sense2,mselected2)
-           EQ -> (frame1,sense1,mselected1)   -- choose intransitive because transitive should
+           GT -> (frame1,(sense1,False),mselected1)
+           LT -> (frame2,(sense2,True),mselected2)
+           EQ -> (frame1,(sense1,False),mselected1)   -- choose intransitive because transitive should
                                               -- have one more argument in general.
 
 
@@ -247,7 +247,7 @@ matchFrameRolesAll :: [TagPos TokIdx MarkType]
                    -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
                    -> Maybe (DetP '[Lemma])
                    -> [((RoleInstance,Int),[(ArgPattern () GRel,Int)])]
-                   -> [((Text,SenseID,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,AdjustedDetP)])),Int)]
+                   -> [((Text,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,AdjustedDetP)])),Int)]
 matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   (rm,toppatts) <- rmtoppatts
   let sense1 = rm^._1._1
@@ -278,7 +278,7 @@ matchExtraRoles tagged paws felst =
 --   This version is ad hoc, so it will be updated when we come up with a better algorithm.
 --
 scoreSelectedFrame :: Int
-                   -> ((Text,SenseID,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,a)])),Int)
+                   -> ((Text,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,a)])),Int)
                    -> Double
 scoreSelectedFrame total ((_,_,mselected),n) =
   let mn = maybe 0 fromIntegral (mselected^?_Just.to numMatchedRoles)
@@ -321,7 +321,7 @@ matchFrame :: [TagPos TokIdx MarkType]
            -> (VerbStructure,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
            -> Maybe (Range,VerbProperty (Zipper '[Lemma])
                     ,Text
-                    ,SenseID
+                    ,(SenseID,Bool)
                     ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, AdjustedDetP)]))
 matchFrame tagged (vstr,paws) = do
   let cp = paws^.pa_CP

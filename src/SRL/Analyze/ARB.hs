@@ -19,6 +19,7 @@ import           Data.Maybe                (catMaybes,fromMaybe
 import           Data.Text                 (Text)
 import qualified Data.Tree as Tr
 --
+import           Lexicon.Mapping.Causation (causeDualMap,cm_causativeFrame,cm_externalAgent)
 import           Lexicon.Type              (RoleInstance)
 import           NLP.Syntax.Clause         (hoistMaybe) -- this should be moved somewhere
 import           NLP.Syntax.Type.Verb      (vp_lemma)
@@ -50,12 +51,18 @@ subjectList = [ "Agent","Speaker","Owner","Cognizer","Actor","Author","Cognizer_
 -- isSubject t = 
 
 
-isSubject rolemap Nothing rel = any (==rel) subjectList
-isSubject rolemap (Just sense) rel = fromMaybe False $ do
-                                       roles <- lookup sense rolemap
-                                       (((==rel) <$> lookup "arg0" roles)
-                                        <|>
-                                        ((==rel) <$> lookup "arg1" roles))
+isSubject rolemap frame Nothing rel = any (==rel) subjectList
+isSubject rolemap frame (Just (sense,cause)) rel =
+  fromMaybe False $ do
+    roles <- lookup sense rolemap
+    if cause
+      then do
+        m <- find (\m -> m^.cm_causativeFrame == frame) causeDualMap
+        return (m^.cm_externalAgent == rel)
+      else 
+        (((==rel) <$> lookup "arg0" roles)
+         <|>
+        ((==rel) <$> lookup "arg1" roles))
 
 
 findRel :: [MGEdge] -> Int -> Int -> Maybe MGEdge
@@ -86,7 +93,7 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid 
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) children
   (sidx,subject) <- hoistMaybe $ do
-                      e <- find (\e -> isSubject rolemap msense (e^.me_relation)) rels
+                      e <- find (\e -> isSubject rolemap frmtxt msense (e^.me_relation)) rels
                       let sidx = e^.me_end
                       (sidx,) . (e^.me_relation,) <$> findLabel (mg^.mg_vertices) sidx
   objs <- lift $ do

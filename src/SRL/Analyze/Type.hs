@@ -142,7 +142,7 @@ data MGVertex = MGEntity    { _mv_id :: Int
               | MGPredicate { _mv_id    :: Int
                             , _mv_range :: Range
                             , _mv_frame :: Text
-                            , _mv_sense :: SenseID
+                            , _mv_sense :: (SenseID,Bool)  -- ^ (ON sense ID, causation)
                             , _mv_verb  :: VerbProperty Text -- (Text,Tense,Aspect,Voice,Maybe Text)
                             }
               | MGNominalPredicate { _mv_id    :: Int
