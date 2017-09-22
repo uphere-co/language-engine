@@ -7,6 +7,7 @@
 , lexicon            ? <lexicon>
 , lexicon-builder    ? <lexicon-builder>
 , multi-word-tagger  ? <multi-word-tagger>
+, nlp-shared-types   ? <nlp-shared-types>
 , nlp-types          ? <nlp-types>
 , OntoNotes          ? <OntoNotes>
 , PropBank           ? <PropBank>
@@ -49,6 +50,7 @@ let
     self: super: {
       "lexicon"        = self.callPackage (import lexicon) {};
       "multi-word-tagger" = self.callPackage (import multi-word-tagger) {};
+      "nlp-shared-types" = self.callPackage (import nlp-shared-types) {};
       "nlp-types"      = self.callPackage (import nlp-types) {};
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
       "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
@@ -96,6 +98,7 @@ let
             p.lexicon
             p.lexicon-builder
             p.multi-word-tagger
+            p.nlp-shared-types
             p.nlp-types
             p.OntoNotes
             p.PropBank
