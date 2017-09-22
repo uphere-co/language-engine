@@ -99,6 +99,7 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
   objs <- lift $ do
     fmap catMaybes . flip mapM (filter (\e -> e ^.me_end /= sidx) rels) $ \o -> do
       let oidx = o^.me_end
+          oprep = o^.me_prep
       runMaybeT $ do
         v <- hoistMaybe (findVertex (mg^.mg_vertices) oidx)
         if isFrame v
@@ -108,7 +109,7 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
             return (Left arb)
           else do
             olabel <- hoistMaybe (findLabel (mg^.mg_vertices) oidx)
-            return (Right (o^.me_relation,olabel))
+            return (Right (o^.me_relation,(oprep,olabel)))
   return (ARB frmtxt subject (frmtxt,verbtxt) objs [])
 
 
