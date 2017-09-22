@@ -112,6 +112,7 @@ printMeaningGraph dstr = do
     putStrLn "meaning graph ARB"
     putStrLn "-----------------"
 
+    print mg
     print (getGraphFromMG mg)
     mapM_ print (mkARB mg)
     

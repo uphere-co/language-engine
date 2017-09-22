@@ -1,58 +1,57 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 
 module SRL.Analyze.ARB where
 
-import           Control.Lens     ((^.),(^..),_2,_3,to)
-import           Data.Graph
-import           Data.List        (find)
-import           Data.Maybe       (catMaybes,fromJust,isNothing,mapMaybe)
-import           Data.Text        (Text)
+import           Control.Lens              ((^.),(^..),_2,_3,to)
+import           Control.Monad.Loops       (unfoldM)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Control.Monad.Trans.State (State,runState,execState,evalState,get,put,modify')
+import           Data.Array                ((!))
+import           Data.Graph                (Graph,Vertex,topSort)
+import           Data.List                 (delete,find,elem)
+import           Data.Maybe                (catMaybes,fromJust,isNothing,mapMaybe,maybeToList)
+import           Data.Text                 (Text)
 import qualified Data.Tree as Tr
 --
-import           NLP.Syntax.Type.Verb    (vp_lemma)
-import           NLP.Type.PennTreebankII (Lemma(..))
+import           NLP.Syntax.Clause         (hoistMaybe) -- this should be moved somewhere
+import           NLP.Syntax.Type.Verb      (vp_lemma)
+import           NLP.Type.PennTreebankII   (Lemma(..))
 import           NLP.Shared.Type
 import           SRL.Analyze.Type
 import           SRL.Statistics
 --
 import           Debug.Trace
 
-isMGPredicate :: MGVertex -> Bool
-isMGPredicate (MGEntity {..}) = False
-isMGPredicate (MGPredicate {..}) = True
 
-isMGEntity :: MGVertex -> Bool
-isMGEntity = (not . isMGPredicate)
+type VertexARB = (Vertex, Vertex, [Vertex])
 
+
+isFrame :: MGVertex -> Bool
+isFrame (MGEntity {..})           = False
+isFrame (MGPredicate {..})        = True
+isFrame (MGNominalPredicate {..}) = True
+
+
+isEntity :: MGVertex -> Bool
+isEntity = (not . isFrame)
+
+{-
 cnvtVtxToMGV :: MeaningGraph -> Vertex -> Maybe MGVertex 
 cnvtVtxToMGV mg vtx =
   let vrtcs = (mg ^. mg_vertices)
-      mv = find (\x -> (x ^. mv_id) == vtx) vrtcs
-  in mv
+  in find (\x -> (x ^. mv_id) == vtx) vrtcs
 
 cnvtEdgToMGE :: MeaningGraph -> Edge -> Maybe MGEdge
 cnvtEdgToMGE mg edg =
   let edgs = (mg ^. mg_edges)
-      me = find (\x -> (x ^. me_start) == (fst edg) && (x ^. me_end) == (snd edg)) edgs
-  in me
+  in find (\x -> (x ^. me_start) == (fst edg) && (x ^. me_end) == (snd edg)) edgs
 
-findRel :: [MGEdge] -> Int -> Int -> Maybe Text
-findRel mes i j =
-  let mr = find (\me -> (me ^. me_start) == i && (me ^. me_end) == j) mes
-  in case mr of
-    Nothing -> Nothing
-    Just e  -> Just (e ^. me_relation)
 
-findLabel :: [MGVertex] -> Int -> Maybe (Text,Text)
-findLabel mvs i =
-  let mr = find (\mv -> (mv ^. mv_id) == i) mvs
-  in case mr of
-    Nothing                            -> Nothing
-    Just (v@(MGEntity {..}))           -> Just ("", v ^. mv_text)
-    Just (v@(MGPredicate {..}))        -> Just ("", v ^. mv_verb . vp_lemma . to unLemma)
-    Just (v@(MGNominalPredicate {..})) -> Just ("", v ^. mv_frame)
+
     
 findFrame :: [MGVertex] -> Int -> Maybe Text
 findFrame mvs i =
@@ -64,46 +63,6 @@ findFrame mvs i =
     Just _                             -> Nothing
 
 
-type VertexARB = (Vertex, Vertex, [Vertex])
-
-{- 
-findAgent :: MeaningGraph -> Graph -> Vertex -> Maybe Edge
-findAgent mg grph vtx = case (cnvtVtxToMGV mg vtx) of
-  Nothing -> Nothing
-  Just mv -> case (isMGPredicate mv) of
-    False   -> Nothing
-    True    -> let children = attached grph vtx
-                   rels = catMaybes $ map (\n -> (,,) <$> findRel (mg ^. mg_edges) vtx n <*> Just vtx <*> Just n) children
-                   agent' = find (\(t,_i,_j) -> t == "Agent") rels
-                   agent = fmap (\x -> (x ^. _2, x ^. _3)) agent'
-               in agent
-
-
-findAgentThemes :: MeaningGraph -> Graph -> Vertex -> Maybe VertexARB
-findAgentThemes mg grph vtx = case (cnvtVtxToMGV mg vtx) of
-  Nothing -> Nothing
-  Just mv -> case (isMGPredicate mv) of
-    False   -> Nothing
-    True    -> let children = attached grph vtx
-                   rels = catMaybes $ map (\n -> (,,) <$> findRel (mg ^. mg_edges) vtx n <*> Just vtx <*> Just n) children
-                   agent = fmap (^. _3) $ find (\(t,_i,_j) -> t == "Agent") rels
-                   theme1 = fmap (^. _3) $ find (\(t,_i,_j) -> t == "Theme") rels
-               in ((,,) <$> agent <*> Just vtx <*> (sequence [theme1]))
--}
-
-subjectList = ["Agent","Speaker","Owner","Cognizer","Actor","Author"]
-isSubject t = any (\a -> t == a) subjectList
-
-findSubjectObjects :: MeaningGraph -> Graph -> Vertex -> Maybe VertexARB
-findSubjectObjects mg grph vtx = case (cnvtVtxToMGV mg vtx) of
-  Nothing -> Nothing
-  Just mv -> case (isMGPredicate mv) of
-    False   -> Nothing
-    True    -> let children = attached grph vtx
-                   rels = catMaybes $ map (\n -> (,,) <$> findRel (mg ^. mg_edges) vtx n <*> Just vtx <*> Just n) children
-                   subject = fmap (^. _3) $ find (\(t,_i,_j) -> isSubject t) rels
-                   objects = map (\x -> Just (x ^. _3)) $ filter (\(t,i,j) -> if (isNothing $ cnvtVtxToMGV mg j) then False else (if (isMGEntity $ fromJust $ cnvtVtxToMGV mg j) then (if (isSubject t) then False else True) else False)) rels
-               in ((,,) <$> subject <*> Just vtx <*> (sequence objects))
 
 attached :: Graph -> Vertex -> [Vertex]
 attached grph vtx =
@@ -112,11 +71,85 @@ attached grph vtx =
   in case mlnode of
     []    -> []
     lnode -> head lnode
+-}
+
+subjectList = [ "Agent","Speaker","Owner","Cognizer","Actor","Author","Cognizer_agent"
+              , "Protagonist", "Cause"
+              ]
+isSubject t = any (\a -> t == a) subjectList
+
+findRel :: [MGEdge] -> Int -> Int -> Maybe MGEdge
+findRel mes i j = find (\me -> (me ^. me_start) == i && (me ^. me_end) == j) mes
+
+findVertex :: [MGVertex] -> Int -> Maybe MGVertex
+findVertex mvs i = find (\mv -> (mv ^. mv_id) == i) mvs
+
+findLabel :: [MGVertex] -> Int -> Maybe Text
+findLabel mvs i = do
+  v <- findVertex mvs i
+  case v of
+    MGEntity {..}           -> Just (v ^. mv_text)
+    MGPredicate {..}        -> Just (v ^. mv_verb . vp_lemma . to unLemma)
+    MGNominalPredicate {..} -> Just (v ^. mv_frame)
+
+
+findSubjectObjects :: MeaningGraph
+                   -> Graph
+                   -> Vertex
+                   -> MaybeT (State [Vertex]) ARB
+findSubjectObjects mg grph frmid = do
+  let children = grph ! frmid
+  v <- hoistMaybe $ findVertex (mg^.mg_vertices) frmid
+  frmtxt <- case v of
+              MGEntity           {..} -> hoistMaybe Nothing
+              MGPredicate        {..} -> return (v^.mv_frame)
+              MGNominalPredicate {..} -> return (v^.mv_frame)
+  verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid 
+  let rels = mapMaybe (findRel (mg^.mg_edges) frmid) children
+  (sidx,subject) <- hoistMaybe $ do
+                      e <- find (\e -> isSubject (e^.me_relation)) rels
+                      let sidx = e^.me_end
+                      (sidx,) . (e^.me_relation,) <$> findLabel (mg^.mg_vertices) sidx
+  objs <- lift $ do
+    fmap catMaybes . flip mapM (filter (\e -> e ^.me_end /= sidx) rels) $ \o -> do
+      let oidx = o^.me_end
+      runMaybeT $ do
+        v <- hoistMaybe (findVertex (mg^.mg_vertices) oidx)
+        if isFrame v
+          then do
+            lift (modify' (delete oidx))
+            arb <- findSubjectObjects mg grph oidx
+            return (Left arb)
+          else do
+            olabel <- hoistMaybe (findLabel (mg^.mg_vertices) oidx)
+            return (Right (o^.me_relation,olabel))
+  return (ARB frmtxt subject (frmtxt,verbtxt) objs [])
+
+
+mkARB1 :: (MeaningGraph,Graph) -> State [Vertex] (Maybe (Maybe ARB))
+mkARB1 (mg,graph) = do
+  xs <- get
+  case xs of
+    [] -> return Nothing
+    (y:ys) -> do
+      put ys
+      r <- runMaybeT $ findSubjectObjects mg graph y
+      return (Just r)
+
 
 mkARB :: MeaningGraph -> [ARB]
-mkARB mg =
+mkARB mg = catMaybes $ do
   let mgraph = getGraphFromMG mg
-  in case mgraph of
+  graph <- maybeToList mgraph 
+  let framelst = map (^.mv_id) $ filter isFrame $ mg^. mg_vertices
+
+      vs = filter (`elem` framelst) $ topSort graph
+  evalState (unfoldM (mkARB1 (mg,graph))) vs
+
+
+  -- trace (show graph ++ ":" ++ show s) []
+  -- trace (show graph ++ ":" ++ show vs) [] 
+{-   in case mgraph of
     Nothing    -> []
     Just graph ->
       let mgpred = filter isMGPredicate (mg ^. mg_vertices)
@@ -127,4 +160,4 @@ mkARB mg =
           man = mapMaybe (\(v1,v2,vs) -> (,,,) <$> findFrame vrtcs v2 <*> findLabel vrtcs v1 <*> findLabel vrtcs v2 <*> pure (mapMaybe (\v3 -> fmap Right (findLabel vrtcs v3)) vs)) agents
           arbs = map (\(a,b,c,ds) -> ARB a b c ds []) man
       in trace ("trace : " ++ show mgpredvtxs ++ "  " ++ (show man) ++ "  " ++ (show agents)) arbs
-
+-}
