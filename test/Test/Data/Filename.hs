@@ -33,6 +33,8 @@ posNewsFile5 = POS.chinaTrump
 
 nerNewsSet1 = "data/bloomberg.ner"
 posNewsSet1 = POS.bloombergSet
+titleNewsSet1 = "data/bloomberg.title"
+
 
 loadNEROutfile :: FilePath -> [(POS.POSTag, T.Text)] -> IO [(T.Text, N.NamedEntityClass, POS.POSTag)]
 loadNEROutfile file poss = do
@@ -73,3 +75,5 @@ propertyNameFile  = PropertyNameFile   "data_full/properties.tsv"
 listedCompanyFile = "enwiki/companies"
 
 graphFiles = "enwiki/interlinks.filtered"
+
+investopediaTermFile = "data/terms"

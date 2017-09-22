@@ -41,6 +41,7 @@ library
                      , WikiEL.Convert
                      , WikiEL.Graph
                      , WikiEL.EntityDisambiguation
+                     , WikiEL.Investopedia
   -- other-modules:
                      , WikiEL.ETL.RDF.Common
                      , WikiEL.ETL.RDF.Wikidata
@@ -148,6 +149,7 @@ test-suite test
                      , Test.NamedEntityTagger
                      , Test.WikiEntityTagger
                      , Test.CoreNLPEntity
+                     , Test.InvestopediaTagging
   main-is: testAll.hs
   build-depends:       base
                      , aeson
@@ -182,6 +184,7 @@ test-suite testRun
                      , Test.NamedEntityTagger
                      , Test.WikiEntityTagger
                      , Test.CoreNLPEntity
+                     , Test.InvestopediaTagging
   main-is: testApp.hs
   build-depends:       base
                      , aeson
