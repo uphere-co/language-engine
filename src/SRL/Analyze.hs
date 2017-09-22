@@ -84,15 +84,15 @@ queryProcess config pp apredata emTagger =
 
                   mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkPAWSTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
                   --
-                  printMeaningGraph dstr
+                  printMeaningGraph (apredata^.analyze_rolemap) dstr
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
 
 
 
-printMeaningGraph :: DocStructure -> IO ()
-printMeaningGraph dstr = do
+printMeaningGraph :: [RoleInstance] -> DocStructure -> IO ()
+printMeaningGraph rolemap dstr = do
   putStrLn "-------------"
   putStrLn "meaning graph"
   putStrLn "-------------"
@@ -114,7 +114,7 @@ printMeaningGraph dstr = do
 
     print mg
     print (getGraphFromMG mg)
-    mapM_ print (mkARB mg)
+    mapM_ print (mkARB rolemap mg)
     
     putStrLn "-----------------"
     putStrLn "meaning graph dot"

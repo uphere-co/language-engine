@@ -208,7 +208,7 @@ showMatchedFrame :: [TagPos TokIdx MarkType]
                  -> IO ()
 showMatchedFrame tagged (vstr,paws) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame tagged (vstr,paws)) $ \(rng,_,frame,mselected) -> do
+  flip traverse_ (matchFrame tagged (vstr,paws)) $ \(rng,_,frame,_,mselected) -> do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> frame)
@@ -232,7 +232,7 @@ formatMGEdge e = printf "i%d -> i%d [label=\"%s\" style=\"%s\" fontsize=12.0 %s]
                  if (e^.me_ismodifier) then printf "\n  {rankdir=TB; i%d -> i%d [style=invis]};" (e^.me_end) (e^.me_start) else ""
 
 formatMGVerb (MGEntity    _ _ _ _) = Nothing
-formatMGVerb (MGPredicate i _ f v)
+formatMGVerb (MGPredicate i _ f _ v)
   = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
              "<tr><td colspan=\"4\">" <> f <> "</td></tr>" <>
              "<tr>" <>
@@ -255,11 +255,11 @@ formatMGVerb (MGNominalPredicate i _ f)
 
 
 
-formatMGEntity (MGEntity i _ t ns  ) = Just (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-                                               "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
-                                               T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>
+formatMGEntity (MGEntity i _ t ns  )      = Just (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+                                                    "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
+                                                    T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>
                                                "</table>")
-formatMGEntity (MGPredicate _ _ _ _) = Nothing
+formatMGEntity (MGPredicate _ _ _ _ _)    = Nothing
 formatMGEntity (MGNominalPredicate _ _ _) = Nothing
 
 
