@@ -27,6 +27,7 @@ library
   -- other-extensions:
   build-depends:       base,
                        --
+                       aeson,
                        hashable,
                        lens,
                        text,

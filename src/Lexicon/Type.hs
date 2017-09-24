@@ -9,6 +9,7 @@
 module Lexicon.Type where
 
 import           Control.Lens         (makeLenses)
+import           Data.Aeson           (FromJSON,ToJSON)
 import           Data.Hashable        (Hashable)
 import           Data.Text            (Text)
 -- import qualified Data.Text    as T
@@ -20,6 +21,8 @@ data POSVorN = Verb | Noun deriving (Show,Eq,Ord,Generic)
 
 instance Hashable POSVorN
 
+instance FromJSON POSVorN
+instance ToJSON POSVorN
 
 type SenseID = (Text,POSVorN,Text)
 
