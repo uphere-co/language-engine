@@ -50,10 +50,10 @@ instance FromJSON TokIdx where
 instance ToJSON TokIdx where
   toJSON x = toJSON (unTokIdx x)
 
-instance FromJSON (TagPos TokIdx (Maybe Text)) where
+instance (FromJSON a) => FromJSON (TagPos TokIdx a) where
   parseJSON = genericParseJSON defaultOptions
 
-instance ToJSON (TagPos TokIdx (Maybe Text)) where
+instance (ToJSON a) => ToJSON (TagPos TokIdx a) where
   toJSON = genericToJSON defaultOptions
 
 
