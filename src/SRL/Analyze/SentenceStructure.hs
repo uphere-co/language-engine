@@ -36,7 +36,7 @@ import           NLP.Type.CoreNLP                          (Sentence,SentenceInd
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,mkPennTreeIdx)
 import qualified NLP.Type.PennTreebankII.Separated as PS
 import           NLP.Type.SyntaxProperty                   (Voice)
-import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..))
+import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
 import           WikiEL.EntityLinking                      (EntityMention,entityPreNE)
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
 import           WikiEL.WikiNamedEntityTagger              (PreNE(..))
@@ -53,20 +53,6 @@ import           SRL.Analyze.WikiEL                        (getWikiResolvedMenti
 import Debug.Trace
 
 
-mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]
-mergeTagPos xs ys =
-  let zs = map (fmap Left) xs ++ map (fmap Right) ys
-      idx (TagPos (i,_,_)) = i
-  in sortBy (compare `on` idx) zs
-
-
-leftTagPos :: [TagPos i (Either a b)] -> [TagPos i a]
-leftTagPos xs = mapMaybe (\(TagPos (b,e,x)) -> TagPos . (b,e,) <$> (x^?_Left)) xs
-
-
-rightTagPos :: [TagPos i (Either a b)] -> [TagPos i b]
-rightTagPos xs = mapMaybe (\(TagPos (b,e,x)) -> TagPos . (b,e,) <$> (x^?_Right)) xs
-
 
 getSenses :: Text
           -> HashMap Text Inventory
@@ -80,7 +66,7 @@ getSenses lma sensemap sensestat framedb ontomap = do
   s <- si^.inventory_senses
   let sid = (lma,Verb, s^.sense_group <> "." <> s^.sense_n)
   let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
-      txt_def = {- T.take 40 -} (s^.sense_name)
+      txt_def = s^.sense_name
       tframe = fromMaybe (Left FrameNone) $ do
         lst <- HM.lookup lma ontomap
         frtxt <- lookup (s^.sense_group <> "." <> s^.sense_n) lst
@@ -117,16 +103,13 @@ getTopPatternsFromONFNInst rolemap subcats (inst,n) = do
 -- | Finding the structure of the sentence and formatting it.
 --
 docStructure :: AnalyzePredata
-             -- -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
              -> ([Sentence] -> [EntityMention Text])
              -> DocAnalysisInput
              -> DocStructure
 docStructure apredata netagger docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) =
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
-      linked_mentions_resolved = netagger (docinput^.dainput_sents) {- getWikiResolvedMentions emTagger
-                                                                        (docinput^.dainput_sents)
-                                                                         (concat (docinput^.dainput_tokss)) -}
+      linked_mentions_resolved = netagger (docinput^.dainput_sents)
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
@@ -136,13 +119,12 @@ docStructure apredata netagger docinput@(DocAnalysisInput sents sentidxs sentite
 
 tagToMark :: Either (EntityMention Text) (Char,Maybe Text) -> Maybe MarkType
 tagToMark (Right _) = Just MarkTime -- time is special
-tagToMark (Left x) =
-  case entityPreNE x of
-    Resolved (_,c) ->
-      if c `elem` [orgClass,personClass,brandClass]
-        then Just MarkEntity  -- only organization, person and brand, for the time being
-        else Nothing
-    _ -> Nothing
+tagToMark (Left x)  = case entityPreNE x of
+                        Resolved (_,c) ->
+                          if c `elem` [orgClass,personClass,brandClass]
+                          then Just MarkEntity  -- only organization, person and brand, for the time being
+                          else Nothing
+                        _ -> Nothing
 
 
 sentStructure :: AnalyzePredata
