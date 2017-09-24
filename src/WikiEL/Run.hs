@@ -39,12 +39,12 @@ mkConstraintFromWikiEL wikiel = map (\x -> let irange = entityIRange x in (beg i
 runEL :: [Sentence]
       -> ([(Text,NamedEntityClass,POSTag)] -> [EntityMention Text])
       -> ([EntityMention Text] -> [EntityMention Text])
-      -> IO ()
-runEL sents tagger entityResolve = do
+      -> [EntityMention Text]
+runEL sents tagger entityResolve =
   let wnps = prepareWNP sents
       linked_mentions = tagger wnps
-      disambiguated_mentions = entityResolve linked_mentions
-  mapM_ print disambiguated_mentions
+  in entityResolve linked_mentions
+
 
 loadWikiData :: IO ([(Text, NamedEntityClass,POSTag)] -> [EntityMention Text], [EntityMention Text] -> [EntityMention Text])
 loadWikiData = do
