@@ -131,7 +131,6 @@ mkARB rolemap mg = catMaybes $ do
   graph <- maybeToList mgraph 
   let framelst = map (^.mv_id) $ filter isFrame $ mg^. mg_vertices
       vs = filter (`elem` framelst) $ topSort graph
-  {- trace (show rolemap) $ -}
   evalState (unfoldM (mkARB1 (rolemap,mg,graph))) vs
 
 

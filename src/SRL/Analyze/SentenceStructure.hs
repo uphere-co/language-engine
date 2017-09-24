@@ -149,7 +149,7 @@ sentStructure apredata tagged (i,midx,lmas,mptr) =
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
         cpstr = (map (bindingAnalysis tagged') . identifyCPHierarchy tagged') vps
         verbStructures = map (verbStructure apredata) vps
-    in trace (show tagged') $ SentStructure i ptr vps clausetr cpstr tagged' verbStructures
+    in SentStructure i ptr vps clausetr cpstr tagged' verbStructures
 
 
 verbStructure :: AnalyzePredata -> VerbProperty (Zipper '[Lemma]) -> VerbStructure
