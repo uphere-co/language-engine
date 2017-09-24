@@ -57,4 +57,19 @@ instance ToJSON (TagPos TokIdx (Maybe Text)) where
 type SentItem i = (SentIdx,BeginEnd i,Text)
 
 
+mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]
+mergeTagPos xs ys =
+  let zs = map (fmap Left) xs ++ map (fmap Right) ys
+      idx (TagPos (i,_,_)) = i
+  in sortBy (compare `on` idx) zs
+
+
+leftTagPos :: [TagPos i (Either a b)] -> [TagPos i a]
+leftTagPos xs = mapMaybe (\(TagPos (b,e,x)) -> TagPos . (b,e,) <$> (x^?_Left)) xs
+
+
+rightTagPos :: [TagPos i (Either a b)] -> [TagPos i b]
+rightTagPos xs = mapMaybe (\(TagPos (b,e,x)) -> TagPos . (b,e,) <$> (x^?_Right)) xs
+
+
 
