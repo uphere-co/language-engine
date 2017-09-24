@@ -3,23 +3,16 @@ module WikiEL.Run where
 import           Control.Lens
 import           Data.Maybe
 --
--- import           CoreNLP.Simple.Convert
 import           Data.Text                             (Text)
-import qualified Data.Text                      as T
-import qualified Data.Text.IO                   as T.IO
-import qualified Data.Vector                    as V
 import           NLP.Type.CoreNLP
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
 import           System.FilePath                          ((</>))
 import           WikiEL.EntityLinking
-import qualified WikiEL.EntityMentionPruning    as EMP
 import           WikiEL.Misc
-import           WikiEL.WikiNamedEntityTagger
 --
 import           WikiEL.Type.FileFormat
 import qualified WikiEL.WikiEntityClass        as WC
-import qualified WikiEL.WikiNamedEntityTagger  as WNET
 import qualified WikiEL                        as WEL
 
 
@@ -36,11 +29,11 @@ prepareWNP sents =
 mkConstraintFromWikiEL :: [EntityMention Text] -> [(Int,Int)]
 mkConstraintFromWikiEL wikiel = map (\x -> let irange = entityIRange x in (beg irange, end irange)) $ wikiel
 
-runEL :: [Sentence]
-      -> ([(Text,NamedEntityClass,POSTag)] -> [EntityMention Text])
+runEL :: ([(Text,NamedEntityClass,POSTag)] -> [EntityMention Text])
       -> ([EntityMention Text] -> [EntityMention Text])
+      -> [Sentence]
       -> [EntityMention Text]
-runEL sents tagger entityResolve =
+runEL tagger entityResolve sents  =
   let wnps = prepareWNP sents
       linked_mentions = tagger wnps
   in entityResolve linked_mentions
