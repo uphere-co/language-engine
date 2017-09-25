@@ -37,7 +37,10 @@ import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,m
 import qualified NLP.Type.PennTreebankII.Separated as PS
 import           NLP.Type.SyntaxProperty                   (Voice)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..))
-import           WikiEL.EntityLinking                      (EntityMention)
+import           WikiEL.EntityLinking                      (EntityMention,entityPreNE)
+import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
+import           WikiEL.WikiNamedEntityTagger              (PreNE(..))
+
 --
 import           OntoNotes.Type.SenseInventory
 --
@@ -131,6 +134,16 @@ docStructure apredata netagger docinput@(DocAnalysisInput sents sentidxs sentite
   in DocStructure mtokenss sentitems mergedtags sentStructures
 
 
+tagToMark :: Either (EntityMention Text) (Char,Maybe Text) -> Maybe MarkType
+tagToMark (Right _) = Just MarkTime -- time is special
+tagToMark (Left x) =
+  case entityPreNE x of
+    Resolved (_,c) ->
+      if c `elem` [orgClass,personClass,brandClass]
+        then Just MarkEntity  -- only organization, person and brand, for the time being
+        else Nothing
+    _ -> Nothing
+
 
 sentStructure :: AnalyzePredata
               -> [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text))]
@@ -140,11 +153,11 @@ sentStructure apredata tagged (i,midx,lmas,mptr) =
   flip fmap mptr $ \ptr ->
     let tagged' = fromMaybe [] $ do
                     (b0,e0) <- (^.sent_tokenRange) <$> midx
-                    return $ flip mapMaybe tagged $ \(TagPos (TokIdx b,TokIdx e,t)) ->
-                                                      let t' = case t of Left _ -> MarkEntity ; Right _ -> MarkTime
-                                                      in if b0 <= b && e <= e0
-                                                         then Just (TagPos (TokIdx (b-b0),TokIdx (e-b0),t'))
-                                                         else Nothing
+                    return $ flip mapMaybe tagged $ \(TagPos (TokIdx b,TokIdx e,t)) -> do
+                      t' <- tagToMark t
+                      if b0 <= b && e <= e0
+                        then return (TagPos (TokIdx (b-b0),TokIdx (e-b0),t'))
+                        else Nothing
         lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
