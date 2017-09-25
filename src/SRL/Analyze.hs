@@ -36,20 +36,22 @@ import           Lexicon.Data                 (LexDataConfig(..),cfg_framenet_fr
                                               ,loadSenseInventory
                                               )
 import           NLP.Syntax.Format            (formatCPHierarchy)
+import           NLP.Type.CoreNLP             (Sentence)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           NLP.Type.SyntaxProperty      (Voice)
 import           OntoNotes.Corpus.Load        (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 import           Text.Format.Dot              (mkLabelText)
-import           WikiEL                       (loadEMtagger)
+-- import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention)
+import           WikiEL.Run                   (runEL,loadWikiData)
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
 --
 import           SRL.Analyze.ARB               (mkARB)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP           (runParser)
 import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructure,showMatchedFrame)
-import           SRL.Analyze.Match             ({- allPAWSTriplesFromDocStructure,-}mkPAWSTriples,meaningGraph,tagMG)
+import           SRL.Analyze.Match             (mkPAWSTriples,meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure (docStructure)
 import           SRL.Analyze.Type
 import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
@@ -63,21 +65,22 @@ import SRL.Statistics (getGraphFromMG)
 queryProcess :: Analyze.Config
              -> J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> AnalyzePredata
-             -> ([(Text,NamedEntityClass)] -> [EntityMention Text])
+             -- -> ([(Text,NamedEntityClass)] -> [EntityMention Text])
+             -> ([Sentence] -> [EntityMention Text])
              -> IO ()
-queryProcess config pp apredata emTagger =
+queryProcess config pp apredata netagger =
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     let input = T.pack input'
         (command,rest) = T.splitAt 3 input
     case command of
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
-                  dstr <- docStructure apredata emTagger <$> runParser pp txt
+                  dstr <- docStructure apredata netagger <$> runParser pp txt
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
                   mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkPAWSTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
 
-      ":v " -> do dstr <- docStructure apredata emTagger <$> runParser pp rest
+      ":v " -> do dstr <- docStructure apredata netagger <$> runParser pp rest
                   mapM_ (T.IO.putStrLn . formatCPHierarchy) (dstr ^.. ds_sentStructures . traverse . _Just . ss_cpstr . traverse)
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
@@ -126,20 +129,24 @@ printMeaningGraph rolemap dstr = do
 
 
 loadConfig :: LexDataConfig
-           -> IO (HashMap Text Inventory
+           -> IO (AnalyzePredata,[Sentence]->[EntityMention Text])
+{- 
+  (HashMap Text Inventory
                  ,HashMap (Text, Text) Int
                  ,FrameDB
                  ,HashMap Text [(Text, Text)]
-                 ,[(Text, NamedEntityClass)] -> [EntityMention Text]
+                 ,[Sentence] -> [EntityMention Text]
                  ,[RoleInstance]
                  ,[RolePattInstance Voice]
-                 )
+                 ) -}
 loadConfig cfg = do
-  (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats) <- loadAnalyzePredata cfg
-  emTagger <- loadEMtagger reprFile [ (orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)
+  apredata@(AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats) <- loadAnalyzePredata cfg
+  {- emTagger <- loadEMtagger reprFile [ (orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)
                                     , (locationClass, locationItemFile), (occupationClass, occupationItemFile)
-                                    , (humanRuleClass, humanRuleItemFile), (buildingClass, buildingItemFile) ]
-  return (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats)
+                                    , (humanRuleClass, humanRuleItemFile), (buildingClass, buildingItemFile) ] -}
+  netagger <- uncurry runEL <$> loadWikiData
+  return (apredata,netagger)
+  -- (sensemap,sensestat,framedb,ontomap,netagger,rolemap,subcats)
 
 
 loadAnalyzePredata :: LexDataConfig -> IO AnalyzePredata
@@ -160,14 +167,14 @@ getAnalysis :: DocAnalysisInput
                ,HashMap (Text,Text) Int
                ,FrameDB
                ,HashMap Text [(Text,Text)]
-               ,([(Text,NamedEntityClass)] -> [EntityMention Text])
+               ,([Sentence] -> [EntityMention Text])
                ,[RoleInstance]
                ,[RolePattInstance Voice])
             -> DocStructure
 getAnalysis input config =
-  let (sensemap,sensestat,framedb,ontomap,emTagger,rolemap,subcats) = config
+  let (sensemap,sensestat,framedb,ontomap,netagger,rolemap,subcats) = config
       apredata = AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats
-  in docStructure apredata emTagger input
+  in docStructure apredata netagger input
 
 
 loadJVM :: IO (J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
@@ -184,15 +191,18 @@ loadJVM = prepare (def & (tokenizer .~ True)
 --
 runAnalysis :: LexDataConfig -> Analyze.Config -> IO ()
 runAnalysis cfg acfg = do
-  subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
+{-   subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-  emTagger <- loadEMtagger reprFile [(orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)]
-  let apredata = AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats
+  -- emTagger <- loadEMtagger reprFile [(orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)]
+  -}
+
+  (apredata,netagger) <- loadConfig cfg
+  -- let apredata = AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
     pp <- prepare (def & (tokenizer .~ True)
@@ -203,4 +213,4 @@ runAnalysis cfg acfg = do
                        . (constituency .~ True)
                        . (ner .~ True)
                   )
-    queryProcess acfg pp apredata emTagger
+    queryProcess acfg pp apredata netagger

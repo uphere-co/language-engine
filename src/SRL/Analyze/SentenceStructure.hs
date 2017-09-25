@@ -31,7 +31,7 @@ import           NLP.Syntax.Type                           (MarkType(..))
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
 import           NLP.Syntax.Type.XBar                      (Zipper)
 import qualified NLP.Type.NamedEntity              as N
-import           NLP.Type.CoreNLP                          (SentenceIndex,sentenceToken,sentenceLemma,sent_tokenRange)
+import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,sentenceToken,sentenceLemma,sent_tokenRange)
 
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,mkPennTreeIdx)
 import qualified NLP.Type.PennTreebankII.Separated as PS
@@ -114,15 +114,16 @@ getTopPatternsFromONFNInst rolemap subcats (inst,n) = do
 -- | Finding the structure of the sentence and formatting it.
 --
 docStructure :: AnalyzePredata
-             -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
+             -- -> ([(Text, N.NamedEntityClass)] -> [EntityMention Text])
+             -> ([Sentence] -> [EntityMention Text])
              -> DocAnalysisInput
              -> DocStructure
-docStructure apredata emTagger docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) =
+docStructure apredata netagger docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) =
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
-      linked_mentions_resolved = getWikiResolvedMentions emTagger
-                                                         (docinput^.dainput_sents)
-                                                         (concat (docinput^.dainput_tokss))
+      linked_mentions_resolved = netagger (docinput^.dainput_sents) {- getWikiResolvedMentions emTagger
+                                                                        (docinput^.dainput_sents)
+                                                                         (concat (docinput^.dainput_tokss)) -}
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
