@@ -36,6 +36,10 @@ posNewsSet1 = POS.bloombergSet
 titleNewsSet1 = "data/bloomberg.title"
 
 
+nerNewsSet2 = "data/bloomberg2.ner"
+posNewsSet2 = POS.bloombergSet2
+titleNewsSet2 = "data/bloomberg2.title"
+
 loadNEROutfile :: FilePath -> [(POS.POSTag, T.Text)] -> IO [(T.Text, N.NamedEntityClass, POS.POSTag)]
 loadNEROutfile file poss = do
   text <- T.IO.readFile file
