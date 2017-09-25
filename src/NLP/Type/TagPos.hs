@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TupleSections              #-}
 
 module NLP.Type.TagPos where
 
@@ -9,6 +10,8 @@ import           Control.Lens
 import           Control.Monad                                 (guard)
 import           Data.Aeson
 import           Data.Aeson.Types                              (typeMismatch)
+import           Data.Function                                 (on)
+import           Data.List                                     (sortBy)
 import           Data.Maybe                                    (fromJust,mapMaybe)
 import           Data.Scientific                               (floatingOrInteger)
 import           Data.Text                                     (Text)
@@ -47,14 +50,29 @@ instance FromJSON TokIdx where
 instance ToJSON TokIdx where
   toJSON x = toJSON (unTokIdx x)
 
-instance FromJSON (TagPos TokIdx (Maybe Text)) where
+instance (FromJSON a) => FromJSON (TagPos TokIdx a) where
   parseJSON = genericParseJSON defaultOptions
 
-instance ToJSON (TagPos TokIdx (Maybe Text)) where
+instance (ToJSON a) => ToJSON (TagPos TokIdx a) where
   toJSON = genericToJSON defaultOptions
 
 
 type SentItem i = (SentIdx,BeginEnd i,Text)
+
+
+mergeTagPos :: (Ord i) => [TagPos i a] -> [TagPos i b] -> [TagPos i (Either a b)]
+mergeTagPos xs ys =
+  let zs = map (fmap Left) xs ++ map (fmap Right) ys
+      idx (TagPos (i,_,_)) = i
+  in sortBy (compare `on` idx) zs
+
+
+leftTagPos :: [TagPos i (Either a b)] -> [TagPos i a]
+leftTagPos xs = mapMaybe (\(TagPos (b,e,x)) -> TagPos . (b,e,) <$> (x^?_Left)) xs
+
+
+rightTagPos :: [TagPos i (Either a b)] -> [TagPos i b]
+rightTagPos xs = mapMaybe (\(TagPos (b,e,x)) -> TagPos . (b,e,) <$> (x^?_Right)) xs
 
 
 
