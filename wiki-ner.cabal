@@ -34,6 +34,7 @@ library
                      , WikiEL.ETL.RDF.Yago
                      , WikiEL.ETL.Util
                      , WikiEL.Graph
+                     , WikiEL.Investopedia
                      , WikiEL.Misc
                      , WikiEL.NamedEntity
                      , WikiEL.Run
@@ -152,6 +153,7 @@ test-suite test
                      , Test.NamedEntityTagger
                      , Test.WikiEntityTagger
                      , Test.CoreNLPEntity
+                     , Test.InvestopediaTagging
   main-is: testAll.hs
   build-depends:       base
                      , aeson
@@ -186,6 +188,7 @@ test-suite testRun
                      , Test.NamedEntityTagger
                      , Test.WikiEntityTagger
                      , Test.CoreNLPEntity
+                     , Test.InvestopediaTagging
   main-is: testApp.hs
   build-depends:       base
                      , aeson
