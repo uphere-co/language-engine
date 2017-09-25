@@ -222,26 +222,33 @@ main3init = do
   store <- newStore cc
   store1 <- newStore sorted
   
-  tagger <- WEL.loadFEMtagger reprFile classFiles  
+  tagger <- WEL.loadFEMtagger reprFile classFiles
   a3 <- loadNEROutfile nerNewsFile3 posNewsFile3
   a4 <- loadNEROutfile nerNewsFile4 posNewsFile4
-  a5 <- loadNEROutfile nerNewsFile5 posNewsFile5  
+  a5 <- loadNEROutfile nerNewsFile5 posNewsFile5
+  
+  b2 <- loadNEROutfile nerNewsSet2 posNewsSet2
   let
     mentions3 = tagger a3
     mentions4 = tagger a4
     mentions5 = tagger a5
+    mentionsb2 = tagger b2
   print $ length mentions3
   print $ length mentions4
   print $ length mentions5
+  print $ length mentionsb2
+  
   store2 <- newStore tagger
   store3 <- newStore mentions3
   store4 <- newStore mentions4
-  store5 <- newStore mentions5
+  store5 <- newStore mentions5  
 
   titles@(a,b) <- WEL.loadWikipageMapping wikiTitleMappingFile
   store6 <- newStore titles
   print $ M.size a
   print $ M.size b
+
+  store7 <- newStore mentionsb2
     
   
   print store
@@ -251,6 +258,7 @@ main3init = do
   print store4
   print store5
   print store6
+  print store7
   --print $ M.size tns
   --print $ UV.length (snd sortedTEs)
   --print $ wn  
@@ -303,7 +311,10 @@ main3reload = do
   
   Just store6 <- lookupStore 6 :: IO (Maybe (Store (M.Map WEL.ItemID T.Text, M.Map T.Text WEL.ItemID)))
   titles@(i2t,t2i) <- readStore store6
-  
+
+  Just s7 <- lookupStore 7 :: IO (Maybe (Store [WEL.EntityMention T.Text]))
+  mentionsb2 <- readStore s7
+
   uidTag   <-  WEL.loadFiles classFiles
   let
     --refs = concatMap (WEL.toWikipages titles) (filter WEL.hasResolvedUID mentions5)  
@@ -312,15 +323,18 @@ main3reload = do
     a3 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 3) mentions3
     a4 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 3) mentions4
     a5 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 3) mentions5
+    aa2 = WEL.tryDisambiguate uidTag titles (WEL.matchToSimilar f 3) mentionsb2
     b3 = WEL.entityLinkings a3
     b4 = WEL.entityLinkings a4
     b5 = WEL.entityLinkings a5
+    bb2 = WEL.entityLinkings aa2
   --mapM_ print (filter WEL.hasResolvedUID a3)
   --mapM_ print (filter WEL.hasResolvedUID a4)
   --mapM_ print (filter WEL.hasResolvedUID a5)
   mapM_ print (filter WEL.hasResolvedUID b3)
   mapM_ print (filter WEL.hasResolvedUID b4)
   mapM_ print (filter WEL.hasResolvedUID b5)
+  mapM_ print (filter WEL.hasResolvedUID bb2)
 
 stripEdges :: [a] -> Maybe [a]
 stripEdges vs | length vs <2 = Nothing

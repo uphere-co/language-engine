@@ -30,13 +30,14 @@ main = do
     entityResolve = WEL.disambiguateMentions edges uidTag titles
     run = runEL (tagger,entityResolve)
 
-  --{-
+  {-
   run nerNewsFile3 posNewsFile3
   print "///////////////////////////////////"
   run nerNewsFile4 posNewsFile4
   print "///////////////////////////////////"
   run nerNewsFile5 posNewsFile5  
   print "///////////////////////////////////"
-  --}
-  run nerNewsSet1 posNewsSet1  
+  run nerNewsSet1 posNewsSet1
+  -}
+  run nerNewsSet2 posNewsSet2
 
