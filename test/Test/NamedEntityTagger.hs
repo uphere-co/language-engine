@@ -307,11 +307,11 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
       Just symbol -> Just (mentionUID, itemID, symbol)
       Nothing     -> Nothing
 
-runEL (tickerMap,uidTag,wikiTable) rawFile nerFile posFile = do
+runEL (tickerMap,uidTag,wikiTable) nerFile posFile = do
   let
     -- Load data for entity mention pruner. Input is a list of PoS tags of the input text.
     input_pos = V.fromList (map fst posFile)
-  input_raw <- T.IO.readFile rawFile
+    text = fromList (map snd posFile)    
   input_ner <- T.IO.readFile nerFile
   let
     stanford_nefs  = map parseStanfordNE (parseNEROutputStr input_ner)
@@ -319,7 +319,6 @@ runEL (tickerMap,uidTag,wikiTable) rawFile nerFile posFile = do
     wiki_entities  = namedEntityAnnotator wikiTable stanford_nefs
     wiki_named_entities = resolveNEs uidTag named_entities wiki_entities
 
-    text = fromList (T.words input_raw)
     mentions = buildEntityMentions text wiki_named_entities
     all_linked_mentions = entityLinkings mentions
 
@@ -353,10 +352,9 @@ main1 = do
   uidTag   <-  WC.loadFiles classFiles
   wikiTable <- loadWETagger reprFile
 
-
-  runEL (tickerMap,uidTag,wikiTable) rawNewsFile3 nerNewsFile3 posNewsFile3
-  runEL (tickerMap,uidTag,wikiTable) rawNewsFile4 nerNewsFile4 posNewsFile4
-  runEL (tickerMap,uidTag,wikiTable) rawNewsFile5 nerNewsFile5 posNewsFile5
+  runEL (tickerMap,uidTag,wikiTable) nerNewsFile3 posNewsFile3
+  runEL (tickerMap,uidTag,wikiTable) nerNewsFile4 posNewsFile4
+  runEL (tickerMap,uidTag,wikiTable) nerNewsFile5 posNewsFile5
 
 
   
