@@ -176,10 +176,7 @@ $ time lbzcat wikidata-20170627-truthy-BETA.nt.bz2 | grep "@en " | grep "<http:/
 real	5m3.000s
 
 
-$ time pigz -dc enwiki-20170620-redirect.sql.gz  | iconv -f ISO-8859-1 -t UTF-8 | python mysqldump_to_csv.py  | lbzip2 --fast > enwiki-20170620-redirect.tsv.bz2
-real	0m42.186s
-
-$ time join -j 1 -t$'\t' <(lbzcat enwiki-20170620-redirect.tsv.bz2 | awk -F "\t" '{print $1 "\t" $3}'| sort -k1,1 -t$'\t') <(sort -k1,1 -t$'\t' page_id) > redirects
+$ time join -j 1 -t$'\t' <(lbzcat enwiki-latest-redirect.tsv.bz2 | awk -F "\t" '{print $1 "\t" $3}'| sort -k1,1 -t$'\t') <(sort -k1,1 -t$'\t' page_id) > redirects
 real	0m24.686s
 
 $ time join -j 2 -t$'\t' <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) <(sort -k2,2 -t$'\t' redirects) > page_title.page_id.wiki_id.redirect
@@ -221,19 +218,13 @@ $ time join -1 2 -2 1 -t$'\t' <(sort -k2,2 -t$'\t' enwiki/page_id.category.wikid
 real	1m5.242s
 ```
 
-#### Get names per entity
+#### Get names per entity from Wikipedia redirects
 ```
-$ time cat page_id.category.wikidata.wordnet.sorted | awk -F '\t' '{print $4}' | sort | uniq > entities.wikidata
 $ time cat page_id.category.wikidata.wordnet.sorted | awk -F '\t' '{print $3}' | sort | uniq > entities.wiki
 real	0m52.277s
-
 $ time cat redirects | grep -Fwf entities.wiki > entities.wiki_alias
 real	0m31.076s
-$ time join -1 2 -2 2 -t$'\t' <(sort -k2,2 -t$'\t' entities.wiki_alias)  <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) | sed 's/_/ /g' | awk -F '\t' '{print $5 "\t" $3}' > names.wiki_alias
+$ time join -1 2 -2 2 -t$'\t' <(sort -k2,2 -t$'\t' entities.wiki_alias)  <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) | sed 's/_/ /g' | awk -F '\t' '{print $5 "\t" $3}' > names.redirect
 real	0m14.269s
-$ time cat ../wikidata/wikidata.all_entities | grep -Fwf entities.wikidata > names.wikidata_alias
-real	0m6.339s
-$ time cat names.* | sort | uniq > names
-real	0m27.200s
 ```
 
