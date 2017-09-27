@@ -73,10 +73,10 @@ reprFile       = EntityReprFile "data/names"
 --reprFile       = EntityReprFile "data/names.1"
 --reprFile       = EntityReprFile "data/names.person.2"
 -- Full data
-wikiTitleMappingFile= WikiTitleMappingFile "data/wiki_id.page_title.txt"
+wikiTitleMappingFile= WikiTitleMappingFile "data/wiki_id.page_title.txt" -- obsoleted. Not used for now.
 wordnetMappingFile= WordNetMappingFile "data/page_id.wiki_id.wordnet.tsv"
-propertyNameFile  = PropertyNameFile   "data_full/properties.tsv"
-listedCompanyFile = "enwiki/companies"
+propertyNameFile  = PropertyNameFile   "data_full/properties.tsv" -- obsoleted. Not used for now.
+listedCompanyFile = "enwiki/companies" -- obsoleted. Not used for now.
 
 graphFiles = "enwiki/interlinks.filtered"
 

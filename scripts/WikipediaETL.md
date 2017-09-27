@@ -51,8 +51,9 @@ Current ETL process depends on a python script, `mysqldump_to_csv.py`, in https:
 ```
 nix-shell shell-wiki.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 20 --cores 20
 ```
-#### Convert SQL dump files to TSC files
+#### Convert SQL dump files to TSV files
 ```
+# Use wiki-ner/shell-wiki.nix
 $ time pigz -dc enwiki-latest-categorylinks.sql.gz | iconv -f ISO-8859-1 -t UTF-8 | python mysqldump_to_csv.py |tr -d '\r' | lbzip2 --fast > enwiki-latest-categorylinks.tsv.bz2
 real	18m58.210s
 $ time pigz -dc enwiki-latest-category.sql.gz | iconv -f ISO-8859-1 -t UTF-8 | python mysqldump_to_csv.py |tr -d '\r'  | lbzip2 --fast > enwiki-latest-category.tsv.bz2
@@ -96,7 +97,7 @@ $ time join -t$'\t' page_id page_id.wiki_id.sorted > page_id.wiki_id.txt.sorted
 real	0m8.493s
 
 #Get links from category pages.
-$ time lbzcat enwiki-latest-categorylinks.tsv.bz2| awk -F"\t" '$NF=="page"{print $1 "\t" $2}' |sort -k1,1 -t$'\t' > enwiki-latest-categorylinks.page.sorted
+$ time lbzcat enwiki-latest-categorylinks.tsv.bz2 | awk -F"\t" '$NF=="page"{print $1 "\t" $2}' |sort -k1,1 -t$'\t' > enwiki-latest-categorylinks.page.sorted
 real	9m9.721s
 #Get categories per page_id(and its title and Wikidata UID)
 $ time join -t$'\t' enwiki-latest-categorylinks.page.sorted page_id | join -t$'\t' - page_id.wiki_id.sorted > page_id.category.wikidata.sorted
@@ -160,7 +161,7 @@ cat enwiki/page_id.wiki_id.txt.sorted | awk -F '\t' '{print $3 "\t" $2}' > data/
 ```
 
 #### ETL to get Wikidata - WordNet mapping 
-Download `wordnet_links.ttl.gz` from [here](http://wiki.dbpedia.org/services-resources/datasets/dbpedia-datasets).
+Download `wordnet_links.ttl.gz` from [here](http://downloads.dbpedia.org/2016-04/links/).
 ```
 tail +2 dbpedia/wordnet_links.ttl | sed 's/> / /g' | awk '/^#/ {next} {print $1 "\t" $3}' | sed 's/<http:\/\/dbpedia.org\/resource\///g' | sed 's/<http:\/\/www.w3.org\/2006\/03\/wn\/wn20\/instances\///g'  > wordnet_links.tsv
 join -1 2 -2 1 -t$'\t' <(sort -k2,2 -t$'\t' page_id.wiki_id.txt.sorted) <(sort -k1,1 -t$'\t' wordnet_links.tsv) > page_id.wiki_id.wordnet.tsv

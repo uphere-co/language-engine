@@ -47,14 +47,8 @@ import qualified WikiEL.ETL.RDF.Binary         as BR
 import qualified Data.ByteString.Lazy.Char8    as BL
 
 import qualified Graph.ETL                     as G.E
-import qualified WikiEL.EntityDisambiguation   as ED
 import qualified WikiEL                        as WEL
 import           Test.Data.Filename
-
-
--- For path scoring
-import qualified Data.Char                     as C
-import qualified Data.Text.Encoding            as T.E
 
 
 type LText = T.L.Text
@@ -178,7 +172,7 @@ wordnetType table@(WNTypes types names) name = f ts
   where
     key = H.wordHash name
     f Nothing = []
-    f (Just ts) = mapMaybe (\t -> M.lookup t names) ts
+    f (Just ts) = mapMaybe (`M.lookup` names) ts
     ts = M.lookup key types
 
 
@@ -336,57 +330,6 @@ main3reload = do
   mapM_ print (filter WEL.hasResolvedUID b5)
   mapM_ print (filter WEL.hasResolvedUID bb2)
 
-stripEdges :: [a] -> Maybe [a]
-stripEdges vs | length vs <2 = Nothing
-stripEdges vs = Just ((tail . init) vs)
-
-type ToBString   = M.Map H.WordHash G.E.BString
-type SortedEdges = (G.Direction, UV.Vector (H.WordHash, H.WordHash))
-type NodeCounts  = M.Map Text Int
-type Path        = [Text]
-consume :: ED.NodeNames -> SortedEdges -> NodeCounts -> Path -> IO NodeCounts
-consume _ _ cs ns | length ns < 2 = return cs
-consume names sorted cs (a:b:ns) = do
-  let
-    --hash word = H.wordHash (T.pack word)
-    hashT = H.wordHash
-    --showPath invs path = catMaybes (UV.foldl' f [] path) where f accum hash = M.lookup hash invs : accum
-    --showPathPairs names = mapM_  (print . (\(x,y)-> reverse (showPath names y) ++ tail (showPath names x)))
-    showPath invs path = map T.E.decodeUtf8 (catMaybes (UV.foldl' f [] path))
-      where
-        f accum hash = (M.lookup hash invs) : accum
-    showPathPair names (x,y) = reverse (showPath names y) ++ tail (showPath names x)
-  
-    getPaths len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hashT wp1) (hashT wp2)
-    paths = map (showPathPair names) (getPaths 1 a b)
-    fs = L.foldl' f
-      where f accum v = M.insertWith (+) v 1 accum
-    cs' = L.foldl' fs cs (mapMaybe stripEdges paths)
-  consume names sorted cs' ns
-
-countNodes :: FilePath -> Int -> IO [(T.Text, Int)]
-countNodes filepath cutoff = do
-  let
-    idx =0
-    idx1=1
-    idx2=2
-  Just store    <- lookupStore idx  :: IO (Maybe (Store G.E.Graph))
-  Just store1   <- lookupStore idx1 :: IO (Maybe (Store (G.Direction, UV.Vector (H.WordHash, H.WordHash))))
-  cc@(G.E.Graph edges names) <- readStore store
-  sortedEdges@(d,es) <- readStore store1  
-  lines <- readlines filepath
-  cs    <- consume names sortedEdges M.empty (take 1000000 lines)
-  let 
-    vs = L.sortOn ((\x -> -x) . snd) (M.toList cs)
-    filters = take cutoff vs
-  -- mapM_ print filters
-  mapM_ T.IO.putStrLn $ filter (not . C.isLower . T.head ) (map fst filters)
-  mapM_ T.IO.putStrLn $ filter (C.isLower . T.head ) (map fst filters)  
-  
-  return filters
-
-filterGen = do
-  countNodes "nodes.weighted.ran" 100
 
 {-
 filters <- countNodes "nodes.weighted.ran"
