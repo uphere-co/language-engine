@@ -45,22 +45,27 @@ splitDP tagged z = bareNounModifier tagged . fromMaybe (mkOrdDP z) $ do
   let rf = getRange . current
   ((guard (isChunkAs SBAR (current sbar)) >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
    (guard (isChunkAs VP (current sbar))   >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
-   (splitParentheticalApposition z))
+   (splitParentheticalModifier z))
 
-splitParentheticalApposition z = do
-  guard (isChunkAs NP (current z))
+
+splitParentheticalModifier :: Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))
+splitParentheticalModifier z = do
+  guard (isChunkAs NP (current z))         -- dominating phrase must be NP
   dp1 <- child1 z
-  guard (isChunkAs NP (current dp1))
+  guard (isChunkAs NP (current dp1))       -- first (head) phrase must be NP
   comma1 <- next dp1
-  guard (isPOSAs M_COMMA (current comma1))
-  dp2 <- next comma1
-  guard (isChunkAs NP (current dp2))
-  comma2 <- next dp2
-  guard (isPOSAs M_COMMA (current comma2))
+  guard (isPOSAs M_COMMA (current comma1)) -- followed by comma
+  z2 <- next comma1                        -- followed by a phrase
+  comma2 <- next z2
+  guard (isPOSAs M_COMMA (current comma2)) -- followed by comma
   guard (isNothing (next comma2))
   let rf = getRange . current
-  return (mkSplittedDP APMod (rf dp1) (rf dp2) z)
-
+  -- phrase inside parenthetical commas must be NP or clause
+  ((guard (isChunkAs NP (current z2)) >> return (mkSplittedDP APMod (rf dp1) (rf z2) z))
+   <|>
+   (guard (isChunkAs VP (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z))
+   <|>
+   (guard (isChunkAs SBAR (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z)))
 
 
 -- | This function is very ad hoc. Later we should have PP according to X-bar theory
