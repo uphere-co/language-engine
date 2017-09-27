@@ -50,8 +50,6 @@ data XP x tag = XP { _headX             :: Property x tag
 
 makeLenses ''XP
 
--- data DP a = SilentPRO | RExp a
-
 -- | Denote trace. We use our own trace annotation system.
 --   Empty categories are first identified as NULL and
 --   will be resolved step by step.
@@ -81,7 +79,7 @@ removeDPorPP (DP x) = x
 removeDPorPP (PrepP _ x) = x
 
 
-data SplitType = CLMod | BNMod
+data SplitType = CLMod | BNMod | APMod
                deriving (Show,Eq,Ord)
 
 getTokens :: BitreeICP as -> Text
@@ -94,46 +92,6 @@ headRange x = x^.headX._2
 
 
 headText x = (T.intercalate " " . tokensByRange (headRange x) . current) (x^.maximalProjection)
-
-
-
-{- 
-  getTokens (current z)
-headText (Splitted y)   = 
--}
-
-
-{- 
-
-
-data SplittedDP a = SplittedDP { _sdp_type     :: SplitType
-                               , _sdp_head     :: Range
-                               , _sdp_modifier :: Range
-                               , _sdp_original :: a }
-
-makeLenses ''SplittedDP
-
-
-data SplitDP a = Unsplitted a
-               | Splitted (SplittedDP a)
-
-makePrisms ''SplitDP
-
-getOriginal (Unsplitted z) = z
-getOriginal (Splitted x) = x^.sdp_original
-
-
-
-
-
-modifierRange z = z ^? _Splitted.sdp_modifier
-
-
-
-modifierText (Unsplitted z) = Nothing
-modifierText (Splitted y)   = (Just . T.intercalate " " . tokensByRange (y^.sdp_modifier) . current) (y^.sdp_original)
-
--}
 
 
 --
@@ -188,6 +146,5 @@ mkCP mc mcp tp = XP mc mcp () () tp
 
 data CPDP a = CPCase (CP a)
             | DPCase (DetP a)
-            --  | DPCase' (Range,Range) (Zipper a)    -- this is "appositional" case. will be treated more properly later.
 
 makePrisms ''CPDP

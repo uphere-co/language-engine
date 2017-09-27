@@ -97,13 +97,6 @@ formatDPorPP (DP z)          = formatDP z
 formatDPorPP (PrepP _mtxt z) = "PP-" <> formatDP z
 
 
-{- 
-formatSplittedDP x = let typtxt = case x^.sdp_type of
-                                    CLMod -> "clmod"
-                                    BNMod -> "bnmod"
-                     in "head:" <>  showRange (x^.sdp_head) <> "," <> typtxt <> ":" <> showRange (x^.sdp_modifier)
--}
-
 formatPAWS :: PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
            -> String
 formatPAWS pa =

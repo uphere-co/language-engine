@@ -8,7 +8,7 @@ import           Control.Lens             ((^.),to,_1,_2)
 import           Control.Monad            (guard)
 import           Data.Foldable            (toList)
 import           Data.List                (find)
-import           Data.Maybe               (fromMaybe)
+import           Data.Maybe               (fromMaybe,isNothing)
 --
 import           Data.BitreeZipper        (child1,current,next)
 import           Data.Range               (Range)
@@ -23,19 +23,20 @@ import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 
 mkOrdDP :: Zipper a -> DetP a
 mkOrdDP z = XP (rf z,rf z) z () Nothing Nothing
-  where rf = getRange . current 
+  where rf = getRange . current
 
 
 mkSplittedDP :: SplitType -> Range -> Range -> Zipper a -> DetP a
 mkSplittedDP typ h m o = case typ of
                            CLMod -> XP (rf o,h) o () Nothing  (Just m)
                            BNMod -> XP (rf o,h) o () (Just m) Nothing
-  where rf = getRange . current 
+                           APMod -> XP (rf o,h) o () (Just m) Nothing  -- apposition is an adjunct.
+  where rf = getRange . current
 
 
 splitDP :: [TagPos TokIdx MarkType]
         -> Zipper (Lemma ': as)
-        -> DetP (Lemma ': as) -- SplitDP (Zipper (Lemma ': as))
+        -> DetP (Lemma ': as)
 splitDP tagged z = bareNounModifier tagged . fromMaybe (mkOrdDP z) $ do
   guard (isChunkAs NP (current z))
   dp <- child1 z
@@ -43,7 +44,23 @@ splitDP tagged z = bareNounModifier tagged . fromMaybe (mkOrdDP z) $ do
   sbar <- next dp
   let rf = getRange . current
   ((guard (isChunkAs SBAR (current sbar)) >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
-   (guard (isChunkAs VP (current sbar))   >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)))
+   (guard (isChunkAs VP (current sbar))   >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
+   (splitParentheticalApposition z))
+
+splitParentheticalApposition z = do
+  guard (isChunkAs NP (current z))
+  dp1 <- child1 z
+  guard (isChunkAs NP (current dp1))
+  comma1 <- next dp1
+  guard (isPOSAs M_COMMA (current comma1))
+  dp2 <- next comma1
+  guard (isChunkAs NP (current dp2))
+  comma2 <- next dp2
+  guard (isPOSAs M_COMMA (current comma2))
+  guard (isNothing (next comma2))
+  let rf = getRange . current
+  return (mkSplittedDP APMod (rf dp1) (rf dp2) z)
+
 
 
 -- | This function is very ad hoc. Later we should have PP according to X-bar theory
@@ -59,12 +76,11 @@ splitPP tagged z = fromMaybe (mkOrdDP z) $ do
 
 -- | Identify bare noun subexpression inside noun phrase as modifier.
 --   I did not implement the already-splitted case. We need multiple-adjunct
---   structure. 
+--   structure.
 --
 bareNounModifier :: [TagPos TokIdx MarkType]
                  -> DetP (Lemma ': as)
                  -> DetP (Lemma ': as)
--- bareNounModifier _      x@(Splitted   _) = x                 -- for the time being
 bareNounModifier tagged x = fromMaybe x $ do
   let z = x^.maximalProjection
   guard (isChunkAs NP (current z))
