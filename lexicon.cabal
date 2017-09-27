@@ -18,6 +18,7 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Lexicon
                        Lexicon.Format
+                       Lexicon.Mapping.Addition
                        Lexicon.Mapping.Causation
                        Lexicon.Mapping.OntoNotesFrameNet
                        Lexicon.Merge

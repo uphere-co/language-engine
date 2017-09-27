@@ -8,7 +8,7 @@ import           Control.Applicative
 import           Control.Lens
 import           Data.Function                (on)
 import           Data.Hashable                (Hashable)
-import           Data.List                    (groupBy)
+import           Data.List                    (foldl',groupBy,maximumBy)
 import           Data.Maybe                   (listToMaybe)
 import           Data.Monoid                  ((<>))
 import           Data.Text                    (Text)
@@ -16,6 +16,9 @@ import qualified Data.Text            as T
 import qualified Data.Text.IO         as T.IO
 import           Data.Text.Read               (decimal)
 --
+import           NLP.Type.SyntaxProperty      (Voice)
+--
+import           Lexicon.Mapping.Addition     (additionalMapping)
 import           Lexicon.Type
 
 
@@ -79,16 +82,43 @@ parseRolePattInst ws@[lma',sense',mvoice,marg0,marg1,marg2,marg3,marg4,count] =
 
 
 
+adjustRolePattInsts :: [RolePattInstance Voice] -> [RolePattInstance Voice]
+adjustRolePattInsts roles = foldl' adjust roles additionalMapping
+  where
+    adjust :: [RolePattInstance Voice]
+           -> (SenseID,ArgPattern Voice GRel)
+           -> [RolePattInstance Voice]
+    adjust rs (sid,patt) =
+      let defresult = [(patt,1)]
+          (ps,ns) = break ((== sid) . (^._1)) rs
+      in case ns of
+           []          -> ps ++ ((sid,defresult) : ns)
+           ((_,opatts):ns') ->
+             if null opatts
+             then ps ++ ((sid,defresult) : ns')
+             else
+               let newresult =
+                     let (_,maxn) = maximumBy (compare `on` (^._2)) opatts
+                         (p1s,n1s) = break ((== patt) . (^._1)) opatts
+                     in case n1s of
+                          [] -> (patt,maxn) : p1s
+                          (_:n1s') -> p1s ++ ((patt,maxn) : n1s')
+               in ps ++ ((sid,newresult) : ns')
+
+
+
+
 loadRolePattInsts :: (Read v,Hashable v) => FilePath -> IO [RolePattInstance v]
 loadRolePattInsts fp = do
   txt <- T.IO.readFile fp
   let getLemmaSense x = x^._1
-  return . map (\xs  -> (getLemmaSense (head xs),map (\x->(x^._2,x^._3)) xs))
-         . groupBy ((==) `on` getLemmaSense)
-         . map parseRolePattInst
-         . map T.words
-         . T.lines
-         $ txt
+      roles_from_file = map (\xs  -> (getLemmaSense (head xs),map (\x->(x^._2,x^._3)) xs))
+                      . groupBy ((==) `on` getLemmaSense)
+                      . map parseRolePattInst
+                      . map T.words
+                      . T.lines
+                      $ txt
+  return roles_from_file
 
 
 cutHistogram :: Double -> [(a,Int)] -> [(a,Int)]
