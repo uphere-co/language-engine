@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Lexicon.Mapping.Addition where
 
 import           NLP.Type.SyntaxProperty
