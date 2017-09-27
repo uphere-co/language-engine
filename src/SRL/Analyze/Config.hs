@@ -5,9 +5,10 @@ module SRL.Analyze.Config where
 
 import           Control.Lens 
 
-data Config = Config { _showDetail :: Bool
+data Config = Config { _showDetail     :: Bool
                      , _showFullDetail :: Bool
-                     , _configFile :: FilePath
+                     , _bypassNER      :: Bool
+                     , _configFile     :: FilePath
                      -- , _useGlobalConfig :: Bool
                      }
             deriving (Show)

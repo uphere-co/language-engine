@@ -65,7 +65,6 @@ import SRL.Statistics (getGraphFromMG)
 queryProcess :: Analyze.Config
              -> J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> AnalyzePredata
-             -- -> ([(Text,NamedEntityClass)] -> [EntityMention Text])
              -> ([Sentence] -> [EntityMention Text])
              -> IO ()
 queryProcess config pp apredata netagger =
@@ -128,25 +127,15 @@ printMeaningGraph rolemap dstr = do
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
 
 
-loadConfig :: LexDataConfig
+loadConfig :: Bool
+           -> LexDataConfig
            -> IO (AnalyzePredata,[Sentence]->[EntityMention Text])
-{- 
-  (HashMap Text Inventory
-                 ,HashMap (Text, Text) Int
-                 ,FrameDB
-                 ,HashMap Text [(Text, Text)]
-                 ,[Sentence] -> [EntityMention Text]
-                 ,[RoleInstance]
-                 ,[RolePattInstance Voice]
-                 ) -}
-loadConfig cfg = do
+loadConfig bypass_ner cfg = do
   apredata@(AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats) <- loadAnalyzePredata cfg
-  {- emTagger <- loadEMtagger reprFile [ (orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)
-                                    , (locationClass, locationItemFile), (occupationClass, occupationItemFile)
-                                    , (humanRuleClass, humanRuleItemFile), (buildingClass, buildingItemFile) ] -}
-  netagger <- uncurry runEL <$> loadWikiData
+  netagger <- if bypass_ner
+                then return (const [])
+                else uncurry runEL <$> loadWikiData
   return (apredata,netagger)
-  -- (sensemap,sensestat,framedb,ontomap,netagger,rolemap,subcats)
 
 
 loadAnalyzePredata :: LexDataConfig -> IO AnalyzePredata
@@ -191,18 +180,7 @@ loadJVM = prepare (def & (tokenizer .~ True)
 --
 runAnalysis :: LexDataConfig -> Analyze.Config -> IO ()
 runAnalysis cfg acfg = do
-{-   subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
-  rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
-  framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
-  let ontomap = HM.fromList mapFromONtoFN
-  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
-  sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
-  let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-  -- emTagger <- loadEMtagger reprFile [(orgClass, orgItemFile), (personClass, personItemFile), (brandClass, brandItemFile)]
-  -}
-
-  (apredata,netagger) <- loadConfig cfg
-  -- let apredata = AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats
+  (apredata,netagger) <- loadConfig (acfg^.Analyze.bypassNER) cfg
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
     pp <- prepare (def & (tokenizer .~ True)
