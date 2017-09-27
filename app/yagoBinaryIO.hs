@@ -99,12 +99,12 @@ yago prevPartialBlock block = do
     --links = mapMaybe (interWikiLinks . parseUserDefined parserInterEnwikiLinks) lines
   --mapM_ print (rights aliases)
   --mapM_ T.IO.putStrLn synsets
-  --mapM_ T.IO.putStrLn typedCats
-  --mapM_ print taxons  
-  --mapM_ T.IO.putStrLn links
+  mapM_ T.IO.putStrLn typedCats -- for generating the `typedCats` file
+  --mapM_ print taxons    
+  --mapM_ T.IO.putStrLn links -- for generating the `interlinks` file
   
   --mapM_ T.IO.putStrLn wnTypes
-  mapM_ T.IO.putStrLn taxonomies
+  --mapM_ T.IO.putStrLn taxonomies
   
   return partialBlock
 

@@ -88,12 +88,13 @@ $ ps2pdf testApp.ps testApp.pdf
 ### Running WikiEL with disambiguation.
 #### Getting Wikipedia interlinks and WordNet synsets from YAGO
 ```
-$ lbzcat yago/yago3_entire_tsv.bz2 | grep "<linksTo>" > yago/wikilinks
-$ time cat yago/wikilinks | runhaskell -i./src/ test/testApp.hs > enwiki/interlinks
-real	60m40.005s
-
--- using `yago-bin` with `wordnetTypes`
 cabal build yago-bin --builddir=../dists/wiki-ner
+# using `yago-bin` with `interWikiLinks`
+# Get sub-dataset for speedup
+$ lbzcat yago/yago3_entire_tsv.bz2 | grep "<linksTo>" > yago/wikilinks
+$ time grep subclassOf yago/wikilinks | ../dists/wiki-ner/build/yago-bin/yago-bin > enwiki/interlinks
+# using `yago-bin` with `wordnetTypes`
+$ lbzcat yago/yago3_entire_tsv.bz2 | grep "<wordnet_" > yago/wordnet
 $ time grep subclassOf yago/wordnet | ../dists/wiki-ner/build/yago-bin/yago-bin > enwiki/wnTypes
 -- using `yago-bin` with `wordnetTaxonomy`
 cabal build yago-bin --builddir=../dists/wiki-ner
@@ -126,11 +127,35 @@ $ time cat nodes.weighted.ran | grep -Fxf orgs > nodes.weighted.ran.orgs
 real	0m58.049s
 
 
-# Generate filter.page by running Main.filterGen in test/testApp
+# Generate filter.page and get filtered interlinks
+$ cabal build node-filter
+# Put `interlinks` and `nodes.weighted.ran` into the current directory
+$ time ../dist/build/node-filter/node-filter > filter.page
+real	41m12.292s
 $ time awk -F"\t" 'NR == FNR { a[$1]; next } !($2 in a) {print}' filter.page enwiki/interlinks > interlinks.filtered
 real	0m47.716s
 ```
 
 #### Prepare data and run the executable for entity linking
-First, See "Wikidata entity annotation" section of `rnn++/README.md` to produce `wikidata.items` file. (Caution : as noted in the rnn++/README.md, must use wavewave's fork of nixpkgs; don't have clue why clang cannot find the standard header files, otherwise.)
-Second, to prepare data, follow a 'Run CoreNLP NER' section of `scripts/WikipediaETL.md` 
+First, See "Wikidata entity annotation" section of `rnn++/README.md` to produce `wikidata.items` and `wikidata.all_entities` files. (Caution : as noted in the rnn++/README.md, must use wavewave's fork of nixpkgs; don't have clue why clang cannot find the standard header files, otherwise.)
+
+Second, follow `ETL_process.md` for remaining steps.
+
+#### Add test datset for entity linking
+```
+# Read wiki-ner/scripts/WikipediaETL.md
+nix-shell shell-wiki.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 20 --cores 20
+
+#Follow a 'Run CoreNLP NER' section of `scripts/WikipediaETL.md` to run CoreNLP NER
+
+# Read HCoreNLP/README.md
+nix-shell shell.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 20 --cores 20
+./dist/build/annotate/annotate -f ../wiki-ner/data/bloomberg2.txt -p > a
+# copy and paste the POS list in wiki-ner/test/Test/data/POS.hs
+
+# Run WikiEL
+# In wiki-ner repo,
+cabal build wikiel
+./dist/build/wikiel/wikiel
+```
+
