@@ -6,9 +6,8 @@ tail -n +2 $DIR/businesspersons.csv | awk -F ',' '{print $1}' | awk -F "/" '{pri
 tail -n +2 $DIR/employees.csv       | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}' >> ne.business_person
 
 QEDIR=/opt/develset.rss/
-grep -Fwf ne.business_person /opt/develset.rss/wikidata.all_entities > uid.business_person
-grep -Fwf ne.company /opt/develset.rss/wikidata.all_entities    > uid.company
-grep -Fwf <(cat ne.*) /opt/develset.rss/wikidata.properties > property
+grep -Fwf ne.business_person $QEDIR/wikidata.all_entities > uid.business_person
+grep -Fwf ne.company $QEDIR/wikidata.all_entities    > uid.company
 
 tail -n +2 orgs.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > org_types
 tail -n +2 locations.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > loc_types
@@ -18,19 +17,19 @@ tail -n +2 brands.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > br
 tail -n +2 human_rules.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > human_rule_types
 tail -n +2 buildings.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > building_types
 
-grep -Fwf org_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.org.2
-grep -Fwf loc_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.loc.2
-grep -Fwf person_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.person.2
-grep -Fwf occupation_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.occupation.2
-grep -Fwf brand_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.brand.2
-grep -Fwf human_rule_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.human_rule.2
-grep -Fwf building_types $DIR/wikidata.items | awk -F '\t' '{print $1}' > ne.building.2
+grep -Fwf org_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.org.2
+grep -Fwf loc_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.loc.2
+grep -Fwf person_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.person.2
+grep -Fwf occupation_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.occupation.2
+grep -Fwf brand_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.brand.2
+grep -Fwf human_rule_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.human_rule.2
+grep -Fwf building_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.building.2
 
 # Without disambiguation, person should be limited to a much smaller set, such as business_person
 #cp ne.business_person ne.person.2
 cat ne.*.2 | sort | uniq > uid
 cat ../enwiki/names | sed 's/q/Q/g' | grep -Fwf uid  > tmp
-cat ../wikidata/wikidata.all_entities | grep -Fwf uid >> tmp
+cat $QEDIR/wikidata.all_entities | grep -Fwf uid >> tmp
 cat tmp | sort | uniq > names.2
 
 cp *.2 ../data
@@ -60,6 +59,8 @@ ln -s names.2 names
 #grep -Fwf items.org $DIR/wikidata.all_entities > ne.org
 #grep -Fwf items.person $DIR/wikidata.all_entities > ne.person
 #grep -Fwf items.occupation $DIR/wikidata.all_entities > ne.occupation
+
+grep -Fwf <(cat ne.*) $QEDIR/wikidata.properties > property
 
 #Note : it takes ~ 3 mins
 grep -Fwf ne.person $DIR/wikidata.all_entities > uid.person
