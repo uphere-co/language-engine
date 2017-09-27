@@ -30,12 +30,13 @@ mkSplittedDP :: SplitType -> Range -> Range -> Zipper a -> DetP a
 mkSplittedDP typ h m o = case typ of
                            CLMod -> XP (rf o,h) o () Nothing  (Just m)
                            BNMod -> XP (rf o,h) o () (Just m) Nothing
+                           APMod -> XP (rf o,h) o () (Just m) Nothing  -- apposition is an adjunct.
   where rf = getRange . current 
 
 
 splitDP :: [TagPos TokIdx MarkType]
         -> Zipper (Lemma ': as)
-        -> DetP (Lemma ': as) -- SplitDP (Zipper (Lemma ': as))
+        -> DetP (Lemma ': as)
 splitDP tagged z = bareNounModifier tagged . fromMaybe (mkOrdDP z) $ do
   guard (isChunkAs NP (current z))
   dp <- child1 z
@@ -64,7 +65,6 @@ splitPP tagged z = fromMaybe (mkOrdDP z) $ do
 bareNounModifier :: [TagPos TokIdx MarkType]
                  -> DetP (Lemma ': as)
                  -> DetP (Lemma ': as)
--- bareNounModifier _      x@(Splitted   _) = x                 -- for the time being
 bareNounModifier tagged x = fromMaybe x $ do
   let z = x^.maximalProjection
   guard (isChunkAs NP (current z))
