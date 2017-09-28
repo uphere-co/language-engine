@@ -54,6 +54,11 @@ import           Test.Data.Filename
 type LText = T.L.Text
 
 
+{-|
+  This is for parsing Wikidata dumps in TTL format.
+  Since each line cannot be parsed individually, it carries ParsingState.
+  For now, it just print triples, parsed from a chunk of input text.
+-}
 wikidata :: (ParsingState,Text) -> Text -> IO (ParsingState,Text)
 wikidata (!prevState, prevPartialBlock) block = do
   let

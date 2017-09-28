@@ -9,6 +9,12 @@ import qualified WikiEL                        as WEL
 import           Test.Data.Filename
 import           Test.Data.POS
 
+{-
+  Run an entity linker, WikiEL.
+  It is for client use, so it contains all the submodules, including filtering and disambiguation.
+  While it takes some minutes to load `tagger` and `entityResolve`,
+  one can reuse it for different inputs.
+-}
 runEL (tagger,entityResolve) nerFile posFile = do
   input_ner <- T.IO.readFile nerFile
   let
@@ -30,7 +36,7 @@ main = do
     entityResolve = WEL.disambiguateMentions edges uidTag titles
     run = runEL (tagger,entityResolve)
 
-  --{-
+  {-
   run nerNewsFile3 posNewsFile3
   print "///////////////////////////////////"
   run nerNewsFile4 posNewsFile4
@@ -39,6 +45,6 @@ main = do
   print "///////////////////////////////////"
   run nerNewsSet1 posNewsSet1
   print "///////////////////////////////////"
-  ---}
+  -}
   run nerNewsSet2 posNewsSet2
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-
+import           System.Environment                    (getArgs)
 import           Data.Text                             (Text)
 import           Data.Maybe                            (mapMaybe,catMaybes)
 import qualified Data.Text                     as T
@@ -28,7 +28,7 @@ type Path        = [Text]
 
 
 {-|
-
+  It accumulates counts of nodes in a path, except both edges.
 -}
 consume :: ED.NodeNames -> SortedEdges -> NodeCounts -> Path -> NodeCounts
 consume _ _ cs ns | length ns < 2 = cs
@@ -49,6 +49,12 @@ consume names sorted cs (a:b:ns) = consume names sorted cs' ns
       where f accum v = M.insertWith (+) v 1 accum
     cs' = L.foldl' fs cs (mapMaybe stripEdges paths)
 
+{-|
+  1. Randomly selects two nodes.
+  2. Get paths between the two nodes.
+  3. Count nodes in the paths and accumulate them.
+  4. Nodes with top N counts are the 'noisy hub nodes' and printed.
+-}
 countNodes :: FilePath -> FilePath -> Int -> IO [(T.Text, Int)]
 countNodes linkfile nodeSampleFile cutoff = do
   cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph linkfile
@@ -65,5 +71,10 @@ countNodes linkfile nodeSampleFile cutoff = do
 
 main :: IO ()
 main = do
-  filters <- countNodes "interlinks" "nodes.weighted.ran" 100
+  args <- getArgs  
+  let
+    -- Regarding how to produce linkefile and weightfile, see README.md 
+    [linkfile,weightfile] = args
+    n_node = 100  -- cutoff for a number of noisy hub nodes to select
+  filters <- countNodes linkfile weightfile n_node
   print ""

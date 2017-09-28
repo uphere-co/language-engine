@@ -117,7 +117,7 @@ real	0m58.049s
 # Generate filter.page and get filtered interlinks
 $ cabal build node-filter
 # Put `interlinks` and `nodes.weighted.ran` into the current directory
-$ time ../dist/build/node-filter/node-filter > filter.page
+$ time ../dist/build/node-filter/node-filter interlinks nodes.weighted.ran > filter.page
 real	41m12.292s
 $ time awk -F"\t" 'NR == FNR { a[$1]; next } !($2 in a) {print}' filter.page interlinks > interlinks.filtered
 real	0m47.716s

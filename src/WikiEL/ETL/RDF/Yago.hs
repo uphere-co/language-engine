@@ -10,6 +10,11 @@ import           WikiEL.ETL.RDF.Common      (parserObject,parserObject2,parserTy
 import           WikiEL.Type.RDF.Yago
 
 
+{-
+  This is a module for parsing YAGO dumps.
+  It is rather low level. In most client usages, it will be enough to check WikiEL.ETL.RDF.
+-}
+
 nullID :: YagoObject
 nullID = YagoID "None"
 

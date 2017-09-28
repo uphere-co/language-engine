@@ -17,6 +17,10 @@ import           WikiEL.Type.WordNet
 import           WikiEL.Type.Equity
 import           WikiEL.Type.FileFormat
 
+{-!
+  Attoparsec parsers for various types. 
+  In most cases, it will be simpler to use wrapping functions defined below.
+-}
 
 parserWikidataItemID :: Parser ItemID
 parserWikidataItemID = do
@@ -141,6 +145,10 @@ parserWikiTitleMappingRow = do
   title   <- column
   return (itemID, title)
   
+
+{-!
+  Wrapping functions of above parsers for ease of usages.
+-}
   
 itemID :: Text -> ItemID
 itemID = getParseResult parserWikidataItemID

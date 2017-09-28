@@ -13,6 +13,10 @@ import qualified Data.Char                     as C
 import           WikiEL.ETL.RDF.Common      (parserObject,parserObject2,parserTypedValue)
 import           WikiEL.Type.RDF.Wikidata
 
+{-
+  This is a module for parsing Wikidata dumps.
+  It is rather low level. In most client usages, it will be enough to check WikiEL.ETL.RDF.
+-}
 
 parserWikiAlias,parserWikiTypedValue,parserWikiTextValue,parserURLObject :: Parser WikidataObject
 parserWikiAlias = parserObject2 "\"" "\"@" "" f
