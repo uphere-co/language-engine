@@ -26,7 +26,7 @@ import           CoreNLP.Simple               (prepare)
 import           CoreNLP.Simple.Type          (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
 import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
-import           Lexicon.Query                (loadRoleInsts,loadRolePattInsts)
+import           Lexicon.Query                (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts)
 import           Lexicon.Type                 (RoleInstance,RolePattInstance)
 import           Lexicon.Data                 (LexDataConfig(..),cfg_framenet_framedir
                                               ,cfg_rolemap_file
@@ -147,7 +147,7 @@ loadAnalyzePredata cfg = do
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
-  subcats <- loadRolePattInsts (cfg^.cfg_verb_subcat_file)
+  subcats <- adjustRolePattInsts <$> loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats)
 
 
