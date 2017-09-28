@@ -17,22 +17,23 @@ tail -n +2 brands.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > br
 tail -n +2 human_rules.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > human_rule_types
 tail -n +2 buildings.csv | awk -F ',' '{print $1}' | awk -F "/" '{print $NF}'  > building_types
 
-grep -Fwf org_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.org.2
-grep -Fwf loc_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.loc.2
-grep -Fwf person_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.person.2
-grep -Fwf occupation_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.occupation.2
-grep -Fwf brand_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.brand.2
-grep -Fwf human_rule_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.human_rule.2
-grep -Fwf building_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.building.2
+VER='3'
+grep -Fwf org_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.org."$VER"
+grep -Fwf loc_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.loc."$VER"
+grep -Fwf person_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.person."$VER"
+grep -Fwf occupation_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.occupation."$VER"
+grep -Fwf brand_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.brand."$VER"
+grep -Fwf human_rule_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.human_rule."$VER"
+grep -Fwf building_types $QEDIR/wikidata.items | awk -F '\t' '{print $1}' > ne.building."$VER"
 
 # Without disambiguation, person should be limited to a much smaller set, such as business_person
 #cp ne.business_person ne.person.2
-cat ne.*.2 | sort | uniq > uid
-cat ../enwiki/names | sed 's/q/Q/g' | grep -Fwf uid  > tmp
+cat ne.*."$VER" | sort | uniq > uid
+cat names.redirect | sed 's/q/Q/g' | grep -Fwf uid  > tmp
 cat $QEDIR/wikidata.all_entities | grep -Fwf uid >> tmp
-cat tmp | sort | uniq > names.2
+cat tmp | sort | uniq > names."$VER"
 
-cp *.2 ../data
+cp *."$VER" ../data
 cd ../data
 rm ne.org
 rm ne.loc
@@ -42,14 +43,14 @@ rm ne.occupation
 rm ne.human_rule
 rm ne.building
 rm names
-ln -s ne.org.2    ne.org
-ln -s ne.loc.2    ne.loc
-ln -s ne.person.2 ne.person
-ln -s ne.occupation.2 ne.occupation
-ln -s ne.brand.2  ne.brand
-ln -s ne.human_rule.2 ne.human_rule
-ln -s ne.building.2 ne.building
-ln -s names.2 names
+ln -s ne.org."$VER"    ne.org
+ln -s ne.loc."$VER"    ne.loc
+ln -s ne.person."$VER" ne.person
+ln -s ne.occupation."$VER" ne.occupation
+ln -s ne.brand."$VER"  ne.brand
+ln -s ne.human_rule."$VER" ne.human_rule
+ln -s ne.building."$VER" ne.building
+ln -s names."$VER" names
 
 
 #########################################################
