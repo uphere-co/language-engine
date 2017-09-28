@@ -1,9 +1,9 @@
 ## Run CoreNLP NER
 ```
 # for word tokenization
-java edu.stanford.nlp.process.PTBTokenizer -preserveLines iphone.txt > iphone.ptb
+java edu.stanford.nlp.process.PTBTokenizer -preserveLinesjava edu.stanford.nlp.process.PTBTokenizer -preserveLines data/bloomberg2.txt > data/bloomberg2.ptb 
 # for NER
-java -mx48g edu.stanford.nlp.ie.NERClassifierCombiner -ner.model $CORENLP/classifiers/english.all.3class.distsim.crf.ser.gz,$CORENLP/classifiers/english.conll.4class.distsim.crf.ser.gz,$CORENLP/classifiers/english.muc.7class.distsim.crf.ser.gz -textFile iphone.ptb > iphone.ner
+java -mx48g edu.stanford.nlp.ie.NERClassifierCombiner -ner.model $CORENLP/classifiers/english.all.3class.distsim.crf.ser.gz,$CORENLP/classifiers/english.conll.4class.distsim.crf.ser.gz,$CORENLP/classifiers/english.muc.7class.distsim.crf.ser.gz -textFile data/bloomberg2.txt > data/bloomberg2.ner
 # for POS tagging : Check HCoreNLP/README.md 
 ```
 ## Output file schemes
