@@ -211,9 +211,9 @@ real	15m55.255s
 ## YAGO and Wikidata
 #### Get WordNet synset per entity
 ```
+cabal build yago-bin
 # run with `wikicatOfWordNetT`:
-$ time cat yago/yagoTaxonomy.tsv | runhaskell -i./src/ test/testApp.hs > yago/typedCats 
-real	0m54.654s
+$ cat yago/yagoTaxonomy.tsv | dist/build/yago-bin/yago-bin typedCat > typedCats 
 $ time join -1 2 -2 1 -t$'\t' <(sort -k2,2 -t$'\t' enwiki/page_id.category.wikidata.sorted) <(sort -k1,1 -t$'\t' yago/typedCats) > enwiki/page_id.category.wikidata.wordnet.sorted
 real	1m5.242s
 ```

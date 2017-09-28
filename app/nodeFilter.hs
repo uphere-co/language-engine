@@ -25,10 +25,15 @@ type ToBString   = M.Map H.WordHash G.E.BString
 type SortedEdges = (G.Direction, UV.Vector (H.WordHash, H.WordHash))
 type NodeCounts  = M.Map Text Int
 type Path        = [Text]
-consume :: ED.NodeNames -> SortedEdges -> NodeCounts -> Path -> IO NodeCounts
-consume _ _ cs ns | length ns < 2 = return cs
-consume names sorted cs (a:b:ns) = do
-  let
+
+
+{-|
+
+-}
+consume :: ED.NodeNames -> SortedEdges -> NodeCounts -> Path -> NodeCounts
+consume _ _ cs ns | length ns < 2 = cs
+consume names sorted cs (a:b:ns) = consume names sorted cs' ns
+  where
     --hash word = H.wordHash (T.pack word)
     hashT = H.wordHash
     --showPath invs path = catMaybes (UV.foldl' f [] path) where f accum hash = M.lookup hash invs : accum
@@ -43,7 +48,6 @@ consume names sorted cs (a:b:ns) = do
     fs = L.foldl' f
       where f accum v = M.insertWith (+) v 1 accum
     cs' = L.foldl' fs cs (mapMaybe stripEdges paths)
-  consume names sorted cs' ns
 
 countNodes :: FilePath -> FilePath -> Int -> IO [(T.Text, Int)]
 countNodes linkfile nodeSampleFile cutoff = do
@@ -51,8 +55,8 @@ countNodes linkfile nodeSampleFile cutoff = do
   let
     sortedEdges = G.sortEdges G.From  edges
   lines <- E.U.readlines nodeSampleFile
-  cs    <- consume names sortedEdges M.empty (take 1000000 lines)
   let 
+    cs = consume names sortedEdges M.empty (take 1000000 lines)    
     vs = L.sortOn ((\x -> -x) . snd) (M.toList cs)
     filters = take cutoff vs
   -- mapM_ print filters

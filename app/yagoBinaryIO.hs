@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import           System.Environment                    (getArgs)
 import           Data.Text                             (Text)
 import           Data.Maybe                            (mapMaybe,catMaybes)
 import           System.IO                             (stdin,stdout)
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
-
 
 import           WikiEL.ETL.RDF
 import           WikiEL.ETL.Util
@@ -13,6 +13,8 @@ import           WikiEL.ETL.RDF.Binary
 import           WikiEL.Type.WordNet                   (SynsetY)
 import           WikiEL.ETL.Parser                     (wordnetSynsetYAGO)
 
+-- yagoBinarySave and yagoBinaryLoad are rather experimental. 
+-- For now, a size of binary is too large and no noticeable performance gains.
 yagoBinarySave :: IO ()
 yagoBinarySave = do
   let
@@ -50,11 +52,13 @@ taxonomyWordNet (Right (_,YagoWordnet sub,YagoRDFSprop p,YagoWordnet super))|p =
     y = wordnetSynsetYAGO super
 taxonomyWordNet _ = Nothing
 
+-- | returns only if the triple describes a WordNet synset of a Wikipedia category.
 wikicatOfWordNetT :: Either a YagoRdfTriple -> Maybe Text
 wikicatOfWordNetT (Right (_,ts@(YagoWikicat cat),tv,to@(YagoWordnet synset)) ) = x
   where x = Just (T.concat [cat, "\t",synset])
 wikicatOfWordNetT _ = Nothing
 
+-- | returns only if the triple is an interlink between (English) Wikipedia.
 interWikiLinks :: Either a YagoRdfTriple -> Maybe Text
 interWikiLinks (Right (_,ts@(YagoWikiTitle s),_,to@(YagoWikiTitle o))) = Just (T.intercalate "\t" [s,o])
 interWikiLinks _ = Nothing
@@ -83,36 +87,33 @@ parserInterEnwikiLinks = do
 parseUserDefined = parseOnly
 -}
 
-yago :: Text -> Text -> IO Text
-yago prevPartialBlock block = do
+newtype Opt = Opt Text
+            deriving (Show, Eq)
+
+selector :: Opt -> Text -> Maybe Text
+selector opt | opt == Opt "typedCat"  = wikicatOfWordNetT.readlineYAGO  -- for generating the `typedCats` file
+selector opt | opt == Opt "interlink" = interWikiLinks . readlineYAGO   -- for generating the `interlinks` file
+selector opt | opt == Opt "synset"    = wordnetType . readlineYAGO
+selector opt | opt == Opt "taxonomy"  = wordnetTaxonomy . readlineYAGO
+selector opt                          = error "Unknown option"
+
+{-|
+  This is for filtering specific RDF triples and print them wiht a custom representation. 
+-}
+yago :: (Text -> Maybe Text) -> Text -> Text -> IO Text
+yago f prevPartialBlock block = do
   let
     (mainBlock,partialBlock) = T.breakOnEnd "\n" block
-    lines = T.lines (T.append prevPartialBlock mainBlock)
-    aliases = map (hasWikiAlias.readlineYAGO) lines
-    synsets = filter (isWordNet.readlineYAGO) lines
-    typedCats = mapMaybe (wikicatOfWordNetT.readlineYAGO) lines
-
-    taxons = mapMaybe (taxonomyWordNet.readlineYAGO) lines
-    links = mapMaybe (interWikiLinks . readlineYAGO) lines
-    wnTypes = mapMaybe (wordnetType . readlineYAGO) lines
-    taxonomies = mapMaybe (wordnetTaxonomy . readlineYAGO) lines
-    --links = mapMaybe (interWikiLinks . parseUserDefined parserInterEnwikiLinks) lines
-  --mapM_ print (rights aliases)
-  --mapM_ T.IO.putStrLn synsets
-  mapM_ T.IO.putStrLn typedCats -- for generating the `typedCats` file
-  --mapM_ print taxons    
-  --mapM_ T.IO.putStrLn links -- for generating the `interlinks` file
-  
-  --mapM_ T.IO.putStrLn wnTypes
-  --mapM_ T.IO.putStrLn taxonomies
-  
+    lines = T.lines (T.append prevPartialBlock mainBlock)    
+    filtered = mapMaybe f lines
+  mapM_ T.IO.putStrLn filtered  
   return partialBlock
 
-main1 = readBlocks stdin yago ""
-
-
 main :: IO ()
---main = yagoBinarySave
---main = yagoBinaryLoad
-main = main1
+main = do
+  args <- getArgs
+  let
+    opt = Opt (T.pack (head args))
+  readBlocks stdin (yago (selector opt)) ""
+
 
