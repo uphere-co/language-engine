@@ -38,19 +38,9 @@ nix-build release.nix --arg pkgs "import $HOME/repo/srcc/nixpkgs {}" --max-jobs 
 ```
 
 ## Run experiments in REPL with YAGO data.
-### Convert RDF dumps to Binary
-```
-# For YAGO
-cabal build yago-bin
-time ./dist/build/yago-bin/yago-bin
-```
 
 ### Run experiments
 ```
-# Get test dataset for experiments
--- uses `main1`
-cabal build yago-bin
-time cat yago/wordnet | dist/build/yago-bin/yago-bin > enwiki/wnTypes
 # To run experiments in REPL
 cabal new-repl testRun --builddir=../dists/wiki-ner
 # To run the compiled experiments app
@@ -88,17 +78,14 @@ $ ps2pdf testApp.ps testApp.pdf
 ### Running WikiEL with disambiguation.
 #### Getting Wikipedia interlinks and WordNet synsets from YAGO
 ```
-cabal build yago-bin --builddir=../dists/wiki-ner
+cabal build yago-bin
 # using `yago-bin` with `interWikiLinks`
 # Get sub-dataset for speedup
-$ lbzcat yago/yago3_entire_tsv.bz2 | grep "<linksTo>" > yago/wikilinks
-$ time grep subclassOf yago/wikilinks | ../dists/wiki-ner/build/yago-bin/yago-bin > enwiki/interlinks
-# using `yago-bin` with `wordnetTypes`
+$ lbzcat yago/yago3_entire_tsv.bz2 | grep "<linksTo>" > wikilinks
+$ time cat wikilinks | dist/build/yago-bin/yago-bin interlink > interlinks
 $ lbzcat yago/yago3_entire_tsv.bz2 | grep "<wordnet_" > yago/wordnet
-$ time grep subclassOf yago/wordnet | ../dists/wiki-ner/build/yago-bin/yago-bin > enwiki/wnTypes
--- using `yago-bin` with `wordnetTaxonomy`
-cabal build yago-bin --builddir=../dists/wiki-ner
-$ time grep subclassOf yago/wordnet | ../dists/wiki-ner/build/yago-bin/yago-bin > enwiki/taxonomies
+$ time grep subclassOf yago/wordnet | dist/build/yago-bin/yago-bin synset > wnTypes
+$ time grep subclassOf yago/wordnet | dist/build/yago-bin/yago-bin taxonomy > taxonomies
 real	0m3.048s
 
 cp enwiki/wnTypes enwiki/synsets
