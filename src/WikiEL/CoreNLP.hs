@@ -13,7 +13,9 @@ data EntityToken = EntityToken { word :: WordToken
                                , tag  :: NETag }
                  deriving (Show)
 
-
+{-|
+  This module is for parsing an output format of CoreNLP NER in CLI mode.
+-}
 parseNERToken :: Text -> EntityToken
 parseNERToken tokenStr = (\(x,y)-> (EntityToken (WordToken (T.dropEnd 1 x)) (NETag y))) $ T.breakOnEnd (T.pack "/") tokenStr
 

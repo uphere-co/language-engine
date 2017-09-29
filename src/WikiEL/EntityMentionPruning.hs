@@ -26,6 +26,9 @@ isEntityLinkable tags (IRange beg end) = V.any isEntityLinkableTag tokens
   where
     tokens = V.slice beg (end-beg) tags
 
+{-|
+  filterEMbyPOS requires that a text of an entity mention should contain a noun phrase.
+-}
 filterEMbyPOS :: V.Vector POSTag -> [EntityMention w] -> [EntityMention w]
 filterEMbyPOS wholeTags = filter f
   where

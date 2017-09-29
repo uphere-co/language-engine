@@ -125,7 +125,6 @@ Output : nodes.weighted.ran
 
 Input  : interlinks, nodes.weighted.ran,  `node-filter` binary
 Output : filter.page
-$ time ../dist/build/node-filter/node-filter > filter.page
 real	41m12.292s
 
 Input : filter.page, interlinks

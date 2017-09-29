@@ -31,6 +31,10 @@ newtype EntityMentionUID = EntityMentionUID { _emuid :: Int} deriving (Generic)
 instance Show EntityMentionUID where
   show (EntityMentionUID uid) = "EMuid " ++ show uid
 
+{-|
+  Self - entity mention; e.g. Michael Jordan
+  Cite - a reference to an entity mention; e.g. Jordan
+-}
 data UIDCite uid info = Cite { _uid  :: uid
                              , _ref  :: uid
                              , _info :: info} 
@@ -118,6 +122,11 @@ entityLinking targets src = foldr f src targets
         Just linked -> Cite idx (_uid target) linked
     f _      src = src
 
+{-
+  entityLinkings tries to resolve unresolved or ambiguous entity mentions using :
+    1. phrase inclusion
+    2. entity type matching (see WikiEL.WikiEntityClass.mayCite for details)
+-}
 entityLinkings :: Eq a => [EntityMention a] -> [EntityMention a]
 entityLinkings srcs = reverse (foldl' f [] srcs)
   where

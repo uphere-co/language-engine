@@ -41,6 +41,9 @@ instance FromJSON ItemClass where
 buildItemClass :: Text -> Text -> ItemClass
 buildItemClass x name = ItemClass (itemID x) name
 
+{-|
+  A list of constant values for Wikipedia entity classes
+-}
 otherClass  = buildItemClass "Q35120"  "Other"-- maps to entity (Q35120), which means "anything"
 orgClass    = buildItemClass "Q43229"  "Organization"
 personClass = buildItemClass "Q215627" "Person"
@@ -58,6 +61,10 @@ fromNEClass N.Person = personClass
 fromNEClass N.Loc    = locationClass
 fromNEClass _        = otherClass
 
+{-| 
+  Since CoreNLP NER classes, NEClass, are more coarse, we need inclusion, or a sort of subclass, relationship 
+  between ItemClass and NEClass.
+-}
 mayCite :: NEClass -> ItemClass -> Bool 
 mayCite N.Org    c | c==orgClass      = True
 mayCite N.Person c | c==personClass   = True

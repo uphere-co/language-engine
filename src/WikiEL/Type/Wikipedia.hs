@@ -2,6 +2,15 @@
 
 module WikiEL.Type.Wikipedia where
 
+
+{-|
+  Each Wikipedia entity has their own page with a unique title.
+  Internally, each title has an unique page ID, too. 
+  This IDs are appeared in Wikipedia dumps.
+  PageTitle is for representing Wikipedia title.
+  PageID is for representing a page id of a title.
+-}
+
 newtype PageID = PageID {_id :: Int }
                deriving (Eq, Ord)
 
