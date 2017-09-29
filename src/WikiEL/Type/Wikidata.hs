@@ -7,6 +7,13 @@ import           Data.Aeson
 import           Data.Text                             (Text)
 import           GHC.Generics                          (Generic)
 
+{-|
+  Each Wikidata entity has an unique ID, e.g. Q30 for USA.
+  ItemID is for representing the ID.
+  PropertyID is for Wikidata properties.
+  ItemRepr is for a name or an alias of Wikidata entity.
+-}
+
 newtype ItemID = ItemID { _itemID :: Int }
                deriving (Eq,Ord,Generic)
 

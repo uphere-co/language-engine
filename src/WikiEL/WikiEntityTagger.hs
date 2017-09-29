@@ -32,6 +32,12 @@ import           Assert                                (massertEqual,eassertEqua
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
 import qualified WikiEL.Type.Wikidata         as Wiki
 
+{-|
+  WikiEL.WikiEntityTagger is a text-match based Wikipedia/Wikidata entity tagger. 
+  With greedy algorithm, it tags a phrase if it matches with a name or an alias of an entity.
+-}
+
+
 type WordsHash = UV.Vector WordHash
 
 ithElementOrdering :: Int -> WordsHash -> WordsHash -> Ordering

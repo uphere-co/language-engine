@@ -18,6 +18,7 @@ data TurtleState = Comma
                  | End
                  deriving (Show, Eq)
 
+-- | A TurtleRelation instance represents a line of Wikidata RDF dump in TTL format.
 data TurtleRelation = RelationSVO WikidataObject WikidataObject WikidataObject
                     | RelationVO  WikidataObject WikidataObject
                     | RelationO   WikidataObject

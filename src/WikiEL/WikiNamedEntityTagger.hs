@@ -28,6 +28,14 @@ import qualified WikiEL.WikiEntityClass        as WEC
 import qualified NLP.Type.NamedEntity          as NE
 
 
+
+{-|
+  This module combines Wikidata tagger, WikiEL.WikiEntityTagger, and CoreNLP NER.
+  by discarding possiblities that both results are inconsistent.
+-}
+
+
+
 type NEClass = NamedEntityClass
 
 

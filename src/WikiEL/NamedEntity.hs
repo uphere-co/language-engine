@@ -9,6 +9,10 @@ import           Data.Monoid
 
 import           NLP.Type.NamedEntity
 
+{-|
+  CoreNLP NER tags per word. But named entities are often phrases.
+  The word fragments should be merged to recover entities.
+-}
 partitionFrags :: [NamedEntityFrag] -> [[NamedEntityFrag]]
 partitionFrags = foldr f []
   where
