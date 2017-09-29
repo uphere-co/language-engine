@@ -13,6 +13,12 @@ import qualified Data.List                     as L
 import           WikiEL.ETL.Util                        (readlines)
 
 
+{-|
+  InvestopediaTerm is for representing page titles in Investopedia.
+  The loadInvestopediaTagger is a text-match based tagger.
+-}
+
+
 newtype InvestopediaTerm = InvestopediaTerm Text
                          deriving (Show,Eq)
 type InvestopediaTerms = [Text]
