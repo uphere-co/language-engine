@@ -33,7 +33,7 @@ type TestVerbProp = (Text,Int,(Tense,Aspect,Voice,[Text],Maybe Text),[(Int,(Lemm
 ex1 ,ex2 ,ex3 ,ex4 ,ex5 ,ex6 ,ex7 ,ex8 ,ex9 ,ex10 :: TestVerbProp
 ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20 :: TestVerbProp
 ex21,ex22,ex23,ex24,ex25,ex26,ex27,ex28,ex29,ex30 :: TestVerbProp
-ex31 :: TestVerbProp
+ex31,ex32,ex33                                    :: TestVerbProp
 
 
 ex1 = ( "He was fined $25,000."
@@ -298,11 +298,18 @@ ex32 = ( "A former executive threw his client under the bus by using his knowled
        )
 
 
+ex33 = ( "E-commerce is not going to eliminate the retailing sector of the country."
+       , 5
+       , (Present,Simple,Active, ["be","go","to"], Just "not")
+       , [(0,("e-commerce","E-commerce")),(1,("be","is")),(2,("not","not")),(3,("go","going")),(4,("to","to")),(5,("eliminate","eliminate")),(6,("the","the")),(7,("retailing","retailing")),(8,("sector","sector")),(9,("of","of")),(10,("the","the")),(11,("country","country")),(12,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("NN","E-commerce")],PN "VP" [PL ("VBZ","is"),PL ("RB","not"),PN "VP" [PL ("VBG","going"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","eliminate"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","retailing"),PL ("NN","sector")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("DT","the"),PL ("NN","country")]]]]]]]],PL (".",".")]]
+       )
+
 testcases :: [TestVerbProp]
 testcases = [ ex1, ex2, ex3, ex4, ex5, ex6, ex7, ex8, ex9,ex10
             ,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20
             ,ex21,ex22,ex23,ex24,ex25,ex26,ex27,ex28,ex29,ex30
-            ,ex31,ex32
+            ,ex31,ex32,ex33
             ]
 
 

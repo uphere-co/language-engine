@@ -40,11 +40,11 @@ auxBe z fd fg fn f =
       | isLemmaAs "be" (current z) && isPOSAs VBG (current z) -> fg
       | isLemmaAs "be" (current z) && isPOSAs VBN (current z) -> fn
       | isLemmaAs "be" (current z)                            -> f
-      | otherwise                                             -> Nothing  
+      | otherwise                                             -> Nothing
 
 
 auxHave :: BitreeZipperICP (Lemma ': as) -> Maybe Tense
-auxHave z = 
+auxHave z =
   if | isLemmaAs "have" (current z) && isPOSAs VBD (current z) -> return Past
      | isLemmaAs "have" (current z)                            -> return Present
      | otherwise                                               -> Nothing
@@ -64,19 +64,28 @@ findPrevVerb z = do
 
 
 findMWAux :: (GetIntLemma tag) =>
-             Bool 
+             Bool
           -> BitreeZipperICP tag
           -> [(BitreeZipperICP tag, (Int,Lemma))]
 findMWAux withto z
-  | withto         = do p <- maybeToList (parent z)
-                        guard (isChunkAs VP (current p) && isNothing (prev p))
-                        p' <- maybeToList (parent p)
-                        guard (isChunkAs S (current p'))
-                        p'' <- maybeToList (parent p')
-                        guard (isChunkAs VP (current p'') && isNothing ((prev <=< prev) p'))
-                        c <- maybeToList (child1 p'')
-                        let i = current c in guard (isLemmaAs "have" i || isLemmaAs "ought" i || isLemmaAs "use" i) 
-                        mapMaybe (\x -> (x,) <$> intLemma x) [c,z] 
+  | withto = fromMaybe [] $ do
+               -- z is to.
+               p   <- parent z
+               guard (isChunkAs VP (current p) && isNothing (prev p))
+               p'  <- parent p
+               guard (isChunkAs S (current p'))
+               p'' <- parent p'
+               guard (isChunkAs VP (current p'') && isNothing ((prev <=< prev) p'))
+               c   <- child1 p''
+               let i = current c
+               ((do guard (isLemmaAs "have" i || isLemmaAs "ought" i || (isLemmaAs "use" i && isPOSAs VBD i))
+                    return $ mapMaybe (\x -> (x,) <$> intLemma x) [c,z])
+                <|>
+                (do guard (isLemmaAs "go" i && isPOSAs VBG i)
+                    p''' <- parent p''
+                    c' <- child1 p'''
+                    guard (isLemmaAs "be" (current c'))
+                    return $ mapMaybe (\x -> (x,) <$> intLemma x) [c',c,z]))
   | otherwise      = (z,) <$> maybeToList (intLemma z)   -- not implemented yet
 
 
@@ -95,7 +104,7 @@ findAux lma z = do
      | otherwise                  -> findAux lma p
 
 
-findNeg :: (GetIntLemma tag) => 
+findNeg :: (GetIntLemma tag) =>
            BitreeZipperICP tag
         -> Maybe (BitreeZipperICP tag, (Int,Lemma))
 findNeg z = (\z'->(z',) <$> intLemma z') =<< (findNegInSiblings prev z <|> findNegInSiblings next z)
@@ -105,7 +114,7 @@ findNeg z = (\z'->(z',) <$> intLemma z') =<< (findNegInSiblings prev z <|> findN
 
 auxNegWords
   :: (GetIntLemma tag) =>
-     Lemma   
+     Lemma
   -> BitreeZipperICP tag
   -> [BitreeZipperICP tag]
   -> AuxNegWords (BitreeZipperICP tag)
@@ -134,7 +143,7 @@ tenseAspectVoiceAuxNeg z = do
               Just z1 -> do
                 ((auxBe z1
                   (return (Past,Simple,Passive,auxNegWords lma z1 [z1,z]))
-                  (findPrevVerb z1 >>= \z2 -> 
+                  (findPrevVerb z1 >>= \z2 ->
                     auxBe z2
                       (return (Past,Progressive,Passive,auxNegWords lma z2 [z2,z1,z]))
                       Nothing
@@ -164,7 +173,7 @@ tenseAspectVoiceAuxNeg z = do
               Just z1 -> do
                 ((auxBe z1
                   (return (Past,Simple,Passive,auxNegWords lma z1 [z1,z]))
-                  (findPrevVerb z1 >>= \z2 -> 
+                  (findPrevVerb z1 >>= \z2 ->
                     auxBe z2
                       (return (Past,Progressive,Passive,auxNegWords lma z2 [z2,z1,z]))
                       Nothing
@@ -181,7 +190,7 @@ tenseAspectVoiceAuxNeg z = do
   --
   oth lma = return (Present,Simple,Active,auxNegWords lma z [z])
 
-  
+
 verbProperty :: BitreeZipperICP '[Lemma] -> Maybe (VerbProperty (BitreeZipperICP '[Lemma]))
 verbProperty z = do
   i <- getLeafIndex (current z)
@@ -191,15 +200,19 @@ verbProperty z = do
 
 
 verbPropertyFromPennTree :: IntMap Lemma -> PennTree -> [VerbProperty (BitreeZipperICP '[Lemma])]
-verbPropertyFromPennTree lemmamap pt = 
+verbPropertyFromPennTree lemmamap pt =
   let lemmapt = mkBitreeICP lemmamap pt
       --
       phase1 z = case getRoot (current z) of
                   Right (_,ALeaf (pos,_) annot)
-                    -> if isVerb pos && ahead annot /= "be" && ahead annot /= "have" && ahead annot /= "do" && ahead annot /= "use"
+                    -> if isVerb pos && ahead annot /= "be" &&
+                                        ahead annot /= "have" &&
+                                        ahead annot /= "do" &&
+                                        ahead annot /= "go" &&
+                                        ahead annot /= "use"
                        then verbProperty z
                        else Nothing
-                  _ -> Nothing 
+                  _ -> Nothing
       vps1 = mapMaybe phase1 (toList (mkBitreeZipper [] lemmapt))
       identified_verbs1 = concatMap (\vp -> vp^..(vp_words.traverse._2._1)) vps1
       --
@@ -224,7 +237,7 @@ verbPropertyFromPennTree lemmamap pt =
 
 
 
--- | excerpted from https://en.wiktionary.org/wiki/Category:English_control_verbs 
+-- | excerpted from https://en.wiktionary.org/wiki/Category:English_control_verbs
 controlVerbs :: [Text]
 controlVerbs =
   [ "allow"
@@ -296,7 +309,7 @@ copulativeVerbs =
   , "seem"
   , "sound"
   , "test"
-  ] 
+  ]
 
 {-
  -- from werdy
