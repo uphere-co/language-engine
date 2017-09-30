@@ -290,11 +290,19 @@ ex31 = ( "They will have the votes to pass it as soon as next week."
        )
 
 
+ex32 = ( "A former top HSBC Holdings Plc executive threw his Scottish client \"under the bus\" by using his knowledge of its large planned currency transaction to do his own trading first, a U.S. prosecutor said on Monday at the start of a closedly-watched trail."
+       , 27
+       , (Present, Progressive, Active, ["to"], Nothing)
+       , [(0,("a","A")),(1,("former","former")),(2,("top","top")),(3,("HSBC","HSBC")),(4,("Holdings","Holdings")),(5,("Plc","Plc")),(6,("executive","executive")),(7,("throw","threw")),(8,("he","his")),(9,("scottish","Scottish")),(10,("client","client")),(11,("``","``")),(12,("under","under")),(13,("the","the")),(14,("bus","bus")),(15,("''","''")),(16,("by","by")),(17,("use","using")),(18,("he","his")),(19,("knowledge","knowledge")),(20,("of","of")),(21,("its","its")),(22,("large","large")),(23,("planned","planned")),(24,("currency","currency")),(25,("transaction","transaction")),(26,("to","to")),(27,("do","do")),(28,("he","his")),(29,("own","own")),(30,("trading","trading")),(31,("first","first")),(32,(",",",")),(33,("a","a")),(34,("U.S.","U.S.")),(35,("prosecutor","prosecutor")),(36,("say","said")),(37,("on","on")),(38,("Monday","Monday")),(39,("at","at")),(40,("the","the")),(41,("start","start")),(42,("of","of")),(43,("a","a")),(44,("closedly-watched","closedly-watched")),(45,("trail","trail")),(46,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP-TMP" [PN "NP" [PL ("DT","A"),PL ("JJ","former"),PL ("JJ","top"),PL ("NNP","HSBC"),PL ("NNPS","Holdings"),PL ("NNP","Plc"),PL ("NN","executive")],PN "SBAR" [PN "S" [PN "VP" [PL ("VBD","threw"),PN "NP" [PL ("PRP$","his"),PL ("JJ","Scottish"),PL ("NN","client")],PL ("``","``"),PN "PP" [PL ("IN","under"),PN "NP" [PL ("DT","the"),PL ("NN","bus")]],PL ("''","''"),PN "PP" [PL ("IN","by"),PN "S" [PN "VP" [PL ("VBG","using"),PN "NP" [PN "NP" [PL ("PRP$","his"),PL ("NN","knowledge")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("PRP$","its"),PL ("JJ","large"),PL ("JJ","planned"),PL ("NN","currency"),PL ("NN","transaction")]]],PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","do"),PN "NP" [PL ("PRP$","his"),PL ("JJ","own"),PL ("NN","trading")],PN "ADVP" [PL ("RB","first")]]]]]]]]]]],PL (",",","),PN "NP" [PL ("DT","a"),PL ("NNP","U.S."),PL ("NN","prosecutor")],PN "VP" [PL ("VBD","said"),PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Monday")]],PN "PP" [PL ("IN","at"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","start")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("DT","a"),PL ("JJ","closedly-watched"),PL ("NN","trail")]]]]],PL (".",".")]]
+       )
+
+
 testcases :: [TestVerbProp]
 testcases = [ ex1, ex2, ex3, ex4, ex5, ex6, ex7, ex8, ex9,ex10
             ,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20
             ,ex21,ex22,ex23,ex24,ex25,ex26,ex27,ex28,ex29,ex30
-            ,ex31
+            ,ex31,ex32
             ]
 
 
