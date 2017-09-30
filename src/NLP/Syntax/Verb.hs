@@ -73,7 +73,7 @@ findMWAux withto z
                         p' <- maybeToList (parent p)
                         guard (isChunkAs S (current p'))
                         p'' <- maybeToList (parent p')
-                        guard (isChunkAs VP (current p''))
+                        guard (isChunkAs VP (current p'') && isNothing ((prev <=< prev) p'))
                         c <- maybeToList (child1 p'')
                         let i = current c in guard (isLemmaAs "have" i || isLemmaAs "ought" i || isLemmaAs "use" i) 
                         mapMaybe (\x -> (x,) <$> intLemma x) [c,z] 
