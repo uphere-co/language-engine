@@ -290,11 +290,19 @@ ex31 = ( "They will have the votes to pass it as soon as next week."
        )
 
 
+ex32 = ( "A former executive threw his client under the bus by using his knowledge to do his own trading first."
+       , 14
+       , (Present, Simple, Active, ["to"], Nothing)
+       , [(0,("a","A")),(1,("former","former")),(2,("executive","executive")),(3,("throw","threw")),(4,("he","his")),(5,("client","client")),(6,("under","under")),(7,("the","the")),(8,("bus","bus")),(9,("by","by")),(10,("use","using")),(11,("he","his")),(12,("knowledge","knowledge")),(13,("to","to")),(14,("do","do")),(15,("he","his")),(16,("own","own")),(17,("trading","trading")),(18,("first","first")),(19,(".","."))]
+       , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","A"),PL ("JJ","former"),PL ("NN","executive")],PN "VP" [PL ("VBD","threw"),PN "NP" [PL ("PRP$","his"),PL ("NN","client")],PN "PP" [PL ("IN","under"),PN "NP" [PL ("DT","the"),PL ("NN","bus")]],PN "PP" [PL ("IN","by"),PN "S" [PN "VP" [PL ("VBG","using"),PN "NP" [PL ("PRP$","his"),PL ("NN","knowledge"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","do"),PN "NP" [PL ("PRP$","his"),PL ("JJ","own"),PL ("NN","trading")],PN "ADVP" [PL ("RB","first")]]]]]]]]],PL (".",".")]]
+       )
+
+
 testcases :: [TestVerbProp]
 testcases = [ ex1, ex2, ex3, ex4, ex5, ex6, ex7, ex8, ex9,ex10
             ,ex11,ex12,ex13,ex14,ex15,ex16,ex17,ex18,ex19,ex20
             ,ex21,ex22,ex23,ex24,ex25,ex26,ex27,ex28,ex29,ex30
-            ,ex31
+            ,ex31,ex32
             ]
 
 
