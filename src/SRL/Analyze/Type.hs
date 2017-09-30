@@ -143,12 +143,11 @@ data MGVertex = MGEntity    { _mv_id :: Int
                             , _mv_range :: Range
                             , _mv_frame :: Text
                             , _mv_sense :: (SenseID,Bool)  -- ^ (ON sense ID, causation)
-                            , _mv_verb  :: VerbProperty Text -- (Text,Tense,Aspect,Voice,Maybe Text)
+                            , _mv_verb  :: VerbProperty Text
                             }
               | MGNominalPredicate { _mv_id    :: Int
                                    , _mv_range :: Range
                                    , _mv_frame :: Text
-                                   -- , _mv_verb  :: VerbProperty Text -- (Text,Tense,Aspect,Voice,Maybe Text)
                                    }
 
               deriving (Generic, Show)

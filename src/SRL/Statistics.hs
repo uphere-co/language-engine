@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
 
 module SRL.Statistics where
 
@@ -23,22 +24,26 @@ getGraphFromMG mg =
               graph  = buildG bounds edgs
           in (Just graph)
 
+
 numberOfPredicate :: SentStructure -> Int
 numberOfPredicate (SentStructure _ _ _ _ _ _ vstrs) = length vstrs
+
 
 numberOfMGVerbPredicate :: MeaningGraph -> Int
 numberOfMGVerbPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
   where
-    fmtVerb (MGEntity    _ _ _  _ )    = Nothing
-    fmtVerb (MGPredicate i _ _  _ _)   = Just i
-    fmtVerb (MGNominalPredicate i _ _) = Nothing
+    fmtVerb MGEntity           {..} = Nothing
+    fmtVerb MGPredicate        {..} = Just _mv_id
+    fmtVerb MGNominalPredicate {..} = Nothing
+
 
 numberOfMGPredicate :: MeaningGraph -> Int
 numberOfMGPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
   where
-    fmtVerb (MGEntity    _ _ _  _ )    = Nothing
-    fmtVerb (MGPredicate i _ _ _ _)    = Just i
-    fmtVerb (MGNominalPredicate i _ _) = Just i 
+    fmtVerb MGEntity           {..} = Nothing
+    fmtVerb MGPredicate        {..} = Just _mv_id
+    fmtVerb MGNominalPredicate {..} = Just _mv_id
+
 
 -- I change the name to farthest, not furthest
 farthestPath :: Graph -> Int
