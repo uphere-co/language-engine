@@ -40,7 +40,6 @@ import           NLP.Type.TagPos              (TagPos,TokIdx)
 --
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
-                                              -- ,AdjustedDetP(..), _WithPrep, getDetP
                                               ,DocStructure
                                               ,SentStructure
                                               ,VerbStructure
@@ -52,12 +51,6 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               )
 --
 import Debug.Trace
-
-
-
--- formatAdjustedDetP (WithPrep p _ z)  = "prep:"  <> p <> ", " <> formatDP z
--- formatAdjustedDetP (WithoutPrep z) = formatDP z
-
 
 
 mkPAWSTriples :: SentStructure
@@ -100,7 +93,7 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
 matchSubject :: [(PBArg,FNFrameElement)]
              -> Either (Zipper '[Lemma]) (DetP '[Lemma])
              -> ArgPattern p GRel
-             -> Maybe (FNFrameElement, {- AdjustedDetP -} CompVP '[Lemma])
+             -> Maybe (FNFrameElement, CompVP '[Lemma])
 matchSubject rolemap edp patt = do
   dp <- edp^?_Right            -- for the time being
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
@@ -116,7 +109,7 @@ validObject (CompVP_PrepP _ _) = Nothing
 matchObjects :: [(PBArg,FNFrameElement)]
              -> VerbP '[Lemma]
              -> ArgPattern p GRel
-             -> [(FNFrameElement, {- AdjustedDetP-} CompVP '[Lemma])]
+             -> [(FNFrameElement, CompVP '[Lemma])]
 matchObjects rolemap verbp patt = do
   (garg,obj') <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved.to (\x -> x >>= \case CompVP_DP z -> Just z; _ -> Nothing)) -- this should be changed
   obj <- maybeToList obj'
@@ -152,36 +145,36 @@ matchPrepArgs :: [(PBArg,FNFrameElement)]
               -> [TagPos TokIdx MarkType]
               -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
               -> ArgPattern p GRel
-              -> [(FNFrameElement, {- AdjustedDetP -} CompVP '[Lemma])]
+              -> [(FNFrameElement, CompVP '[Lemma])]
 matchPrepArgs rolemap tagged paws patt = do
   (p,(prep,mising)) <- pbArgForPP patt
   (o,z) <- maybeToList (matchPP tagged paws (prep,mising))
   let comp = CompVP_PP (XP (Prep_WORD prep) o () () z)
-  (, comp {- WithPrep prep o z -}) <$> maybeToList (lookup p rolemap)
+  (, comp) <$> maybeToList (lookup p rolemap)
 
 
 matchAgentForPassive :: [(PBArg,FNFrameElement)]
                      -> [TagPos TokIdx MarkType]
                      -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
                      -> ArgPattern p GRel
-                     -> Maybe (FNFrameElement, {- AdjustedDetP -} CompVP '[Lemma])
+                     -> Maybe (FNFrameElement, CompVP '[Lemma])
 matchAgentForPassive rolemap tagged paws patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
     (o,z) <- matchPP tagged paws ("by",Nothing)
     let comp = CompVP_PP (XP (Prep_WORD "by") o () () z)
-    (,{- WithPrep "by" o z -} comp) <$> lookup p rolemap
+    (,comp) <$> lookup p rolemap
 
 
 
 matchThemeForPassive :: [(PBArg,FNFrameElement)]
                      -> Either (Zipper '[Lemma]) (DetP '[Lemma])
                      -> ArgPattern p GRel
-                     -> Maybe (FNFrameElement, {- AdjustedDetP -} CompVP '[Lemma])
+                     -> Maybe (FNFrameElement, CompVP '[Lemma])
 matchThemeForPassive rolemap edp patt = do
   dp <- edp^?_Right              -- for the time being
   (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
   let comp = CompVP_DP dp
-  (,{- WithoutPrep dp -} comp) <$> lookup p rolemap
+  (,comp) <$> lookup p rolemap
 
 
 matchSO :: [(PBArg,FNFrameElement)]
@@ -190,7 +183,7 @@ matchSO :: [(PBArg,FNFrameElement)]
            , VerbP '[Lemma]
            , PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
         -> (ArgPattern p GRel, Int)
-        -> ((ArgPattern p GRel, Int), [(FNFrameElement, {- AdjustedDetP -} CompVP '[Lemma])])
+        -> ((ArgPattern p GRel, Int), [(FNFrameElement, CompVP '[Lemma])])
 matchSO rolemap tagged (dp,verbp,paws) (patt,num) =
   case verbp^.headX.vp_voice of
     Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap tagged paws patt )
@@ -219,7 +212,7 @@ matchRoles :: [(PBArg,FNFrameElement)]
            -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
            -> [(ArgPattern () GRel, Int)]
            -> Either (Zipper '[Lemma]) (DetP '[Lemma])
-           -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, {- AdjustedDetP -} CompVP '[Lemma])])
+           -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, CompVP '[Lemma])])
 matchRoles rolemap tagged verbp paws toppattstats dp =
     (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy (flip compare `on` numMatchedRoles)) matched
   where
@@ -236,7 +229,7 @@ matchFrameRolesForCauseDual :: [TagPos TokIdx MarkType]
                             -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
                             -> LittleV
                             -> (Text, SenseID, [(PBArg, FNFrameElement)])
-                            -> (Text, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, {- AdjustedDetP -} CompVP '[Lemma])]))
+                            -> (Text, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])]))
 matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sense1,rolemap1) =
   let (frame2,sense2,rolemap2) = if causetype == LVDual
                                  then extendRoleMapForDual (frame1,sense1,rolemap1)
@@ -260,7 +253,7 @@ matchFrameRolesAll :: [TagPos TokIdx MarkType]
                    -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
                    -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
                    -> [((RoleInstance,Int),[(ArgPattern () GRel,Int)])]
-                   -> [((Text,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, {- AdjustedDetP -} CompVP '[Lemma])])),Int)]
+                   -> [((Text,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])),Int)]
 matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   (rm,toppatts) <- rmtoppatts
   let sense1 = rm^._1._1
@@ -275,8 +268,8 @@ matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
 --
 matchExtraRoles :: [TagPos TokIdx MarkType]
                 -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
-                -> [(FNFrameElement,{- AdjustedDetP -} CompVP '[Lemma])]
-                -> [(FNFrameElement,{- AdjustedDetP -} CompVP '[Lemma])]
+                -> [(FNFrameElement, CompVP '[Lemma])]
+                -> [(FNFrameElement, CompVP '[Lemma])]
 matchExtraRoles tagged paws felst =
   let mmeans = do
         guard (isNothing (find (\x -> x^._1 == "Means") felst))
@@ -342,7 +335,7 @@ matchFrame :: [TagPos TokIdx MarkType]
            -> Maybe (Range,VerbProperty (Zipper '[Lemma])
                     ,Text
                     ,(SenseID,Bool)
-                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, {- AdjustedDetP -} CompVP '[Lemma])]))
+                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])]))
 matchFrame tagged (vstr,paws) = do
   let cp = paws^.pa_CP
       verbp = cp^.complement.complement
