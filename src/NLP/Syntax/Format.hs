@@ -160,7 +160,7 @@ formatCPHierarchy :: Bitree (Range,CPDP as) (Range,CPDP as) -> Text
 formatCPHierarchy tr = formatBitree fmt tr
   where
         fmt (rng,CPCase _) = "CP" <> showRange rng
-        fmt (rng,DPCase x) = "DP" <> formatDP x
+        fmt (rng,DPCase x) = formatDP x
 
 formatClauseStructure :: ClauseTree -> Text
 formatClauseStructure clausetr =
