@@ -35,7 +35,7 @@ import           NLP.Syntax.Noun              (splitPP)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util              (isLemmaAs)
+import           NLP.Syntax.Util              (isLemmaAs,intLemma0)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 import           NLP.Type.TagPos              (TagPos,TokIdx)
@@ -453,15 +453,14 @@ meaningGraph sstr =
                   i <- maybeToList (HM.lookup (0,rng) rngidxmap)   -- frame
                   (_,felst) <- maybeToList mselected
                   (fe,x) <- felst
-                  {-
-                  x <- maybeToList (x0 ^? _CompVP_DP)
-                  let z = getDetP x
-                      mprep = x ^? _WithPrep . _1
-                  let rng' = headRange z
-                  -}
                   (rng',mprep) <- case x of
                                     CompVP_Unresolved _ -> []
-                                    CompVP_CP cp -> maybeToList (cp^.maximalProjection) >>= \z_cp -> return (getRange (current z_cp),Nothing)
+                                    CompVP_CP cp -> maybeToList (cp^.maximalProjection) >>= \z_cp ->
+                                                      let mprep = case cp^.headX of
+                                                                    C_PHI -> Nothing
+                                                                    C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
+                                                                                >>= \prep -> if prep == "that" then Nothing else return prep
+                                                      in return (getRange (current z_cp),mprep)
                                     CompVP_DP dp -> return (headRange dp,Nothing)
                                     CompVP_PP pp -> return (headRange (pp^.complement),pp^?headX._Prep_WORD)
                   i' <- maybeToList (HM.lookup (0,rng') rngidxmap)  -- frame element
