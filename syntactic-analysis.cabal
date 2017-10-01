@@ -29,7 +29,8 @@ library
                        NLP.Syntax.Util
                        NLP.Syntax.Verb
                        NLP.Syntax.Verb.Old
-  other-modules:
+  other-modules:       NLP.Syntax.Type.XBar.Internal
+                       NLP.Syntax.Type.XBar.TH
   other-extensions:
   build-depends:       base >=4.9,
                        bifunctors,
