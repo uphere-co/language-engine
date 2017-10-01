@@ -52,6 +52,9 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 --
 import Debug.Trace
 
+import Text.Printf
+import Data.List (intercalate)
+
 
 mkPAWSTriples :: SentStructure
               -> ([Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
@@ -111,19 +114,22 @@ matchObjects :: [(PBArg,FNFrameElement)]
              -> ArgPattern p GRel
              -> [(FNFrameElement, CompVP '[Lemma])]
 matchObjects rolemap verbp patt = do
-  (garg,obj') <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved.to (\x -> x >>= \case CompVP_DP z -> Just z; _ -> Nothing)) -- this should be changed
-  obj <- maybeToList obj'
+  (garg,obj) <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved._Just) -- .to (\x -> x >>= \case CompVP_DP z -> Just z; _ -> Nothing)) -- this should be changed
+  guard (case obj of CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False)
+  -- obj <- maybeToList obj'
+  {- 
   ctag <- case obj ^. maximalProjection.to current.to getRoot of
             Left (_,node) -> [chunkTag node]
-            _             -> []
+            _             -> []  -}
   (p,a) <- maybeToList (pbArgForGArg garg patt)
-  case ctag of
+  {- case ctag of
     NP   -> guard (a == GR_NP   (Just garg))
     S    -> guard (a == GR_SBAR (Just garg))
     SBAR -> guard (a == GR_SBAR (Just garg))
-    _    -> []
+    _    -> [] -}
   fe <- maybeToList (lookup p rolemap)
-  return (fe, CompVP_DP obj)  -- this should be changed
+  return (fe, obj)
+  -- return (fe, CompVP_DP obj)  -- this should be changed
 
 
 
@@ -186,7 +192,7 @@ matchSO :: [(PBArg,FNFrameElement)]
         -> ((ArgPattern p GRel, Int), [(FNFrameElement, CompVP '[Lemma])])
 matchSO rolemap tagged (dp,verbp,paws) (patt,num) =
   case verbp^.headX.vp_voice of
-    Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap tagged paws patt )
+    Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ (let x = matchObjects rolemap verbp patt in trace ("TEST:::::" ++ intercalate "\n" (map showMatchedFE' x)) x ) ++ matchPrepArgs rolemap tagged paws patt )
     Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap tagged paws patt,matchThemeForPassive rolemap dp patt] ++ matchPrepArgs rolemap tagged paws patt)
 
 
@@ -373,6 +379,22 @@ entityFromDP dp =
   in (rng,txt,mrngtxt')
 
 
+showMatchedFE' :: (FNFrameElement, CompVP '[Lemma]) -> String
+--                                         FE   range prep text
+showMatchedFE' (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) ("" :: Text) (headText dp)
+showMatchedFE' (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe (maybe "" (show.getRange.current) mz) ("" :: Text) (maybe "" gettext mz)
+  where mz = cp^.maximalProjection
+        gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
+showMatchedFE' (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) prep (headText dp)
+  where dp = pp^.complement
+        prep = case pp^.headX of
+                 Prep_NULL -> ""
+                 Prep_WORD p -> p
+showMatchedFE' (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
+  where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
+
+
+
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
   let (cpstr,lst_vstrpaws) = mkPAWSTriples sstr
@@ -387,14 +409,12 @@ meaningGraph sstr =
       entities0 = do (_,_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
                      (fe,x) <- felst
-                     case x of
-                       CompVP_Unresolved _ -> []
-                       CompVP_CP cp -> [] -- CP is not an entity.
-                                        {- let gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
-                                             in maybeToList (cp^.maximalProjection) >>= \z_cp ->
-                                            return (getRange (current z_cp),gettext z_cp,Nothing) -}
-                       CompVP_DP dp -> return (entityFromDP dp)
-                       CompVP_PP pp -> return (entityFromDP (pp^.complement))
+                     trace (intercalate "\n" (map showMatchedFE' felst)) $
+                       case x of
+                         CompVP_Unresolved _ -> []
+                         CompVP_CP cp -> [] -- CP is not an entity.
+                         CompVP_DP dp -> return (entityFromDP dp)
+                         CompVP_PP pp -> return (entityFromDP (pp^.complement))
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
