@@ -133,6 +133,15 @@ test_noun_modifier =
   , [TagPos (TokIdx {unTokIdx = 2},TokIdx {unTokIdx = 4},MarkEntity)]
   )
 
+-- |
+test_sub_clause :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
+test_sub_clause =
+  ( "I ran after the rain had stopped."
+  , [(0,("I","I")),(1,("run","ran")),(2,("after","after")),(3,("the","the")),(4,("rain","rain")),(5,("have","had")),(6,("stop","stopped")),(7,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","ran"),PN "SBAR" [PL ("IN","after"),PN "S" [PN "NP" [PL ("DT","the"),PL ("NN","rain")],PN "VP" [PL ("VBD","had"),PN "VP" [PL ("VBN","stopped")]]]]],PL (".",".")]]
+  , []
+  )
+
 
 showDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType]) -> IO ()
 showDetail (txt,lma,pt,tmxs) = do
@@ -153,21 +162,12 @@ showDetail (txt,lma,pt,tmxs) = do
       Nothing -> return ()
       Just z -> print $ hasEmptyPreposition z
 
-  {- let vps = verbPropertyFromPennTree lmap1 pt
-      mcpstr = identifyCPHierarchy vps
-  case mcpstr of
-    Nothing -> putStrLn "CP Hierarchy not identified..."
-    Just cpstr -> do
-      let fmt x = T.pack (show (x^._1))
-      mapM_ (T.IO.putStrLn . linePrint fmt . toTree) cpstr
-  -}
-
 
 mainShow :: IO ()
-mainShow = mapM_ showDetail [ test_coordination
-                            , test_complex_noun_phrase
-                            , test_bare_noun_adverb
-                            , test_relative_pronoun_subject
-                            , test_noun_modifier
-
+mainShow = mapM_ showDetail [ --test_coordination
+                           --  , test_complex_noun_phrase
+                            -- , test_bare_noun_adverb
+                            -- , test_relative_pronoun_subject
+                            -- , test_noun_modifier
+                              test_sub_clause
                             ]
