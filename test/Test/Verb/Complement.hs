@@ -142,7 +142,7 @@ formatTP (txt,i,_,lmatknlst,pt) =
                       (T.intercalate " " (vp^..vp_auxiliary.traverse._2._2.to unLemma))
                   ] ++ case constructCP [] vp of   -- for the time being
                          Nothing -> ["not successful in constructing CP"]
-                         Just (cp,_) -> [formatCP cp]
+                         Just (cp,_) -> [formatCP [] cp]
                     ++ [T.unpack cltxts]
 
 showTP :: (Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree) -> IO ()
