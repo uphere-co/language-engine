@@ -122,6 +122,10 @@ matchObjects rolemap verbp patt = do
             Left (_,node) -> [chunkTag node]
             _             -> []  -}
   (p,a) <- maybeToList (pbArgForGArg garg patt)
+  case obj of
+    CompVP_CP _ -> guard (a == GR_SBAR (Just garg))
+    CompVP_DP _ -> guard (a == GR_NP   (Just garg))
+    _           -> []
   {- case ctag of
     NP   -> guard (a == GR_NP   (Just garg))
     S    -> guard (a == GR_SBAR (Just garg))
@@ -192,7 +196,7 @@ matchSO :: [(PBArg,FNFrameElement)]
         -> ((ArgPattern p GRel, Int), [(FNFrameElement, CompVP '[Lemma])])
 matchSO rolemap tagged (dp,verbp,paws) (patt,num) =
   case verbp^.headX.vp_voice of
-    Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ (let x = matchObjects rolemap verbp patt in trace ("TEST:::::" ++ intercalate "\n" (map showMatchedFE' x)) x ) ++ matchPrepArgs rolemap tagged paws patt )
+    Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap tagged paws patt )
     Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap tagged paws patt,matchThemeForPassive rolemap dp patt] ++ matchPrepArgs rolemap tagged paws patt)
 
 
