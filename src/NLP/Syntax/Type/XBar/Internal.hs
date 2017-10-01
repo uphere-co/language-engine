@@ -9,8 +9,9 @@
 
 module NLP.Syntax.Type.XBar.Internal where
 
--- import           Control.Lens
+-- import           Control.Lens                ((^.))
 -- import           Data.Foldable               (toList)
+-- import           Data.Maybe                  (fromMaybe)
 import           Data.Text                   (Text)
 -- import qualified Data.Text              as T
 --
@@ -85,17 +86,13 @@ type instance Complement 'X_D t = Maybe Range
 type DetP = XP 'X_D
 
 
-data CompVP t = CompVP_CP (Zipper t) -- (CP t)
+data CompVP t = CompVP_Unresolved (Zipper t) 
+              --  | CompVP_CP (CP t)
               | CompVP_DP (DetP t)
               | CompVP_PrepP (Maybe Text) (DetP t)
 
 
 
-
-compVPToEither :: CompVP t -> Either {- (CP t) -} (Zipper t) (DetP t)
-compVPToEither (CompVP_CP x)      = Left  x
-compVPToEither (CompVP_DP y)      = Right y
-compVPToEither (CompVP_PrepP _ y) = Right y
 
 
 

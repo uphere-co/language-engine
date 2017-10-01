@@ -65,7 +65,7 @@ complementsOfVerb tagged vp = {- map (\x -> TraceChain [] (Just (checkEmptyPrep 
                               map xform (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp))
   where
     xform_dp = TraceChain [] . Just . checkEmptyPrep tagged . splitDP tagged
-    xform_cp = TraceChain [] . Just . CompVP_CP
+    xform_cp = TraceChain [] . Just . CompVP_Unresolved
     xform z = case tag (current z) of
                 Left NP    -> xform_dp z
                 Left _     -> xform_cp z

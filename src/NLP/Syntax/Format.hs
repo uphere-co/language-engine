@@ -6,11 +6,11 @@
 module NLP.Syntax.Format where
 
 import           Control.Lens
-import           Data.Foldable                 (toList)
+import           Data.Foldable                 (foldMap,toList)
 import           Data.IntMap                   (IntMap)
 import           Data.List                     (intercalate)
 import           Data.Maybe
-import           Data.Monoid                   ((<>))
+import           Data.Monoid                   ((<>),First(..))
 import           Data.Text                     (Text)
 import qualified Data.Text               as T
 import qualified Data.Text.IO            as T.IO
@@ -96,11 +96,24 @@ formatDP x = case (x^.adjunct,x^.complement) of
 -- formatCP :: CP as -> Text
 
 
-formatCompVP :: Maybe (Bitree (Range,CPDP as) (Range,CPDP as)) -> CompVP as -> Text
-formatCompVP _ (CompVP_CP z)          = ""
-                                        {- case z^.headX of
-                                          C_PHI -> "CP" <> rangeText (Left z)
-                                          C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z' <> rangeText (Left z) -} 
+formatCompVP :: [Bitree (Range,CPDP as) (Range,CPDP as)] -> CompVP as -> Text
+formatCompVP cpstr (CompVP_Unresolved z)  =
+  fromMaybe ("unresolved" <> T.pack (show (getRange (current z)))) $ do
+    let rng = getRange (current z)
+    -- cpstr <- mcpstr
+    z' <- getFirst (foldMap (First . extractZipperById rng) cpstr)
+    case (snd . getRoot1 . current) z' of
+      DPCase _  -> return "error: unresolved DPCase"
+      CPCase cp -> case cp^.headX of
+        C_PHI    -> return ("CP" <> maybe "" (rangeText . Left) (cp^.maximalProjection))
+        C_WORD w -> return ("CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) w
+                                  <> maybe "" (rangeText . Left) (cp^.maximalProjection))
+
+
+{- formatCompVP _ (CompVP_CP z)          = case z^.headX of
+                                        C_PHI -> "CP" <> maybe "" (rangeText . Left) (z^.maximalProjection)
+                                        C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'
+                                                           <> maybe "" (rangeText . Left) (z^.maximalProjection)  -}
 formatCompVP _ (CompVP_DP z)          = formatDP z
 formatCompVP _ (CompVP_PrepP _mtxt z) = "PP-" <> formatDP z
 
@@ -113,7 +126,7 @@ formatPAWS pa =
          \              complements   : %s"
          (formatTraceChain rangeText (pa^.pa_CP^.complement.specifier))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
-         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatTraceChain (formatCompVP Nothing))))
+         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatTraceChain (formatCompVP []))))
   where
     fmtArg a = case a of
                  Right (_  ,p)           -> show p
@@ -125,8 +138,12 @@ formatPAWS pa =
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
 
-formatCP :: forall as. CP (Lemma ': as) -> String
-formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
+formatCP :: forall as.
+            [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
+         -> CP (Lemma ': as)
+         -> String
+formatCP cpstr cp =
+              printf "Complementizer Phrase: %-6s  %s\n\
                      \Complementizer       : %-6s  %s\n\
                      \Specifier            : %-6s  %s\n\
                      \Tense Phrase         : %-6s  %s\n\
@@ -142,7 +159,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                 (formatTraceChain rangeText (cp^.complement.specifier))
                 (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 ((show . gettoken) (cp^.complement.complement.maximalProjection))
-                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain (formatCompVP Nothing)))))
+                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain (formatCompVP cpstr)))))
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
@@ -202,7 +219,7 @@ formatVPwithPAWS tagged clausetr cpstr vp =
                                    (formatVerbProperty fmt vp)
                                    (maybe "" formatPAWS mpaws))
                           <> "\n"
-                          <> T.pack (formatCP (paws^.pa_CP))
+                          <> T.pack (formatCP cpstr (paws^.pa_CP))
                           <> "\n"
 
 
