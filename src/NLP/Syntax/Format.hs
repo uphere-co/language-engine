@@ -1,6 +1,7 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators       #-}
 
 module NLP.Syntax.Format where
 
@@ -74,10 +75,8 @@ showRange rng = T.pack (printf "%-7s" (show rng))
 
 
 rangeText :: DetP as -> Text
-rangeText x = x ^. headX . _2 . to show . to T.pack 
+rangeText x = x ^. headX . _2 . to show . to T.pack
 
---   (T.pack . show . getRange . current) z
--- rangeText (Splitted x)   = (T.pack . show) (x ^. sdp_head)
 
 
 formatDP x = case (x^.adjunct,x^.complement) of
@@ -107,7 +106,6 @@ formatPAWS pa =
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
          (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatTraceChain formatDPorPP)))
   where
-    -- gettoken = map (tokenWord.snd) . toList . current
     fmtArg a = case a of
                  Right (_  ,p)           -> show p
                  Left  (_  ,(S_RT))      -> "ROOT"
@@ -118,17 +116,18 @@ formatPAWS pa =
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
 
-formatCP :: CP (Lemma ': as) -> String
-formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
-                     \Complementizer       : %-4s  %s\n\
-                     \Tense Phrase         : %-4s  %s\n\
-                     \Determiner Phrase    :       %s\n\
-                     \Verb Phrase          : %-4s  %s\n\
+formatCP :: forall as. CP (Lemma ': as) -> String
+formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
+                     \Complementizer       : %-6s  %s\n\
+                     \Specifier            : %-6s  %s\n\
+                     \Tense Phrase         : %-6s  %s\n\
+                     \Determiner Phrase    :         %s\n\
+                     \Verb Phrase          : %-6s  %s\n\
                      \Verb Complements     :       %s\n"
                 (maybe "null" show (getchunk =<< cp^.maximalProjection))
                 (maybe "" (show . gettoken) (cp^.maximalProjection))
-                (either show formatposchunk (fmap getposchunk (cp^.headX)))
-                (either show (show . gettoken) (cp^.headX))
+                head1 head2
+                spec1 spec2
                 (maybe "null" show (getchunk =<< cp^.complement.maximalProjection))
                 (maybe "" (show . gettoken) (cp^.complement.maximalProjection))
                 (formatTraceChain rangeText (cp^.complement.specifier))
@@ -139,9 +138,21 @@ formatCP cp = printf "Complementizer Phrase: %-4s  %s\n\
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
         getposchunk = bimap (chunkTag . snd) (posTag . snd) . getRoot . current
+        --
         formatposchunk (Left c) = show c
         formatposchunk (Right p) = "(" ++ show p ++ ")"
-
+        --
+        formatComplementizer :: Complementizer (Lemma ': as) -> (String,String)
+        formatComplementizer C_PHI = ("phi","")
+        formatComplementizer (C_WORD z) = (formatposchunk (getposchunk z), show (gettoken z))
+        --
+        formatSpecCP :: Maybe (SpecCP (Lemma ': as)) -> (String,String)
+        formatSpecCP Nothing              = ("","")
+        formatSpecCP (Just SpecCP_WHPHI)  = ("phi_WH","")
+        formatSpecCP (Just (SpecCP_WH z)) = (formatposchunk (getposchunk z), show (gettoken z))
+        --
+        (head1,head2) = formatComplementizer (cp^.headX)
+        (spec1,spec2) = formatSpecCP (cp^.specifier)
 
 
 

@@ -164,10 +164,10 @@ showDetail (txt,lma,pt,tmxs) = do
 
 
 mainShow :: IO ()
-mainShow = mapM_ showDetail [ --test_coordination
-                           --  , test_complex_noun_phrase
-                            -- , test_bare_noun_adverb
-                            -- , test_relative_pronoun_subject
-                            -- , test_noun_modifier
-                              test_sub_clause
+mainShow = mapM_ showDetail [ test_coordination
+                            , test_complex_noun_phrase
+                            , test_bare_noun_adverb
+                            , test_relative_pronoun_subject
+                            , test_noun_modifier
+                            , test_sub_clause
                             ]
