@@ -89,12 +89,12 @@ bareNounModifier :: [TagPos TokIdx MarkType]
 bareNounModifier tagged x = fromMaybe x $ do
   let z = x^.maximalProjection
   guard (isChunkAs NP (current z))
-  let rng@(b0,e0) = getRange (current z)
+  let rng@(b0,_e0) = getRange (current z)
   -- check entity for the last words
-  let f (b0,e0) (b1,e1) = e0 == e1 && b0 < b1
-  TagPos (b1'',e1'',t) <- find (\(TagPos (b1',e1',t)) -> f rng (beginEndToRange (b1',e1')) && t == MarkEntity) tagged
+  let f (xb,xe) (yb,ye) = xe == ye && xb < yb
+  TagPos (b1'',e1'',_t) <- find (\(TagPos (b1',e1',t)) -> f rng (beginEndToRange (b1',e1')) && t == MarkEntity) tagged
   let (b1,e1) = beginEndToRange (b1'',e1'')
       idx_last_modifier_word = b1-1
-  last_modifier_word <- find (\x -> x^._1 == idx_last_modifier_word) (toList (current z))
+  last_modifier_word <- find (\y -> y^._1 == idx_last_modifier_word) (toList (current z))
   guard (last_modifier_word^._2.to posTag.to isNoun == Yes)
   return (mkSplittedDP BNMod (b1,e1) (b0,idx_last_modifier_word) z)

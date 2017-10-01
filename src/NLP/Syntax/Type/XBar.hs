@@ -81,9 +81,10 @@ getTokens = T.intercalate " " . map (tokenWord.snd) . toList
 tokensByRange :: (Foldable t) => Range -> t (Int, ALeaf a) -> [Text]
 tokensByRange rng = map snd . filter (^._1.to (\i -> i `isInside` rng)) . map (\(i,x)->(i,tokenWord x)) . toList
 
-
+headRange :: DetP t -> Range
 headRange x = x^.headX._2
 
+headText :: DetP t -> Text
 headText x = (T.intercalate " " . tokensByRange (headRange x) . current) (x^.maximalProjection)
 
 

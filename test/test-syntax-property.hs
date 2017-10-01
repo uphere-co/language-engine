@@ -2,7 +2,7 @@ module Main where
 
 --
 -- import qualified Test.Clause         as T.C
-import qualified Test.Noun            as N
+-- import qualified Test.Noun            as N
 import qualified Test.Trace           as T
 import qualified Test.Verb.Complement as V.C 
 import qualified Test.Verb.Property   as V.P

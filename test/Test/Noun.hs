@@ -3,7 +3,7 @@
 
 module Test.Noun where
 
-import           Control.Lens                    ((^.),(%~),_1,_2,_3,_4,to)
+import           Control.Lens                    ((^.),(%~),_1,_2,_3,to)
 import           Data.Bifunctor                  (bimap)
 import qualified Data.IntMap             as IM
 import           Data.Text                       (Text)
@@ -11,15 +11,12 @@ import qualified Data.Text               as T
 import qualified Data.Text.IO            as T.IO
 import           Text.Format.Tree                (linePrint)
 --
-import           Data.Bitree                     (Bitree(..),getRoot1,toTree)
-import           Data.BitreeZipper               (mkBitreeZipper)
+import           Data.Bitree                     (Bitree(..),toTree)
 import           NLP.Type.PennTreebankII         (PennTree,Lemma)
 import           NLP.Type.TagPos                 (TagPos(..),TokIdx(..))
 --
 -- import           NLP.Syntax.Format               (formatBitree)
-import           NLP.Syntax.Noun                 (bareNounModifier)
 import           NLP.Syntax.Type                 (MarkType(..))
-import           NLP.Syntax.Type.XBar            (Zipper)
 import           NLP.Syntax.Util                 (mkBitreeICP)
 
 
@@ -52,8 +49,8 @@ testfunc x = do
       tr = toTree (bimap f g lemmapt)
         where f = (^._1.to show.to T.pack)
               g = (^._1.to show.to T.pack)
-      z :: Zipper '[Lemma]
-      z = getRoot1 $ mkBitreeZipper [] lemmapt
+      -- z :: Zipper '[Lemma]
+      -- z = getRoot1 $ mkBitreeZipper [] lemmapt
       -- y = bareNounModifier (x^._4) z
   -- print y
   T.IO.putStrLn (linePrint id tr)

@@ -8,7 +8,6 @@
 module Test.Verb.Complement where
 
 import           Control.Lens               hiding (levels)
-import           Data.Foldable                     (toList)
 import           Data.List                         (find,intercalate)
 import           Data.Maybe                        (fromMaybe)
 import           Data.Monoid                       (All(All,getAll),mconcat)
@@ -17,7 +16,6 @@ import qualified Data.Text                  as T
 import           Text.Printf
 --
 import           Data.Bitree
-import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated      as N

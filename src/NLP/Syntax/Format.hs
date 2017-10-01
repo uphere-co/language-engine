@@ -6,7 +6,7 @@
 module NLP.Syntax.Format where
 
 import           Control.Lens
-import           Data.Foldable                 (toList,traverse_)
+import           Data.Foldable                 (toList)
 import           Data.IntMap                   (IntMap)
 import           Data.List                     (intercalate)
 import           Data.Maybe
@@ -71,6 +71,7 @@ formatTraceChain f (TraceChain xs x) = T.concat (map ((<> " -> ") . fmt) xs) <> 
         fmt WHPRO     = "*WHP*"
 
 
+showRange :: Range -> Text
 showRange rng = T.pack (printf "%-7s" (show rng))
 
 
@@ -78,7 +79,7 @@ rangeText :: DetP as -> Text
 rangeText x = x ^. headX . _2 . to show . to T.pack
 
 
-
+formatDP :: DetP as -> Text
 formatDP x = case (x^.adjunct,x^.complement) of
                (Nothing,Nothing)    -> "DP"          <> rangeText x
                (Nothing,Just rng)   -> "DP-comp"     <> rangeText x
@@ -160,7 +161,8 @@ formatCPHierarchy :: Bitree (Range,CPDP as) (Range,CPDP as) -> Text
 formatCPHierarchy tr = formatBitree fmt tr
   where
         fmt (rng,CPCase _) = "CP" <> showRange rng
-        fmt (rng,DPCase x) = formatDP x
+        fmt (_  ,DPCase x) = formatDP x
+
 
 formatClauseStructure :: ClauseTree -> Text
 formatClauseStructure clausetr =

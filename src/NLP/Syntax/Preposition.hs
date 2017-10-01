@@ -9,13 +9,13 @@ import           Data.List               (find)
 import           Data.Maybe              (fromMaybe)
 --
 import           Data.BitreeZipper       (current,parent)
-import           Data.Range              (Range)
+
 import           NLP.Type.PennTreebankII (ChunkTag(..),getRange)
-import           NLP.Type.TagPos         (TagPos(..),TokIdx,BeginEnd)
+import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
-import           NLP.Syntax.Type.XBar    (Zipper,CompVP(..),maximalProjection)
+import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..),maximalProjection)
 
 
 
@@ -31,7 +31,8 @@ hasEmptyPreposition z =
         return True
 
 
--- checkEmptyPrep tagged x@(Splitted _) = DP x
+
+checkEmptyPrep :: [TagPos TokIdx MarkType] -> DetP t -> CompVP t
 checkEmptyPrep tagged dp =
   let z = dp^.maximalProjection
       r = fromMaybe False $ do
