@@ -15,9 +15,8 @@ import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
-import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..),maximalProjection)
-
-
+import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..),Prep(..),XP(..)
+                                         ,maximalProjection)
 
 
 hasEmptyPreposition :: Zipper as -> Bool
@@ -40,4 +39,6 @@ checkEmptyPrep tagged dp =
             -- check bare noun adverb
             find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) == rng && t == MarkTime) tagged
             return (hasEmptyPreposition z)
-  in if r then CompVP_PrepP Nothing dp else CompVP_DP dp
+  in if r
+     then CompVP_PP (XP Prep_NULL (dp^.maximalProjection) () () dp)
+     else CompVP_DP dp

@@ -29,7 +29,7 @@ type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
 type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 
-data XType = X_V | X_T | X_C | X_D
+data XType = X_V | X_T | X_C | X_D | X_P
 
 type family Property   (x :: XType) (tag :: [*]) :: *
 
@@ -86,13 +86,23 @@ type instance Complement 'X_D t = Maybe Range
 type DetP = XP 'X_D
 
 
-data CompVP t = CompVP_Unresolved (Zipper t) 
+data Prep = Prep_NULL
+          | Prep_WORD Text -- (Zipper t)
+
+--
+type instance Property   'X_P t = Prep
+type instance Maximal    'X_P t = Zipper t
+type instance Specifier  'X_P t = ()
+type instance Adjunct    'X_P t = ()
+type instance Complement 'X_P t = DetP t
+
+type PP = XP 'X_P
+
+
+data CompVP t = CompVP_Unresolved (Zipper t)
               | CompVP_CP (CP t)
               | CompVP_DP (DetP t)
-              | CompVP_PrepP (Maybe Text) (DetP t)
-
-
-
+              | CompVP_PP (PP t) -- (Maybe Text) (DetP t)
 
 
 
@@ -143,5 +153,3 @@ mkCP mc mcp spec tp = XP mc mcp spec () tp
 
 data CPDP a = CPCase (CP a)
             | DPCase (DetP a)
-
-
