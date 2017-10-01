@@ -98,20 +98,27 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
 
 
 matchSubject :: [(PBArg,FNFrameElement)]
-             -> DetP '[Lemma]
+             -> Either (Zipper '[Lemma]) (DetP '[Lemma])
              -> ArgPattern p GRel
              -> Maybe (FNFrameElement, AdjustedDetP)
-matchSubject rolemap dp patt = do
+matchSubject rolemap edp patt = do
+  dp <- edp^?_Right
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
   (,WithoutPrep dp) <$> lookup p rolemap
 
+{-
+validObject (CompVP_Unresolved _) = Nothing
+validObject (CompVP_CP z) = Just z
+validObject (CompVP_DP z) = Just z
+validObject (CompVP_PrepP _ _) = Nothing
+-}
 
 matchObjects :: [(PBArg,FNFrameElement)]
              -> VerbP '[Lemma]
              -> ArgPattern p GRel
              -> [(FNFrameElement, AdjustedDetP)]
 matchObjects rolemap verbp patt = do
-  (garg,obj') <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved.to (\x -> x >>= \case DP z -> Just z; _ -> Nothing))
+  (garg,obj') <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved.to (\x -> x >>= \case CompVP_DP z -> Just z; _ -> Nothing))
   obj <- maybeToList obj'
   ctag <- case obj ^. maximalProjection.to current.to getRoot of
             Left (_,node) -> [chunkTag node]
@@ -165,17 +172,20 @@ matchAgentForPassive rolemap tagged paws patt = do
 
 
 matchThemeForPassive :: [(PBArg,FNFrameElement)]
-                     -> DetP '[Lemma]
+                     -> Either (Zipper '[Lemma]) (DetP '[Lemma])
                      -> ArgPattern p GRel
                      -> Maybe (FNFrameElement, AdjustedDetP)
-matchThemeForPassive rolemap dp patt = do
+matchThemeForPassive rolemap edp patt = do
+  dp <- edp^?_Right
   (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
   (,WithoutPrep dp) <$> lookup p rolemap
 
 
 matchSO :: [(PBArg,FNFrameElement)]
         -> [TagPos TokIdx MarkType]
-        -> (DetP '[Lemma], VerbP '[Lemma], PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
+        -> ( Either (Zipper '[Lemma]) (DetP '[Lemma])
+           , VerbP '[Lemma]
+           , PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
         -> (ArgPattern p GRel, Int)
         -> ((ArgPattern p GRel, Int), [(FNFrameElement, AdjustedDetP)])
 matchSO rolemap tagged (dp,verbp,paws) (patt,num) =
@@ -205,7 +215,7 @@ matchRoles :: [(PBArg,FNFrameElement)]
            -> VerbP '[Lemma]
            -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
            -> [(ArgPattern () GRel, Int)]
-           -> DetP '[Lemma]
+           -> Either (Zipper '[Lemma]) (DetP '[Lemma])
            -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, AdjustedDetP)])
 matchRoles rolemap tagged verbp paws toppattstats dp =
     (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy (flip compare `on` numMatchedRoles)) matched
@@ -220,7 +230,7 @@ matchFrameRolesForCauseDual :: [TagPos TokIdx MarkType]
                             -> VerbP '[Lemma]
                             -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
                             -> [(ArgPattern () GRel,Int)]
-                            -> Maybe (DetP '[Lemma])
+                            -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
                             -> LittleV
                             -> (Text, SenseID, [(PBArg, FNFrameElement)])
                             -> (Text, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, AdjustedDetP)]))
@@ -245,7 +255,7 @@ matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sen
 matchFrameRolesAll :: [TagPos TokIdx MarkType]
                    -> VerbP '[Lemma]
                    -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
-                   -> Maybe (DetP '[Lemma])
+                   -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
                    -> [((RoleInstance,Int),[(ArgPattern () GRel,Int)])]
                    -> [((Text,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,AdjustedDetP)])),Int)]
 matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
