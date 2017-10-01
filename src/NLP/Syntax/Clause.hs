@@ -247,7 +247,7 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   tr <- lift get
   z <- hoistMaybe (extractZipperById rng tr)
   cp <- hoistMaybe (currentCPDP z ^? _CPCase)
-  if is _Just (cp^.specifier)  -- ^ relative clause
+  if is _Just (cp^.specifier)  -- relative clause
     then lift (whMovement tagged z)
     else do
       let spec = cp^.complement.specifier
