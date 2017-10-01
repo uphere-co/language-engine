@@ -15,7 +15,7 @@ import           NLP.Type.TagPos         (TagPos(..),TokIdx,BeginEnd)
 --
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
-import           NLP.Syntax.Type.XBar    (Zipper,DPorPP(..),maximalProjection)
+import           NLP.Syntax.Type.XBar    (Zipper,CompVP(..),maximalProjection)
 
 
 
@@ -39,4 +39,4 @@ checkEmptyPrep tagged dp =
             -- check bare noun adverb
             find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) == rng && t == MarkTime) tagged
             return (hasEmptyPreposition z)
-  in if r then PrepP Nothing dp else DP dp
+  in if r then CompVP_PrepP Nothing dp else CompVP_DP dp

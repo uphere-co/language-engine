@@ -12,7 +12,7 @@ import           Data.Attribute
 import           Data.Bitree
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
-import           NLP.Type.TagPos                   (TagPos(..),TokIdx,BeginEnd)
+import           NLP.Type.TagPos                   (TokIdx,BeginEnd)
 import           NLP.Type.TagPos                   
 --
 import           NLP.Syntax.Type.XBar

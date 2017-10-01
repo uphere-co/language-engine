@@ -70,13 +70,15 @@ emptyTraceChain :: TraceChain a
 emptyTraceChain = TraceChain [] Nothing
 
 
-data DPorPP a = DP a | PrepP (Maybe Text) a
+data CompVP a = CompVP_DP a
+              | CompVP_PrepP (Maybe Text) a
+              
 
-makePrisms ''DPorPP
+makePrisms ''CompVP
 
-removeDPorPP :: DPorPP a -> a
-removeDPorPP (DP x) = x
-removeDPorPP (PrepP _ x) = x
+uncoverCompVP :: CompVP a -> a
+uncoverCompVP (CompVP_DP x) = x
+uncoverCompVP (CompVP_PrepP _ x) = x
 
 
 data SplitType = CLMod | BNMod | APMod
@@ -85,11 +87,12 @@ data SplitType = CLMod | BNMod | APMod
 getTokens :: BitreeICP as -> Text
 getTokens = T.intercalate " " . map (tokenWord.snd) . toList
 
+
+tokensByRange :: (Foldable t) => Range -> t (Int, ALeaf a) -> [Text]
 tokensByRange rng = map snd . filter (^._1.to (\i -> i `isInside` rng)) . map (\(i,x)->(i,tokenWord x)) . toList
 
 
 headRange x = x^.headX._2
-
 
 headText x = (T.intercalate " " . tokensByRange (headRange x) . current) (x^.maximalProjection)
 
@@ -110,11 +113,11 @@ type instance Property   'X_V t = VerbProperty (Zipper t)
 type instance Maximal    'X_V t = Zipper t
 type instance Specifier  'X_V t = ()
 type instance Adjunct    'X_V t = ()
-type instance Complement 'X_V t = [TraceChain (DPorPP (DetP t))] -- [TraceChain (DPorPP (SplitDP (Zipper t)))]
+type instance Complement 'X_V t = [TraceChain (CompVP (DetP t))]
 
 type VerbP = XP 'X_V
 
-mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [TraceChain (DPorPP (DetP t))] -> VerbP t
+mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [TraceChain (CompVP (DetP t))] -> VerbP t
 mkVerbP vp vprop comps = XP vprop vp () () comps
 
 type instance Property   'X_T t = ()
@@ -129,9 +132,6 @@ mkTP :: Maybe (Zipper t) -> TraceChain (DetP t) -> VerbP t -> TP t
 mkTP mtp mdp vp = XP () mtp mdp () vp
 
 
--- data NullComplementizer = C_NULL --   | C_WH
---                         deriving (Show,Eq,Ord)
-
 data Complementizer t = C_PHI              -- ^ empty complementizer
                       | C_WORD (Zipper t)  -- ^ complementizer word
                       -- deriving (Show,Eq,Ord)
@@ -144,9 +144,9 @@ data SpecCP t = SpecCP_WHPHI           -- ^ empty Wh-word
 makePrisms ''SpecCP
 
 
-type instance Property   'X_C t = Complementizer t -- Either NullComplementizer (Zipper t)
+type instance Property   'X_C t = Complementizer t
 type instance Maximal    'X_C t = Maybe (Zipper t)
-type instance Specifier  'X_C t = Maybe (SpecCP t) -- Maybe (Zipper t)
+type instance Specifier  'X_C t = Maybe (SpecCP t)
 type instance Adjunct    'X_C t = ()
 type instance Complement 'X_C t = TP t
 

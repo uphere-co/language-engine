@@ -60,8 +60,7 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
-                  -> [TraceChain (DPorPP (DetP (Lemma ': as)))]
-                     -- [TraceChain (DPorPP (SplitDP (Zipper (Lemma ': as))))]
+                  -> [TraceChain (CompVP (DetP (Lemma ': as)))]
 complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep tagged x)))
                                   (splitDP tagged <$> (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
@@ -95,13 +94,13 @@ identifySubject tagged tag vp =
 --
 constructCP :: [TagPos TokIdx MarkType]
             -> VerbProperty (Zipper (Lemma ': as))
-            -> Maybe (CP (Lemma ': as),[DetP (Lemma ': as)]) -- [SplitDP (Zipper (Lemma ': as))])
+            -> Maybe (CP (Lemma ': as),[DetP (Lemma ': as)])
 constructCP tagged vprop = do
     vp <- maximalProjectionVP vprop
     tp <- parentOfVP vprop
     tptag' <- N.convert <$> getchunk tp
     let comps = complementsOfVerb tagged vprop
-        comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to removeDPorPP)
+        comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to uncoverCompVP)
         verbp = mkVerbP vp vprop comps
         nullsubj = TraceChain [NULL] Nothing
     case tptag' of
@@ -212,7 +211,7 @@ whMovement tagged w =
           runMaybeT $ do
             z'  <- splitDP tagged <$> hoistMaybe (prev =<< cp^.maximalProjection)
             let -- adjust function for complement with relative pronoun resolution
-                rf0 = _2._CPCase.complement.complement.complement %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)
+                rf0 = _2._CPCase.complement.complement.complement %~ (TraceChain [Moved,WHPRO] (Just (CompVP_DP z')) :)
                 dprng = z' ^. maximalProjection.to current.to getRange
             -- adjust CPDP hierarchy by modifier relation.
             adjustXBarTree rf0 w z'

@@ -91,9 +91,9 @@ formatDP x = case (x^.adjunct,x^.complement) of
 
 
 
-formatDPorPP :: DPorPP (DetP as) -> Text
-formatDPorPP (DP z)          = formatDP z
-formatDPorPP (PrepP _mtxt z) = "PP-" <> formatDP z
+formatDPorPP :: CompVP (DetP as) -> Text
+formatDPorPP (CompVP_DP z)          = formatDP z
+formatDPorPP (CompVP_PrepP _mtxt z) = "PP-" <> formatDP z
 
 
 formatPAWS :: PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
