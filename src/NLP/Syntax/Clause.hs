@@ -60,7 +60,7 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
-                  -> [TraceChain (CompVP (DetP (Lemma ': as)))]
+                  -> [TraceChain (CompVP (Lemma ': as))]
 complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep tagged x)))
                                   (splitDP tagged <$> (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where

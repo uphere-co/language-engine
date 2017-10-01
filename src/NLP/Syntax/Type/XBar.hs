@@ -70,16 +70,6 @@ emptyTraceChain :: TraceChain a
 emptyTraceChain = TraceChain [] Nothing
 
 
-data CompVP a = CompVP_DP a
-              | CompVP_PrepP (Maybe Text) a
-              
-
-makePrisms ''CompVP
-
-uncoverCompVP :: CompVP a -> a
-uncoverCompVP (CompVP_DP x) = x
-uncoverCompVP (CompVP_PrepP _ x) = x
-
 
 data SplitType = CLMod | BNMod | APMod
                deriving (Show,Eq,Ord)
@@ -109,15 +99,28 @@ type instance Complement 'X_D t = Maybe Range
 type DetP = XP 'X_D
 
 
+data CompVP t = CompVP_DP (DetP t)
+              | CompVP_PrepP (Maybe Text) (DetP t)
+              ---   | CompVP_CP_phi (CP t)
+
+
+makePrisms ''CompVP
+
+uncoverCompVP :: CompVP t -> DetP t
+uncoverCompVP (CompVP_DP x) = x
+uncoverCompVP (CompVP_PrepP _ x) = x
+
+
+
 type instance Property   'X_V t = VerbProperty (Zipper t)
 type instance Maximal    'X_V t = Zipper t
 type instance Specifier  'X_V t = ()
 type instance Adjunct    'X_V t = ()
-type instance Complement 'X_V t = [TraceChain (CompVP (DetP t))]
+type instance Complement 'X_V t = [TraceChain (CompVP t)]
 
 type VerbP = XP 'X_V
 
-mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [TraceChain (CompVP (DetP t))] -> VerbP t
+mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [TraceChain (CompVP t)] -> VerbP t
 mkVerbP vp vprop comps = XP vprop vp () () comps
 
 type instance Property   'X_T t = ()

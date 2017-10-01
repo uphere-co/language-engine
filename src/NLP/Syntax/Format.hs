@@ -91,7 +91,7 @@ formatDP x = case (x^.adjunct,x^.complement) of
 
 
 
-formatDPorPP :: CompVP (DetP as) -> Text
+formatDPorPP :: CompVP as -> Text
 formatDPorPP (CompVP_DP z)          = formatDP z
 formatDPorPP (CompVP_PrepP _mtxt z) = "PP-" <> formatDP z
 
