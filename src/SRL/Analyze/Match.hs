@@ -292,7 +292,7 @@ matchExtraRoles tagged paws felst =
 
       -- mduration = do
       --   guard (is _Nothing (find (\x -> x^._1 == "Duration") felst))
-  in felst ++ let xs = catMaybes [mmeans,mtime] in trace ("TRACE:\n" ++ intercalate "\n" (map showMatchedFE' xs)) xs
+  in felst ++ catMaybes [mmeans,mtime] 
 
 
 -- | A scoring algorithm for selecting a frame among candidates.
