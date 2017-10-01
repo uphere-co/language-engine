@@ -28,12 +28,12 @@ import           Data.BitreeZipper
 import           Data.Range
 import qualified HTMLEntities.Text             as HTMLT               
 import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
-import           Lexicon.Type                            (ArgPattern(..),RoleInstance,GRel(..))
+import           Lexicon.Type                            (ArgPattern(..),RoleInstance,GRel(..),FNFrameElement)
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CPDP,headRange,headText)
+import           NLP.Syntax.Type.XBar                    (CPDP,headRange,headText,CompVP(..),Prep(..),headX,complement,maximalProjection)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
@@ -46,7 +46,7 @@ import           SRL.Analyze.Match                       (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,MGVertex(..),MeaningGraph
-                                                         ,AdjustedDetP(..), getDetP, _WithPrep
+                                                         -- ,AdjustedDetP(..), getDetP, _WithPrep
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
                                                          ,chooseMostFreqFrame
@@ -201,6 +201,19 @@ formatVerbStructure clausetr cpstr (VerbStructure vp senses mrmmtoppatts) =
   ]
 
 
+showMatchedFE :: (FNFrameElement, CompVP '[Lemma]) -> String
+--                                         FE   range prep text
+showMatchedFE (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) ("" :: Text) (headText dp)
+showMatchedFE (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe (maybe "" (show.getRange.current) mz) ("" :: Text) (maybe "" gettext mz)
+  where mz = cp^.maximalProjection
+        gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
+showMatchedFE (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) prep (headText dp)
+  where dp = pp^.complement
+        prep = case pp^.headX of
+                 Prep_NULL -> ""
+                 Prep_WORD p -> p
+showMatchedFE (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
+  where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 
 
 showMatchedFrame :: [TagPos TokIdx MarkType]
@@ -212,13 +225,8 @@ showMatchedFrame tagged (vstr,paws) = do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> frame)
-    flip traverse_ mselected $ \(_,felst) -> do
-      mapM_ putStrLn . map (\(fe,x) -> printf "%-15s: %-7s %3s %s"
-                                         fe
-                                         (show (headRange (getDetP x)))
-                                         (fromMaybe "" (x^?_WithPrep._1))
-                                         (headText (getDetP x)))
-        $ felst
+    flip traverse_ mselected $ \(_,felst) -> mapM_ (putStrLn . showMatchedFE) felst
+
 
 
 
