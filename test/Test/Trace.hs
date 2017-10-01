@@ -151,7 +151,7 @@ checkTrace c = -- False
                 in return (dp == c ^._3._2)
       Comp n -> do let comps = cp ^.complement.complement.complement
                    comp <- comps ^? ix (n-1)
-                   let dp = fmap compVPToHeadText {-  (\case CompVP_DP z -> headText z; CompVP_PrepP _ z -> headText z) -} comp
+                   let dp = fmap compVPToHeadText comp
                    return (dp == c ^._3._2)
 
 

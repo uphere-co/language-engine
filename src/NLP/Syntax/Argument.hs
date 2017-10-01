@@ -62,7 +62,8 @@ phraseNodeType mtp z
                   m <- flip find os $ \o ->
                          case o^._2 of
                            Just (Right x) -> x^.maximalProjection.to current.to getRange == rng
-                           Just (Left x)  -> x^?maximalProjection._Just.to current.to getRange == Just rng
+                           Just (Left x)  -> (getRange . current) x == rng
+                              -- x^?maximalProjection._Just.to current.to getRange == Just rng
                            Nothing        -> False
                   return (m^._1)
         mgarg :: Maybe GArg

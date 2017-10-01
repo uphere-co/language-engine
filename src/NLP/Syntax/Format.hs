@@ -75,9 +75,10 @@ showRange :: Range -> Text
 showRange rng = T.pack (printf "%-7s" (show rng))
 
 
-rangeText :: Either (CP as) (DetP as) -> Text
+rangeText :: Either {- (CP as) -} (Zipper as) (DetP as) -> Text
 rangeText (Right x) = x ^. headX . _2 . to show . to T.pack
-rangeText (Left x ) = maybe "null CP?" (T.pack.show.getRange.current) (x ^. maximalProjection)
+rangeText (Left x ) = (T.pack.show.getRange.current) x
+  -- maybe "null CP?" (T.pack.show.getRange.current) (x ^. maximalProjection)
 
 
 formatDP :: DetP as -> Text
@@ -95,12 +96,13 @@ formatDP x = case (x^.adjunct,x^.complement) of
 -- formatCP :: CP as -> Text
 
 
-formatCompVP :: CompVP as -> Text
-formatCompVP (CompVP_CP z)          = case z^.headX of
-                                        C_PHI -> "CP" <> rangeText (Left z)
-                                        C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z' <> rangeText (Left z)
-formatCompVP (CompVP_DP z)          = formatDP z
-formatCompVP (CompVP_PrepP _mtxt z) = "PP-" <> formatDP z
+formatCompVP :: Maybe (Bitree (Range,CPDP as) (Range,CPDP as)) -> CompVP as -> Text
+formatCompVP _ (CompVP_CP z)          = ""
+                                        {- case z^.headX of
+                                          C_PHI -> "CP" <> rangeText (Left z)
+                                          C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z' <> rangeText (Left z) -} 
+formatCompVP _ (CompVP_DP z)          = formatDP z
+formatCompVP _ (CompVP_PrepP _mtxt z) = "PP-" <> formatDP z
 
 
 formatPAWS :: PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
@@ -111,7 +113,7 @@ formatPAWS pa =
          \              complements   : %s"
          (formatTraceChain rangeText (pa^.pa_CP^.complement.specifier))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
-         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatTraceChain formatCompVP)))
+         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatTraceChain (formatCompVP Nothing))))
   where
     fmtArg a = case a of
                  Right (_  ,p)           -> show p
@@ -140,7 +142,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                 (formatTraceChain rangeText (cp^.complement.specifier))
                 (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 ((show . gettoken) (cp^.complement.complement.maximalProjection))
-                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain formatCompVP))))
+                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain (formatCompVP Nothing)))))
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current

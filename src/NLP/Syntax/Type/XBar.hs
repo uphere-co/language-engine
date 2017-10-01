@@ -42,6 +42,6 @@ headText x = (T.intercalate " " . tokensByRange (headRange x) . current) (x^.max
 
 
 compVPToHeadText :: CompVP as -> Text
-compVPToHeadText (CompVP_CP      z) = fromMaybe "" (z^?maximalProjection._Just.to (T.intercalate " " . map (tokenWord.snd) . toList . current))
+compVPToHeadText (CompVP_CP      z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z -- fromMaybe "" (z^?maximalProjection._Just.to (T.intercalate " " . map (tokenWord.snd) . toList . current))
 compVPToHeadText (CompVP_DP      z) = headText z
 compVPToHeadText (CompVP_PrepP _ z) = headText z

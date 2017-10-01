@@ -85,14 +85,14 @@ type instance Complement 'X_D t = Maybe Range
 type DetP = XP 'X_D
 
 
-data CompVP t = CompVP_CP (CP t)
+data CompVP t = CompVP_CP (Zipper t) -- (CP t)
               | CompVP_DP (DetP t)
               | CompVP_PrepP (Maybe Text) (DetP t)
 
 
 
 
-compVPToEither :: CompVP t -> Either (CP t) (DetP t)
+compVPToEither :: CompVP t -> Either {- (CP t) -} (Zipper t) (DetP t)
 compVPToEither (CompVP_CP x)      = Left  x
 compVPToEither (CompVP_DP y)      = Right y
 compVPToEither (CompVP_PrepP _ y) = Right y
@@ -112,13 +112,13 @@ mkVerbP vp vprop comps = XP vprop vp () () comps
 
 type instance Property   'X_T t = ()
 type instance Maximal    'X_T t = Maybe (Zipper t)
-type instance Specifier  'X_T t = TraceChain (Either (CP t) (DetP t))
+type instance Specifier  'X_T t = TraceChain (Either {- (CP t) -} (Zipper t) (DetP t))
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Maybe (Zipper t) -> TraceChain (Either (CP t) (DetP t)) -> VerbP t -> TP t
+mkTP :: Maybe (Zipper t) -> TraceChain (Either {- (CP t) -} (Zipper t) (DetP t)) -> VerbP t -> TP t
 mkTP mtp mdp vp = XP () mtp mdp () vp
 
 
