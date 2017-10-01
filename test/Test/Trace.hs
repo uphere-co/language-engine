@@ -13,6 +13,7 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 --
 import           Data.Bitree
+-- import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -146,12 +147,15 @@ checkTrace c = -- False
     paws <- findPAWS [] clausetr vp cpstr
     let cp = paws^.pa_CP
     case c^._3._1 of
-      Subj   -> let dp = fmap headText (cp ^.complement.specifier)
+      Subj   -> let dp = fmap (either (const "") headText) (cp ^.complement.specifier)  -- for the time being. ignore CP subject
                 in return (dp == c ^._3._2)
       Comp n -> do let comps = cp ^.complement.complement.complement
                    comp <- comps ^? ix (n-1)
-                   let dp = fmap (\case CompVP_DP z -> headText z; CompVP_PrepP _ z -> headText z) comp
+                   let dp = fmap compVPToHeadText {-  (\case CompVP_DP z -> headText z; CompVP_PrepP _ z -> headText z) -} comp
                    return (dp == c ^._3._2)
+
+
+
 
 
 unitTests :: TestTree

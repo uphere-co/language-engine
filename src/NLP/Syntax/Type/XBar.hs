@@ -7,10 +7,12 @@ module NLP.Syntax.Type.XBar
 , tokensByRange
 , headRange
 , headText
+, compVPToHeadText
 ) where
 
-import           Control.Lens                       ((^.),_1,_2,to)
+import           Control.Lens                       ((^.),(^?),_1,_2,_Just,to)
 import           Data.Foldable                      (toList)
+import           Data.Maybe                         (fromMaybe)
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
 --
@@ -36,3 +38,10 @@ headRange x = x^.headX._2
 
 headText :: DetP t -> Text
 headText x = (T.intercalate " " . tokensByRange (headRange x) . current) (x^.maximalProjection)
+
+
+
+compVPToHeadText :: CompVP as -> Text
+compVPToHeadText (CompVP_CP      z) = fromMaybe "" (z^?maximalProjection._Just.to (T.intercalate " " . map (tokenWord.snd) . toList . current))
+compVPToHeadText (CompVP_DP      z) = headText z
+compVPToHeadText (CompVP_PrepP _ z) = headText z

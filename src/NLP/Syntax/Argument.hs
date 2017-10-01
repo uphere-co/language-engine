@@ -1,10 +1,11 @@
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections     #-}
 
 module NLP.Syntax.Argument where
 
-import           Control.Lens                 ((^..),(^.),(^?),_1,_2,_Just,to)
+import           Control.Lens                 ((^..),(^.),(^?),_1,_2,_Just,_Right,to)
 import           Control.Monad                (join)
 import           Data.Bifunctor               (bimap)
 import           Data.Foldable                (toList)
@@ -53,12 +54,16 @@ phraseNodeType :: Maybe (TP as) -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Te
 phraseNodeType mtp z
   = let rng = getRange (current z)
         subj = do tp <- mtp
-                  dp <- tp^.specifier.trResolved
+                  dp <- tp^?specifier.trResolved._Just._Right   -- for the time being, later we will support CP subject
                   return (dp^.maximalProjection.to current.to getRange == rng)
         obj  = do tp <- mtp
                   -- The following must be changed to accommodate PP
-                  let os = zip [1..] (tp^..complement.complement.traverse.trResolved.to (fmap uncoverCompVP))
-                  m <- find (\o -> o^?_2._Just.maximalProjection.to current.to getRange == Just rng) os
+                  let os = zip [1..] (tp^..complement.complement.traverse.trResolved.to (fmap compVPToEither))
+                  m <- flip find os $ \o ->
+                         case o^._2 of
+                           Just (Right x) -> x^.maximalProjection.to current.to getRange == rng
+                           Just (Left x)  -> x^?maximalProjection._Just.to current.to getRange == Just rng
+                           Nothing        -> False
                   return (m^._1)
         mgarg :: Maybe GArg
         mgarg = case subj of
