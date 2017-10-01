@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -74,7 +75,7 @@ complementsOfVerb tagged vp = {- map (\x -> TraceChain [] (Just (checkEmptyPrep 
                 Left SQ    -> xform_cp z
                 Left _     -> -- False -}
                 Right p    -> if isNoun p == Yes then xform_dp z else xform_cp z
-      
+
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkNPSBAR z = case tag z of
                       Left NP    -> True
@@ -272,21 +273,61 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
                 _         ->    return spec
 
 
+
+resolveCP :: forall as.
+             Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
+          -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
+resolveCP cpstr = execState (go rng0) cpstr
+  where
+    getrng = fst . getRoot1 . current
+    rng0 = (fst . getRoot1) cpstr
+    go :: Range
+       -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))) ()
+    go rng = do tr <- get
+                void . runMaybeT $ do
+                  z <- hoistMaybe (extractZipperById rng tr)
+                  z' <- (replace z <|> return z)
+                  ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
+                   <|>
+                   (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
+
+    replace :: BitreeZipper (Range, CPDP (Lemma ': as)) (Range, CPDP (Lemma ': as))
+            -> MaybeT (State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as)))) (BitreeZipper (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as)))
+    replace z = do cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
+                   let xs = cp^.complement.complement.complement
+                   xs' <- flip traverse xs $ \x ->
+                            ((do tr <- lift get
+                                 rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved.to current.to getRange)
+                                 y <- hoistMaybe (extractZipperById rng tr)
+                                 y' <- replace y
+                                 cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
+                                 (return . (trResolved .~ Just (CompVP_CP cp'))) x
+                             )
+                             <|>
+                             (return x))
+                   -- let rf = _2._CPCase.complement.complement.complement .~ xs'
+                   let z' = replaceFocusItem (_2._CPCase.complement.complement.complement .~ xs') (_2._CPCase.complement.complement.complement .~ xs') z
+                   lift (put (toBitree z'))
+                   return z'
+
+
+
 bindingAnalysis :: [TagPos TokIdx MarkType]
                 -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
                 -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
 bindingAnalysis tagged cpstr = execState (go rng0) cpstr
-   where getrng = either fst fst . getRoot . current
-         rng0 = (either fst fst . getRoot) cpstr
-         go rng = do xs <- resolveDP tagged rng
-                     tr <- get
-                     void . runMaybeT $ do
-                       z <- hoistMaybe (extractZipperById rng tr)
-                       let z' = replaceFocusItem (_2._CPCase.complement.specifier .~ xs) (_2._CPCase.complement.specifier .~ xs) z
-                       lift (put (toBitree z'))
-                       ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
-                        <|>
-                        (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
+   where
+     getrng = either fst fst . getRoot . current
+     rng0 = (either fst fst . getRoot) cpstr
+     go rng = do xs <- resolveDP tagged rng
+                 tr <- get
+                 void . runMaybeT $ do
+                   z <- hoistMaybe (extractZipperById rng tr)
+                   let z' = replaceFocusItem (_2._CPCase.complement.specifier .~ xs) (_2._CPCase.complement.specifier .~ xs) z
+                   lift (put (toBitree z'))
+                   ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
+                    <|>
+                    (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
 
 
 

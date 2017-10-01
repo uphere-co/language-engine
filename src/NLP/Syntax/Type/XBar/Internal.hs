@@ -87,7 +87,7 @@ type DetP = XP 'X_D
 
 
 data CompVP t = CompVP_Unresolved (Zipper t) 
-              --  | CompVP_CP (CP t)
+              | CompVP_CP (CP t)
               | CompVP_DP (DetP t)
               | CompVP_PrepP (Maybe Text) (DetP t)
 
