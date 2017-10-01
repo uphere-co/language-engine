@@ -357,6 +357,22 @@ depCPDP (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap depCPD
 depCPDP (PL _)           = []
 
 
+
+
+entityFromDP dp =
+  let rng = headRange dp
+      txt = headText dp
+      mrngtxt' = do rng_sub <- case (dp^.adjunct, dp^.complement) of
+                                 (Just r,_) -> return r -- for the time being
+                                 _          -> Nothing
+                    let txt_sub = dp ^.  maximalProjection
+                                        .to current
+                                        .to (tokensByRange rng_sub)
+                                        .to (T.intercalate " ")
+                    return (rng_sub,txt_sub)
+  in (rng,txt,mrngtxt')
+
+
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
   let (cpstr,lst_vstrpaws) = mkPAWSTriples sstr
@@ -367,20 +383,18 @@ meaningGraph sstr =
                                    -> MGPredicate i rng frame sense (simplifyVProp vprop)
       ipreds = zipWith ($) preds [1..]
       --
+
       entities0 = do (_,_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
-                     z <- mapMaybe (^?_2 . _CompVP_DP) felst
-                     let rng = headRange z
-                         mrngtxt' = do rng <- case (z^.adjunct, z^.complement) of
-                                                (Just r,_) -> return r -- for the time being
-                                                _          -> Nothing
-                                       let txt = z ^.  maximalProjection
-                                                      .to current
-                                                      .to (tokensByRange rng)
-                                                      .to (T.intercalate " ")
-                                       return (rng,txt)
-                         txt = headText z
-                     return (rng,txt,mrngtxt')
+                     (fe,x) <- felst
+                     case x of
+                       CompVP_Unresolved _ -> []
+                       CompVP_CP cp -> [] -- CP is not an entity.
+                                        {- let gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
+                                             in maybeToList (cp^.maximalProjection) >>= \z_cp ->
+                                            return (getRange (current z_cp),gettext z_cp,Nothing) -}
+                       CompVP_DP dp -> return (entityFromDP dp)
+                       CompVP_PP pp -> return (entityFromDP (pp^.complement))
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
@@ -412,7 +426,7 @@ meaningGraph sstr =
                   i <- maybeToList (HM.lookup (0,rng) rngidxmap)   -- frame
                   (_,felst) <- maybeToList mselected
                   (fe,x) <- felst
-                  {- 
+                  {-
                   x <- maybeToList (x0 ^? _CompVP_DP)
                   let z = getDetP x
                       mprep = x ^? _WithPrep . _1

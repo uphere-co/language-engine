@@ -200,7 +200,6 @@ formatVerbStructure clausetr cpstr (VerbStructure vp senses mrmmtoppatts) =
   , T.pack (formatSenses False senses mrmmtoppatts)
   ]
 
-
 showMatchedFE :: (FNFrameElement, CompVP '[Lemma]) -> String
 --                                         FE   range prep text
 showMatchedFE (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) ("" :: Text) (headText dp)
@@ -214,6 +213,7 @@ showMatchedFE (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s %s" fe (show (headRang
                  Prep_WORD p -> p
 showMatchedFE (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
   where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
+
 
 
 showMatchedFrame :: [TagPos TokIdx MarkType]
