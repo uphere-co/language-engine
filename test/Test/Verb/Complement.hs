@@ -169,7 +169,7 @@ checkComplement c  = fromMaybe False $ do
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
   (cp,_) <- constructCP [] vp  -- for the time being
   let lst :: [Maybe Text]
-      lst = cp^..complement.complement.complement.traverse.trResolved.to (fmap (headText . uncoverCompVP))
+      lst = cp^..complement.complement.complement.traverse.trResolved.to (fmap compVPToHeadText)
       --
       lst2 :: [Text]
       lst2 = c^._3._2

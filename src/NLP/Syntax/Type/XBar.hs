@@ -7,10 +7,14 @@ module NLP.Syntax.Type.XBar
 , tokensByRange
 , headRange
 , headText
+, compVPToEither
+, compVPToHeadText
 ) where
 
-import           Control.Lens                       ((^.),_1,_2,to)
+import           Control.Lens                       ((^.),(^?),_1,_2,_Just,to)
+-- import           Control.Lens                       ((^.),_1,_2,to)
 import           Data.Foldable                      (toList)
+import           Data.Maybe                         (fromMaybe)
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
 --
@@ -36,3 +40,19 @@ headRange x = x^.headX._2
 
 headText :: DetP t -> Text
 headText x = (T.intercalate " " . tokensByRange (headRange x) . current) (x^.maximalProjection)
+
+
+compVPToEither :: CompVP t -> Either (Zipper t) (DetP t)
+compVPToEither (CompVP_Unresolved x) = Left  x
+compVPToEither (CompVP_CP z)         = Left (fromMaybe (error "compVPToEither CP") (z^.maximalProjection))  -- this case should not happen.
+compVPToEither (CompVP_DP y)         = Right y
+compVPToEither (CompVP_PrepP _ y)    = Right y
+
+
+
+
+compVPToHeadText :: CompVP as -> Text
+compVPToHeadText (CompVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
+compVPToHeadText (CompVP_CP         z) = fromMaybe "" (z^?maximalProjection._Just.to (T.intercalate " " . map (tokenWord.snd) . toList . current))
+compVPToHeadText (CompVP_DP         z) = headText z
+compVPToHeadText (CompVP_PrepP _    z) = headText z

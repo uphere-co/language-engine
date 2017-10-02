@@ -75,26 +75,47 @@ showRange :: Range -> Text
 showRange rng = T.pack (printf "%-7s" (show rng))
 
 
-rangeText :: DetP as -> Text
-rangeText x = x ^. headX . _2 . to show . to T.pack
+rangeText :: Either {- (CP as) -} (Zipper as) (DetP as) -> Text
+rangeText (Right x) = x ^. headX . _2 . to show . to T.pack
+rangeText (Left x ) = (T.pack.show.getRange.current) x
+  -- maybe "null CP?" (T.pack.show.getRange.current) (x ^. maximalProjection)
 
 
 formatDP :: DetP as -> Text
 formatDP x = case (x^.adjunct,x^.complement) of
-               (Nothing,Nothing)    -> "DP"          <> rangeText x
-               (Nothing,Just rng)   -> "DP-comp"     <> rangeText x
+               (Nothing,Nothing)    -> "DP"          <> rangeText (Right x)
+               (Nothing,Just rng)   -> "DP-comp"     <> rangeText (Right x)
                                                      <> T.pack (show rng)
-               (Just rng,Nothing)   -> "DP-adj"      <> rangeText x
+               (Just rng,Nothing)   -> "DP-adj"      <> rangeText (Right x)
                                                      <> T.pack (show rng)
-               (Just rng,Just rng') -> "DP-comp-adj" <> rangeText x
+               (Just rng,Just rng') -> "DP-comp-adj" <> rangeText (Right x)
                                                      <> T.pack (show rng')
                                                      <> T.pack (show rng)
 
 
+-- formatCP :: CP as -> Text
 
-formatDPorPP :: CompVP as -> Text
-formatDPorPP (CompVP_DP z)          = formatDP z
-formatDPorPP (CompVP_PrepP _mtxt z) = "PP-" <> formatDP z
+
+formatCompVP :: CompVP as -> Text
+formatCompVP (CompVP_Unresolved z)  = "unresolved" <> T.pack (show (getRange (current z)))
+{-   fromMaybe ())) $ do
+    let rng = getRange (current z)
+    -- cpstr <- mcpstr
+    z' <- getFirst (foldMap (First . extractZipperById rng) cpstr)
+    case (snd . getRoot1 . current) z' of
+      DPCase _  -> return "error: unresolved DPCase"
+      CPCase cp -> case cp^.headX of
+        C_PHI    -> return ("CP" <> maybe "" (rangeText . Left) (cp^.maximalProjection))
+        C_WORD w -> return ("CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) w
+                                  <> maybe "" (rangeText . Left) (cp^.maximalProjection))
+
+-}
+formatCompVP (CompVP_CP z) = case z^.headX of
+                               C_PHI -> "CP" <> maybe "" (rangeText . Left) (z^.maximalProjection)
+                               C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'
+                                                  <> maybe "" (rangeText . Left) (z^.maximalProjection)
+formatCompVP (CompVP_DP z)          = formatDP z
+formatCompVP (CompVP_PrepP _mtxt z) = "PP-" <> formatDP z
 
 
 formatPAWS :: PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
@@ -105,7 +126,7 @@ formatPAWS pa =
          \              complements   : %s"
          (formatTraceChain rangeText (pa^.pa_CP^.complement.specifier))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
-         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatTraceChain formatDPorPP)))
+         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatTraceChain formatCompVP )))
   where
     fmtArg a = case a of
                  Right (_  ,p)           -> show p
@@ -134,7 +155,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                 (formatTraceChain rangeText (cp^.complement.specifier))
                 (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 ((show . gettoken) (cp^.complement.complement.maximalProjection))
-                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain formatDPorPP))))
+                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain formatCompVP ))))
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
@@ -203,7 +224,7 @@ showClauseStructure :: [TagPos TokIdx MarkType] -> IntMap Lemma -> PennTree -> I
 showClauseStructure tagged lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      cpstr = (map (bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
+      cpstr = (map (resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
       xs = map (formatVPwithPAWS tagged clausetr cpstr) vps
   mapM_ (T.IO.putStrLn . formatCPHierarchy) cpstr
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)

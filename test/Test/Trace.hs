@@ -13,6 +13,7 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 --
 import           Data.Bitree
+-- import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -98,7 +99,7 @@ formatDetail :: TestTrace -> [Text]
 formatDetail (_txt,_,_,lma,pt,tmxs) =
   let vps  = mkVPS lma pt
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
-      cpstr = (map (bindingAnalysis tmxs) . identifyCPHierarchy tmxs) vps
+      cpstr = (map (resolveCP . bindingAnalysis tmxs) . identifyCPHierarchy tmxs) vps
  
   in   
   [ "===================================================================================================================="
@@ -140,18 +141,21 @@ checkTrace c = -- False
   fromMaybe False $ do
     let vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
-        cpstr = (map (bindingAnalysis (c^._6)) . identifyCPHierarchy (c^._6)) vps
+        cpstr = (map (resolveCP . bindingAnalysis (c^._6)) . identifyCPHierarchy (c^._6)) vps
     
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
     paws <- findPAWS [] clausetr vp cpstr
     let cp = paws^.pa_CP
     case c^._3._1 of
-      Subj   -> let dp = fmap headText (cp ^.complement.specifier)
+      Subj   -> let dp = fmap (either (const "") headText) (cp ^.complement.specifier)  -- for the time being. ignore CP subject
                 in return (dp == c ^._3._2)
       Comp n -> do let comps = cp ^.complement.complement.complement
                    comp <- comps ^? ix (n-1)
-                   let dp = fmap (\case CompVP_DP z -> headText z; CompVP_PrepP _ z -> headText z) comp
+                   let dp = fmap compVPToHeadText comp
                    return (dp == c ^._3._2)
+
+
+
 
 
 unitTests :: TestTree

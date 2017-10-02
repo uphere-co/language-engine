@@ -9,8 +9,9 @@
 
 module NLP.Syntax.Type.XBar.Internal where
 
--- import           Control.Lens
+-- import           Control.Lens                ((^.))
 -- import           Data.Foldable               (toList)
+-- import           Data.Maybe                  (fromMaybe)
 import           Data.Text                   (Text)
 -- import qualified Data.Text              as T
 --
@@ -85,16 +86,13 @@ type instance Complement 'X_D t = Maybe Range
 type DetP = XP 'X_D
 
 
-data CompVP t = CompVP_DP (DetP t)
-              --   | CompVP_CP (CP t)
+data CompVP t = CompVP_Unresolved (Zipper t) 
+              | CompVP_CP (CP t)
+              | CompVP_DP (DetP t)
               | CompVP_PrepP (Maybe Text) (DetP t)
 
 
 
-
-uncoverCompVP :: CompVP t -> DetP t
-uncoverCompVP (CompVP_DP x) = x
-uncoverCompVP (CompVP_PrepP _ x) = x
 
 
 
@@ -111,13 +109,13 @@ mkVerbP vp vprop comps = XP vprop vp () () comps
 
 type instance Property   'X_T t = ()
 type instance Maximal    'X_T t = Maybe (Zipper t)
-type instance Specifier  'X_T t = TraceChain (DetP t)
+type instance Specifier  'X_T t = TraceChain (Either {- (CP t) -} (Zipper t) (DetP t))
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Maybe (Zipper t) -> TraceChain (DetP t) -> VerbP t -> TP t
+mkTP :: Maybe (Zipper t) -> TraceChain (Either {- (CP t) -} (Zipper t) (DetP t)) -> VerbP t -> TP t
 mkTP mtp mdp vp = XP () mtp mdp () vp
 
 
@@ -132,7 +130,7 @@ data SpecCP t = SpecCP_WHPHI           -- ^ empty Wh-word
 
 
 type instance Property   'X_C t = Complementizer t
-type instance Maximal    'X_C t = Maybe (Zipper t)
+type instance Maximal    'X_C t = Maybe (Zipper t)    -- why maybe?
 type instance Specifier  'X_C t = Maybe (SpecCP t)
 type instance Adjunct    'X_C t = ()
 type instance Complement 'X_C t = TP t
