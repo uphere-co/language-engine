@@ -115,7 +115,7 @@ formatCompVP (CompVP_CP z) = case z^.headX of
                                C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'
                                                   <> maybe "" (rangeText . Left) (z^.maximalProjection)
 formatCompVP (CompVP_DP z)          = formatDP z
-formatCompVP (CompVP_PrepP _mtxt z) = "PP-" <> formatDP z
+formatCompVP (CompVP_PP z) = "PP-" <> formatDP (z^.complement)
 
 
 formatPAWS :: PredArgWorkspace as (Either (Range,STag) (Int,POSTag))

@@ -11,6 +11,8 @@ makeLenses ''XP
 
 makeLenses ''TraceChain
 
+makePrisms ''Prep
+
 makePrisms ''CompVP
 
 makePrisms ''Complementizer
