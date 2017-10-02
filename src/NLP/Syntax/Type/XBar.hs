@@ -129,19 +129,31 @@ mkTP :: Maybe (Zipper t) -> TraceChain (DetP t) -> VerbP t -> TP t
 mkTP mtp mdp vp = XP () mtp mdp () vp
 
 
-data NullComplementizer = C_NULL | C_WH
-                        deriving (Show,Eq,Ord)
+-- data NullComplementizer = C_NULL --   | C_WH
+--                         deriving (Show,Eq,Ord)
 
-type instance Property   'X_C t = Either NullComplementizer (Zipper t)
+data Complementizer t = C_PHI              -- ^ empty complementizer
+                      | C_WORD (Zipper t)  -- ^ complementizer word
+                      -- deriving (Show,Eq,Ord)
+
+makePrisms ''Complementizer
+
+data SpecCP t = SpecCP_WHPHI           -- ^ empty Wh-word
+              | SpecCP_WH (Zipper t)   -- ^ Wh-word
+
+makePrisms ''SpecCP
+
+
+type instance Property   'X_C t = Complementizer t -- Either NullComplementizer (Zipper t)
 type instance Maximal    'X_C t = Maybe (Zipper t)
-type instance Specifier  'X_C t = ()
+type instance Specifier  'X_C t = Maybe (SpecCP t) -- Maybe (Zipper t)
 type instance Adjunct    'X_C t = ()
 type instance Complement 'X_C t = TP t
 
 type CP = XP 'X_C
 
-mkCP :: Either NullComplementizer (Zipper t) -> Maybe (Zipper t) -> TP t -> CP t
-mkCP mc mcp tp = XP mc mcp () () tp
+mkCP :: Complementizer t -> Maybe (Zipper t) -> Maybe (SpecCP t) -> TP t -> CP t
+mkCP mc mcp spec tp = XP mc mcp spec () tp
 
 
 data CPDP a = CPCase (CP a)

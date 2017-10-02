@@ -10,6 +10,7 @@ module NLP.Syntax.Clause where
 
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
+import           Control.Lens.Extras                    (is)
 import           Control.Monad                          ((<=<),void)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
@@ -112,15 +113,20 @@ constructCP tagged vprop = do
             dps = (subj_dps++comps_dps)
         case cptag' of
           N.CL N.SBAR ->
-            return (mkCP (maybe (Left C_NULL) Right (prev tp)) (Just cp') (mkTP (Just tp) subj verbp),dps)
+            let (cphead,cpspec) = case prev tp of
+                                    Nothing -> (C_PHI,Nothing)
+                                    Just z -> if (isChunkAs WHNP (current z))
+                                              then (C_PHI,Just (SpecCP_WH z))
+                                              else (C_WORD z,Nothing)
+            in return (mkCP cphead (Just cp') cpspec (mkTP (Just tp) subj verbp),dps)
           N.CL _ ->
-            return (mkCP (Left C_NULL) (Just tp) (mkTP (Just tp) subj verbp),dps)
+            return (mkCP C_PHI (Just tp) Nothing (mkTP (Just tp) subj verbp),dps)
           N.RT   ->
-            return (mkCP (Left C_NULL) (Just cp') (mkTP (Just tp) subj verbp),dps)
+            return (mkCP C_PHI (Just cp') Nothing (mkTP (Just tp) subj verbp),dps)
           _      -> -- somewhat problematic case?
-            return (mkCP (Left C_NULL) Nothing (mkTP (Just tp) subj verbp),dps)
+            return (mkCP C_PHI Nothing Nothing (mkTP (Just tp) subj verbp),dps)
       _ -> -- reduced relative clause
-           return (mkCP (Left C_WH) (Just vp) (mkTP (Just vp) nullsubj verbp),comps_dps)
+           return (mkCP C_PHI (Just vp) (Just SpecCP_WHPHI) (mkTP (Just vp) nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -226,7 +232,7 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   tr <- lift get
   z <- hoistMaybe (extractZipperById rng tr)
   cp <- hoistMaybe (currentCPDP z ^? _CPCase)
-  if either (== C_WH) (isChunkAs WHNP . current) (cp^.headX)
+  if is _Just (cp^.specifier)  -- ^ relative clause
     then lift (whMovement tagged z)
     else do
       let spec = cp^.complement.specifier
