@@ -12,6 +12,7 @@ module SRL.Analyze.Match where
 
 import           Control.Applicative
 import           Control.Lens
+import           Control.Lens.Extras          (is)
 import           Control.Monad                (guard,join)
 import           Data.Foldable
 import           Data.Function                (on)
@@ -34,7 +35,7 @@ import           NLP.Syntax.Noun              (splitPP)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util              (isLemmaAs)
+import           NLP.Syntax.Util              (isLemmaAs,intLemma0)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 import           NLP.Type.TagPos              (TagPos,TokIdx)
@@ -103,12 +104,6 @@ matchSubject rolemap edp patt = do
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
   (,CompVP_DP dp) <$> lookup p rolemap
 
-{-
-validObject (CompVP_Unresolved _) = Nothing
-validObject (CompVP_CP z) = Just z
-validObject (CompVP_DP z) = Just z
-validObject (CompVP_PrepP _ _) = Nothing
--}
 
 isPhiOrThat cp = case cp^.headX of
                    C_PHI -> True
@@ -121,7 +116,7 @@ matchObjects :: [(PBArg,FNFrameElement)]
              -> ArgPattern p GRel
              -> [(FNFrameElement, CompVP '[Lemma])]
 matchObjects rolemap verbp patt = do
-  (garg,obj) <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved._Just) -- .to (\x -> x >>= \case CompVP_DP z -> Just z; _ -> Nothing)) -- this should be changed
+  (garg,obj) <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved._Just)
   guard (case obj of CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False)
   (p,a) <- maybeToList (pbArgForGArg garg patt)
   case obj of
@@ -270,6 +265,8 @@ matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   return (matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sense1,rolemap1),stat)
 
 
+checkTimeComplementizer z = any (\x -> isLemmaAs x (current z)) ["after","before"]
+
 -- | this function should be generalized.
 --
 matchExtraRoles :: [TagPos TokIdx MarkType]
@@ -282,9 +279,20 @@ matchExtraRoles tagged paws felst =
         (o,z) <-matchPP tagged paws ("by",Just True)
         let rng = headRange z
             comp = CompVP_PP (XP (Prep_WORD "by") o () () z)
-        guard (isNothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
+        guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
         return ("Means",comp)
-  in maybe felst (\means -> means : felst) mmeans
+      mtime = do
+        guard (is _Nothing (find (\x -> x^._1 == "Time") felst))
+        let candidates = paws^..pa_CP.complement.complement.complement.traverse.trResolved._Just._CompVP_CP
+        cp <- find (\x->x^?headX._C_WORD.to checkTimeComplementizer == Just True) candidates
+        rng <- cp^?maximalProjection._Just.to current.to getRange
+        guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
+        let comp = CompVP_CP cp
+        return ("Time",comp)
+
+      -- mduration = do
+      --   guard (is _Nothing (find (\x -> x^._1 == "Duration") felst))
+  in felst ++ catMaybes [mmeans,mtime] 
 
 
 -- | A scoring algorithm for selecting a frame among candidates.
@@ -409,12 +417,11 @@ meaningGraph sstr =
       entities0 = do (_,_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
                      (fe,x) <- felst
-                     trace (intercalate "\n" (map showMatchedFE' felst)) $
-                       case x of
-                         CompVP_Unresolved _ -> []
-                         CompVP_CP cp -> [] -- CP is not an entity.
-                         CompVP_DP dp -> return (entityFromDP dp)
-                         CompVP_PP pp -> return (entityFromDP (pp^.complement))
+                     case x of
+                       CompVP_Unresolved _ -> []
+                       CompVP_CP cp -> [] -- CP is not an entity.
+                       CompVP_DP dp -> return (entityFromDP dp)
+                       CompVP_PP pp -> return (entityFromDP (pp^.complement))
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
@@ -446,15 +453,14 @@ meaningGraph sstr =
                   i <- maybeToList (HM.lookup (0,rng) rngidxmap)   -- frame
                   (_,felst) <- maybeToList mselected
                   (fe,x) <- felst
-                  {-
-                  x <- maybeToList (x0 ^? _CompVP_DP)
-                  let z = getDetP x
-                      mprep = x ^? _WithPrep . _1
-                  let rng' = headRange z
-                  -}
                   (rng',mprep) <- case x of
                                     CompVP_Unresolved _ -> []
-                                    CompVP_CP cp -> maybeToList (cp^.maximalProjection) >>= \z_cp -> return (getRange (current z_cp),Nothing)
+                                    CompVP_CP cp -> maybeToList (cp^.maximalProjection) >>= \z_cp ->
+                                                      let mprep = case cp^.headX of
+                                                                    C_PHI -> Nothing
+                                                                    C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
+                                                                                >>= \prep -> if prep == "that" then Nothing else return prep
+                                                      in return (getRange (current z_cp),mprep)
                                     CompVP_DP dp -> return (headRange dp,Nothing)
                                     CompVP_PP pp -> return (headRange (pp^.complement),pp^?headX._Prep_WORD)
                   i' <- maybeToList (HM.lookup (0,rng') rngidxmap)  -- frame element
