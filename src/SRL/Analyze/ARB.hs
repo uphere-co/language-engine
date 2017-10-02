@@ -97,7 +97,7 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
                       e <- find (\e -> isSubject rolemap frmtxt msense (e^.me_relation)) rels
                       let sidx = e^.me_end
                       (sidx,) . (e^.me_relation,) <$> findLabel (mg^.mg_vertices) sidx
-  objs <- lift $ do
+  (objs :: [(Text,Either (PrepOr ARB) (PrepOr Text))]) <- lift $ do
     fmap catMaybes . flip mapM (filter (\e -> e ^.me_end /= sidx) rels) $ \o -> do
       let oidx = o^.me_end
           oprep = o^.me_prep
@@ -108,7 +108,7 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
           then do
             lift (modify' (delete oidx))
             arb <- findSubjectObjects (rolemap,mg,grph) oidx
-            return (orole,Left arb)
+            return (orole,Left (PrepOr oprep arb))
           else do
             olabel <- hoistMaybe (findLabel (mg^.mg_vertices) oidx)
             return (orole,Right (PrepOr oprep olabel))
