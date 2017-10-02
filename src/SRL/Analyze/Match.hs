@@ -40,7 +40,6 @@ import           NLP.Type.TagPos              (TagPos,TokIdx)
 --
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
-                                              ,AdjustedDetP(..), _WithPrep, getDetP
                                               ,DocStructure
                                               ,SentStructure
                                               ,VerbStructure
@@ -53,11 +52,8 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 --
 import Debug.Trace
 
-
-
-formatAdjustedDetP (WithPrep p _ z)  = "prep:"  <> p <> ", " <> formatDP z
-formatAdjustedDetP (WithoutPrep z) = formatDP z
-
+import Text.Printf
+import Data.List (intercalate)
 
 
 mkPAWSTriples :: SentStructure
@@ -98,32 +94,46 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
 
 
 matchSubject :: [(PBArg,FNFrameElement)]
-             -> DetP '[Lemma]
+             -> Either (Zipper '[Lemma]) (DetP '[Lemma])
              -> ArgPattern p GRel
-             -> Maybe (FNFrameElement, AdjustedDetP)
-matchSubject rolemap dp patt = do
+             -> Maybe (FNFrameElement, CompVP '[Lemma])
+matchSubject rolemap edp patt = do
+  dp <- edp^?_Right            -- for the time being
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
-  (,WithoutPrep dp) <$> lookup p rolemap
+  (,CompVP_DP dp) <$> lookup p rolemap
 
+{-
+validObject (CompVP_Unresolved _) = Nothing
+validObject (CompVP_CP z) = Just z
+validObject (CompVP_DP z) = Just z
+validObject (CompVP_PrepP _ _) = Nothing
+-}
 
 matchObjects :: [(PBArg,FNFrameElement)]
              -> VerbP '[Lemma]
              -> ArgPattern p GRel
-             -> [(FNFrameElement, AdjustedDetP)]
+             -> [(FNFrameElement, CompVP '[Lemma])]
 matchObjects rolemap verbp patt = do
-  (garg,obj') <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved.to (\x -> x >>= \case DP z -> Just z; _ -> Nothing))
-  obj <- maybeToList obj'
+  (garg,obj) <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved._Just) -- .to (\x -> x >>= \case CompVP_DP z -> Just z; _ -> Nothing)) -- this should be changed
+  guard (case obj of CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False)
+  -- obj <- maybeToList obj'
+  {- 
   ctag <- case obj ^. maximalProjection.to current.to getRoot of
             Left (_,node) -> [chunkTag node]
-            _             -> []
+            _             -> []  -}
   (p,a) <- maybeToList (pbArgForGArg garg patt)
-  case ctag of
+  case obj of
+    CompVP_CP _ -> guard (a == GR_SBAR (Just garg))
+    CompVP_DP _ -> guard (a == GR_NP   (Just garg))
+    _           -> []
+  {- case ctag of
     NP   -> guard (a == GR_NP   (Just garg))
     S    -> guard (a == GR_SBAR (Just garg))
     SBAR -> guard (a == GR_SBAR (Just garg))
-    _    -> []
+    _    -> [] -}
   fe <- maybeToList (lookup p rolemap)
-  return (fe, WithoutPrep obj)
+  return (fe, obj)
+  -- return (fe, CompVP_DP obj)  -- this should be changed
 
 
 
@@ -145,39 +155,45 @@ matchPrepArgs :: [(PBArg,FNFrameElement)]
               -> [TagPos TokIdx MarkType]
               -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
               -> ArgPattern p GRel
-              -> [(FNFrameElement, AdjustedDetP)]
+              -> [(FNFrameElement, CompVP '[Lemma])]
 matchPrepArgs rolemap tagged paws patt = do
   (p,(prep,mising)) <- pbArgForPP patt
   (o,z) <- maybeToList (matchPP tagged paws (prep,mising))
-  (,WithPrep prep o z) <$> maybeToList (lookup p rolemap)
+  let comp = CompVP_PP (XP (Prep_WORD prep) o () () z)
+  (, comp) <$> maybeToList (lookup p rolemap)
 
 
 matchAgentForPassive :: [(PBArg,FNFrameElement)]
                      -> [TagPos TokIdx MarkType]
                      -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
                      -> ArgPattern p GRel
-                     -> Maybe (FNFrameElement, AdjustedDetP)
+                     -> Maybe (FNFrameElement, CompVP '[Lemma])
 matchAgentForPassive rolemap tagged paws patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
     (o,z) <- matchPP tagged paws ("by",Nothing)
-    (,WithPrep "by" o z) <$> lookup p rolemap
+    let comp = CompVP_PP (XP (Prep_WORD "by") o () () z)
+    (,comp) <$> lookup p rolemap
 
 
 
 matchThemeForPassive :: [(PBArg,FNFrameElement)]
-                     -> DetP '[Lemma]
+                     -> Either (Zipper '[Lemma]) (DetP '[Lemma])
                      -> ArgPattern p GRel
-                     -> Maybe (FNFrameElement, AdjustedDetP)
-matchThemeForPassive rolemap dp patt = do
+                     -> Maybe (FNFrameElement, CompVP '[Lemma])
+matchThemeForPassive rolemap edp patt = do
+  dp <- edp^?_Right              -- for the time being
   (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
-  (,WithoutPrep dp) <$> lookup p rolemap
+  let comp = CompVP_DP dp
+  (,comp) <$> lookup p rolemap
 
 
 matchSO :: [(PBArg,FNFrameElement)]
         -> [TagPos TokIdx MarkType]
-        -> (DetP '[Lemma], VerbP '[Lemma], PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
+        -> ( Either (Zipper '[Lemma]) (DetP '[Lemma])
+           , VerbP '[Lemma]
+           , PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
         -> (ArgPattern p GRel, Int)
-        -> ((ArgPattern p GRel, Int), [(FNFrameElement, AdjustedDetP)])
+        -> ((ArgPattern p GRel, Int), [(FNFrameElement, CompVP '[Lemma])])
 matchSO rolemap tagged (dp,verbp,paws) (patt,num) =
   case verbp^.headX.vp_voice of
     Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap tagged paws patt )
@@ -205,8 +221,8 @@ matchRoles :: [(PBArg,FNFrameElement)]
            -> VerbP '[Lemma]
            -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
            -> [(ArgPattern () GRel, Int)]
-           -> DetP '[Lemma]
-           -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, AdjustedDetP)])
+           -> Either (Zipper '[Lemma]) (DetP '[Lemma])
+           -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, CompVP '[Lemma])])
 matchRoles rolemap tagged verbp paws toppattstats dp =
     (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy (flip compare `on` numMatchedRoles)) matched
   where
@@ -220,10 +236,10 @@ matchFrameRolesForCauseDual :: [TagPos TokIdx MarkType]
                             -> VerbP '[Lemma]
                             -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
                             -> [(ArgPattern () GRel,Int)]
-                            -> Maybe (DetP '[Lemma])
+                            -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
                             -> LittleV
                             -> (Text, SenseID, [(PBArg, FNFrameElement)])
-                            -> (Text, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, AdjustedDetP)]))
+                            -> (Text, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])]))
 matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sense1,rolemap1) =
   let (frame2,sense2,rolemap2) = if causetype == LVDual
                                  then extendRoleMapForDual (frame1,sense1,rolemap1)
@@ -245,9 +261,9 @@ matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sen
 matchFrameRolesAll :: [TagPos TokIdx MarkType]
                    -> VerbP '[Lemma]
                    -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
-                   -> Maybe (DetP '[Lemma])
+                   -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
                    -> [((RoleInstance,Int),[(ArgPattern () GRel,Int)])]
-                   -> [((Text,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,AdjustedDetP)])),Int)]
+                   -> [((Text,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])),Int)]
 matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   (rm,toppatts) <- rmtoppatts
   let sense1 = rm^._1._1
@@ -262,15 +278,16 @@ matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
 --
 matchExtraRoles :: [TagPos TokIdx MarkType]
                 -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
-                -> [(FNFrameElement,AdjustedDetP)]
-                -> [(FNFrameElement,AdjustedDetP)]
+                -> [(FNFrameElement, CompVP '[Lemma])]
+                -> [(FNFrameElement, CompVP '[Lemma])]
 matchExtraRoles tagged paws felst =
   let mmeans = do
         guard (isNothing (find (\x -> x^._1 == "Means") felst))
         (o,z) <-matchPP tagged paws ("by",Just True)
         let rng = headRange z
-        guard (isNothing (find (\x -> x^?_2._WithPrep._3.to headRange == Just rng) felst))
-        return ("Means",WithPrep "by" o z)
+            comp = CompVP_PP (XP (Prep_WORD "by") o () () z)
+        guard (isNothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
+        return ("Means",comp)
   in maybe felst (\means -> means : felst) mmeans
 
 
@@ -290,30 +307,36 @@ scoreSelectedFrame total ((_,_,mselected),n) =
 --   This algorithm is ad hoc but practically works for PP embedded in DP by CoreNLP.
 --   We need to have a systematic treatment and tests for PP ambiguity.
 --
-resolveAmbiguityInDP :: [(FNFrameElement, AdjustedDetP)]
-                     -> [(FNFrameElement, AdjustedDetP)]
+resolveAmbiguityInDP :: [(FNFrameElement, CompVP '[Lemma])]
+                     -> [(FNFrameElement, CompVP '[Lemma])]
 resolveAmbiguityInDP lst = foldr1 (.) (map go lst) lst
   where
-    go :: (FNFrameElement,AdjustedDetP)
-       -> [(FNFrameElement,AdjustedDetP)]
-       -> [(FNFrameElement,AdjustedDetP)]
-    go (fe,WithPrep _ o z) lst = map (f (fe,getRange (current o))) lst
-    go (fe,WithoutPrep z) lst = map (f (fe,z^.headX._2)) lst
+    go :: (FNFrameElement,CompVP '[Lemma])
+       -> [(FNFrameElement,CompVP '[Lemma])]
+       -> [(FNFrameElement,CompVP '[Lemma])]
+    go (fe,CompVP_PP pp) lst = let o = pp^.maximalProjection
+                               in map (f (fe,getRange (current o))) lst
+    go (fe,CompVP_DP dp) lst = map (f (fe,dp^.headX._2)) lst
+    go (fe,_           ) lst = lst
 
-    f (fe,rng@(b,e)) (fe',WithPrep prep' o' z')
-      = let rng'@(b',e') = z'^.headX._1
+    f (fe,rng@(b,e)) (fe',CompVP_PP pp)
+      = let prep' = pp^.headX
+            o'    = pp^.maximalProjection
+            z'    = pp^.complement
+            rng'@(b',e') = z'^.headX._1
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
           then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ Nothing)) z'
-               in (fe', WithPrep prep' o' z'')
-          else (fe',WithPrep prep' o' z')
-    f (fe,rng@(b,e)) (fe',WithoutPrep z')
-      = let rng'@(b',e') = z'^.headX._1
+               in (fe',CompVP_PP (XP prep' o' () () z''))
+          else (fe',CompVP_PP (XP prep' o' () () z'))
+    f (fe,rng@(b,e)) (fe',CompVP_DP dp)
+      = let rng'@(b',e') = dp^.headX._1
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
-          then let z'' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ Nothing)) z'
-               in (fe', WithoutPrep z'')
-          else (fe',WithoutPrep z')
+          then let dp' = ((headX .~ ((b,e),(b',b-1))) . (adjunct .~ Nothing)) dp
+               in (fe', CompVP_DP dp')
+          else (fe', CompVP_DP dp)
+    f (fe,rng@(b,e)) x = x
 
 
 
@@ -322,7 +345,7 @@ matchFrame :: [TagPos TokIdx MarkType]
            -> Maybe (Range,VerbProperty (Zipper '[Lemma])
                     ,Text
                     ,(SenseID,Bool)
-                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, AdjustedDetP)]))
+                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])]))
 matchFrame tagged (vstr,paws) = do
   let cp = paws^.pa_CP
       verbp = cp^.complement.complement
@@ -344,6 +367,38 @@ depCPDP (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap depCPD
 depCPDP (PL _)           = []
 
 
+
+
+entityFromDP dp =
+  let rng = headRange dp
+      txt = headText dp
+      mrngtxt' = do rng_sub <- case (dp^.adjunct, dp^.complement) of
+                                 (Just r,_) -> return r -- for the time being
+                                 _          -> Nothing
+                    let txt_sub = dp ^.  maximalProjection
+                                        .to current
+                                        .to (tokensByRange rng_sub)
+                                        .to (T.intercalate " ")
+                    return (rng_sub,txt_sub)
+  in (rng,txt,mrngtxt')
+
+
+showMatchedFE' :: (FNFrameElement, CompVP '[Lemma]) -> String
+--                                         FE   range prep text
+showMatchedFE' (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) ("" :: Text) (headText dp)
+showMatchedFE' (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe (maybe "" (show.getRange.current) mz) ("" :: Text) (maybe "" gettext mz)
+  where mz = cp^.maximalProjection
+        gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
+showMatchedFE' (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) prep (headText dp)
+  where dp = pp^.complement
+        prep = case pp^.headX of
+                 Prep_NULL -> ""
+                 Prep_WORD p -> p
+showMatchedFE' (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
+  where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
+
+
+
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
   let (cpstr,lst_vstrpaws) = mkPAWSTriples sstr
@@ -354,20 +409,16 @@ meaningGraph sstr =
                                    -> MGPredicate i rng frame sense (simplifyVProp vprop)
       ipreds = zipWith ($) preds [1..]
       --
+
       entities0 = do (_,_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
-                     z <- (^._2 . to getDetP) <$> felst
-                     let rng = headRange z
-                         mrngtxt' = do rng <- case (z^.adjunct, z^.complement) of
-                                                (Just r,_) -> return r -- for the time being
-                                                _          -> Nothing
-                                       let txt = z ^.  maximalProjection
-                                                      .to current
-                                                      .to (tokensByRange rng)
-                                                      .to (T.intercalate " ")
-                                       return (rng,txt)
-                         txt = headText z
-                     return (rng,txt,mrngtxt')
+                     (fe,x) <- felst
+                     trace (intercalate "\n" (map showMatchedFE' felst)) $
+                       case x of
+                         CompVP_Unresolved _ -> []
+                         CompVP_CP cp -> [] -- CP is not an entity.
+                         CompVP_DP dp -> return (entityFromDP dp)
+                         CompVP_PP pp -> return (entityFromDP (pp^.complement))
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
@@ -399,9 +450,17 @@ meaningGraph sstr =
                   i <- maybeToList (HM.lookup (0,rng) rngidxmap)   -- frame
                   (_,felst) <- maybeToList mselected
                   (fe,x) <- felst
+                  {-
+                  x <- maybeToList (x0 ^? _CompVP_DP)
                   let z = getDetP x
                       mprep = x ^? _WithPrep . _1
                   let rng' = headRange z
+                  -}
+                  (rng',mprep) <- case x of
+                                    CompVP_Unresolved _ -> []
+                                    CompVP_CP cp -> maybeToList (cp^.maximalProjection) >>= \z_cp -> return (getRange (current z_cp),Nothing)
+                                    CompVP_DP dp -> return (headRange dp,Nothing)
+                                    CompVP_PP pp -> return (headRange (pp^.complement),pp^?headX._Prep_WORD)
                   i' <- maybeToList (HM.lookup (0,rng') rngidxmap)  -- frame element
                   let b = isJust (find (== (rng',rng)) depmap)
                   return (MGEdge fe b mprep i i')

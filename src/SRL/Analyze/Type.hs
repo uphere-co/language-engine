@@ -119,7 +119,7 @@ instance FromJSON DocAnalysisInput where
   parseJSON = genericParseJSON defaultOptions
 
 
-
+{-
 data AdjustedDetP = WithPrep { _adj_prep :: Text
                              , _adj_pp   :: Zipper '[Lemma]
                              , _adj_dp   :: DetP '[Lemma]
@@ -128,9 +128,10 @@ data AdjustedDetP = WithPrep { _adj_prep :: Text
 
 makePrisms ''AdjustedDetP
 
+
 getDetP (WithPrep _ _ z) = z
 getDetP (WithoutPrep z ) = z
-
+-}
 
 
 
