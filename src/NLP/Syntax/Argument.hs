@@ -57,7 +57,7 @@ phraseNodeType mtp z
                   return (dp^.maximalProjection.to current.to getRange == rng)
         obj  = do tp <- mtp
                   -- The following must be changed to accommodate PP
-                  let os = zip [1..] (tp^..complement.complement.traverse.trResolved.to (fmap removeDPorPP))
+                  let os = zip [1..] (tp^..complement.complement.traverse.trResolved.to (fmap uncoverCompVP))
                   m <- find (\o -> o^?_2._Just.maximalProjection.to current.to getRange == Just rng) os
                   return (m^._1)
         mgarg :: Maybe GArg

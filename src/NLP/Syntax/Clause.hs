@@ -19,7 +19,6 @@ import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers)
 import qualified Data.HashMap.Strict               as HM
-import           Data.List                              (find,mapAccumL,inits)
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (First(..),Last(..),(<>))
 import           Data.Text                              (Text)
@@ -32,14 +31,13 @@ import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
-import           NLP.Syntax.Noun                        (bareNounModifier,splitDP)
-import           NLP.Syntax.Preposition                 (checkEmptyPrep,hasEmptyPreposition)
+import           NLP.Syntax.Noun                        (splitDP)
+import           NLP.Syntax.Preposition                 (checkEmptyPrep)
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs)
 --
-import Debug.Trace
 
 
 hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
@@ -60,8 +58,7 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
-                  -> [TraceChain (DPorPP (DetP (Lemma ': as)))]
-                     -- [TraceChain (DPorPP (SplitDP (Zipper (Lemma ': as))))]
+                  -> [TraceChain (CompVP (Lemma ': as))]
 complementsOfVerb tagged vp = map (\x -> TraceChain [] (Just (checkEmptyPrep tagged x)))
                                   (splitDP tagged <$> (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp)))
   where
@@ -95,13 +92,13 @@ identifySubject tagged tag vp =
 --
 constructCP :: [TagPos TokIdx MarkType]
             -> VerbProperty (Zipper (Lemma ': as))
-            -> Maybe (CP (Lemma ': as),[DetP (Lemma ': as)]) -- [SplitDP (Zipper (Lemma ': as))])
+            -> Maybe (CP (Lemma ': as),[DetP (Lemma ': as)])
 constructCP tagged vprop = do
     vp <- maximalProjectionVP vprop
     tp <- parentOfVP vprop
     tptag' <- N.convert <$> getchunk tp
     let comps = complementsOfVerb tagged vprop
-        comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to removeDPorPP)
+        comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to uncoverCompVP)
         verbp = mkVerbP vp vprop comps
         nullsubj = TraceChain [NULL] Nothing
     case tptag' of
@@ -136,7 +133,7 @@ cpRange cp = (cp^?maximalProjection._Just.to (getRange . current)) <|>
              (cp^?complement.maximalProjection._Just.to (getRange . current)) <|>
              (return (cp^.complement.complement.maximalProjection.to (getRange . current)))
 
-
+hierarchyBits :: (CP as, [DetP as]) -> Maybe [(Range, (Range, CPDP as))]
 hierarchyBits (cp,zs) = do
   rng <- cpRange cp
   let cpbit = (rng,(rng,CPCase cp))
@@ -160,7 +157,10 @@ currentCPDP :: BitreeZipper (Range,CPDP as) (Range,CPDP as) -> CPDP as
 currentCPDP = snd . getRoot1 . current
 
 
-
+adjustXBarTree :: ((Range, CPDP as) -> (Range, CPDP as))
+               -> BitreeZipper (Range, CPDP as) (Range, CPDP as)
+               -> DetP as
+               -> MaybeT (State (Bitree (Range,CPDP as) (Range, CPDP as))) ()
 adjustXBarTree f w z = do
   let dprng = z ^. maximalProjection.to current.to getRange
       -- adjust CPDP hierarchy by modifier relation.
@@ -212,8 +212,8 @@ whMovement tagged w =
           runMaybeT $ do
             z'  <- splitDP tagged <$> hoistMaybe (prev =<< cp^.maximalProjection)
             let -- adjust function for complement with relative pronoun resolution
-                rf0 = _2._CPCase.complement.complement.complement %~ (TraceChain [Moved,WHPRO] (Just (DP z')) :)
-                dprng = z' ^. maximalProjection.to current.to getRange
+                rf0 = _2._CPCase.complement.complement.complement %~ (TraceChain [Moved,WHPRO] (Just (CompVP_DP z')) :)
+                -- dprng = z' ^. maximalProjection.to current.to getRange
             -- adjust CPDP hierarchy by modifier relation.
             adjustXBarTree rf0 w z'
             return ()

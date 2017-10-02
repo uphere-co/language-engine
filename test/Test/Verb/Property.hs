@@ -323,6 +323,7 @@ checkVP (_txt,i,expresult,lmatknlst,pt) =
        _       -> False
 
 
+formatTitle :: TestVerbProp -> String
 formatTitle c = printf "- %-80s %4s%4s%4s: %-10s: %-5s"
                  (c^._1)
                  (formatTense  (c^._3._1))

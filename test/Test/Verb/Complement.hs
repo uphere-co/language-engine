@@ -8,7 +8,6 @@
 module Test.Verb.Complement where
 
 import           Control.Lens               hiding (levels)
-import           Data.Foldable                     (toList)
 import           Data.List                         (find,intercalate)
 import           Data.Maybe                        (fromMaybe)
 import           Data.Monoid                       (All(All,getAll),mconcat)
@@ -17,7 +16,6 @@ import qualified Data.Text                  as T
 import           Text.Printf
 --
 import           Data.Bitree
-import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated      as N
@@ -170,10 +168,8 @@ checkComplement c  = fromMaybe False $ do
   let vps = mkVPS (c^._4) (c^._5)
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
   (cp,_) <- constructCP [] vp  -- for the time being
-  let -- gettokens x = case x of DP y -> headText y; PrepP _ y -> headTextdTokens y
-      --
-      lst :: [Maybe Text]
-      lst = cp^..complement.complement.complement.traverse.trResolved.to (fmap (headText . removeDPorPP))
+  let lst :: [Maybe Text]
+      lst = cp^..complement.complement.complement.traverse.trResolved.to (fmap (headText . uncoverCompVP))
       --
       lst2 :: [Text]
       lst2 = c^._3._2
