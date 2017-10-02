@@ -34,6 +34,7 @@ import           NLP.Syntax.Noun              (splitPP)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
+import           NLP.Syntax.Util              (isLemmaAs)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 import           NLP.Type.TagPos              (TagPos,TokIdx)
@@ -109,6 +110,12 @@ validObject (CompVP_DP z) = Just z
 validObject (CompVP_PrepP _ _) = Nothing
 -}
 
+isPhiOrThat cp = case cp^.headX of
+                   C_PHI -> True
+                   C_WORD z -> isLemmaAs "that" (current z)
+                   
+
+
 matchObjects :: [(PBArg,FNFrameElement)]
              -> VerbP '[Lemma]
              -> ArgPattern p GRel
@@ -116,24 +123,13 @@ matchObjects :: [(PBArg,FNFrameElement)]
 matchObjects rolemap verbp patt = do
   (garg,obj) <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved._Just) -- .to (\x -> x >>= \case CompVP_DP z -> Just z; _ -> Nothing)) -- this should be changed
   guard (case obj of CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False)
-  -- obj <- maybeToList obj'
-  {- 
-  ctag <- case obj ^. maximalProjection.to current.to getRoot of
-            Left (_,node) -> [chunkTag node]
-            _             -> []  -}
   (p,a) <- maybeToList (pbArgForGArg garg patt)
   case obj of
-    CompVP_CP _ -> guard (a == GR_SBAR (Just garg))
-    CompVP_DP _ -> guard (a == GR_NP   (Just garg))
-    _           -> []
-  {- case ctag of
-    NP   -> guard (a == GR_NP   (Just garg))
-    S    -> guard (a == GR_SBAR (Just garg))
-    SBAR -> guard (a == GR_SBAR (Just garg))
-    _    -> [] -}
+    CompVP_CP cp -> guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
+    CompVP_DP _  -> guard (a == GR_NP   (Just garg))
+    _            -> []
   fe <- maybeToList (lookup p rolemap)
   return (fe, obj)
-  -- return (fe, CompVP_DP obj)  -- this should be changed
 
 
 
