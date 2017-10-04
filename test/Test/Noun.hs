@@ -3,7 +3,7 @@
 
 module Test.Noun where
 
-import           Control.Lens                    ((^.),(%~),_1,_2,_3,to)
+import           Control.Lens                    ((^.),(%~),_1,_2,_3,_4,to)
 import           Data.Bifunctor                  (bimap)
 import qualified Data.IntMap             as IM
 import           Data.Text                       (Text)
@@ -11,12 +11,15 @@ import qualified Data.Text               as T
 import qualified Data.Text.IO            as T.IO
 import           Text.Format.Tree                (linePrint)
 --
-import           Data.Bitree                     (Bitree(..),toTree)
+import           Data.Bitree                     (Bitree(..),getRoot1,toTree)
+import           Data.BitreeZipper               (mkBitreeZipper)
 import           NLP.Type.PennTreebankII         (PennTree,Lemma)
 import           NLP.Type.TagPos                 (TagPos(..),TokIdx(..))
 --
 -- import           NLP.Syntax.Format               (formatBitree)
+import           NLP.Syntax.Noun                 (bareNounModifier,mkOrdDP)
 import           NLP.Syntax.Type                 (MarkType(..))
+import           NLP.Syntax.Type.XBar            (Zipper,headX)
 import           NLP.Syntax.Util                 (mkBitreeICP)
 
 
@@ -41,6 +44,17 @@ test_bare_noun_modifier_2 =
   , [TagPos (TokIdx 0,TokIdx 3,MarkEntity),TagPos (TokIdx 4,TokIdx 6,MarkEntity)]
   )
 
+-- |
+test_bare_noun_modifier_3 :: TestType
+test_bare_noun_modifier_3 =
+  ( "Mexican state oil company Pemex"
+  , [(0,("mexican","Mexican")),(1,("state","state")),(2,("oil","oil")),(3,("company","company")),(4,("Pemex","Pemex"))]
+  , PN "NP" [PN "NP" [PL ("JJ","Mexican"),PL ("NN","state"),PL ("NN","oil"),PL ("NN","company")],PN "NP" [PL ("NNP","Pemex")]]
+  , [TagPos (TokIdx 4,TokIdx 5,MarkEntity)]
+  )
+
+
+
 
 testfunc :: TestType -> IO ()
 testfunc x = do
@@ -49,9 +63,9 @@ testfunc x = do
       tr = toTree (bimap f g lemmapt)
         where f = (^._1.to show.to T.pack)
               g = (^._1.to show.to T.pack)
-      -- z :: Zipper '[Lemma]
-      -- z = getRoot1 $ mkBitreeZipper [] lemmapt
-      -- y = bareNounModifier (x^._4) z
-  -- print y
+      z :: Zipper '[Lemma]
+      z = getRoot1 $ mkBitreeZipper [] lemmapt
+      y = bareNounModifier (x^._4) (mkOrdDP z)
+  print (y^.headX)
   T.IO.putStrLn (linePrint id tr)
 
