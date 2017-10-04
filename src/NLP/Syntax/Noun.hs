@@ -79,6 +79,9 @@ splitPP tagged z = fromMaybe (mkOrdDP z) $ do
   return (splitDP tagged dp)
 
 
+
+
+
 -- | Identify bare noun subexpression inside noun phrase as modifier.
 --   I did not implement the already-splitted case. We need multiple-adjunct
 --   structure.
@@ -91,7 +94,7 @@ bareNounModifier tagged x = fromMaybe x $ do
   guard (isChunkAs NP (current z))
   let rng@(b0,_e0) = getRange (current z)
   -- check entity for the last words
-  let f (xb,xe) (yb,ye) = xe == ye && xb < yb && ye-yb > 1 -- at least two words.
+  let f (xb,xe) (yb,ye) = xe == ye && xb < yb && ye-yb >= 1 -- at least two words.
   TagPos (b1'',e1'',_t) <- find (\(TagPos (b1',e1',t)) -> f rng (beginEndToRange (b1',e1')) && t == MarkEntity) tagged
   let (b1,e1) = beginEndToRange (b1'',e1'')
       idx_last_modifier_word = b1-1
