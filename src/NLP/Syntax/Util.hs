@@ -87,3 +87,5 @@ mkBitreeICP lemmamap = lemmatize lemmamap . mkAnnotatable . mkPennTreeIdx
 
 beginEndToRange :: BeginEnd TokIdx -> Range
 beginEndToRange (TokIdx b,TokIdx e) = (b,e-1)
+
+

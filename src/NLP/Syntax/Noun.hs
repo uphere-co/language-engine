@@ -6,9 +6,11 @@ module NLP.Syntax.Noun where
 import           Control.Applicative      ((<|>))
 import           Control.Lens             ((^.),to,_1,_2)
 import           Control.Monad            (guard)
+import           Data.Char                (isUpper)
 import           Data.Foldable            (toList)
 import           Data.List                (find)
 import           Data.Maybe               (fromMaybe,isNothing)
+import qualified Data.Text           as T
 --
 import           Data.BitreeZipper        (child1,current,next)
 import           Data.Range               (Range)
@@ -17,7 +19,9 @@ import           NLP.Type.PennTreebankII  (ChunkTag(..),Lemma,POSTag(..),Ternary
 import           NLP.Type.TagPos          (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Type          (MarkType(..))
-import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,XP(..),maximalProjection)
+import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,XP(..),maximalProjection
+                                          ,tokensByRange
+                                          )
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 
 
@@ -79,6 +83,12 @@ splitPP tagged z = fromMaybe (mkOrdDP z) $ do
   return (splitDP tagged dp)
 
 
+-- | starting with capital letter
+-- 
+checkProperNoun z (b,e) =
+  let toks = tokensByRange (b,e) (toList (current z))
+  in (not.null) toks && isUpper (T.head (head toks))
+
 -- | Identify bare noun subexpression inside noun phrase as modifier.
 --   I did not implement the already-splitted case. We need multiple-adjunct
 --   structure.
@@ -91,8 +101,8 @@ bareNounModifier tagged x = fromMaybe x $ do
   guard (isChunkAs NP (current z))
   let rng@(b0,_e0) = getRange (current z)
   -- check entity for the last words
-  let f (xb,xe) (yb,ye) = xe == ye && xb < yb
-  TagPos (b1'',e1'',_t) <- find (\(TagPos (b1',e1',t)) -> f rng (beginEndToRange (b1',e1')) && t == MarkEntity) tagged
+  let f z (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun z (yb,ye) 
+  TagPos (b1'',e1'',_t) <- find (\(TagPos (b1',e1',t)) -> f z rng (beginEndToRange (b1',e1')) && t == MarkEntity) tagged
   let (b1,e1) = beginEndToRange (b1'',e1'')
       idx_last_modifier_word = b1-1
   last_modifier_word <- find (\y -> y^._1 == idx_last_modifier_word) (toList (current z))
