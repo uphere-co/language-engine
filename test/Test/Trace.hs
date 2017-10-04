@@ -26,9 +26,9 @@ import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 --
 import           Test.Common
-import           Test.Tasty.HUnit
 import           Test.Tasty
---
+import           Test.Tasty.HUnit
+
 
 
 data TracePos = Subj | Comp Int

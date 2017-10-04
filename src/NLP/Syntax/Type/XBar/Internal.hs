@@ -9,11 +9,7 @@
 
 module NLP.Syntax.Type.XBar.Internal where
 
--- import           Control.Lens                ((^.))
--- import           Data.Foldable               (toList)
--- import           Data.Maybe                  (fromMaybe)
 import           Data.Text                   (Text)
--- import qualified Data.Text              as T
 --
 import           Data.Bitree
 import           Data.BitreeZipper
