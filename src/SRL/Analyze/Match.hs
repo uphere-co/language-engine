@@ -267,6 +267,25 @@ matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
 
 checkTimeComplementizer z = any (\x -> isLemmaAs x (current z)) ["after","before"]
 
+
+matchExtraRolesForPPing prep role tagged paws felst = do
+  guard (isNothing (find (\x -> x^._1 == role) felst))
+  (o,z) <-matchPP tagged paws (prep,Just True)
+  let rng = headRange z
+      comp = CompVP_PP (XP (Prep_WORD prep) o () () z)
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
+  return (role,comp)
+
+matchExtraRolesForCP check role paws felst = do
+  guard (is _Nothing (find (\x -> x^._1 == role) felst))
+  let candidates = paws^..pa_CP.complement.complement.complement.traverse.trResolved._Just._CompVP_CP
+  cp <- find (\x->x^?headX._C_WORD.to check == Just True) candidates
+  rng <- cp^?maximalProjection._Just.to current.to getRange
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
+  let comp = CompVP_CP cp
+  return (role,comp)
+
+
 -- | this function should be generalized.
 --
 matchExtraRoles :: [TagPos TokIdx MarkType]
@@ -274,24 +293,10 @@ matchExtraRoles :: [TagPos TokIdx MarkType]
                 -> [(FNFrameElement, CompVP '[Lemma])]
                 -> [(FNFrameElement, CompVP '[Lemma])]
 matchExtraRoles tagged paws felst =
-  let mmeans = do
-        guard (isNothing (find (\x -> x^._1 == "Means") felst))
-        (o,z) <-matchPP tagged paws ("by",Just True)
-        let rng = headRange z
-            comp = CompVP_PP (XP (Prep_WORD "by") o () () z)
-        guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
-        return ("Means",comp)
-      mtime = do
-        guard (is _Nothing (find (\x -> x^._1 == "Time") felst))
-        let candidates = paws^..pa_CP.complement.complement.complement.traverse.trResolved._Just._CompVP_CP
-        cp <- find (\x->x^?headX._C_WORD.to checkTimeComplementizer == Just True) candidates
-        rng <- cp^?maximalProjection._Just.to current.to getRange
-        guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
-        let comp = CompVP_CP cp
-        return ("Time",comp)
-
-      -- mduration = do
-      --   guard (is _Nothing (find (\x -> x^._1 == "Duration") felst))
+  let mmeans = matchExtraRolesForPPing "by" "Means" tagged paws felst
+      mtime  = matchExtraRolesForCP checkTimeComplementizer "Time" paws felst
+               <|> matchExtraRolesForPPing "after" "Time" tagged paws felst
+               <|> matchExtraRolesForPPing "before" "Time" tagged paws felst
   in felst ++ catMaybes [mmeans,mtime] 
 
 
