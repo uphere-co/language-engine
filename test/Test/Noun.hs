@@ -59,6 +59,16 @@ test_bare_noun_modifier_3 =
   )
 
 
+-- |
+test_bare_noun_modifier_4 :: TestBNM
+test_bare_noun_modifier_4 =
+  ( "its food delivery service"
+  , ((0,3),(0,3))
+  , [(0,("its","its")),(1,("food","food")),(2,("delivery","delivery")),(3,("service","service"))]
+  , PN "NP" [PN "NP" [PL ("PRP$","its"),PL ("NN","food"),PL ("NN","delivery")],PN "NP" [PL ("NN","service")]]
+  , [TagPos (TokIdx 3, TokIdx 4,MarkEntity)]
+  )
+
 checkBNM :: TestBNM -> Bool
 checkBNM x =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) (x^._3))
@@ -78,6 +88,7 @@ testcases :: [TestBNM]
 testcases = [ test_bare_noun_modifier_1
             , test_bare_noun_modifier_2
             , test_bare_noun_modifier_3
+            , test_bare_noun_modifier_4            
             ]
 
 
