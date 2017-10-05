@@ -114,15 +114,15 @@ mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [TraceChain (CompVP t)] -> Ver
 mkVerbP vp vprop comps = XP vprop vp () () comps
 
 type instance Property   'X_T t = ()
-type instance Maximal    'X_T t = Maybe (Zipper t)
+type instance Maximal    'X_T t = Zipper t
 type instance Specifier  'X_T t = TraceChain (Either {- (CP t) -} (Zipper t) (DetP t))
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Maybe (Zipper t) -> TraceChain (Either {- (CP t) -} (Zipper t) (DetP t)) -> VerbP t -> TP t
-mkTP mtp mdp vp = XP () mtp mdp () vp
+mkTP :: Zipper t -> TraceChain (Either {- (CP t) -} (Zipper t) (DetP t)) -> VerbP t -> TP t
+mkTP tp mdp vp = XP () tp mdp () vp
 
 
 data Complementizer t = C_PHI              -- ^ empty complementizer
@@ -136,15 +136,15 @@ data SpecCP t = SpecCP_WHPHI           -- ^ empty Wh-word
 
 
 type instance Property   'X_C t = Complementizer t
-type instance Maximal    'X_C t = Maybe (Zipper t)    -- why maybe?
+type instance Maximal    'X_C t = Zipper t
 type instance Specifier  'X_C t = Maybe (SpecCP t)
 type instance Adjunct    'X_C t = ()
 type instance Complement 'X_C t = TP t
 
 type CP = XP 'X_C
 
-mkCP :: Complementizer t -> Maybe (Zipper t) -> Maybe (SpecCP t) -> TP t -> CP t
-mkCP mc mcp spec tp = XP mc mcp spec () tp
+mkCP :: Complementizer t -> Zipper t -> Maybe (SpecCP t) -> TP t -> CP t
+mkCP mc cp spec tp = XP mc cp spec () tp
 
 
 data CPDP a = CPCase (CP a)

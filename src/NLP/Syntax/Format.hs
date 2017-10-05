@@ -78,7 +78,6 @@ showRange rng = T.pack (printf "%-7s" (show rng))
 rangeText :: Either {- (CP as) -} (Zipper as) (DetP as) -> Text
 rangeText (Right x) = x ^. headX . _2 . to show . to T.pack
 rangeText (Left x ) = (T.pack.show.getRange.current) x
-  -- maybe "null CP?" (T.pack.show.getRange.current) (x ^. maximalProjection)
 
 
 formatDP :: DetP as -> Text
@@ -93,27 +92,14 @@ formatDP x = case (x^.adjunct,x^.complement) of
                                                      <> T.pack (show rng)
 
 
--- formatCP :: CP as -> Text
 
 
 formatCompVP :: CompVP as -> Text
 formatCompVP (CompVP_Unresolved z)  = "unresolved" <> T.pack (show (getRange (current z)))
-{-   fromMaybe ())) $ do
-    let rng = getRange (current z)
-    -- cpstr <- mcpstr
-    z' <- getFirst (foldMap (First . extractZipperById rng) cpstr)
-    case (snd . getRoot1 . current) z' of
-      DPCase _  -> return "error: unresolved DPCase"
-      CPCase cp -> case cp^.headX of
-        C_PHI    -> return ("CP" <> maybe "" (rangeText . Left) (cp^.maximalProjection))
-        C_WORD w -> return ("CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) w
-                                  <> maybe "" (rangeText . Left) (cp^.maximalProjection))
-
--}
 formatCompVP (CompVP_CP z) = case z^.headX of
-                               C_PHI -> "CP" <> maybe "" (rangeText . Left) (z^.maximalProjection)
+                               C_PHI -> "CP" <> rangeText (Left (z^.maximalProjection))
                                C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'
-                                                  <> maybe "" (rangeText . Left) (z^.maximalProjection)
+                                                  <> rangeText (Left (z^.maximalProjection))
 formatCompVP (CompVP_DP z)          = formatDP z
 formatCompVP (CompVP_PP z) = "PP-" <> formatDP (z^.complement)
 
@@ -146,12 +132,12 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                      \Determiner Phrase    :         %s\n\
                      \Verb Phrase          : %-6s  %s\n\
                      \Verb Complements     :       %s\n"
-                (maybe "null" show (getchunk =<< cp^.maximalProjection))
-                (maybe "" (show . gettoken) (cp^.maximalProjection))
+                (maybe "null" show (getchunk (cp^.maximalProjection)))
+                (show (gettoken (cp^.maximalProjection)))
                 head1 head2
                 spec1 spec2
-                (maybe "null" show (getchunk =<< cp^.complement.maximalProjection))
-                (maybe "" (show . gettoken) (cp^.complement.maximalProjection))
+                (maybe "null" show (getchunk (cp^.complement.maximalProjection)))
+                (show (gettoken (cp^.complement.maximalProjection)))
                 (formatTraceChain rangeText (cp^.complement.specifier))
                 (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 ((show . gettoken) (cp^.complement.complement.maximalProjection))
@@ -206,7 +192,7 @@ formatVPwithPAWS :: [TagPos TokIdx MarkType]
                  -> Text
 formatVPwithPAWS tagged clausetr cpstr vp =
   let mpaws = findPAWS tagged clausetr vp cpstr
-      mrng = cpRange . (^.pa_CP) =<< mpaws
+      mrng = cpRange . (^.pa_CP) <$> mpaws
       fmt = either (const "") (tokenWord.snd) . getRoot . current
   in case (,) <$> mpaws <*> mrng of
        Nothing -> "fail in identifying PAWS"
