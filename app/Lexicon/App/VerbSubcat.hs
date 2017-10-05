@@ -63,6 +63,24 @@ import           Lexicon.Data
 type LemmaList = [(Int,Text)]
 
 
+
+-- | migrated from OntoNotes
+--
+matchVerbPropertyWithRelation :: [VerbProperty (BitreeZipperICP '[Lemma])]
+                              -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
+                              -> MatchedInstance
+                              -> Maybe (VerbProperty (BitreeZipperICP '[Lemma])
+                                       ,Maybe (PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))))
+matchVerbPropertyWithRelation verbprops clausetr minst = do
+  relidx <- findRelNode (minst^.mi_arguments)
+  vp <- find (\vp->vp^.vp_index==relidx) verbprops
+  let cpstr = (map (bindingAnalysis []) . identifyCPHierarchy []) verbprops   -- for the time being
+      mpa = findPAWS [] clausetr vp cpstr                                -- for the time being
+  return (vp,mpa)
+
+
+
+
 lookupRoleset :: PredicateDB -> (Text,Text) -> Maybe Text
 lookupRoleset db (lma,sens) = do
   p <- HM.lookup lma (db^.predicateDB)
