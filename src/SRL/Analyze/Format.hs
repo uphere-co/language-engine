@@ -203,8 +203,8 @@ formatVerbStructure clausetr cpstr (VerbStructure vp senses mrmmtoppatts) =
 showMatchedFE :: (FNFrameElement, CompVP '[Lemma]) -> String
 --                                         FE   range prep text
 showMatchedFE (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) ("" :: Text) (headText dp)
-showMatchedFE (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe (maybe "" (show.getRange.current) mz) ("" :: Text) (maybe "" gettext mz)
-  where mz = cp^.maximalProjection
+showMatchedFE (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("" :: Text) (gettext z)
+  where z = cp^.maximalProjection
         gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 showMatchedFE (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) prep (headText dp)
   where dp = pp^.complement

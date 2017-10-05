@@ -32,3 +32,6 @@ Volkswagen's fixes for diesel vehicles in Europe are running smoothly, a spokesm
 
 -- after ..ing (PP-ing extra role)
 Microsoft Corp Chief Executive Officer Satya Nadella said on Wednesday the company's search engine, Bing, will focus on expanding in the PC search market after losing its deal with Apple Inc's Siri.
+
+-- simplified version of the above sentence.
+Satya Nadella said Bing will focus on expanding after losing its deal with Siri.
