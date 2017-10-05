@@ -28,6 +28,7 @@ mg2 =
   )
 -}
 
+{-
 mg3 =
   ( "Authorities say at least 35 people have died."
   , MeaningGraph {_mg_vertices = [MGPredicate {_mv_id = 1, _mv_range = (0,8), _mv_frame = "Statement", _mv_sense = (("say",Verb,"1.1"),False), _mv_verb = VerbProperty {_vp_index = 1, _vp_lemma = Lemma {unLemma = "say"}, _vp_tense = Present, _vp_aspect = Simple, _vp_voice = Active, _vp_auxiliary = [], _vp_negation = Nothing, _vp_words = [("say",(1,Lemma {unLemma = "say"}))]}},MGPredicate {_mv_id = 2, _mv_range = (2,7), _mv_frame = "Ceasing_to_be", _mv_sense = (("die",Verb,"1.1"),False), _mv_verb = VerbProperty {_vp_index = 7, _vp_lemma = Lemma {unLemma = "die"}, _vp_tense = Present, _vp_aspect = Perfect, _vp_voice = Active, _vp_auxiliary = [], _vp_negation = Nothing, _vp_words = [("have",(6,Lemma {unLemma = "have"})),("die",(7,Lemma {unLemma = "die"}))]}},MGEntity {_mv_id = 3, _mv_range = (0,0), _mv_text = "Authorities", _mv_resolved_entities = []},MGEntity {_mv_id = 4, _mv_range = (2,5), _mv_text = "at least 35 people", _mv_resolved_entities = []}], _mg_edges = [MGEdge {_me_relation = "Speaker", _me_ismodifier = False, _me_prep = Nothing, _me_start = 1, _me_end = 3},MGEdge {_me_relation = "Message", _me_ismodifier = False, _me_prep = Nothing, _me_start = 1, _me_end = 2},MGEdge {_me_relation = "Entity", _me_ismodifier = False, _me_prep = Nothing, _me_start = 2, _me_end = 4}]}
@@ -37,7 +38,15 @@ mg3 =
 test rolemap mg = do
   putStrLn (dotMeaningGraph (mg^._1) (mg^._2))
   print (mkARB rolemap (mg^._2))
-  
+-}  
+
+
+test_raise =
+  ( "I plan to write a book"
+  , [(0,("I","I")),(1,("plan","plan")),(2,("to","to")),(3,("write","write")),(4,("a","a")),(5,("book","book")),(6,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","book")]]]]],PL (".",".")]]
+  , []
+  )
 
 main = do
   rolemap <- loadRoleInsts "/home/wavewave/repo/srcp/lexicon-builder/mapping/final.txt"

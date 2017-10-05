@@ -30,7 +30,7 @@ import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_caus
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,findPAWS)
-import           NLP.Syntax.Format            (formatDP)
+import           NLP.Syntax.Format            (formatCP,formatDP)
 import           NLP.Syntax.Noun              (splitPP)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
@@ -116,15 +116,18 @@ matchObjects :: [(PBArg,FNFrameElement)]
              -> ArgPattern p GRel
              -> [(FNFrameElement, CompVP '[Lemma])]
 matchObjects rolemap verbp patt = do
-  (garg,obj) <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved._Just)
+ (garg,obj) <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved._Just)
+ trace (show (verbp^.headX.vp_lemma) ++  show garg) $ do
   guard (case obj of CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False)
   (p,a) <- maybeToList (pbArgForGArg garg patt)
   case obj of
-    CompVP_CP cp -> guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
+    CompVP_CP cp -> do
+      trace ("before\n"++ formatCP cp) $ 
+        guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
     CompVP_DP _  -> guard (a == GR_NP   (Just garg))
     _            -> []
   fe <- maybeToList (lookup p rolemap)
-  return (fe, obj)
+  trace ("after here\n") $ return (fe, obj)
 
 
 
@@ -134,7 +137,7 @@ matchPP :: [TagPos TokIdx MarkType]
         -> Maybe (Zipper '[Lemma],DetP '[Lemma])
 matchPP tagged paws (prep,mising) = do
     Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
-    tr <- current . root <$> paws^.pa_CP.maximalProjection
+    let tr = paws^.pa_CP.maximalProjection.to root.to current
     z' <- (find (\z -> z^?to current._PN._1._1 == Just rng) . getNodes .mkBitreeZipper []) tr
     return (z',splitPP tagged z')
   where
@@ -280,7 +283,7 @@ matchExtraRolesForCP check role paws felst = do
   guard (is _Nothing (find (\x -> x^._1 == role) felst))
   let candidates = paws^..pa_CP.complement.complement.complement.traverse.trResolved._Just._CompVP_CP
   cp <- find (\x->x^?headX._C_WORD.to check == Just True) candidates
-  rng <- cp^?maximalProjection._Just.to current.to getRange
+  let rng = cp^.maximalProjection.to current.to getRange
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
   let comp = CompVP_CP cp
   return (role,comp)
@@ -360,8 +363,8 @@ matchFrame tagged (vstr,paws) = do
       verbp = cp^.complement.complement
       mDP = cp^.complement.specifier.trResolved
       vprop = vstr^.vs_vp
-  rng <- cpRange cp
-  let frmsels = matchFrameRolesAll tagged verbp paws mDP (vstr^.vs_roleTopPatts)
+      rng = cpRange cp
+      frmsels = matchFrameRolesAll tagged verbp paws mDP (vstr^.vs_roleTopPatts)
       total=  sum (frmsels^..traverse._2)
   ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
   let mselected1 = (_Just . _2 %~ matchExtraRoles tagged paws) mselected0
@@ -395,8 +398,8 @@ entityFromDP dp =
 showMatchedFE' :: (FNFrameElement, CompVP '[Lemma]) -> String
 --                                         FE   range prep text
 showMatchedFE' (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) ("" :: Text) (headText dp)
-showMatchedFE' (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe (maybe "" (show.getRange.current) mz) ("" :: Text) (maybe "" gettext mz)
-  where mz = cp^.maximalProjection
+showMatchedFE' (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe (z^.to current.to getRange.to show) ("" :: Text) (gettext z)
+  where z = cp^.maximalProjection
         gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 showMatchedFE' (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) prep (headText dp)
   where dp = pp^.complement
@@ -422,11 +425,12 @@ meaningGraph sstr =
       entities0 = do (_,_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
                      (fe,x) <- felst
-                     case x of
-                       CompVP_Unresolved _ -> []
-                       CompVP_CP cp -> [] -- CP is not an entity.
-                       CompVP_DP dp -> return (entityFromDP dp)
-                       CompVP_PP pp -> return (entityFromDP (pp^.complement))
+                     trace (intercalate "\n" (map showMatchedFE' felst)) $ do 
+                       case x of
+                         CompVP_Unresolved _ -> []
+                         CompVP_CP cp -> [] -- CP is not an entity.
+                         CompVP_DP dp -> return (entityFromDP dp)
+                         CompVP_PP pp -> return (entityFromDP (pp^.complement))
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
@@ -460,12 +464,12 @@ meaningGraph sstr =
                   (fe,x) <- felst
                   (rng',mprep) <- case x of
                                     CompVP_Unresolved _ -> []
-                                    CompVP_CP cp -> maybeToList (cp^.maximalProjection) >>= \z_cp ->
-                                                      let mprep = case cp^.headX of
-                                                                    C_PHI -> Nothing
-                                                                    C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
-                                                                                >>= \prep -> if prep == "that" then Nothing else return prep
-                                                      in return (getRange (current z_cp),mprep)
+                                    CompVP_CP cp -> let z_cp = cp^.maximalProjection 
+                                                        mprep = case cp^.headX of
+                                                                  C_PHI -> Nothing
+                                                                  C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
+                                                                                 >>= \prep -> if prep == "that" then Nothing else return prep
+                                                    in return (getRange (current z_cp),mprep)
                                     CompVP_DP dp -> return (headRange dp,Nothing)
                                     CompVP_PP pp -> return (headRange (pp^.complement),pp^?headX._Prep_WORD)
                   i' <- maybeToList (HM.lookup (0,rng') rngidxmap)  -- frame element
