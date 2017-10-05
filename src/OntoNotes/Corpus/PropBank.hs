@@ -8,10 +8,10 @@ import           Data.Function
 import           Data.List
 import           Data.Text                       (Text)
 --
-import           NLP.Syntax.Clause
-import           NLP.Syntax.Type                 (PredArgWorkspace,STag)
-import           NLP.Syntax.Type.Verb
-import           NLP.Syntax.Type.XBar
+-- import           NLP.Syntax.Clause
+-- import           NLP.Syntax.Type                 (PredArgWorkspace,STag)
+-- import           NLP.Syntax.Type.Verb
+-- import           NLP.Syntax.Type.XBar
 import           NLP.Type.PennTreebankII
 import           PropBank.Match
 import           PropBank.Type.Match
@@ -68,7 +68,7 @@ toMatchResult (x:[]) = ExactMatch x
 toMatchResult xs     = MergeMatch xs
 
 
-
+{- 
 matchVerbPropertyWithRelation :: [VerbProperty (BitreeZipperICP '[Lemma])]
                               -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
                               -> MatchedInstance
@@ -81,4 +81,4 @@ matchVerbPropertyWithRelation verbprops clausetr minst = do
       mpa = findPAWS [] clausetr vp cpstr                                -- for the time being
   return (vp,mpa)
 
-
+-}
