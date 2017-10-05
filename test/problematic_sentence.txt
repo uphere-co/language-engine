@@ -35,3 +35,11 @@ Microsoft Corp Chief Executive Officer Satya Nadella said on Wednesday the compa
 
 -- simplified version of the above sentence.
 Satya Nadella said Bing will focus on expanding after losing its deal with Siri.
+
+
+-- | targeting Alzheimer's patients modifies drug.
+Axovant Sciences Ltd said on Tuesday its experimental drug targeting Alzheimer's patients failed to meet the main goals in a late-stage trial.
+
+
+-- |
+Chinese e-commerce giant Alibaba Group Holding Ltd is raising its stake in logistics affiliate Cainiao Smart Logistics Network Ltd to 51 percent from 47 percent by investing 5.3 billion yuan.
