@@ -95,6 +95,27 @@ test_reduced_relative_clause =
   )
 
 
+-- | passive verb
+--
+test_passive :: TestTrace
+test_passive =
+  ( "The book is used by Chomsky."
+  , 3, (Comp 1, TraceChain [Moved] (Just "The book"))
+  , [(0,("the","The")),(1,("book","book")),(2,("be","is")),(3,("use","used")),(4,("by","by")),(5,("Chomsky","Chomsky")),(6,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","The"),PL ("NN","book")],PN "VP" [PL ("VBZ","is"),PN "VP" [PL ("VBN","used"),PN "PP" [PL ("IN","by"),PN "NP" [PL ("NNP","Chomsky")]]]],PL (".",".")]]
+  , []
+  )
+
+
+-- | raising construction associated with passive ECM verb
+--
+test_passive_raising =
+  ( "You are expected to call."
+  , 4, (Subj,TraceChain [] Nothing)
+  , [(0,("you","You")),(1,("be","are")),(2,("expect","expected")),(3,("to","to")),(4,("call","call")),(5,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","You")],PN "VP" [PL ("VBP","are"),PN "VP" [PL ("VBN","expected"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","call")]]]]],PL (".",".")]]
+  )
+
 formatDetail :: TestTrace -> [Text]
 formatDetail (_txt,_,_,lma,pt,tmxs) =
   let vps  = mkVPS lma pt
@@ -118,7 +139,7 @@ formatDetail (_txt,_,_,lma,pt,tmxs) =
 showDetail :: TestTrace -> IO ()
 showDetail = mapM_ T.IO.putStrLn . formatDetail
 
-
+{- 
 mainShow :: IO ()
 mainShow = mapM_ showDetail [ test_silent_pronoun
                             , test_multi_silent_pronoun
@@ -126,14 +147,15 @@ mainShow = mapM_ showDetail [ test_silent_pronoun
                             , test_relative_pronoun_object
                             , test_reduced_relative_clause
                             ]
-
+-}
 
 testcases :: [TestTrace]
-testcases = [ test_silent_pronoun
+testcases = [ test_passive
+            {- test_silent_pronoun
             , test_multi_silent_pronoun
             , test_relative_pronoun_subject
             , test_relative_pronoun_object
-            , test_reduced_relative_clause
+            , test_reduced_relative_clause -}
             ]
 
 checkTrace :: TestTrace -> Bool
