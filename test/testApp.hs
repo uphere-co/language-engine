@@ -1,6 +1,5 @@
-{-# LANGUAGE OverloadedStrings
-           , BangPatterns
- #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE BangPatterns      #-}
 
 
 module Main where
@@ -41,8 +40,9 @@ import qualified Data.Vector                   as V
 import qualified Data.Vector.Unboxed           as UV
 import qualified Data.Vector.Fusion.Bundle     as B
 --import qualified WikiEL.Util.Hash              as H
+import qualified Graph                         as G
 import qualified Graph.Internal.Hash           as H
-import qualified WikiEL.Graph                  as G
+-- import qualified WikiEL.Graph                  as G
 import qualified WikiEL.ETL.RDF.Binary         as BR
 import qualified Data.ByteString.Lazy.Char8    as BL
 
