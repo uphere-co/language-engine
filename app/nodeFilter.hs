@@ -11,7 +11,8 @@ import qualified Data.List                     as L
 import qualified Data.Map.Strict               as M
 import qualified Data.Vector.Unboxed           as UV
 
-import qualified WikiEL.Graph                  as G
+--import qualified WikiEL.Graph                  as G
+import qualified Graph                         as G
 import qualified Graph.ETL                     as G.E
 import qualified Graph.Internal.Hash           as H
 import qualified WikiEL.EntityDisambiguation   as ED

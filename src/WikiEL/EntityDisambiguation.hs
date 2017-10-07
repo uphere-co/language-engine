@@ -12,9 +12,10 @@ import qualified Data.Vector.Unboxed           as UV
 import           WikiEL.Type.Wikidata                         (ItemID)
 import           WikiEL.EntityLinking                         (EntityMention)
 import qualified NLP.Type.NamedEntity          as NE
+import qualified Graph                         as G
 import qualified Graph.ETL                     as G.E
 import qualified Graph.Internal.Hash           as H  
-import qualified WikiEL.Graph                  as G
+-- import qualified WikiEL.Graph                  as G
 import qualified WikiEL.EntityLinking          as EL
 import qualified WikiEL.WikiNamedEntityTagger  as NET
 import qualified WikiEL.WikiEntityClass        as WEC

@@ -5,7 +5,7 @@
 
 module WikiEL.WikiEntityTagger 
   ( module WikiEL.WikiEntityTagger
-  , WikiEL.Util.Hash.WordHash
+  , WordHash
   ) where
 
 import           Data.Maybe                            (fromJust, isNothing)
@@ -23,7 +23,9 @@ import qualified Data.Vector                   as V
 import qualified Data.Vector.Algorithms.Search as VS
 import qualified Data.Vector.Unboxed           as UV
 
-import           WikiEL.Util.Hash                      (WordHash,wordHash)
+
+import           Graph.Internal.Hash                   (WordHash,wordHash)
+--import           WikiEL.Util.Hash                      (WordHash,wordHash)
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           WikiEL.Type.FileFormat                (EntityReprFile,EntityReprRow(..))
 import           WikiEL.ETL.LoadData                   (loadEntityReprs)
