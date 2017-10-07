@@ -24,10 +24,13 @@ module WikiEL
 
 import           Data.Text                                    (Text)  
 import qualified Data.Vector                        as V
-
+--
+import qualified Graph                              as G
+import qualified Graph.Internal.Hash                as H
+--
 import           NLP.Type.PennTreebankII                      (POSTag(..))
 import           NLP.Type.NamedEntity                         (NamedEntityClass,NamedEntityFrag(..))
-
+--
 import           WikiEL.Type.Wikidata                         (ItemID)
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,namedEntityAnnotator)
 import           WikiEL.WikiEntityTagger                      (NameUIDTable,loadWETagger)
@@ -40,8 +43,6 @@ import qualified WikiEL.ETL.Util                    as U
 import qualified WikiEL.ETL.LoadData                as LD
 import qualified WikiEL.WikiEntityClass             as WEC
 import qualified WikiEL.EntityDisambiguation        as ED
-import qualified Graph.Internal.Hash                as H
-import qualified WikiEL.Graph                       as G
 
 import           WikiEL.Type.FileFormat
 import           WikiEL.WordNet -- for WordNet synset lookup. 
