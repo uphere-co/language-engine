@@ -45,7 +45,7 @@ library
                        WikiEL.Type.Wikidata
                        WikiEL.Type.Wikipedia
                        WikiEL.Type.WordNet
-                       WikiEL.Util.Hash
+
                        WikiEL.WikiEntityClass
                        WikiEL.WikiEntityTagger
                        WikiEL.WikiNamedEntityTagger
