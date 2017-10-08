@@ -359,15 +359,7 @@ bindingECM rng = do
   rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.to headRange)
   cp' <- hoistMaybe (c2^?trResolved._Just._CompVP_CP)
   let rng' = cpRange cp'
-      spec' = cp'^.complement.specifier -- .trResolved
-  -- trace ("\nbindingECM:" ++ show (rng,rng') ++ "," ++ show (formatTraceChain rangeText spec')) $ return z
-  {-
-  (z',_) <- retrieveZCP rng' -}
-  rng_dp <- hoistMaybe (spec'^?trResolved._Just._Right.to headRange)
-
-  -- trace (show (map (formatTraceChain formatCompVP) [c1,c2])) $ return ()
-  -- trace ("bindingECM: " ++ show (rng1,rng_dp)) $ do
-
+  rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.to headRange)
   if rng1 == rng_dp
     then do
       let rf = (_2._CPCase.complement.specifier .~ emptyTraceChain)
@@ -375,10 +367,8 @@ bindingECM rng = do
           z' = replaceFocusItem rf rf z
       lift (put (toBitree z'))
       return z'
-      -- trace "bindingECM here" $ return z'
     else
       return z
-  -- trace ("\nbindingECM:::" ++ show (rng,rng',rng_dp)) $ return z
 
 
 --
