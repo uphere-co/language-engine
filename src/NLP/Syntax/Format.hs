@@ -18,6 +18,7 @@ import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.ListZipper                        (lzToList)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
@@ -165,8 +166,8 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
 
 
 
-formatCPHierarchy :: Bitree (Range,CPDP as) (Range,CPDP as) -> Text
-formatCPHierarchy tr = formatBitree fmt tr
+formatX'Tree :: X'Tree as -> Text
+formatX'Tree tr = formatBitree fmt tr
   where
         fmt (rng,CPCase _) = "CP" <> showRange rng
         fmt (_  ,DPCase x) = formatDP x
@@ -188,7 +189,7 @@ formatClauseStructure clausetr =
 
 formatVPwithPAWS :: [TagPos TokIdx MarkType]
                  -> ClauseTree
-                 -> [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
+                 -> [X'Tree (Lemma ': as)]
                  -> VerbProperty (BitreeZipperICP (Lemma ': as))
                  -> Text
 formatVPwithPAWS tagged clausetr cpstr vp =
@@ -213,5 +214,5 @@ showClauseStructure tagged lemmamap ptree  = do
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
       cpstr = (map (resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
       xs = map (formatVPwithPAWS tagged clausetr cpstr) vps
-  mapM_ (T.IO.putStrLn . formatCPHierarchy) cpstr
+  mapM_ (T.IO.putStrLn . formatX'Tree) cpstr
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)

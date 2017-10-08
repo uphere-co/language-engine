@@ -12,7 +12,6 @@ module NLP.Syntax.Type.XBar
 ) where
 
 import           Control.Lens                       ((^.),(^?),_1,_2,_Just,to)
--- import           Control.Lens                       ((^.),_1,_2,to)
 import           Data.Foldable                      (toList)
 import           Data.Maybe                         (fromMaybe)
 import           Data.Text                          (Text)
@@ -24,6 +23,7 @@ import           NLP.Type.PennTreebankII            (ALeaf,tokenWord)
 --
 import           NLP.Syntax.Type.XBar.Internal
 import           NLP.Syntax.Type.XBar.TH
+
 
 
 getTokens :: BitreeICP as -> Text

@@ -13,6 +13,7 @@ import           Data.Text                   (Text)
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.ListZipper
 import           Data.Range
 --
 import           NLP.Type.PennTreebankII
@@ -159,3 +160,8 @@ mkCP mc cp spec tp = XP mc cp spec () tp
 
 data CPDP a = CPCase (CP a)
             | DPCase (DetP a)
+
+
+type X'Tree t = Bitree (Range,CPDP t) (Range,CPDP t)
+
+type X'Zipper t = BitreeZipper (Range,CPDP t) (Range,CPDP t)

@@ -14,6 +14,7 @@ import qualified Data.Text.IO               as T.IO
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.ListZipper
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -127,7 +128,7 @@ formatDetail (_txt,_,_,lma,pt,tmxs) =
   , (T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList) pt
   , "--------------------------------------------------------------------------------------------------------------------"
   ]
-  ++ map formatCPHierarchy cpstr
+  ++ map formatX'Tree cpstr
   ++ map (formatVPwithPAWS tmxs clausetr cpstr) vps
   ++
   [ "--------------------------------------------------------------------------------------------------------------------"
