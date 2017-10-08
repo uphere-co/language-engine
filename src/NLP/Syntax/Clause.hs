@@ -21,7 +21,7 @@ import           Data.Bitraversable                     (bitraverse)
 import           Data.Either                            (partitionEithers,rights)
 import qualified Data.HashMap.Strict               as HM
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
-import           Data.Monoid                            (First(..),Last(..),(<>))
+import           Data.Monoid                            (First(..),Last(..))
 import           Data.Text                              (Text)
 --
 import           Data.Bitree
@@ -84,7 +84,7 @@ complementsOfVerb tagged vp = map xform (siblingsBy next checkNPSBAR =<< maybeTo
 identifySubject :: [TagPos TokIdx MarkType]
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)
-                -> TraceChain (Either {- (CP (Lemma ': as)) -} (Zipper (Lemma ': as)) (DetP (Lemma ': as)))   -- now support clause subject!
+                -> TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as)))   -- now support clause subject!
 identifySubject tagged tag vp =
   let r = case tag of
             N.SINV -> firstSiblingBy next (isChunkAs NP) vp
@@ -100,7 +100,7 @@ identifySubject tagged tag vp =
 --
 constructCP :: [TagPos TokIdx MarkType]
             -> VerbProperty (Zipper (Lemma ': as))
-            -> Maybe (CP (Lemma ': as),[Either {- (CP (Lemma ':as )) -} (Zipper (Lemma ': as)) (DetP (Lemma ': as))])
+            -> Maybe (CP (Lemma ': as),[Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))])
 constructCP tagged vprop = do
     vp <- maximalProjectionVP vprop
     tp <- parentOfVP vprop
@@ -138,11 +138,7 @@ constructCP tagged vprop = do
 
 cpRange :: CP xs -> Range
 cpRange cp = cp^.maximalProjection.to (getRange . current)
-{- 
-  <|>
-             (cp^?complement.maximalProjection._Just.to (getRange . current)) <|>
-             (return (cp^.complement.complement.maximalProjection.to (getRange . current)))
--}
+
 
 hierarchyBits :: (CP as, [DetP as]) -> Maybe [(Range, (Range, CPDP as))]
 hierarchyBits (cp,zs) = do
@@ -156,7 +152,7 @@ hierarchyBits (cp,zs) = do
 
 identifyCPHierarchy :: [TagPos TokIdx MarkType]
                     -> [VerbProperty (Zipper (Lemma ': as))]
-                    -> [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
+                    -> [X'Tree (Lemma ': as)]
 identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
   where cpmap = (HM.fromList . concat . mapMaybe (hierarchyBits . (_2 %~ rights) <=< constructCP tagged)) vps
         rngs = HM.keys cpmap
@@ -164,14 +160,12 @@ identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull toful
         tofull rng = HM.lookup rng cpmap
 
 
-currentCPDP :: BitreeZipper (Range,CPDP as) (Range,CPDP as) -> CPDP as
+currentCPDP :: X'Zipper as -> CPDP as
 currentCPDP = snd . getRoot1 . current
 
 
 adjustXBarTree :: ((Range, CPDP as) -> (Range, CPDP as))
-               -> BitreeZipper (Range, CPDP as) (Range, CPDP as)
-               -> DetP as
-               -> MaybeT (State (Bitree (Range,CPDP as) (Range, CPDP as))) ()
+               -> X'Zipper as -> DetP as -> MaybeT (State (X'Tree as)) ()
 adjustXBarTree f w z = do
   let dprng = z ^. maximalProjection.to current.to getRange
       -- adjust CPDP hierarchy by modifier relation.
@@ -194,9 +188,8 @@ adjustXBarTree f w z = do
 
 
 whMovement :: [TagPos TokIdx MarkType]
-           -> BitreeZipper (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
-           -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as)))
-                (TraceChain (Either {- (CP (Lemma ': as)) -} (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
+           -> X'Zipper (Lemma ': as) 
+           -> State (X'Tree (Lemma ': as)) (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 whMovement tagged w =
   -- letter z denotes zipper for PennTree, w denotes zipper for Bitree (Range,CPDP as) (Range,CPDP as)
   case currentCPDP w of
@@ -238,8 +231,7 @@ whMovement tagged w =
 --
 resolveDP :: [TagPos TokIdx MarkType]
           -> Range
-          -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as)))
-               (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
+          -> State (X'Tree (Lemma ': as)) (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   tr <- lift get
   z <- hoistMaybe (extractZipperById rng tr)
@@ -269,15 +261,12 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
 
 
 
-resolveCP :: forall as.
-             Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
-          -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
+resolveCP :: forall as. X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
 resolveCP cpstr = execState (go rng0) cpstr
   where
     getrng = fst . getRoot1 . current
     rng0 = (fst . getRoot1) cpstr
-    go :: Range
-       -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))) ()
+    go :: Range -> State (X'Tree (Lemma ': as)) ()
     go rng = do tr <- get
                 void . runMaybeT $ do
                   z <- hoistMaybe (extractZipperById rng tr)
@@ -286,8 +275,7 @@ resolveCP cpstr = execState (go rng0) cpstr
                    <|>
                    (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
 
-    replace :: BitreeZipper (Range, CPDP (Lemma ': as)) (Range, CPDP (Lemma ': as))
-            -> MaybeT (State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as)))) (BitreeZipper (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as)))
+    replace :: X'Zipper (Lemma ': as) -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as))
     replace z = do cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
                    let xs = cp^.complement.complement.complement
                    xs' <- flip traverse xs $ \x ->
@@ -307,9 +295,7 @@ resolveCP cpstr = execState (go rng0) cpstr
 
 
 
-bindingAnalysis :: [TagPos TokIdx MarkType]
-                -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
-                -> Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
+bindingAnalysis :: [TagPos TokIdx MarkType] -> X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
 bindingAnalysis tagged cpstr = execState (go rng0) cpstr
    where
      getrng = either fst fst . getRoot . current
@@ -350,7 +336,7 @@ predicateArgWS cp z =
 findPAWS :: [TagPos TokIdx MarkType]
          -> ClauseTree
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
-         -> [Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))]
+         -> [X'Tree (Lemma ': as)] 
          -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
 findPAWS tagged tr vp cpstr = do
   cp <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.

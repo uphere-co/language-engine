@@ -128,7 +128,7 @@ formatDetail (_txt,_,_,lma,pt,tmxs) =
   , (T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList) pt
   , "--------------------------------------------------------------------------------------------------------------------"
   ]
-  ++ map formatCPHierarchy cpstr
+  ++ map formatX'Tree cpstr
   ++ map (formatVPwithPAWS tmxs clausetr cpstr) vps
   ++
   [ "--------------------------------------------------------------------------------------------------------------------"
