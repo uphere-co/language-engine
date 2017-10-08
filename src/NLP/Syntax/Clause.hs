@@ -200,7 +200,7 @@ adjustX'Tree f w z = do
 
 
 
-retrieveZCP :: Range -> MaybeT (State (X'Tree (Lemma ': as)))(X'Zipper (Lemma ': as),CP (Lemma ': as))
+retrieveZCP :: Range -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as),CP (Lemma ': as))
 retrieveZCP rng = do
   tr <- lift get
   z <- hoistMaybe (extractZipperById rng tr)
@@ -286,12 +286,12 @@ resolveVPComp rng spec = do
       let cs = verbp^.complement
       case cs of
         [] -> trace "No complements?" $ return spec
-        c:rest -> trace (show (map (formatTraceChain formatCompVP) cs)) $ do
+        c:rest -> do
           let r = either (const Nothing) (Just . CompVP_DP) =<< spec^.trResolved  -- ignore CP case for the time being.
               c' = TraceChain (mergeLeftELZ (c^.trChain) (spec^.trChain)) r
               rf = _2._CPCase.complement.complement.complement .~ (c':rest)
               z' = replaceFocusItem rf rf z
-          trace (show (formatTraceChain formatCompVP c')) $ lift (put (toBitree z'))
+          lift (put (toBitree z'))
           return (TraceChain (mergeRightELZ (c^.trChain) (spec^.trChain)) (spec^.trResolved))
 
 
@@ -312,17 +312,22 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
 
 
 resolveCP :: forall as. X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
-resolveCP cpstr = execState (go rng0) cpstr
+resolveCP xtr = rewriteTree action xtr
+
+  -- execState (go rng0) cpstr
   where
-    getrng = fst . getRoot1 . current
+    {- getrng = fst . getRoot1 . current
     rng0 = (fst . getRoot1) cpstr
     go :: Range -> State (X'Tree (Lemma ': as)) ()
     go rng = void . runMaybeT $ do
-               (z,_) <- retrieveZCP rng
+               z <- hoistMaybe . extractZipperById rng =<< lift get
                z' <- (replace z <|> return z)
                ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
                 <|>
                 (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
+     -}
+    action rng = do z <- hoistMaybe . extractZipperById rng =<< lift get
+                    (replace z <|> return z)
 
     replace :: X'Zipper (Lemma ': as) -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as))
     replace z = do cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
@@ -344,18 +349,60 @@ resolveCP cpstr = execState (go rng0) cpstr
 
 
 
+
+
+bindingSpec rng spec = do
+  z <- hoistMaybe . extractZipperById rng =<< lift get
+  let rf = _2._CPCase.complement.specifier .~ spec
+      z' = replaceFocusItem rf rf z
+  lift (put (toBitree z'))
+  return z'
+
+
+bindingECM rng = do
+  (z,cp) <- retrieveZCP rng
+  c1:c2:[] <- return (cp^.complement.complement.complement)
+  cp' <- hoistMaybe (c2^?trResolved._Just._CompVP_CP)
+  let rng' = cpRange cp'
+      spec' = cp'^.complement.specifier -- .trResolved
+  trace (show (rng,rng') ++ show (formatTraceChain rangeText spec')) $ return ()
+  {-
+  (z',_) <- retrieveZCP rng'
+  rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.to headRange)
+  -- trace (show (map (formatTraceChain formatCompVP) [c1,c2])) $ return ()
+  trace (show (rng,rng',rng_dp)) $ return ()
+ -}
+--
+-- | This is the final step to bind inter-clause trace chain
+--
 bindingAnalysis :: [TagPos TokIdx MarkType] -> X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
-bindingAnalysis tagged cpstr = execState (go rng0) cpstr
-   where
-     getrng = either fst fst . getRoot . current
-     rng0 = (either fst fst . getRoot) cpstr
-     go rng = do xs <- resolveDP tagged rng
-                 tr <- get
-                 void . runMaybeT $ do
-                   z <- hoistMaybe (extractZipperById rng tr)
-                   let rf = _2._CPCase.complement.specifier .~ xs
-                       z' = replaceFocusItem rf rf z
-                   lift (put (toBitree z'))
+bindingAnalysis tagged xtr = rewriteTree action xtr
+  where
+    action rng = bindingSpec rng =<< lift (resolveDP tagged rng)
+
+
+  {- execState (go rng0) cpstr
+  where
+    getrng = fst . getRoot1 . current
+    rng0 = (either fst fst . getRoot) cpstr
+    go rng = void . runMaybeT $ do
+               spec <- lift $ resolveDP tagged rng
+               z' <- bindingSpec rng spec
+               (bindingECM rng <|> return ())
+               ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
+                <|>
+                (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
+-}
+
+
+-- rewriteTree :: X'Tree as -> X'Tree as
+rewriteTree action xtr = execState (go rng0) xtr
+  where getrng = fst . getRoot1 . current
+        rng0 = (either fst fst . getRoot) xtr
+        go rng = void . runMaybeT $ do
+                   -- spec <- lift $ resolveDP tagged rng
+                   z' <- action rng -- bindingSpec rng spec
+                   -- (bindingECM rng <|> return ())
                    ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
                     <|>
                     (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
