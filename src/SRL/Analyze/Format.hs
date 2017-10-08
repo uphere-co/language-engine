@@ -33,7 +33,7 @@ import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CPDP,headRange,headText,CompVP(..),Prep(..),headX,complement,maximalProjection)
+import           NLP.Syntax.Type.XBar                    (CPDP,CompVP(..),Prep(..),X'Tree,headRange,headText,headX,complement,maximalProjection)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
@@ -46,7 +46,6 @@ import           SRL.Analyze.Match                       (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,MGVertex(..),MeaningGraph
-                                                         -- ,AdjustedDetP(..), getDetP, _WithPrep
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
                                                          ,chooseMostFreqFrame
@@ -193,7 +192,7 @@ formatSentStructure showdetail (SentStructure i ptr _ clausetr cpstr _ vstrs) =
    in subline1 ++ (if showdetail then subline1_1 else []) ++ concat subline2
 
 
-formatVerbStructure :: ClauseTree -> [Bitree (Range,CPDP '[Lemma]) (Range,CPDP '[Lemma])] -> VerbStructure -> [Text]
+formatVerbStructure :: ClauseTree -> [X'Tree '[Lemma]] -> VerbStructure -> [Text]
 formatVerbStructure clausetr cpstr (VerbStructure vp senses mrmmtoppatts) =
   [ formatVPwithPAWS [] clausetr cpstr vp        -- for the time being
   , T.pack (printf "Verb: %-20s" (vp^.vp_lemma.to unLemma))
