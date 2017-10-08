@@ -237,9 +237,7 @@ matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sen
                                  else (frame1,sense1,rolemap1)
       mselected1 = matchRoles rolemap1 tagged verbp paws toppatts mDP
       mselected2 = matchRoles rolemap2 tagged verbp paws toppatts mDP
-  in trace ("\nmatchFrameRolesForCauseDual: " ++ show (verbp^.headX.vp_lemma)++ "\n") $
-
-      case (mselected1,mselected2) of
+  in case (mselected1,mselected2) of
        (Nothing,Nothing) -> (frame1,(sense1,False),Nothing)
        (Just _ ,Nothing) -> (frame1,(sense1,False),mselected1)
        (Nothing,Just _ ) -> (frame2,(sense2,True),mselected2)
@@ -320,6 +318,7 @@ scoreSelectedFrame total ((_,_,mselected),n) =
 --
 resolveAmbiguityInDP :: [(FNFrameElement, CompVP '[Lemma])]
                      -> [(FNFrameElement, CompVP '[Lemma])]
+resolveAmbiguityInDP [] = []
 resolveAmbiguityInDP lst = foldr1 (.) (map go lst) lst
   where
     go :: (FNFrameElement,CompVP '[Lemma])
