@@ -41,7 +41,7 @@ type TestTrace = (Text,Int,(TracePos,TraceChain Text),[(Int,(Lemma,Text))],PennT
 test_silent_pronoun :: TestTrace
 test_silent_pronoun =
   ( "Republican senators plan to write a health-care bill."
-  , 4,(Subj,TraceChain (Right [SilentPRO]) (Just "Republican senators"))
+  , 4,(Subj,TraceChain (Left (singletonLZ SilentPRO)) (Just "Republican senators"))
   , [(0,("republican","Republican")),(1,("senator","senators")),(2,("plan","plan")),(3,("to","to")),(4,("write","write")),(5,("a","a")),(6,("health-care","health-care")),(7,("bill","bill")),(8,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("JJ","Republican"),PL ("NNS","senators")],PN "VP" [PL ("VBP","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","health-care"),PL ("NN","bill")]]]]],PL (".",".")]]
   , []
@@ -53,7 +53,7 @@ test_silent_pronoun =
 test_multi_silent_pronoun :: TestTrace
 test_multi_silent_pronoun =
   ( "I want to plan to write a paper."
-  , 5, (Subj,TraceChain (Right [SilentPRO,SilentPRO]) (Just "I"))
+  , 5, (Subj,TraceChain (Left (LZ [] SilentPRO [SilentPRO])) (Just "I"))
   , [(0,("I","I")),(1,("want","want")),(2,("to","to")),(3,("plan","plan")),(4,("to","to")),(5,("write","write")),(6,("a","a")),(7,("paper","paper")),(8,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBP","want"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","write"),PN "NP" [PL ("DT","a"),PL ("NN","paper")]]]]]]]],PL (".",".")]]
   , []
@@ -64,7 +64,7 @@ test_multi_silent_pronoun =
 test_relative_pronoun_subject :: TestTrace
 test_relative_pronoun_subject =
   ( "I saw the man who sat on the bench."
-  , 5, (Subj,TraceChain (Left (LZ [Moved] WHPRO [])) (Just "the man"))
+  , 5, (Subj,TraceChain (Left (LZ [] Moved [WHPRO])) (Just "the man"))
   , [(0,("I","I")),(1,("see","saw")),(2,("the","the")),(3,("man","man")),(4,("who","who")),(5,("sit","sat")),(6,("on","on")),(7,("the","the")),(8,("bench","bench")),(9,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","saw"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","man")],PN "SBAR" [PN "WHNP" [PL ("WP","who")],PN "S" [PN "VP" [PL ("VBD","sat"),PN "PP" [PL ("IN","on"),PN "NP" [PL ("DT","the"),PL ("NN","bench")]]]]]]],PL (".",".")]]
   , []
@@ -76,7 +76,7 @@ test_relative_pronoun_subject =
 test_relative_pronoun_object :: TestTrace
 test_relative_pronoun_object =
   ( "I bought the book which Tim Cook read."
-  , 7, (Comp 1,TraceChain (Left (LZ [Moved] WHPRO [])) (Just "the book"))
+  , 7, (Comp 1,TraceChain (Left (LZ [] Moved [WHPRO])) (Just "the book"))
   , [(0,("I","I")),(1,("buy","bought")),(2,("the","the")),(3,("book","book")),(4,("which","which")),(5,("Tim","Tim")),(6,("Cook","Cook")),(7,("read","read")),(8,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","bought"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","book")],PN "SBAR" [PN "WHNP" [PL ("WDT","which")],PN "S" [PN "NP" [PL ("NNP","Tim"),PL ("NNP","Cook")],PN "VP" [PL ("VBD","read")]]]]],PL (".",".")]]
   , []
@@ -89,7 +89,7 @@ test_relative_pronoun_object =
 test_reduced_relative_clause :: TestTrace
 test_reduced_relative_clause =
   ( "I bought the book used by Chomsky."
-  , 4, (Subj,TraceChain (Left (LZ [Moved] WHPRO [])) (Just "the book"))
+  , 4, (Comp 1,TraceChain (Left (LZ [] Moved [Moved,WHPRO])) (Just "the book"))
   , [(0,("I","I")),(1,("buy","bought")),(2,("the","the")),(3,("book","book")),(4,("use","used")),(5,("by","by")),(6,("Chomsky","Chomsky")),(7,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","bought"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","book")],PN "VP" [PL ("VBN","used"),PN "PP" [PL ("IN","by"),PN "NP" [PL ("NNP","Chomsky")]]]]],PL (".",".")]]
   , []
@@ -140,7 +140,7 @@ formatDetail (_txt,_,_,lma,pt,tmxs) =
 showDetail :: TestTrace -> IO ()
 showDetail = mapM_ T.IO.putStrLn . formatDetail
 
-{- 
+{-
 mainShow :: IO ()
 mainShow = mapM_ showDetail [ test_silent_pronoun
                             , test_multi_silent_pronoun
@@ -155,12 +155,12 @@ testcases = [ test_silent_pronoun
             , test_multi_silent_pronoun
             , test_relative_pronoun_subject
             , test_relative_pronoun_object
-            -- , test_passive
             , test_reduced_relative_clause
+            , test_passive
             ]
 
 checkTrace :: TestTrace -> Bool
-checkTrace c = -- False
+checkTrace c =
   fromMaybe False $ do
     let vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))

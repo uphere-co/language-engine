@@ -94,7 +94,7 @@ type DetP = XP 'X_D
 
 
 data Prep = Prep_NULL
-          | Prep_WORD Text -- (Zipper t)
+          | Prep_WORD Text
 
 --
 type instance Property   'X_P t = Prep
@@ -109,7 +109,7 @@ type PP = XP 'X_P
 data CompVP t = CompVP_Unresolved (Zipper t)
               | CompVP_CP (CP t)
               | CompVP_DP (DetP t)
-              | CompVP_PP (PP t) -- (Maybe Text) (DetP t)
+              | CompVP_PP (PP t)
 
 
 
