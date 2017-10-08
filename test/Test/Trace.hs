@@ -151,12 +151,13 @@ mainShow = mapM_ showDetail [ test_silent_pronoun
 -}
 
 testcases :: [TestTrace]
-testcases = [ test_silent_pronoun
-            , test_multi_silent_pronoun
-            , test_relative_pronoun_subject
-            , test_relative_pronoun_object
-            -- , test_passive
-            , test_reduced_relative_clause
+testcases = [ -- test_silent_pronoun
+            -- , test_multi_silent_pronoun
+            -- , test_relative_pronoun_subject
+           --  , test_relative_pronoun_object
+            -- ,
+              test_passive
+            -- , test_reduced_relative_clause
             ]
 
 checkTrace :: TestTrace -> Bool

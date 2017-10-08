@@ -5,12 +5,14 @@
 
 module NLP.Syntax.Util where
 
+import           Control.Lens                      ((%~))
 import           Data.IntMap                       (IntMap)
 --
 import           CoreNLP.Simple.Convert            (lemmatize)
 import           Data.Attribute
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.ListZipper
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                   (TokIdx,BeginEnd)
 import           NLP.Type.TagPos                   
@@ -89,3 +91,14 @@ beginEndToRange :: BeginEnd TokIdx -> Range
 beginEndToRange (TokIdx b,TokIdx e) = (b,e-1)
 
 
+mergeLeftELZ :: Either (ListZipper a) [a] -> Either (ListZipper a) [a] -> Either (ListZipper a) [a]
+mergeLeftELZ (Right xs) (Right ys) = Right (xs++ys)
+mergeLeftELZ (Left z1)  (Right ys) = Left ((lz_nexts %~ (++ ys)) z1)
+mergeLeftELZ (Right xs) (Left z2)  = Left ((lz_prevs %~ (++ (reverse xs))) z2)
+mergeLeftELZ (Left z1)  (Left z2)  = Left (mergeLeftLZ z1 z2)
+
+mergeRightELZ :: Either (ListZipper a) [a] -> Either (ListZipper a) [a] -> Either (ListZipper a) [a]
+mergeRightELZ (Right xs) (Right ys) = Right (xs++ys)
+mergeRightELZ (Left z1)  (Right ys) = Right (lzToList z1 ++ ys)
+mergeRightELZ (Right xs) (Left z2)  = Left ((lz_prevs %~ (++ (reverse xs))) z2)
+mergeRightELZ (Left z1)  (Left z2)  = Left (mergeRightLZ z1 z2)
