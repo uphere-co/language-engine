@@ -30,6 +30,7 @@ import           Data.BitreeZipper.Util
 import           Data.Range                             (rangeTree)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
+import           NLP.Type.SyntaxProperty                (Voice(..))
 import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Noun                        (splitDP)
@@ -60,7 +61,11 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> [TraceChain (CompVP (Lemma ': as))]
-complementsOfVerb tagged vp = map xform (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp))
+complementsOfVerb tagged vp =
+  let cs = map xform (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp))
+  in case vp^.vp_voice of
+       Active -> cs
+       Passive -> TraceChain [NULL] Nothing : cs
   where
     xform_dp = TraceChain [] . Just . checkEmptyPrep tagged . splitDP tagged
     xform_cp = TraceChain [] . Just . CompVP_Unresolved
@@ -83,11 +88,11 @@ complementsOfVerb tagged vp = map xform (siblingsBy next checkNPSBAR =<< maybeTo
 identifySubject :: [TagPos TokIdx MarkType]
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)
-                -> TraceChain (Either {- (CP (Lemma ': as)) -} (Zipper (Lemma ': as)) (DetP (Lemma ': as)))   -- now support clause subject!
+                -> TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as)))
 identifySubject tagged tag vp =
   let r = case tag of
-            N.SINV -> firstSiblingBy next (isChunkAs NP) vp
-            _      -> firstSiblingBy prev (isChunkAs NP) vp
+            N.SINV -> firstSiblingBy next (isChunkAs NP) vp   -- this should be refined.
+            _      -> firstSiblingBy prev (isChunkAs NP) vp   -- this should be refined.
   in case r of
        Nothing -> TraceChain [NULL] Nothing
        Just z  -> TraceChain []     (Just (Right (splitDP tagged z)))   -- for the time being, CP subject is not supported
@@ -99,7 +104,7 @@ identifySubject tagged tag vp =
 --
 constructCP :: [TagPos TokIdx MarkType]
             -> VerbProperty (Zipper (Lemma ': as))
-            -> Maybe (CP (Lemma ': as),[Either {- (CP (Lemma ':as )) -} (Zipper (Lemma ': as)) (DetP (Lemma ': as))])
+            -> Maybe (CP (Lemma ': as),[Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))])
 constructCP tagged vprop = do
     vp <- maximalProjectionVP vprop
     tp <- parentOfVP vprop
@@ -107,7 +112,8 @@ constructCP tagged vprop = do
     let comps = complementsOfVerb tagged vprop
         comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
         verbp = mkVerbP vp vprop comps
-        nullsubj = TraceChain [NULL] Nothing
+        -- nullsubj = TraceChain [NULL] Nothing
+        nullsubj = TraceChain [] Nothing
     case tptag' of
       N.CL s -> do
         cp' <- parent tp
@@ -137,11 +143,7 @@ constructCP tagged vprop = do
 
 cpRange :: CP xs -> Range
 cpRange cp = cp^.maximalProjection.to (getRange . current)
-{- 
-  <|>
-             (cp^?complement.maximalProjection._Just.to (getRange . current)) <|>
-             (return (cp^.complement.complement.maximalProjection.to (getRange . current)))
--}
+
 
 hierarchyBits :: (CP as, [DetP as]) -> Maybe [(Range, (Range, CPDP as))]
 hierarchyBits (cp,zs) = do
@@ -195,7 +197,7 @@ adjustXBarTree f w z = do
 whMovement :: [TagPos TokIdx MarkType]
            -> BitreeZipper (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as))
            -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as)))
-                (TraceChain (Either {- (CP (Lemma ': as)) -} (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
+                (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 whMovement tagged w =
   -- letter z denotes zipper for PennTree, w denotes zipper for Bitree (Range,CPDP as) (Range,CPDP as)
   case currentCPDP w of
@@ -238,7 +240,7 @@ whMovement tagged w =
 resolveDP :: [TagPos TokIdx MarkType]
           -> Range
           -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as)))
-               (TraceChain (Either {- (CP (Lemma ': as)) -} (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
+               (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   tr <- lift get
   z <- hoistMaybe (extractZipperById rng tr)
@@ -300,8 +302,8 @@ resolveCP cpstr = execState (go rng0) cpstr
                              )
                              <|>
                              (return x))
-                   -- let rf = _2._CPCase.complement.complement.complement .~ xs'
-                   let z' = replaceFocusItem (_2._CPCase.complement.complement.complement .~ xs') (_2._CPCase.complement.complement.complement .~ xs') z
+                   let rf = _2._CPCase.complement.complement.complement .~ xs'
+                       z' = replaceFocusItem rf rf  z
                    lift (put (toBitree z'))
                    return z'
 

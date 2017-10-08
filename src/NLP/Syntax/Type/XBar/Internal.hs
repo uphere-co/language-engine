@@ -83,7 +83,7 @@ type DetP = XP 'X_D
 
 
 data Prep = Prep_NULL
-          | Prep_WORD Text -- (Zipper t)
+          | Prep_WORD Text
 
 --
 type instance Property   'X_P t = Prep
@@ -98,7 +98,7 @@ type PP = XP 'X_P
 data CompVP t = CompVP_Unresolved (Zipper t)
               | CompVP_CP (CP t)
               | CompVP_DP (DetP t)
-              | CompVP_PP (PP t) -- (Maybe Text) (DetP t)
+              | CompVP_PP (PP t)
 
 
 
@@ -115,13 +115,13 @@ mkVerbP vp vprop comps = XP vprop vp () () comps
 
 type instance Property   'X_T t = ()
 type instance Maximal    'X_T t = Zipper t
-type instance Specifier  'X_T t = TraceChain (Either {- (CP t) -} (Zipper t) (DetP t))
+type instance Specifier  'X_T t = TraceChain (Either (Zipper t) (DetP t))
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Zipper t -> TraceChain (Either {- (CP t) -} (Zipper t) (DetP t)) -> VerbP t -> TP t
+mkTP :: Zipper t -> TraceChain (Either (Zipper t) (DetP t)) -> VerbP t -> TP t
 mkTP tp mdp vp = XP () tp mdp () vp
 
 

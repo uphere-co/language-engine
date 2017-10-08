@@ -84,7 +84,8 @@ splitPP tagged z = fromMaybe (mkOrdDP z) $ do
 
 
 -- | starting with capital letter
--- 
+--
+checkProperNoun :: Zipper t -> Range -> Bool
 checkProperNoun z (b,e) =
   let toks = tokensByRange (b,e) (toList (current z))
   in (not.null) toks && isUpper (T.head (head toks))
@@ -101,7 +102,7 @@ bareNounModifier tagged x = fromMaybe x $ do
   guard (isChunkAs NP (current z))
   let rng@(b0,_e0) = getRange (current z)
   -- check entity for the last words
-  let f z (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun z (yb,ye) 
+  let f z' (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun z' (yb,ye) 
   TagPos (b1'',e1'',_t) <- find (\(TagPos (b1',e1',t)) -> f z rng (beginEndToRange (b1',e1')) && t == MarkEntity) tagged
   let (b1,e1) = beginEndToRange (b1'',e1'')
       idx_last_modifier_word = b1-1
