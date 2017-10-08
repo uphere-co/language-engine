@@ -108,6 +108,7 @@ test_passive =
   )
 
 
+--
 -- | raising construction associated with passive ECM verb
 --
 test_passive_raising =
@@ -115,13 +116,25 @@ test_passive_raising =
   , 4, (Subj,TraceChain (Right []) Nothing)
   , [(0,("you","You")),(1,("be","are")),(2,("expect","expected")),(3,("to","to")),(4,("call","call")),(5,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","You")],PN "VP" [PL ("VBP","are"),PN "VP" [PL ("VBN","expected"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","call")]]]]],PL (".",".")]]
+  , []
+  )
+
+--
+-- | ECM
+--
+test_ECM =
+  ( "I expected him to call her."
+  , 4, (Subj,TraceChain (Right []) Nothing)
+  , [(0,("I","I")),(1,("expect","expected")),(2,("he","him")),(3,("to","to")),(4,("call","call")),(5,("she","her")),(6,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","expected"),PN "S" [PN "NP" [PL ("PRP","him")],PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","call"),PN "NP" [PL ("PRP","her")]]]]],PL (".",".")]]
+  , []
   )
 
 formatDetail :: TestTrace -> [Text]
 formatDetail (_txt,_,_,lma,pt,tmxs) =
   let vps  = mkVPS lma pt
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
-      cpstr = (map (resolveCP . bindingAnalysis tmxs) . identifyCPHierarchy tmxs) vps
+      cpstr = (map (bindingAnalysis tmxs . resolveCP) . identifyCPHierarchy tmxs) vps
 
   in
   [ "===================================================================================================================="
@@ -157,14 +170,17 @@ testcases = [ test_silent_pronoun
             , test_relative_pronoun_object
             , test_reduced_relative_clause
             , test_passive
+            , test_passive_raising
+            , test_ECM
             ]
 
 checkTrace :: TestTrace -> Bool
-checkTrace c =
+checkTrace c = -- False
+
   fromMaybe False $ do
     let vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
-        cpstr = (map (resolveCP . bindingAnalysis (c^._6)) . identifyCPHierarchy (c^._6)) vps
+        cpstr = (map (bindingAnalysis (c^._6) . resolveCP) . identifyCPHierarchy (c^._6)) vps
 
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
     paws <- findPAWS [] clausetr vp cpstr
