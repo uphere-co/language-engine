@@ -202,18 +202,17 @@ whMovement tagged w =
       let spec = cp^.complement.specifier
       -- whMovement process starts with cheking trace in subject
       case spec^.trChain of
-        Left (LZ ps c _ns) ->
+        Left (LZ ps c ns) ->
           -- with trace in subject
           -- check subject for relative pronoun
           case c of
             NULL -> do
-              let xspro = LZ ps SilentPRO []
-                  -- xsmov = LZ ps Moved []
+              let xspro = LZ ps SilentPRO ns
               fmap (fromMaybe (TraceChain (Left xspro) Nothing)) . runMaybeT $ do
                 -- check subject position for relative pronoun
                 z' <- splitDP tagged <$> hoistMaybe (prev (cp^.maximalProjection))
                 adjustXBarTree id w z'
-                return (TraceChain (Left (LZ (Moved:ps) WHPRO [])) (Just (Right z')))
+                return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right z')))
             _    -> return spec
         Right _ -> do
           -- without trace in subject
@@ -222,12 +221,20 @@ whMovement tagged w =
             z'  <- splitDP tagged <$> hoistMaybe (prev (cp^.maximalProjection))
             let -- adjust function for complement with relative pronoun resolution
                 rf0 = _2._CPCase.complement.complement.complement
-                       %~ (TraceChain (Left (LZ [Moved] WHPRO [])) (Just (CompVP_DP z')) :)
+                       %~ (TraceChain (Left (LZ [] Moved [WHPRO])) (Just (CompVP_DP z')) :)
             -- adjust CPDP hierarchy by modifier relation.
             adjustXBarTree rf0 w z'
             return ()
           return spec
     _  -> return emptyTraceChain
+
+
+
+mergeLeftELZ :: Either (ListZipper a) [a] -> Either (ListZipper a) [a] -> Either (ListZipper a) [a]
+mergeLeftELZ (Right xs) (Right ys) = Right (xs++ys)
+mergeLeftELZ (Left z1)  (Right ys) = Left ((lz_nexts %~ (++ ys)) z1)
+mergeLeftELZ (Right xs) (Left z2)  = Left ((lz_prevs %~ (++ (reverse xs))) z2)
+mergeLeftELZ (Left z1)  (Left z2)  = Left (mergeLeftLZ z1 z2)
 
 
 -- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
@@ -247,21 +254,24 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
       let spec = cp^.complement.specifier
       case spec^.trChain of
         Right _ -> return spec
-        Left (xs@(LZ ps c _ns)) -> case c of
+        Left (xs@(LZ _ c _)) -> case c of
           NULL      -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDP =<< parent z)
                             let rng' = cpRange cp'
                             TraceChain exs' x' <- lift (resolveDP tagged rng')
-                            let xs' = either lzToList id exs'
-                            return (TraceChain (Right (reverse ps ++ (SilentPRO:xs'))) x'))
+                            -- let xs' = either lzToList id exs'
+                            return (TraceChain (mergeLeftELZ (Left (replaceLZ SilentPRO xs)) exs') x'))
+
+
+                                    -- (Right (reverse ps ++ (SilentPRO:xs'))) x'))
                         <|>
-                        return (TraceChain (Left (LZ ps SilentPRO [])) Nothing))
+                        return (TraceChain (Left (replaceLZ SilentPRO xs)) Nothing))
           SilentPRO -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDP =<< parent z)
                             let rng' = cpRange cp'
                             TraceChain exs' x' <- lift (resolveDP tagged rng')
                             let xs' = either lzToList id exs'
-                            return (TraceChain (Right (lzToList xs ++ xs')) x'))
+                            return (TraceChain (mergeLeftELZ (Left xs) exs') x'))
                         <|>
-                        return (TraceChain (Left (LZ ps c [])) Nothing))
+                        return (TraceChain (Left xs) Nothing))
           _         -> return spec
 
 

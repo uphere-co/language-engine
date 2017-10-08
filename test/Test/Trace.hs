@@ -160,7 +160,8 @@ testcases = [ test_silent_pronoun
             ]
 
 checkTrace :: TestTrace -> Bool
-checkTrace c = -- False
+checkTrace c = False
+{- 
   fromMaybe False $ do
     let vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
@@ -176,7 +177,7 @@ checkTrace c = -- False
                    comp <- comps ^? ix (n-1)
                    let dp = fmap compVPToHeadText comp
                    return (dp == c ^._3._2)
-
+-}
 
 
 
