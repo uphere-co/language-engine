@@ -89,7 +89,7 @@ test_relative_pronoun_object =
 test_reduced_relative_clause :: TestTrace
 test_reduced_relative_clause =
   ( "I bought the book used by Chomsky."
-  , 4, (Subj,TraceChain (Left (LZ [Moved] WHPRO [])) (Just "the book"))
+  , 4, (Comp 1,TraceChain (Left (LZ [] Moved [Moved,WHPRO])) (Just "the book"))
   , [(0,("I","I")),(1,("buy","bought")),(2,("the","the")),(3,("book","book")),(4,("use","used")),(5,("by","by")),(6,("Chomsky","Chomsky")),(7,(".","."))]
   , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","bought"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","book")],PN "VP" [PL ("VBN","used"),PN "PP" [PL ("IN","by"),PN "NP" [PL ("NNP","Chomsky")]]]]],PL (".",".")]]
   , []
@@ -160,7 +160,7 @@ testcases = [ test_silent_pronoun
             ]
 
 checkTrace :: TestTrace -> Bool
-checkTrace c = -- False
+checkTrace c =
   fromMaybe False $ do
     let vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
