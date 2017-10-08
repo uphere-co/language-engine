@@ -27,6 +27,7 @@ import           Data.Text                              (Text)
 import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.BitreeZipper.Util
+import           Data.ListZipper
 import           Data.Range                             (rangeTree)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -238,7 +239,7 @@ whMovement tagged w =
 resolveDP :: [TagPos TokIdx MarkType]
           -> Range
           -> State (Bitree (Range,CPDP (Lemma ': as)) (Range,CPDP (Lemma ': as)))
-               (TraceChain (Either {- (CP (Lemma ': as)) -} (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
+               (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   tr <- lift get
   z <- hoistMaybe (extractZipperById rng tr)
@@ -299,8 +300,8 @@ resolveCP cpstr = execState (go rng0) cpstr
                              )
                              <|>
                              (return x))
-                   -- let rf = _2._CPCase.complement.complement.complement .~ xs'
-                   let z' = replaceFocusItem (_2._CPCase.complement.complement.complement .~ xs') (_2._CPCase.complement.complement.complement .~ xs') z
+                   let rf = _2._CPCase.complement.complement.complement .~ xs'
+                       z' = replaceFocusItem rf rf z
                    lift (put (toBitree z'))
                    return z'
 
@@ -317,7 +318,8 @@ bindingAnalysis tagged cpstr = execState (go rng0) cpstr
                  tr <- get
                  void . runMaybeT $ do
                    z <- hoistMaybe (extractZipperById rng tr)
-                   let z' = replaceFocusItem (_2._CPCase.complement.specifier .~ xs) (_2._CPCase.complement.specifier .~ xs) z
+                   let rf = _2._CPCase.complement.specifier .~ xs
+                       z' = replaceFocusItem rf rf z
                    lift (put (toBitree z'))
                    ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
                     <|>

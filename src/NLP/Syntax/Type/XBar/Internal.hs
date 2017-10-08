@@ -13,6 +13,7 @@ import           Data.Text                   (Text)
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.ListZipper
 import           Data.Range
 --
 import           NLP.Type.PennTreebankII
