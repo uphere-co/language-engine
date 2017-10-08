@@ -13,6 +13,7 @@ import           Data.Text                   (Text)
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.ListZipper
 import           Data.Range
 --
 import           NLP.Type.PennTreebankII
@@ -54,14 +55,24 @@ data TraceType = NULL | SilentPRO | Moved | WHPRO
 
 
 
-data TraceChain a = TraceChain { _trChain    :: [TraceType]
+-- | TraceChain represents the current focus of trace chain at a given position of tree.
+--   Left case of trChain denodes the focus of the intermediate chain, while Right case 
+--   of trChain denotes the case in which the final resolved element is currently focused.
+--
+--   e.g. (a -> b -> c -> d) is a trace chain.
+--   * If a is focused, (Left ([],a,[b,c]),d)
+--   * If b is focused, (Left ([a],b,[c]), d)
+--   * If c is focused, (Left ([a,b],c,[]),d)
+--   * If d is focused, (Right [a,b,c], d)
+--
+data TraceChain a = TraceChain { _trChain    :: Either (ListZipper TraceType) [TraceType]
                                , _trResolved :: Maybe a
                                }
                      deriving (Show,Eq,Ord,Functor)
 
 
 emptyTraceChain :: TraceChain a
-emptyTraceChain = TraceChain [] Nothing
+emptyTraceChain = TraceChain (Right []) Nothing
 
 
 

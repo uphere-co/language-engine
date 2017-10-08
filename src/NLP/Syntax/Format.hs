@@ -18,6 +18,7 @@ import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.ListZipper                        (lzToList)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
@@ -64,8 +65,9 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
 
 
 formatTraceChain :: (a -> Text) -> TraceChain a -> Text
-formatTraceChain f (TraceChain xs x) = T.concat (map ((<> " -> ") . fmt) xs) <> maybe "NOT_RESOLVED" f x
-  where fmt NULL      = "*NUL*"
+formatTraceChain f (TraceChain xs0 x) = T.concat (map ((<> " -> ") . fmt) xs) <> maybe "NOT_RESOLVED" f x
+  where xs = either lzToList id xs0
+        fmt NULL      = "*NUL*"
         fmt SilentPRO = "*PRO*"
         fmt Moved     = "*MOV*"
         fmt WHPRO     = "*WHP*"
