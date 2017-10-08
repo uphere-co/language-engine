@@ -8,7 +8,8 @@ import           Data.Bifoldable         (biList)
 import           Data.List               (find,unfoldr)
 --
 import           Data.Bitree
---
+import           Data.ListZipper
+
 
 -- | Surrounding context of the focused item at current level
 data BitreeContext c t = TC { _tc_node_content :: c
@@ -29,22 +30,6 @@ data BitreeZipper c t = TZ { _tz_current  :: Bitree c t          -- ^ current it
 
 makeLenses ''BitreeZipper
 
-
-data ListZipper a = LZ { _lz_prevs :: [a]
-                       , _lz_current :: a
-                       , _lz_nexts :: [a]
-                       }
-                  deriving (Show,Functor)
-
-makeLenses ''ListZipper
-
-
-genListZippers :: [a] -> [ListZipper a]
-genListZippers [] = error "cannot make a zipper for empty list"
-genListZippers (k:ks) = l1 : unfoldr succ l1
-  where l1 = LZ [] k ks
-        succ (LZ xs y [])     = Nothing
-        succ (LZ xs y (z:zs)) = let w = LZ (y:xs) z zs in Just (w,w)
 
 
 mkBitreeZipper :: [BitreeContext c t] -> Bitree c t -> Bitree (BitreeZipper c t) (BitreeZipper c t)
