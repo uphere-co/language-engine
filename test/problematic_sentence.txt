@@ -46,3 +46,7 @@ Chinese e-commerce giant Alibaba Group Holding Ltd is raising its stake in logis
 
 -- | voted as type?
 The council voted six to three that AIG was no longer a risk to financial stability.
+
+-- | object-control. 
+The SEC said it charged Maksim Zaslavskiy along with REcoin Group Foundation and DRC World with selling unregistered cryptocurrency securities reputedly backed by investments in real estate and diamonds, when it found no such investment had taken place.
+

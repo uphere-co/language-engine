@@ -95,11 +95,11 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
 
 
 matchSubject :: [(PBArg,FNFrameElement)]
-             -> Either (Zipper '[Lemma]) (DetP '[Lemma])
+             -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
              -> ArgPattern p GRel
              -> Maybe (FNFrameElement, CompVP '[Lemma])
-matchSubject rolemap edp patt = do
-  dp <- edp^?_Right            -- for the time being
+matchSubject rolemap mDP patt = do
+  dp <- mDP^?_Just._Right            -- for the time being
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
   (,CompVP_DP dp) <$> lookup p rolemap
 
@@ -115,18 +115,15 @@ matchObjects :: [(PBArg,FNFrameElement)]
              -> ArgPattern p GRel
              -> [(FNFrameElement, CompVP '[Lemma])]
 matchObjects rolemap verbp patt = do
- (garg,obj) <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved._Just)
- trace (show (verbp^.headX.vp_lemma) ++  show garg) $ do
+  (garg,obj) <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved._Just)
   guard (case obj of CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False)
   (p,a) <- maybeToList (pbArgForGArg garg patt)
   case obj of
-    CompVP_CP cp -> do
-      trace ("before\n"++ formatCP cp) $ 
-        guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
+    CompVP_CP cp -> guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
     CompVP_DP _  -> guard (a == GR_NP   (Just garg))
     _            -> []
   fe <- maybeToList (lookup p rolemap)
-  trace ("after here\n") $ return (fe, obj)
+  return (fe, obj)
 
 
 
@@ -168,7 +165,7 @@ matchAgentForPassive rolemap tagged paws patt = do
     (,comp) <$> lookup p rolemap
 
 
-
+{- 
 matchThemeForPassive :: [(PBArg,FNFrameElement)]
                      -> Either (Zipper '[Lemma]) (DetP '[Lemma])
                      -> ArgPattern p GRel
@@ -178,19 +175,20 @@ matchThemeForPassive rolemap edp patt = do
   (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
   let comp = CompVP_DP dp
   (,comp) <$> lookup p rolemap
-
+-}
 
 matchSO :: [(PBArg,FNFrameElement)]
         -> [TagPos TokIdx MarkType]
-        -> ( Either (Zipper '[Lemma]) (DetP '[Lemma])
+        -> ( Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
            , VerbP '[Lemma]
            , PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
         -> (ArgPattern p GRel, Int)
         -> ((ArgPattern p GRel, Int), [(FNFrameElement, CompVP '[Lemma])])
-matchSO rolemap tagged (dp,verbp,paws) (patt,num) =
+matchSO rolemap tagged (mDP,verbp,paws) (patt,num) =
+  
   case verbp^.headX.vp_voice of
-    Active -> ((patt,num), maybeToList (matchSubject rolemap dp patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap tagged paws patt )
-    Passive -> ((patt,num),catMaybes [matchAgentForPassive rolemap tagged paws patt,matchThemeForPassive rolemap dp patt] ++ matchPrepArgs rolemap tagged paws patt)
+    Active  -> ((patt,num), maybeToList (matchSubject rolemap mDP patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap tagged paws patt )
+    Passive -> ((patt,num),maybeToList (matchAgentForPassive rolemap tagged paws patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap tagged paws patt)
 
 
 extendRoleMapForDual :: (Text,SenseID,[(PBArg,FNFrameElement)])
@@ -214,12 +212,12 @@ matchRoles :: [(PBArg,FNFrameElement)]
            -> VerbP '[Lemma]
            -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
            -> [(ArgPattern () GRel, Int)]
-           -> Either (Zipper '[Lemma]) (DetP '[Lemma])
+           -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
            -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, CompVP '[Lemma])])
-matchRoles rolemap tagged verbp paws toppattstats dp =
+matchRoles rolemap tagged verbp paws toppattstats mDP =
     (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy (flip compare `on` numMatchedRoles)) matched
   where
-    matched = map (matchSO rolemap tagged (dp,verbp,paws)) toppattstats
+    matched = map (matchSO rolemap tagged (mDP,verbp,paws)) toppattstats
     cmpstat  = flip compare `on` (^._1._2)
     eq       = (==) `on` lengthOf (_2.folded)
 
@@ -237,9 +235,11 @@ matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sen
   let (frame2,sense2,rolemap2) = if causetype == LVDual
                                  then extendRoleMapForDual (frame1,sense1,rolemap1)
                                  else (frame1,sense1,rolemap1)
-      mselected1 = join (matchRoles rolemap1 tagged verbp paws toppatts <$> mDP)
-      mselected2 = join (matchRoles rolemap2 tagged verbp paws toppatts <$> mDP)
-  in case (mselected1,mselected2) of
+      mselected1 = matchRoles rolemap1 tagged verbp paws toppatts mDP
+      mselected2 = matchRoles rolemap2 tagged verbp paws toppatts mDP
+  in trace ("\nmatchFrameRolesForCauseDual: " ++ show (verbp^.headX.vp_lemma)++ "\n") $
+
+      case (mselected1,mselected2) of
        (Nothing,Nothing) -> (frame1,(sense1,False),Nothing)
        (Just _ ,Nothing) -> (frame1,(sense1,False),mselected1)
        (Nothing,Just _ ) -> (frame2,(sense2,True),mselected2)
