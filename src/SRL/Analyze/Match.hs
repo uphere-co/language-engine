@@ -59,8 +59,7 @@ import Data.List (intercalate)
 
 
 mkPAWSTriples :: SentStructure
-              -> ([Bitree (Range, CPDP '[Lemma]) (Range, CPDP '[Lemma])]
-                 ,[(VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))])
+              -> ([X'Tree '[Lemma]],[(VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))])
 mkPAWSTriples sstr =
   let clausetr = sstr^.ss_clausetr
       cpstr = sstr^.ss_cpstr
@@ -374,13 +373,13 @@ matchFrame tagged (vstr,paws) = do
 
 
 
-depCPDP :: Bitree (Range,a) (Range,a) -> [(Range,Range)]
+depCPDP :: X'Tree p -> [(Range,Range)]
 depCPDP (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap depCPDP xs
 depCPDP (PL _)           = []
 
 
 
-
+entityFromDP :: DetP t -> (Range,Text,Maybe (Range,Text))
 entityFromDP dp =
   let rng = headRange dp
       txt = headText dp

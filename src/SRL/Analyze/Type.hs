@@ -21,7 +21,7 @@ import           FrameNet.Query.Frame          (FrameDB)
 import           Lexicon.Type                  (ArgPattern,GRel,RoleInstance,RolePattInstance,SenseID)
 import           NLP.Syntax.Type               (ClauseTree,MarkType(..))
 import           NLP.Syntax.Type.Verb          (VerbProperty(..))
-import           NLP.Syntax.Type.XBar          (Zipper,CPDP,DetP)
+import           NLP.Syntax.Type.XBar          (Zipper,CPDP,DetP,X'Tree)
 import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
 import           NLP.Type.PennTreebankII       (Lemma,PennTree)
 import           NLP.Type.SyntaxProperty       (Voice)
@@ -86,7 +86,7 @@ data SentStructure = SentStructure { _ss_i              :: Int
                                    , _ss_ptr            :: PennTree
                                    , _ss_vps            :: [VerbProperty (Zipper '[Lemma])]
                                    , _ss_clausetr       :: ClauseTree
-                                   , _ss_cpstr          :: [Bitree (Range,CPDP '[Lemma]) (Range,CPDP '[Lemma])]
+                                   , _ss_cpstr          :: [X'Tree '[Lemma]]
                                    , _ss_tagged         :: [TagPos TokIdx MarkType]
                                    , _ss_verbStructures :: [VerbStructure]
                                    }
