@@ -126,13 +126,13 @@ mkVerbP vp vprop comps = XP vprop vp () () comps
 
 type instance Property   'X_T t = ()
 type instance Maximal    'X_T t = Zipper t
-type instance Specifier  'X_T t = TraceChain (Either {- (CP t) -} (Zipper t) (DetP t))
+type instance Specifier  'X_T t = TraceChain (Either (Zipper t) (DetP t))
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Zipper t -> TraceChain (Either {- (CP t) -} (Zipper t) (DetP t)) -> VerbP t -> TP t
+mkTP :: Zipper t -> TraceChain (Either (Zipper t) (DetP t)) -> VerbP t -> TP t
 mkTP tp mdp vp = XP () tp mdp () vp
 
 
@@ -160,3 +160,8 @@ mkCP mc cp spec tp = XP mc cp spec () tp
 
 data CPDP a = CPCase (CP a)
             | DPCase (DetP a)
+
+
+type X'Tree t = Bitree (Range,CPDP t) (Range,CPDP t)
+
+type X'Zipper t = BitreeZipper (Range,CPDP t) (Range,CPDP t)
