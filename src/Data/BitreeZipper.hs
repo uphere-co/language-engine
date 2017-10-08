@@ -34,9 +34,17 @@ data ListZipper a = LZ { _lz_prevs :: [a]
                        , _lz_current :: a
                        , _lz_nexts :: [a]
                        }
-                  deriving (Show,Functor)
+                  deriving (Show,Eq,Ord,Functor)
 
 makeLenses ''ListZipper
+
+
+singletonLZ :: a -> ListZipper a
+singletonLZ x = LZ [] x []
+
+
+lzToList :: ListZipper a -> [a]
+lzToList x = x^.lz_prevs.to reverse ++ (x^.lz_current : x^.lz_nexts)
 
 
 genListZippers :: [a] -> [ListZipper a]
