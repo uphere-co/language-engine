@@ -254,7 +254,7 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
                             let rng' = cpRange cp'
                             TraceChain exs' x' <- lift (resolveDP tagged rng')
                             let xs' = either lzToList id exs'
-                            return (TraceChain (Right (lzToList xs ++ xs')) x'))
+                            return (TraceChain (Right (reverse ps ++ (SilentPRO:xs'))) x'))
                         <|>
                         return (TraceChain (Left (LZ ps SilentPRO [])) Nothing))
           SilentPRO -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDP =<< parent z)
