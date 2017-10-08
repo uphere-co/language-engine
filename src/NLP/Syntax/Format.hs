@@ -186,7 +186,7 @@ showClauseStructure :: [TagPos TokIdx MarkType] -> IntMap Lemma -> PennTree -> I
 showClauseStructure tagged lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      cpstr = (map (bindingAnalysis tagged . resolveCP) . identifyCPHierarchy tagged) vps
+      cpstr = (map (bindingAnalysis2 . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
       xs = map (formatVPwithPAWS tagged clausetr cpstr) vps
   mapM_ (T.IO.putStrLn . formatX'Tree) cpstr
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)

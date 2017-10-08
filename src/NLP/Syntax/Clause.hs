@@ -13,7 +13,7 @@ module NLP.Syntax.Clause where
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
 import           Control.Lens.Extras                    (is)
-import           Control.Monad                          ((<=<),void)
+import           Control.Monad                          ((<=<),guard,void)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
@@ -313,19 +313,7 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
 
 resolveCP :: forall as. X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
 resolveCP xtr = rewriteTree action xtr
-
-  -- execState (go rng0) cpstr
   where
-    {- getrng = fst . getRoot1 . current
-    rng0 = (fst . getRoot1) cpstr
-    go :: Range -> State (X'Tree (Lemma ': as)) ()
-    go rng = void . runMaybeT $ do
-               z <- hoistMaybe . extractZipperById rng =<< lift get
-               z' <- (replace z <|> return z)
-               ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
-                <|>
-                (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
-     -}
     action rng = do z <- hoistMaybe . extractZipperById rng =<< lift get
                     (replace z <|> return z)
 
@@ -359,50 +347,64 @@ bindingSpec rng spec = do
   return z'
 
 
+nextLZ (LZ ps c (n:ns)) = Just (LZ (c:ps) n ns)
+nextLZ _                = Nothing
+
+
+-- consider passive case only now for the time being.
 bindingECM rng = do
   (z,cp) <- retrieveZCP rng
+  guard (cp ^. complement.complement.headX.vp_voice == Passive)
   c1:c2:[] <- return (cp^.complement.complement.complement)
+  rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.to headRange)
   cp' <- hoistMaybe (c2^?trResolved._Just._CompVP_CP)
   let rng' = cpRange cp'
       spec' = cp'^.complement.specifier -- .trResolved
-  trace (show (rng,rng') ++ show (formatTraceChain rangeText spec')) $ return ()
+  -- trace ("\nbindingECM:" ++ show (rng,rng') ++ "," ++ show (formatTraceChain rangeText spec')) $ return z
   {-
-  (z',_) <- retrieveZCP rng'
-  rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.to headRange)
+  (z',_) <- retrieveZCP rng' -}
+  rng_dp <- hoistMaybe (spec'^?trResolved._Just._Right.to headRange)
+
   -- trace (show (map (formatTraceChain formatCompVP) [c1,c2])) $ return ()
-  trace (show (rng,rng',rng_dp)) $ return ()
- -}
+  -- trace ("bindingECM: " ++ show (rng1,rng_dp)) $ do
+
+  if rng1 == rng_dp
+    then do
+      let rf = (_2._CPCase.complement.specifier .~ emptyTraceChain)
+             . (_2._CPCase.complement.complement.complement .~ [c2])
+          z' = replaceFocusItem rf rf z
+      lift (put (toBitree z'))
+      return z'
+      -- trace "bindingECM here" $ return z'
+    else
+      return z
+  -- trace ("\nbindingECM:::" ++ show (rng,rng',rng_dp)) $ return z
+
+
 --
 -- | This is the final step to bind inter-clause trace chain
 --
 bindingAnalysis :: [TagPos TokIdx MarkType] -> X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
-bindingAnalysis tagged xtr = rewriteTree action xtr
-  where
-    action rng = bindingSpec rng =<< lift (resolveDP tagged rng)
+bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= bindingSpec rng
 
 
-  {- execState (go rng0) cpstr
-  where
-    getrng = fst . getRoot1 . current
-    rng0 = (either fst fst . getRoot) cpstr
-    go rng = void . runMaybeT $ do
-               spec <- lift $ resolveDP tagged rng
-               z' <- bindingSpec rng spec
-               (bindingECM rng <|> return ())
-               ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
-                <|>
-                (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
--}
+--
+-- |
+--
+bindingAnalysis2 :: X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
+bindingAnalysis2 = rewriteTree $ \rng -> do z <- hoistMaybe . extractZipperById rng =<< lift get
+                                            (bindingECM rng <|> return z)
 
 
--- rewriteTree :: X'Tree as -> X'Tree as
+
+rewriteTree :: (Range -> MaybeT (State (X'Tree as)) (X'Zipper as))
+            -> X'Tree as
+            -> X'Tree as
 rewriteTree action xtr = execState (go rng0) xtr
   where getrng = fst . getRoot1 . current
         rng0 = (either fst fst . getRoot) xtr
         go rng = void . runMaybeT $ do
-                   -- spec <- lift $ resolveDP tagged rng
-                   z' <- action rng -- bindingSpec rng spec
-                   -- (bindingECM rng <|> return ())
+                   z' <- action rng
                    ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
                     <|>
                     (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
