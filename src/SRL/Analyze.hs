@@ -167,20 +167,6 @@ newNETagger = do
                               resolved = r^._1
                           in x { EL._info = (i1,i2,WNET.Resolved (resolved,u resolved)) }
           _ -> x
-
---             intercalate "\n" ()
-
-        {- 
-        let tokens = WET.wordsHash ["San","Francisco"]
-            matchedIdxs = WET.greedyAnnotation (WET._names wikiTable) tokens
-            -- matchedItem = V.map (V.unsafeIndex (WET._uids wikiTable)) . snd . head $ matchedIdxs
-            matchedItem = map (V.unsafeIndex (WET._uids wikiTable)) [1199652,1199653,1199654]
-            test = V.unsafeIndex (WET._names wikiTable) 1199652
-        in show (IM.lookup 62 wikiMap)  -- show (matchedItem) ++ show test -- (WET.wikiAnnotator wikiTable )
-        -- ("testfunc:" ++ show (V.length (WET._names wikiTable)))
-        -}
-  -- let testfunc xs =  xs
-
   return (runEL tagger (map disambiguator))   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem  
 
 
