@@ -28,3 +28,7 @@ Roku's first day of trading Thursday saw shares rise nearly 70 percent.
 
 -- Topicalization
 Volkswagen's fixes for diesel vehicles in Europe are running smoothly, a spokesman said after the company said its fixes in North America may cost 2.5 billion euros more than expected.
+
+
+-- too short named entity
+Uber Technologies Inc. on Wednesday confirmed it is shutting down its U.S. auto-leasing business, months after it discovered it was losing 18-times more money per vehicle than previously thought.
