@@ -156,18 +156,17 @@ newNETagger = do
         where f !acc (FF.EntityReprRow (WD.ItemID i) (WD.ItemRepr t)) = IM.insertWith (++) i [t] acc 
   uidNEtags <- WEC.loadFiles classFilesG -- uidTagFiles
   let tagger = extractFilteredEntityMentions wikiTable uidNEtags
-  let formatfunc x =
-        let x' = case ((^._3) . EL._info) x of
-                   WNET.AmbiguousUID (ys,t) ->
-                     let lst = sortBy (flip compare `on` (length.snd)) .  mapMaybe (\y-> (y,) <$> IM.lookup (WD._itemID y) wikiMap) $ ys
-                     in case lst of
-                          [] -> x
-                          (r:_) -> let (i1,i2,_) = EL._info x
-                                       u = WEC.guessItemClass2 uidNEtags t
-                                       resolved = r^._1
-                                   in x { EL._info = (i1,i2,WNET.Resolved (resolved,u resolved)) }
-                   _ -> x
-        in show x'
+  let disambiguator x =
+        case ((^._3) . EL._info) x of
+          WNET.AmbiguousUID (ys,t) ->
+            let lst = sortBy (flip compare `on` (length.snd)) .  mapMaybe (\y-> (y,) <$> IM.lookup (WD._itemID y) wikiMap) $ ys
+            in case lst of
+                 [] -> x
+                 (r:_) -> let (i1,i2,_) = EL._info x
+                              u = WEC.guessItemClass2 uidNEtags t
+                              resolved = r^._1
+                          in x { EL._info = (i1,i2,WNET.Resolved (resolved,u resolved)) }
+          _ -> x
 
 --             intercalate "\n" ()
 
@@ -180,9 +179,9 @@ newNETagger = do
         in show (IM.lookup 62 wikiMap)  -- show (matchedItem) ++ show test -- (WET.wikiAnnotator wikiTable )
         -- ("testfunc:" ++ show (V.length (WET._names wikiTable)))
         -}
-  let testfunc xs = trace (intercalate "\n" (map formatfunc xs)) xs
+  -- let testfunc xs =  xs
 
-  return (runEL tagger testfunc)   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem  
+  return (runEL tagger (map disambiguator))   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem  
 
 
 loadConfig :: Bool
