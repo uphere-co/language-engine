@@ -56,3 +56,8 @@ Citigroup Inc and Lehman Brothers Holdings Inc resolved a fight over $2.1 billio
 
 -- | today is recognized as complement
 Sanders said in a statement that Price "offered his resignation earlier today and the president accepted."
+
+
+-- | indirect WH-question
+Senators pressed Equifax CEO Wednesday on why consumers shouln't have power over the data that companies collect on them.
+

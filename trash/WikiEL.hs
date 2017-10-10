@@ -1,3 +1,5 @@
+{- 
+
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
@@ -141,11 +143,6 @@ getCompanySymbol tikcerMap (mentionUID, itemID) = result
 
 
 
-linkedMentionToTagPos :: (EntityMention Text)
-                      -> (TagPos TokIdx (EntityMention Text))
-linkedMentionToTagPos linked_mention =
-  let IRange b e = (_info linked_mention)^._1
-  in TagPos (TokIdx b, TokIdx e,linked_mention)
 
 prepareNETokens :: [Sentence] -> [(Text,NamedEntityClass)]
 prepareNETokens sents =
@@ -167,17 +164,9 @@ getWikiResolvedMentions emTagger sents tokens =
   in filter (\x -> let (_,_,pne) = _info x in case pne of Resolved _ -> True ; _ -> False) linked_mentions_all_unfiltered
 
 
-adjustWikiRange :: (Int,Int) -> (Int,Int)
-adjustWikiRange (a,b) = (a,b-1)
 
 
 
-mkWikiList :: DocStructure -> [((Int, Int), Text)]
-mkWikiList dstr =
-  let tagposs = toList (dstr ^. ds_mergedtags)
-      wikiel  = lefts $ map (\(TagPos (_,_,e)) -> e) tagposs
-      wikilst = map (\w -> (adjustWikiRange $ getRangeFromEntityMention w,getNEFromEntityMention w)) wikiel
-  in wikilst
       
 
 
@@ -186,4 +175,6 @@ getWikiAllMentions :: [Sentence]
                    -> ([(Text,NamedEntityClass)] -> [EntityMention Text])
                    -> [EntityMention Text]
 getWikiAllMentions sents emTagger = emTagger (prepareNETokens sents)
+-}
+
 -}
