@@ -1,10 +1,12 @@
+{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
 module SRL.Analyze where
 
-import           Control.Lens                 ((^.),(^..),(.~),(&),_Just,to)
+import           Control.Lens                 ((^.),(^..),(.~),(&),_Just,to,_1,_2,_3)
 import           Control.Monad                (forM_,join,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
@@ -12,6 +14,8 @@ import qualified Data.ByteString.Char8  as B
 import           Data.Default                 (def)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
+import qualified Data.IntMap            as IM
+import           Data.List                    (foldl',intercalate)
 import           Data.Maybe
 import           Data.Text                    (Text)
 import qualified Data.Text              as T
@@ -64,6 +68,12 @@ import           SRL.Statistics (getGraphFromMG)
 --
 import Debug.Trace
 import qualified Data.Vector as V
+import qualified WikiEL.EntityLinking   as EL
+import qualified WikiEL.ETL.LoadData    as LD
+import qualified WikiEL.Type.FileFormat as FF
+import qualified WikiEL.Type.Wikidata   as WD
+import qualified WikiEL.WikiNamedEntityTagger as WNET
+
 
 -- | main query loop
 --
@@ -142,13 +152,28 @@ loadConfig bypass_ner cfg = do
                 then return (const [])
                 else do --- uncurry runEL <$> loadWikiData
                         -- (tagger,entityResolve) <- loadWikiData
-                        wikiTable <- WET.loadWETagger reprFileG -- wikiNameFile
+                        -- wikiTable <- WET.loadWETagger reprFileG -- wikiNameFile
+                        reprs <- LD.loadEntityReprs reprFileG
+                        let wikiTable = WET.buildEntityTable reprs
+                            wikiMap = foldl' f IM.empty reprs
+                              where f !acc (FF.EntityReprRow (WD.ItemID i) (WD.ItemRepr t)) = IM.insertWith (++) i [t] acc 
                         uidNEtags <- WEC.loadFiles classFilesG -- uidTagFiles
                         let tagger = extractFilteredEntityMentions wikiTable uidNEtags
-                        let formatfunc =
-                              show (WET.wikiAnnotator wikiTable ["San","Francisco"])
+                        let formatfunc x =
+                              case ((^._3) . EL._info) x of
+                                WNET.AmbiguousUID (ys,_) -> intercalate "\n" (map (\y->show (IM.lookup (WD._itemID y) wikiMap)) ys)
+
+                                _ -> ""
+                              {- 
+                              let tokens = WET.wordsHash ["San","Francisco"]
+                                  matchedIdxs = WET.greedyAnnotation (WET._names wikiTable) tokens
+                                  -- matchedItem = V.map (V.unsafeIndex (WET._uids wikiTable)) . snd . head $ matchedIdxs
+                                  matchedItem = map (V.unsafeIndex (WET._uids wikiTable)) [1199652,1199653,1199654]
+                                  test = V.unsafeIndex (WET._names wikiTable) 1199652
+                              in show (IM.lookup 62 wikiMap)  -- show (matchedItem) ++ show test -- (WET.wikiAnnotator wikiTable )
                               -- ("testfunc:" ++ show (V.length (WET._names wikiTable)))
-                        let testfunc x = trace formatfunc x
+                              -}
+                        let testfunc xs = trace (intercalate "\n" (map formatfunc xs)) xs
                         
                         return (runEL tagger testfunc)   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem
   return (apredata,netagger)
