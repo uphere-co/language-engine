@@ -10,6 +10,7 @@ import           Data.Text               (Text)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as CS
 import           Data.BitreeZipper
+import           Data.ListZipper                              (ListZipper)
 import           NLP.Type.CoreNLP                      as S
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty                      (Voice)

@@ -21,6 +21,7 @@ import           Data.Tree                      (levels)
 import           Data.Attribute
 import           Data.Bitree                    (getLeaves)
 import           Data.BitreeZipper
+import           Data.ListZipper                (ListZipper(..))
 import           NLP.Type.CoreNLP
 import           NLP.Type.PennTreebankII
 import           NLP.Type.UniversalDependencies2.Syntax

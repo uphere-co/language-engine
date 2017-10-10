@@ -35,7 +35,7 @@ import           Lexicon.Data                 (LexDataConfig(..),cfg_framenet_fr
                                               ,cfg_wsj_directory
                                               ,loadSenseInventory
                                               )
-import           NLP.Syntax.Format            (formatCPHierarchy)
+import           NLP.Syntax.Format            (formatX'Tree)
 import           NLP.Type.CoreNLP             (Sentence)
 import           NLP.Type.NamedEntity         (NamedEntityClass)
 import           NLP.Type.SyntaxProperty      (Voice)
@@ -80,7 +80,7 @@ queryProcess config pp apredata netagger =
                   mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkPAWSTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
 
       ":v " -> do dstr <- docStructure apredata netagger <$> runParser pp rest
-                  mapM_ (T.IO.putStrLn . formatCPHierarchy) (dstr ^.. ds_sentStructures . traverse . _Just . ss_cpstr . traverse)
+                  mapM_ (T.IO.putStrLn . formatX'Tree) (dstr ^.. ds_sentStructures . traverse . _Just . ss_cpstr . traverse)
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
 

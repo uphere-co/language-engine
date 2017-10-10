@@ -32,3 +32,20 @@ Volkswagen's fixes for diesel vehicles in Europe are running smoothly, a spokesm
 
 -- too short named entity
 Uber Technologies Inc. on Wednesday confirmed it is shutting down its U.S. auto-leasing business, months after it discovered it was losing 18-times more money per vehicle than previously thought.
+
+-- after ..ing (PP-ing extra role)
+Microsoft Corp Chief Executive Officer Satya Nadella said on Wednesday the company's search engine, Bing, will focus on expanding in the PC search market after losing its deal with Apple Inc's Siri.
+
+-- simplified version of the above sentence.
+Satya Nadella said Bing will focus on expanding after losing its deal with Siri.
+
+
+-- | targeting Alzheimer's patients modifies drug.
+Axovant Sciences Ltd said on Tuesday its experimental drug targeting Alzheimer's patients failed to meet the main goals in a late-stage trial.
+
+
+-- |
+Chinese e-commerce giant Alibaba Group Holding Ltd is raising its stake in logistics affiliate Cainiao Smart Logistics Network Ltd to 51 percent from 47 percent by investing 5.3 billion yuan.
+
+-- | voted as type?
+The council voted six to three that AIG was no longer a risk to financial stability.
