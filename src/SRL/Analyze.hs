@@ -42,10 +42,12 @@ import           NLP.Type.SyntaxProperty      (Voice)
 import           OntoNotes.Corpus.Load        (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 import           Text.Format.Dot              (mkLabelText)
--- import           WikiEL                       (loadEMtagger)
+import           WikiEL                       (extractFilteredEntityMentions)
 import           WikiEL.EntityLinking         (EntityMention)
-import           WikiEL.Run                   (runEL,loadWikiData,classFilesG)
+import           WikiEL.Run                   (runEL,loadWikiData,classFilesG,reprFileG)
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
+import qualified WikiEL.WikiEntityClass             as WEC
+import qualified WikiEL.WikiEntityTagger            as WET
 --
 import           SRL.Analyze.ARB               (mkARB)
 import qualified SRL.Analyze.Config as Analyze
@@ -58,7 +60,10 @@ import           SRL.Analyze.Type
 --                                                ,occupationItemFile,orgItemFile,personItemFile,reprFile)
 -- import           SRL.Analyze.WikiEL            (mkWikiList)
 
-import SRL.Statistics (getGraphFromMG)
+import           SRL.Statistics (getGraphFromMG)
+--
+import Debug.Trace
+import qualified Data.Vector as V
 
 -- | main query loop
 --
@@ -136,8 +141,16 @@ loadConfig bypass_ner cfg = do
   netagger <- if bypass_ner
                 then return (const [])
                 else do --- uncurry runEL <$> loadWikiData
-                        (tagger,entityResolve) <- loadWikiData
-                        return (runEL tagger id)   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem
+                        -- (tagger,entityResolve) <- loadWikiData
+                        wikiTable <- WET.loadWETagger reprFileG -- wikiNameFile
+                        uidNEtags <- WEC.loadFiles classFilesG -- uidTagFiles
+                        let tagger = extractFilteredEntityMentions wikiTable uidNEtags
+                        let formatfunc =
+                              show (WET.wikiAnnotator wikiTable ["San","Francisco"])
+                              -- ("testfunc:" ++ show (V.length (WET._names wikiTable)))
+                        let testfunc x = trace formatfunc x
+                        
+                        return (runEL tagger testfunc)   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem
   return (apredata,netagger)
 
 
