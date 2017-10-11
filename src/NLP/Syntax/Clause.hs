@@ -13,7 +13,7 @@ module NLP.Syntax.Clause where
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
 import           Control.Lens.Extras                    (is)
-import           Control.Monad                          ((<=<),void)
+import           Control.Monad                          ((<=<),guard,void)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
@@ -200,7 +200,7 @@ adjustX'Tree f w z = do
 
 
 
-retrieveZCP :: Range -> MaybeT (State (X'Tree (Lemma ': as)))(X'Zipper (Lemma ': as),CP (Lemma ': as))
+retrieveZCP :: Range -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as),CP (Lemma ': as))
 retrieveZCP rng = do
   tr <- lift get
   z <- hoistMaybe (extractZipperById rng tr)
@@ -286,12 +286,12 @@ resolveVPComp rng spec = do
       let cs = verbp^.complement
       case cs of
         [] -> trace "No complements?" $ return spec
-        c:rest -> trace (show (map (formatTraceChain formatCompVP) cs)) $ do
+        c:rest -> do
           let r = either (const Nothing) (Just . CompVP_DP) =<< spec^.trResolved  -- ignore CP case for the time being.
               c' = TraceChain (mergeLeftELZ (c^.trChain) (spec^.trChain)) r
               rf = _2._CPCase.complement.complement.complement .~ (c':rest)
               z' = replaceFocusItem rf rf z
-          trace (show (formatTraceChain formatCompVP c')) $ lift (put (toBitree z'))
+          lift (put (toBitree z'))
           return (TraceChain (mergeRightELZ (c^.trChain) (spec^.trChain)) (spec^.trResolved))
 
 
@@ -312,17 +312,10 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
 
 
 resolveCP :: forall as. X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
-resolveCP cpstr = execState (go rng0) cpstr
+resolveCP xtr = rewriteTree action xtr
   where
-    getrng = fst . getRoot1 . current
-    rng0 = (fst . getRoot1) cpstr
-    go :: Range -> State (X'Tree (Lemma ': as)) ()
-    go rng = void . runMaybeT $ do
-               (z,_) <- retrieveZCP rng
-               z' <- (replace z <|> return z)
-               ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
-                <|>
-                (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
+    action rng = do z <- hoistMaybe . extractZipperById rng =<< lift get
+                    (replace z <|> return z)
 
     replace :: X'Zipper (Lemma ': as) -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as))
     replace z = do cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
@@ -344,18 +337,67 @@ resolveCP cpstr = execState (go rng0) cpstr
 
 
 
+
+
+bindingSpec rng spec = do
+  z <- hoistMaybe . extractZipperById rng =<< lift get
+  let rf = _2._CPCase.complement.specifier .~ spec
+      z' = replaceFocusItem rf rf z
+  lift (put (toBitree z'))
+  return z'
+
+
+nextLZ (LZ ps c (n:ns)) = Just (LZ (c:ps) n ns)
+nextLZ _                = Nothing
+
+
+-- consider passive case only now for the time being.
+connectRaisedDP :: Range -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as))
+connectRaisedDP rng = do
+  (z,cp) <- retrieveZCP rng
+  guard (cp ^. complement.complement.headX.vp_voice == Passive)
+  c1:c2:[] <- return (cp^.complement.complement.complement)
+  rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.to headRange)
+  cp' <- hoistMaybe (c2^?trResolved._Just._CompVP_CP)
+  let rng' = cpRange cp'
+  rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.to headRange)
+  if rng1 == rng_dp
+    then do
+      let rf = (_2._CPCase.complement.specifier .~ emptyTraceChain)
+             . (_2._CPCase.complement.complement.complement .~ [c2])
+          z' = replaceFocusItem rf rf z
+      lift (put (toBitree z'))
+      return z'
+    else
+      return z
+
+
+-- I think we should change the name of these bindingAnalysis.. functions.
+
+--
+-- | This is the final step to bind inter-clause trace chain
+--
 bindingAnalysis :: [TagPos TokIdx MarkType] -> X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
-bindingAnalysis tagged cpstr = execState (go rng0) cpstr
-   where
-     getrng = either fst fst . getRoot . current
-     rng0 = (either fst fst . getRoot) cpstr
-     go rng = do xs <- resolveDP tagged rng
-                 tr <- get
-                 void . runMaybeT $ do
-                   z <- hoistMaybe (extractZipperById rng tr)
-                   let rf = _2._CPCase.complement.specifier .~ xs
-                       z' = replaceFocusItem rf rf z
-                   lift (put (toBitree z'))
+bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= bindingSpec rng
+
+
+--
+-- |
+--
+bindingAnalysisRaising :: X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
+bindingAnalysisRaising = rewriteTree $ \rng -> do z <- hoistMaybe . extractZipperById rng =<< lift get
+                                                  (connectRaisedDP rng <|> return z)
+
+
+
+rewriteTree :: (Range -> MaybeT (State (X'Tree as)) (X'Zipper as))
+            -> X'Tree as
+            -> X'Tree as
+rewriteTree action xtr = execState (go rng0) xtr
+  where getrng = fst . getRoot1 . current
+        rng0 = (either fst fst . getRoot) xtr
+        go rng = void . runMaybeT $ do
+                   z' <- action rng
                    ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
                     <|>
                     (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
