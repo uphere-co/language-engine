@@ -1,17 +1,23 @@
+{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TupleSections     #-}
 
 module SRL.Analyze where
 
-import           Control.Lens                 ((^.),(^..),(.~),(&),_Just,to)
+import           Control.Lens                 ((^.),(^..),(.~),(&),_Just,to,_1,_2,_3)
 import           Control.Monad                (forM_,join,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
 import           Data.Default                 (def)
+import           Data.Function                (on)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
+import qualified Data.IntMap            as IM
+import           Data.List                    (foldl',intercalate,sortBy)
 import           Data.Maybe
 import           Data.Text                    (Text)
 import qualified Data.Text              as T
@@ -42,10 +48,12 @@ import           NLP.Type.SyntaxProperty      (Voice)
 import           OntoNotes.Corpus.Load        (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 import           Text.Format.Dot              (mkLabelText)
--- import           WikiEL                       (loadEMtagger)
+import           WikiEL                       (extractFilteredEntityMentions)
 import           WikiEL.EntityLinking         (EntityMention)
-import           WikiEL.Run                   (runEL,loadWikiData,classFilesG)
+import           WikiEL.Run                   (runEL,loadWikiData,classFilesG,reprFileG)
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
+import qualified WikiEL.WikiEntityClass             as WEC
+import qualified WikiEL.WikiEntityTagger            as WET
 --
 import           SRL.Analyze.ARB               (mkARB)
 import qualified SRL.Analyze.Config as Analyze
@@ -58,7 +66,17 @@ import           SRL.Analyze.Type
 --                                                ,occupationItemFile,orgItemFile,personItemFile,reprFile)
 -- import           SRL.Analyze.WikiEL            (mkWikiList)
 
-import SRL.Statistics (getGraphFromMG)
+import           SRL.Statistics (getGraphFromMG)
+--
+import Debug.Trace
+import qualified Data.Vector as V
+import qualified WikiEL.EntityLinking   as EL
+import qualified WikiEL.ETL.LoadData    as LD
+import qualified WikiEL.Type.FileFormat as FF
+import qualified WikiEL.Type.Wikidata   as WD
+-- import qualified WikiEL.WikiEntityClass       as WEC
+import qualified WikiEL.WikiNamedEntityTagger as WNET
+
 
 -- | main query loop
 --
@@ -128,6 +146,30 @@ printMeaningGraph rolemap dstr = do
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
 
 
+newNETagger = do
+  --- uncurry runEL <$> loadWikiData
+  -- (tagger,entityResolve) <- loadWikiData
+  -- wikiTable <- WET.loadWETagger reprFileG -- wikiNameFile
+  reprs <- LD.loadEntityReprs reprFileG
+  let wikiTable = WET.buildEntityTable reprs
+      wikiMap = foldl' f IM.empty reprs
+        where f !acc (FF.EntityReprRow (WD.ItemID i) (WD.ItemRepr t)) = IM.insertWith (++) i [t] acc 
+  uidNEtags <- WEC.loadFiles classFilesG -- uidTagFiles
+  let tagger = extractFilteredEntityMentions wikiTable uidNEtags
+  let disambiguator x =
+        case ((^._3) . EL._info) x of
+          WNET.AmbiguousUID (ys,t) ->
+            let lst = sortBy (flip compare `on` (length.snd)) .  mapMaybe (\y-> (y,) <$> IM.lookup (WD._itemID y) wikiMap) $ ys
+            in case lst of
+                 [] -> x
+                 (r:_) -> let (i1,i2,_) = EL._info x
+                              u = WEC.guessItemClass2 uidNEtags t
+                              resolved = r^._1
+                          in x { EL._info = (i1,i2,WNET.Resolved (resolved,u resolved)) }
+          _ -> x
+  return (runEL tagger (map disambiguator))   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem  
+
+
 loadConfig :: Bool
            -> LexDataConfig
            -> IO (AnalyzePredata,[Sentence]->[EntityMention Text])
@@ -135,9 +177,7 @@ loadConfig bypass_ner cfg = do
   apredata@(AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats) <- loadAnalyzePredata cfg
   netagger <- if bypass_ner
                 then return (const [])
-                else do --- uncurry runEL <$> loadWikiData
-                        (tagger,entityResolve) <- loadWikiData
-                        return (runEL tagger id)   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem
+                else newNETagger
   return (apredata,netagger)
 
 

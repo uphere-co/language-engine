@@ -423,12 +423,12 @@ meaningGraph sstr =
       entities0 = do (_,_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
                      (fe,x) <- felst
-                     trace (intercalate "\n" (map showMatchedFE' felst)) $ do 
-                       case x of
-                         CompVP_Unresolved _ -> []
-                         CompVP_CP cp -> [] -- CP is not an entity.
-                         CompVP_DP dp -> return (entityFromDP dp)
-                         CompVP_PP pp -> return (entityFromDP (pp^.complement))
+                     -- trace (intercalate "\n" (map showMatchedFE' felst)) $ do 
+                     case x of
+                       CompVP_Unresolved _ -> []
+                       CompVP_CP cp -> [] -- CP is not an entity.
+                       CompVP_DP dp -> return (entityFromDP dp)
+                       CompVP_PP pp -> return (entityFromDP (pp^.complement))
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
