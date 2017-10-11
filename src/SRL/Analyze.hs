@@ -44,7 +44,7 @@ import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 import           Text.Format.Dot              (mkLabelText)
 -- import           WikiEL                       (loadEMtagger)
 import           WikiEL.EntityLinking         (EntityMention)
-import           WikiEL.Run                   (runEL,loadWikiData)
+import           WikiEL.Run                   (runEL,loadWikiData,classFilesG)
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
 --
 import           SRL.Analyze.ARB               (mkARB)
@@ -52,11 +52,11 @@ import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP           (runParser)
 import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructure,showMatchedFrame)
 import           SRL.Analyze.Match             (mkPAWSTriples,meaningGraph,tagMG)
-import           SRL.Analyze.SentenceStructure (docStructure)
+import           SRL.Analyze.SentenceStructure (docStructure,mkWikiList)
 import           SRL.Analyze.Type
-import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
-                                               ,occupationItemFile,orgItemFile,personItemFile,reprFile)
-import           SRL.Analyze.WikiEL            (mkWikiList)
+-- import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
+--                                                ,occupationItemFile,orgItemFile,personItemFile,reprFile)
+-- import           SRL.Analyze.WikiEL            (mkWikiList)
 
 import SRL.Statistics (getGraphFromMG)
 
@@ -81,7 +81,8 @@ queryProcess config pp apredata netagger =
 
       ":v " -> do dstr <- docStructure apredata netagger <$> runParser pp rest
                   mapM_ (T.IO.putStrLn . formatX'Tree) (dstr ^.. ds_sentStructures . traverse . _Just . ss_cpstr . traverse)
-                  when (config^.Analyze.showDetail) $
+                  when (config^.Analyze.showDetail) $ do
+                    print (dstr^.ds_mergedtags)
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
 
                   mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkPAWSTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
@@ -134,7 +135,9 @@ loadConfig bypass_ner cfg = do
   apredata@(AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats) <- loadAnalyzePredata cfg
   netagger <- if bypass_ner
                 then return (const [])
-                else uncurry runEL <$> loadWikiData
+                else do --- uncurry runEL <$> loadWikiData
+                        (tagger,entityResolve) <- loadWikiData
+                        return (runEL tagger id)   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem
   return (apredata,netagger)
 
 

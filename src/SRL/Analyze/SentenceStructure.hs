@@ -7,6 +7,8 @@ module SRL.Analyze.SentenceStructure where
 
 import           Control.Lens                              ((^?),(^.),(^..),_Left,_Right,_1,_2,to)
 import           Data.Bifunctor                            (bimap)
+import           Data.Either                               (lefts)
+import           Data.Foldable                             (toList)
 import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
@@ -37,7 +39,9 @@ import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,m
 import qualified NLP.Type.PennTreebankII.Separated as PS
 import           NLP.Type.SyntaxProperty                   (Voice)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
-import           WikiEL.EntityLinking                      (EntityMention,entityPreNE)
+import           WikiEL.Convert                               (getNEFromEntityMention,getRangeFromEntityMention)
+import           WikiEL.EntityLinking                      (EntityMention,entityPreNE,UIDCite(..))
+import           WikiEL.Misc                               (IRange(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
 import           WikiEL.WikiNamedEntityTagger              (PreNE(..))
 
@@ -46,12 +50,30 @@ import           OntoNotes.Type.SenseInventory
 --
 import           SRL.Analyze.Parameter                     (thresholdPattStat)
 import           SRL.Analyze.Type
-import           SRL.Analyze.WikiEL                        (getWikiResolvedMentions
-                                                           ,linkedMentionToTagPos)
+-- import           SRL.Analyze.WikiEL                        (getWikiResolvedMentions
+--                                                            ,linkedMentionToTagPos)
 
 --
 import Debug.Trace
 
+
+adjustWikiRange :: (Int,Int) -> (Int,Int)
+adjustWikiRange (a,b) = (a,b-1)
+
+
+linkedMentionToTagPos :: (EntityMention Text)
+                      -> (TagPos TokIdx (EntityMention Text))
+linkedMentionToTagPos linked_mention =
+  let IRange b e = (_info linked_mention)^._1
+  in TagPos (TokIdx b, TokIdx e,linked_mention)
+
+
+mkWikiList :: DocStructure -> [((Int, Int), Text)]
+mkWikiList dstr =
+  let tagposs = toList (dstr ^. ds_mergedtags)
+      wikiel  = lefts $ map (\(TagPos (_,_,e)) -> e) tagposs
+      wikilst = map (\w -> (adjustWikiRange $ getRangeFromEntityMention w,getNEFromEntityMention w)) wikiel
+  in wikilst
 
 
 getSenses :: Text

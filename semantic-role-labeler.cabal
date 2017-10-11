@@ -27,7 +27,7 @@ library
                        SRL.Analyze.SentenceStructure
                        SRL.Analyze.Type
                        SRL.Analyze.Util
-                       SRL.Analyze.WikiEL
+                       -- SRL.Analyze.WikiEL
                        SRL.Statistics
 
                        SRL.Old.CoNLL.CoNLL08.Parser

@@ -53,3 +53,14 @@ The council voted six to three that AIG was no longer a risk to financial stabil
 -- | object-control. 
 The SEC said it charged Maksim Zaslavskiy along with REcoin Group Foundation and DRC World with selling unregistered cryptocurrency securities reputedly backed by investments in real estate and diamonds, when it found no such investment had taken place.
 
+-- | parsing error
+Citigroup Inc and Lehman Brothers Holdings Inc resolved a fight over $2.1 billion that dates to the financial crisis era after Citigroup agreed to give back $1.74 billion to the estate of the investment bank, according to Bloomberg.
+
+
+-- | today is recognized as complement
+Sanders said in a statement that Price "offered his resignation earlier today and the president accepted."
+
+
+-- | indirect WH-question
+Senators pressed Equifax CEO Wednesday on why consumers shouln't have power over the data that companies collect on them.
+
