@@ -352,7 +352,8 @@ nextLZ _                = Nothing
 
 
 -- consider passive case only now for the time being.
-bindingECM rng = do
+connectRaisedDP :: Range -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as))
+connectRaisedDP rng = do
   (z,cp) <- retrieveZCP rng
   guard (cp ^. complement.complement.headX.vp_voice == Passive)
   c1:c2:[] <- return (cp^.complement.complement.complement)
@@ -371,6 +372,8 @@ bindingECM rng = do
       return z
 
 
+-- I think we should change the name of these bindingAnalysis.. functions.
+
 --
 -- | This is the final step to bind inter-clause trace chain
 --
@@ -381,9 +384,9 @@ bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= b
 --
 -- |
 --
-bindingAnalysis2 :: X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
-bindingAnalysis2 = rewriteTree $ \rng -> do z <- hoistMaybe . extractZipperById rng =<< lift get
-                                            (bindingECM rng <|> return z)
+bindingAnalysisRaising :: X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
+bindingAnalysisRaising = rewriteTree $ \rng -> do z <- hoistMaybe . extractZipperById rng =<< lift get
+                                                  (connectRaisedDP rng <|> return z)
 
 
 

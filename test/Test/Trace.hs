@@ -134,7 +134,7 @@ formatDetail :: TestTrace -> [Text]
 formatDetail (_txt,_,_,lma,pt,tmxs) =
   let vps  = mkVPS lma pt
       clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
-      cpstr = (map (bindingAnalysis2 . resolveCP . bindingAnalysis tmxs) . identifyCPHierarchy tmxs) vps
+      cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tmxs) . identifyCPHierarchy tmxs) vps
 
   in
   [ "===================================================================================================================="
@@ -180,7 +180,7 @@ checkTrace c = -- False
   fromMaybe False $ do
     let vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
-        cpstr = (map (bindingAnalysis2 . resolveCP . bindingAnalysis (c^._6)) . identifyCPHierarchy (c^._6)) vps
+        cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis (c^._6)) . identifyCPHierarchy (c^._6)) vps
 
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
     paws <- findPAWS [] clausetr vp cpstr
