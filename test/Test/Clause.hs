@@ -143,6 +143,15 @@ test_sub_clause =
   )
 
 
+-- |
+test_gerundive :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
+test_gerundive =
+  ( "Travis Kalanick said he had appointed two new board members, challenging Uber shareholders."
+  , [(0,("Travis","Travis")),(1,("Kalanick","Kalanick")),(2,("say","said")),(3,("he","he")),(4,("have","had")),(5,("appoint","appointed")),(6,("two","two")),(7,("new","new")),(8,("board","board")),(9,("member","members")),(10,(",",",")),(11,("challenge","challenging")),(12,("Uber","Uber")),(13,("shareholder","shareholders")),(14,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","Travis"),PL ("NNP","Kalanick")],PN "VP" [PL ("VBD","said"),PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","he")],PN "VP" [PL ("VBD","had"),PN "VP" [PL ("VBN","appointed"),PN "NP" [PL ("CD","two"),PL ("JJ","new"),PL ("NN","board"),PL ("NNS","members")],PL (",",","),PN "S" [PN "VP" [PL ("VBG","challenging"),PN "NP" [PL ("NNP","Uber"),PL ("NNS","shareholders")]]]]]]]],PL (".",".")]]
+  , []
+  )
+
 showDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType]) -> IO ()
 showDetail (txt,lma,pt,tmxs) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
@@ -164,10 +173,11 @@ showDetail (txt,lma,pt,tmxs) = do
 
 
 mainShow :: IO ()
-mainShow = mapM_ showDetail [ test_coordination
-                            , test_complex_noun_phrase
-                            , test_bare_noun_adverb
-                            , test_relative_pronoun_subject
-                            , test_noun_modifier
-                            , test_sub_clause
+mainShow = mapM_ showDetail [ -- test_coordination
+                            -- , test_complex_noun_phrase
+                            -- , test_bare_noun_adverb
+                            -- , test_relative_pronoun_subject
+                            -- , test_noun_modifier
+                            -- , test_sub_clause
+                             test_gerundive
                             ]
