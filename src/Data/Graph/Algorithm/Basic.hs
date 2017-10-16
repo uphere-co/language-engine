@@ -1,4 +1,4 @@
-module Graph.Algorithm.Basic where
+module Data.Graph.Algorithm.Basic where
 
 import           Data.Graph
 import           Data.Tree

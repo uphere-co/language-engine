@@ -18,7 +18,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Graph
-                       Graph.Algorithm.Basic
+                       Data.Graph.Algorithm.Basic
                        Graph.ETL
                        Graph.Internal.Hash
                        Graph.Internal.BinarySearch
