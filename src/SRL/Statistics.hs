@@ -43,12 +43,3 @@ numberOfMGPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
     fmtVerb MGEntity           {..} = Nothing
     fmtVerb MGPredicate        {..} = Just _mv_id
     fmtVerb MGNominalPredicate {..} = Just _mv_id
-
-
--- I change the name to farthest, not furthest
-farthestPath :: Graph -> Int
-farthestPath grph = maximum $ map (length . flatten) $ dff grph
-
-
-numberOfIsland :: Graph -> Int
-numberOfIsland grph = length $ components $ grph
