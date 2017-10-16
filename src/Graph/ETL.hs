@@ -28,7 +28,6 @@ data Graph = Graph { _edges :: UV.Vector (H.WordHash, H.WordHash)
 
 applyLines :: ([BString] -> a) -> FilePath -> IO a
 applyLines f filepath = do
-  print filepath
   content <- BS.readFile filepath
   let
     nl = BSI.c2w '\n'

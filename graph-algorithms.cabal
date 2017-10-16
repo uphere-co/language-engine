@@ -9,8 +9,8 @@ version:             0.1.0.0
 license-file:        LICENSE
 author:              UpHere, Inc.
 maintainer:          ianwookim@gmail.com
--- copyright:           
--- category:            
+-- copyright:
+-- category:
 build-type:          Simple
 extra-source-files:  README.md, ChangeLog.md
 cabal-version:       >=1.10
