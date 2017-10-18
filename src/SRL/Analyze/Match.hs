@@ -287,9 +287,23 @@ matchExtraRolesForCPInAdjunctCP mcheck role paws felst = do
   return (role,comp)
 
 
-checkTimeComplementizer x = x^?headX._C_WORD.to (\z -> any (\c -> isLemmaAs c (current z)) ["after","before"]) == Just True
+hasComplementizer lst x =
+  x^?headX._C_WORD.to (\z -> any (\c -> isLemmaAs c (current z)) lst) == Just True
 
---                                      x^?headX._C_WORD.to cwordcheck == Just True) 
+
+toInfinitive x =
+  let vprop = x^.complement.complement.headX
+  in case vprop^.vp_auxiliary of
+       (_,(_,lma)):_ -> lma == "to"
+       _             -> False
+{-
+["after","before"]) == Just True
+
+checkTimeComplementizer x = x^?headX._C_WORD.to (\z -> any (\c -> isLemmaAs c (current z)) ["after","before"]) == Just True
+-}
+
+
+--                                      x^?headX._C_WORD.to cwordcheck == Just True)
 -- (\x->x^?headX._C_WORD.to check == Just True)
 
 
@@ -301,13 +315,15 @@ matchExtraRoles :: [TagPos TokIdx MarkType]
                 -> [(FNFrameElement, CompVP '[Lemma])]
 matchExtraRoles tagged paws felst =
   let mmeans = matchExtraRolesForPPing "by" "Means" tagged paws felst
-      madjunct  = matchExtraRolesForCPInCompVP checkTimeComplementizer "Time" paws felst <|>
-                  ( matchExtraRolesForCPInAdjunctCP (Just checkTimeComplementizer) "Time" paws felst <|>
-                    matchExtraRolesForCPInAdjunctCP Nothing "Manner" paws felst
-                  ) <|>
-                  matchExtraRolesForPPing "after" "Time" tagged paws felst <|>
-                  matchExtraRolesForPPing "before" "Time" tagged paws felst
-  in felst ++ catMaybes [mmeans,madjunct]
+      mcomp  = matchExtraRolesForCPInCompVP (hasComplementizer ["after","before"]) "Time" paws felst <|>
+               matchExtraRolesForCPInCompVP toInfinitive "Purpose" paws felst                        <|>
+               matchExtraRolesForPPing "after" "Time" tagged paws felst                              <|>
+               matchExtraRolesForPPing "before" "Time" tagged paws felst
+      madj   = matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["after","before"])) "Time"   paws felst <|>
+               matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["while","as"]))     "Manner" paws felst <|>
+               matchExtraRolesForCPInAdjunctCP (Just toInfinitive) "Purpose" paws felst                          <|>
+               matchExtraRolesForCPInAdjunctCP Nothing "Manner" paws felst
+  in felst ++ catMaybes [mmeans,mcomp,madj]
 
 
 -- | A scoring algorithm for selecting a frame among candidates.
