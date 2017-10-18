@@ -169,7 +169,7 @@ formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,_sense) =
       minst = dummyMatch proptr inst
       nlemmamap = adjustedLemmaMap lemmamap proptr
       verbprops = verbPropertyFromPennTree nlemmamap proptr
-      clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
+      clausetr = clauseStructure [] verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr)) -- for the time being
       l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
       mvpmva =  matchVerbPropertyWithRelation verbprops clausetr minst
@@ -266,7 +266,7 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                         nlemmamap = adjustedLemmaMap lemmamap proptr
                         verbprops = verbPropertyFromPennTree nlemmamap proptr
                         
-                        clausetr = clauseStructure verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr))
+                        clausetr = clauseStructure [] verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr)) -- for the time being
                         mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
                         mtp = do (vp,_) <- mvpmva
                                  constructCP [] vp^? _Just._1.complement      -- for the time being
