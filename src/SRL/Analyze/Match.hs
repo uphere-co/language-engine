@@ -271,6 +271,7 @@ matchExtraRolesForCPInCompVP check role paws felst = do
   cp <- find check candidates
   let rng = cp^.maximalProjection.to current.to getRange
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_CP.to cpRange == Just rng) felst))
   let comp = CompVP_CP cp
   return (role,comp)
 
@@ -283,6 +284,7 @@ matchExtraRolesForCPInAdjunctCP mcheck role paws felst = do
           Just check -> find check candidates
   let rng = cp^.maximalProjection.to current.to getRange
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_CP.to cpRange == Just rng) felst))
   let comp = CompVP_CP cp
   return (role,comp)
 
@@ -296,15 +298,6 @@ toInfinitive x =
   in case vprop^.vp_auxiliary of
        (_,(_,lma)):_ -> lma == "to"
        _             -> False
-{-
-["after","before"]) == Just True
-
-checkTimeComplementizer x = x^?headX._C_WORD.to (\z -> any (\c -> isLemmaAs c (current z)) ["after","before"]) == Just True
--}
-
-
---                                      x^?headX._C_WORD.to cwordcheck == Just True)
--- (\x->x^?headX._C_WORD.to check == Just True)
 
 
 -- | this function should be generalized.
@@ -315,15 +308,17 @@ matchExtraRoles :: [TagPos TokIdx MarkType]
                 -> [(FNFrameElement, CompVP '[Lemma])]
 matchExtraRoles tagged paws felst =
   let mmeans = matchExtraRolesForPPing "by" "Means" tagged paws felst
-      mcomp  = matchExtraRolesForCPInCompVP (hasComplementizer ["after","before"]) "Time" paws felst <|>
-               matchExtraRolesForCPInCompVP toInfinitive "Purpose" paws felst                        <|>
-               matchExtraRolesForPPing "after" "Time" tagged paws felst                              <|>
-               matchExtraRolesForPPing "before" "Time" tagged paws felst
-      madj   = matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["after","before"])) "Time"   paws felst <|>
-               matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["while","as"]))     "Manner" paws felst <|>
-               matchExtraRolesForCPInAdjunctCP (Just toInfinitive) "Purpose" paws felst                          <|>
-               matchExtraRolesForCPInAdjunctCP Nothing "Manner" paws felst
-  in felst ++ catMaybes [mmeans,mcomp,madj]
+      felst' = felst ++ maybeToList mmeans
+      mcomp  = matchExtraRolesForCPInCompVP (hasComplementizer ["after","before"]) "Time"    paws felst' <|>
+               matchExtraRolesForCPInCompVP toInfinitive                           "Purpose" paws felst' <|>
+               matchExtraRolesForPPing "after" "Time" tagged paws felst'                                 <|>
+               matchExtraRolesForPPing "before" "Time" tagged paws felst'
+      felst'' = felst' ++ maybeToList mcomp
+      madj   = matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["after","before"])) "Time"    paws felst'' <|>
+               matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["while","as"]))     "Manner"  paws felst'' <|>
+               matchExtraRolesForCPInAdjunctCP (Just toInfinitive)                           "Purpose" paws felst'' <|>
+               matchExtraRolesForCPInAdjunctCP Nothing                                       "Manner"  paws felst''
+  in felst'' ++ maybeToList madj
 
 
 -- | A scoring algorithm for selecting a frame among candidates.
