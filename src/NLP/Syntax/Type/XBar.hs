@@ -46,13 +46,13 @@ compVPToEither :: CompVP t -> Either (Zipper t) (DetP t)
 compVPToEither (CompVP_Unresolved x) = Left  x
 compVPToEither (CompVP_CP z)         = Left (z^.maximalProjection)
 compVPToEither (CompVP_DP y)         = Right y
-compVPToEither (CompVP_PP y)    = Right (y^.complement)
+compVPToEither (CompVP_PP y)         = Right (y^.complement)
 
 
 
 
 compVPToHeadText :: CompVP as -> Text
 compVPToHeadText (CompVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
-compVPToHeadText (CompVP_CP z) = z^.maximalProjection.to (T.intercalate " " . map (tokenWord.snd) . toList . current)
-compVPToHeadText (CompVP_DP z) = headText z
-compVPToHeadText (CompVP_PP z) = headText (z^.complement)
+compVPToHeadText (CompVP_CP z)         = z^.maximalProjection.to (T.intercalate " " . map (tokenWord.snd) . toList . current)
+compVPToHeadText (CompVP_DP z)         = headText z
+compVPToHeadText (CompVP_PP z)         = headText (z^.complement)

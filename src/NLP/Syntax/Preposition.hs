@@ -3,7 +3,7 @@
 
 module NLP.Syntax.Preposition where
 
-import           Control.Lens            ((^.))
+import           Control.Lens            ((^.),(.~))
 import           Control.Monad           (guard)
 import           Data.List               (find)
 import           Data.Maybe              (fromMaybe)
@@ -15,8 +15,9 @@ import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
-import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..),Prep(..),PrepClass(..),XP(..)
-                                         ,maximalProjection)
+import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..)
+                                         ,Prep(..),PrepClass(..),PP,XP(..)
+                                         ,complement,headX,maximalProjection)
 
 
 hasEmptyPreposition :: Zipper as -> Bool
@@ -30,6 +31,9 @@ hasEmptyPreposition z =
         return True
 
 
+isMatchedTime rng (TagPos (b,e,t)) = beginEndToRange (b,e) == rng && t == MarkTime
+
+
 
 checkEmptyPrep :: [TagPos TokIdx MarkType] -> DetP t -> CompVP t
 checkEmptyPrep tagged dp =
@@ -37,8 +41,20 @@ checkEmptyPrep tagged dp =
       r = fromMaybe False $ do
             let rng = getRange (current z)
             -- check bare noun adverb
-            find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) == rng && t == MarkTime) tagged
+            find (isMatchedTime rng) tagged
             return (hasEmptyPreposition z)
   in if r
      then CompVP_PP (XP (Prep_NULL,PC_Time) (dp^.maximalProjection) () () dp)
      else CompVP_DP dp
+
+
+checkTimePrep :: [TagPos TokIdx MarkType] -> PP t -> CompVP t
+checkTimePrep tagged pp =
+  let dp = pp^.complement
+      z = dp^.maximalProjection
+      (prep,pclass) = pp^.headX
+      r = fromMaybe False $ do
+            let rng = getRange (current z)
+            find (isMatchedTime rng) tagged
+            return True
+  in if r then CompVP_PP ((headX .~ (prep,PC_Time)) pp) else CompVP_PP pp

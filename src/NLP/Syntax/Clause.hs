@@ -28,6 +28,7 @@ import           Data.Text                              (Text)
 import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.BitreeZipper.Util
+import           Data.List                              (find)
 import           Data.ListZipper
 import           Data.Range                             (rangeTree)
 import           NLP.Type.PennTreebankII
@@ -36,7 +37,7 @@ import           NLP.Type.SyntaxProperty                (Voice(..))
 import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Noun                        (splitDP)
-import           NLP.Syntax.Preposition                 (checkEmptyPrep)
+import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTimePrep,isMatchedTime)
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -75,6 +76,7 @@ complementsOfVerb tagged vprop =
        Active -> cs
        Passive -> TraceChain (Left (singletonLZ Moved)) Nothing : cs
   where
+    -- xform_pp = TraceChain (Right []) . Just . checkTimePrep tagged
     xform_dp = TraceChain (Right []) . Just . checkEmptyPrep tagged . splitDP tagged
     xform_cp = TraceChain (Right []) . Just . CompVP_Unresolved
     xform z = case tag (current z) of
@@ -498,7 +500,7 @@ promoteToVP x@(PN _ _)               = Right x
 promote_PP_CP_from_NP :: Bitree (Range,(STag,Int)) t -> [Bitree (Range,(STag,Int)) t]
 promote_PP_CP_from_NP x@(PN (_rng,(S_OTHER N.NP,_lvl)) [x1,x2]) =
   case (getRoot x1, getRoot x2) of
-    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_PP _ _,_)))   ->  [x1,x2]
+    (Left (_,(S_OTHER N.NP,_)), Left (_,(S_PP _ _ _,_)))   ->  [x1,x2]
     (Left (_,(S_OTHER N.NP,_)), Left (_,(S_SBAR _,_))) ->  [x1,x2]
     (Left (_,(S_OTHER N.NP,_)), Left (_,(S_CL _,_)))   ->  [x1,x2]
     _ -> [x]
@@ -506,12 +508,13 @@ promote_PP_CP_from_NP x = [x]
 
 
 
-clauseStructure :: [VerbProperty (Zipper '[Lemma])]
+clauseStructure :: [TagPos TokIdx MarkType]
+                -> [VerbProperty (Zipper '[Lemma])]
                 -> PennTreeIdxG N.CombinedTag (POSTag,Text)
                 -> ClauseTree
-clauseStructure _vps (PL (i,pt)) = PL (Right (i,pt))
-clauseStructure vps  (PN (rng,tag) xs)
-  = let ys = map (clauseStructure vps) xs
+clauseStructure tagged _vps (PL (i,pt)) = PL (Right (i,pt))
+clauseStructure tagged vps  (PN (rng,tag) xs)
+  = let ys = map (clauseStructure tagged vps) xs
         (verbs,nonverbs0)= partitionEithers (map promoteToVP ys)
         nonverbs = concatMap promote_PP_CP_from_NP nonverbs0
         lvl = maximum (map currentlevel ys) :: Int
@@ -544,8 +547,10 @@ clauseStructure vps  (PN (rng,tag) xs)
                          PL (_,(IN,t)):os ->
                            -- we need to rewrite this whole functions using zipper later.
                            let prep = case os of
-                                        PN (_,(N.CL N.S)) _lst : _ -> S_PP t True
-                                        _                          -> S_PP t False
+                                        PN (_,(N.CL N.S)) _lst : _ -> S_PP t PC_Other True
+                                        PN (rng,_) _ : _           -> S_PP t (fromMaybe PC_Other (find (isMatchedTime rng) tagged >> return PC_Time)) False
+                                        PL (i,_) : _               -> S_PP t (fromMaybe PC_Other (find (isMatchedTime (i,i)) tagged >> return PC_Time)) False
+                                        _                          -> S_PP t PC_Other False
                            in case tail ys of
                                 [] -> PL (Left (rng,(prep,lvl)))
                                 _  -> PN (rng,(prep,lvl)) (tail ys)
@@ -553,13 +558,15 @@ clauseStructure vps  (PN (rng,tag) xs)
                          PL (_,(TO,t)):os ->
                            -- we need to rewrite this whole functions using zipper later.
                            let prep = case os of
-                                        PN (_,(N.CL N.S)) _lst : _ -> S_PP t True
-                                        _                          -> S_PP t False
+                                        PN (_,(N.CL N.S)) _lst : _ -> S_PP t PC_Other True
+                                        PN (rng,_) _ : _           -> S_PP t (fromMaybe PC_Other (find (isMatchedTime rng) tagged >> return PC_Time)) False
+                                        PL (i,_) : _               -> S_PP t (fromMaybe PC_Other (find (isMatchedTime (i,i)) tagged >> return PC_Time)) False
+                                        _                          -> S_PP t PC_Other False
                            in case tail ys of
                                 [] -> PL (Left (rng,(prep,lvl)))
                                 _ -> PN (rng,(prep,lvl)) (tail ys)
                          -- non-prepositional case
-                         _ -> PL (Left (rng,(S_PP "" False,lvl)))
+                         _ -> PL (Left (rng,(S_PP "" PC_Other False,lvl)))
                      N.PRT ->
                        case xs of
                          PL (i,(p1,t)):_  -> PN (rng,(S_OTHER N.PRT,lvl)) [PL (Right (i,(p1,t)))]
@@ -592,7 +599,7 @@ cutOutLevel0 x@(PL _             ) = x
 cutOutLevel0 (PN (rng,(p,lvl)) xs) =
   if lvl == 0
   then case p of
-         S_PP    _ _ -> PL (Left (rng,(p,lvl)))
-         S_OTHER _   -> PL (Left (rng,(p,lvl)))
-         _           -> PN (rng,(p,lvl)) (map cutOutLevel0 xs)
+         S_PP    _ _ _ -> PL (Left (rng,(p,lvl)))
+         S_OTHER _     -> PL (Left (rng,(p,lvl)))
+         _             -> PN (rng,(p,lvl)) (map cutOutLevel0 xs)
   else PN (rng,(p,lvl)) (map cutOutLevel0 xs)
