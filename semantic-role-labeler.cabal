@@ -63,6 +63,7 @@ library
                        data-default,
                        discrimination,
                        either,
+                       errors,
                        filepath,
                        haskeline,
                        html-entities,

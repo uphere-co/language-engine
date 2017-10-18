@@ -77,6 +77,7 @@ let
             bindings-svm
             cabal-install
             either
+            errors
             haskeline
             html-entities
             lens

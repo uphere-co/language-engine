@@ -11,6 +11,7 @@
 module SRL.Analyze.Match where
 
 import           Control.Applicative
+import           Control.Error.Safe           (rightMay,headErr)
 import           Control.Lens
 import           Control.Lens.Extras          (is)
 import           Control.Monad                (guard,join)
@@ -107,7 +108,7 @@ matchSubject rolemap mDP patt = do
 isPhiOrThat cp = case cp^.headX of
                    C_PHI -> True
                    C_WORD z -> isLemmaAs "that" (current z)
-                   
+
 
 
 matchObjects :: [(PBArg,FNFrameElement)]
@@ -165,18 +166,6 @@ matchAgentForPassive rolemap tagged paws patt = do
     (,comp) <$> lookup p rolemap
 
 
-{- 
-matchThemeForPassive :: [(PBArg,FNFrameElement)]
-                     -> Either (Zipper '[Lemma]) (DetP '[Lemma])
-                     -> ArgPattern p GRel
-                     -> Maybe (FNFrameElement, CompVP '[Lemma])
-matchThemeForPassive rolemap edp patt = do
-  dp <- edp^?_Right              -- for the time being
-  (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
-  let comp = CompVP_DP dp
-  (,comp) <$> lookup p rolemap
--}
-
 matchSO :: [(PBArg,FNFrameElement)]
         -> [TagPos TokIdx MarkType]
         -> ( Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
@@ -185,7 +174,7 @@ matchSO :: [(PBArg,FNFrameElement)]
         -> (ArgPattern p GRel, Int)
         -> ((ArgPattern p GRel, Int), [(FNFrameElement, CompVP '[Lemma])])
 matchSO rolemap tagged (mDP,verbp,paws) (patt,num) =
-  
+
   case verbp^.headX.vp_voice of
     Active  -> ((patt,num), maybeToList (matchSubject rolemap mDP patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap tagged paws patt )
     Passive -> ((patt,num),maybeToList (matchAgentForPassive rolemap tagged paws patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap tagged paws patt)
@@ -265,7 +254,6 @@ matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   return (matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sense1,rolemap1),stat)
 
 
-checkTimeComplementizer z = any (\x -> isLemmaAs x (current z)) ["after","before"]
 
 
 matchExtraRolesForPPing prep role tagged paws felst = do
@@ -276,14 +264,40 @@ matchExtraRolesForPPing prep role tagged paws felst = do
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
   return (role,comp)
 
-matchExtraRolesForCP check role paws felst = do
+
+matchExtraRolesForCPInCompVP check role paws felst = do
   guard (is _Nothing (find (\x -> x^._1 == role) felst))
   let candidates = paws^..pa_CP.complement.complement.complement.traverse.trResolved._Just._CompVP_CP
-  cp <- find (\x->x^?headX._C_WORD.to check == Just True) candidates
+  cp <- find check candidates
   let rng = cp^.maximalProjection.to current.to getRange
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_CP.to cpRange == Just rng) felst))
   let comp = CompVP_CP cp
   return (role,comp)
+
+
+matchExtraRolesForCPInAdjunctCP mcheck role paws felst = do
+  guard (is _Nothing (find (\x -> x^._1 == role) felst))
+  let candidates = paws^..pa_CP.adjunct.traverse._AdjunctCP_CP
+  cp <- case mcheck of
+          Nothing -> (rightMay . headErr "no adjuncts") candidates
+          Just check -> find check candidates
+  let rng = cp^.maximalProjection.to current.to getRange
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_CP.to cpRange == Just rng) felst))
+  let comp = CompVP_CP cp
+  return (role,comp)
+
+
+hasComplementizer lst x =
+  x^?headX._C_WORD.to (\z -> any (\c -> isLemmaAs c (current z)) lst) == Just True
+
+
+toInfinitive x =
+  let vprop = x^.complement.complement.headX
+  in case vprop^.vp_auxiliary of
+       (_,(_,lma)):_ -> lma == "to"
+       _             -> False
 
 
 -- | this function should be generalized.
@@ -294,10 +308,17 @@ matchExtraRoles :: [TagPos TokIdx MarkType]
                 -> [(FNFrameElement, CompVP '[Lemma])]
 matchExtraRoles tagged paws felst =
   let mmeans = matchExtraRolesForPPing "by" "Means" tagged paws felst
-      mtime  = matchExtraRolesForCP checkTimeComplementizer "Time" paws felst
-               <|> matchExtraRolesForPPing "after" "Time" tagged paws felst
-               <|> matchExtraRolesForPPing "before" "Time" tagged paws felst
-  in felst ++ catMaybes [mmeans,mtime] 
+      felst' = felst ++ maybeToList mmeans
+      mcomp  = matchExtraRolesForCPInCompVP (hasComplementizer ["after","before"]) "Time"    paws felst' <|>
+               matchExtraRolesForCPInCompVP toInfinitive                           "Purpose" paws felst' <|>
+               matchExtraRolesForPPing "after" "Time" tagged paws felst'                                 <|>
+               matchExtraRolesForPPing "before" "Time" tagged paws felst'
+      felst'' = felst' ++ maybeToList mcomp
+      madj   = matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["after","before"])) "Time"    paws felst'' <|>
+               matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["while","as"]))     "Manner"  paws felst'' <|>
+               matchExtraRolesForCPInAdjunctCP (Just toInfinitive)                           "Purpose" paws felst'' <|>
+               matchExtraRolesForCPInAdjunctCP Nothing                                       "Manner"  paws felst''
+  in felst'' ++ maybeToList madj
 
 
 -- | A scoring algorithm for selecting a frame among candidates.
@@ -423,7 +444,7 @@ meaningGraph sstr =
       entities0 = do (_,_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
                      (fe,x) <- felst
-                     -- trace (intercalate "\n" (map showMatchedFE' felst)) $ do 
+                     -- trace (intercalate "\n" (map showMatchedFE' felst)) $ do
                      case x of
                        CompVP_Unresolved _ -> []
                        CompVP_CP cp -> [] -- CP is not an entity.
@@ -462,7 +483,7 @@ meaningGraph sstr =
                   (fe,x) <- felst
                   (rng',mprep) <- case x of
                                     CompVP_Unresolved _ -> []
-                                    CompVP_CP cp -> let z_cp = cp^.maximalProjection 
+                                    CompVP_CP cp -> let z_cp = cp^.maximalProjection
                                                         mprep = case cp^.headX of
                                                                   C_PHI -> Nothing
                                                                   C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
