@@ -150,7 +150,7 @@ matchPrepArgs :: [(PBArg,FNFrameElement)]
 matchPrepArgs rolemap tagged paws patt = do
   (p,(prep,mising)) <- pbArgForPP patt
   (o,z) <- maybeToList (matchPP tagged paws (prep,mising))
-  let comp = CompVP_PP (XP (Prep_WORD prep) o () () z)
+  let comp = CompVP_PP (XP (Prep_WORD prep,PC_Other) o () () z)
   (, comp) <$> maybeToList (lookup p rolemap)
 
 
@@ -162,7 +162,7 @@ matchAgentForPassive :: [(PBArg,FNFrameElement)]
 matchAgentForPassive rolemap tagged paws patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
     (o,z) <- matchPP tagged paws ("by",Nothing)
-    let comp = CompVP_PP (XP (Prep_WORD "by") o () () z)
+    let comp = CompVP_PP (XP (Prep_WORD "by",PC_Other) o () () z)
     (,comp) <$> lookup p rolemap
 
 
@@ -260,7 +260,7 @@ matchExtraRolesForPPing prep role tagged paws felst = do
   guard (isNothing (find (\x -> x^._1 == role) felst))
   (o,z) <-matchPP tagged paws (prep,Just True)
   let rng = headRange z
-      comp = CompVP_PP (XP (Prep_WORD prep) o () () z)
+      comp = CompVP_PP (XP (Prep_WORD prep,PC_Other) o () () z)
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
   return (role,comp)
 
@@ -422,7 +422,7 @@ showMatchedFE' (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe (z^.to current
         gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 showMatchedFE' (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) prep (headText dp)
   where dp = pp^.complement
-        prep = case pp^.headX of
+        prep = case pp^.headX._1 of
                  Prep_NULL -> ""
                  Prep_WORD p -> p
 showMatchedFE' (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
@@ -490,7 +490,7 @@ meaningGraph sstr =
                                                                                  >>= \prep -> if prep == "that" then Nothing else return prep
                                                     in return (getRange (current z_cp),mprep)
                                     CompVP_DP dp -> return (headRange dp,Nothing)
-                                    CompVP_PP pp -> return (headRange (pp^.complement),pp^?headX._Prep_WORD)
+                                    CompVP_PP pp -> return (headRange (pp^.complement),pp^?headX._1._Prep_WORD)
                   i' <- maybeToList (HM.lookup (0,rng') rngidxmap)  -- frame element
                   let b = isJust (find (== (rng',rng)) depmap)
                   return (MGEdge fe b mprep i i')
