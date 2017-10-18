@@ -130,15 +130,17 @@ matchObjects rolemap verbp patt = do
 
 matchPP :: [TagPos TokIdx MarkType]
         -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
-        -> (Text,Maybe Bool)
-        -> Maybe (Zipper '[Lemma],DetP '[Lemma])
-matchPP tagged paws (prep,mising) = do
-    Left (rng,_) <- find ppcheck (paws^.pa_candidate_args)
+        -> (Maybe Text,Maybe PrepClass,Maybe Bool)
+        -> Maybe (Text,Zipper '[Lemma],DetP '[Lemma])
+matchPP tagged paws (mprep,mpclass,mising) = do
+    Left (rng,S_PP prep' _ _) <- find ppcheck (paws^.pa_candidate_args)
     let tr = paws^.pa_CP.maximalProjection.to root.to current
     z' <- (find (\z -> z^?to current._PN._1._1 == Just rng) . getNodes .mkBitreeZipper []) tr
-    return (z',splitPP tagged z')
+    return (prep',z',splitPP tagged z')
   where
-    ppcheck (Left (_,S_PP prep' ising')) = prep == prep' && maybe True (\ising -> ising == ising') mising
+    ppcheck (Left (_,S_PP prep' pclass' ising')) = maybe True (== prep')   mprep   &&
+                                                   maybe True (== pclass') mpclass &&
+                                                   maybe True (\ising -> ising == ising') mising
     ppcheck _                            = False
 
 
@@ -147,11 +149,16 @@ matchPrepArgs :: [(PBArg,FNFrameElement)]
               -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
               -> ArgPattern p GRel
               -> [(FNFrameElement, CompVP '[Lemma])]
-matchPrepArgs rolemap tagged paws patt = do
+              -> [(FNFrameElement, CompVP '[Lemma])]
+matchPrepArgs rolemap tagged paws patt felst = do
   (p,(prep,mising)) <- pbArgForPP patt
-  (o,z) <- maybeToList (matchPP tagged paws (prep,mising))
+  role <- maybeToList (lookup p rolemap)
+
+  (_,o,z) <- maybeToList (matchPP tagged paws (Just prep,Nothing,mising))
   let comp = CompVP_PP (XP (Prep_WORD prep,PC_Other) o () () z)
-  (, comp) <$> maybeToList (lookup p rolemap)
+      rng = compVPToRange comp
+  guard (is _Nothing (find (\x -> x^?_2.to compVPToRange == Just rng) felst))
+  return (role, comp)
 
 
 matchAgentForPassive :: [(PBArg,FNFrameElement)]
@@ -161,7 +168,7 @@ matchAgentForPassive :: [(PBArg,FNFrameElement)]
                      -> Maybe (FNFrameElement, CompVP '[Lemma])
 matchAgentForPassive rolemap tagged paws patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
-    (o,z) <- matchPP tagged paws ("by",Nothing)
+    (_,o,z) <- matchPP tagged paws (Just "by",Just PC_Other,Nothing)
     let comp = CompVP_PP (XP (Prep_WORD "by",PC_Other) o () () z)
     (,comp) <$> lookup p rolemap
 
@@ -174,11 +181,13 @@ matchSO :: [(PBArg,FNFrameElement)]
         -> (ArgPattern p GRel, Int)
         -> ((ArgPattern p GRel, Int), [(FNFrameElement, CompVP '[Lemma])])
 matchSO rolemap tagged (mDP,verbp,paws) (patt,num) =
+  let (rpatt,rmatched0) = case verbp^.headX.vp_voice of
+                            Active  -> ((patt,num), maybeToList (matchSubject rolemap mDP patt) ++ matchObjects rolemap verbp patt)
+                            Passive -> ((patt,num),maybeToList (matchAgentForPassive rolemap tagged paws patt) ++ matchObjects rolemap verbp patt) 
+      rmatched1 = rmatched0 ++ maybeToList (matchExtraRolesForPPTime tagged paws rmatched0)
+  in (rpatt,rmatched1 ++ matchPrepArgs rolemap tagged paws patt rmatched1)
 
-  case verbp^.headX.vp_voice of
-    Active  -> ((patt,num), maybeToList (matchSubject rolemap mDP patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap tagged paws patt )
-    Passive -> ((patt,num),maybeToList (matchAgentForPassive rolemap tagged paws patt) ++ matchObjects rolemap verbp patt ++ matchPrepArgs rolemap tagged paws patt)
-
+-- ++ matchPrepArgs rolemap tagged paws patt)
 
 extendRoleMapForDual :: (Text,SenseID,[(PBArg,FNFrameElement)])
                      -> (Text,SenseID,[(PBArg,FNFrameElement)])
@@ -254,11 +263,18 @@ matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   return (matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sense1,rolemap1),stat)
 
 
+matchExtraRolesForPPTime tagged paws felst = do
+  guard (isNothing (find (\x -> x^._1 == "Time") felst))
+  (prep,o,z) <-matchPP tagged paws (Nothing,Just PC_Time,Just False)
+  let rng = headRange z
+      comp = CompVP_PP (XP (Prep_WORD prep,PC_Time) o () () z)
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
+  return ("Time",comp)
 
-
+  
 matchExtraRolesForPPing prep role tagged paws felst = do
   guard (isNothing (find (\x -> x^._1 == role) felst))
-  (o,z) <-matchPP tagged paws (prep,Just True)
+  (_,o,z) <-matchPP tagged paws (Just prep,Just PC_Other,Just True)
   let rng = headRange z
       comp = CompVP_PP (XP (Prep_WORD prep,PC_Other) o () () z)
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
@@ -309,12 +325,12 @@ matchExtraRoles :: [TagPos TokIdx MarkType]
 matchExtraRoles tagged paws felst =
   let mmeans = matchExtraRolesForPPing "by" "Means" tagged paws felst
       felst' = felst ++ maybeToList mmeans
-      mcomp  = matchExtraRolesForCPInCompVP (hasComplementizer ["after","before"]) "Time"    paws felst' <|>
+      mcomp  = matchExtraRolesForCPInCompVP (hasComplementizer ["after","before"]) "Relative_time"    paws felst' <|>    -- for the time being
                matchExtraRolesForCPInCompVP toInfinitive                           "Purpose" paws felst' <|>
-               matchExtraRolesForPPing "after" "Time" tagged paws felst'                                 <|>
-               matchExtraRolesForPPing "before" "Time" tagged paws felst'
+               matchExtraRolesForPPing "after" "Relative_time" tagged paws felst'                                 <|>
+               matchExtraRolesForPPing "before" "Relative_time" tagged paws felst'
       felst'' = felst' ++ maybeToList mcomp
-      madj   = matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["after","before"])) "Time"    paws felst'' <|>
+      madj   = matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["after","before"])) "Relative_time"    paws felst'' <|>
                matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["while","as"]))     "Manner"  paws felst'' <|>
                matchExtraRolesForCPInAdjunctCP (Just toInfinitive)                           "Purpose" paws felst'' <|>
                matchExtraRolesForCPInAdjunctCP Nothing                                       "Manner"  paws felst''
