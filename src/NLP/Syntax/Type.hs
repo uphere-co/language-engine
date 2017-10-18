@@ -67,7 +67,7 @@ data STag = S_RT
           | S_SBAR SBARType
           | S_CL N.ClauseTag
           | S_VP [(Int,(POSTag,Text))]
-          | S_PP Text Bool
+          | S_PP Text PrepClass Bool
           | S_OTHER N.PhraseTag
           deriving Show
 

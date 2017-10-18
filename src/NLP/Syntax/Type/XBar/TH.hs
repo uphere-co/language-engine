@@ -13,6 +13,8 @@ makeLenses ''TraceChain
 
 makePrisms ''Prep
 
+makePrisms ''PrepClass
+
 makePrisms ''CompVP
 
 makePrisms ''Complementizer

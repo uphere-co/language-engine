@@ -91,7 +91,7 @@ formatPAWS pa =
                  Left  (rng,(S_SBAR _))  -> "SBAR" ++ show rng
                  Left  (rng,(S_CL c))    -> show c ++ show rng
                  Left  (_  ,(S_VP _))    -> "VP"
-                 Left  (rng,(S_PP t b))  -> "(PP " ++ show t ++ if b then " ing" else "" ++ ")" ++ show rng
+                 Left  (rng,(S_PP t c b))  -> "(PP " ++ show t ++ " " ++ show c ++ if b then " ing" else "" ++ ")" ++ show rng
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
 
@@ -154,7 +154,7 @@ formatClauseStructure clausetr =
         where f (S_CL c,l)    = T.pack (show c) <> ":" <> T.pack (show l)
               f (S_SBAR zs,l) = "SBAR:" <> T.pack (show zs) <> "," <> T.pack (show l)
               f (S_VP zs,l)   = "VP:" <> T.pack (show zs) <> "," <> T.pack (show l)
-              f (S_PP p b,_l) = "PP:" <> T.pack (show p) <> if b then "-ing" else ""
+              f (S_PP p c b,_l) = "PP:" <> T.pack (show p) <> " " <> T.pack (show c) <> if b then "-ing" else ""
               f (S_OTHER p,l) = T.pack (show p) <> ":" <> T.pack (show l)
               f (S_RT  ,l)    = "ROOT" <> ":" <> T.pack (show l)
               g (Left x)      = T.pack (show x)
@@ -186,7 +186,7 @@ formatVPwithPAWS tagged clausetr cpstr vp =
 showClauseStructure :: [TagPos TokIdx MarkType] -> IntMap Lemma -> PennTree -> IO ()
 showClauseStructure tagged lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
-      clausetr = clauseStructure vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
+      clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
       cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
       xs = map (formatVPwithPAWS tagged clausetr cpstr) vps
   mapM_ (T.IO.putStrLn . formatX'Tree) cpstr

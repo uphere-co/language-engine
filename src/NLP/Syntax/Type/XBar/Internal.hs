@@ -56,7 +56,7 @@ data TraceType = NULL | SilentPRO | Moved | WHPRO
 
 
 -- | TraceChain represents the current focus of trace chain at a given position of tree.
---   Left case of trChain denodes the focus of the intermediate chain, while Right case 
+--   Left case of trChain denodes the focus of the intermediate chain, while Right case
 --   of trChain denotes the case in which the final resolved element is currently focused.
 --
 --   e.g. (a -> b -> c -> d) is a trace chain.
@@ -93,11 +93,18 @@ type instance Complement 'X_D t = Maybe Range
 type DetP = XP 'X_D
 
 
+
 data Prep = Prep_NULL
           | Prep_WORD Text
 
+
+data PrepClass = PC_Time
+               | PC_Other
+               deriving (Show,Eq,Ord)
+
+
 --
-type instance Property   'X_P t = Prep
+type instance Property   'X_P t = (Prep,PrepClass)
 type instance Maximal    'X_P t = Zipper t
 type instance Specifier  'X_P t = ()
 type instance Adjunct    'X_P t = ()

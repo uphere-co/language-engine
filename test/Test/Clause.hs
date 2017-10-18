@@ -152,6 +152,16 @@ test_gerundive =
   , []
   )
 
+
+-- |
+test_temporal =
+  ( "Kenyan stocks and bonds fell on Wednesday after opposition leader Raila Odinga pulled out of a repeat presidential election set for Oct. 26."
+  , [(0,("kenyan","Kenyan")),(1,("stock","stocks")),(2,("and","and")),(3,("bond","bonds")),(4,("fall","fell")),(5,("on","on")),(6,("Wednesday","Wednesday")),(7,("after","after")),(8,("opposition","opposition")),(9,("leader","leader")),(10,("Raila","Raila")),(11,("Odinga","Odinga")),(12,("pull","pulled")),(13,("out","out")),(14,("of","of")),(15,("a","a")),(16,("repeat","repeat")),(17,("presidential","presidential")),(18,("election","election")),(19,("set","set")),(20,("for","for")),(21,("Oct.","Oct.")),(22,("26","26")),(23,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("JJ","Kenyan"),PL ("NNS","stocks"),PL ("CC","and"),PL ("NNS","bonds")],PN "VP" [PL ("VBD","fell"),PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Wednesday")]],PN "SBAR" [PL ("IN","after"),PN "S" [PN "NP" [PL ("NN","opposition"),PL ("NN","leader"),PL ("NNP","Raila"),PL ("NNP","Odinga")],PN "VP" [PL ("VBD","pulled"),PN "PRT" [PL ("RP","out")],PN "PP" [PL ("IN","of"),PN "NP" [PN "NP" [PL ("DT","a"),PL ("NN","repeat"),PL ("JJ","presidential"),PL ("NN","election")],PN "VP" [PL ("VBN","set"),PN "PP" [PL ("IN","for"),PN "NP" [PL ("NNP","Oct."),PL ("CD","26")]]]]]]]]],PL (".",".")]]
+  , [TagPos (TokIdx 6,TokIdx 7,MarkTime)]
+  )
+
+
 showDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType]) -> IO ()
 showDetail (txt,lma,pt,tmxs) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
@@ -173,11 +183,12 @@ showDetail (txt,lma,pt,tmxs) = do
 
 
 mainShow :: IO ()
-mainShow = mapM_ showDetail [ -- test_coordination
-                            -- , test_complex_noun_phrase
-                            -- , test_bare_noun_adverb
-                            -- , test_relative_pronoun_subject
-                            -- , test_noun_modifier
-                            -- , test_sub_clause
-                             test_gerundive
+mainShow = mapM_ showDetail [ test_coordination
+                            , test_complex_noun_phrase
+                            , test_bare_noun_adverb
+                            , test_relative_pronoun_subject
+                            , test_noun_modifier
+                            , test_sub_clause
+                            , test_gerundive
+                            , test_temporal
                             ]
