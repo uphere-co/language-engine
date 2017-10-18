@@ -15,7 +15,7 @@ import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
-import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..),Prep(..),XP(..)
+import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..),Prep(..),PrepClass(..),XP(..)
                                          ,maximalProjection)
 
 
@@ -40,5 +40,5 @@ checkEmptyPrep tagged dp =
             find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) == rng && t == MarkTime) tagged
             return (hasEmptyPreposition z)
   in if r
-     then CompVP_PP (XP Prep_NULL (dp^.maximalProjection) () () dp)
+     then CompVP_PP (XP (Prep_NULL,PC_Time) (dp^.maximalProjection) () () dp)
      else CompVP_DP dp

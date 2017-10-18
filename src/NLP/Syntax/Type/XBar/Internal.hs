@@ -92,12 +92,17 @@ type instance Complement 'X_D t = Maybe Range
 
 type DetP = XP 'X_D
 
+ 
 
 data Prep = Prep_NULL
           | Prep_WORD Text
 
+
+data PrepClass = PC_Time
+               | PC_Other
+
 --
-type instance Property   'X_P t = Prep
+type instance Property   'X_P t = (Prep,PrepClass)
 type instance Maximal    'X_P t = Zipper t
 type instance Specifier  'X_P t = ()
 type instance Adjunct    'X_P t = ()
