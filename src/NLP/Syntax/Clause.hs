@@ -40,7 +40,7 @@ import           NLP.Syntax.Preposition                 (checkEmptyPrep)
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                        (isChunkAs,mergeLeftELZ,mergeRightELZ)
+import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ)
 --
 import qualified Data.Text as T
 import           NLP.Syntax.Format.Internal
@@ -66,9 +66,12 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> [TraceChain (CompVP (Lemma ': as))]
-complementsOfVerb tagged vp =
-  let cs = map xform (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp))
-  in case vp^.vp_voice of
+complementsOfVerb tagged vprop =
+  let nextNotComma z = do n <- next z
+                          guard (not (isPOSAs M_COMMA (current n)))
+                          return n
+      cs = map xform (siblingsBy (nextNotComma) checkNPSBAR =<< maybeToList (headVP vprop))
+  in case vprop^.vp_voice of
        Active -> cs
        Passive -> TraceChain (Left (singletonLZ Moved)) Nothing : cs
   where
@@ -88,6 +91,23 @@ complementsOfVerb tagged vp =
                       Left SQ    -> True
                       Left _     -> False
                       Right p    -> isNoun p == Yes
+
+
+allAdjunctCPOfVerb vprop =
+    let mcomma = firstSiblingBy next (isPOSAs M_COMMA) =<< headVP vprop
+    in case mcomma of
+         Nothing -> []
+         Just comma -> siblingsBy next checkS comma
+  where
+    tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
+    checkS z = case tag z of
+                    Left SBAR  -> True
+                    Left S     -> True
+                    Left SBARQ -> True
+                    Left SQ    -> True
+                    _          -> False
+
+
 
 
 identifySubject :: [TagPos TokIdx MarkType]
@@ -119,6 +139,7 @@ constructCP tagged vprop = do
     tp <- parentOfVP vprop
     tptag' <- N.convert <$> getchunk tp
     let comps = complementsOfVerb tagged vprop
+        adjs  = allAdjunctCPOfVerb vprop
         comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
         verbp = mkVerbP vp vprop comps
         nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
@@ -136,15 +157,15 @@ constructCP tagged vprop = do
                                     Just z -> if (isChunkAs WHNP (current z))
                                               then (C_PHI,Just (SpecCP_WH z))
                                               else (C_WORD z,Nothing)
-            in return (mkCP cphead cp' cpspec (mkTP tp subj verbp),dps)
+            in return (mkCP cphead cp' cpspec adjs (mkTP tp subj verbp),dps)
           N.CL _ ->
-            return (mkCP C_PHI tp Nothing (mkTP tp subj verbp),dps)
+            return (mkCP C_PHI tp Nothing adjs (mkTP tp subj verbp),dps)
           N.RT   ->
-            return (mkCP C_PHI cp' Nothing (mkTP tp subj verbp),dps)
+            return (mkCP C_PHI cp' Nothing adjs (mkTP tp subj verbp),dps)
           _      -> -- somewhat problematic case?
-            return (mkCP C_PHI tp Nothing (mkTP tp subj verbp),dps)
+            return (mkCP C_PHI tp Nothing adjs (mkTP tp subj verbp),dps)
       _ -> -- reduced relative clause
-           return (mkCP C_PHI vp (Just SpecCP_WHPHI) (mkTP vp nullsubj verbp),comps_dps)
+           return (mkCP C_PHI vp (Just SpecCP_WHPHI) adjs (mkTP vp nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
