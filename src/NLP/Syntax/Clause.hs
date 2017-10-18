@@ -13,7 +13,7 @@ module NLP.Syntax.Clause where
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
 import           Control.Lens.Extras                    (is)
-import           Control.Monad                          ((<=<),guard,void)
+import           Control.Monad                          ((<=<),(>=>),guard,void)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
@@ -40,7 +40,7 @@ import           NLP.Syntax.Preposition                 (checkEmptyPrep)
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                        (isChunkAs,mergeLeftELZ,mergeRightELZ)
+import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ)
 --
 import qualified Data.Text as T
 import           NLP.Syntax.Format.Internal
@@ -66,9 +66,12 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> [TraceChain (CompVP (Lemma ': as))]
-complementsOfVerb tagged vp =
-  let cs = map xform (siblingsBy next checkNPSBAR =<< maybeToList (headVP vp))
-  in case vp^.vp_voice of
+complementsOfVerb tagged vprop =
+  let nextNotComma z = do n <- next z
+                          guard (not (isPOSAs M_COMMA (current n))) -- ad hoc separation using comma
+                          return n
+      cs = map xform (siblingsBy (nextNotComma) checkNPSBAR =<< maybeToList (headVP vprop))
+  in case vprop^.vp_voice of
        Active -> cs
        Passive -> TraceChain (Left (singletonLZ Moved)) Nothing : cs
   where
@@ -90,11 +93,27 @@ complementsOfVerb tagged vp =
                       Right p    -> isNoun p == Yes
 
 
+allAdjunctCPOfVerb :: VerbProperty (Zipper (Lemma ': as))
+                   -> [AdjunctCP (Lemma ': as)]
+allAdjunctCPOfVerb vprop =
+    let mcomma = firstSiblingBy next (isPOSAs M_COMMA) =<< headVP vprop  -- ad hoc separation using comma
+    in case mcomma of
+         Nothing -> []
+         Just comma -> map AdjunctCP_Unresolved (siblingsBy next checkS comma)
+  where
+    tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
+    checkS z = case tag z of
+                    Left SBAR  -> True
+                    Left S     -> True
+                    Left SBARQ -> True
+                    Left SQ    -> True
+                    _          -> False
+
+
+
 identifySubject :: [TagPos TokIdx MarkType]
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)   -- ^ Verb maximal projection
-                -- -> VerbProperty (Zipper (Lemma ': as))
-                -- -> [TraceChain (CompVP (Lemma ': as))]
                 -> TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as)))
 identifySubject tagged tag vp = maybe nul smp r
   where
@@ -119,6 +138,7 @@ constructCP tagged vprop = do
     tp <- parentOfVP vprop
     tptag' <- N.convert <$> getchunk tp
     let comps = complementsOfVerb tagged vprop
+        adjs  = allAdjunctCPOfVerb vprop
         comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
         verbp = mkVerbP vp vprop comps
         nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
@@ -126,7 +146,7 @@ constructCP tagged vprop = do
       N.CL s -> do
         cp' <- parent tp
         cptag' <- N.convert <$> getchunk cp'
-        let subj = identifySubject tagged s vp -- vprop comps
+        let subj = identifySubject tagged s vp
             subj_dps = maybeToList (subj ^? trResolved._Just)
             dps = (subj_dps++comps_dps)
         case cptag' of
@@ -136,15 +156,15 @@ constructCP tagged vprop = do
                                     Just z -> if (isChunkAs WHNP (current z))
                                               then (C_PHI,Just (SpecCP_WH z))
                                               else (C_WORD z,Nothing)
-            in return (mkCP cphead cp' cpspec (mkTP tp subj verbp),dps)
+            in return (mkCP cphead cp' cpspec adjs (mkTP tp subj verbp),dps)
           N.CL _ ->
-            return (mkCP C_PHI tp Nothing (mkTP tp subj verbp),dps)
+            return (mkCP C_PHI tp Nothing adjs (mkTP tp subj verbp),dps)
           N.RT   ->
-            return (mkCP C_PHI cp' Nothing (mkTP tp subj verbp),dps)
+            return (mkCP C_PHI cp' Nothing adjs (mkTP tp subj verbp),dps)
           _      -> -- somewhat problematic case?
-            return (mkCP C_PHI tp Nothing (mkTP tp subj verbp),dps)
+            return (mkCP C_PHI tp Nothing adjs (mkTP tp subj verbp),dps)
       _ -> -- reduced relative clause
-           return (mkCP C_PHI vp (Just SpecCP_WHPHI) (mkTP vp nullsubj verbp),comps_dps)
+           return (mkCP C_PHI vp (Just SpecCP_WHPHI) adjs (mkTP vp nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -316,26 +336,45 @@ resolveCP xtr = rewriteTree action xtr
   where
     action rng = do z <- hoistMaybe . extractZipperById rng =<< lift get
                     (replace z <|> return z)
-
+    --
     replace :: X'Zipper (Lemma ': as) -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as))
-    replace z = do cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
-                   let xs = cp^.complement.complement.complement
-                   xs' <- flip traverse xs $ \x ->
-                            ((do tr <- lift get
-                                 rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved.to current.to getRange)
-                                 y <- hoistMaybe (extractZipperById rng tr)
-                                 y' <- replace y
-                                 cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
-                                 (return . (trResolved .~ Just (CompVP_CP cp'))) x
-                             )
-                             <|>
-                             (return x))
-                   let rf = _2._CPCase.complement.complement.complement .~ xs'
-                       z' = replaceFocusItem rf rf z
-                   lift (put (toBitree z'))
-                   return z'
-
-
+    replace = replaceCompVP >=> replaceAdjunctCP
+    --
+    replaceCompVP z = do
+      cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
+      let xs = cp^.complement.complement.complement
+      xs' <- flip traverse xs $ \x ->
+               ((do tr <- lift get
+                    rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved.to current.to getRange)
+                    y <- hoistMaybe (extractZipperById rng tr)
+                    y' <- replace y
+                    cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
+                    (return . (trResolved .~ Just (CompVP_CP cp'))) x
+                )
+                <|>
+                (return x))
+      let rf = _2._CPCase.complement.complement.complement .~ xs'
+          z' = replaceFocusItem rf rf z
+      lift (put (toBitree z'))
+      return z'
+    --
+    replaceAdjunctCP z = do
+      cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
+      let xs = cp^.adjunct
+      xs' <- flip traverse xs $ \x ->
+               ((do tr <- lift get
+                    rng <- hoistMaybe (x^?_AdjunctCP_Unresolved.to current.to getRange)
+                    y <- hoistMaybe (extractZipperById rng tr)
+                    y' <- replace y
+                    cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
+                    return (AdjunctCP_CP cp')
+                )
+                <|>
+                (return x))
+      let rf = _2._CPCase.adjunct .~ xs'
+          z' = replaceFocusItem rf rf z
+      lift (put (toBitree z'))
+      return z'
 
 
 

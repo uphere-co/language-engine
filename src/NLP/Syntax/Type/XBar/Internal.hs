@@ -145,17 +145,20 @@ data SpecCP t = SpecCP_WHPHI           -- ^ empty Wh-word
               | SpecCP_WH (Zipper t)   -- ^ Wh-word
 
 
+data AdjunctCP t = AdjunctCP_Unresolved (Zipper t)
+                 | AdjunctCP_CP         (CP t)
+
 
 type instance Property   'X_C t = Complementizer t
 type instance Maximal    'X_C t = Zipper t
 type instance Specifier  'X_C t = Maybe (SpecCP t)
-type instance Adjunct    'X_C t = ()
+type instance Adjunct    'X_C t = [AdjunctCP t]
 type instance Complement 'X_C t = TP t
 
 type CP = XP 'X_C
 
-mkCP :: Complementizer t -> Zipper t -> Maybe (SpecCP t) -> TP t -> CP t
-mkCP mc cp spec tp = XP mc cp spec () tp
+mkCP :: Complementizer t -> Zipper t -> Maybe (SpecCP t) -> [AdjunctCP t] -> TP t -> CP t
+mkCP mc cp spec adjs tp = XP mc cp spec adjs tp
 
 
 data CPDP a = CPCase (CP a)

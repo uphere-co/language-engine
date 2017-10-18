@@ -75,11 +75,6 @@ showRange rng = T.pack (printf "%-7s" (show rng))
 
 
 
- 
-
-
-
-
 formatPAWS :: PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
            -> String
 formatPAWS pa =
@@ -100,10 +95,15 @@ formatPAWS pa =
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
 
+formatAdjunctCP (AdjunctCP_Unresolved z) = "unresolved" <> (showRange . getRange . current) z
+formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cpRange cp)
+
+
 formatCP :: forall as. CP (Lemma ': as) -> String
 formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                      \Complementizer       : %-6s  %s\n\
                      \Specifier            : %-6s  %s\n\
+                     \Adjunct              :         %s\n\
                      \Tense Phrase         : %-6s  %s\n\
                      \Determiner Phrase    :         %s\n\
                      \Verb Phrase          : %-6s  %s\n\
@@ -112,6 +112,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                 (show (gettoken (cp^.maximalProjection)))
                 head1 head2
                 spec1 spec2
+                (T.intercalate " | " (cp^..adjunct.traverse.to formatAdjunctCP))
                 (maybe "null" show (getchunk (cp^.complement.maximalProjection)))
                 (show (gettoken (cp^.complement.maximalProjection)))
                 (formatTraceChain rangeText (cp^.complement.specifier))
