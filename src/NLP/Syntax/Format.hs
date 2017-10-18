@@ -95,6 +95,10 @@ formatPAWS pa =
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
 
+formatAdjunctCP (AdjunctCP_Unresolved z) = "unresolved" <> (showRange . getRange . current) z
+formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cpRange cp)
+
+
 formatCP :: forall as. CP (Lemma ': as) -> String
 formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                      \Complementizer       : %-6s  %s\n\
@@ -108,7 +112,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                 (show (gettoken (cp^.maximalProjection)))
                 head1 head2
                 spec1 spec2
-                (T.intercalate " | " (cp^..adjunct.traverse.to current.to getRange.to showRange))
+                (T.intercalate " | " (cp^..adjunct.traverse.to formatAdjunctCP))
                 (maybe "null" show (getchunk (cp^.complement.maximalProjection)))
                 (show (gettoken (cp^.complement.maximalProjection)))
                 (formatTraceChain rangeText (cp^.complement.specifier))
