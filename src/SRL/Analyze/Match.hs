@@ -166,18 +166,6 @@ matchAgentForPassive rolemap tagged paws patt = do
     (,comp) <$> lookup p rolemap
 
 
-{-
-matchThemeForPassive :: [(PBArg,FNFrameElement)]
-                     -> Either (Zipper '[Lemma]) (DetP '[Lemma])
-                     -> ArgPattern p GRel
-                     -> Maybe (FNFrameElement, CompVP '[Lemma])
-matchThemeForPassive rolemap edp patt = do
-  dp <- edp^?_Right              -- for the time being
-  (p,GR_NP (Just GA1)) <- pbArgForGArg GA1 patt
-  let comp = CompVP_DP dp
-  (,comp) <$> lookup p rolemap
--}
-
 matchSO :: [(PBArg,FNFrameElement)]
         -> [TagPos TokIdx MarkType]
         -> ( Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
@@ -266,7 +254,6 @@ matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   return (matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sense1,rolemap1),stat)
 
 
-checkTimeComplementizer z = any (\x -> isLemmaAs x (current z)) ["after","before"]
 
 
 matchExtraRolesForPPing prep role tagged paws felst = do
@@ -281,22 +268,29 @@ matchExtraRolesForPPing prep role tagged paws felst = do
 matchExtraRolesForCPInCompVP check role paws felst = do
   guard (is _Nothing (find (\x -> x^._1 == role) felst))
   let candidates = paws^..pa_CP.complement.complement.complement.traverse.trResolved._Just._CompVP_CP
-  cp <- find (\x->x^?headX._C_WORD.to check == Just True) candidates
+  cp <- find check candidates
   let rng = cp^.maximalProjection.to current.to getRange
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
   let comp = CompVP_CP cp
   return (role,comp)
 
 
-matchExtraRolesForCPInAdjunctCP role paws felst = do
+matchExtraRolesForCPInAdjunctCP mcheck role paws felst = do
   guard (is _Nothing (find (\x -> x^._1 == role) felst))
   let candidates = paws^..pa_CP.adjunct.traverse._AdjunctCP_CP
-  cp <- (rightMay . headErr "no adjuncts") candidates
+  cp <- case mcheck of
+          Nothing -> (rightMay . headErr "no adjuncts") candidates
+          Just check -> find check candidates
   let rng = cp^.maximalProjection.to current.to getRange
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to headRange == Just rng) felst))
   let comp = CompVP_CP cp
   return (role,comp)
 
+
+checkTimeComplementizer x = x^?headX._C_WORD.to (\z -> any (\c -> isLemmaAs c (current z)) ["after","before"]) == Just True
+
+--                                      x^?headX._C_WORD.to cwordcheck == Just True) 
+-- (\x->x^?headX._C_WORD.to check == Just True)
 
 
 -- | this function should be generalized.
@@ -307,11 +301,13 @@ matchExtraRoles :: [TagPos TokIdx MarkType]
                 -> [(FNFrameElement, CompVP '[Lemma])]
 matchExtraRoles tagged paws felst =
   let mmeans = matchExtraRolesForPPing "by" "Means" tagged paws felst
-      mtime  = matchExtraRolesForCPInCompVP checkTimeComplementizer "Time" paws felst
-               <|> matchExtraRolesForPPing "after" "Time" tagged paws felst
-               <|> matchExtraRolesForPPing "before" "Time" tagged paws felst
-      mmanner = matchExtraRolesForCPInAdjunctCP "Manner" paws felst
-  in felst ++ catMaybes [mmeans,mtime,mmanner]
+      madjunct  = matchExtraRolesForCPInCompVP checkTimeComplementizer "Time" paws felst <|>
+                  ( matchExtraRolesForCPInAdjunctCP (Just checkTimeComplementizer) "Time" paws felst <|>
+                    matchExtraRolesForCPInAdjunctCP Nothing "Manner" paws felst
+                  ) <|>
+                  matchExtraRolesForPPing "after" "Time" tagged paws felst <|>
+                  matchExtraRolesForPPing "before" "Time" tagged paws felst
+  in felst ++ catMaybes [mmeans,madjunct]
 
 
 -- | A scoring algorithm for selecting a frame among candidates.
