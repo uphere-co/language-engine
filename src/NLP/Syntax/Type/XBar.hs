@@ -9,6 +9,7 @@ module NLP.Syntax.Type.XBar
 , headText
 , compVPToEither
 , compVPToHeadText
+, compVPToRange
 ) where
 
 import           Control.Lens                       ((^.),(^?),_1,_2,_Just,to)
@@ -19,7 +20,7 @@ import qualified Data.Text                     as T
 --
 import           Data.BitreeZipper                  (current)
 import           Data.Range                         (Range,isInside)
-import           NLP.Type.PennTreebankII            (ALeaf,tokenWord)
+import           NLP.Type.PennTreebankII            (ALeaf,tokenWord,getRange)
 --
 import           NLP.Syntax.Type.XBar.Internal
 import           NLP.Syntax.Type.XBar.TH
@@ -56,3 +57,8 @@ compVPToHeadText (CompVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd
 compVPToHeadText (CompVP_CP z)         = z^.maximalProjection.to (T.intercalate " " . map (tokenWord.snd) . toList . current)
 compVPToHeadText (CompVP_DP z)         = headText z
 compVPToHeadText (CompVP_PP z)         = headText (z^.complement)
+
+
+
+compVPToRange :: CompVP as -> Range
+compVPToRange = either (getRange.current) (\dp->dp^.maximalProjection.to (getRange.current)) . compVPToEither 
