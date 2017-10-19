@@ -149,10 +149,9 @@ printMeaningGraph rolemap dstr = do
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
 
 
+  -- entityResolve = WEL.disambiguateMentions .. seems to have a problem
+
 newNETagger = do
-  --- uncurry runEL <$> loadWikiData
-  -- (tagger,entityResolve) <- loadWikiData
-  -- wikiTable <- WET.loadWETagger reprFileG -- wikiNameFile
   reprs <- LD.loadEntityReprs reprFileG
   let wikiTable = WET.buildEntityTable reprs
       wikiMap = foldl' f IM.empty reprs
@@ -178,29 +177,13 @@ newNETagger = do
                   name = (T.replace "," "" . T.replace "." "") name0   -- try once more
                   tags' = WET.wikiAnnotator wikiTable (T.words name)
                   tags'' = filter (\(r,_)->end r-beg r>1) tags'
-                  --tags =
-                  --  (maybeToList . fmap () . rightMay . headErr "null" .
-                  -- cls = case t of
-                  --         Org -> WEC.orgClass
-                  --         Person -> WEC.personClass
-                  --         _  -> WEC.otherClass
-
               in case tags'' of
                    [] -> x
                    _  -> let rids = (V.toList . snd . maximumBy (flip compare `on` (\(r,_) -> end r - beg r))) tags''
                          in disambiguatorWorker x (rids,t)
-                   {-
-                         in dis
-                             mrid = rids !? 0
-                         in case mrid of
-                              Nothing -> x
-                              Just rid ->
-                                let newinfo = (_3 .~ WNET.Resolved (rid,cls)) (EL._info x)
-                                in x { EL._info = newinfo } -}
             else x
           _ -> x
-  return (runEL tagger (map disambiguator))   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem
-
+  return (runEL tagger (map disambiguator))
 
 loadConfig :: Bool
            -> LexDataConfig
