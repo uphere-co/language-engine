@@ -6,7 +6,7 @@
 module SRL.Analyze.SentenceStructure where
 
 import           Control.Lens                              ((^?),(^.),(^..),_Left,_Right,_1,_2,_3,to)
-import           Data.Bifunctor                            (bimap)
+import           Data.Bifunctor                            (bimap,first)
 import           Data.Either                               (lefts)
 import           Data.Foldable                             (toList)
 import           Data.Function                             (on)
@@ -69,19 +69,20 @@ linkedMentionToTagPos linked_mention =
 
 
 
+--                             (adjustWikiRange (getRangeFromEntityMention w),) <$> getNEFunc w) wikiel
 
-mkWikiList :: DocStructure -> [((Int, Int), Text)]
-mkWikiList dstr =
-  let tagposs = toList (dstr ^. ds_mergedtags)
-      wikiel  = lefts $ map (\(TagPos (_,_,e)) -> e) tagposs
-      wikilst = mapMaybe  (\w -> (adjustWikiRange (getRangeFromEntityMention w),) <$> getNEFunc w) wikiel
+
+mkWikiList :: SentStructure -> [((Int, Int), Text)]
+mkWikiList sstr =
+  let tagposs = sstr ^.. ss_tagged . traverse . to (fmap fst) -- (toList (dstr ^. ds_mergedtags))
+      wikiel  = lefts $ map (\(TagPos (i,j,e)) -> first (unTokIdx i,unTokIdx j,) e) tagposs
+      wikilst = mapMaybe  (\(i,j,w) -> ((i,j-1),) <$> getNEFunc w) wikiel
       getNEFunc e =
         case (_info e)^._3 of
           UnresolvedUID x    -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> ")" )
           AmbiguousUID (_,x) -> Just (entityName (_info e) <> "(" <> T.pack (show x)<> ")" )
           Resolved (i,c)     -> Just (entityName (_info e) <> "(" <> T.pack (show c) <> "," <> T.pack (show i) <> ")")
           UnresolvedClass _  -> Nothing
---      getNEFromEntityMention w)) wikiel
   in wikilst
 
 
@@ -166,23 +167,36 @@ tagToMark (Left x)  = case entityPreNE x of
                         _ -> Nothing
 
 
+adjustTokenIndexForSentence midx tagged
+  = fromMaybe [] $ do
+      (b0,e0) <- (^.sent_tokenRange) <$> midx
+      return $ flip mapMaybe tagged $ \(TagPos (TokIdx b,TokIdx e,t)) -> do
+        t' <- tagToMark t
+        if b0 <= b && e <= e0
+          then return (TagPos (TokIdx (b-b0),TokIdx (e-b0),(t,t')))
+          else Nothing
+
+
+
 sentStructure :: AnalyzePredata
               -> [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text))]
               -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree)
               -> Maybe SentStructure
 sentStructure apredata tagged (i,midx,lmas,mptr) =
   flip fmap mptr $ \ptr ->
-    let tagged' = fromMaybe [] $ do
+    let tagged' = adjustTokenIndexForSentence midx tagged
+        taggedMarkOnly = map (fmap snd) tagged'
+          {- fromMaybe [] $ do
                     (b0,e0) <- (^.sent_tokenRange) <$> midx
                     return $ flip mapMaybe tagged $ \(TagPos (TokIdx b,TokIdx e,t)) -> do
                       t' <- tagToMark t
                       if b0 <= b && e <= e0
                         then return (TagPos (TokIdx (b-b0),TokIdx (e-b0),t'))
-                        else Nothing
+                        else Nothing -}
         lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
-        clausetr = clauseStructure tagged' vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
-        cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged') . identifyCPHierarchy tagged') vps
+        clausetr = clauseStructure taggedMarkOnly vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
+        cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis taggedMarkOnly) . identifyCPHierarchy taggedMarkOnly) vps
         verbStructures = map (verbStructure apredata) vps
     in SentStructure i ptr vps clausetr cpstr tagged' verbStructures
 
