@@ -1,15 +1,17 @@
+{-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 module WikiEL.WikiNamedEntityTagger 
 ( module WikiEL.WikiNamedEntityTagger 
 , WEC.mayCite
 ) where
 
+import           Control.Lens                          (makePrisms)
 import           Data.Aeson
 import           Data.Text                             (Text)
 import           Data.Vector                           (Vector,toList,fromList,ifoldr,foldl')
@@ -78,6 +80,8 @@ data PreNE = UnresolvedUID NEClass             -- Tagged by CoreNLP NER, but no 
            | Resolved (ItemID, WEC.ItemClass)  -- A wikidata UID of a CoreNLP NER Class type.
            | UnresolvedClass [ItemID]          -- Not tagged by CoreNLP NER, but matched Wikidata UID(s)
            deriving(Show, Eq, Generic)
+
+makePrisms ''PreNE
 
 instance ToJSON PreNE where
   toJSON = genericToJSON defaultOptions
