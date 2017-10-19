@@ -3,9 +3,11 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 module WikiEL.EntityLinking where
 
+import           Control.Lens                          (makePrisms)
 import           Data.Aeson
 import           Data.List                             (inits,foldl')
 import           Data.Vector                           (Vector,toList)
@@ -41,6 +43,9 @@ data UIDCite uid info = Cite { _uid  :: uid
                       | Self { _uid  :: uid
                              , _info :: info}
                       deriving(Eq,Generic)
+
+makePrisms ''UIDCite
+
 -- w : type of word token
 type EMInfo w = (IRange, Vector w, PreNE)
 type EntityMention w = UIDCite EntityMentionUID (EMInfo w)
