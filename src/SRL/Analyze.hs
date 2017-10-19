@@ -7,6 +7,7 @@
 
 module SRL.Analyze where
 
+import           Control.Error.Safe
 import           Control.Lens                 ((^.),(^..),(.~),(&),_Just,to,_1,_2,_3)
 import           Control.Monad                (forM_,join,void,when)
 import           Control.Monad.IO.Class       (liftIO)
@@ -17,11 +18,12 @@ import           Data.Function                (on)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
 import qualified Data.IntMap            as IM
-import           Data.List                    (foldl',intercalate,sortBy)
+import           Data.List                    (foldl',intercalate,maximumBy,sortBy)
 import           Data.Maybe
 import           Data.Text                    (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.IO           as T.IO
+import qualified Data.Vector            as V
 import qualified Language.Java          as J
 import           MWE.Util                     (mkTextFromToken)
 import           System.Console.Haskeline     (runInputT,defaultSettings,getInputLine)
@@ -43,13 +45,14 @@ import           Lexicon.Data                 (LexDataConfig(..),cfg_framenet_fr
                                               )
 import           NLP.Syntax.Format            (formatX'Tree)
 import           NLP.Type.CoreNLP             (Sentence)
-import           NLP.Type.NamedEntity         (NamedEntityClass)
+import           NLP.Type.NamedEntity         (NamedEntityClass(..))
 import           NLP.Type.SyntaxProperty      (Voice)
 import           OntoNotes.Corpus.Load        (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 import           Text.Format.Dot              (mkLabelText)
 import           WikiEL                       (extractFilteredEntityMentions)
 import           WikiEL.EntityLinking         (EntityMention)
+import           WikiEL.Misc                  (beg,end)
 import           WikiEL.Run                   (runEL,loadWikiData,classFilesG,reprFileG)
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
 import qualified WikiEL.WikiEntityClass             as WEC
@@ -136,7 +139,7 @@ printMeaningGraph rolemap dstr = do
     print mg
     print (getGraphFromMG mg)
     mapM_ print (mkARB rolemap mg)
-    
+
     putStrLn "-----------------"
     putStrLn "meaning graph dot"
     putStrLn "-----------------"
@@ -153,21 +156,50 @@ newNETagger = do
   reprs <- LD.loadEntityReprs reprFileG
   let wikiTable = WET.buildEntityTable reprs
       wikiMap = foldl' f IM.empty reprs
-        where f !acc (FF.EntityReprRow (WD.ItemID i) (WD.ItemRepr t)) = IM.insertWith (++) i [t] acc 
+        where f !acc (FF.EntityReprRow (WD.ItemID i) (WD.ItemRepr t)) = IM.insertWith (++) i [t] acc
   uidNEtags <- WEC.loadFiles classFilesG -- uidTagFiles
   let tagger = extractFilteredEntityMentions wikiTable uidNEtags
+      disambiguatorWorker x (ys,t) =
+        let lst = sortBy (flip compare `on` (length.snd)) .  mapMaybe (\y-> (y,) <$> IM.lookup (WD._itemID y) wikiMap) $ ys
+       in case lst of
+            [] -> x
+            (r:_) -> let (i1,i2,_) = EL._info x
+                         u = WEC.guessItemClass2 uidNEtags t
+                         resolved = r^._1
+                     in x { EL._info = (i1,i2,WNET.Resolved (resolved,u resolved)) }
+
   let disambiguator x =
         case ((^._3) . EL._info) x of
-          WNET.AmbiguousUID (ys,t) ->
-            let lst = sortBy (flip compare `on` (length.snd)) .  mapMaybe (\y-> (y,) <$> IM.lookup (WD._itemID y) wikiMap) $ ys
-            in case lst of
-                 [] -> x
-                 (r:_) -> let (i1,i2,_) = EL._info x
-                              u = WEC.guessItemClass2 uidNEtags t
-                              resolved = r^._1
-                          in x { EL._info = (i1,i2,WNET.Resolved (resolved,u resolved)) }
+          WNET.AmbiguousUID (ys,t) -> disambiguatorWorker x (ys,t)
+          WNET.UnresolvedUID t ->
+            if t == Org || t == Person
+            then
+              let name0 = EL.entityName (EL._info x)
+                  name = (T.replace "," "" . T.replace "." "") name0   -- try once more
+                  tags' = WET.wikiAnnotator wikiTable (T.words name)
+                  tags'' = filter (\(r,_)->end r-beg r>1) tags'
+                  --tags =
+                  --  (maybeToList . fmap () . rightMay . headErr "null" .
+                  -- cls = case t of
+                  --         Org -> WEC.orgClass
+                  --         Person -> WEC.personClass
+                  --         _  -> WEC.otherClass
+
+              in case tags'' of
+                   [] -> x
+                   _  -> let rids = (V.toList . snd . maximumBy (flip compare `on` (\(r,_) -> end r - beg r))) tags''
+                         in disambiguatorWorker x (rids,t)
+                   {-
+                         in dis
+                             mrid = rids !? 0
+                         in case mrid of
+                              Nothing -> x
+                              Just rid ->
+                                let newinfo = (_3 .~ WNET.Resolved (rid,cls)) (EL._info x)
+                                in x { EL._info = newinfo } -}
+            else x
           _ -> x
-  return (runEL tagger (map disambiguator))   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem  
+  return (runEL tagger (map disambiguator))   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem
 
 
 loadConfig :: Bool
