@@ -5,7 +5,7 @@
 
 module SRL.Analyze.SentenceStructure where
 
-import           Control.Lens                              ((^?),(^.),(^..),_Left,_Right,_1,_2,to)
+import           Control.Lens                              ((^?),(^.),(^..),_Left,_Right,_1,_2,_3,to)
 import           Data.Bifunctor                            (bimap)
 import           Data.Either                               (lefts)
 import           Data.Foldable                             (toList)
@@ -40,7 +40,7 @@ import qualified NLP.Type.PennTreebankII.Separated as PS
 import           NLP.Type.SyntaxProperty                   (Voice)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
 import           WikiEL.Convert                               (getNEFromEntityMention,getRangeFromEntityMention)
-import           WikiEL.EntityLinking                      (EntityMention,entityPreNE,UIDCite(..))
+import           WikiEL.EntityLinking                      (EntityMention,entityPreNE,UIDCite(..),entityName)
 import           WikiEL.Misc                               (IRange(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
 import           WikiEL.WikiNamedEntityTagger              (PreNE(..))
@@ -68,11 +68,20 @@ linkedMentionToTagPos linked_mention =
   in TagPos (TokIdx b, TokIdx e,linked_mention)
 
 
+
+
 mkWikiList :: DocStructure -> [((Int, Int), Text)]
 mkWikiList dstr =
   let tagposs = toList (dstr ^. ds_mergedtags)
       wikiel  = lefts $ map (\(TagPos (_,_,e)) -> e) tagposs
-      wikilst = map (\w -> (adjustWikiRange $ getRangeFromEntityMention w,getNEFromEntityMention w)) wikiel
+      wikilst = mapMaybe  (\w -> (adjustWikiRange (getRangeFromEntityMention w),) <$> getNEFunc w) wikiel
+      getNEFunc e =
+        case (_info e)^._3 of
+          UnresolvedUID x    -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> ")" )
+          AmbiguousUID (_,x) -> Just (entityName (_info e) <> "(" <> T.pack (show x)<> ")" )
+          Resolved (i,c)     -> Just (entityName (_info e) <> "(" <> T.pack (show c) <> "," <> T.pack (show i) <> ")")
+          UnresolvedClass _  -> Nothing
+--      getNEFromEntityMention w)) wikiel
   in wikilst
 
 
@@ -145,6 +154,14 @@ tagToMark (Left x)  = case entityPreNE x of
                         Resolved (_,c) ->
                           if c `elem` [orgClass,personClass,brandClass]
                           then Just MarkEntity  -- only organization, person and brand, for the time being
+                          else Nothing
+                        UnresolvedUID c ->
+                          if c `elem` [N.Org,N.Person]
+                          then Just MarkEntity
+                          else Nothing
+                        AmbiguousUID (_,c) ->
+                          if c `elem` [N.Org,N.Person]
+                          then Just MarkEntity
                           else Nothing
                         _ -> Nothing
 
