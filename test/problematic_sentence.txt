@@ -75,3 +75,7 @@ Kenyan stocks and bonds fell on Wednesday after opposition leader Raila Odinga p
 -- | named entity unresolved.
 Defense and aerospace company Lockheed Martin Corp. said Thursday its board of directors has authorized buying an additional $2 billion of the company's stock under its share buyback program.
 
+
+-- | named entity outside
+St. Louis Fed President James Bullard told Business Insider that there was "no hurry to raise rates" with inflation below target.
+

@@ -87,7 +87,7 @@ data SentStructure = SentStructure { _ss_i              :: Int
                                    , _ss_vps            :: [VerbProperty (Zipper '[Lemma])]
                                    , _ss_clausetr       :: ClauseTree
                                    , _ss_cpstr          :: [X'Tree '[Lemma]]
-                                   , _ss_tagged         :: [TagPos TokIdx MarkType]
+                                   , _ss_tagged         :: [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text), MarkType)]
                                    , _ss_verbStructures :: [VerbStructure]
                                    }
 
@@ -118,20 +118,6 @@ instance ToJSON DocAnalysisInput where
 instance FromJSON DocAnalysisInput where
   parseJSON = genericParseJSON defaultOptions
 
-
-{-
-data AdjustedDetP = WithPrep { _adj_prep :: Text
-                             , _adj_pp   :: Zipper '[Lemma]
-                             , _adj_dp   :: DetP '[Lemma]
-                             }
-                  | WithoutPrep { _adj_dp :: DetP '[Lemma] }
-
-makePrisms ''AdjustedDetP
-
-
-getDetP (WithPrep _ _ z) = z
-getDetP (WithoutPrep z ) = z
--}
 
 
 

@@ -98,7 +98,7 @@ queryProcess config pp apredata netagger =
                   dstr <- docStructure apredata netagger <$> runParser pp txt
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkPAWSTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
+                  mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^..ss_tagged.traverse.to (fmap snd),x) | x <- snd (mkPAWSTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
 
       ":v " -> do dstr <- docStructure apredata netagger <$> runParser pp rest
                   mapM_ (T.IO.putStrLn . formatX'Tree) (dstr ^.. ds_sentStructures . traverse . _Just . ss_cpstr . traverse)
@@ -106,7 +106,7 @@ queryProcess config pp apredata netagger =
                     print (dstr^.ds_mergedtags)
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
 
-                  mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkPAWSTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
+                  mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^..ss_tagged.traverse.to (fmap snd),x) | x <- snd (mkPAWSTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
                   --
                   printMeaningGraph (apredata^.analyze_rolemap) dstr
       _     ->    putStrLn "cannot understand the command"
@@ -122,13 +122,14 @@ printMeaningGraph rolemap dstr = do
   putStrLn "-------------"
   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
       mtokss = (dstr ^. ds_mtokenss)
-      wikilst = mkWikiList dstr
+      -- wikilst = mkWikiList dstr
   -- print (sstrs1 ^.. traverse . ss_ptr)
   -- print (sstrs1 ^.. traverse . ss_clausetr)
 
-  let mgs = map meaningGraph sstrs1
-  forM_ (zip mtokss (zip ([1..] :: [Int]) mgs)) $ \(mtks,(i,mg')) -> do
+  let mgs = map (\sstr -> (sstr,meaningGraph sstr)) sstrs1
+  forM_ (zip mtokss (zip ([1..] :: [Int]) mgs)) $ \(mtks,(i,(sstr,mg'))) -> do
     let title = mkTextFromToken mtks
+        wikilst = mkWikiList sstr -- sstrs1
         mg = tagMG mg' wikilst
     mapM_ print (mg^.mg_vertices)
     mapM_ print (mg^.mg_edges)

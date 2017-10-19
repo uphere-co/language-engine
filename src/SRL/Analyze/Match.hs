@@ -67,7 +67,7 @@ mkPAWSTriples sstr =
   in ( cpstr
      , [(vstr,paws)| vstr <- sstr ^.ss_verbStructures
                    , let vp = vstr^.vs_vp
-                   , paws <- maybeToList (findPAWS (sstr^.ss_tagged) clausetr vp cpstr) ]
+                   , paws <- maybeToList (findPAWS (sstr^..ss_tagged.traverse.to (fmap snd)) clausetr vp cpstr) ]
      )
 
 
@@ -449,7 +449,7 @@ showMatchedFE' (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
   let (cpstr,lst_vstrpaws) = mkPAWSTriples sstr
-      matched = mapMaybe (matchFrame (sstr^.ss_tagged)) lst_vstrpaws
+      matched = mapMaybe (matchFrame (sstr^..ss_tagged.traverse.to (fmap snd))) lst_vstrpaws
       depmap = depCPDP =<< cpstr
       --
       preds = flip map matched $ \(rng,vprop,frame,sense,_mselected) i
