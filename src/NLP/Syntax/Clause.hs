@@ -227,14 +227,25 @@ rewriteX'TreeForModifier f w z = do
 
 
 
-retrieveZCP :: Range -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as),CP (Lemma ': as))
-retrieveZCP rng = do
+retrieveWCP :: Range -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as),CP (Lemma ': as))
+retrieveWCP rng = do
   tr <- lift get
-  z <- hoistMaybe (extractZipperById rng tr)
-  cp <- hoistMaybe (currentCPDP z ^? _CPCase)
-  return (z,cp)
+  w <- hoistMaybe (extractZipperById rng tr)
+  cp <- hoistMaybe (currentCPDP w ^? _CPCase)
+  return (w,cp)
 
 
+rewriteX'TreeForFreeWH rng ps w z' = do
+  w_dom <- parent w
+  cp_dom <- w_dom^?to currentCPDP._CPCase
+  let vp_dom = cp_dom^.complement.complement
+      comps = vp_dom^.complement
+      comps' = flip map comps $ \comp -> trace (T.unpack (formatTraceChain formatCompVP comp)) $ fromMaybe comp $ do
+                 z_comp <- comp^?trResolved._Just._CompVP_Unresolved
+                 guard (getRange (current z_comp) == rng)
+                 return (TraceChain (Right (ps++[Moved,WHPRO])) (Just (CompVP_DP z')))
+      rf = _2._CPCase.complement.complement.complement .~ comps'
+  return (replaceFocusItem rf rf w_dom)
 
 
 whMovement :: [TagPos TokIdx MarkType]
@@ -242,8 +253,9 @@ whMovement :: [TagPos TokIdx MarkType]
            -> State (X'Tree (Lemma ': as))
                     (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 whMovement tagged (w,cp) = do
-  -- letter z denotes zipper for PennTree, w denotes zipper for Bitree (Range,CPDP as) (Range,CPDP as)
-  let spec = cp^.complement.specifier
+  -- letter z denotes zipper for PennTree, w denotes zipper for X'Tree
+  let rng = cpRange cp
+      spec = cp^.complement.specifier
   -- whMovement process starts with cheking trace in subject
   case spec^.trChain of
     Left (LZ ps c ns) ->
@@ -263,8 +275,24 @@ whMovement tagged (w,cp) = do
              <|>
              (do -- free relative clause
                  z' <- splitDP tagged <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
-                 rewriteX'TreeForModifier id w z'
-                 return (TraceChain (Left (LZ ps Moved [])) (Just (Right z')))))
+                 w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng (reverse ps) w z')
+
+
+                 {-  do
+                   w_dom <- parent w
+                   cp_dom <- w_dom^?to currentCPDP._CPCase
+                   let vp_dom = cp_dom^.complement.complement
+                       comps = vp_dom^.complement
+                       comps' = flip map comps $ \comp -> trace (T.unpack (formatTraceChain formatCompVP comp)) $ fromMaybe comp $ do
+                                  z_comp <- comp^?trResolved._Just._CompVP_Unresolved
+                                  guard (getRange (current z_comp) == rng)
+                                  return (TraceChain (Right (ps++[Moved,WHPRO])) (Just (CompVP_DP z')))
+                       rf = _2._CPCase.complement.complement.complement .~ comps'
+                   return (replaceFocusItem rf rf w_dom) -}
+                 lift (put (toBitree w_dom'))
+                 (w',_) <- retrieveWCP rng  
+                 rewriteX'TreeForModifier id w' z'
+                 return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right z')))))
         _    -> return spec
     Right _ -> do
       -- without trace in subject
@@ -283,7 +311,7 @@ whMovement tagged (w,cp) = do
              z' <- splitDP tagged <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
              let -- adjust function for complement with relative pronoun resolution
                  rf0 = _2._CPCase.complement.complement.complement
-                         %~ (TraceChain (Left (LZ [] Moved [])) (Just (CompVP_DP z')) :)
+                         %~ (TraceChain (Left (LZ [] Moved [WHPRO])) (Just (CompVP_DP z')) :)
              rewriteX'TreeForModifier rf0 w z'))
       return spec
 
@@ -318,7 +346,7 @@ resolveVPComp :: Range
               -> TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as)))
               -> MaybeT (State (X'Tree (Lemma ': as))) (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 resolveVPComp rng spec = do
-  (z,cp) <- retrieveZCP rng
+  (w,cp) <- retrieveWCP rng
   let verbp = cp^.complement.complement
   case verbp^.headX.vp_voice of
     Active -> return spec
@@ -330,8 +358,8 @@ resolveVPComp rng spec = do
           let r = either (const Nothing) (Just . CompVP_DP) =<< spec^.trResolved  -- ignore CP case for the time being.
               c' = TraceChain (mergeLeftELZ (c^.trChain) (spec^.trChain)) r
               rf = _2._CPCase.complement.complement.complement .~ (c':rest)
-              z' = replaceFocusItem rf rf z
-          lift (put (toBitree z'))
+              w' = replaceFocusItem rf rf w
+          lift (put (toBitree w'))
           return (TraceChain (mergeRightELZ (c^.trChain) (spec^.trChain)) (spec^.trResolved))
 
 
@@ -344,10 +372,10 @@ resolveDP :: [TagPos TokIdx MarkType]
           -> Range
           -> State (X'Tree (Lemma ': as)) (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
-  (z,cp) <- retrieveZCP rng
+  (w,cp) <- retrieveWCP rng
   if is _Just (cp^.specifier)  -- relative clause
-    then resolveVPComp rng =<< lift (whMovement tagged (z,cp))
-    else resolveVPComp rng =<< resolveSilentPRO tagged (z,cp)
+    then resolveVPComp rng =<< lift (whMovement tagged (w,cp))
+    else resolveVPComp rng =<< resolveSilentPRO tagged (w,cp)
 
 
 
@@ -413,7 +441,7 @@ nextLZ _                = Nothing
 -- consider passive case only now for the time being.
 connectRaisedDP :: Range -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as))
 connectRaisedDP rng = do
-  (z,cp) <- retrieveZCP rng
+  (w,cp) <- retrieveWCP rng
   guard (cp ^. complement.complement.headX.vp_voice == Passive)
   c1:c2:[] <- return (cp^.complement.complement.complement)
   rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.to headRange)
@@ -424,11 +452,11 @@ connectRaisedDP rng = do
     then do
       let rf = (_2._CPCase.complement.specifier .~ emptyTraceChain)
              . (_2._CPCase.complement.complement.complement .~ [c2])
-          z' = replaceFocusItem rf rf z
-      lift (put (toBitree z'))
-      return z'
+          w' = replaceFocusItem rf rf w
+      lift (put (toBitree w'))
+      return w'
     else
-      return z
+      return w
 
 
 -- I think we should change the name of these bindingAnalysis.. functions.
