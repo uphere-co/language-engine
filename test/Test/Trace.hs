@@ -140,6 +140,15 @@ test_nonrestrictive_relative_clause =
   )
 
 
+test_free_relative_clause =
+  ( "President Donald Trump doesn't know who the next Fed chair will be."
+  , 12, (Comp 1, TraceChain (Left (LZ [] Moved [])) (Just "who"))
+  , [(0,("President","President")),(1,("Donald","Donald")),(2,("Trump","Trump")),(3,("do","does")),(4,("not","n't")),(5,("know","know")),(6,("who","who")),(7,("the","the")),(8,("next","next")),(9,("Fed","Fed")),(10,("chair","chair")),(11,("will","will")),(12,("be","be")),(13,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","President"),PL ("NNP","Donald"),PL ("NNP","Trump")],PN "VP" [PL ("VBZ","does"),PL ("RB","n't"),PN "VP" [PL ("VB","know"),PN "SBAR" [PN "WHNP" [PL ("WP","who")],PN "S" [PN "NP" [PL ("DT","the"),PL ("JJ","next"),PL ("NNP","Fed"),PL ("NN","chair")],PN "VP" [PL ("MD","will"),PN "VP" [PL ("VB","be")]]]]]],PL (".",".")]]
+  , []
+  )
+
+
 
 formatDetail :: TestTrace -> [Text]
 formatDetail (_txt,_,_,lma,pt,tmxs) =
@@ -184,6 +193,7 @@ testcases = [ test_silent_pronoun
             , test_passive_raising
             , test_ECM
             , test_nonrestrictive_relative_clause
+            , test_free_relative_clause
             ]
 
 checkTrace :: TestTrace -> Bool
