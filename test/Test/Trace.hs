@@ -141,6 +141,39 @@ test_nonrestrictive_relative_clause =
 
 
 
+test_free_relative_clause_subject_1 =
+  ( "President Donald Trump doesn't know who will be the next Fed chair."
+  , 8, (Subj, TraceChain (Left (LZ [] Moved [WHPRO])) (Just "who"))
+  , [(0,("President","President")),(1,("Donald","Donald")),(2,("Trump","Trump")),(3,("do","does")),(4,("not","n't")),(5,("know","know")),(6,("who","who")),(7,("will","will")),(8,("be","be")),(9,("the","the")),(10,("next","next")),(11,("Fed","Fed")),(12,("chair","chair")),(13,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","President"),PL ("NNP","Donald"),PL ("NNP","Trump")],PN "VP" [PL ("VBZ","does"),PL ("RB","n't"),PN "VP" [PL ("VB","know"),PN "SBAR" [PN "WHNP" [PL ("WP","who")],PN "S" [PN "VP" [PL ("MD","will"),PN "VP" [PL ("VB","be"),PN "NP" [PL ("DT","the"),PL ("JJ","next"),PL ("NNP","Fed"),PL ("NN","chair")]]]]]]],PL (".",".")]]
+  , []
+  )
+
+test_free_relative_clause_subject_2 =
+  ( "President Donald Trump doesn't know who will be the next Fed chair."
+  , 5, (Comp 1, TraceChain (Right [Moved,WHPRO]) (Just "who"))
+  , [(0,("President","President")),(1,("Donald","Donald")),(2,("Trump","Trump")),(3,("do","does")),(4,("not","n't")),(5,("know","know")),(6,("who","who")),(7,("will","will")),(8,("be","be")),(9,("the","the")),(10,("next","next")),(11,("Fed","Fed")),(12,("chair","chair")),(13,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","President"),PL ("NNP","Donald"),PL ("NNP","Trump")],PN "VP" [PL ("VBZ","does"),PL ("RB","n't"),PN "VP" [PL ("VB","know"),PN "SBAR" [PN "WHNP" [PL ("WP","who")],PN "S" [PN "VP" [PL ("MD","will"),PN "VP" [PL ("VB","be"),PN "NP" [PL ("DT","the"),PL ("JJ","next"),PL ("NNP","Fed"),PL ("NN","chair")]]]]]]],PL (".",".")]]
+  , []
+  )
+
+test_free_relative_clause_object_1 =
+  ( "President Donald Trump doesn't know who the next Fed chair will be."
+  , 12, (Comp 1, TraceChain (Left (LZ [] Moved [WHPRO])) (Just "who"))
+  , [(0,("President","President")),(1,("Donald","Donald")),(2,("Trump","Trump")),(3,("do","does")),(4,("not","n't")),(5,("know","know")),(6,("who","who")),(7,("the","the")),(8,("next","next")),(9,("Fed","Fed")),(10,("chair","chair")),(11,("will","will")),(12,("be","be")),(13,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","President"),PL ("NNP","Donald"),PL ("NNP","Trump")],PN "VP" [PL ("VBZ","does"),PL ("RB","n't"),PN "VP" [PL ("VB","know"),PN "SBAR" [PN "WHNP" [PL ("WP","who")],PN "S" [PN "NP" [PL ("DT","the"),PL ("JJ","next"),PL ("NNP","Fed"),PL ("NN","chair")],PN "VP" [PL ("MD","will"),PN "VP" [PL ("VB","be")]]]]]],PL (".",".")]]
+  , []
+  )
+
+test_free_relative_clause_object_2 =
+  ( "President Donald Trump doesn't know who the next Fed chair will be."
+  , 5, (Comp 1, TraceChain (Right [Moved,WHPRO]) (Just "who"))
+  , [(0,("President","President")),(1,("Donald","Donald")),(2,("Trump","Trump")),(3,("do","does")),(4,("not","n't")),(5,("know","know")),(6,("who","who")),(7,("the","the")),(8,("next","next")),(9,("Fed","Fed")),(10,("chair","chair")),(11,("will","will")),(12,("be","be")),(13,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","President"),PL ("NNP","Donald"),PL ("NNP","Trump")],PN "VP" [PL ("VBZ","does"),PL ("RB","n't"),PN "VP" [PL ("VB","know"),PN "SBAR" [PN "WHNP" [PL ("WP","who")],PN "S" [PN "NP" [PL ("DT","the"),PL ("JJ","next"),PL ("NNP","Fed"),PL ("NN","chair")],PN "VP" [PL ("MD","will"),PN "VP" [PL ("VB","be")]]]]]],PL (".",".")]]
+  , []
+  )
+
+
 formatDetail :: TestTrace -> [Text]
 formatDetail (_txt,_,_,lma,pt,tmxs) =
   let vps  = mkVPS lma pt
@@ -184,11 +217,14 @@ testcases = [ test_silent_pronoun
             , test_passive_raising
             , test_ECM
             , test_nonrestrictive_relative_clause
+            , test_free_relative_clause_subject_1
+            , test_free_relative_clause_subject_2
+            , test_free_relative_clause_object_1
+            , test_free_relative_clause_object_2            
             ]
 
 checkTrace :: TestTrace -> Bool
-checkTrace c = -- False
-
+checkTrace c =
   fromMaybe False $ do
     let vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure (c^._6) vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
