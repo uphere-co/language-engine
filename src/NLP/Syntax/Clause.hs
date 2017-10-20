@@ -251,23 +251,35 @@ whMovement tagged (w,cp) = do
           fmap (fromMaybe (TraceChain (Left xspro) Nothing)) . runMaybeT $ do
             -- check subject position for relative pronoun
             let z_cp = cp^.maximalProjection
-            z' <- splitDP tagged <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
-            adjustX'Tree id w z'
-            return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right z')))
+            ((do -- ordinary relative clause
+                 z' <- splitDP tagged <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
+                 adjustX'Tree id w z'
+                 return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right z'))))
+             <|>
+             (do -- free relative clause
+                 z' <- splitDP tagged <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+                 adjustX'Tree id w z'
+                 return (TraceChain (Left (LZ ps Moved [])) (Just (Right z')))))
         _    -> return spec
     Right _ -> do
       -- without trace in subject
       -- check object for relative pronoun
-      runMaybeT $ do
+      void . runMaybeT $ do
         let z_cp = cp^.maximalProjection
-        z' <- splitDP tagged <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
-        -- z'  <- splitDP tagged <$> hoistMaybe (prev (cp^.maximalProjection))
-        let -- adjust function for complement with relative pronoun resolution
-            rf0 = _2._CPCase.complement.complement.complement
-                   %~ (TraceChain (Left (LZ [] Moved [WHPRO])) (Just (CompVP_DP z')) :)
-        -- adjust CPDP hierarchy by modifier relation.
-        adjustX'Tree rf0 w z'
-        return ()
+        ((do -- ordinary relative clause
+             z' <- splitDP tagged <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
+             let -- adjust function for complement with relative pronoun resolution
+                 rf0 = _2._CPCase.complement.complement.complement
+                         %~ (TraceChain (Left (LZ [] Moved [WHPRO])) (Just (CompVP_DP z')) :)
+             -- adjust CPDP hierarchy by modifier relation.
+             adjustX'Tree rf0 w z')
+         <|>
+         (do -- free relative clause
+             z' <- splitDP tagged <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+             let -- adjust function for complement with relative pronoun resolution
+                 rf0 = _2._CPCase.complement.complement.complement
+                         %~ (TraceChain (Left (LZ [] Moved [])) (Just (CompVP_DP z')) :)
+             adjustX'Tree rf0 w z'))
       return spec
 
 
