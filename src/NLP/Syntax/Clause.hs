@@ -233,44 +233,42 @@ retrieveZCP rng = do
 
 
 whMovement :: [TagPos TokIdx MarkType]
-           -> X'Zipper (Lemma ': as)
-           -> State (X'Tree (Lemma ': as)) (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
-whMovement tagged w =
+           -> (X'Zipper (Lemma ': as),CP (Lemma ': as)) 
+           -> State (X'Tree (Lemma ': as))
+                    (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
+whMovement tagged (w,cp) = do
   -- letter z denotes zipper for PennTree, w denotes zipper for Bitree (Range,CPDP as) (Range,CPDP as)
-  case currentCPDP w of
-    CPCase cp -> do
-      let spec = cp^.complement.specifier
-      -- whMovement process starts with cheking trace in subject
-      case spec^.trChain of
-        Left (LZ ps c ns) ->
-          -- with trace in subject
-          -- check subject for relative pronoun
-          case c of
-            NULL -> do
-              -- ignore ns.
-              let xspro = LZ ps SilentPRO []
-              fmap (fromMaybe (TraceChain (Left xspro) Nothing)) . runMaybeT $ do
-                -- check subject position for relative pronoun
-                let z_cp = cp^.maximalProjection
-                z' <- splitDP tagged <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
-                adjustX'Tree id w z'
-                return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right z')))
-            _    -> return spec
-        Right _ -> do
-          -- without trace in subject
-          -- check object for relative pronoun
-          runMaybeT $ do
+  let spec = cp^.complement.specifier
+  -- whMovement process starts with cheking trace in subject
+  case spec^.trChain of
+    Left (LZ ps c ns) ->
+      -- with trace in subject
+      -- check subject for relative pronoun
+      case c of
+        NULL -> do
+          -- ignore ns.
+          let xspro = LZ ps SilentPRO []
+          fmap (fromMaybe (TraceChain (Left xspro) Nothing)) . runMaybeT $ do
+            -- check subject position for relative pronoun
             let z_cp = cp^.maximalProjection
             z' <- splitDP tagged <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
-            -- z'  <- splitDP tagged <$> hoistMaybe (prev (cp^.maximalProjection))
-            let -- adjust function for complement with relative pronoun resolution
-                rf0 = _2._CPCase.complement.complement.complement
-                       %~ (TraceChain (Left (LZ [] Moved [WHPRO])) (Just (CompVP_DP z')) :)
-            -- adjust CPDP hierarchy by modifier relation.
-            adjustX'Tree rf0 w z'
-            return ()
-          return spec
-    _  -> return emptyTraceChain
+            adjustX'Tree id w z'
+            return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right z')))
+        _    -> return spec
+    Right _ -> do
+      -- without trace in subject
+      -- check object for relative pronoun
+      runMaybeT $ do
+        let z_cp = cp^.maximalProjection
+        z' <- splitDP tagged <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
+        -- z'  <- splitDP tagged <$> hoistMaybe (prev (cp^.maximalProjection))
+        let -- adjust function for complement with relative pronoun resolution
+            rf0 = _2._CPCase.complement.complement.complement
+                   %~ (TraceChain (Left (LZ [] Moved [WHPRO])) (Just (CompVP_DP z')) :)
+        -- adjust CPDP hierarchy by modifier relation.
+        adjustX'Tree rf0 w z'
+        return ()
+      return spec
 
 
 resolveSilentPRO :: [TagPos TokIdx MarkType]
@@ -331,7 +329,7 @@ resolveDP :: [TagPos TokIdx MarkType]
 resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   (z,cp) <- retrieveZCP rng
   if is _Just (cp^.specifier)  -- relative clause
-    then resolveVPComp rng =<< lift (whMovement tagged z)
+    then resolveVPComp rng =<< lift (whMovement tagged (z,cp))
     else resolveVPComp rng =<< resolveSilentPRO tagged (z,cp)
 
 
