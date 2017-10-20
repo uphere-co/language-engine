@@ -251,7 +251,8 @@ whMovement tagged w =
               let xspro = LZ ps SilentPRO []
               fmap (fromMaybe (TraceChain (Left xspro) Nothing)) . runMaybeT $ do
                 -- check subject position for relative pronoun
-                z' <- splitDP tagged <$> hoistMaybe (prev (cp^.maximalProjection))
+                let z_cp = cp^.maximalProjection
+                z' <- splitDP tagged <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
                 adjustX'Tree id w z'
                 return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right z')))
             _    -> return spec
