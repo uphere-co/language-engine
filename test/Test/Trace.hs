@@ -130,6 +130,17 @@ test_ECM =
   , []
   )
 
+
+test_nonrestrictive_relative_clause =
+  ( "Toyota said it would begin testing self-driving electric cars, which will use artificial intelligence to engage with drivers."
+  , 12, (Subj,TraceChain (Left (LZ [] Moved [WHPRO])) (Just "self-driving electric cars"))
+  , [(0,("Toyota","Toyota")),(1,("say","said")),(2,("it","it")),(3,("would","would")),(4,("begin","begin")),(5,("test","testing")),(6,("self-driving","self-driving")),(7,("electric","electric")),(8,("car","cars")),(9,(",",",")),(10,("which","which")),(11,("will","will")),(12,("use","use")),(13,("artificial","artificial")),(14,("intelligence","intelligence")),(15,("to","to")),(16,("engage","engage")),(17,("with","with")),(18,("driver","drivers")),(19,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","Toyota")],PN "VP" [PL ("VBD","said"),PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","it")],PN "VP" [PL ("MD","would"),PN "VP" [PL ("VB","begin"),PN "S" [PN "VP" [PL ("VBG","testing"),PN "NP" [PN "NP" [PL ("JJ","self-driving"),PL ("JJ","electric"),PL ("NNS","cars")],PL (",",","),PN "SBAR" [PN "WHNP" [PL ("WDT","which")],PN "S" [PN "VP" [PL ("MD","will"),PN "VP" [PL ("VB","use"),PN "NP" [PL ("JJ","artificial"),PL ("NN","intelligence")],PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","engage"),PN "PP" [PL ("IN","with"),PN "NP" [PL ("NNS","drivers")]]]]]]]]]]]]]]]]],PL (".",".")]]
+  , []
+  )
+
+
+
 formatDetail :: TestTrace -> [Text]
 formatDetail (_txt,_,_,lma,pt,tmxs) =
   let vps  = mkVPS lma pt
@@ -172,6 +183,7 @@ testcases = [ test_silent_pronoun
             , test_passive
             , test_passive_raising
             , test_ECM
+            , test_nonrestrictive_relative_clause
             ]
 
 checkTrace :: TestTrace -> Bool
