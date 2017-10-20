@@ -240,7 +240,7 @@ rewriteX'TreeForFreeWH rng ps w z' = do
   cp_dom <- w_dom^?to currentCPDP._CPCase
   let vp_dom = cp_dom^.complement.complement
       comps = vp_dom^.complement
-      comps' = flip map comps $ \comp -> trace (T.unpack (formatTraceChain formatCompVP comp)) $ fromMaybe comp $ do
+      comps' = flip map comps $ \comp -> fromMaybe comp $ do
                  z_comp <- comp^?trResolved._Just._CompVP_Unresolved
                  guard (getRange (current z_comp) == rng)
                  return (TraceChain (Right (ps++[Moved,WHPRO])) (Just (CompVP_DP z')))
@@ -249,7 +249,7 @@ rewriteX'TreeForFreeWH rng ps w z' = do
 
 
 whMovement :: [TagPos TokIdx MarkType]
-           -> (X'Zipper (Lemma ': as),CP (Lemma ': as)) 
+           -> (X'Zipper (Lemma ': as),CP (Lemma ': as))
            -> State (X'Tree (Lemma ': as))
                     (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 whMovement tagged (w,cp) = do
@@ -276,25 +276,12 @@ whMovement tagged (w,cp) = do
              (do -- free relative clause
                  z' <- splitDP tagged <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
                  w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng (reverse ps) w z')
-
-
-                 {-  do
-                   w_dom <- parent w
-                   cp_dom <- w_dom^?to currentCPDP._CPCase
-                   let vp_dom = cp_dom^.complement.complement
-                       comps = vp_dom^.complement
-                       comps' = flip map comps $ \comp -> trace (T.unpack (formatTraceChain formatCompVP comp)) $ fromMaybe comp $ do
-                                  z_comp <- comp^?trResolved._Just._CompVP_Unresolved
-                                  guard (getRange (current z_comp) == rng)
-                                  return (TraceChain (Right (ps++[Moved,WHPRO])) (Just (CompVP_DP z')))
-                       rf = _2._CPCase.complement.complement.complement .~ comps'
-                   return (replaceFocusItem rf rf w_dom) -}
                  lift (put (toBitree w_dom'))
-                 (w',_) <- retrieveWCP rng  
+                 (w',_) <- retrieveWCP rng
                  rewriteX'TreeForModifier id w' z'
                  return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right z')))))
         _    -> return spec
-    Right _ -> do
+    Right ps -> do
       -- without trace in subject
       -- check object for relative pronoun
       void . runMaybeT $ do
@@ -309,10 +296,13 @@ whMovement tagged (w,cp) = do
          <|>
          (do -- free relative clause
              z' <- splitDP tagged <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+             w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng ps w z')
+             lift (put (toBitree w_dom'))
+             (w',_) <- retrieveWCP rng
              let -- adjust function for complement with relative pronoun resolution
                  rf0 = _2._CPCase.complement.complement.complement
                          %~ (TraceChain (Left (LZ [] Moved [WHPRO])) (Just (CompVP_DP z')) :)
-             rewriteX'TreeForModifier rf0 w z'))
+             rewriteX'TreeForModifier rf0 w' z'))
       return spec
 
 
