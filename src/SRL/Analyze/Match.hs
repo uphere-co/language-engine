@@ -32,7 +32,7 @@ import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_caus
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,findPAWS)
 import           NLP.Syntax.Format            (formatCP,formatDP)
-import           NLP.Syntax.Noun              (mkOrdDP,splitDP)
+import           NLP.Syntax.Noun              (splitDP)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -435,10 +435,11 @@ entityFromDP dp =
       mrngtxt' = do rng_sub <- case (dp^.adjunct, dp^.complement) of
                                  (Just r,_) -> return r -- for the time being
                                  _          -> Nothing
-                    let txt_sub = dp ^.  maximalProjection
-                                        .to current
-                                        .to (tokensByRange rng_sub)
-                                        .to (T.intercalate " ")
+                    let txt_sub = dp ^. maximalProjection
+                                      . original
+                                      . to current
+                                      . to (tokensByRange rng_sub)
+                                      . to (T.intercalate " ")
                     return (rng_sub,txt_sub)
   in (rng,txt,mrngtxt')
 
