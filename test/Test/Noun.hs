@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Noun where
@@ -6,20 +7,23 @@ module Test.Noun where
 import           Control.Lens                    ((^.),(%~),_1,_2,_3,_4,_5,to)
 import           Data.Bifunctor                  (bimap)
 import qualified Data.IntMap             as IM
+import           Data.Monoid                     ((<>))
 import           Data.Text                       (Text)
 import qualified Data.Text               as T
 import qualified Data.Text.IO            as T.IO
 import           Text.Format.Tree                (linePrint)
 --
 import           Data.Bitree                     (Bitree(..),getRoot1,toTree)
-import           Data.BitreeZipper               (mkBitreeZipper)
+import           Data.BitreeZipper               (current,mkBitreeZipper)
 import           Data.Range                      (Range)
 import           NLP.Type.PennTreebankII         (PennTree,Lemma)
 import           NLP.Type.TagPos                 (TagPos(..),TokIdx(..))
 --
+import           NLP.Syntax.Format.Internal      (formatDP)
 import           NLP.Syntax.Noun                 (bareNounModifier)
+import           NLP.Syntax.Preposition          (identifyInternalTimePrep)
 import           NLP.Syntax.Type                 (MarkType(..))
-import           NLP.Syntax.Type.XBar            (Zipper,headX,mkOrdDP)
+import           NLP.Syntax.Type.XBar            (Zipper,getTokens,headX,mkOrdDP)
 import           NLP.Syntax.Util                 (mkBitreeICP)
 --
 import           Test.Tasty
@@ -88,7 +92,7 @@ testcases :: [TestBNM]
 testcases = [ test_bare_noun_modifier_1
             , test_bare_noun_modifier_2
             , test_bare_noun_modifier_3
-            , test_bare_noun_modifier_4            
+            , test_bare_noun_modifier_4
             ]
 
 
@@ -98,3 +102,26 @@ unitTests = testGroup "Bare Noun Modifier test" . flip map testcases $ \c ->
                 checkBNM c @? "error"
 
 
+
+test_internal_time ::  (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
+
+test_internal_time
+  = ( "Toyota Motor Corp on Monday"
+    , [(0,("Toyota","Toyota")),(1,("Motor","Motor")),(2,("Corp","Corp")),(3,("on","on")),(4,("Monday","Monday"))]
+    , PN "NP" [PN "NP" [PL ("NNP","Toyota"),PL ("NNP","Motor"),PL ("NNP","Corp")],PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Monday")]]]
+    , [TagPos (TokIdx 3, TokIdx 4, MarkTime)]
+    )
+
+
+testFunc t =
+  let lmas = t^._2
+      tr = t^._3
+      tagged = t^._4
+      lmap1 = IM.fromList (map (_2 %~ (^._1)) (t^._2))
+      lemmapt = mkBitreeICP lmap1 tr
+      z = getRoot1 $ mkBitreeZipper [] lemmapt
+      dp = mkOrdDP z
+      (dp',zs) = identifyInternalTimePrep tagged dp
+  in T.intercalate "\n" (map (getTokens.current) zs) <> "\n" <>
+     formatDP dp' <> "\n" <>
+     T.pack (show (dp'^.headX))

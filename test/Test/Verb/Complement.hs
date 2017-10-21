@@ -145,7 +145,7 @@ preposedTemporalAdjunct
     , ("Toyota Motor Corp", ["it would begin testing self-driving electric cars around 2020"], ["on Monday"])
     , [(0,("Toyota","Toyota")),(1,("Motor","Motor")),(2,("Corp","Corp")),(3,("on","on")),(4,("Monday","Monday")),(5,("say","said")),(6,("it","it")),(7,("would","would")),(8,("begin","begin")),(9,("test","testing")),(10,("self-driving","self-driving")),(11,("electric","electric")),(12,("car","cars")),(13,("around","around")),(14,("2020","2020")),(15,(".","."))]
     , PN "ROOT" [PN "S" [PN "NP" [PN "NP" [PL ("NNP","Toyota"),PL ("NNP","Motor"),PL ("NNP","Corp")],PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Monday")]]],PN "VP" [PL ("VBD","said"),PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","it")],PN "VP" [PL ("MD","would"),PN "VP" [PL ("VB","begin"),PN "S" [PN "VP" [PL ("VBG","testing"),PN "NP" [PL ("JJ","self-driving"),PL ("JJ","electric"),PL ("NNS","cars")],PN "PP" [PL ("IN","around"),PN "NP" [PL ("CD","2020")]]]]]]]]],PL (".",".")]]
-    , [TagPos (TokIdx 3, TokIdx 4, MarkTime)] 
+    , [TagPos (TokIdx 4, TokIdx 5, MarkTime)] 
     )
 
 
@@ -195,7 +195,7 @@ mainShow = do
 
 
 checkSubjCompAdjunct :: TestVerbComplement -> Bool
-checkSubjCompAdjunct c  = fromMaybe False $ do
+checkSubjCompAdjunct c = fromMaybe False $ do
   let vps = mkVPS (c^._4) (c^._5)
       clausetr = clauseStructure (c^._6) vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis (c^._6)) . identifyCPHierarchy (c^._6)) vps
@@ -216,7 +216,9 @@ checkSubjCompAdjunct c  = fromMaybe False $ do
       lst_comps_test = c^._3._2
       b_comps = getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst_comps lst_comps_test)) && (length lst_comps == length lst_comps_test)
       -- test adjuncts
-      b_adjuncts = True
+      lst_adjs = cp^..complement.complement.adjunct.traverse.to (getTokens.current)
+      lst_adjs_test = c^._3._3
+      b_adjuncts = lst_adjs == lst_adjs_test
   return (b_subj && b_comps && b_adjuncts)
 
 
@@ -230,7 +232,7 @@ testcases = [ -- main_finite_1
             -- , ditransitive_2
             , ditransitive_3
             -- , ditransitive_4
-            -- , preposedTemporalAdjunct
+            , preposedTemporalAdjunct
             ]
 
 unitTests :: TestTree

@@ -83,9 +83,9 @@ data SplitType = CLMod | BNMod | APMod
 
 
 data MaximalDP t = Intact { _original :: Zipper t }
-                 | Sep { _original :: Zipper t
-                       , _maximal :: Range
-                       }
+                 | Seperated { _original :: Zipper t
+                             , _maximal :: Range
+                             }
 
 original :: Simple Lens (MaximalDP t) (Zipper t)
 original = lens _original (\f a -> f { _original = a })
@@ -149,13 +149,13 @@ data CompVP t = CompVP_Unresolved (Zipper t)
 type instance Property   'X_V t = VerbProperty (Zipper t)
 type instance Maximal    'X_V t = Zipper t
 type instance Specifier  'X_V t = ()
-type instance Adjunct    'X_V t = ()
+type instance Adjunct    'X_V t = [Zipper t]
 type instance Complement 'X_V t = [TraceChain (CompVP t)]
 
 type VerbP = XP 'X_V
 
-mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [TraceChain (CompVP t)] -> VerbP t
-mkVerbP vp vprop comps = XP vprop vp () () comps
+mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [Zipper t] -> [TraceChain (CompVP t)] -> VerbP t
+mkVerbP vp vprop adjs comps = XP vprop vp () adjs comps
 
 type instance Property   'X_T t = ()
 type instance Maximal    'X_T t = Zipper t

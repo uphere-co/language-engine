@@ -37,7 +37,10 @@ import           NLP.Type.SyntaxProperty                (Voice(..))
 import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Noun                        (splitDP)
-import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTimePrep,isMatchedTime)
+import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTimePrep,isMatchedTime
+                                                        ,identifyInternalTimePrep
+                                                        ,mkPPFromZipper
+                                                        )
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -142,15 +145,20 @@ constructCP tagged vprop = do
     let comps = complementsOfVerb tagged vprop
         adjs  = allAdjunctCPOfVerb vprop
         comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
-        verbp = mkVerbP vp vprop comps
         nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
     case tptag' of
       N.CL s -> do
         cp' <- parent tp
         cptag' <- N.convert <$> getchunk cp'
-        let subj = identifySubject tagged s vp
-            subj_dps = maybeToList (subj ^? trResolved._Just)
-            dps = (subj_dps++comps_dps)
+        let subj0 = identifySubject tagged s vp
+            (subj,subj_dps,vadjs) = fromMaybe (subj0,[],[]) $ do
+              dp_subj <- subj0 ^? trResolved . _Just . _Right
+              let (dp_subj',vadjs) = identifyInternalTimePrep tagged dp_subj
+                  subj' = ((trResolved . _Just . _Right) .~ dp_subj') subj0
+              subj_dp <- subj' ^? trResolved . _Just
+              return (subj',[subj_dp],vadjs)
+        let verbp = mkVerbP vp vprop vadjs comps
+            dps = subj_dps ++ comps_dps
         case cptag' of
           N.CL N.SBAR ->
             let (cphead,cpspec) = case prev tp of
@@ -166,7 +174,8 @@ constructCP tagged vprop = do
           _      -> -- somewhat problematic case?
             return (mkCP C_PHI tp Nothing adjs (mkTP tp subj verbp),dps)
       _ -> -- reduced relative clause
-           return (mkCP C_PHI vp (Just SpecCP_WHPHI) adjs (mkTP vp nullsubj verbp),comps_dps)
+        let verbp = mkVerbP vp vprop [] comps
+        in return (mkCP C_PHI vp (Just SpecCP_WHPHI) adjs (mkTP vp nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -180,7 +189,7 @@ hierarchyBits (cp,zs) = do
   let rng = cpRange cp
   let cpbit = (rng,(rng,CPCase cp))
 
-  let f z = let rng' = z^.headX._1 {- maximalProjection.to current.to getRange -}
+  let f z = let rng' = z^.headX._1
             in (rng',(rng',DPCase z))
   return (cpbit:map f zs)
 
@@ -209,7 +218,7 @@ rewriteX'TreeForModifier :: ((Range, CPDP as) -> (Range, CPDP as))
              -> DetP as
              -> MaybeT (State (X'Tree as)) ()
 rewriteX'TreeForModifier f w z = do
-  let dprng = z^.headX._1 -- maximalProjection.to current.to getRange
+  let dprng = z^.headX._1
       -- rewrite X'Tree by modifier relation.
   case extractZipperById dprng (toBitree w) of
     Nothing -> do let newtr (PN y ys) = PN (dprng,DPCase z) [PN (f y) ys]
@@ -482,14 +491,21 @@ rewriteTree action xtr = execState (go rng0) xtr
 
 
 
-predicateArgWS :: CP xs
+predicateArgWS :: CP (Lemma ': as)
                -> ClauseTreeZipper
-               -> PredArgWorkspace xs (Either (Range,STag) (Int,POSTag))
-predicateArgWS cp z =
+               -> [Zipper (Lemma ': as)]
+               -> PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag))
+predicateArgWS cp z adjs =
   PAWS { _pa_CP = cp
        , _pa_candidate_args = case child1 z of
                                 Nothing -> []
                                 Just z' -> map extractArg (z':iterateMaybe next z')
+                              ++ let f z = flip fmap (mkPPFromZipper PC_Time z) $ \pp ->
+                                             let prep = fromMaybe "" (pp^?headX._1._Prep_WORD)
+                                                 rng = pp ^. maximalProjection.to (getRange.current)
+                                             in Left (rng,S_PP prep PC_Time False)
+                                 in mapMaybe f adjs
+
        }
   where extractArg x = case getRoot (current x) of
                          Left (rng,(stag,_))         -> Left  (rng,stag)
@@ -507,12 +523,12 @@ findPAWS :: [TagPos TokIdx MarkType]
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
          -> [X'Tree (Lemma ': as)]
          -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
-findPAWS tagged tr vp cpstr = do
+findPAWS tagged tr vp x'tr = do
   cp <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
+                                           -- anyway need to be rewritten.
   let rng = cpRange cp
-  cp' <- (^? _CPCase) . currentCPDP =<< ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
-  predicateArgWS cp' <$> findVerb (vp^.vp_index) tr
-
+  cp' <- (^? _CPCase) . currentCPDP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
+  predicateArgWS cp' <$> findVerb (vp^.vp_index) tr <*> pure (cp' ^. complement.complement.adjunct)
 
 
 ---------
