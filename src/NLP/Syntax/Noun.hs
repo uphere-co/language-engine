@@ -72,16 +72,6 @@ splitParentheticalModifier z = do
    (guard (isChunkAs SBAR (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z)))
 
 
--- | This function is very ad hoc. Later we should have PP according to X-bar theory
---
-splitPP :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> DetP (Lemma ': as)
-splitPP tagged z = fromMaybe (mkOrdDP z) $ do
-  guard (isChunkAs PP (current z))
-  p <- child1 z
-  guard (isPOSAs TO (current p) || isPOSAs IN (current p))
-  dp <- next p
-  return (splitDP tagged dp)
-
 
 -- | starting with capital letter
 --

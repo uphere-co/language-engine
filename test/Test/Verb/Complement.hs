@@ -230,7 +230,7 @@ testcases = [ -- main_finite_1
             -- , ditransitive_2
             , ditransitive_3
             -- , ditransitive_4
-            , preposedTemporalAdjunct
+            -- , preposedTemporalAdjunct
             ]
 
 unitTests :: TestTree
