@@ -83,9 +83,9 @@ data SplitType = CLMod | BNMod | APMod
 
 
 data MaximalDP t = Intact { _original :: Zipper t }
-                 | Sep { _original :: Zipper t
-                       , _maximal :: Range
-                       }
+                 | Seperated { _original :: Zipper t
+                             , _maximal :: Range
+                             }
 
 original :: Simple Lens (MaximalDP t) (Zipper t)
 original = lens _original (\f a -> f { _original = a })

@@ -5,8 +5,11 @@
 
 module NLP.Syntax.Util where
 
-import           Control.Lens                      ((%~))
+import           Control.Lens                      ((^?),(%~),to)
+import           Control.Monad                     (guard)
+import           Data.Bifoldable                   (bifoldMap)
 import           Data.IntMap                       (IntMap)
+import           Data.Monoid                       (First(..))
 --
 import           CoreNLP.Simple.Convert            (lemmatize)
 import           Data.Attribute
@@ -15,7 +18,7 @@ import           Data.BitreeZipper
 import           Data.ListZipper
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                   (TokIdx,BeginEnd)
-import           NLP.Type.TagPos                   
+import           NLP.Type.TagPos
 --
 import           NLP.Syntax.Type.XBar
 
@@ -29,13 +32,13 @@ instance GetIntLemma (Lemma ': as) where
   intLemma c = do
     i <- getLeafIndex (current c)
     l <- ahead . getAnnot <$> getLeaf (current c)
-    return (i,l)                                  
+    return (i,l)
 
   intLemma0 :: BitreeICP (Lemma ': as) -> Maybe (Int,Lemma)
   intLemma0 c = do
     i <- getLeafIndex c
     l <- ahead . getAnnot <$> getLeaf c
-    return (i,l)                                  
+    return (i,l)
 
 
 
@@ -89,6 +92,16 @@ mkBitreeICP lemmamap = lemmatize lemmamap . mkAnnotatable . mkPennTreeIdx
 
 beginEndToRange :: BeginEnd TokIdx -> Range
 beginEndToRange (TokIdx b,TokIdx e) = (b,e-1)
+
+
+findZipperForRangeICP :: Range -> BitreeICP a -> Maybe (Zipper a)
+findZipperForRangeICP rng tr = getFirst (bifoldMap check check (mkBitreeZipper [] tr))
+  where check z = First $ do
+                    rng' <-  z ^? to current . to getRange
+                    guard (rng' == rng)
+                    return z
+
+
 
 
 mergeLeftELZ :: Either (ListZipper a) [a] -> Either (ListZipper a) [a] -> Either (ListZipper a) [a]
