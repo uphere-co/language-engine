@@ -122,4 +122,6 @@ testFunc t =
       z = getRoot1 $ mkBitreeZipper [] lemmapt
       dp = mkOrdDP z
       (dp',zs) = identifyInternalTimePrep tagged dp
-  in T.intercalate "\n" (map (getTokens.current) zs) <> "\n" <> formatDP dp'
+  in T.intercalate "\n" (map (getTokens.current) zs) <> "\n" <>
+     formatDP dp' <> "\n" <>
+     T.pack (show (dp'^.headX))

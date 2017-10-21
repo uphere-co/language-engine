@@ -89,13 +89,14 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   let z_dp = dp^.maximalProjection.original
       rng_dp@(b_dp,e_dp) = dp^.headX._1
   TagPos (b0,e0,_) <- find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) tagged
-  let (b,e) = beginEndToRange (b0,e0)
-  z_tdp <- findZipperForRangeICP (b,e) (current z_dp)
+  let rng_time = beginEndToRange (b0,e0)
+  z_tdp <- findZipperForRangeICP rng_time (current z_dp)
   z_tpp <- parent z_tdp
   guard (isChunkAs PP (current z_tpp))
-  let rng_dp' = (b_dp,b-1)
+  let rng_tpp@(b_tpp,e_tpp) = getRange (current z_tpp)
+      rng_dp' = (b_dp,b_tpp-1)
       rng_head = let (b_h,e_h) = dp^.headX._2
-                 in if e_h > b-1 then (b_h,b-1) else (b_h,e_h)
+                 in if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
   let dp' = dp & (headX .~ (rng_dp',rng_head))
                . (maximalProjection .~ Seperated z_dp rng_dp')
       -- pp' = mkPP ( ,PC_Time)
