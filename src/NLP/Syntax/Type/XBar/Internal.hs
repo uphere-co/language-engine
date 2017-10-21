@@ -9,6 +9,7 @@
 
 module NLP.Syntax.Type.XBar.Internal where
 
+import           Control.Lens
 import           Data.Text                   (Text)
 --
 import           Data.Bitree
@@ -81,17 +82,40 @@ data SplitType = CLMod | BNMod | APMod
 
 
 
+data MaximalDP t = Intact { _original :: Zipper t }
+                 | Sep { _original :: Zipper t
+                       , _maximal :: Range
+                       }
+
+original :: Simple Lens (MaximalDP t) (Zipper t)
+original = lens _original (\f a -> f { _original = a })
+
 --
 -- this definition is not truly X-bar-theoretic, but for the time being
 --
 type instance Property   'X_D t = (Range,Range)   -- (original,head)
-type instance Maximal    'X_D t = Zipper t
+type instance Maximal    'X_D t = MaximalDP t -- Either Range (Zipper t)
 type instance Specifier  'X_D t = ()
 type instance Adjunct    'X_D t = Maybe Range
 type instance Complement 'X_D t = Maybe Range
 
 type DetP = XP 'X_D
 
+--
+-- | These functions, mkOrdDP and mkSplittedDP, should be rewritten in a
+--   better representation.
+--
+mkOrdDP :: Zipper a -> DetP a
+mkOrdDP z = XP (rf z,rf z) (Intact z) () Nothing Nothing
+  where rf = getRange . current
+
+
+mkSplittedDP :: SplitType -> Range -> Range -> Zipper a -> DetP a
+mkSplittedDP typ h m o = case typ of
+                           CLMod -> XP (rf o,h) (Intact o) () Nothing  (Just m)
+                           BNMod -> XP (rf o,h) (Intact o) () (Just m) Nothing
+                           APMod -> XP (rf o,h) (Intact o) () (Just m) Nothing  -- apposition is an adjunct.
+  where rf = getRange . current
 
 
 data Prep = Prep_NULL
@@ -111,6 +135,8 @@ type instance Adjunct    'X_P t = ()
 type instance Complement 'X_P t = DetP t
 
 type PP = XP 'X_P
+
+mkPP (prep,pclass) z dp = XP (prep,pclass) z () () dp 
 
 
 data CompVP t = CompVP_Unresolved (Zipper t)

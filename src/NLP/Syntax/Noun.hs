@@ -20,22 +20,9 @@ import           NLP.Type.TagPos          (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,XP(..),maximalProjection
-                                          ,tokensByRange
+                                          ,tokensByRange,mkOrdDP,mkSplittedDP,original
                                           )
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
-
-
-mkOrdDP :: Zipper a -> DetP a
-mkOrdDP z = XP (rf z,rf z) z () Nothing Nothing
-  where rf = getRange . current
-
-
-mkSplittedDP :: SplitType -> Range -> Range -> Zipper a -> DetP a
-mkSplittedDP typ h m o = case typ of
-                           CLMod -> XP (rf o,h) o () Nothing  (Just m)
-                           BNMod -> XP (rf o,h) o () (Just m) Nothing
-                           APMod -> XP (rf o,h) o () (Just m) Nothing  -- apposition is an adjunct.
-  where rf = getRange . current
 
 
 splitDP :: [TagPos TokIdx MarkType]
@@ -72,16 +59,6 @@ splitParentheticalModifier z = do
    (guard (isChunkAs SBAR (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z)))
 
 
--- | This function is very ad hoc. Later we should have PP according to X-bar theory
---
-splitPP :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> DetP (Lemma ': as)
-splitPP tagged z = fromMaybe (mkOrdDP z) $ do
-  guard (isChunkAs PP (current z))
-  p <- child1 z
-  guard (isPOSAs TO (current p) || isPOSAs IN (current p))
-  dp <- next p
-  return (splitDP tagged dp)
-
 
 -- | starting with capital letter
 --
@@ -98,7 +75,7 @@ bareNounModifier :: [TagPos TokIdx MarkType]
                  -> DetP (Lemma ': as)
                  -> DetP (Lemma ': as)
 bareNounModifier tagged x = fromMaybe x $ do
-  let z = x^.maximalProjection
+  let z = x^.maximalProjection.original
   guard (isChunkAs NP (current z))
   let rng@(b0,_e0) = getRange (current z)
   -- check entity for the last words

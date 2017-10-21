@@ -12,7 +12,7 @@ module NLP.Syntax.Type.XBar
 , compVPToRange
 ) where
 
-import           Control.Lens                       ((^.),(^?),_1,_2,_Just,to)
+import           Control.Lens                       ((^.),(^..),(^?),_1,_2,_Just,_Right,to)
 import           Data.Foldable                      (toList)
 import           Data.Maybe                         (fromMaybe)
 import           Data.Text                          (Text)
@@ -40,7 +40,9 @@ headRange x = x^.headX._2
 
 
 headText :: DetP t -> Text
-headText x = (T.intercalate " " . tokensByRange (headRange x) . current) (x^.maximalProjection)
+headText x = (x^.maximalProjection.original.to (T.intercalate " " . tokensByRange (headRange x) . current))
+
+-- (x^.maximalProjection)
 
 
 compVPToEither :: CompVP t -> Either (Zipper t) (DetP t)
@@ -61,4 +63,6 @@ compVPToHeadText (CompVP_PP z)         = headText (z^.complement)
 
 
 compVPToRange :: CompVP as -> Range
-compVPToRange = either (getRange.current) (\dp->dp^.maximalProjection.to (getRange.current)) . compVPToEither 
+compVPToRange = either (getRange.current) (\dp->dp^.headX._1) . compVPToEither
+
+--  (\dp->dp^.maximalProjection.to (getRange.current)) . compVPToEither 
