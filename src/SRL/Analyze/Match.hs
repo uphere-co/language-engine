@@ -25,18 +25,18 @@ import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
 import           Data.Bitree                  (getNodes,getRoot,getRoot1,_PN)
-import           Data.BitreeZipper            (current,mkBitreeZipper,root)
+import           Data.BitreeZipper            (child1,current,mkBitreeZipper,next,root)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,findPAWS)
 import           NLP.Syntax.Format            (formatCP,formatDP)
-import           NLP.Syntax.Noun              (splitPP)
+import           NLP.Syntax.Noun              (mkOrdDP,splitDP)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util              (isLemmaAs,intLemma0)
+import           NLP.Syntax.Util              (isLemmaAs,intLemma0,isChunkAs,isPOSAs)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 import           NLP.Type.TagPos              (TagPos,TokIdx)
@@ -57,6 +57,19 @@ import Debug.Trace
 
 import Text.Printf
 import Data.List (intercalate)
+
+--
+-- | This function is very ad hoc. Later we should have PP according to X-bar theory
+--   (We should get rid of this function soon.)
+--
+splitPP :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> DetP (Lemma ': as)
+splitPP tagged z = fromMaybe (mkOrdDP z) $ do
+  guard (isChunkAs PP (current z))
+  p <- child1 z
+  guard (isPOSAs TO (current p) || isPOSAs IN (current p))
+  dp <- next p
+  return (splitDP tagged dp)
+
 
 
 mkPAWSTriples :: SentStructure

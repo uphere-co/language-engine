@@ -79,3 +79,5 @@ Defense and aerospace company Lockheed Martin Corp. said Thursday its board of d
 -- | named entity outside
 St. Louis Fed President James Bullard told Business Insider that there was "no hurry to raise rates" with inflation below target.
 
+
+Toyota said it would begin testing self-driving electric cars around 2020, which will use artificial intelligence to engage with drivers.
