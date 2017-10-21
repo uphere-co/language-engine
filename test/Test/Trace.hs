@@ -175,18 +175,18 @@ test_free_relative_clause_object_2 =
 
 
 formatDetail :: TestTrace -> [Text]
-formatDetail (_txt,_,_,lma,pt,tmxs) =
+formatDetail (_txt,_,_,lma,pt,tagged) =
   let vps  = mkVPS lma pt
-      clausetr = clauseStructure tmxs vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
-      cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tmxs) . identifyCPHierarchy tmxs) vps
+      clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
+      x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
 
   in
   [ "===================================================================================================================="
   , (T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList) pt
   , "--------------------------------------------------------------------------------------------------------------------"
   ]
-  ++ map formatX'Tree cpstr
-  ++ map (formatVPwithPAWS tmxs clausetr cpstr) vps
+  ++ map formatX'Tree x'tr
+  ++ map (formatVPwithPAWS tagged clausetr x'tr) vps
   ++
   [ "--------------------------------------------------------------------------------------------------------------------"
   , prettyPrint 0 pt
@@ -231,7 +231,7 @@ checkTrace c =
         cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis (c^._6)) . identifyCPHierarchy (c^._6)) vps
 
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-    paws <- findPAWS [] clausetr vp cpstr
+    paws <- findPAWS (c^._6) clausetr vp cpstr
     let cp = paws^.pa_CP
     case c^._3._1 of
       Subj   -> let dp = fmap (either (const "") headText) (cp ^.complement.specifier)  -- for the time being. ignore CP subject
