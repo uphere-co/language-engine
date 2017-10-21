@@ -64,8 +64,8 @@ checkTimePrep tagged pp =
 
 identifyInternalTimePrep :: [TagPos TokIdx MarkType]
                          -> DetP t
-                         -> Maybe (DetP t, Zipper t)
-identifyInternalTimePrep tagged dp = do
+                         -> (DetP t,[Zipper t])
+identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   let z_dp = dp^.maximalProjection.original
       rng_dp@(b_dp,e_dp) = dp^.headX._1
   TagPos (b0,e0,_) <- find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) tagged
@@ -78,4 +78,5 @@ identifyInternalTimePrep tagged dp = do
                  in if e_h > b-1 then (b_h,b-1) else (b_h,e_h)
   let dp' = dp & (headX .~ (rng_dp',rng_head))
                . (maximalProjection .~ Seperated z_dp rng_dp')
-  return (dp',z_tpp)
+      -- pp' = mkPP ( ,PC_Time)
+  return (dp',[z_tpp])

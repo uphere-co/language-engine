@@ -121,7 +121,5 @@ testFunc t =
       lemmapt = mkBitreeICP lmap1 tr
       z = getRoot1 $ mkBitreeZipper [] lemmapt
       dp = mkOrdDP z
-      mresult = identifyInternalTimePrep tagged dp
-  in case mresult of
-       Nothing -> "nothing"
-       Just (dp',z') -> (getTokens.current) z' <> "\n" <> formatDP dp'
+      (dp',zs) = identifyInternalTimePrep tagged dp
+  in T.intercalate "\n" (map (getTokens.current) zs) <> "\n" <> formatDP dp'

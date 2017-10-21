@@ -216,7 +216,9 @@ checkSubjCompAdjunct c  = fromMaybe False $ do
       lst_comps_test = c^._3._2
       b_comps = getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst_comps lst_comps_test)) && (length lst_comps == length lst_comps_test)
       -- test adjuncts
-      b_adjuncts = True
+      lst_adjs = cp^..complement.complement.adjunct.traverse.to (getTokens.current)
+      lst_adjs_test = c^._3._3
+      b_adjuncts = lst_adjs == lst_adjs_test
   return (b_subj && b_comps && b_adjuncts)
 
 
@@ -230,7 +232,7 @@ testcases = [ -- main_finite_1
             -- , ditransitive_2
             , ditransitive_3
             -- , ditransitive_4
-            -- , preposedTemporalAdjunct
+            , preposedTemporalAdjunct
             ]
 
 unitTests :: TestTree
