@@ -11,6 +11,8 @@ makeLenses ''XP
 
 makeLenses ''TraceChain
 
+makePrisms ''MaximalDP
+
 makePrisms ''Prep
 
 makePrisms ''PrepClass

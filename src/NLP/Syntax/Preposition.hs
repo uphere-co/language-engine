@@ -17,7 +17,9 @@ import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
 import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP,XP(..)
-                                         ,complement,headX,maximalProjection)
+                                         ,complement,headX,maximalProjection
+                                         ,original,mkPP
+                                         )
 
 
 hasEmptyPreposition :: Zipper as -> Bool
@@ -37,21 +39,21 @@ isMatchedTime rng (TagPos (b,e,t)) = beginEndToRange (b,e) == rng && t == MarkTi
 
 checkEmptyPrep :: [TagPos TokIdx MarkType] -> DetP t -> CompVP t
 checkEmptyPrep tagged dp =
-  let z = dp^.maximalProjection
+  let z = dp^.maximalProjection.original
       r = fromMaybe False $ do
             let rng = getRange (current z)
             -- check bare noun adverb
             find (isMatchedTime rng) tagged
             return (hasEmptyPreposition z)
   in if r
-     then CompVP_PP (XP (Prep_NULL,PC_Time) (dp^.maximalProjection) () () dp)
+     then CompVP_PP (mkPP (Prep_NULL,PC_Time) z dp)
      else CompVP_DP dp
 
 
 checkTimePrep :: [TagPos TokIdx MarkType] -> PP t -> CompVP t
 checkTimePrep tagged pp =
   let dp = pp^.complement
-      z = dp^.maximalProjection
+      z = dp^.maximalProjection.original
       (prep,pclass) = pp^.headX
       r = fromMaybe False $ do
             let rng = getRange (current z)

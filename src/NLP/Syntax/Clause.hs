@@ -180,7 +180,8 @@ hierarchyBits (cp,zs) = do
   let rng = cpRange cp
   let cpbit = (rng,(rng,CPCase cp))
 
-  let f z = let rng' = z^.maximalProjection.to current.to getRange in (rng',(rng',DPCase z))
+  let f z = let rng' = z^.headX._1 {- maximalProjection.to current.to getRange -}
+            in (rng',(rng',DPCase z))
   return (cpbit:map f zs)
 
 
@@ -208,7 +209,7 @@ rewriteX'TreeForModifier :: ((Range, CPDP as) -> (Range, CPDP as))
              -> DetP as
              -> MaybeT (State (X'Tree as)) ()
 rewriteX'TreeForModifier f w z = do
-  let dprng = z ^. maximalProjection.to current.to getRange
+  let dprng = z^.headX._1 -- maximalProjection.to current.to getRange
       -- rewrite X'Tree by modifier relation.
   case extractZipperById dprng (toBitree w) of
     Nothing -> do let newtr (PN y ys) = PN (dprng,DPCase z) [PN (f y) ys]

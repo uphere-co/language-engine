@@ -17,9 +17,9 @@ import           Data.Range                      (Range)
 import           NLP.Type.PennTreebankII         (PennTree,Lemma)
 import           NLP.Type.TagPos                 (TagPos(..),TokIdx(..))
 --
-import           NLP.Syntax.Noun                 (bareNounModifier,mkOrdDP)
+import           NLP.Syntax.Noun                 (bareNounModifier)
 import           NLP.Syntax.Type                 (MarkType(..))
-import           NLP.Syntax.Type.XBar            (Zipper,headX)
+import           NLP.Syntax.Type.XBar            (Zipper,headX,mkOrdDP)
 import           NLP.Syntax.Util                 (mkBitreeICP)
 --
 import           Test.Tasty
