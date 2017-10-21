@@ -38,7 +38,9 @@ import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Noun                        (splitDP)
 import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTimePrep,isMatchedTime
-                                                        ,identifyInternalTimePrep)
+                                                        ,identifyInternalTimePrep
+                                                        ,mkPPFromZipper
+                                                        )
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -489,14 +491,21 @@ rewriteTree action xtr = execState (go rng0) xtr
 
 
 
-predicateArgWS :: CP xs
+predicateArgWS :: CP (Lemma ': as)
                -> ClauseTreeZipper
-               -> PredArgWorkspace xs (Either (Range,STag) (Int,POSTag))
-predicateArgWS cp z =
+               -> [Zipper (Lemma ': as)]
+               -> PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag))
+predicateArgWS cp z adjs =
   PAWS { _pa_CP = cp
        , _pa_candidate_args = case child1 z of
                                 Nothing -> []
                                 Just z' -> map extractArg (z':iterateMaybe next z')
+                              ++ let f z = flip fmap (mkPPFromZipper PC_Time z) $ \pp ->
+                                             let prep = fromMaybe "" (pp^?headX._1._Prep_WORD)
+                                                 rng = pp ^. maximalProjection.to (getRange.current)
+                                             in Left (rng,S_PP prep PC_Time False)
+                                 in mapMaybe f adjs
+
        }
   where extractArg x = case getRoot (current x) of
                          Left (rng,(stag,_))         -> Left  (rng,stag)
@@ -514,12 +523,12 @@ findPAWS :: [TagPos TokIdx MarkType]
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
          -> [X'Tree (Lemma ': as)]
          -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
-findPAWS tagged tr vp cpstr = do
+findPAWS tagged tr vp x'tr = do
   cp <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
+                                           -- anyway need to be rewritten.
   let rng = cpRange cp
-  cp' <- (^? _CPCase) . currentCPDP =<< ((getFirst . foldMap (First . extractZipperById rng)) cpstr)
-  predicateArgWS cp' <$> findVerb (vp^.vp_index) tr
-
+  cp' <- (^? _CPCase) . currentCPDP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
+  predicateArgWS cp' <$> findVerb (vp^.vp_index) tr <*> pure (cp' ^. complement.complement.adjunct)
 
 
 ---------
