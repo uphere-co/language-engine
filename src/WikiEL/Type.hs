@@ -1,12 +1,19 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module WikiEL.Type where
 
+import           Control.Lens         (makePrisms)
 import           Data.Aeson
-import           Data.Text      (Text)
-import qualified Data.Text as T
-import           GHC.Generics   (Generic)
+import           Data.Text            (Text)
+import qualified Data.Text    as T
+import           Data.Vector          (Vector)
+import           GHC.Generics         (Generic)
+--
+import           NLP.Type.NamedEntity (NamedEntityClass)
+--
+import           WikiEL.Type.Wikidata (ItemID)
 
 data EntityToken = EntityToken { word :: Text
                                , tag  :: Text
@@ -33,3 +40,52 @@ parseNERToken tokenStr = (\(x,y)-> EntityToken (T.dropEnd 1 x) y) $ T.breakOnEnd
 
 parseNEROutputStr :: Text -> [EntityToken]
 parseNEROutputStr str = map parseNERToken (T.words str)
+
+data PreNE = UnresolvedUID NamedEntityClass             -- Tagged by CoreNLP NER, but no matched Wikidata UID                
+           | AmbiguousUID ([ItemID],NamedEntityClass)   -- Tagged by CoreNLP NER, and matched Wikidata UIDs of the NamedEntityClass                                                                                                                      
+           | Resolved (ItemID, WEC.ItemClass)  -- A wikidata UID of a CoreNLP NER Class type.                                
+           | UnresolvedClass [ItemID]          -- Not tagged by CoreNLP NER, but matched Wikidata UID(s)                     
+           deriving(Show, Eq, Generic)
+
+makePrisms ''PreNE
+
+instance ToJSON PreNE where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON PreNE where
+  parseJSON = genericParseJSON defaultOptions
+
+
+newtype EntityMentionUID = EntityMentionUID { _emuid :: Int} deriving (Generic)
+
+instance Show EntityMentionUID where
+  show (EntityMentionUID uid) = "EMuid " ++ show uid
+
+{-|
+  Self - entity mention; e.g. Michael Jordan
+  Cite - a reference to an entity mention; e.g. Jordan
+-}
+data UIDCite uid info = Cite { _uid  :: uid
+                             , _ref  :: uid
+                             , _info :: info} 
+                      | Self { _uid  :: uid
+                             , _info :: info}
+                      deriving(Eq,Generic)
+
+makePrisms ''UIDCite
+
+-- w : type of word token
+type EMInfo w = (IRange, Vector w, PreNE)
+type EntityMention w = UIDCite EntityMentionUID (EMInfo w)
+
+instance ToJSON EntityMentionUID where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON EntityMentionUID where
+  parseJSON = genericParseJSON defaultOptions
+
+instance ToJSON (EntityMention Text) where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON (EntityMention Text) where
+  parseJSON = genericParseJSON defaultOptions

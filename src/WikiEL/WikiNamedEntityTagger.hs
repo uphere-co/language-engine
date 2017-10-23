@@ -71,21 +71,6 @@ getStanfordNEs = dropNonNE . partitonFrags
   where
     dropNonNE = filter (\x-> snd x /= Other)
 
-
-data PreNE = UnresolvedUID NamedEntityClass             -- Tagged by CoreNLP NER, but no matched Wikidata UID
-           | AmbiguousUID ([ItemID],NamedEntityClass)   -- Tagged by CoreNLP NER, and matched Wikidata UIDs of the NamedEntityClass
-           | Resolved (ItemID, WEC.ItemClass)  -- A wikidata UID of a CoreNLP NER Class type.
-           | UnresolvedClass [ItemID]          -- Not tagged by CoreNLP NER, but matched Wikidata UID(s)
-           deriving(Show, Eq, Generic)
-
-makePrisms ''PreNE
-
-instance ToJSON PreNE where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON PreNE where
-  parseJSON = genericParseJSON defaultOptions
-
 uidCandidates :: PreNE -> [ItemID]
 uidCandidates (UnresolvedUID _)      = []
 uidCandidates (AmbiguousUID (ids,_)) = ids

@@ -27,42 +27,6 @@ mayRefer src target = (N._type src == N._type target) && T.isInfixOf (N._str src
 
 canRefer :: OrderedNamedEntity -> OrderedNamedEntity -> Bool
 canRefer src target = (N._order src > N._order target) && mayRefer (N._entity src) (N._entity target)
-
-
-newtype EntityMentionUID = EntityMentionUID { _emuid :: Int} deriving (Generic)
-
-instance Show EntityMentionUID where
-  show (EntityMentionUID uid) = "EMuid " ++ show uid
-
-{-|
-  Self - entity mention; e.g. Michael Jordan
-  Cite - a reference to an entity mention; e.g. Jordan
--}
-data UIDCite uid info = Cite { _uid  :: uid
-                             , _ref  :: uid
-                             , _info :: info} 
-                      | Self { _uid  :: uid
-                             , _info :: info}
-                      deriving(Eq,Generic)
-
-makePrisms ''UIDCite
-
--- w : type of word token
-type EMInfo w = (IRange, Vector w, PreNE)
-type EntityMention w = UIDCite EntityMentionUID (EMInfo w)
-
-instance ToJSON EntityMentionUID where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON EntityMentionUID where
-  parseJSON = genericParseJSON defaultOptions
-
-instance ToJSON (EntityMention Text) where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON (EntityMention Text) where
-  parseJSON = genericParseJSON defaultOptions
-
   
 entityName :: EMInfo Text -> Text
 entityName (_, ws, _) = T.intercalate " " (toList ws)
