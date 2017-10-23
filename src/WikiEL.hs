@@ -30,11 +30,10 @@ import qualified Graph.Internal.Hash                as H
 import           NLP.Type.PennTreebankII                      (POSTag(..))
 import           NLP.Type.NamedEntity                         (NamedEntityClass,NamedEntityFrag(..))
 --
-import           WikiEL.Type                                  (NodeNames(..),EntityMention,ItemClass,NameUIDTable,SortedGraph(..))
+import           WikiEL.Type                                  (NodeNames(..),EntityMention,ItemClass,NameUIDTable,SortedGraph(..),WikiuidNETag)
 import           WikiEL.Type.Wikidata                         (ItemID)
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,namedEntityAnnotator)
 import           WikiEL.WikiEntityTagger                      (loadWETagger)
-import           WikiEL.WikiEntityClass                       (WikiuidNETag)
 import           WikiEL.EntityLinking                         (entityLinkings,buildEntityMentions)
 import qualified WikiEL.WikiEntityTagger            as WET
 import qualified WikiEL.EntityLinking               as EL

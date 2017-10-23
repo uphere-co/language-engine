@@ -18,7 +18,7 @@ import           GHC.Generics                          (Generic)
 
 import           NLP.Type.NamedEntity                  (NamedEntityClass)
 import qualified NLP.Type.NamedEntity          as N
-import           WikiEL.Type                           (ItemClass(..))
+import           WikiEL.Type                           (ItemClass(..),WikiuidNETag(..))
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           WikiEL.Type.FileFormat
 import           WikiEL.ETL.LoadData
@@ -69,9 +69,6 @@ loadTypedUIDs (tag, fileName) = do
   let 
     uids = map (\x -> (x, tag)) items
   return uids
-
-data WikiuidNETag = WikiuidNETag { _set :: S.Set (ItemID, ItemClass)}
-                   deriving (Show)
 
 loadFiles :: [(ItemClass, ItemIDFile)] -> IO WikiuidNETag
 loadFiles pairs = do

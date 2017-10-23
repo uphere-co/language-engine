@@ -21,7 +21,8 @@ import qualified Data.Text                     as T
 import           GHC.Generics                          (Generic)
 
 import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
-import           WikiEL.Type                           (EntityToken(..),IRange(..),NameUIDTable,PreNE(..),RelativePosition(..)
+import           WikiEL.Type                           (EntityToken(..),IRange(..),NameUIDTable
+                                                       ,PreNE(..),RelativePosition(..),WikiuidNETag
                                                        ,parseNEROutputStr)
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           WikiEL.Misc                           (relativePos, untilNoOverlap)
@@ -87,7 +88,7 @@ resolvedUID (UnresolvedUID _) = Left "Unresolved ItemID"
 resolvedUID (AmbiguousUID _)  = Left "Ambiguous ItemID"
 resolvedUID (UnresolvedClass _) = Left "Unresolved named entity class"
 
-resolveNEClass :: WEC.WikiuidNETag -> NamedEntityClass -> Vector ItemID -> PreNE
+resolveNEClass :: WikiuidNETag -> NamedEntityClass -> Vector ItemID -> PreNE
 resolveNEClass ts stag xs = g matchedUIDs
   where
     u = WEC.guessItemClass2 ts stag
@@ -98,7 +99,7 @@ resolveNEClass ts stag xs = g matchedUIDs
     g []    = UnresolvedUID stag
     g uids  = AmbiguousUID (uids, stag)
 
-resolveNEsImpl :: WEC.WikiuidNETag -> [(IRange,PreNE)] -> [(IRange, NamedEntityClass)] -> [(IRange, Vector ItemID)] -> [(IRange,PreNE)]
+resolveNEsImpl :: WikiuidNETag -> [(IRange,PreNE)] -> [(IRange, NamedEntityClass)] -> [(IRange, Vector ItemID)] -> [(IRange,PreNE)]
 resolveNEsImpl ts accum [] [] = accum
 resolveNEsImpl ts accum lhss@((lrange,ltag):ls) []  =
   resolveNEsImpl ts ((lrange, UnresolvedUID ltag) : accum) ls []
@@ -122,7 +123,7 @@ resolveNEsImpl ts accum lhss@((lrange,ltag):ls) rhss@((rrange,rtags):rs) =
 
 
 
-resolveNEs :: WEC.WikiuidNETag -> [(IRange, NamedEntityClass)] -> [(IRange, Vector ItemID)] -> [(IRange,PreNE)]
+resolveNEs :: WikiuidNETag -> [(IRange, NamedEntityClass)] -> [(IRange, Vector ItemID)] -> [(IRange,PreNE)]
 resolveNEs ts lhss rhss = map (second assumeCorrectAnnotation) xs
   where
     xs = reverse (resolveNEsImpl ts [] lhss rhss)

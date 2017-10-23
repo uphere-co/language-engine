@@ -10,7 +10,8 @@ import qualified Data.Map                      as M
 import qualified Data.Vector.Unboxed           as UV
 
 import           WikiEL.Type                                  (EntityMention,PreNE(..)
-                                                              ,SortedEdges(..),SortedGraph(..),NodeNames(..),UIDCite(..))
+                                                              ,SortedEdges(..),SortedGraph(..),NodeNames(..)
+                                                              ,UIDCite(..),WikiuidNETag)
 import           WikiEL.Type.Wikidata                         (ItemID)
 import qualified NLP.Type.NamedEntity          as NE
 import qualified Graph                         as G
@@ -89,7 +90,7 @@ Output : disambiguated entity mentions.
 -}
 
 type NameMappings = (M.Map ItemID Text, M.Map Text ItemID)
-tryDisambiguate :: WEC.WikiuidNETag -> NameMappings -> ([Text] -> [Text] -> Maybe (a,Text,Text)) -> [EntityMention b] -> [EntityMention b]
+tryDisambiguate :: WikiuidNETag -> NameMappings -> ([Text] -> [Text] -> Maybe (a,Text,Text)) -> [EntityMention b] -> [EntityMention b]
 tryDisambiguate uidNEtags (i2t,t2i) fTD mentions = map (updateNE f) mentions
   where
     refs = concatMap (toWikipages i2t) (filter EL.hasResolvedUID mentions)

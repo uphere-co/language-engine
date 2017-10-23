@@ -8,6 +8,7 @@ module WikiEL.Type where
 import           Control.Lens         (makePrisms)
 import           Data.Aeson
 import qualified Data.Map                      as M
+import qualified Data.Set     as S
 import           Data.Text            (Text)
 import qualified Data.Text    as T
 import           Data.Vector          (Vector)
@@ -121,3 +122,6 @@ data NameUIDTable = NameUIDTable { _uids :: Vector ItemID
 type SortedEdges = (G.Direction, UV.Vector (H.WordHash, H.WordHash))
 type NodeNames   = M.Map H.WordHash G.E.BString
 data SortedGraph = SortedGraph SortedEdges NodeNames
+
+data WikiuidNETag = WikiuidNETag { _set :: S.Set (ItemID, ItemClass)}
+                   deriving (Show)
