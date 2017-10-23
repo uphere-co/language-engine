@@ -21,9 +21,10 @@ import qualified Data.Text                     as T
 import           GHC.Generics                          (Generic)
 
 import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
-import           WikiEL.Type
+import           WikiEL.Type                           (EntityToken(..),IRange(..),RelativePosition(..)
+                                                       ,parseNEROutputStr)
 import           WikiEL.Type.Wikidata                  (ItemID)
-import           WikiEL.Misc                           (IRange(..),RelativePosition(..), relativePos, untilNoOverlap)
+import           WikiEL.Misc                           (relativePos, untilNoOverlap)
 import           WikiEL.WikiEntityTagger               (NameUIDTable,buildEntityTable,wikiAnnotator)
 import qualified WikiEL.NamedEntity            as N
 import qualified WikiEL.WikiEntityClass        as WEC
@@ -35,10 +36,6 @@ import qualified NLP.Type.NamedEntity          as NE
   This module combines Wikidata tagger, WikiEL.WikiEntityTagger, and CoreNLP NER.
   by discarding possiblities that both results are inconsistent.
 -}
-
-
-
-type NEClass = NamedEntityClass
 
 
 parseStanfordNE :: EntityToken -> NamedEntityFrag

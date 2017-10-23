@@ -7,7 +7,7 @@ import           Data.Text                             (Text)
 import qualified Data.Text   as T
 --
 import WikiEL.EntityLinking
-import WikiEL.Misc                                     (IRange(..))
+import WikiEL.Type                                     (IRange(..))
 
 getNameFromEntityMention :: EntityMention Text -> Text
 getNameFromEntityMention x = case x of

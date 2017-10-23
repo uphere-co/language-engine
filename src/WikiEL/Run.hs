@@ -7,10 +7,10 @@ import           Data.Text                             (Text)
 import           NLP.Type.CoreNLP
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
-import           System.FilePath                          ((</>))
+import           System.FilePath                       ((</>))
 import           WikiEL.EntityLinking
-import           WikiEL.Misc
 --
+import           WikiEL.Type                           (IRange(..))
 import           WikiEL.Type.FileFormat
 import qualified WikiEL.WikiEntityClass        as WC
 import qualified WikiEL                        as WEL

@@ -26,10 +26,10 @@ import qualified Data.Vector.Unboxed           as UV
 
 import           Graph.Internal.Hash                   (WordHash,wordHash)
 --import           WikiEL.Util.Hash                      (WordHash,wordHash)
+import           WikiEL.Type                           (IRange(..))
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           WikiEL.Type.FileFormat                (EntityReprFile,EntityReprRow(..))
 import           WikiEL.ETL.LoadData                   (loadEntityReprs)
-import           WikiEL.Misc                           (IRange(..))
 import           Assert                                (massertEqual,eassertEqual)
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
 import qualified WikiEL.Type.Wikidata         as Wiki

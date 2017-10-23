@@ -1,28 +1,9 @@
-{-# LANGUAGE DeriveGeneric              #-}
-
 module WikiEL.Misc where
 
-import           Data.Aeson
 import qualified Data.Vector                   as V
 import           Data.Vector                           (Vector,toList,fromList,ifoldr,foldl')
-import           GHC.Generics                          (Generic)
-
-data IRange = IRange { beg :: Int
-                     , end :: Int}
-                deriving(Eq,Generic)
-
-instance ToJSON IRange where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON IRange where
-  parseJSON = genericParseJSON defaultOptions
-
-instance Show IRange where
-  show (IRange beg end) = "IRange [" ++ show beg ++ "," ++ show end ++ ")"
-
-
-data RelativePosition = LbeforeR | RbeforeL | Coincide | RinL | LinR | LoverlapR | RoverlapL
-                      deriving(Show,Eq)
+--
+import           WikiEL.Type                           (IRange(..),RelativePosition(..))
 
 relativePos :: IRange -> IRange -> RelativePosition
 relativePos (IRange lbeg lend) (IRange rbeg rend)
