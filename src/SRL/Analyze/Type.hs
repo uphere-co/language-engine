@@ -26,7 +26,7 @@ import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceInde
 import           NLP.Type.PennTreebankII       (Lemma,PennTree)
 import           NLP.Type.SyntaxProperty       (Voice)
 import           NLP.Type.TagPos               (CharIdx,SentItem,TagPos,TokIdx)
-import           WikiEL.EntityLinking          (EntityMention)
+import           WikiEL.Type                   (EntityMention)
 --
 import           OntoNotes.Type.SenseInventory (Inventory)
 --

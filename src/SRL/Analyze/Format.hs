@@ -39,9 +39,9 @@ import           NLP.Type.CoreNLP                        (Token,token_lemma,toke
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
 import qualified WikiEL                        as WEL
-import           WikiEL.EntityLinking                    (UIDCite(..),_emuid)
 import qualified WikiEL.EntityLinking          as EL
-import           WikiEL.WikiNamedEntityTagger            (PreNE,resolvedUID)
+import           WikiEL.Type                             (EMInfo,EntityMention(..),PreNE,UIDCite(..),_emuid)
+import           WikiEL.WikiNamedEntityTagger            (resolvedUID)
 --
 import           SRL.Analyze.Match                       (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
@@ -125,9 +125,9 @@ formatSenses doesShowOtherSense onfnlst rmtoppatts
         else ""
 
 
-formatLinkedMention :: EL.EntityMention Text -> String
-formatLinkedMention Cite {..} = printf "%3d: (-> %3d) %s " (EL._emuid _uid) (EL._emuid _ref) (formatEMInfo _info)
-formatLinkedMention Self {..} = printf "%3d:          %s " (EL._emuid _uid)                  (formatEMInfo _info)
+formatLinkedMention :: EntityMention Text -> String
+formatLinkedMention Cite {..} = printf "%3d: (-> %3d) %s " (_emuid _uid) (_emuid _ref) (formatEMInfo _info)
+formatLinkedMention Self {..} = printf "%3d:          %s " (_emuid _uid)               (formatEMInfo _info)
 
 
 formatIndexedTimex :: (Char,Maybe Text) -> String
@@ -148,19 +148,19 @@ formatPreNE tag = case resolvedUID tag of
                     Right i -> show i
 
 
-formatEMInfo :: EL.EMInfo Text -> String
+formatEMInfo :: EMInfo Text -> String
 formatEMInfo em@(_,_,tag) = printf "%-25s %-20s" (WEL.entityName em) (formatPreNE tag)
 
 
 formatTagged :: [[Maybe Token]]
              -> [SentItem CharIdx]
-             -> [TagPos TokIdx (Either (EL.EntityMention Text) (Char,(Maybe Text)))]
+             -> [TagPos TokIdx (Either (EntityMention Text) (Char,(Maybe Text)))]
              -> Box
 formatTagged mtokenss sentitems tlst =
   let toks = concatMap (map snd . sentToTokens') mtokenss
       clst = mapMaybe (convertTagPosFromTokenToChar toks) tlst
       sents_tagged = map (addTag clst) sentitems
-      doc1 = formatTaggedSentences (either (T.pack . show . _emuid . EL._uid) (T.singleton . (^._1))) sents_tagged
+      doc1 = formatTaggedSentences (either (T.pack . show . _emuid . _uid) (T.singleton . (^._1))) sents_tagged
       doc2 = vcat top . intersperse (text "") . map (text. either formatLinkedMention formatIndexedTimex) $ map (\(TagPos (_,_,x)) -> x) clst
   in hsep 10 left [doc1,doc2]
 
