@@ -33,6 +33,7 @@ import           NLP.Syntax.Format.Internal
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
+import           NLP.Syntax.Util                        (rootTag)
 import           NLP.Syntax.Verb
 
 
@@ -122,19 +123,19 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
-        getposchunk = bimap (chunkTag . snd) (posTag . snd) . getRoot . current
+        -- getposchunk = bimap (chunkTag . snd) (posTag . snd) . getRoot . current
         --
         formatposchunk (Left c) = show c
         formatposchunk (Right p) = "(" ++ show p ++ ")"
         --
         formatComplementizer :: Complementizer (Lemma ': as) -> (String,String)
         formatComplementizer C_PHI = ("phi","")
-        formatComplementizer (C_WORD z) = (formatposchunk (getposchunk z), show (gettoken z))
+        formatComplementizer (C_WORD z) = (formatposchunk (rootTag (current z)), show (gettoken z))
         --
         formatSpecCP :: Maybe (SpecCP (Lemma ': as)) -> (String,String)
         formatSpecCP Nothing              = ("","")
         formatSpecCP (Just SpecCP_WHPHI)  = ("phi_WH","")
-        formatSpecCP (Just (SpecCP_WH z)) = (formatposchunk (getposchunk z), show (gettoken z))
+        formatSpecCP (Just (SpecCP_WH z)) = (formatposchunk (rootTag (current z)), show (gettoken z))
         --
         (head1,head2) = formatComplementizer (cp^.headX)
         (spec1,spec2) = formatSpecCP (cp^.specifier)

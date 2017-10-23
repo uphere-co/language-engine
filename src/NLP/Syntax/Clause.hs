@@ -19,6 +19,7 @@ import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
+import           Data.Foldable
 import           Data.Either                            (partitionEithers,rights)
 import qualified Data.HashMap.Strict               as HM
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
@@ -44,7 +45,7 @@ import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTim
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ)
+import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
 --
 import qualified Data.Text as T
 import           NLP.Syntax.Format.Internal
@@ -67,28 +68,25 @@ headVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
 headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 
-complementsOfVerb :: [TagPos TokIdx MarkType]
-                  -> VerbProperty (Zipper (Lemma ': as))
-                  -> [TraceChain (CompVP (Lemma ': as))]
-complementsOfVerb tagged vprop =
-  let nextNotComma z = do n <- next z
-                          guard (not (isPOSAs M_COMMA (current n))) -- ad hoc separation using comma
-                          return n
-      cs = map xform (siblingsBy (nextNotComma) checkNPSBAR =<< maybeToList (headVP vprop))
-  in case vprop^.vp_voice of
-       Active -> cs
-       Passive -> TraceChain (Left (singletonLZ Moved)) Nothing : cs
-  where
-    -- xform_pp = TraceChain (Right []) . Just . checkTimePrep tagged
-    xform_dp = TraceChain (Right []) . Just . checkEmptyPrep tagged . splitDP tagged
-    xform_cp = TraceChain (Right []) . Just . CompVP_Unresolved
-    xform z = case tag (current z) of
-                Left NP    -> xform_dp z
-                Left _     -> xform_cp z
-                Right p    -> if isNoun p == Yes then xform_dp z else xform_cp z
+complementCandidates :: VerbProperty (Zipper (Lemma ': as)) -> Zipper (Lemma ': as) -> [Zipper (Lemma ': as)]
+complementCandidates vprop z_vp =
+    let cs0 = siblingsBy (nextNotComma) checkNPSBAR =<< maybeToList (headVP vprop)
+        cs1 = maybeToList $ do
+                guard (isChunkAs VP (current z_vp))
+                z_np <- prev z_vp
+                guard (isChunkAs NP (current z_np))
+                z_comma <- prev z_np
+                guard (isPOSAs M_COMMA (current z_comma))
+                z_cp <- prev z_comma
+                (guard (isChunkAs S (current z_cp) || isChunkAs SBAR (current z_cp)))
+                return z_cp
+    in cs0 ++ cs1
 
-    tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
-    checkNPSBAR z = case tag z of
+  where
+    nextNotComma z = do n <- next z
+                        guard (not (isPOSAs M_COMMA (current n))) -- ad hoc separation using comma
+                        return n
+    checkNPSBAR z = case rootTag z of
                       Left NP    -> True
                       Left SBAR  -> True
                       Left S     -> True
@@ -96,6 +94,27 @@ complementsOfVerb tagged vprop =
                       Left SQ    -> True
                       Left _     -> False
                       Right p    -> isNoun p == Yes
+
+
+complementsOfVerb :: [TagPos TokIdx MarkType]
+                  -> VerbProperty (Zipper (Lemma ': as))
+                  -> Zipper (Lemma ': as)
+                  -> [TraceChain (CompVP (Lemma ': as))]
+complementsOfVerb tagged vprop z_vp =
+  let cs = map xform (complementCandidates vprop z_vp)
+  in case vprop^.vp_voice of
+       Active -> cs
+       Passive -> TraceChain (Left (singletonLZ Moved)) Nothing : cs
+  where
+    -- xform_pp = TraceChain (Right []) . Just . checkTimePrep tagged
+    xform_dp = TraceChain (Right []) . Just . checkEmptyPrep tagged . splitDP tagged
+    xform_cp = TraceChain (Right []) . Just . CompVP_Unresolved
+    xform z = case rootTag (current z) of
+                Left NP    -> xform_dp z
+                Left _     -> xform_cp z
+                Right p    -> if isNoun p == Yes then xform_dp z else xform_cp z
+
+    -- tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
 
 
 allAdjunctCPOfVerb :: VerbProperty (Zipper (Lemma ': as))
@@ -139,25 +158,25 @@ constructCP :: [TagPos TokIdx MarkType]
             -> VerbProperty (Zipper (Lemma ': as))
             -> Maybe (CP (Lemma ': as),[Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))])
 constructCP tagged vprop = do
-    vp <- maximalProjectionVP vprop
+    z_vp <- maximalProjectionVP vprop
     tp <- parentOfVP vprop
     tptag' <- N.convert <$> getchunk tp
-    let comps = complementsOfVerb tagged vprop
-        adjs  = allAdjunctCPOfVerb vprop
-        comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
-        nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
     case tptag' of
       N.CL s -> do
         cp' <- parent tp
         cptag' <- N.convert <$> getchunk cp'
-        let subj0 = identifySubject tagged s vp
+        let comps = complementsOfVerb tagged vprop z_vp
+            adjs  = allAdjunctCPOfVerb vprop
+            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
+            nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
+            subj0 = identifySubject tagged s z_vp
             (subj,subj_dps,vadjs) = fromMaybe (subj0,[],[]) $ do
               dp_subj <- subj0 ^? trResolved . _Just . _Right
               let (dp_subj',vadjs) = identifyInternalTimePrep tagged dp_subj
                   subj' = ((trResolved . _Just . _Right) .~ dp_subj') subj0
               subj_dp <- subj' ^? trResolved . _Just
               return (subj',[subj_dp],vadjs)
-        let verbp = mkVerbP vp vprop vadjs comps
+            verbp = mkVerbP z_vp vprop vadjs comps
             dps = subj_dps ++ comps_dps
         case cptag' of
           N.CL N.SBAR ->
@@ -174,8 +193,12 @@ constructCP tagged vprop = do
           _      -> -- somewhat problematic case?
             return (mkCP C_PHI tp Nothing adjs (mkTP tp subj verbp),dps)
       _ -> -- reduced relative clause
-        let verbp = mkVerbP vp vprop [] comps
-        in return (mkCP C_PHI vp (Just SpecCP_WHPHI) adjs (mkTP vp nullsubj verbp),comps_dps)
+        let comps = complementsOfVerb tagged vprop z_vp
+            adjs  = allAdjunctCPOfVerb vprop
+            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
+            verbp = mkVerbP z_vp vprop [] comps
+            nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
+        in return (mkCP C_PHI z_vp (Just SpecCP_WHPHI) adjs (mkTP z_vp nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 

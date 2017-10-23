@@ -7,6 +7,7 @@ module NLP.Syntax.Util where
 
 import           Control.Lens                      ((^?),(%~),to)
 import           Control.Monad                     (guard)
+import           Data.Bifunctor                    (bimap)
 import           Data.Bifoldable                   (bifoldMap)
 import           Data.IntMap                       (IntMap)
 import           Data.Monoid                       (First(..))
@@ -58,6 +59,7 @@ getLeafIndex (PL (i,_)) = Just i
 getLeafIndex _          = Nothing
 
 
+rootTag = bimap (chunkTag.snd) (posTag.snd) . getRoot
 
 
 isLemmaAs :: (GetIntLemma tag) => Lemma -> BitreeICP tag -> Bool

@@ -25,6 +25,8 @@ import           NLP.Syntax.Format
 import           NLP.Syntax.Preposition
 import           NLP.Syntax.Type                   (MarkType(..))
 import           NLP.Syntax.Util
+--
+import           Test.Common
 
 {-
 test1 =
@@ -172,6 +174,7 @@ test_nonrestrictive_relative_clause =
   )
 -}
 
+{- 
 showDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType]) -> IO ()
 showDetail (txt,lma,pt,tmxs) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
@@ -191,6 +194,7 @@ showDetail (txt,lma,pt,tmxs) = do
       Nothing -> return ()
       Just z -> print $ hasEmptyPreposition z
 
+-}
 
 mainShow :: IO ()
 mainShow = mapM_ showDetail [ test_coordination
