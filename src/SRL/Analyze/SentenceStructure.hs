@@ -39,12 +39,10 @@ import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,m
 import qualified NLP.Type.PennTreebankII.Separated as PS
 import           NLP.Type.SyntaxProperty                   (Voice)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
-import           WikiEL.Convert                               (getNEFromEntityMention,getRangeFromEntityMention)
-import           WikiEL.EntityLinking                      (EntityMention,entityPreNE,UIDCite(..),entityName)
-import           WikiEL.Misc                               (IRange(..))
+import           WikiEL.Convert                            (getNEFromEntityMention,getRangeFromEntityMention)
+import           WikiEL.EntityLinking                      (entityPreNE,entityName)
+import           WikiEL.Type                               (EntityMention,IRange(..),PreNE(..),UIDCite(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
-import           WikiEL.WikiNamedEntityTagger              (PreNE(..))
-
 --
 import           OntoNotes.Type.SenseInventory
 --

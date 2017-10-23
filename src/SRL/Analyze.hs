@@ -51,9 +51,8 @@ import           OntoNotes.Corpus.Load        (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 import           Text.Format.Dot              (mkLabelText)
 import           WikiEL                       (extractFilteredEntityMentions)
-import           WikiEL.EntityLinking         (EntityMention)
-import           WikiEL.Misc                  (beg,end)
 import           WikiEL.Run                   (runEL,loadWikiData,classFilesG,reprFileG)
+import           WikiEL.Type                  (EntityMention,PreNE(..),UIDCite(..),beg,end)
 import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
 import qualified WikiEL.WikiEntityClass             as WEC
 import qualified WikiEL.WikiEntityTagger            as WET
@@ -78,7 +77,6 @@ import qualified WikiEL.ETL.LoadData    as LD
 import qualified WikiEL.Type.FileFormat as FF
 import qualified WikiEL.Type.Wikidata   as WD
 -- import qualified WikiEL.WikiEntityClass       as WEC
-import qualified WikiEL.WikiNamedEntityTagger as WNET
 
 
 -- | main query loop
@@ -163,18 +161,18 @@ newNETagger = do
         let lst = sortBy (flip compare `on` (length.snd)) .  mapMaybe (\y-> (y,) <$> IM.lookup (WD._itemID y) wikiMap) $ ys
        in case lst of
             [] -> x
-            (r:_) -> let (i1,i2,_) = EL._info x
+            (r:_) -> let (i1,i2,_) = _info x
                          u = WEC.guessItemClass2 uidNEtags t
                          resolved = r^._1
-                     in x { EL._info = (i1,i2,WNET.Resolved (resolved,u resolved)) }
+                     in x { _info = (i1,i2,Resolved (resolved,u resolved)) }
 
   let disambiguator x =
-        case ((^._3) . EL._info) x of
-          WNET.AmbiguousUID (ys,t) -> disambiguatorWorker x (ys,t)
-          WNET.UnresolvedUID t ->
+        case ((^._3) . _info) x of
+          AmbiguousUID (ys,t) -> disambiguatorWorker x (ys,t)
+          UnresolvedUID t ->
             if t == Org || t == Person
             then
-              let name0 = EL.entityName (EL._info x)
+              let name0 = EL.entityName (_info x)
                   name = (T.replace "," "" . T.replace "." "") name0   -- try once more
                   tags' = WET.wikiAnnotator wikiTable (T.words name)
                   tags'' = filter (\(r,_)->end r-beg r>1) tags'
