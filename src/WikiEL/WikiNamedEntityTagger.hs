@@ -21,11 +21,12 @@ import qualified Data.Text                     as T
 import           GHC.Generics                          (Generic)
 
 import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
+import           WikiEL.Type                           (EntityToken(..),IRange(..),NameUIDTable
+                                                       ,PreNE(..),RelativePosition(..),WikiuidNETag)
 import           WikiEL.Type.Wikidata                  (ItemID)
-import           WikiEL.Misc                           (IRange(..),RelativePosition(..), relativePos, untilNoOverlap)
-import           WikiEL.WikiEntityTagger               (NameUIDTable,buildEntityTable,wikiAnnotator)
+import           WikiEL.Misc                           (relativePos, untilNoOverlap)
+import           WikiEL.WikiEntityTagger               (buildEntityTable,wikiAnnotator)
 import qualified WikiEL.NamedEntity            as N
-import qualified WikiEL.CoreNLP                as C
 import qualified WikiEL.WikiEntityClass        as WEC
 import qualified NLP.Type.NamedEntity          as NE
 
@@ -37,15 +38,17 @@ import qualified NLP.Type.NamedEntity          as NE
 -}
 
 
+parseNERToken :: Text -> EntityToken
+parseNERToken tokenStr = (\(x,y)-> EntityToken (T.dropEnd 1 x) y) $ T.breakOnEnd (T.pack "/") tokenStr
 
-type NEClass = NamedEntityClass
+parseNEROutputStr :: Text -> [EntityToken]
+parseNEROutputStr str = map parseNERToken (T.words str)
 
-
-parseStanfordNE :: C.EntityToken -> NamedEntityFrag
-parseStanfordNE (C.EntityToken (C.WordToken word) (C.NETag tag)) =  parseStr word tag
+parseStanfordNE :: EntityToken -> NamedEntityFrag
+parseStanfordNE (EntityToken word tag) = parseStr word tag
 
 loadStanfordNERoutput :: Text -> [NamedEntityFrag]
-loadStanfordNERoutput content = map parseStanfordNE (C.parseNEROutputStr content)
+loadStanfordNERoutput content = map parseStanfordNE (parseNEROutputStr content)
 
 getWords :: [NamedEntityFrag] -> [Text]
 getWords  = map _fstr
@@ -58,7 +61,7 @@ namedEntityAnnotator entities frags = reverse matchedItems
     words = map _fstr frags
     matchedItems = wikiAnnotator entities words
 
-partitonFrags:: [NamedEntityFrag] -> [(IRange, NEClass)]
+partitonFrags:: [NamedEntityFrag] -> [(IRange, NamedEntityClass)]
 partitonFrags frags = ifoldr f [] (fromList frags)
   where
     decL (IRange beg end) = IRange (beg-1) end
@@ -69,25 +72,10 @@ partitonFrags frags = ifoldr f [] (fromList frags)
     f idx frag accum@((range, tag):ss) | tagType frag == tag = (decL range, tag):ss
                                        | otherwise            = g idx frag : accum
 
-getStanfordNEs :: [NamedEntityFrag] -> [(IRange, NEClass)]
+getStanfordNEs :: [NamedEntityFrag] -> [(IRange, NamedEntityClass)]
 getStanfordNEs = dropNonNE . partitonFrags
   where
     dropNonNE = filter (\x-> snd x /= Other)
-
-
-data PreNE = UnresolvedUID NEClass             -- Tagged by CoreNLP NER, but no matched Wikidata UID
-           | AmbiguousUID ([ItemID],NEClass)   -- Tagged by CoreNLP NER, and matched Wikidata UIDs of the NEClass
-           | Resolved (ItemID, WEC.ItemClass)  -- A wikidata UID of a CoreNLP NER Class type.
-           | UnresolvedClass [ItemID]          -- Not tagged by CoreNLP NER, but matched Wikidata UID(s)
-           deriving(Show, Eq, Generic)
-
-makePrisms ''PreNE
-
-instance ToJSON PreNE where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON PreNE where
-  parseJSON = genericParseJSON defaultOptions
 
 uidCandidates :: PreNE -> [ItemID]
 uidCandidates (UnresolvedUID _)      = []
@@ -105,7 +93,7 @@ resolvedUID (UnresolvedUID _) = Left "Unresolved ItemID"
 resolvedUID (AmbiguousUID _)  = Left "Ambiguous ItemID"
 resolvedUID (UnresolvedClass _) = Left "Unresolved named entity class"
 
-resolveNEClass :: WEC.WikiuidNETag -> NEClass -> Vector ItemID -> PreNE
+resolveNEClass :: WikiuidNETag -> NamedEntityClass -> Vector ItemID -> PreNE
 resolveNEClass ts stag xs = g matchedUIDs
   where
     u = WEC.guessItemClass2 ts stag
@@ -116,7 +104,7 @@ resolveNEClass ts stag xs = g matchedUIDs
     g []    = UnresolvedUID stag
     g uids  = AmbiguousUID (uids, stag)
 
-resolveNEsImpl :: WEC.WikiuidNETag -> [(IRange,PreNE)] -> [(IRange, NEClass)] -> [(IRange, Vector ItemID)] -> [(IRange,PreNE)]
+resolveNEsImpl :: WikiuidNETag -> [(IRange,PreNE)] -> [(IRange, NamedEntityClass)] -> [(IRange, Vector ItemID)] -> [(IRange,PreNE)]
 resolveNEsImpl ts accum [] [] = accum
 resolveNEsImpl ts accum lhss@((lrange,ltag):ls) []  =
   resolveNEsImpl ts ((lrange, UnresolvedUID ltag) : accum) ls []
@@ -140,7 +128,7 @@ resolveNEsImpl ts accum lhss@((lrange,ltag):ls) rhss@((rrange,rtags):rs) =
 
 
 
-resolveNEs :: WEC.WikiuidNETag -> [(IRange, NEClass)] -> [(IRange, Vector ItemID)] -> [(IRange,PreNE)]
+resolveNEs :: WikiuidNETag -> [(IRange, NamedEntityClass)] -> [(IRange, Vector ItemID)] -> [(IRange,PreNE)]
 resolveNEs ts lhss rhss = map (second assumeCorrectAnnotation) xs
   where
     xs = reverse (resolveNEsImpl ts [] lhss rhss)

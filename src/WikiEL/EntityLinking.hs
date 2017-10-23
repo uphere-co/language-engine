@@ -15,10 +15,13 @@ import           Data.Text                             (Text)
 import qualified Data.Text                  as T
 import           GHC.Generics                          (Generic)
 
-import           WikiEL.Misc                           (IRange(..),RelativePosition(..),relativePos,strictSlice,subVector) 
+import           WikiEL.Misc                           (relativePos,strictSlice,subVector) 
+import           WikiEL.Type                           (EMInfo(..),EntityMention(..),EntityMentionUID(..),IRange(..)
+                                                       ,PreNE(..),RelativePosition(..)
+                                                       ,UIDCite(..))
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           NLP.Type.NamedEntity                  (NamedEntity, OrderedNamedEntity)
-import           WikiEL.WikiNamedEntityTagger          (PreNE(..),isResolved,resolvedUID,mayCite,uidCandidates)
+import           WikiEL.WikiNamedEntityTagger          (isResolved,resolvedUID,mayCite,uidCandidates)
 import qualified NLP.Type.NamedEntity       as N
 
 mayRefer :: NamedEntity -> NamedEntity -> Bool
@@ -27,42 +30,6 @@ mayRefer src target = (N._type src == N._type target) && T.isInfixOf (N._str src
 canRefer :: OrderedNamedEntity -> OrderedNamedEntity -> Bool
 canRefer src target = (N._order src > N._order target) && mayRefer (N._entity src) (N._entity target)
 
-
-newtype EntityMentionUID = EntityMentionUID { _emuid :: Int} deriving (Generic)
-
-instance Show EntityMentionUID where
-  show (EntityMentionUID uid) = "EMuid " ++ show uid
-
-{-|
-  Self - entity mention; e.g. Michael Jordan
-  Cite - a reference to an entity mention; e.g. Jordan
--}
-data UIDCite uid info = Cite { _uid  :: uid
-                             , _ref  :: uid
-                             , _info :: info} 
-                      | Self { _uid  :: uid
-                             , _info :: info}
-                      deriving(Eq,Generic)
-
-makePrisms ''UIDCite
-
--- w : type of word token
-type EMInfo w = (IRange, Vector w, PreNE)
-type EntityMention w = UIDCite EntityMentionUID (EMInfo w)
-
-instance ToJSON EntityMentionUID where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON EntityMentionUID where
-  parseJSON = genericParseJSON defaultOptions
-
-instance ToJSON (EntityMention Text) where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON (EntityMention Text) where
-  parseJSON = genericParseJSON defaultOptions
-
-  
 entityName :: EMInfo Text -> Text
 entityName (_, ws, _) = T.intercalate " " (toList ws)
 
@@ -71,11 +38,13 @@ entityUID m = resolvedUID tag
   where
     (_,_,tag) = _info m
 
+mentionedEntityName :: EntityMention Text -> Text
+mentionedEntityName em = entityName (_info em)
+
 entityUIDcandidates :: EntityMention w -> [ItemID]
 entityUIDcandidates m = uidCandidates tag
   where    
     (_,_,tag) = _info m
-    
 
 entityIRange :: EntityMention a -> IRange
 entityIRange mention = range
@@ -87,16 +56,6 @@ entityPreNE mention = ne
 
 hasResolvedUID :: EntityMention a -> Bool
 hasResolvedUID mention  = isResolved (entityPreNE mention)
-
-mentionedEntityName :: EntityMention Text -> Text
-mentionedEntityName em = entityName (_info em)
-
-toString :: EMInfo Text -> String
-toString em@(range, ws, tag) = show range ++ " \"" ++ T.unpack (entityName em) ++  "\", " ++show tag
-
-instance (Show a) => Show (UIDCite a (EMInfo Text))  where
-  show (Cite uid ref info) = "Cite {" ++ show uid ++ " cites " ++ show ref ++ ",\t" ++ toString info ++ "}"
-  show (Self uid info) = "Self {" ++ show uid  ++ ",\t" ++ toString info ++ "}"
 
 buildEntityMentions :: Vector w -> [(IRange, PreNE)] -> [EntityMention w]
 buildEntityMentions text wikiNEs = zipWith Self uids mentions

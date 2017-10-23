@@ -18,25 +18,12 @@ import           GHC.Generics                          (Generic)
 
 import           NLP.Type.NamedEntity                  (NamedEntityClass)
 import qualified NLP.Type.NamedEntity          as N
-import           WikiEL.Type.Wikidata                 (ItemID)
+import           WikiEL.Type                           (ItemClass(..),WikiuidNETag(..))
+import           WikiEL.Type.Wikidata                  (ItemID)
 import           WikiEL.Type.FileFormat
 import           WikiEL.ETL.LoadData
 import           WikiEL.ETL.Parser
 
-type NEClass = NamedEntityClass
-
-data ItemClass = ItemClass { _itemID  :: ItemID
-                           , _strName :: Text }
-                  deriving (Eq,Ord,Generic)
-
-instance Show ItemClass where
-  show id = "Class:" ++ show (_strName id)
-                  
-instance ToJSON ItemClass where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON ItemClass where
-  parseJSON = genericParseJSON defaultOptions
 
 buildItemClass :: Text -> Text -> ItemClass
 buildItemClass x name = ItemClass (itemID x) name
@@ -55,7 +42,7 @@ buildingClass   = buildItemClass "Q41176"    "Building"
 extednedClasses = [brandClass,occupationClass,humanRuleClass,buildingClass]
 allClasses      = [otherClass, orgClass, personClass, locationClass] ++ extednedClasses
 
-fromNEClass :: NEClass -> ItemClass
+fromNEClass :: NamedEntityClass -> ItemClass
 fromNEClass N.Org    = orgClass
 fromNEClass N.Person = personClass
 fromNEClass N.Loc    = locationClass
@@ -65,7 +52,7 @@ fromNEClass _        = otherClass
   Since CoreNLP NER classes, NEClass, are more coarse, we need inclusion, or a sort of subclass, relationship 
   between ItemClass and NEClass.
 -}
-mayCite :: NEClass -> ItemClass -> Bool 
+mayCite :: NamedEntityClass -> ItemClass -> Bool 
 mayCite N.Org    c | c==orgClass      = True
 mayCite N.Person c | c==personClass   = True
 mayCite N.Loc    c | c==locationClass = True
@@ -83,9 +70,6 @@ loadTypedUIDs (tag, fileName) = do
     uids = map (\x -> (x, tag)) items
   return uids
 
-data WikiuidNETag = WikiuidNETag { _set :: S.Set (ItemID, ItemClass)}
-                   deriving (Show)
-
 loadFiles :: [(ItemClass, ItemIDFile)] -> IO WikiuidNETag
 loadFiles pairs = do
   lists <- mapM loadTypedUIDs pairs
@@ -94,7 +78,7 @@ loadFiles pairs = do
 fromList :: [(ItemID, ItemClass)] -> WikiuidNETag
 fromList pairs = WikiuidNETag (S.fromList pairs)
   
-hasNETag :: WikiuidNETag -> (ItemID, NEClass) -> Bool
+hasNETag :: WikiuidNETag -> (ItemID, NamedEntityClass) -> Bool
 hasNETag (WikiuidNETag tags) (id,stag) | stag /= N.Other = S.member (id,fromNEClass stag) tags
 hasNETag (WikiuidNETag tags) (id,stag) = any (\x -> S.member (id,x) tags) extednedClasses
 
@@ -103,7 +87,7 @@ guessItemClass (WikiuidNETag tags) id = fromMaybe otherClass x
   where
     x = L.find (\x -> S.member (id,x) tags) allClasses
 
-guessItemClass2 :: WikiuidNETag -> NEClass -> ItemID -> ItemClass
+guessItemClass2 :: WikiuidNETag -> NamedEntityClass -> ItemID -> ItemClass
 guessItemClass2 tags ne id | hasNETag tags (id,ne) = fromNEClass ne
 guessItemClass2 tags ne id = guessItemClass tags id
   
@@ -143,4 +127,3 @@ allRelationPairs relTuples = pairs
 
 isSubclass :: S.Set (SubclassUID, SuperclassUID) -> SuperclassUID -> SubclassUID -> Bool
 isSubclass pairs super sub = S.member (sub, super) pairs
-

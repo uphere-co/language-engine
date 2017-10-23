@@ -7,10 +7,10 @@ import           Data.Text                             (Text)
 import           NLP.Type.CoreNLP
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
-import           System.FilePath                          ((</>))
+import           System.FilePath                       ((</>))
 import           WikiEL.EntityLinking
-import           WikiEL.Misc
 --
+import           WikiEL.Type                           (EntityMention,IRange(..),ItemClass(..))
 import           WikiEL.Type.FileFormat
 import qualified WikiEL.WikiEntityClass        as WC
 import qualified WikiEL                        as WEL
@@ -61,7 +61,7 @@ occupationItemFileG = ItemIDFile (globalData </> "wiki-ner/data/ne.occupation")
 humanRuleItemFileG  = ItemIDFile (globalData </> "wiki-ner/data/ne.human_rule")
 buildingItemFileG   = ItemIDFile (globalData </> "wiki-ner/data/ne.building")
 
-classFilesG :: [(WC.ItemClass,ItemIDFile)]
+classFilesG :: [(ItemClass,ItemIDFile)]
 classFilesG = [ (WC.personClass, personItemFileG)
               , (WC.orgClass,    orgItemFileG)
               , (WC.brandClass,  brandItemFileG)

@@ -26,10 +26,10 @@ import qualified Data.Vector.Unboxed           as UV
 
 import           Graph.Internal.Hash                   (WordHash,wordHash)
 --import           WikiEL.Util.Hash                      (WordHash,wordHash)
+import           WikiEL.Type                           (IRange(..),NameUIDTable(..),WordsHash)
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           WikiEL.Type.FileFormat                (EntityReprFile,EntityReprRow(..))
 import           WikiEL.ETL.LoadData                   (loadEntityReprs)
-import           WikiEL.Misc                           (IRange(..))
 import           Assert                                (massertEqual,eassertEqual)
 import           WikiEL.BinarySearch                   (binarySearchLR,binarySearchLRBy,binarySearchLRByBounds)
 import qualified WikiEL.Type.Wikidata         as Wiki
@@ -39,8 +39,6 @@ import qualified WikiEL.Type.Wikidata         as Wiki
   With greedy algorithm, it tags a phrase if it matches with a name or an alias of an entity.
 -}
 
-
-type WordsHash = UV.Vector WordHash
 
 ithElementOrdering :: Int -> WordsHash -> WordsHash -> Ordering
 ithElementOrdering i lhs rhs | UV.length lhs <= i = LT
@@ -96,10 +94,6 @@ nameWordsHash (Wiki.ItemRepr name) = wordsHash (T.words name)
 
 itemTuple :: EntityReprRow -> (ItemID, WordsHash)
 itemTuple (EntityReprRow uid name) = (uid, nameWordsHash name)
-
-data NameUIDTable = NameUIDTable { _uids :: Vector ItemID
-                                 , _names :: Vector WordsHash}
-                  deriving (Show)
 
 buildEntityTable :: [EntityReprRow] -> NameUIDTable
 buildEntityTable entities = NameUIDTable uids names
