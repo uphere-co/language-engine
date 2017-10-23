@@ -9,8 +9,7 @@ import qualified Data.Vector                   as V
 import qualified WikiEL.EntityLinking          as EL
 
 import           NLP.Type.PennTreebankII    (POSTag(..), TernaryLogic(..), isNoun, isVerb)
-import           WikiEL.EntityLinking       (EntityMention(..))
-import           WikiEL.Type                (IRange(..))
+import           WikiEL.Type                (EntityMention(..),IRange(..))
 
 
 isEntityLinkableTag :: POSTag -> Bool

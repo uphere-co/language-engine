@@ -9,8 +9,8 @@ import qualified Data.Text                     as T
 import qualified Data.Map                      as M
 import qualified Data.Vector.Unboxed           as UV
 
+import           WikiEL.Type                                  (EntityMention,PreNE(..),UIDCite(..))
 import           WikiEL.Type.Wikidata                         (ItemID)
-import           WikiEL.EntityLinking                         (EntityMention)
 import qualified NLP.Type.NamedEntity          as NE
 import qualified Graph                         as G
 import qualified Graph.ETL                     as G.E
@@ -70,9 +70,9 @@ toWikipages titles mention = toTitle titles (EL.entityPreNE mention)
   where
     toTitle titles ne = mapMaybe (`M.lookup` titles) (NET.uidCandidates ne)
 
-updateNE :: (NET.PreNE->NET.PreNE) -> EntityMention a -> EntityMention a
-updateNE f (EL.Self id     info@(range,vec,ne)) = EL.Self id     (range,vec,f ne)
-updateNE f (EL.Cite id ref info@(range,vec,ne)) = EL.Cite id ref (range,vec,f ne)
+updateNE :: (PreNE -> PreNE) -> EntityMention a -> EntityMention a
+updateNE f (Self id     info@(range,vec,ne)) = Self id     (range,vec,f ne)
+updateNE f (Cite id ref info@(range,vec,ne)) = Cite id ref (range,vec,f ne)
 
 {-
 tryDisambiguate : a main funtion that does the named entity disambiguation.
@@ -96,11 +96,11 @@ tryDisambiguate :: WEC.WikiuidNETag -> NameMappings -> ([Text] -> [Text] -> Mayb
 tryDisambiguate uidNEtags (i2t,t2i) fTD mentions = map (updateNE f) mentions
   where
     refs = concatMap (toWikipages i2t) (filter EL.hasResolvedUID mentions)
-    f x@(NET.AmbiguousUID ([],_))= x
-    f x@(NET.AmbiguousUID (ids,stag)) = g (fTD refs titles)
+    f x@(AmbiguousUID ([],_))= x
+    f x@(AmbiguousUID (ids,stag)) = g (fTD refs titles)
       where
         titles = mapMaybe (`M.lookup` i2t) ids
-        g (Just (score,ref,title)) | WEC.mayCite stag tag = NET.Resolved (uid,tag)
+        g (Just (score,ref,title)) | WEC.mayCite stag tag = Resolved (uid,tag)
           where
             uid  = fromJust $ M.lookup title t2i
             tag = WEC.guessItemClass2 uidNEtags stag uid        

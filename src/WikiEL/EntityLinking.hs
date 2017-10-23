@@ -16,10 +16,12 @@ import qualified Data.Text                  as T
 import           GHC.Generics                          (Generic)
 
 import           WikiEL.Misc                           (relativePos,strictSlice,subVector) 
-import           WikiEL.Type                           (IRange(..),RelativePosition(..))
+import           WikiEL.Type                           (EMInfo(..),EntityMention(..),EntityMentionUID(..),IRange(..)
+                                                       ,PreNE(..),RelativePosition(..)
+                                                       ,UIDCite(..))
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           NLP.Type.NamedEntity                  (NamedEntity, OrderedNamedEntity)
-import           WikiEL.WikiNamedEntityTagger          (PreNE(..),isResolved,resolvedUID,mayCite,uidCandidates)
+import           WikiEL.WikiNamedEntityTagger          (isResolved,resolvedUID,mayCite,uidCandidates)
 import qualified NLP.Type.NamedEntity       as N
 
 mayRefer :: NamedEntity -> NamedEntity -> Bool

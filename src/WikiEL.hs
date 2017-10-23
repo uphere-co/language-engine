@@ -10,7 +10,6 @@ module WikiEL
   , EL.mentionedEntityName
   , EL.hasResolvedUID
   , EL.entityLinkings
-  , EL.EntityMention
   , EMP.filterEM
   , WET.loadWETagger
   , WEC.loadFiles
@@ -31,11 +30,12 @@ import qualified Graph.Internal.Hash                as H
 import           NLP.Type.PennTreebankII                      (POSTag(..))
 import           NLP.Type.NamedEntity                         (NamedEntityClass,NamedEntityFrag(..))
 --
+import           WikiEL.Type                                  (EntityMention,ItemClass)
 import           WikiEL.Type.Wikidata                         (ItemID)
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,namedEntityAnnotator)
 import           WikiEL.WikiEntityTagger                      (NameUIDTable,loadWETagger)
-import           WikiEL.WikiEntityClass                       (WikiuidNETag,ItemClass)
-import           WikiEL.EntityLinking                         (EntityMention,entityLinkings,buildEntityMentions)
+import           WikiEL.WikiEntityClass                       (WikiuidNETag)
+import           WikiEL.EntityLinking                         (entityLinkings,buildEntityMentions)
 import qualified WikiEL.WikiEntityTagger            as WET
 import qualified WikiEL.EntityLinking               as EL
 import qualified WikiEL.EntityMentionPruning        as EMP

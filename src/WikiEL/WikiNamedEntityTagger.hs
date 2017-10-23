@@ -21,7 +21,7 @@ import qualified Data.Text                     as T
 import           GHC.Generics                          (Generic)
 
 import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
-import           WikiEL.Type                           (EntityToken(..),IRange(..),RelativePosition(..)
+import           WikiEL.Type                           (EntityToken(..),IRange(..),PreNE(..),RelativePosition(..)
                                                        ,parseNEROutputStr)
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           WikiEL.Misc                           (relativePos, untilNoOverlap)

@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
@@ -41,9 +42,23 @@ parseNERToken tokenStr = (\(x,y)-> EntityToken (T.dropEnd 1 x) y) $ T.breakOnEnd
 parseNEROutputStr :: Text -> [EntityToken]
 parseNEROutputStr str = map parseNERToken (T.words str)
 
+data ItemClass = ItemClass { _itemID  :: ItemID
+                           , _strName :: Text }
+                  deriving (Eq,Ord,Generic)
+
+instance Show ItemClass where
+  show id = "Class:" ++ show (_strName id)
+
+instance ToJSON ItemClass where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON ItemClass where
+  parseJSON = genericParseJSON defaultOptions
+
+
 data PreNE = UnresolvedUID NamedEntityClass             -- Tagged by CoreNLP NER, but no matched Wikidata UID                
            | AmbiguousUID ([ItemID],NamedEntityClass)   -- Tagged by CoreNLP NER, and matched Wikidata UIDs of the NamedEntityClass                                                                                                                      
-           | Resolved (ItemID, WEC.ItemClass)  -- A wikidata UID of a CoreNLP NER Class type.                                
+           | Resolved (ItemID, ItemClass)  -- A wikidata UID of a CoreNLP NER Class type.                                
            | UnresolvedClass [ItemID]          -- Not tagged by CoreNLP NER, but matched Wikidata UID(s)                     
            deriving(Show, Eq, Generic)
 
@@ -89,3 +104,4 @@ instance ToJSON (EntityMention Text) where
 
 instance FromJSON (EntityMention Text) where
   parseJSON = genericParseJSON defaultOptions
+
