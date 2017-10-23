@@ -174,28 +174,9 @@ test_free_relative_clause_object_2 =
   )
 
 
-formatDetail :: TestTrace -> [Text]
-formatDetail (_txt,_,_,lma,pt,tagged) =
-  let vps  = mkVPS lma pt
-      clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
-      x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
-
-  in
-  [ "===================================================================================================================="
-  , (T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList) pt
-  , "--------------------------------------------------------------------------------------------------------------------"
-  ]
-  ++ map formatX'Tree x'tr
-  ++ map (formatVPwithPAWS tagged clausetr x'tr) vps
-  ++
-  [ "--------------------------------------------------------------------------------------------------------------------"
-  , prettyPrint 0 pt
-  , "--------------------------------------------------------------------------------------------------------------------"
-  ]
-
 
 showDetail :: TestTrace -> IO ()
-showDetail = mapM_ T.IO.putStrLn . formatDetail
+showDetail (txt,_,_,lma,pt,tagged) = mapM_ T.IO.putStrLn (formatDetail (txt,lma,pt,tagged))
 
 {-
 mainShow :: IO ()
@@ -248,4 +229,4 @@ checkTrace c =
 unitTests :: TestTree
 unitTests = testGroup "Trace identification test" . flip map testcases $ \c ->
               testCase (T.unpack (c^._1)) $
-                checkTrace c @? (T.unpack (T.intercalate "\n" (formatDetail c)))
+                checkTrace c @? (let (txt,_,_,lma,pt,tagged) = c in T.unpack (T.intercalate "\n" (formatDetail (txt,lma,pt,tagged))))
