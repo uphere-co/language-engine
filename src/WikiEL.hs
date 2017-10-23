@@ -30,7 +30,7 @@ import qualified Graph.Internal.Hash                as H
 import           NLP.Type.PennTreebankII                      (POSTag(..))
 import           NLP.Type.NamedEntity                         (NamedEntityClass,NamedEntityFrag(..))
 --
-import           WikiEL.Type                                  (EntityMention,ItemClass,NameUIDTable)
+import           WikiEL.Type                                  (NodeNames(..),EntityMention,ItemClass,NameUIDTable,SortedGraph(..))
 import           WikiEL.Type.Wikidata                         (ItemID)
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,namedEntityAnnotator)
 import           WikiEL.WikiEntityTagger                      (loadWETagger)
@@ -104,8 +104,8 @@ loadFEMtagger wikiNameFile uidTagFiles = do
 
 
 -- |disambiguateMentions : a high level function for client use to perform the entity mention disambiguation.
-disambiguateMentions :: Eq a => ED.SortedGraph -> WikiuidNETag -> ED.NameMappings -> [EntityMention a] -> [EntityMention a]
-disambiguateMentions (ED.SortedGraph sorted names) uidTag titles mentions = filter EL.hasResolvedUID outputs
+disambiguateMentions :: Eq a => SortedGraph -> WikiuidNETag -> ED.NameMappings -> [EntityMention a] -> [EntityMention a]
+disambiguateMentions (SortedGraph sorted names) uidTag titles mentions = filter EL.hasResolvedUID outputs
   where
     distance_cut = 1
     score_cut    = 3

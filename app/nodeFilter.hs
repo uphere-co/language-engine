@@ -15,6 +15,7 @@ import qualified Data.Vector.Unboxed           as UV
 import qualified Graph                         as G
 import qualified Graph.ETL                     as G.E
 import qualified Graph.Internal.Hash           as H
+import           WikiEL.Type                           (NodeNames)
 import qualified WikiEL.EntityDisambiguation   as ED
 import qualified WikiEL.ETL.Util               as E.U
 
@@ -31,7 +32,7 @@ type Path        = [Text]
 {-|
   It accumulates counts of nodes in a path, except both edges.
 -}
-consume :: ED.NodeNames -> SortedEdges -> NodeCounts -> Path -> NodeCounts
+consume :: NodeNames -> SortedEdges -> NodeCounts -> Path -> NodeCounts
 consume _ _ cs ns | length ns < 2 = cs
 consume names sorted cs (a:b:ns) = consume names sorted cs' ns
   where

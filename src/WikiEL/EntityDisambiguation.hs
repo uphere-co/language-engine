@@ -9,7 +9,8 @@ import qualified Data.Text                     as T
 import qualified Data.Map                      as M
 import qualified Data.Vector.Unboxed           as UV
 
-import           WikiEL.Type                                  (EntityMention,PreNE(..),UIDCite(..))
+import           WikiEL.Type                                  (EntityMention,PreNE(..)
+                                                              ,SortedEdges(..),SortedGraph(..),NodeNames(..),UIDCite(..))
 import           WikiEL.Type.Wikidata                         (ItemID)
 import qualified NLP.Type.NamedEntity          as NE
 import qualified Graph                         as G
@@ -22,10 +23,6 @@ import qualified WikiEL.WikiEntityClass        as WEC
 import qualified WikiEL.ETL.Parser             as P
 import qualified WikiEL.ETL.Util               as U
 
-
-type SortedEdges = (G.Direction, UV.Vector (H.WordHash, H.WordHash))
-type NodeNames   = M.Map H.WordHash G.E.BString
-data SortedGraph = SortedGraph SortedEdges NodeNames
 
 
 {-
