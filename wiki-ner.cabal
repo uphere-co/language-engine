@@ -21,7 +21,7 @@ library
                        WikiEL
                        WikiEL.BinarySearch
                        WikiEL.Convert
-                       WikiEL.CoreNLP
+                       -- WikiEL.CoreNLP
                        WikiEL.EntityDisambiguation
                        WikiEL.EntityLinking
                        WikiEL.EntityMentionPruning
@@ -38,6 +38,7 @@ library
                        WikiEL.Misc
                        WikiEL.NamedEntity
                        WikiEL.Run
+                       WikiEL.Type
                        WikiEL.Type.Equity
                        WikiEL.Type.FileFormat
                        WikiEL.Type.RDF.Wikidata

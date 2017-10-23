@@ -21,11 +21,11 @@ import qualified Data.Text                     as T
 import           GHC.Generics                          (Generic)
 
 import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
+import           WikiEL.Type
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           WikiEL.Misc                           (IRange(..),RelativePosition(..), relativePos, untilNoOverlap)
 import           WikiEL.WikiEntityTagger               (NameUIDTable,buildEntityTable,wikiAnnotator)
 import qualified WikiEL.NamedEntity            as N
-import qualified WikiEL.CoreNLP                as C
 import qualified WikiEL.WikiEntityClass        as WEC
 import qualified NLP.Type.NamedEntity          as NE
 
@@ -41,11 +41,11 @@ import qualified NLP.Type.NamedEntity          as NE
 type NEClass = NamedEntityClass
 
 
-parseStanfordNE :: C.EntityToken -> NamedEntityFrag
-parseStanfordNE (C.EntityToken (C.WordToken word) (C.NETag tag)) =  parseStr word tag
+parseStanfordNE :: EntityToken -> NamedEntityFrag
+parseStanfordNE (EntityToken word tag) = parseStr word tag
 
 loadStanfordNERoutput :: Text -> [NamedEntityFrag]
-loadStanfordNERoutput content = map parseStanfordNE (C.parseNEROutputStr content)
+loadStanfordNERoutput content = map parseStanfordNE (parseNEROutputStr content)
 
 getWords :: [NamedEntityFrag] -> [Text]
 getWords  = map _fstr
