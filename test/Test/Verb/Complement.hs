@@ -141,14 +141,24 @@ ditransitive_4
 
 preposedTemporalAdjunct :: TestVerbComplement
 preposedTemporalAdjunct
-  = ( "Toyota Motor Corp on Monday said it would begin testing self-driving electric cars around 2020.", 5
+  = ( "Toyota Motor Corp on Monday said it would begin testing self-driving electric cars around 2020."
+    , 5
     , ("Toyota Motor Corp", ["it would begin testing self-driving electric cars around 2020"], ["on Monday"])
     , [(0,("Toyota","Toyota")),(1,("Motor","Motor")),(2,("Corp","Corp")),(3,("on","on")),(4,("Monday","Monday")),(5,("say","said")),(6,("it","it")),(7,("would","would")),(8,("begin","begin")),(9,("test","testing")),(10,("self-driving","self-driving")),(11,("electric","electric")),(12,("car","cars")),(13,("around","around")),(14,("2020","2020")),(15,(".","."))]
     , PN "ROOT" [PN "S" [PN "NP" [PN "NP" [PL ("NNP","Toyota"),PL ("NNP","Motor"),PL ("NNP","Corp")],PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Monday")]]],PN "VP" [PL ("VBD","said"),PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","it")],PN "VP" [PL ("MD","would"),PN "VP" [PL ("VB","begin"),PN "S" [PN "VP" [PL ("VBG","testing"),PN "NP" [PL ("JJ","self-driving"),PL ("JJ","electric"),PL ("NNS","cars")],PN "PP" [PL ("IN","around"),PN "NP" [PL ("CD","2020")]]]]]]]]],PL (".",".")]]
-    , [TagPos (TokIdx 4, TokIdx 5, MarkTime)] 
+    , [TagPos (TokIdx 4, TokIdx 5, MarkTime)]
     )
 
 
+preposedCP :: TestVerbComplement
+preposedCP
+  = ( "Brazilian steelmaker Companhia Siderugica Nacional SA plans to sell bonds on international markets in an effort to improve its debt profile, Benjamin Steinbruch, chief executive officer, said on Friday."
+    , 29
+    , ("Benjamain Steinbruch, chief executive officer,", ["Brazilian steelmaker Companhia Siderugica Nacional SA plans to sell bonds on international markets in an effort to improve its debt profile"], ["on Friday"])
+    , [(0,("brazilian","Brazilian")),(1,("steelmaker","steelmaker")),(2,("Companhia","Companhia")),(3,("Siderugica","Siderugica")),(4,("Nacional","Nacional")),(5,("SA","SA")),(6,("plan","plans")),(7,("to","to")),(8,("sell","sell")),(9,("bond","bonds")),(10,("on","on")),(11,("international","international")),(12,("market","markets")),(13,("in","in")),(14,("a","an")),(15,("effort","effort")),(16,("to","to")),(17,("improve","improve")),(18,("its","its")),(19,("debt","debt")),(20,("profile","profile")),(21,(",",",")),(22,("Benjamin","Benjamin")),(23,("Steinbruch","Steinbruch")),(24,(",",",")),(25,("chief","chief")),(26,("executive","executive")),(27,("officer","officer")),(28,(",",",")),(29,("say","said")),(30,("on","on")),(31,("Friday","Friday")),(32,(".","."))]
+    , PN "ROOT" [PN "S" [PN "S" [PN "NP" [PL ("JJ","Brazilian"),PL ("NN","steelmaker"),PL ("NNP","Companhia"),PL ("NNP","Siderugica"),PL ("NNP","Nacional"),PL ("NNP","SA")],PN "VP" [PL ("VBZ","plans"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","sell"),PN "NP" [PN "NP" [PL ("NNS","bonds")],PN "PP" [PL ("IN","on"),PN "NP" [PL ("JJ","international"),PL ("NNS","markets")]]],PN "PP" [PL ("IN","in"),PN "NP" [PL ("DT","an"),PL ("NN","effort"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","improve"),PN "NP" [PL ("PRP$","its"),PL ("NN","debt"),PL ("NN","profile")]]]]]]]]]]],PL (",",","),PN "NP" [PN "NP" [PL ("NNP","Benjamin"),PL ("NNP","Steinbruch")],PL (",",","),PN "NP" [PL ("JJ","chief"),PL ("NN","executive"),PL ("NN","officer")],PL (",",",")],PN "VP" [PL ("VBD","said"),PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Friday")]]],PL (".",".")]]
+    , []
+    )
 
 formatTP :: TestVerbComplement -> [String]
 formatTP (txt,i,_,lmatknlst,pt,tagged) =
@@ -192,24 +202,24 @@ mainShow = do
   showTP ditransitive_3
   showTP ditransitive_4
   showTP preposedTemporalAdjunct
-
+  showTP preposedCP
 
 checkSubjCompAdjunct :: TestVerbComplement -> Bool
 checkSubjCompAdjunct c = fromMaybe False $ do
   let vps = mkVPS (c^._4) (c^._5)
       clausetr = clauseStructure (c^._6) vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis (c^._6)) . identifyCPHierarchy (c^._6)) vps
-  
+
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
   paws <- findPAWS [] clausetr vp x'tr
-  
+
   -- (cp,_) <- constructCP (c^._6) vp
   let cp = paws^.pa_CP
       -- test subjects
       subj = cp^?complement.specifier.trResolved._Just.to (either (getTokens . current) headText)
       subj_test = c^._3._1
-      b_subj = subj == Just subj_test  
-      -- test complements 
+      b_subj = subj == Just subj_test
+      -- test complements
       -- lst_comps :: [Maybe Text]
       lst_comps = cp^..complement.complement.complement.traverse.trResolved.to (fmap compVPToHeadText)
       -- lst_comps_test :: [Text]
@@ -233,10 +243,10 @@ testcases = [ -- main_finite_1
             , ditransitive_3
             -- , ditransitive_4
             , preposedTemporalAdjunct
+            , preposedCP
             ]
 
 unitTests :: TestTree
 unitTests = testGroup "Subject and direct/indirect object identification" . flip map testcases $ \c ->
               testCase (T.unpack (c^._1)) $
                 (checkSubjCompAdjunct c == True) @? (intercalate "\n" (formatTP c))
-
