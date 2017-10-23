@@ -10,8 +10,10 @@ import           Data.Aeson
 import           Data.Text            (Text)
 import qualified Data.Text    as T
 import           Data.Vector          (Vector)
+import qualified Data.Vector.Unboxed as UV
 import           GHC.Generics         (Generic)
 --
+import           Graph.Internal.Hash  (WordHash)
 import           NLP.Type.NamedEntity (NamedEntityClass)
 --
 import           WikiEL.Type.Wikidata (ItemID)
@@ -105,3 +107,8 @@ instance ToJSON (EntityMention Text) where
 instance FromJSON (EntityMention Text) where
   parseJSON = genericParseJSON defaultOptions
 
+type WordsHash = UV.Vector WordHash
+
+data NameUIDTable = NameUIDTable { _uids :: Vector ItemID
+                                 , _names :: Vector WordsHash}
+                  deriving (Show)

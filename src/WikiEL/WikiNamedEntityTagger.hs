@@ -21,11 +21,11 @@ import qualified Data.Text                     as T
 import           GHC.Generics                          (Generic)
 
 import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
-import           WikiEL.Type                           (EntityToken(..),IRange(..),PreNE(..),RelativePosition(..)
+import           WikiEL.Type                           (EntityToken(..),IRange(..),NameUIDTable,PreNE(..),RelativePosition(..)
                                                        ,parseNEROutputStr)
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           WikiEL.Misc                           (relativePos, untilNoOverlap)
-import           WikiEL.WikiEntityTagger               (NameUIDTable,buildEntityTable,wikiAnnotator)
+import           WikiEL.WikiEntityTagger               (buildEntityTable,wikiAnnotator)
 import qualified WikiEL.NamedEntity            as N
 import qualified WikiEL.WikiEntityClass        as WEC
 import qualified NLP.Type.NamedEntity          as NE

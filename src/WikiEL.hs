@@ -30,10 +30,10 @@ import qualified Graph.Internal.Hash                as H
 import           NLP.Type.PennTreebankII                      (POSTag(..))
 import           NLP.Type.NamedEntity                         (NamedEntityClass,NamedEntityFrag(..))
 --
-import           WikiEL.Type                                  (EntityMention,ItemClass)
+import           WikiEL.Type                                  (EntityMention,ItemClass,NameUIDTable)
 import           WikiEL.Type.Wikidata                         (ItemID)
 import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,namedEntityAnnotator)
-import           WikiEL.WikiEntityTagger                      (NameUIDTable,loadWETagger)
+import           WikiEL.WikiEntityTagger                      (loadWETagger)
 import           WikiEL.WikiEntityClass                       (WikiuidNETag)
 import           WikiEL.EntityLinking                         (entityLinkings,buildEntityMentions)
 import qualified WikiEL.WikiEntityTagger            as WET
@@ -64,7 +64,7 @@ Two high-level functions for client uses.
 -}
 
 
-extractEntityMentions :: WET.NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass)] -> [EntityMention Text]
+extractEntityMentions :: NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass)] -> [EntityMention Text]
 extractEntityMentions wikiTable uidNEtags neTokens = linked_mentions
   where    
     stanford_nefs  = map (uncurry NamedEntityFrag) neTokens
@@ -76,7 +76,7 @@ extractEntityMentions wikiTable uidNEtags neTokens = linked_mentions
     mentions = buildEntityMentions words wiki_named_entities
     linked_mentions = entityLinkings mentions
 
-extractFilteredEntityMentions :: WET.NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass, POSTag)] -> [EntityMention Text]
+extractFilteredEntityMentions :: NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass, POSTag)] -> [EntityMention Text]
 extractFilteredEntityMentions wikiTable uidNEtags tokens = filtered_mentions
   where    
     neTokens = map (\(x,y,z)->(x,y)) tokens
