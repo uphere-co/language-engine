@@ -1,7 +1,8 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 module WikiEL.Type where
 
@@ -11,7 +12,7 @@ import qualified Data.Map                      as M
 import qualified Data.Set     as S
 import           Data.Text            (Text)
 import qualified Data.Text    as T
-import           Data.Vector          (Vector)
+import           Data.Vector          (Vector,toList)
 import qualified Data.Vector.Unboxed as UV
 import           GHC.Generics         (Generic)
 --
@@ -57,7 +58,7 @@ instance FromJSON ItemClass where
   parseJSON = genericParseJSON defaultOptions
 
 data PreNE = UnresolvedUID NamedEntityClass             -- Tagged by CoreNLP NER, but no matched Wikidata UID                
-           | AmbiguousUID ([ItemID],NamedEntityClass)   -- Tagged by CoreNLP NER, and matched Wikidata UIDs of the NamedEntityClass                                                                                                                      
+           | AmbiguousUID ([ItemID],NamedEntityClass)   -- Tagged by CoreNLP NER, and matched Wikidata UIDs of the NamedEntityClass
            | Resolved (ItemID, ItemClass)  -- A wikidata UID of a CoreNLP NER Class type.                                
            | UnresolvedClass [ItemID]          -- Not tagged by CoreNLP NER, but matched Wikidata UID(s)                     
            deriving(Show, Eq, Generic)
@@ -92,6 +93,17 @@ makePrisms ''UIDCite
 -- w : type of word token
 type EMInfo w = (IRange, Vector w, PreNE)
 type EntityMention w = UIDCite EntityMentionUID (EMInfo w)
+
+-- Duplicated function
+entityName :: EMInfo Text -> Text
+entityName (_, ws, _) = T.intercalate " " (toList ws)
+
+toString :: EMInfo Text -> String
+toString em@(range, ws, tag) = show range ++ " \"" ++ T.unpack (entityName em) ++  "\", " ++show tag
+
+instance (Show a) => Show (UIDCite a (EMInfo Text))  where
+  show (Cite uid ref info) = "Cite {" ++ show uid ++ " cites " ++ show ref ++ ",\t" ++ toString info ++ "}"
+  show (Self uid info) = "Self {" ++ show uid  ++ ",\t" ++ toString info ++ "}"
 
 instance ToJSON EntityMentionUID where
   toJSON = genericToJSON defaultOptions

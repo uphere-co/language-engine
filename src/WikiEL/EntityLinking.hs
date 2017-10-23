@@ -29,7 +29,7 @@ mayRefer src target = (N._type src == N._type target) && T.isInfixOf (N._str src
 
 canRefer :: OrderedNamedEntity -> OrderedNamedEntity -> Bool
 canRefer src target = (N._order src > N._order target) && mayRefer (N._entity src) (N._entity target)
-  
+
 entityName :: EMInfo Text -> Text
 entityName (_, ws, _) = T.intercalate " " (toList ws)
 
@@ -38,11 +38,13 @@ entityUID m = resolvedUID tag
   where
     (_,_,tag) = _info m
 
+mentionedEntityName :: EntityMention Text -> Text
+mentionedEntityName em = entityName (_info em)
+
 entityUIDcandidates :: EntityMention w -> [ItemID]
 entityUIDcandidates m = uidCandidates tag
   where    
     (_,_,tag) = _info m
-    
 
 entityIRange :: EntityMention a -> IRange
 entityIRange mention = range
@@ -54,16 +56,6 @@ entityPreNE mention = ne
 
 hasResolvedUID :: EntityMention a -> Bool
 hasResolvedUID mention  = isResolved (entityPreNE mention)
-
-mentionedEntityName :: EntityMention Text -> Text
-mentionedEntityName em = entityName (_info em)
-
-toString :: EMInfo Text -> String
-toString em@(range, ws, tag) = show range ++ " \"" ++ T.unpack (entityName em) ++  "\", " ++show tag
-
-instance (Show a) => Show (UIDCite a (EMInfo Text))  where
-  show (Cite uid ref info) = "Cite {" ++ show uid ++ " cites " ++ show ref ++ ",\t" ++ toString info ++ "}"
-  show (Self uid info) = "Self {" ++ show uid  ++ ",\t" ++ toString info ++ "}"
 
 buildEntityMentions :: Vector w -> [(IRange, PreNE)] -> [EntityMention w]
 buildEntityMentions text wikiNEs = zipWith Self uids mentions
