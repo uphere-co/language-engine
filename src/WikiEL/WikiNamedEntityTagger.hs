@@ -22,8 +22,7 @@ import           GHC.Generics                          (Generic)
 
 import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
 import           WikiEL.Type                           (EntityToken(..),IRange(..),NameUIDTable
-                                                       ,PreNE(..),RelativePosition(..),WikiuidNETag
-                                                       ,parseNEROutputStr)
+                                                       ,PreNE(..),RelativePosition(..),WikiuidNETag)
 import           WikiEL.Type.Wikidata                  (ItemID)
 import           WikiEL.Misc                           (relativePos, untilNoOverlap)
 import           WikiEL.WikiEntityTagger               (buildEntityTable,wikiAnnotator)
@@ -38,6 +37,12 @@ import qualified NLP.Type.NamedEntity          as NE
   by discarding possiblities that both results are inconsistent.
 -}
 
+
+parseNERToken :: Text -> EntityToken
+parseNERToken tokenStr = (\(x,y)-> EntityToken (T.dropEnd 1 x) y) $ T.breakOnEnd (T.pack "/") tokenStr
+
+parseNEROutputStr :: Text -> [EntityToken]
+parseNEROutputStr str = map parseNERToken (T.words str)
 
 parseStanfordNE :: EntityToken -> NamedEntityFrag
 parseStanfordNE (EntityToken word tag) = parseStr word tag

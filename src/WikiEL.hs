@@ -114,4 +114,3 @@ disambiguateMentions (SortedGraph sorted names) uidTag titles mentions = filter 
     dms = ED.tryDisambiguate uidTag titles (ED.matchToSimilar f score_cut) mentions
     disambiguated = EL.entityLinkings dms
     outputs = EL.entityLinkings disambiguated
-

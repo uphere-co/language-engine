@@ -43,12 +43,6 @@ instance Show IRange where
 data RelativePosition = LbeforeR | RbeforeL | Coincide | RinL | LinR | LoverlapR | RoverlapL
                       deriving(Show,Eq)
 
-parseNERToken :: Text -> EntityToken
-parseNERToken tokenStr = (\(x,y)-> EntityToken (T.dropEnd 1 x) y) $ T.breakOnEnd (T.pack "/") tokenStr
-
-parseNEROutputStr :: Text -> [EntityToken]
-parseNEROutputStr str = map parseNERToken (T.words str)
-
 data ItemClass = ItemClass { _itemID  :: ItemID
                            , _strName :: Text }
                   deriving (Eq,Ord,Generic)
@@ -61,7 +55,6 @@ instance ToJSON ItemClass where
 
 instance FromJSON ItemClass where
   parseJSON = genericParseJSON defaultOptions
-
 
 data PreNE = UnresolvedUID NamedEntityClass             -- Tagged by CoreNLP NER, but no matched Wikidata UID                
            | AmbiguousUID ([ItemID],NamedEntityClass)   -- Tagged by CoreNLP NER, and matched Wikidata UIDs of the NamedEntityClass                                                                                                                      
