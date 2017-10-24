@@ -175,10 +175,10 @@ newNETagger = do
               let name0 = EL.entityName (_info x)
                   name = (T.replace "," "" . T.replace "." "") name0   -- try once more
                   tags' = WET.wikiAnnotator wikiTable (T.words name)
-                  tags'' = filter (\(r,_)->end r-beg r>1) tags'
+                  tags'' = filter (\(r,_)->(r^.end)-(r^.beg)>1) tags'
               in case tags'' of
                    [] -> x
-                   _  -> let rids = (V.toList . snd . maximumBy (flip compare `on` (\(r,_) -> end r - beg r))) tags''
+                   _  -> let rids = (V.toList . snd . maximumBy (flip compare `on` (\(r,_) -> (r^.end) - (r^.beg)))) tags''
                          in disambiguatorWorker x (rids,t)
             else x
           _ -> x
