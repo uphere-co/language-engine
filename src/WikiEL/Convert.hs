@@ -2,12 +2,14 @@
 
 module WikiEL.Convert where
 
-import           Data.Vector                           (Vector,toList)
-import           Data.Text                             (Text)
-import qualified Data.Text   as T
+import           Control.Lens
+import           Data.Vector       (Vector,toList)
+import           Data.Text         (Text)
+import qualified Data.Text    as T
 --
 import WikiEL.EntityLinking
-import WikiEL.Type                                     (EntityMention(..),EntityMentionUID(..),IRange(..),UIDCite(..))
+import WikiEL.Type                                     (EntityMention(..),EntityMentionUID(..),IRange(..),UIDCite(..)
+                                                       ,beg,end)
 
 getNameFromEntityMention :: EntityMention Text -> Text
 getNameFromEntityMention x = case x of
@@ -16,8 +18,8 @@ getNameFromEntityMention x = case x of
 
 getRangeFromEntityMention :: EntityMention Text -> (Int,Int)
 getRangeFromEntityMention x = case x of
-                                Cite uid ref info@(ir,v,ne) -> (beg ir,end ir)
-                                Self uid     info@(ir,v,ne) -> (beg ir, end ir)
+                                Cite uid ref info@(ir,v,ne) -> (ir ^. beg,ir ^. end)
+                                Self uid     info@(ir,v,ne) -> (ir ^. beg,ir ^. end)
     
 getUIDFromEntityMention :: EntityMention Text -> Int
 getUIDFromEntityMention x = case x of
