@@ -1,6 +1,6 @@
 module WikiEL.Run where
 
-import           Control.Lens
+import           Control.Lens                          ((^.),(^..))
 import           Data.Maybe
 --
 import           Data.Text                             (Text)
@@ -10,7 +10,8 @@ import           NLP.Type.PennTreebankII
 import           System.FilePath                       ((</>))
 import           WikiEL.EntityLinking
 --
-import           WikiEL.Type                           (EntityMention,IRange(..),ItemClass(..))
+import           WikiEL.Type                           (EntityMention,IRange(..),ItemClass(..)
+                                                       ,beg,end)
 import           WikiEL.Type.FileFormat
 import qualified WikiEL.WikiEntityClass        as WC
 import qualified WikiEL                        as WEL
@@ -27,7 +28,7 @@ prepareWNP sents =
 
 
 mkConstraintFromWikiEL :: [EntityMention Text] -> [(Int,Int)]
-mkConstraintFromWikiEL wikiel = map (\x -> let irange = entityIRange x in (beg irange, end irange)) $ wikiel
+mkConstraintFromWikiEL wikiel = map (\x -> let irange = entityIRange x in (irange ^. beg,irange ^. end)) $ wikiel
 
 runEL :: ([(Text,NamedEntityClass,POSTag)] -> [EntityMention Text])
       -> ([EntityMention Text] -> [EntityMention Text])
