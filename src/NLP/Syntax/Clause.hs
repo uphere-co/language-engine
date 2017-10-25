@@ -99,22 +99,25 @@ complementCandidates vprop z_vp =
 complementsOfVerb :: [TagPos TokIdx MarkType]
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> Zipper (Lemma ': as)
-                  -> [TraceChain (CompVP (Lemma ': as))]
+                  -> ([TraceChain (CompVP (Lemma ': as))],[Zipper (Lemma ': as)])
 complementsOfVerb tagged vprop z_vp =
-  let cs = map xform (complementCandidates vprop z_vp)
+  let (cs,zs) = let lst = map xform (complementCandidates vprop z_vp)
+                in (map fst lst,concatMap snd lst)    
   in case vprop^.vp_voice of
-       Active -> cs
-       Passive -> TraceChain (Left (singletonLZ Moved)) Nothing : cs
+       Active -> (cs,zs)
+       Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,zs)
   where
     -- xform_pp = TraceChain (Right []) . Just . checkTimePrep tagged
-    xform_dp = TraceChain (Right []) . Just . checkEmptyPrep tagged . splitDP tagged
-    xform_cp = TraceChain (Right []) . Just . CompVP_Unresolved
+    xform_dp z = let dp = splitDP tagged z
+                     (dp',zs) = identifyInternalTimePrep tagged dp
+                 in (TraceChain (Right []) (Just (checkEmptyPrep tagged dp')), zs)
+    xform_cp z = (TraceChain (Right []) (Just (CompVP_Unresolved z)), [])
     xform z = case rootTag (current z) of
                 Left NP    -> xform_dp z
                 Left _     -> xform_cp z
                 Right p    -> if isNoun p == Yes then xform_dp z else xform_cp z
 
-    -- tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
+
 
 
 allAdjunctCPOfVerb :: VerbProperty (Zipper (Lemma ': as))
@@ -165,18 +168,18 @@ constructCP tagged vprop = do
       N.CL s -> do
         cp' <- parent tp
         cptag' <- N.convert <$> getchunk cp'
-        let comps = complementsOfVerb tagged vprop z_vp
+        let (comps,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
             nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
             subj0 = identifySubject tagged s z_vp
-            (subj,subj_dps,vadjs) = fromMaybe (subj0,[],[]) $ do
+            (subj,subj_dps,sadjs) = fromMaybe (subj0,[],[]) $ do
               dp_subj <- subj0 ^? trResolved . _Just . _Right
-              let (dp_subj',vadjs) = identifyInternalTimePrep tagged dp_subj
+              let (dp_subj',sadjs) = identifyInternalTimePrep tagged dp_subj
                   subj' = ((trResolved . _Just . _Right) .~ dp_subj') subj0
               subj_dp <- subj' ^? trResolved . _Just
-              return (subj',[subj_dp],vadjs)
-            verbp = mkVerbP z_vp vprop vadjs comps
+              return (subj',[subj_dp],sadjs)
+            verbp = mkVerbP z_vp vprop (cadjs++sadjs) comps
             dps = subj_dps ++ comps_dps
         case cptag' of
           N.CL N.SBAR ->
@@ -193,10 +196,10 @@ constructCP tagged vprop = do
           _      -> -- somewhat problematic case?
             return (mkCP C_PHI tp Nothing adjs (mkTP tp subj verbp),dps)
       _ -> -- reduced relative clause
-        let comps = complementsOfVerb tagged vprop z_vp
+        let (comps,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
-            verbp = mkVerbP z_vp vprop [] comps
+            verbp = mkVerbP z_vp vprop cadjs comps
             nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
         in return (mkCP C_PHI z_vp (Just SpecCP_WHPHI) adjs (mkTP z_vp nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
