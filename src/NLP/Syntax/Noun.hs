@@ -47,9 +47,13 @@ splitParentheticalModifier z = do
   comma1 <- next dp1
   guard (isPOSAs M_COMMA (current comma1)) -- followed by comma
   z2 <- next comma1                        -- followed by a phrase
-  comma2 <- next z2
-  guard (isPOSAs M_COMMA (current comma2)) -- followed by comma
-  guard (isNothing (next comma2))
+  -- followed by comma and end, or just end. 
+  ((do comma2 <- next z2
+       guard (isPOSAs M_COMMA (current comma2))
+       guard (isNothing (next comma2)))
+   <|>
+   (guard (isNothing (next z2))))
+
   let rf = getRange . current
   -- phrase inside parenthetical commas must be NP or clause
   ((guard (isChunkAs NP (current z2)) >> return (mkSplittedDP APMod (rf dp1) (rf z2) z))
