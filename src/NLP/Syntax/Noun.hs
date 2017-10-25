@@ -4,7 +4,7 @@
 module NLP.Syntax.Noun where
 
 import           Control.Applicative      ((<|>))
-import           Control.Lens             ((^.),to,_1,_2)
+import           Control.Lens             ((^.),(^?),to,_1,_2)
 import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
 import           Data.Foldable            (toList)
@@ -20,23 +20,26 @@ import           NLP.Type.TagPos          (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,XP(..),maximalProjection
-                                          ,tokensByRange,mkOrdDP,mkSplittedDP,original
+                                          ,tokensByRange,mkOrdDP,mkSplittedDP,original,_Intact
                                           )
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 
 
 splitDP :: [TagPos TokIdx MarkType]
-        -> Zipper (Lemma ': as)
+        -- -> Zipper (Lemma ': as)
         -> DetP (Lemma ': as)
-splitDP tagged z = bareNounModifier tagged . fromMaybe (mkOrdDP z) $ do
-  guard (isChunkAs NP (current z))
-  dp <- child1 z
-  guard (isChunkAs NP (current dp))
-  sbar <- next dp
-  let rf = getRange . current
-  ((guard (isChunkAs SBAR (current sbar)) >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
-   (guard (isChunkAs VP (current sbar))   >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
-   (splitParentheticalModifier z))
+        -> DetP (Lemma ': as)
+splitDP tagged dp0 =
+  bareNounModifier tagged . fromMaybe dp0 $ do
+    z <- dp0^?maximalProjection._Intact
+    guard (isChunkAs NP (current z))
+    dp <- child1 z
+    guard (isChunkAs NP (current dp))
+    sbar <- next dp
+    let rf = getRange . current
+    ((guard (isChunkAs SBAR (current sbar)) >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
+     (guard (isChunkAs VP (current sbar))   >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
+     (splitParentheticalModifier z))
 
 
 splitParentheticalModifier :: Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))

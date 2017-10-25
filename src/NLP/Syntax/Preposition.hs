@@ -4,13 +4,14 @@
 
 module NLP.Syntax.Preposition where
 
+import           Control.Applicative     ((<|>))
 import           Control.Lens            ((^.),(^?),(.~),(&),_1,_2,_Right,to)
 import           Control.Monad           (guard)
 import           Data.List               (find)
 import           Data.Maybe              (fromMaybe)
 --
 import           Data.Bitree             (_PL)
-import           Data.BitreeZipper       (child1,current,next,parent)
+import           Data.BitreeZipper       (child1,current,next,parent,toBitree)
 import           Data.BitreeZipper.Util  (firstSiblingBy)
 import           Data.Range              (isInsideR)
 import           NLP.Type.PennTreebankII (ChunkTag(..),Lemma(..),POSTag(..)
@@ -97,7 +98,10 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
       rng_dp' = (b_dp,b_tpp-1)
       rng_head = let (b_h,e_h) = dp^.headX._2
                  in if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
-  let dp' = dp & (headX .~ (rng_dp',rng_head))
-               . (maximalProjection .~ Seperated z_dp rng_dp')
-      -- pp' = mkPP ( ,PC_Time)
+  dp' <- ((do z_dp' <- findZipperForRangeICP rng_dp' (toBitree z_dp)
+              return (dp & (headX .~ (rng_dp',rng_head)) . (maximalProjection .~ Intact z_dp'))
+          )
+          <|>
+          (return (dp & (headX .~ (rng_dp',rng_head)) . (maximalProjection .~ Seperated z_dp rng_dp'))))
+
   return (dp',[z_tpp])
