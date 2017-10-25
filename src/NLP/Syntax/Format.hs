@@ -108,7 +108,8 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                      \Tense Phrase         : %-6s  %s\n\
                      \Determiner Phrase    :         %s\n\
                      \Verb Phrase          : %-6s  %s\n\
-                     \Verb Complements     :       %s\n"
+                     \Verb Complements     :       %s\n\
+                     \Verb Adjunts         :       %s\n"
                 (maybe "null" show (getchunk (cp^.maximalProjection)))
                 (show (gettoken (cp^.maximalProjection)))
                 head1 head2
@@ -120,6 +121,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                 (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 ((show . gettoken) (cp^.complement.complement.maximalProjection))
                 ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain formatCompVP ))))
+                ((T.intercalate " | " (cp^..complement.complement.adjunct.traverse.to (T.intercalate " " . gettoken))))
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current

@@ -108,7 +108,7 @@ complementsOfVerb tagged vprop z_vp =
        Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,zs)
   where
     -- xform_pp = TraceChain (Right []) . Just . checkTimePrep tagged
-    xform_dp z = let dp = splitDP tagged z
+    xform_dp z = let dp = splitDP tagged (mkOrdDP z)
                      (dp',zs) = identifyInternalTimePrep tagged dp
                  in (TraceChain (Right []) (Just (checkEmptyPrep tagged dp')), zs)
     xform_cp z = (TraceChain (Right []) (Just (CompVP_Unresolved z)), [])
@@ -148,7 +148,7 @@ identifySubject tagged tag vp = maybe nul smp r
           N.SINV -> firstSiblingBy next (isChunkAs NP) vp          -- this should be refined.
           _      -> firstSiblingBy prev (isChunkAs NP) vp          -- this should be refined.
     nul = TraceChain (Left (singletonLZ NULL)) Nothing
-    smp z = TraceChain (Right [])(Just (Right (splitDP tagged z))) -- for the time being, CP subject is not supported
+    smp z = TraceChain (Right [])(Just (Right (splitDP tagged (mkOrdDP z)))) -- for the time being, CP subject is not supported
 
 
 
@@ -176,7 +176,8 @@ constructCP tagged vprop = do
             (subj,subj_dps,sadjs) = fromMaybe (subj0,[],[]) $ do
               dp_subj <- subj0 ^? trResolved . _Just . _Right
               let (dp_subj',sadjs) = identifyInternalTimePrep tagged dp_subj
-                  subj' = ((trResolved . _Just . _Right) .~ dp_subj') subj0
+                  dp_subj'' = splitDP tagged dp_subj' 
+                  subj' = ((trResolved . _Just . _Right) .~ dp_subj'') subj0
               subj_dp <- subj' ^? trResolved . _Just
               return (subj',[subj_dp],sadjs)
             verbp = mkVerbP z_vp vprop (cadjs++sadjs) comps
@@ -305,17 +306,17 @@ whMovement tagged (w,cp) = do
             -- check subject position for relative pronoun
             let z_cp = cp^.maximalProjection
             ((do -- ordinary relative clause
-                 z' <- splitDP tagged <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
-                 rewriteX'TreeForModifier id w z'
-                 return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right z'))))
+                 dp' <- splitDP tagged . mkOrdDP <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
+                 rewriteX'TreeForModifier id w dp'
+                 return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right dp'))))
              <|>
              (do -- free relative clause
-                 z' <- splitDP tagged <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
-                 w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng (reverse ps) w z')
+                 dp' <- splitDP tagged . mkOrdDP <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+                 w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng (reverse ps) w dp')
                  lift (put (toBitree w_dom'))
                  (w',_) <- retrieveWCP rng
-                 rewriteX'TreeForModifier id w' z'
-                 return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right z')))))
+                 rewriteX'TreeForModifier id w' dp'
+                 return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right dp')))))
         _    -> return spec
     Right ps -> do
       -- without trace in subject
@@ -323,7 +324,7 @@ whMovement tagged (w,cp) = do
       void . runMaybeT $ do
         let z_cp = cp^.maximalProjection
         ((do -- ordinary relative clause
-             z' <- splitDP tagged <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
+             z' <- splitDP tagged . mkOrdDP <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
              let -- adjust function for complement with relative pronoun resolution
                  rf0 = _2._CPCase.complement.complement.complement
                          %~ (TraceChain (Left (LZ [] Moved [WHPRO])) (Just (CompVP_DP z')) :)
@@ -331,7 +332,7 @@ whMovement tagged (w,cp) = do
              rewriteX'TreeForModifier rf0 w z')
          <|>
          (do -- free relative clause
-             z' <- splitDP tagged <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+             z' <- splitDP tagged . mkOrdDP <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
              w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng ps w z')
              lift (put (toBitree w_dom'))
              (w',_) <- retrieveWCP rng
