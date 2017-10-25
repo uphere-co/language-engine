@@ -67,8 +67,8 @@ splitPP tagged z = fromMaybe (mkOrdDP z) $ do
   guard (isChunkAs PP (current z))
   p <- child1 z
   guard (isPOSAs TO (current p) || isPOSAs IN (current p))
-  dp <- next p
-  return (splitDP tagged dp)
+  z_dp <- next p
+  return (splitDP tagged (mkOrdDP z_dp))
 
 
 
