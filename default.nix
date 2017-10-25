@@ -5,7 +5,7 @@
 , optparse-applicative, OntoNotes, PropBank, split
 , stdenv
 , syntactic-analysis
-, tasty, tasty-hunit, text, textview, time, transformers, vector
+, tasty, tasty-hunit, text, text-format, textview, time, transformers, vector
 , wiki-ner
 }:
 mkDerivation {
@@ -26,7 +26,7 @@ mkDerivation {
     attoparsec base bytestring containers data-default either fastText
     filepath foreign-store HCoreNLP HCoreNLP-Proto jni jvm lens
     lexicon-builder nlp-types optparse-applicative PropBank syntactic-analysis
-    text text-format time transformers
+    text time transformers
     vector
   ];
   testHaskellDepends = [
