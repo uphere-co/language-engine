@@ -75,6 +75,7 @@ library
                        protocol-buffers,
                        split,
                        text,
+                       text-format,
                        time,
                        transformers,
                        unordered-containers,

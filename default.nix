@@ -20,13 +20,13 @@ mkDerivation {
     html-entities HCoreNLP HCoreNLP-Proto HFrameNet jni jvm lens lexicon-builder multi-word-tagger
     nlp-shared-types nlp-types OntoNotes PropBank
     syntactic-analysis
-    split text time vector textview wiki-ner
+    split text text-format time vector textview wiki-ner
   ];
   executableHaskellDepends = [
     attoparsec base bytestring containers data-default either fastText
     filepath foreign-store HCoreNLP HCoreNLP-Proto jni jvm lens
     lexicon-builder nlp-types optparse-applicative PropBank syntactic-analysis
-    text time transformers
+    text text-format time transformers
     vector
   ];
   testHaskellDepends = [
