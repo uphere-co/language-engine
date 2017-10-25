@@ -239,7 +239,7 @@ formatMGEdge e = printf "i%d -> i%d [label=\"%s\" style=\"%s\" fontsize=12.0 %s]
                    (e^.me_end)
                    (e^.me_relation <> maybe "" (":" <>) (e^.me_prep))
                    (if (e^.me_ismodifier) then "bold" else "solid" :: Text)
-                   (if (e^.me_ismodifier) then "constraint=false" else "" :: Text)
+                   ("" :: Text) -- (if (e^.me_ismodifier) then "constraint=false" else "" :: Text)
                  ++
                  if (e^.me_ismodifier) then printf "\n  {rankdir=TB; i%d -> i%d [style=invis]};" (e^.me_end) (e^.me_start) else ""
 
