@@ -15,6 +15,8 @@ import           Data.Maybe                              (fromMaybe,mapMaybe)
 import           Data.Monoid                             ((<>))
 import           Data.Text                               (Text)
 import qualified Data.Text                       as T
+import qualified Data.Text.Format                as T.F
+import qualified Data.Text.Lazy                  as T.L
 import qualified Data.Text.IO                    as T.IO
 
 import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat,render)
@@ -26,7 +28,7 @@ import           Data.Bitree
 import           Data.BitreeZipper
 
 import           Data.Range
-import qualified HTMLEntities.Text             as HTMLT               
+import qualified HTMLEntities.Text             as HTMLT
 import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
 import           Lexicon.Type                            (ArgPattern(..),RoleInstance,GRel(..),FNFrameElement)
 import           NLP.Syntax.Format
@@ -234,14 +236,21 @@ showMatchedFrame tagged (vstr,paws) = do
 
 
 
-formatMGEdge e = printf "i%d -> i%d [label=\"%s\" style=\"%s\" fontsize=12.0 %s];"
-                   (e^.me_start)
-                   (e^.me_end)
-                   (e^.me_relation <> maybe "" (":" <>) (e^.me_prep))
-                   (if (e^.me_ismodifier) then "bold" else "solid" :: Text)
-                   ("" :: Text) -- (if (e^.me_ismodifier) then "constraint=false" else "" :: Text)
-                 ++
-                 if (e^.me_ismodifier) then printf "\n  {rankdir=TB; i%d -> i%d [style=invis]};" (e^.me_end) (e^.me_start) else ""
+formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}];"
+                   (e^.me_start
+                   ,e^.me_end
+                   ,e^.me_relation <> maybe "" (":" <>) (e^.me_prep)
+                   ,if (e^.me_ismodifier) then "bold" else "solid" :: Text
+                   ,"" :: Text -- (if (e^.me_ismodifier) then "constraint=false" else "" :: Text)
+                   )
+                 <>
+                 if (e^.me_ismodifier)
+                 then format "\n  {rankdir=TB; i{} -> i{} [style=invis]};"
+                        (e^.me_end,e^.me_start)
+                 else ""
+  where
+    format fmt ps = T.L.toStrict (T.F.format fmt ps)
+
 
 formatMGVerb (MGEntity    _ _ _ _) = Nothing
 formatMGVerb (MGPredicate i _ f _ v)
@@ -275,21 +284,20 @@ formatMGEntity (MGPredicate _ _ _ _ _)    = Nothing
 formatMGEntity (MGNominalPredicate _ _ _) = Nothing
 
 
-dotMeaningGraph :: String -> MeaningGraph -> String
-dotMeaningGraph title mg = printf "digraph G {\n  %s\n  %s\n  %s\n}" vtxt etxt ttxt
+dotMeaningGraph :: Text -> MeaningGraph -> Text
+dotMeaningGraph title mg = format "digraph G {\n  {}\n  {}\n  {}\n}" (vtxt,etxt,ttxt)
   where
+    format fmt ps = T.L.toStrict (T.F.format fmt ps)
     -- vtxt :: String
     vtxt = let vertices = mg^.mg_vertices
                verbs = mapMaybe formatMGVerb vertices
                entities = mapMaybe formatMGEntity vertices
 
-           in (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=plaintext, margin=0, style=filled, fillcolor=grey label=<%s>];" i t)) verbs ++  "\n  " ++
-              (intercalate "\n  " . map (\(i,t) -> printf "i%d [shape=plaintext, margin=0, label=<%s>];" i t)) entities
+           in (T.intercalate "\n  " . map (\(i,t) -> format "i{} [shape=plaintext, margin=0, style=filled, fillcolor=grey label=<{}>];" (i,t))) verbs <>  "\n  " <>
+              (T.intercalate "\n  " . map (\(i,t) -> format "i{} [shape=plaintext, margin=0, label=<{}>];" (i,t))) entities
     --
     -- etxt :: String
-    etxt = let edges = mg^.mg_edges in (intercalate "\n  " . map formatMGEdge) edges
+    etxt = let edges = mg^.mg_edges in (T.intercalate "\n  " . map formatMGEdge) edges
     --
     -- ttxt :: String
-    ttxt = "labelloc=\"t\"; \n " ++ "label=\"" ++ title ++ "\"; \n "
-
-
+    ttxt = "labelloc=\"t\"; \n " <> "label=\"" <> title <> "\"; \n "
