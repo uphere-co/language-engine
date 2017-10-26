@@ -26,7 +26,6 @@ import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 
 
 splitDP :: [TagPos TokIdx MarkType]
-        -- -> Zipper (Lemma ': as)
         -> DetP (Lemma ': as)
         -> DetP (Lemma ': as)
 splitDP tagged dp0 =
@@ -39,11 +38,11 @@ splitDP tagged dp0 =
     let rf = getRange . current
     ((guard (isChunkAs SBAR (current sbar)) >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
      (guard (isChunkAs VP (current sbar))   >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
-     (splitParentheticalModifier z))
+     (splitParentheticalModifier tagged z))
 
 
-splitParentheticalModifier :: Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))
-splitParentheticalModifier z = do
+splitParentheticalModifier :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))
+splitParentheticalModifier tagged z = do
   guard (isChunkAs NP (current z))         -- dominating phrase must be NP
   dp1 <- child1 z
   guard (isChunkAs NP (current dp1))       -- first (head) phrase must be NP
@@ -59,13 +58,22 @@ splitParentheticalModifier z = do
 
   let rf = getRange . current
   -- phrase inside parenthetical commas must be NP or clause
-  ((guard (isChunkAs NP (current z2)) >> return (mkSplittedDP APMod (rf dp1) (rf z2) z))
+  ((guard (isChunkAs NP (current z2)) >> return (identAppositiveHead tagged (rf dp1) (rf z2) z))
    <|>
    (guard (isChunkAs VP (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z))
    <|>
    (guard (isChunkAs SBAR (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z)))
 
 
+
+
+identAppositiveHead tagged rng1@(b1,e1) rng2@(b2,e2) z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $ 
+  ((do find (\(TagPos (b,e,t)) -> rng1 == beginEndToRange (b,e) && t == MarkEntity) tagged
+       return (mkSplittedDP APMod rng1 rng2 z))
+   <|>
+   (do find (\(TagPos (b,e,t)) -> rng2 == beginEndToRange (b,e) && t == MarkEntity) tagged
+       return (mkSplittedDP APMod rng2 rng1 z)))
+   
 
 -- | starting with capital letter
 --
