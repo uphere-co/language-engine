@@ -20,7 +20,7 @@ import           NLP.Type.PennTreebankII         (PennTree,Lemma)
 import           NLP.Type.TagPos                 (TagPos(..),TokIdx(..))
 --
 import           NLP.Syntax.Format.Internal      (formatDP)
-import           NLP.Syntax.Noun                 (bareNounModifier)
+import           NLP.Syntax.Noun                 (bareNounModifier,splitDP)
 import           NLP.Syntax.Preposition          (identifyInternalTimePrep)
 import           NLP.Syntax.Type                 (MarkType(..))
 import           NLP.Syntax.Type.XBar            (Zipper,getTokens,headX,mkOrdDP)
@@ -28,6 +28,8 @@ import           NLP.Syntax.Util                 (mkBitreeICP)
 --
 import           Test.Tasty
 import           Test.Tasty.HUnit
+import Debug.Trace
+
 
 type TestBNM = (Text,(Range,Range),[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
 
@@ -73,6 +75,19 @@ test_bare_noun_modifier_4 =
   , [TagPos (TokIdx 3, TokIdx 4,MarkEntity)]
   )
 
+
+-- |
+test_paren_modifier_1 :: TestBNM
+test_paren_modifier_1 =
+  ( "Los-Angeles-based company, Hyperloop One"
+  , ((0,4),(3,4))
+  , [(0,("los-angeles-based","Los-Angeles-based")),(1,("company","company")),(2,(",",",")),(3,("Hyperloop","Hyperloop")),(4,("one","One"))]
+  , PN "NP" [PN "NP" [PL ("JJ","Los-Angeles-based"),PL ("NN","company")],PL (",",","),PN "NP" [PL ("NNP","Hyperloop"),PL ("CD","One")]]
+  , [TagPos (TokIdx 3, TokIdx 5, MarkEntity)]
+  )
+
+
+
 checkBNM :: TestBNM -> Bool
 checkBNM x =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) (x^._3))
@@ -82,8 +97,8 @@ checkBNM x =
               g = (^._1.to show.to T.pack)
       z :: Zipper '[Lemma]
       z = getRoot1 $ mkBitreeZipper [] lemmapt
-      y = bareNounModifier (x^._5) (mkOrdDP z)
-  in (y^.headX == x^._2)
+      y = splitDP (x^._5) (mkOrdDP z)
+  in y^.headX == x^._2
 
 --  T.IO.putStrLn (linePrint id tr)
 
@@ -93,6 +108,7 @@ testcases = [ test_bare_noun_modifier_1
             , test_bare_noun_modifier_2
             , test_bare_noun_modifier_3
             , test_bare_noun_modifier_4
+            , test_paren_modifier_1
             ]
 
 
