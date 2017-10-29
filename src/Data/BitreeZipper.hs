@@ -33,7 +33,7 @@ makeLenses ''BitreeZipper
 
 
 mkBitreeZipper :: [BitreeContext c t] -> Bitree c t -> Bitree (BitreeZipper c t) (BitreeZipper c t)
-mkBitreeZipper zs p@(PL x)    = PL (TZ p zs)
+mkBitreeZipper zs p@(PL _)    = PL (TZ p zs)
 mkBitreeZipper zs p@(PN x xs) = PN (TZ p zs) lst
   where lst = map (\(LZ xs1 y xs2) -> mkBitreeZipper ((TC x xs1 xs2):zs) y) (genListZippers xs)
 
@@ -61,13 +61,14 @@ parent :: BitreeZipper c t -> Maybe (BitreeZipper c t)
 parent (TZ x (y:ys)) =
   case y of
     TC c zs ws -> Just (TZ (PN c (f (x:ws))) ys)
-      where f = foldr (\x acc -> acc . (x:)) id zs
+      where f = foldr (\z acc -> acc . (z:)) id zs
 parent _             = Nothing
 
 
 child1 :: BitreeZipper c t -> Maybe (BitreeZipper c t)
 child1 (TZ (PL _) _) = Nothing
 child1 (TZ (PN c (x:xs)) ys) = Just (TZ x ((TC c [] xs):ys))
+child1 (TZ (PN _ []    ) _ ) = Nothing -- this should not happen. 
 
 
 

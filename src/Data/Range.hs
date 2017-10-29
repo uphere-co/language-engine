@@ -10,6 +10,8 @@ import           Data.Foldable (any)
 import           Data.List     (inits,mapAccumL)
 --
 import           Data.Bitree
+--
+import           Prelude    hiding (max) 
 
 
 type Range = (Int,Int)
@@ -30,16 +32,17 @@ elemRevIsInsideR x ys = any (\y -> y `isInsideR` x) ys
 -- | Bubble sort of ranges. Since a list of range is a partially ordered set,
 --   we mark non-included ranges as Left.
 --
+rootRange :: [Range] -> (Range, [Either Range Range])
 rootRange []     = error "rootRange"
 rootRange rs@(r:_) = 
                      let res = mapAccumL (\(!rmax) rlst -> go rmax rlst) r (tail (inits rs ++ [rs]))
                      in (fst res, last (snd res))
   where
-    go r rs = mapAccumL f r rs
+    go x xs = mapAccumL f x xs
     
-    f !rmax r | r `isInsideR` rmax = (rmax, Right r)
-              | rmax `isInsideR` r = (r   , Right r)
-              | otherwise          = (rmax, Left r )
+    f !max x | x `isInsideR` max = (max, Right x)
+             | max `isInsideR` x = (x  , Right x)
+             | otherwise         = (max, Left  x)
 
 
 

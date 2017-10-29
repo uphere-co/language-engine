@@ -19,13 +19,17 @@ makeLenses ''ListZipper
 singletonLZ :: a -> ListZipper a
 singletonLZ x = LZ [] x []
 
+nextLZ :: ListZipper a -> Maybe (ListZipper a)
+nextLZ (LZ ps c (n:ns)) = Just (LZ (c:ps) n ns)
+nextLZ _                = Nothing
+
 
 lzToList :: ListZipper a -> [a]
 lzToList x = x^.lz_prevs.to reverse ++ (x^.lz_current : x^.lz_nexts)
 
 
 replaceLZ :: a -> ListZipper a -> ListZipper a
-replaceLZ y (LZ ps x ns) = LZ ps y ns
+replaceLZ y (LZ ps _ ns) = LZ ps y ns
 
 
 mergeLeftLZ :: ListZipper a -> ListZipper a -> ListZipper a
@@ -38,8 +42,8 @@ mergeRightLZ l1 (LZ ps x ns) = LZ (ps++reverse (lzToList l1)) x ns
 
 genListZippers :: [a] -> [ListZipper a]
 genListZippers [] = error "cannot make a zipper for empty list"
-genListZippers (k:ks) = l1 : unfoldr succ l1
+genListZippers (k:ks) = l1 : unfoldr suc l1
   where l1 = LZ [] k ks
-        succ (LZ xs y [])     = Nothing
-        succ (LZ xs y (z:zs)) = let w = LZ (y:xs) z zs in Just (w,w)
+        suc (LZ _xs _y []    ) = Nothing
+        suc (LZ xs  y  (z:zs)) = let w = LZ (y:xs) z zs in Just (w,w)
 

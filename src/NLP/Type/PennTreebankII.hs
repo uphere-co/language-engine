@@ -14,7 +14,7 @@ module NLP.Type.PennTreebankII
 , RelationTag(..)
 , AnchorTag(..)
 , TernaryLogic(..)
-, isNone, isVerb, isNoun, isAdverb, isWHword
+, isNone, isVerb, isNoun, isAdverb, isWHword, isWHphrase
 , linkIDChunk
 , identifyPOS, identifyChunk, identifyTrace
 , Bitree(..), LinkID(..)
@@ -33,15 +33,11 @@ module NLP.Type.PennTreebankII
 
 import           Control.Monad.Trans.State      (evalState,get,put)
 import           Data.Aeson
-import           Data.Aeson.Types
-import           Data.Bifoldable
 import           Data.Bifunctor
 import           Data.Binary                    (Binary)
-import           Data.Bitraversable
 import           Data.Either                    (either)
 import           Data.Foldable                  (toList)
 import           Data.Maybe                     (catMaybes,isNothing,listToMaybe)
-import           Data.Monoid                    ((<>))
 import           Data.String                    (IsString)
 import           Data.Text                      (Text)
 import qualified Data.Text                 as T
@@ -478,7 +474,7 @@ containR r0 y@(PN (r,_) xs) | r0 == r = [y]
                             | otherwise = case (filter (not.null) . map (containR r0)) xs of
                                             [] -> []
                                             ys:_ -> y:ys
-containR r0@(b,e) x@(PL (n,_)) = if b == n && e == n then [x] else []
+containR (b,e) x@(PL (n,_)) = if b == n && e == n then [x] else []
 
 
 getADTPennTree :: PennTree -> PennTreeGen ChunkTag (POSTag, Text)
