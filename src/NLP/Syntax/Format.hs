@@ -165,7 +165,7 @@ formatClauseStructure clausetr =
   in formatBitree id tr'
 
 
-formatVPwithPAWS :: [TagPos TokIdx MarkType]
+formatVPwithPAWS :: TaggedLemma
                  -> ClauseTree
                  -> [X'Tree (Lemma ': as)]
                  -> VerbProperty (BitreeZipperICP (Lemma ': as))
@@ -186,7 +186,7 @@ formatVPwithPAWS tagged clausetr cpstr vp =
 
 
 
-showClauseStructure :: [TagPos TokIdx MarkType] -> IntMap Lemma -> PennTree -> IO ()
+showClauseStructure :: TaggedLemma -> IntMap Lemma -> PennTree -> IO ()
 showClauseStructure tagged lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))

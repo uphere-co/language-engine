@@ -18,6 +18,7 @@ import           Data.ListZipper
 import           Data.Range
 --
 import           NLP.Type.PennTreebankII
+import           NLP.Type.TagPos             (TagPos,TokIdx)
 --
 import           NLP.Syntax.Type.Verb
 
@@ -26,6 +27,12 @@ type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
+data MarkType = MarkTime | MarkEntity
+              deriving (Show,Eq,Ord)
+
+data TaggedLemma = TaggedLemma { _lemmaList :: [(Int,(Lemma,Text))]
+                               , _tagList :: [TagPos TokIdx MarkType]
+                               }
 
 data XType = X_V | X_T | X_C | X_D | X_P
 
@@ -89,12 +96,16 @@ data MaximalDP t = Intact { _original :: Zipper t
                              , _maximal :: Range
                              }
 
+
+
 original :: Simple Lens (MaximalDP t) (Zipper t)
 original = lens _original (\f a -> f { _original = a })
 
 
 maximal :: Simple Lens (MaximalDP t) Range
 maximal = lens _maximal (\f a -> f { _maximal = a })
+
+
 
 --
 -- this definition is not truly X-bar-theoretic, but for the time being

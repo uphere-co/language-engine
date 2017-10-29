@@ -207,12 +207,13 @@ testcases = [ test_silent_pronoun
 checkTrace :: TestTrace -> Bool
 checkTrace c =
   fromMaybe False $ do
-    let vps = mkVPS (c^._4) (c^._5)
-        clausetr = clauseStructure (c^._6) vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
-        cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis (c^._6)) . identifyCPHierarchy (c^._6)) vps
+    let tagged = TaggedLemma (c^._4) (c^._6)
+        vps = mkVPS (c^._4) (c^._5)
+        clausetr = clauseStructure tagged vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
+        cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
 
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-    paws <- findPAWS (c^._6) clausetr vp cpstr
+    paws <- findPAWS tagged clausetr vp cpstr
     let cp = paws^.pa_CP
     case c^._3._1 of
       Subj   -> let dp = fmap (either (const "") headText) (cp ^.complement.specifier)  -- for the time being. ignore CP subject

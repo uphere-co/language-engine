@@ -19,13 +19,14 @@ import           NLP.Type.PennTreebankII  (ChunkTag(..),Lemma,POSTag(..),Ternary
 import           NLP.Type.TagPos          (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Type          (MarkType(..))
-import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,maximalProjection
+import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,TaggedLemma,maximalProjection
                                           ,tokensByRange,mkSplittedDP,original,_Intact
+                                          ,tagList
                                           )
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 
 
-splitDP :: [TagPos TokIdx MarkType]
+splitDP :: TaggedLemma
         -> DetP (Lemma ': as)
         -> DetP (Lemma ': as)
 splitDP tagged dp0 =
@@ -41,7 +42,7 @@ splitDP tagged dp0 =
      (splitParentheticalModifier tagged z))
 
 
-splitParentheticalModifier :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))
+splitParentheticalModifier :: TaggedLemma -> Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))
 splitParentheticalModifier tagged z = do
   guard (isChunkAs NP (current z))         -- dominating phrase must be NP
   dp1 <- child1 z
@@ -66,12 +67,12 @@ splitParentheticalModifier tagged z = do
 
 
 
-identApposHead :: [TagPos TokIdx MarkType] -> Range -> Range -> Zipper t -> DetP t
+identApposHead :: TaggedLemma -> Range -> Range -> Zipper t -> DetP t
 identApposHead tagged rng1 rng2 z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $
-  ((do find (\(TagPos (b,e,t)) -> rng1 == beginEndToRange (b,e) && t == MarkEntity) tagged
+  ((do find (\(TagPos (b,e,t)) -> rng1 == beginEndToRange (b,e) && t == MarkEntity) (tagged^.tagList)
        return (mkSplittedDP APMod rng1 rng2 z))
    <|>
-   (do find (\(TagPos (b,e,t)) -> rng2 == beginEndToRange (b,e) && t == MarkEntity) tagged
+   (do find (\(TagPos (b,e,t)) -> rng2 == beginEndToRange (b,e) && t == MarkEntity) (tagged^.tagList)
        return (mkSplittedDP APMod rng2 rng1 z)))
 
 
@@ -86,7 +87,7 @@ checkProperNoun z (b,e) =
 --   I did not implement the already-splitted case. We need multiple-adjunct
 --   structure.
 --
-bareNounModifier :: [TagPos TokIdx MarkType]
+bareNounModifier :: TaggedLemma
                  -> DetP (Lemma ': as)
                  -> DetP (Lemma ': as)
 bareNounModifier tagged x = fromMaybe x $ do
@@ -95,7 +96,8 @@ bareNounModifier tagged x = fromMaybe x $ do
   let rng@(b0,_e0) = getRange (current z)
   -- check entity for the last words
   let f z' (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun z' (yb,ye)
-  TagPos (b1'',e1'',_t) <- find (\(TagPos (b1',e1',t)) -> f z rng (beginEndToRange (b1',e1')) && t == MarkEntity) tagged
+  TagPos (b1'',e1'',_t)
+    <- find (\(TagPos (b1',e1',t)) -> f z rng (beginEndToRange (b1',e1')) && t == MarkEntity) (tagged^.tagList)
   let (b1,e1) = beginEndToRange (b1'',e1'')
       idx_last_modifier_word = b1-1
   last_modifier_word <- find (\y -> y^._1 == idx_last_modifier_word) (toList (current z))

@@ -20,7 +20,7 @@ import           NLP.Syntax.Format.Internal      (formatDP)
 import           NLP.Syntax.Noun                 (splitDP)
 import           NLP.Syntax.Preposition          (identifyInternalTimePrep)
 import           NLP.Syntax.Type                 (MarkType(..))
-import           NLP.Syntax.Type.XBar            (Zipper,getTokens,headX,mkOrdDP)
+import           NLP.Syntax.Type.XBar            (Zipper,TaggedLemma(..),getTokens,headX,mkOrdDP)
 import           NLP.Syntax.Util                 (mkBitreeICP)
 --
 import           Test.Tasty
@@ -93,7 +93,8 @@ checkBNM x =
               g = (^._1.to show.to T.pack) -}
       z :: Zipper '[Lemma]
       z = getRoot1 $ mkBitreeZipper [] lemmapt
-      y = splitDP (x^._5) (mkOrdDP z)
+      tagged = TaggedLemma (x^._3) (x^._5)
+      y = splitDP tagged (mkOrdDP z)
   in y^.headX == x^._2
 
 --  T.IO.putStrLn (linePrint id tr)

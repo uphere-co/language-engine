@@ -6,6 +6,7 @@ import           Control.Lens
 --
 import           NLP.Syntax.Type.XBar.Internal
 
+makeLenses ''TaggedLemma
 
 makeLenses ''XP
 

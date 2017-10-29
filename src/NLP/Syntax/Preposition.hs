@@ -23,7 +23,7 @@ import           NLP.Syntax.Util         (beginEndToRange
                                          ,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
 import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..),MaximalDP(..)
-                                         ,Prep(..),PrepClass(..),PP
+                                         ,Prep(..),PrepClass(..),PP,TaggedLemma(..),tagList
                                          ,complement,headX,maximalProjection,maximal
                                          ,original,mkOrdDP,mkPP
                                          )
@@ -44,27 +44,27 @@ isMatchedTime :: Range -> TagPos TokIdx MarkType -> Bool
 isMatchedTime rng (TagPos (b,e,t)) = beginEndToRange (b,e) == rng && t == MarkTime
 
 
-checkEmptyPrep :: [TagPos TokIdx MarkType] -> DetP t -> CompVP t
+checkEmptyPrep :: TaggedLemma -> DetP t -> CompVP t
 checkEmptyPrep tagged dp =
   let z = dp^.maximalProjection.original
       r = fromMaybe False $ do
             let rng = getRange (current z)
             -- check bare noun adverb
-            find (isMatchedTime rng) tagged
+            find (isMatchedTime rng) (tagged^.tagList)
             return (hasEmptyPreposition z)
   in if r
      then CompVP_PP (mkPP (Prep_NULL,PC_Time) z dp)
      else CompVP_DP dp
 
 
-checkTimePrep :: [TagPos TokIdx MarkType] -> PP t -> CompVP t
+checkTimePrep :: TaggedLemma -> PP t -> CompVP t
 checkTimePrep tagged pp =
   let dp = pp^.complement
       z = dp^.maximalProjection.original
       (prep,_pclass) = pp^.headX
       r = fromMaybe False $ do
             let rng = getRange (current z)
-            find (isMatchedTime rng) tagged
+            find (isMatchedTime rng) (tagged^.tagList)
             return True
   in if r then CompVP_PP ((headX .~ (prep,PC_Time)) pp) else CompVP_PP pp
 
@@ -83,13 +83,14 @@ mkPPFromZipper pclass z = do
   return (mkPP (Prep_WORD lma,pclass) z (mkOrdDP z_dp))
 
 
-identifyInternalTimePrep :: [TagPos TokIdx MarkType]
+identifyInternalTimePrep :: TaggedLemma
                          -> DetP t
                          -> (DetP t,[Zipper t])
 identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   let z_dp = dp^.maximalProjection.original
       rng_dp@(b_dp,_e_dp) = dp^.maximalProjection.maximal
-  TagPos (b0,e0,_) <- find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) tagged
+  TagPos (b0,e0,_)
+    <- find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) (tagged^.tagList)
   let rng_time = beginEndToRange (b0,e0)
   z_tdp <- findZipperForRangeICP rng_time (current z_dp)
   z_tpp <- parent z_tdp

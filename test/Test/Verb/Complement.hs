@@ -174,8 +174,9 @@ complexNP
     )
 
 formatTP :: TestVerbComplement -> [String]
-formatTP (txt,i,_,lmatknlst,pt,tagged) =
-  let vps = mkVPS lmatknlst pt
+formatTP (txt,i,_,lmatknlst,pt,taglst) =
+  let tagged = TaggedLemma lmatknlst taglst
+      vps = mkVPS lmatknlst pt
       ipt = mkPennTreeIdx pt
       clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id ipt)
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
@@ -220,12 +221,13 @@ mainShow = do
 
 checkSubjCompAdjunct :: TestVerbComplement -> Bool
 checkSubjCompAdjunct c = fromMaybe False $ do
-  let vps = mkVPS (c^._4) (c^._5)
-      clausetr = clauseStructure (c^._6) vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
-      x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis (c^._6)) . identifyCPHierarchy (c^._6)) vps
+  let tagged = TaggedLemma (c^._4) (c^._6)
+      vps = mkVPS (c^._4) (c^._5)
+      clausetr = clauseStructure tagged vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
+      x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
 
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-  paws <- findPAWS [] clausetr vp x'tr
+  paws <- findPAWS tagged clausetr vp x'tr
 
   -- (cp,_) <- constructCP (c^._6) vp
   let cp = paws^.pa_CP

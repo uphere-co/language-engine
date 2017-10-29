@@ -91,7 +91,7 @@ complementCandidates vprop z_vp =
                       Right p    -> isNoun p == Yes
 
 
-complementsOfVerb :: [TagPos TokIdx MarkType]
+complementsOfVerb :: TaggedLemma
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> Zipper (Lemma ': as)
                   -> ([TraceChain (CompVP (Lemma ': as))],[Zipper (Lemma ': as)])
@@ -133,7 +133,7 @@ allAdjunctCPOfVerb vprop =
 
 
 
-identifySubject :: [TagPos TokIdx MarkType]
+identifySubject :: TaggedLemma
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)   -- ^ Verb maximal projection
                 -> TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as)))
@@ -146,13 +146,10 @@ identifySubject tagged tag vp = maybe nul smp r
     smp z = TraceChain (Right [])(Just (Right (splitDP tagged (mkOrdDP z)))) -- for the time being, CP subject is not supported
 
 
-
-
-
 --
 -- | Constructing CP umbrella and all of its ingrediant.
 --
-constructCP :: [TagPos TokIdx MarkType]
+constructCP :: TaggedLemma
             -> VerbProperty (Zipper (Lemma ': as))
             -> Maybe (CP (Lemma ': as),[Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))])
 constructCP tagged vprop = do
@@ -217,7 +214,7 @@ hierarchyBits (cp,zs) = do
 
 
 
-identifyCPHierarchy :: [TagPos TokIdx MarkType]
+identifyCPHierarchy :: TaggedLemma
                     -> [VerbProperty (Zipper (Lemma ': as))]
                     -> [X'Tree (Lemma ': as)]
 identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
@@ -281,7 +278,7 @@ rewriteX'TreeForFreeWH rng ps w z' = do
   return (replaceFocusItem rf rf w_dom)
 
 
-whMovement :: [TagPos TokIdx MarkType]
+whMovement :: TaggedLemma
            -> (X'Zipper (Lemma ': as),CP (Lemma ': as))
            -> State (X'Tree (Lemma ': as))
                     (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
@@ -339,7 +336,7 @@ whMovement tagged (w,cp) = do
       return spec
 
 
-resolveSilentPRO :: [TagPos TokIdx MarkType]
+resolveSilentPRO :: TaggedLemma
                  -> (X'Zipper (Lemma ': as),CP (Lemma ': as))
                  -> MaybeT (State (X'Tree (Lemma ': as))) (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 resolveSilentPRO tagged (z,cp) = do
@@ -391,7 +388,7 @@ resolveVPComp rng spec = do
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
-resolveDP :: [TagPos TokIdx MarkType]
+resolveDP :: TaggedLemma
           -> Range
           -> State (X'Tree (Lemma ': as)) (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
@@ -483,7 +480,7 @@ connectRaisedDP rng = do
 --
 -- | This is the final step to bind inter-clause trace chain
 --
-bindingAnalysis :: [TagPos TokIdx MarkType] -> X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
+bindingAnalysis :: TaggedLemma -> X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
 bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= bindingSpec rng
 
 
@@ -537,7 +534,7 @@ predicateArgWS cp z adjs =
             Just x' -> x': iterateMaybe f x'
 
 
-findPAWS :: [TagPos TokIdx MarkType]
+findPAWS :: TaggedLemma
          -> ClauseTree
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
          -> [X'Tree (Lemma ': as)]
@@ -580,7 +577,7 @@ promote_PP_CP_from_NP x = [x]
 
 
 
-clauseStructure :: [TagPos TokIdx MarkType]
+clauseStructure :: TaggedLemma
                 -> [VerbProperty (Zipper '[Lemma])]
                 -> PennTreeIdxG N.CombinedTag (POSTag,Text)
                 -> ClauseTree
@@ -620,8 +617,8 @@ clauseStructure tagged vps  (PN (rng,tag) xs)
                            -- we need to rewrite this whole functions using zipper later.
                            let prep = case os of
                                         PN (_,(N.CL N.S)) _lst : _ -> S_PP t PC_Other True
-                                        PN (rng',_) _ : _           -> S_PP t (fromMaybe PC_Other (find (isMatchedTime rng') tagged >> return PC_Time)) False
-                                        PL (i,_) : _               -> S_PP t (fromMaybe PC_Other (find (isMatchedTime (i,i)) tagged >> return PC_Time)) False
+                                        PN (rng',_) _ : _           -> S_PP t (fromMaybe PC_Other (find (isMatchedTime rng') (tagged^.tagList) >> return PC_Time)) False
+                                        PL (i,_) : _               -> S_PP t (fromMaybe PC_Other (find (isMatchedTime (i,i)) (tagged^.tagList) >> return PC_Time)) False
                                         _                          -> S_PP t PC_Other False
                            in case tail ys of
                                 [] -> PL (Left (rng,(prep,lvl)))
@@ -631,8 +628,8 @@ clauseStructure tagged vps  (PN (rng,tag) xs)
                            -- we need to rewrite this whole functions using zipper later.
                            let prep = case os of
                                         PN (_,(N.CL N.S)) _lst : _ -> S_PP t PC_Other True
-                                        PN (rng',_) _ : _           -> S_PP t (fromMaybe PC_Other (find (isMatchedTime rng') tagged >> return PC_Time)) False
-                                        PL (i,_) : _               -> S_PP t (fromMaybe PC_Other (find (isMatchedTime (i,i)) tagged >> return PC_Time)) False
+                                        PN (rng',_) _ : _           -> S_PP t (fromMaybe PC_Other (find (isMatchedTime rng') (tagged^.tagList) >> return PC_Time)) False
+                                        PL (i,_) : _               -> S_PP t (fromMaybe PC_Other (find (isMatchedTime (i,i)) (tagged^.tagList) >> return PC_Time)) False
                                         _                          -> S_PP t PC_Other False
                            in case tail ys of
                                 [] -> PL (Left (rng,(prep,lvl)))
