@@ -5,10 +5,9 @@
 
 module SRL.Analyze.SentenceStructure where
 
-import           Control.Lens                              ((^?),(^.),(^..),_Left,_Right,_1,_2,_3,to)
+import           Control.Lens                              ((^.),(^..),_1,_2,_3,to)
 import           Data.Bifunctor                            (bimap,first)
 import           Data.Either                               (lefts)
-import           Data.Foldable                             (toList)
 import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
@@ -39,20 +38,13 @@ import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,m
 import qualified NLP.Type.PennTreebankII.Separated as PS
 import           NLP.Type.SyntaxProperty                   (Voice)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
-import           WikiEL.Convert                            (getNEFromEntityMention,getRangeFromEntityMention)
+import           OntoNotes.Type.SenseInventory
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
 import           WikiEL.Type                               (EntityMention,IRange(..),PreNE(..),UIDCite(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
 --
-import           OntoNotes.Type.SenseInventory
---
 import           SRL.Analyze.Parameter                     (thresholdPattStat)
 import           SRL.Analyze.Type
--- import           SRL.Analyze.WikiEL                        (getWikiResolvedMentions
---                                                            ,linkedMentionToTagPos)
-
---
-import Debug.Trace
 
 
 adjustWikiRange :: (Int,Int) -> (Int,Int)
@@ -66,13 +58,9 @@ linkedMentionToTagPos linked_mention =
   in TagPos (TokIdx b, TokIdx e,linked_mention)
 
 
-
---                             (adjustWikiRange (getRangeFromEntityMention w),) <$> getNEFunc w) wikiel
-
-
 mkWikiList :: SentStructure -> [((Int, Int), Text)]
 mkWikiList sstr =
-  let tagposs = sstr ^.. ss_tagged . traverse . to (fmap fst) -- (toList (dstr ^. ds_mergedtags))
+  let tagposs = sstr ^.. ss_tagged . traverse . to (fmap fst)
       wikiel  = lefts $ map (\(TagPos (i,j,e)) -> first (unTokIdx i,unTokIdx j,) e) tagposs
       wikilst = mapMaybe  (\(i,j,w) -> ((i,j-1),) <$> getNEFunc w) wikiel
       getNEFunc e =
@@ -165,6 +153,9 @@ tagToMark (Left x)  = case entityPreNE x of
                         _ -> Nothing
 
 
+adjustTokenIndexForSentence :: Maybe SentenceIndex
+                            -> [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text))]
+                            -> [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text), MarkType)]
 adjustTokenIndexForSentence midx tagged
   = fromMaybe [] $ do
       (b0,e0) <- (^.sent_tokenRange) <$> midx
@@ -184,13 +175,6 @@ sentStructure apredata tagged (i,midx,lmas,mptr) =
   flip fmap mptr $ \ptr ->
     let tagged' = adjustTokenIndexForSentence midx tagged
         taggedMarkOnly = map (fmap snd) tagged'
-          {- fromMaybe [] $ do
-                    (b0,e0) <- (^.sent_tokenRange) <$> midx
-                    return $ flip mapMaybe tagged $ \(TagPos (TokIdx b,TokIdx e,t)) -> do
-                      t' <- tagToMark t
-                      if b0 <= b && e <= e0
-                        then return (TagPos (TokIdx (b-b0),TokIdx (e-b0),t'))
-                        else Nothing -}
         lemmamap = (mkLemmaMap' . map unLemma) lmas
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure taggedMarkOnly vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))

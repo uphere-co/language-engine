@@ -14,49 +14,38 @@ import           Control.Applicative
 import           Control.Error.Safe           (rightMay,headErr)
 import           Control.Lens
 import           Control.Lens.Extras          (is)
-import           Control.Monad                (guard,join)
-import           Data.Foldable
+import           Control.Monad                (guard)
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
 import           Data.Maybe                   (catMaybes,fromMaybe,isJust,isNothing,listToMaybe,mapMaybe,maybeToList)
-import           Data.Monoid                  ((<>))
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
-import           Data.Bitree                  (getNodes,getRoot,getRoot1,_PN)
+import           Data.Bitree                  (getNodes,getRoot1,_PN)
 import           Data.BitreeZipper            (child1,current,mkBitreeZipper,next,root)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,findPAWS)
-import           NLP.Syntax.Format            (formatCP,formatDP)
 import           NLP.Syntax.Noun              (splitDP)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util              (isLemmaAs,intLemma0,isChunkAs,isPOSAs)
+import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemma0,isChunkAs,isPOSAs)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 import           NLP.Type.TagPos              (TagPos,TokIdx)
 --
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
-                                              ,DocStructure
-                                              ,SentStructure
-                                              ,VerbStructure
-                                              ,ds_sentStructures
+                                              ,SentStructure,VerbStructure
                                               ,ss_clausetr,ss_cpstr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
-                                              ,me_relation
-                                              ,mv_text,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges
-                                              )
+                                              ,me_relation,mv_text,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges)
 --
-import Debug.Trace
 
-import Text.Printf
-import Data.List (intercalate)
 
 --
 -- | This function is very ad hoc. Later we should have PP according to X-bar theory
@@ -118,6 +107,7 @@ matchSubject rolemap mDP patt = do
   (,CompVP_DP dp) <$> lookup p rolemap
 
 
+isPhiOrThat :: (GetIntLemma t) => CP t -> Bool
 isPhiOrThat cp = case cp^.headX of
                    C_PHI -> True
                    C_WORD z -> isLemmaAs "that" (current z)
@@ -196,7 +186,7 @@ matchSO :: [(PBArg,FNFrameElement)]
 matchSO rolemap tagged (mDP,verbp,paws) (patt,num) =
   let (rpatt,rmatched0) = case verbp^.headX.vp_voice of
                             Active  -> ((patt,num), maybeToList (matchSubject rolemap mDP patt) ++ matchObjects rolemap verbp patt)
-                            Passive -> ((patt,num),maybeToList (matchAgentForPassive rolemap tagged paws patt) ++ matchObjects rolemap verbp patt) 
+                            Passive -> ((patt,num),maybeToList (matchAgentForPassive rolemap tagged paws patt) ++ matchObjects rolemap verbp patt)
       rmatched1 = rmatched0 ++ maybeToList (matchExtraRolesForPPTime tagged paws rmatched0)
   in (rpatt,rmatched1 ++ matchPrepArgs rolemap tagged paws patt rmatched1)
 
@@ -276,6 +266,10 @@ matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   return (matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sense1,rolemap1),stat)
 
 
+matchExtraRolesForPPTime :: [TagPos TokIdx MarkType]
+                         -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
+                         -> [(FNFrameElement, CompVP '[Lemma])]
+                         -> Maybe (FNFrameElement,CompVP '[Lemma])
 matchExtraRolesForPPTime tagged paws felst = do
   guard (isNothing (find (\x -> x^._1 == "Time") felst))
   (prep,o,dp) <-matchPP tagged paws (Nothing,Just PC_Time,Just False)
@@ -284,7 +278,13 @@ matchExtraRolesForPPTime tagged paws felst = do
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.headX == Just rng) felst))
   return ("Time",comp)
 
-  
+
+matchExtraRolesForPPing :: Text
+                        -> FNFrameElement
+                        -> [TagPos TokIdx MarkType]
+                        -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
+                        -> [(FNFrameElement, CompVP '[Lemma])]
+                        -> Maybe (FNFrameElement,CompVP '[Lemma])
 matchExtraRolesForPPing prep role tagged paws felst = do
   guard (isNothing (find (\x -> x^._1 == role) felst))
   (_,o,dp) <-matchPP tagged paws (Just prep,Just PC_Other,Just True)
@@ -294,6 +294,11 @@ matchExtraRolesForPPing prep role tagged paws felst = do
   return (role,comp)
 
 
+matchExtraRolesForCPInCompVP :: (CP '[Lemma] -> Bool)
+                             -> FNFrameElement
+                             -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
+                             -> [(FNFrameElement, CompVP '[Lemma])]
+                             -> Maybe (FNFrameElement,CompVP '[Lemma])
 matchExtraRolesForCPInCompVP check role paws felst = do
   guard (is _Nothing (find (\x -> x^._1 == role) felst))
   let candidates = paws^..pa_CP.complement.complement.complement.traverse.trResolved._Just._CompVP_CP
@@ -305,11 +310,17 @@ matchExtraRolesForCPInCompVP check role paws felst = do
   return (role,comp)
 
 
+matchExtraRolesForCPInAdjunctCP :: Maybe (CP '[Lemma] -> Bool)
+                                -> FNFrameElement
+                                -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
+                                -> [(FNFrameElement, CompVP '[Lemma])]
+                                -> Maybe (FNFrameElement,CompVP '[Lemma])
+
 matchExtraRolesForCPInAdjunctCP mcheck role paws felst = do
   guard (is _Nothing (find (\x -> x^._1 == role) felst))
   let candidates = paws^..pa_CP.adjunct.traverse._AdjunctCP_CP
   cp <- case mcheck of
-          Nothing -> (rightMay . headErr "no adjuncts") candidates
+          Nothing -> (rightMay . headErr ("no adjuncts" :: String)) candidates
           Just check -> find check candidates
   let rng = cp^.maximalProjection.to current.to getRange
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.headX == Just rng) felst))
@@ -318,10 +329,12 @@ matchExtraRolesForCPInAdjunctCP mcheck role paws felst = do
   return (role,comp)
 
 
+hasComplementizer :: [Lemma] -> CP '[Lemma] -> Bool
 hasComplementizer lst x =
   x^?headX._C_WORD.to (\z -> any (\c -> isLemmaAs c (current z)) lst) == Just True
 
 
+toInfinitive :: CP '[Lemma] -> Bool
 toInfinitive x =
   let vprop = x^.complement.complement.headX
   in case vprop^.vp_auxiliary of
@@ -350,6 +363,7 @@ matchExtraRoles tagged paws felst =
   in felst'' ++ maybeToList madj
 
 
+--
 -- | A scoring algorithm for selecting a frame among candidates.
 --   This version is ad hoc, so it will be updated when we come up with a better algorithm.
 --
@@ -361,7 +375,7 @@ scoreSelectedFrame total ((_,_,mselected),n) =
   in mn * (fromIntegral n) / (fromIntegral total) * roleMatchWeightFactor + (mn*(fromIntegral total))
 
 
-
+--
 -- | Resolve PP ambiguity for matched PP
 --   This algorithm is ad hoc but practically works for PP embedded in DP by CoreNLP.
 --   We need to have a systematic treatment and tests for PP ambiguity.
@@ -369,7 +383,7 @@ scoreSelectedFrame total ((_,_,mselected),n) =
 resolveAmbiguityInDP :: [(FNFrameElement, CompVP '[Lemma])]
                      -> [(FNFrameElement, CompVP '[Lemma])]
 resolveAmbiguityInDP [] = []
-resolveAmbiguityInDP lst = foldr1 (.) (map go lst) lst
+resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
   where
     go :: (FNFrameElement,CompVP '[Lemma])
        -> [(FNFrameElement,CompVP '[Lemma])]
@@ -377,26 +391,26 @@ resolveAmbiguityInDP lst = foldr1 (.) (map go lst) lst
     go (fe,CompVP_PP pp) lst = let o = pp^.maximalProjection
                                in map (f (fe,getRange (current o))) lst
     go (fe,CompVP_DP dp) lst = map (f (fe,dp^.headX)) lst
-    go (fe,_           ) lst = lst
+    go (_ ,_           ) lst = lst
 
     f (fe,rng@(b,e)) (fe',CompVP_PP pp)
       = let prep' = pp^.headX
             o'    = pp^.maximalProjection
             z'    = pp^.complement
-            rng'@(b',e') = z'^.maximalProjection.maximal
+            rng'@(b',_) = z'^.maximalProjection.maximal
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
           then let z'' = ((headX .~  (b',b-1)) . (maximalProjection.maximal .~ (b,e)) . (adjunct .~ Nothing)) z'
                in (fe',CompVP_PP (XP prep' o' () () z''))
           else (fe',CompVP_PP (XP prep' o' () () z'))
     f (fe,rng@(b,e)) (fe',CompVP_DP dp)
-      = let rng'@(b',e') = dp^.maximalProjection.maximal
+      = let rng'@(b',_) = dp^.maximalProjection.maximal
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
           then let dp' = ((headX .~ (b',b-1)) . (maximalProjection.maximal .~ (b,e)) . (adjunct .~ Nothing)) dp
                in (fe', CompVP_DP dp')
           else (fe', CompVP_DP dp)
-    f (fe,rng@(b,e)) x = x
+    f _ x = x
 
 
 
@@ -444,23 +458,6 @@ entityFromDP dp =
   in (rng,txt,mrngtxt')
 
 
-{- 
-showMatchedFE' :: (FNFrameElement, CompVP '[Lemma]) -> String
---                                         FE   range prep text
-showMatchedFE' (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (dp^.headX.to show) ("" :: Text) (headText dp)
-showMatchedFE' (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe (z^.to current.to getRange.to show) ("" :: Text) (gettext z)
-  where z = cp^.maximalProjection
-        gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
-showMatchedFE' (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s %s" fe (dp^.headX.to show) prep (headText dp)
-  where dp = pp^.complement
-        prep = case pp^.headX._1 of
-                 Prep_NULL -> ""
-                 Prep_WORD p -> p
-showMatchedFE' (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
-  where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
--}
-
-
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
   let (cpstr,lst_vstrpaws) = mkPAWSTriples sstr
@@ -474,11 +471,10 @@ meaningGraph sstr =
 
       entities0 = do (_,_,_,_,mselected) <- matched
                      (_,felst) <- maybeToList mselected
-                     (fe,x) <- felst
-                     -- trace (intercalate "\n" (map showMatchedFE' felst)) $ do
+                     (_fe,x) <- felst
                      case x of
                        CompVP_Unresolved _ -> []
-                       CompVP_CP cp -> [] -- CP is not an entity.
+                       CompVP_CP _cp -> [] -- CP is not an entity.
                        CompVP_DP dp -> return (entityFromDP dp)
                        CompVP_PP pp -> return (entityFromDP (pp^.complement))
 
@@ -550,6 +546,8 @@ tagMG mg wikilst =
                              else x )
   in MeaningGraph mg' (mg ^. mg_edges)
 
+
+changeMGText :: MeaningGraph -> MeaningGraph
 changeMGText mg =
   let mg' = mg ^.. mg_edges
                  . traverse

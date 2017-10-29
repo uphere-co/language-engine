@@ -12,7 +12,6 @@ import qualified Data.Text               as T
 import           Data.Text                     (Text)
 import           Text.Printf            hiding (formatArg)
 --
-import           Data.BitreeZipper
 import           Data.ListZipper               (ListZipper(..))
 import           NLP.Type.PennTreebankII
 import           PropBank.Type.Prop
