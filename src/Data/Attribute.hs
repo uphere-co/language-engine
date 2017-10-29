@@ -27,7 +27,6 @@ module Data.Attribute
 
 
 import           Data.Discrimination
-import           Data.Discrimination.Grouping
 import           Data.Maybe
 
   
@@ -110,17 +109,13 @@ instance ToTuple '[a1,a2,a3,a4,a5,a6] where
     = (a1,a2,a3,a4,a5,a6)
   fromTuple (a1,a2,a3,a4,a5,a6) = a1 `acons` (a2 `acons` (a3 `acons` (a4 `acons` (a5 `acons` (a6 `acons` anil)))))
 
-
+acons :: a -> AttribList as -> AttribList (a ': as)
 acons = AttribCons
 
 infixr 8 `acons`
 
--- (<&>) = AttribCons
-
--- infixr 8 <&>
-
+anil :: AttribList '[]
 anil = AttribNil
-
 
 
 makeKeyAttrib :: (a -> k) -> [a] -> [AttribList '[k,a]]

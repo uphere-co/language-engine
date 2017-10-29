@@ -7,7 +7,7 @@ import           Control.Monad.Loops             (unfoldM)
 import           Control.Monad.Trans.State
 import           Data.Bifoldable                 (bifoldMap)
 import           Data.Foldable                   (toList)
-import           Data.List                       (find,intercalate)
+-- import           Data.List                       (find,intercalate)
 import           Data.Maybe                      (mapMaybe,listToMaybe,maybeToList)
 import           Data.Text                       (Text)
 --

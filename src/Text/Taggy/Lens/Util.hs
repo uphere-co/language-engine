@@ -2,12 +2,9 @@
 
 module Text.Taggy.Lens.Util where
 
-import           Control.Applicative
 import           Control.Lens       hiding (element,elements)
-import           Data.List                 (sort)
 import           Data.Text                 (Text)
 import qualified Data.Text         as T
-import qualified Data.Text.Lazy.IO as TLIO
 import           Data.Traversable          (traverse)
 import           Text.Taggy.Lens
 -- import           System.Directory
@@ -41,4 +38,5 @@ getOnly1 x k = case getOnly x k of
 
 type Parser = Either String
 
-p_list p each group x = getOnly1 x group >>= \y -> traverse p (getOnly y each) 
+p_list :: (Element -> Either String a) -> Text -> Text -> Element -> Either String [a]
+p_list p ech group x = getOnly1 x group >>= \y -> traverse p (getOnly y ech) 
