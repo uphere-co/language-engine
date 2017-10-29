@@ -5,16 +5,15 @@ module NLP.Syntax.Type.XBar
 , module NLP.Syntax.Type.XBar.TH
 , getTokens
 , tokensByRange
-, headRange
+-- , headRange
 , headText
 , compVPToEither
 , compVPToHeadText
 , compVPToRange
 ) where
 
-import           Control.Lens                       ((^.),(^..),(^?),_1,_2,_Just,_Right,to)
+import           Control.Lens                       ((^.),_1,to)
 import           Data.Foldable                      (toList)
-import           Data.Maybe                         (fromMaybe)
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
 --
@@ -35,12 +34,13 @@ tokensByRange :: (Foldable t) => Range -> t (Int, ALeaf a) -> [Text]
 tokensByRange rng = map snd . filter (^._1.to (\i -> i `isInside` rng)) . map (\(i,x)->(i,tokenWord x)) . toList
 
 
+{- 
 headRange :: DetP t -> Range
-headRange x = x^.headX._2
-
+headRange x = x^.headX
+-}
 
 headText :: DetP t -> Text
-headText x = (x^.maximalProjection.original.to (T.intercalate " " . tokensByRange (headRange x) . current))
+headText x = (x^.maximalProjection.original.to (T.intercalate " " . tokensByRange (x^.headX) . current))
 
 -- (x^.maximalProjection)
 
@@ -63,6 +63,6 @@ compVPToHeadText (CompVP_PP z)         = headText (z^.complement)
 
 
 compVPToRange :: CompVP as -> Range
-compVPToRange = either (getRange.current) (\dp->dp^.headX._1) . compVPToEither
+compVPToRange = either (getRange.current) (\dp->dp^.maximalProjection.maximal) . compVPToEither
 
 --  (\dp->dp^.maximalProjection.to (getRange.current)) . compVPToEither 

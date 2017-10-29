@@ -19,8 +19,8 @@ import           NLP.Type.PennTreebankII  (ChunkTag(..),Lemma,POSTag(..),Ternary
 import           NLP.Type.TagPos          (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Type          (MarkType(..))
-import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,XP(..),maximalProjection
-                                          ,tokensByRange,mkOrdDP,mkSplittedDP,original,_Intact
+import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,maximalProjection
+                                          ,tokensByRange,mkSplittedDP,original,_Intact
                                           )
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 
@@ -30,7 +30,7 @@ splitDP :: [TagPos TokIdx MarkType]
         -> DetP (Lemma ': as)
 splitDP tagged dp0 =
   bareNounModifier tagged . fromMaybe dp0 $ do
-    z <- dp0^?maximalProjection._Intact
+    (z,_) <- dp0^?maximalProjection._Intact
     guard (isChunkAs NP (current z))
     dp <- child1 z
     guard (isChunkAs NP (current dp))
@@ -49,7 +49,7 @@ splitParentheticalModifier tagged z = do
   comma1 <- next dp1
   guard (isPOSAs M_COMMA (current comma1)) -- followed by comma
   z2 <- next comma1                        -- followed by a phrase
-  -- followed by comma and end, or just end. 
+  -- followed by comma and end, or just end.
   ((do comma2 <- next z2
        guard (isPOSAs M_COMMA (current comma2))
        guard (isNothing (next comma2)))
@@ -58,7 +58,7 @@ splitParentheticalModifier tagged z = do
 
   let rf = getRange . current
   -- phrase inside parenthetical commas must be NP or clause
-  ((guard (isChunkAs NP (current z2)) >> return (identAppositiveHead tagged (rf dp1) (rf z2) z))
+  ((guard (isChunkAs NP (current z2)) >> return (identApposHead tagged (rf dp1) (rf z2) z))
    <|>
    (guard (isChunkAs VP (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z))
    <|>
@@ -66,14 +66,14 @@ splitParentheticalModifier tagged z = do
 
 
 
-
-identAppositiveHead tagged rng1@(b1,e1) rng2@(b2,e2) z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $ 
+identApposHead :: [TagPos TokIdx MarkType] -> Range -> Range -> Zipper t -> DetP t
+identApposHead tagged rng1 rng2 z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $
   ((do find (\(TagPos (b,e,t)) -> rng1 == beginEndToRange (b,e) && t == MarkEntity) tagged
        return (mkSplittedDP APMod rng1 rng2 z))
    <|>
    (do find (\(TagPos (b,e,t)) -> rng2 == beginEndToRange (b,e) && t == MarkEntity) tagged
        return (mkSplittedDP APMod rng2 rng1 z)))
-   
+
 
 -- | starting with capital letter
 --
@@ -94,7 +94,7 @@ bareNounModifier tagged x = fromMaybe x $ do
   guard (isChunkAs NP (current z))
   let rng@(b0,_e0) = getRange (current z)
   -- check entity for the last words
-  let f z' (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun z' (yb,ye) 
+  let f z' (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun z' (yb,ye)
   TagPos (b1'',e1'',_t) <- find (\(TagPos (b1',e1',t)) -> f z rng (beginEndToRange (b1',e1')) && t == MarkEntity) tagged
   let (b1,e1) = beginEndToRange (b1'',e1'')
       idx_last_modifier_word = b1-1

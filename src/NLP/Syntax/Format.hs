@@ -21,7 +21,6 @@ import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
-import           Data.ListZipper                        (ListZipper(..),lzToList)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
@@ -96,6 +95,7 @@ formatPAWS pa =
                  Left  (rng,(S_OTHER t)) -> show t ++ show rng
 
 
+formatAdjunctCP :: AdjunctCP t -> Text
 formatAdjunctCP (AdjunctCP_Unresolved z) = "unresolved" <> (showRange . getRange . current) z
 formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cpRange cp)
 
