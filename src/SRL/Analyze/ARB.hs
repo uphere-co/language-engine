@@ -6,22 +6,20 @@
 module SRL.Analyze.ARB where
 
 import           Control.Applicative       ((<|>))
-import           Control.Lens              ((^.),(^..),_2,_3,to)
-import           Control.Monad             (join)
+import           Control.Lens              ((^.),to)
 import           Control.Monad.Loops       (unfoldM)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Control.Monad.Trans.State (State,runState,execState,evalState,get,put,modify')
+import           Control.Monad.Trans.State (State,evalState,get,put,modify')
 import           Data.Array                ((!))
 import           Data.Graph                (Graph,Vertex,topSort)
 import           Data.List                 (delete,find,elem)
 import           Data.Maybe                (catMaybes,fromMaybe
                                            ,mapMaybe,maybeToList)
 import           Data.Text                 (Text)
-import qualified Data.Tree as Tr
 --
 import           Lexicon.Mapping.Causation (causeDualMap,cm_causativeFrame,cm_externalAgent)
-import           Lexicon.Type              (RoleInstance)
+import           Lexicon.Type              (FNFrameElement,RoleInstance,SenseID)
 import           NLP.Syntax.Clause         (hoistMaybe) -- this should be moved somewhere
 import           NLP.Syntax.Type.Verb      (vp_lemma,vp_negation)
 import           NLP.Type.PennTreebankII   (Lemma(..))
@@ -29,7 +27,6 @@ import           NLP.Shared.Type
 import           SRL.Analyze.Type
 import           SRL.Statistics
 --
-import           Debug.Trace
 
 
 type VertexARB = (Vertex, Vertex, [Vertex])
@@ -45,14 +42,14 @@ isEntity :: MGVertex -> Bool
 isEntity = (not . isFrame)
 
 
-
+subjectList :: [FNFrameElement]
 subjectList = [ "Agent","Speaker","Owner","Cognizer","Actor","Author","Cognizer_agent"
               , "Protagonist", "Cause"
               ]
--- isSubject t = 
 
 
-isSubject rolemap frame Nothing rel = any (==rel) subjectList
+isSubject :: [RoleInstance] -> Text -> Maybe (SenseID,Bool) -> FNFrameElement -> Bool
+isSubject _       _     Nothing rel = any (==rel) subjectList
 isSubject rolemap frame (Just (sense,cause)) rel =
   fromMaybe False $ do
     roles <- lookup sense rolemap
@@ -60,7 +57,7 @@ isSubject rolemap frame (Just (sense,cause)) rel =
       then do
         m <- find (\m -> m^.cm_causativeFrame == frame) causeDualMap
         return (m^.cm_externalAgent == rel)
-      else 
+      else
         (((==rel) <$> lookup "arg0" roles)
          <|>
         ((==rel) <$> lookup "arg1" roles))
@@ -91,7 +88,7 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
                             MGEntity           {..} -> hoistMaybe Nothing
                             MGPredicate        {..} -> return (_mv_frame,Just _mv_sense,_mv_verb^.vp_negation)
                             MGNominalPredicate {..} -> return (_mv_frame,Nothing,Nothing)
-  verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid 
+  verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) children
   (sidx,subject) <- hoistMaybe $ do
                       e <- find (\e -> isSubject rolemap frmtxt msense (e^.me_relation)) rels
@@ -103,8 +100,8 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
           oprep = o^.me_prep
           orole = o^.me_relation
       runMaybeT $ do
-        v <- hoistMaybe (findVertex (mg^.mg_vertices) oidx)
-        if isFrame v
+        v' <- hoistMaybe (findVertex (mg^.mg_vertices) oidx)
+        if isFrame v'
           then do
             lift (modify' (delete oidx))
             arb <- findSubjectObjects (rolemap,mg,grph) oidx
@@ -129,11 +126,7 @@ mkARB1 (rolemap,mg,graph) = do
 mkARB :: [RoleInstance] -> MeaningGraph -> [ARB]
 mkARB rolemap mg = catMaybes $ do
   let mgraph = getGraphFromMG mg
-  graph <- maybeToList mgraph 
+  graph <- maybeToList mgraph
   let framelst = map (^.mv_id) $ filter isFrame $ mg^. mg_vertices
       vs = filter (`elem` framelst) $ topSort graph
   evalState (unfoldM (mkARB1 (rolemap,mg,graph))) vs
-
-
-
-

@@ -4,7 +4,6 @@ module SRL.Old.Feature.ParseTreePath where
 
 import           Data.List                      (group)
 --
-import           Data.BitreeZipper
 import           Data.ListZipper                (ListZipper(..))
 import           NLP.Syntax.Util                (phraseType)
 import           NLP.Type.PennTreebankII

@@ -7,9 +7,8 @@
 
 module SRL.Analyze where
 
-import           Control.Error.Safe
-import           Control.Lens                 ((^.),(^..),(.~),(&),_Just,to,_1,_2,_3)
-import           Control.Monad                (forM_,join,void,when)
+import           Control.Lens                 ((^.),(^..),(.~),(&),_Just,to,_1,_3)
+import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
@@ -18,7 +17,7 @@ import           Data.Function                (on)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
 import qualified Data.IntMap            as IM
-import           Data.List                    (foldl',intercalate,maximumBy,sortBy)
+import           Data.List                    (foldl',maximumBy,sortBy)
 import           Data.Maybe
 import           Data.Text                    (Text)
 import qualified Data.Text              as T
@@ -51,9 +50,8 @@ import           OntoNotes.Corpus.Load        (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
 import           Text.Format.Dot              (mkLabelText)
 import           WikiEL                       (extractFilteredEntityMentions)
-import           WikiEL.Run                   (runEL,loadWikiData,classFilesG,reprFileG)
+import           WikiEL.Run                   (runEL,classFilesG,reprFileG)
 import           WikiEL.Type                  (EntityMention,PreNE(..),UIDCite(..),beg,end)
-import           WikiEL.WikiEntityClass       (brandClass,orgClass,personClass,locationClass,occupationClass,humanRuleClass,buildingClass)
 import qualified WikiEL.WikiEntityClass             as WEC
 import qualified WikiEL.WikiEntityTagger            as WET
 --
@@ -70,8 +68,6 @@ import           SRL.Analyze.Type
 
 import           SRL.Statistics (getGraphFromMG)
 --
-import Debug.Trace
-import qualified Data.Vector as V
 import qualified WikiEL.EntityLinking   as EL
 import qualified WikiEL.ETL.LoadData    as LD
 import qualified WikiEL.Type.FileFormat as FF
@@ -150,6 +146,7 @@ printMeaningGraph rolemap dstr = do
 
   -- entityResolve = WEL.disambiguateMentions .. seems to have a problem
 
+newNETagger :: IO ([Sentence] -> [EntityMention Text])
 newNETagger = do
   reprs <- LD.loadEntityReprs reprFileG
   let wikiTable = WET.buildEntityTable reprs
@@ -188,7 +185,7 @@ loadConfig :: Bool
            -> LexDataConfig
            -> IO (AnalyzePredata,[Sentence]->[EntityMention Text])
 loadConfig bypass_ner cfg = do
-  apredata@(AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats) <- loadAnalyzePredata cfg
+  apredata <- loadAnalyzePredata cfg
   netagger <- if bypass_ner
                 then return (const [])
                 else newNETagger

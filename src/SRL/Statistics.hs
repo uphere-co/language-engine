@@ -6,7 +6,6 @@ module SRL.Statistics where
 import           Control.Lens      ((^.),(^..),to,traverse)
 import           Data.Graph
 import           Data.Maybe        (mapMaybe)
-import           Data.Tree
 --
 import           SRL.Analyze.Type  (MGVertex(..),SentStructure(..),MeaningGraph
                                    ,me_start,me_end,mg_edges,mg_vertices,mv_id)

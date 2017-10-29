@@ -24,9 +24,7 @@ import           Text.Printf                             (printf)
 
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens')
-import           Data.Bitree
 import           Data.BitreeZipper
-
 import           Data.Range
 import qualified HTMLEntities.Text             as HTMLT
 import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
@@ -35,23 +33,21 @@ import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CPDP,CompVP(..),Prep(..),PrepClass(..),X'Tree
-                                                         ,headRange,headText,headX,complement,maximalProjection)
+import           NLP.Syntax.Type.XBar                    (CompVP(..),Prep(..),PrepClass(..),X'Tree
+                                                         ,headText,headX,complement,maximalProjection)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
 import qualified WikiEL                        as WEL
-import qualified WikiEL.EntityLinking          as EL
-import           WikiEL.Type                             (EMInfo,EntityMention(..),PreNE,UIDCite(..),_emuid)
+import           WikiEL.Type                             (EMInfo,EntityMention,PreNE,UIDCite(..),_emuid)
 import           WikiEL.WikiNamedEntityTagger            (resolvedUID)
 --
 import           SRL.Analyze.Match                       (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
-                                                         ,MGVertex(..),MeaningGraph
+                                                         ,MGEdge(..),MGVertex(..),MeaningGraph
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
-                                                         ,chooseMostFreqFrame
                                                          ,onfn_senseID,onfn_definition,onfn_frame
                                                          ,tf_frameID,tf_feCore,tf_fePeri
                                                          ,vs_vp
@@ -204,11 +200,11 @@ formatVerbStructure clausetr cpstr (VerbStructure vp senses mrmmtoppatts) =
 
 showMatchedFE :: (FNFrameElement, CompVP '[Lemma]) -> String
 --                                         FE   range prep text
-showMatchedFE (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) ("" :: Text) (headText dp)
+showMatchedFE (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (dp^.headX.to show) ("" :: Text) (headText dp)
 showMatchedFE (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("" :: Text) (gettext z)
   where z = cp^.maximalProjection
         gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
-showMatchedFE (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s(%4s) %s" fe (show (headRange dp)) prep pclass (headText dp)
+showMatchedFE (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s(%4s) %s" fe (dp^.headX.to show) prep pclass (headText dp)
   where dp = pp^.complement
         prep = case pp^.headX._1 of
                  Prep_NULL -> ""
@@ -235,7 +231,7 @@ showMatchedFrame tagged (vstr,paws) = do
 
 
 
-
+formatMGEdge :: MGEdge -> Text
 formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}];"
                    (e^.me_start
                    ,e^.me_end
@@ -252,6 +248,7 @@ formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}]
     format fmt ps = T.L.toStrict (T.F.format fmt ps)
 
 
+formatMGVerb :: MGVertex -> Maybe (Int,Text)
 formatMGVerb (MGEntity    _ _ _ _) = Nothing
 formatMGVerb (MGPredicate i _ f _ v)
   = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
@@ -275,7 +272,7 @@ formatMGVerb (MGNominalPredicate i _ f)
              "</table>" )
 
 
-
+formatMGEntity :: MGVertex -> Maybe (Int,Text)
 formatMGEntity (MGEntity i _ t ns  )      = Just (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
                                                     "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
                                                     T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>
