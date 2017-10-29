@@ -81,3 +81,7 @@ St. Louis Fed President James Bullard told Business Insider that there was "no h
 
 
 Toyota said it would begin testing self-driving electric cars around 2020, which will use artificial intelligence to engage with drivers.
+
+
+-- | Hyperloop is HEAD, Los-Angeles-based company is ATTRIB -> solved.
+Los-Angeles-based company, Hyperloop One said billionaire Richard Branson's Virgin Group has invested in the company to form a strategic partnership

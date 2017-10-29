@@ -36,7 +36,7 @@ import           NLP.Printer.PennTreebankII              (formatIndexTokensFromT
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
 import           NLP.Syntax.Type.XBar                    (CPDP,CompVP(..),Prep(..),PrepClass(..),X'Tree
-                                                         ,headRange,headText,headX,complement,maximalProjection)
+                                                         ,headText,headX,complement,maximalProjection)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
@@ -204,11 +204,11 @@ formatVerbStructure clausetr cpstr (VerbStructure vp senses mrmmtoppatts) =
 
 showMatchedFE :: (FNFrameElement, CompVP '[Lemma]) -> String
 --                                         FE   range prep text
-showMatchedFE (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (show (headRange dp)) ("" :: Text) (headText dp)
+showMatchedFE (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (dp^.headX.to show) ("" :: Text) (headText dp)
 showMatchedFE (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("" :: Text) (gettext z)
   where z = cp^.maximalProjection
         gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
-showMatchedFE (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s(%4s) %s" fe (show (headRange dp)) prep pclass (headText dp)
+showMatchedFE (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s(%4s) %s" fe (dp^.headX.to show) prep pclass (headText dp)
   where dp = pp^.complement
         prep = case pp^.headX._1 of
                  Prep_NULL -> ""
