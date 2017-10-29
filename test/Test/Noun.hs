@@ -4,23 +4,20 @@
 
 module Test.Noun where
 
-import           Control.Lens                    ((^.),(%~),_1,_2,_3,_4,_5,to)
-import           Data.Bifunctor                  (bimap)
+import           Control.Lens                    ((^.),(%~),_1,_2,_3,_4,_5)
 import qualified Data.IntMap             as IM
 import           Data.Monoid                     ((<>))
 import           Data.Text                       (Text)
 import qualified Data.Text               as T
-import qualified Data.Text.IO            as T.IO
-import           Text.Format.Tree                (linePrint)
 --
-import           Data.Bitree                     (Bitree(..),getRoot1,toTree)
+import           Data.Bitree                     (Bitree(..),getRoot1)
 import           Data.BitreeZipper               (current,mkBitreeZipper)
 import           Data.Range                      (Range)
 import           NLP.Type.PennTreebankII         (PennTree,Lemma)
 import           NLP.Type.TagPos                 (TagPos(..),TokIdx(..))
 --
 import           NLP.Syntax.Format.Internal      (formatDP)
-import           NLP.Syntax.Noun                 (bareNounModifier,splitDP)
+import           NLP.Syntax.Noun                 (splitDP)
 import           NLP.Syntax.Preposition          (identifyInternalTimePrep)
 import           NLP.Syntax.Type                 (MarkType(..))
 import           NLP.Syntax.Type.XBar            (Zipper,getTokens,headX,mkOrdDP)
@@ -28,7 +25,6 @@ import           NLP.Syntax.Util                 (mkBitreeICP)
 --
 import           Test.Tasty
 import           Test.Tasty.HUnit
-import Debug.Trace
 
 
 type TestBNM = (Text,Range,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
@@ -92,9 +88,9 @@ checkBNM :: TestBNM -> Bool
 checkBNM x =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) (x^._3))
       lemmapt = mkBitreeICP lmap1 (x^._4)
-      tr = toTree (bimap f g lemmapt)
+      {- tr = toTree (bimap f g lemmapt)
         where f = (^._1.to show.to T.pack)
-              g = (^._1.to show.to T.pack)
+              g = (^._1.to show.to T.pack) -}
       z :: Zipper '[Lemma]
       z = getRoot1 $ mkBitreeZipper [] lemmapt
       y = splitDP (x^._5) (mkOrdDP z)
@@ -119,15 +115,17 @@ unitTests = testGroup "Bare Noun Modifier test" . flip map testcases $ \c ->
 
 
 
-test_internal_time ::  (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
 
+
+{-
+
+test_internal_time ::  (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
 test_internal_time
   = ( "Toyota Motor Corp on Monday"
     , [(0,("Toyota","Toyota")),(1,("Motor","Motor")),(2,("Corp","Corp")),(3,("on","on")),(4,("Monday","Monday"))]
     , PN "NP" [PN "NP" [PL ("NNP","Toyota"),PL ("NNP","Motor"),PL ("NNP","Corp")],PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Monday")]]]
     , [TagPos (TokIdx 3, TokIdx 4, MarkTime)]
     )
-
 
 testFunc t =
   let lmas = t^._2
@@ -141,3 +139,4 @@ testFunc t =
   in T.intercalate "\n" (map (getTokens.current) zs) <> "\n" <>
      formatDP dp' <> "\n" <>
      T.pack (show (dp'^.headX))
+-}

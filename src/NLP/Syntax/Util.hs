@@ -59,6 +59,7 @@ getLeafIndex (PL (i,_)) = Just i
 getLeafIndex _          = Nothing
 
 
+rootTag :: BitreeICP as -> Either ChunkTag POSTag
 rootTag = bimap (chunkTag.snd) (posTag.snd) . getRoot
 
 

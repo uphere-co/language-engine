@@ -12,9 +12,8 @@ module NLP.Syntax.Type.XBar
 , compVPToRange
 ) where
 
-import           Control.Lens                       ((^.),(^..),(^?),_1,_2,_Just,_Right,to)
+import           Control.Lens                       ((^.),_1,to)
 import           Data.Foldable                      (toList)
-import           Data.Maybe                         (fromMaybe)
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
 --

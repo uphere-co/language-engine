@@ -19,7 +19,6 @@ import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
 import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
-import           Data.Foldable
 import           Data.Either                            (partitionEithers,rights)
 import qualified Data.HashMap.Strict               as HM
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
@@ -38,17 +37,13 @@ import           NLP.Type.SyntaxProperty                (Voice(..))
 import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Noun                        (splitDP)
-import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTimePrep,isMatchedTime
-                                                        ,identifyInternalTimePrep
-                                                        ,mkPPFromZipper
-                                                        )
+import           NLP.Syntax.Preposition                 (checkEmptyPrep,isMatchedTime
+                                                        ,identifyInternalTimePrep,mkPPFromZipper)
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
 --
-import qualified Data.Text as T
-import           NLP.Syntax.Format.Internal
 import Debug.Trace
 
 
@@ -171,15 +166,15 @@ constructCP tagged vprop = do
         let (comps,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
-            nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
+            -- nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
             subj0 = identifySubject tagged s z_vp
             (subj,subj_dps,sadjs) = fromMaybe (subj0,[],[]) $ do
               dp_subj <- subj0 ^? trResolved . _Just . _Right
-              let (dp_subj',sadjs) = identifyInternalTimePrep tagged dp_subj
+              let (dp_subj',sadjs') = identifyInternalTimePrep tagged dp_subj
                   dp_subj'' = splitDP tagged dp_subj' 
                   subj' = ((trResolved . _Just . _Right) .~ dp_subj'') subj0
               subj_dp <- subj' ^? trResolved . _Just
-              return (subj',[subj_dp],sadjs)
+              return (subj',[subj_dp],sadjs')
             verbp = mkVerbP z_vp vprop (cadjs++sadjs) comps
             dps = subj_dps ++ comps_dps
         case cptag' of
@@ -264,7 +259,7 @@ rewriteX'TreeForModifier f w z = do
 
 
 
-retrieveWCP :: Range -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as),CP (Lemma ': as))
+retrieveWCP :: Range -> MaybeT (State (X'Tree t)) (X'Zipper t,CP t)
 retrieveWCP rng = do
   tr <- lift get
   w <- hoistMaybe (extractZipperById rng tr)
@@ -272,6 +267,7 @@ retrieveWCP rng = do
   return (w,cp)
 
 
+rewriteX'TreeForFreeWH :: Range -> [TraceType] -> X'Zipper t -> DetP t -> Maybe (X'Zipper t)
 rewriteX'TreeForFreeWH rng ps w z' = do
   w_dom <- parent w
   cp_dom <- w_dom^?to currentCPDP._CPCase
@@ -295,7 +291,7 @@ whMovement tagged (w,cp) = do
       spec = cp^.complement.specifier
   -- whMovement process starts with cheking trace in subject
   case spec^.trChain of
-    Left (LZ ps c ns) ->
+    Left (LZ ps c _ns) ->
       -- with trace in subject
       -- check subject for relative pronoun
       case c of
@@ -360,7 +356,7 @@ resolveSilentPRO tagged (z,cp) = do
       SilentPRO -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDP =<< parent z)
                         let rng' = cpRange cp'
                         TraceChain exs' x' <- lift (resolveDP tagged rng')
-                        let xs' = either lzToList id exs'
+                        -- let xs' = either lzToList id exs'
                         return (TraceChain (mergeLeftELZ (Left xs) exs') x'))
                     <|>
                     return (TraceChain (Left xs) Nothing))
@@ -452,17 +448,13 @@ resolveCP xtr = rewriteTree action xtr
       return z'
 
 
-
+bindingSpec :: Range -> TraceChain (Either (Zipper t) (DetP t)) -> MaybeT (State (X'Tree t)) (X'Zipper t)
 bindingSpec rng spec = do
   z <- hoistMaybe . extractZipperById rng =<< lift get
   let rf = _2._CPCase.complement.specifier .~ spec
       z' = replaceFocusItem rf rf z
   lift (put (toBitree z'))
   return z'
-
-
-nextLZ (LZ ps c (n:ns)) = Just (LZ (c:ps) n ns)
-nextLZ _                = Nothing
 
 
 -- consider passive case only now for the time being.
@@ -473,7 +465,7 @@ connectRaisedDP rng = do
   c1:c2:[] <- return (cp^.complement.complement.complement)
   rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.headX)
   cp' <- hoistMaybe (c2^?trResolved._Just._CompVP_CP)
-  let rng' = cpRange cp'
+  -- let rng' = cpRange cp'
   rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.headX)
   if rng1 == rng_dp
     then do
@@ -527,7 +519,7 @@ predicateArgWS cp z adjs =
        , _pa_candidate_args = case child1 z of
                                 Nothing -> []
                                 Just z' -> map extractArg (z':iterateMaybe next z')
-                              ++ let f z = flip fmap (mkPPFromZipper PC_Time z) $ \pp ->
+                              ++ let f x = flip fmap (mkPPFromZipper PC_Time x) $ \pp ->
                                              let prep = fromMaybe "" (pp^?headX._1._Prep_WORD)
                                                  rng = pp ^. maximalProjection.to (getRange.current)
                                              in Left (rng,S_PP prep PC_Time False)
@@ -592,7 +584,7 @@ clauseStructure :: [TagPos TokIdx MarkType]
                 -> [VerbProperty (Zipper '[Lemma])]
                 -> PennTreeIdxG N.CombinedTag (POSTag,Text)
                 -> ClauseTree
-clauseStructure tagged _vps (PL (i,pt)) = PL (Right (i,pt))
+clauseStructure _      _    (PL (i,pt)) = PL (Right (i,pt))
 clauseStructure tagged vps  (PN (rng,tag) xs)
   = let ys = map (clauseStructure tagged vps) xs
         (verbs,nonverbs0)= partitionEithers (map promoteToVP ys)
@@ -628,7 +620,7 @@ clauseStructure tagged vps  (PN (rng,tag) xs)
                            -- we need to rewrite this whole functions using zipper later.
                            let prep = case os of
                                         PN (_,(N.CL N.S)) _lst : _ -> S_PP t PC_Other True
-                                        PN (rng,_) _ : _           -> S_PP t (fromMaybe PC_Other (find (isMatchedTime rng) tagged >> return PC_Time)) False
+                                        PN (rng',_) _ : _           -> S_PP t (fromMaybe PC_Other (find (isMatchedTime rng') tagged >> return PC_Time)) False
                                         PL (i,_) : _               -> S_PP t (fromMaybe PC_Other (find (isMatchedTime (i,i)) tagged >> return PC_Time)) False
                                         _                          -> S_PP t PC_Other False
                            in case tail ys of
@@ -639,7 +631,7 @@ clauseStructure tagged vps  (PN (rng,tag) xs)
                            -- we need to rewrite this whole functions using zipper later.
                            let prep = case os of
                                         PN (_,(N.CL N.S)) _lst : _ -> S_PP t PC_Other True
-                                        PN (rng,_) _ : _           -> S_PP t (fromMaybe PC_Other (find (isMatchedTime rng) tagged >> return PC_Time)) False
+                                        PN (rng',_) _ : _           -> S_PP t (fromMaybe PC_Other (find (isMatchedTime rng') tagged >> return PC_Time)) False
                                         PL (i,_) : _               -> S_PP t (fromMaybe PC_Other (find (isMatchedTime (i,i)) tagged >> return PC_Time)) False
                                         _                          -> S_PP t PC_Other False
                            in case tail ys of

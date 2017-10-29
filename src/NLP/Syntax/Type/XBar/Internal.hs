@@ -142,6 +142,7 @@ type instance Complement 'X_P t = DetP t
 
 type PP = XP 'X_P
 
+mkPP :: (Prep,PrepClass) -> Zipper t -> DetP t -> PP t
 mkPP (prep,pclass) z dp = XP (prep,pclass) z () () dp 
 
 
