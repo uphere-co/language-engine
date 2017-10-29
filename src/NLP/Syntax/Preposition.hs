@@ -24,7 +24,7 @@ import           NLP.Syntax.Util         (beginEndToRange
 import           NLP.Syntax.Type         (MarkType(..))
 import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..),MaximalDP(..)
                                          ,Prep(..),PrepClass(..),PP,XP(..)
-                                         ,complement,headX,maximalProjection
+                                         ,complement,headX,maximalProjection,maximal
                                          ,original,mkOrdDP,mkPP
                                          )
 
@@ -88,7 +88,7 @@ identifyInternalTimePrep :: [TagPos TokIdx MarkType]
                          -> (DetP t,[Zipper t])
 identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   let z_dp = dp^.maximalProjection.original
-      rng_dp@(b_dp,e_dp) = dp^.headX._1
+      rng_dp@(b_dp,e_dp) = dp^.maximalProjection.maximal
   TagPos (b0,e0,_) <- find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) tagged
   let rng_time = beginEndToRange (b0,e0)
   z_tdp <- findZipperForRangeICP rng_time (current z_dp)
@@ -96,12 +96,12 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   guard (isChunkAs PP (current z_tpp))
   let rng_tpp@(b_tpp,e_tpp) = getRange (current z_tpp)
       rng_dp' = (b_dp,b_tpp-1)
-      rng_head = let (b_h,e_h) = dp^.headX._2
+      rng_head = let (b_h,e_h) = dp^.headX
                  in if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
   dp' <- ((do z_dp' <- findZipperForRangeICP rng_dp' (toBitree z_dp)
-              return (dp & (headX .~ (rng_dp',rng_head)) . (maximalProjection .~ Intact z_dp'))
+              return (dp & (headX .~ rng_head) . (maximalProjection .~ Intact z_dp' rng_dp'))
           )
           <|>
-          (return (dp & (headX .~ (rng_dp',rng_head)) . (maximalProjection .~ Seperated z_dp rng_dp'))))
+          (return (dp & (headX .~ rng_head) . (maximalProjection .~ Seperated z_dp rng_dp'))))
 
   return (dp',[z_tpp])

@@ -216,7 +216,7 @@ hierarchyBits (cp,zs) = do
   let rng = cpRange cp
   let cpbit = (rng,(rng,CPCase cp))
 
-  let f z = let rng' = z^.headX._1
+  let f z = let rng' = z^.maximalProjection.maximal
             in (rng',(rng',DPCase z))
   return (cpbit:map f zs)
 
@@ -245,7 +245,7 @@ rewriteX'TreeForModifier :: ((Range, CPDP as) -> (Range, CPDP as))
              -> DetP as
              -> MaybeT (State (X'Tree as)) ()
 rewriteX'TreeForModifier f w z = do
-  let dprng = z^.headX._1
+  let dprng = z^.maximalProjection.maximal
       -- rewrite X'Tree by modifier relation.
   case extractZipperById dprng (toBitree w) of
     Nothing -> do let newtr (PN y ys) = PN (dprng,DPCase z) [PN (f y) ys]
@@ -471,10 +471,10 @@ connectRaisedDP rng = do
   (w,cp) <- retrieveWCP rng
   guard (cp ^. complement.complement.headX.vp_voice == Passive)
   c1:c2:[] <- return (cp^.complement.complement.complement)
-  rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.to headRange)
+  rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.headX)
   cp' <- hoistMaybe (c2^?trResolved._Just._CompVP_CP)
   let rng' = cpRange cp'
-  rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.to headRange)
+  rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.headX)
   if rng1 == rng_dp
     then do
       let rf = (_2._CPCase.complement.specifier .~ emptyTraceChain)

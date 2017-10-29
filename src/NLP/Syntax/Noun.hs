@@ -30,7 +30,7 @@ splitDP :: [TagPos TokIdx MarkType]
         -> DetP (Lemma ': as)
 splitDP tagged dp0 =
   bareNounModifier tagged . fromMaybe dp0 $ do
-    z <- dp0^?maximalProjection._Intact
+    (z,_) <- dp0^?maximalProjection._Intact
     guard (isChunkAs NP (current z))
     dp <- child1 z
     guard (isChunkAs NP (current dp))
