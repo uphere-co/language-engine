@@ -2,13 +2,12 @@
 
 module Main where
 
--- import           Data.Foldable
 import           Data.Monoid
 import           Test.Tasty.HUnit
 import           Test.Tasty
 --
--- import           Data.Bitree              (getRoot)
 import           NLP.Type.PennTreebankII
+import           NLP.Type.PennTreebankII.Match
 --
 import           PropBank.Match
 

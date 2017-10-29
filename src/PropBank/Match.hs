@@ -13,13 +13,14 @@ import           Data.Text                       (Text)
 --
 import           Data.Range                      (isInside,isInsideR)
 import           NLP.Type.PennTreebankII
+import           NLP.Type.PennTreebankII.Match
 --
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
 import           PropBank.Util
 --
 
-
+{-
 mergeHyphen :: State [(Int,(POSTag,Text))] (Maybe [(Int,(POSTag,Text))])
 mergeHyphen = fmap (fmap reverse) (go Nothing)
   where go acc = do s <- get
@@ -104,6 +105,16 @@ matchR r0 y@(PN (r,_) xs)
 matchR (b,e) x@(PL (n,_))
   | b == n && e == n = Just x
   | otherwise = Nothing
+-}
+
+
+findNode :: Node -> PennTreeGen c (Int,(p,t)) -> Maybe (p, PennTreeGen c (Int,(p,t)))
+findNode (Node i d) itr = do
+  let lst = reverse (contain i itr)
+  PL (_,(headword,_)) <- listToMaybe (take 1 lst)
+  r <- listToMaybe $ drop d lst
+  return (headword,r)
+
 
 
 matchArgNodes :: (PennTree,PennTree)  -- ^ (CoreNLP tree, PropBank (human-annotated) tree)
