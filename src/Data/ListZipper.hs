@@ -19,6 +19,10 @@ makeLenses ''ListZipper
 singletonLZ :: a -> ListZipper a
 singletonLZ x = LZ [] x []
 
+nextLZ :: ListZipper a -> Maybe (ListZipper a)
+nextLZ (LZ ps c (n:ns)) = Just (LZ (c:ps) n ns)
+nextLZ _                = Nothing
+
 
 lzToList :: ListZipper a -> [a]
 lzToList x = x^.lz_prevs.to reverse ++ (x^.lz_current : x^.lz_nexts)
