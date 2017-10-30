@@ -36,10 +36,6 @@ mkVPS lmatknlst pt =
   in verbPropertyFromPennTree lemmamap pt
 
 
-mkTaggedLemma lma pt taglst =
-  let lmap1 = IM.fromList (map (_2 %~ (^._1)) lma)
-      lemmapt = mkBitreeICP lmap1 pt
-  in TaggedLemma lemmapt lma taglst
 
 
 formatDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType]) -> [Text]

@@ -26,7 +26,7 @@ import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                   (mkBitreeICP)
+import           NLP.Syntax.Util                   (mkBitreeICP,mkTaggedLemma)
 --
 import           Test.Common
 import           Test.Tasty

@@ -5,12 +5,14 @@
 
 module NLP.Syntax.Util where
 
-import           Control.Lens                      ((^?),(%~),to)
+import           Control.Lens                      ((^.),(^?),(%~),_1,_2,to)
 import           Control.Monad                     (guard)
 import           Data.Bifunctor                    (bimap)
 import           Data.Bifoldable                   (bifoldMap)
 import           Data.IntMap                       (IntMap)
+import qualified Data.IntMap                 as IM
 import           Data.Monoid                       (First(..))
+import           Data.Text                         (Text)
 --
 import           CoreNLP.Simple.Convert            (lemmatize)
 import           Data.Attribute
@@ -119,3 +121,10 @@ mergeRightELZ (Right xs) (Right ys) = Right (xs++ys)
 mergeRightELZ (Left z1)  (Right ys) = Right (lzToList z1 ++ ys)
 mergeRightELZ (Right xs) (Left z2)  = Left ((lz_prevs %~ (++ (reverse xs))) z2)
 mergeRightELZ (Left z1)  (Left z2)  = Left (mergeRightLZ z1 z2)
+
+
+mkTaggedLemma :: [(Int,(Lemma,Text))] -> PennTree -> [TagPos TokIdx MarkType] -> TaggedLemma '[Lemma]
+mkTaggedLemma lma pt taglst =
+  let lmap1 = IM.fromList (map (_2 %~ (^._1)) lma)
+      lemmapt = mkBitreeICP lmap1 pt
+  in TaggedLemma lemmapt lma taglst

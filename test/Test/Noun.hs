@@ -21,7 +21,7 @@ import           NLP.Syntax.Noun                 (splitDP)
 import           NLP.Syntax.Preposition          (identifyInternalTimePrep)
 import           NLP.Syntax.Type                 (MarkType(..))
 import           NLP.Syntax.Type.XBar            (Zipper,TaggedLemma(..),getTokens,headX,mkOrdDP)
-import           NLP.Syntax.Util                 (mkBitreeICP)
+import           NLP.Syntax.Util                 (mkBitreeICP,mkTaggedLemma)
 --
 import           Test.Common
 import           Test.Tasty
