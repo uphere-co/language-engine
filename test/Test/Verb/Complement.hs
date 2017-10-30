@@ -228,8 +228,6 @@ checkSubjCompAdjunct c = fromMaybe False $ do
 
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
   paws <- findPAWS tagged clausetr vp x'tr
-
-  -- (cp,_) <- constructCP (c^._6) vp
   let cp = paws^.pa_CP
       -- test subjects
       subj = cp^?complement.specifier.trResolved._Just.to (either (getTokens . current) headText)

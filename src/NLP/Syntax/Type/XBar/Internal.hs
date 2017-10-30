@@ -88,7 +88,7 @@ data SplitType = CLMod | BNMod | APMod
                deriving (Show,Eq,Ord)
 
 
-
+{- 
 data MaximalDP t = Intact { _original :: Zipper t
                           , _maximal :: Range
                           }
@@ -104,14 +104,14 @@ original = lens _original (\f a -> f { _original = a })
 
 maximal :: Simple Lens (MaximalDP t) Range
 maximal = lens _maximal (\f a -> f { _maximal = a })
-
+-}
 
 
 --
 -- this definition is not truly X-bar-theoretic, but for the time being
 --
 type instance Property   'X_D t = Range -- head -- (original,head)
-type instance Maximal    'X_D t = MaximalDP t
+type instance Maximal    'X_D t = Range -- MaximalDP t
 type instance Specifier  'X_D t = ()
 type instance Adjunct    'X_D t = Maybe Range
 type instance Complement 'X_D t = Maybe Range
@@ -123,15 +123,15 @@ type DetP = XP 'X_D
 --   better representation.
 --
 mkOrdDP :: Zipper a -> DetP a
-mkOrdDP z = XP (rf z) (Intact z (rf z)) () Nothing Nothing
+mkOrdDP z = XP (rf z) (rf z) () Nothing Nothing
   where rf = getRange . current
 
 
 mkSplittedDP :: SplitType -> Range -> Range -> Zipper a -> DetP a
 mkSplittedDP typ h m o = case typ of
-                           CLMod -> XP h (Intact o (rf o)) () Nothing  (Just m)
-                           BNMod -> XP h (Intact o (rf o)) () (Just m) Nothing
-                           APMod -> XP h (Intact o (rf o)) () (Just m) Nothing  -- apposition is an adjunct.
+                           CLMod -> XP h (rf o) () Nothing  (Just m)
+                           BNMod -> XP h (rf o) () (Just m) Nothing
+                           APMod -> XP h (rf o) () (Just m) Nothing  -- apposition is an adjunct.
   where rf = getRange . current
 
 
@@ -146,15 +146,15 @@ data PrepClass = PC_Time
 
 --
 type instance Property   'X_P t = (Prep,PrepClass)
-type instance Maximal    'X_P t = Zipper t
+type instance Maximal    'X_P t = Range -- Zipper t
 type instance Specifier  'X_P t = ()
 type instance Adjunct    'X_P t = ()
 type instance Complement 'X_P t = DetP t
 
 type PP = XP 'X_P
 
-mkPP :: (Prep,PrepClass) -> Zipper t -> DetP t -> PP t
-mkPP (prep,pclass) z dp = XP (prep,pclass) z () () dp 
+mkPP :: (Prep,PrepClass) -> Range -> DetP t -> PP t
+mkPP (prep,pclass) rng dp = XP (prep,pclass) rng () () dp 
 
 
 data CompVP t = CompVP_Unresolved (Zipper t)

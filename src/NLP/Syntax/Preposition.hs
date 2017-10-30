@@ -22,10 +22,10 @@ import           NLP.Syntax.Util         (beginEndToRange
                                          ,findZipperForRangeICP
                                          ,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
-import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..),MaximalDP(..)
+import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP,TaggedLemma(..),tagList
-                                         ,complement,headX,maximalProjection,maximal
-                                         ,original,mkOrdDP,mkPP
+                                         ,complement,headX,maximalProjection
+                                         ,mkOrdDP,mkPP
                                          )
 
 
@@ -46,24 +46,24 @@ isMatchedTime rng (TagPos (b,e,t)) = beginEndToRange (b,e) == rng && t == MarkTi
 
 checkEmptyPrep :: TaggedLemma -> DetP t -> CompVP t
 checkEmptyPrep tagged dp =
-  let z = dp^.maximalProjection.original
+  let -- z = dp^.maximalProjection.original
+      rng = dp^.maximalProjection -- getRange (current z)
       r = fromMaybe False $ do
-            let rng = getRange (current z)
             -- check bare noun adverb
             find (isMatchedTime rng) (tagged^.tagList)
             return (hasEmptyPreposition z)
   in if r
-     then CompVP_PP (mkPP (Prep_NULL,PC_Time) z dp)
+     then CompVP_PP (mkPP (Prep_NULL,PC_Time) rng dp)
      else CompVP_DP dp
 
 
 checkTimePrep :: TaggedLemma -> PP t -> CompVP t
 checkTimePrep tagged pp =
   let dp = pp^.complement
-      z = dp^.maximalProjection.original
+      -- z = dp^.maximalProjection.original
       (prep,_pclass) = pp^.headX
       r = fromMaybe False $ do
-            let rng = getRange (current z)
+            let rng = dp^.maximalProjection -- getRange (current z)
             find (isMatchedTime rng) (tagged^.tagList)
             return True
   in if r then CompVP_PP ((headX .~ (prep,PC_Time)) pp) else CompVP_PP pp
