@@ -41,9 +41,11 @@ import           NLP.Syntax.Format
 import           NLP.Syntax.Type                        (PredArgWorkspace,STag)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
+import           NLP.Syntax.Util                        (mkTaggedLemma)
 import           NLP.Syntax.Verb
 import           NLP.Type.CoreNLP                       (Dependency)
 import           NLP.Type.PennTreebankII
+import           NLP.Type.PennTreebankII.Match
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
@@ -64,18 +66,17 @@ type LemmaList = [(Int,Text)]
 
 
 
--- | migrated from OntoNotes
---
-matchVerbPropertyWithRelation :: [VerbProperty (BitreeZipperICP '[Lemma])]
+matchVerbPropertyWithRelation :: TaggedLemma '[Lemma]
+                              -> [VerbProperty (BitreeZipperICP '[Lemma])]
                               -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
                               -> MatchedInstance
                               -> Maybe (VerbProperty (BitreeZipperICP '[Lemma])
                                        ,Maybe (PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))))
-matchVerbPropertyWithRelation verbprops clausetr minst = do
+matchVerbPropertyWithRelation tagged verbprops clausetr minst = do
   relidx <- findRelNode (minst^.mi_arguments)
   vp <- find (\vp->vp^.vp_index==relidx) verbprops
-  let cpstr = (map (bindingAnalysis []) . identifyCPHierarchy []) verbprops   -- for the time being
-      mpa = findPAWS [] clausetr vp cpstr                                -- for the time being
+  let x'tr = (map (bindingAnalysisRaising  . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) verbprops
+      mpa = findPAWS tagged clausetr vp x'tr
   return (vp,mpa)
 
 
@@ -145,16 +146,16 @@ dummyMatch tr0 inst
     }
 
 
-adjustedLemmaMap :: IntMap Lemma -> PennTree -> IntMap Lemma
+adjustedLemmaMap :: IntMap Lemma -> PennTree -> IntMap (Lemma,Text)
 adjustedLemmaMap lemmamap proptr = IM.fromList
                                  . map replacef
-                                 . map (\x->(x^._1,Lemma (x^._2._2)))
+                                 . map (\x->(x^._1,(Lemma (x^._2._2),x^._2._2)))
                                  . toList
                                  . mkIndexedTree $ proptr
   where
-    replacef (i,l0) = fromMaybe (i,l0) $ do j <- eitherToMaybe (adjustIndexFromTree proptr i)
-                                            l <- IM.lookup j lemmamap
-                                            return (i,l)
+    replacef (i,(l0,t)) = fromMaybe (i,(l0,t)) $ do j <- eitherToMaybe (adjustIndexFromTree proptr i)
+                                                    l <- IM.lookup j lemmamap
+                                                    return (i,(l,t))
 
 
 formatInst :: Bool  -- ^ show detail?
@@ -167,14 +168,16 @@ formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,_sense) =
       -- coretr = corenlp^._1
       coretr = proptr
       minst = dummyMatch proptr inst
-      nlemmamap = adjustedLemmaMap lemmamap proptr
+      nlemmamapfull = adjustedLemmaMap lemmamap proptr
+      nlemmamap = fmap (^._1) nlemmamapfull
       verbprops = verbPropertyFromPennTree nlemmamap proptr
-      clausetr = clauseStructure [] verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr)) -- for the time being
+      tagged = mkTaggedLemma (IM.toList nlemmamapfull) proptr []  -- for the time being 
+      clausetr = clauseStructure tagged verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
       l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
-      mvpmva =  matchVerbPropertyWithRelation verbprops clausetr minst
+      mvpmva =  matchVerbPropertyWithRelation tagged verbprops clausetr minst
       mtp = do (vp,_) <- mvpmva
-               constructCP [] vp ^? _Just._1.complement      -- for the time being
+               constructCP tagged vp ^? _Just._1.complement
       argtable0 = mkArgTable iproptr l2p filesidtid args
       argtable1 = zipperArgTable iproptr argtable0
       argtable = fmap f argtable1
@@ -263,13 +266,15 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                         l2p = linkID2PhraseNode proptr
                         minst = dummyMatch proptr inst
                         lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
-                        nlemmamap = adjustedLemmaMap lemmamap proptr
+                        nlemmamapfull = adjustedLemmaMap lemmamap proptr
+                        nlemmamap = fmap (^._1) nlemmamapfull
+                        tagged = mkTaggedLemma (IM.toList nlemmamapfull) proptr []  -- for the time being 
                         verbprops = verbPropertyFromPennTree nlemmamap proptr
                         
-                        clausetr = clauseStructure [] verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr)) -- for the time being
-                        mvpmva = matchVerbPropertyWithRelation verbprops clausetr minst
+                        clausetr = clauseStructure tagged verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr))
+                        mvpmva = matchVerbPropertyWithRelation tagged verbprops clausetr minst
                         mtp = do (vp,_) <- mvpmva
-                                 constructCP [] vp^? _Just._1.complement      -- for the time being
+                                 constructCP tagged vp^? _Just._1.complement
                         argtable0 = mkArgTable iproptr l2p filesidtid args
                         argtable1 = zipperArgTable iproptr argtable0
                         argtable = fmap pnt argtable1
