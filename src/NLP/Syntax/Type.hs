@@ -46,8 +46,6 @@ data PredArgWorkspace as a = PAWS { _pa_CP :: CP as
 makeLenses ''PredArgWorkspace
 
 
-data MarkType = MarkTime | MarkEntity
-              deriving (Show,Eq,Ord)
 
 
 ---------------

@@ -12,25 +12,25 @@ import           Data.List                (find)
 import           Data.Maybe               (fromMaybe,isNothing)
 import qualified Data.Text           as T
 --
-import           Data.BitreeZipper        (child1,current,next)
+import           Data.BitreeZipper        (child1,current,next,extractZipperByRange)
 import           Data.Range               (Range)
 import           NLP.Type.PennTreebankII  (ChunkTag(..),Lemma,POSTag(..),TernaryLogic(..)
                                           ,getRange,isNoun,posTag)
 import           NLP.Type.TagPos          (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Type          (MarkType(..))
-import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,maximalProjection
-                                          ,tokensByRange,mkSplittedDP,original,_Intact
-                                          )
+import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,TaggedLemma
+                                          ,maximalProjection,tokensByRange,mkSplittedDP,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 
 
-splitDP :: [TagPos TokIdx MarkType]
+splitDP :: TaggedLemma (Lemma ': as)
         -> DetP (Lemma ': as)
         -> DetP (Lemma ': as)
 splitDP tagged dp0 =
   bareNounModifier tagged . fromMaybe dp0 $ do
-    (z,_) <- dp0^?maximalProjection._Intact
+    let rng0 = dp0^.maximalProjection
+    z <- extractZipperByRange rng0 (tagged^.pennTree)
     guard (isChunkAs NP (current z))
     dp <- child1 z
     guard (isChunkAs NP (current dp))
@@ -41,7 +41,7 @@ splitDP tagged dp0 =
      (splitParentheticalModifier tagged z))
 
 
-splitParentheticalModifier :: [TagPos TokIdx MarkType] -> Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))
+splitParentheticalModifier :: TaggedLemma (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))
 splitParentheticalModifier tagged z = do
   guard (isChunkAs NP (current z))         -- dominating phrase must be NP
   dp1 <- child1 z
@@ -66,36 +66,37 @@ splitParentheticalModifier tagged z = do
 
 
 
-identApposHead :: [TagPos TokIdx MarkType] -> Range -> Range -> Zipper t -> DetP t
+identApposHead :: TaggedLemma t -> Range -> Range -> Zipper t -> DetP t
 identApposHead tagged rng1 rng2 z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $
-  ((do find (\(TagPos (b,e,t)) -> rng1 == beginEndToRange (b,e) && t == MarkEntity) tagged
+  ((do find (\(TagPos (b,e,t)) -> rng1 == beginEndToRange (b,e) && t == MarkEntity) (tagged^.tagList)
        return (mkSplittedDP APMod rng1 rng2 z))
    <|>
-   (do find (\(TagPos (b,e,t)) -> rng2 == beginEndToRange (b,e) && t == MarkEntity) tagged
+   (do find (\(TagPos (b,e,t)) -> rng2 == beginEndToRange (b,e) && t == MarkEntity) (tagged^.tagList)
        return (mkSplittedDP APMod rng2 rng1 z)))
 
 
 -- | starting with capital letter
 --
-checkProperNoun :: Zipper t -> Range -> Bool
-checkProperNoun z (b,e) =
-  let toks = tokensByRange (b,e) (toList (current z))
-  in (not.null) toks && isUpper (T.head (head toks))
+checkProperNoun :: TaggedLemma t -> Range -> Bool
+checkProperNoun tagged (b,e) =
+  let toks = tokensByRange tagged (b,e) -- (toList (current z))
+  in (not.null) toks && isUpper (T.head (head toks))   -- unsafe!
 
 -- | Identify bare noun subexpression inside noun phrase as modifier.
 --   I did not implement the already-splitted case. We need multiple-adjunct
 --   structure.
 --
-bareNounModifier :: [TagPos TokIdx MarkType]
+bareNounModifier :: TaggedLemma (Lemma ': as)
                  -> DetP (Lemma ': as)
                  -> DetP (Lemma ': as)
 bareNounModifier tagged x = fromMaybe x $ do
-  let z = x^.maximalProjection.original
+  let rng@(b0,_e0) = x^.maximalProjection
+  z <- extractZipperByRange rng (tagged^.pennTree)
   guard (isChunkAs NP (current z))
-  let rng@(b0,_e0) = getRange (current z)
   -- check entity for the last words
-  let f z' (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun z' (yb,ye)
-  TagPos (b1'',e1'',_t) <- find (\(TagPos (b1',e1',t)) -> f z rng (beginEndToRange (b1',e1')) && t == MarkEntity) tagged
+  let f (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun tagged (yb,ye)
+  TagPos (b1'',e1'',_t)
+    <- find (\(TagPos (b1',e1',t)) -> f rng (beginEndToRange (b1',e1')) && t == MarkEntity) (tagged^.tagList)
   let (b1,e1) = beginEndToRange (b1'',e1'')
       idx_last_modifier_word = b1-1
   last_modifier_word <- find (\y -> y^._1 == idx_last_modifier_word) (toList (current z))

@@ -55,13 +55,13 @@ phraseNodeType mtp z
   = let rng = getRange (current z)
         subj = do tp <- mtp
                   dp <- tp^?specifier.trResolved._Just._Right   -- for the time being, later we will support CP subject
-                  return (dp^.maximalProjection.maximal == rng)
+                  return (dp^.maximalProjection == rng)
         obj  = do tp <- mtp
                   -- The following must be changed to accommodate PP
                   let os = zip [1..] (tp^..complement.complement.traverse.trResolved.to (fmap compVPToEither))
                   m <- flip find os $ \o ->
                          case o^._2 of
-                           Just (Right x) -> x^.maximalProjection.maximal == rng
+                           Just (Right x) -> x^.maximalProjection == rng
                            Just (Left x)  -> (getRange . current) x == rng
                               -- x^?maximalProjection._Just.to current.to getRange == Just rng
                            Nothing        -> False

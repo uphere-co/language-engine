@@ -36,9 +36,14 @@ mkVPS lmatknlst pt =
   in verbPropertyFromPennTree lemmamap pt
 
 
+
+
 formatDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType]) -> [Text]
-formatDetail (_txt,lma,pt,tagged) =
-  let vps  = mkVPS lma pt
+formatDetail (_txt,lma,pt,taglst) =
+  let -- lmap1 = IM.fromList (map (_2 %~ (^._1)) lma)
+      -- lemmapt = mkBitreeICP lmap1 pt
+      tagged = mkTaggedLemma lma pt taglst
+      vps  = mkVPS lma pt
       clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
 
@@ -56,7 +61,7 @@ formatDetail (_txt,lma,pt,tagged) =
   ]
 
 
-
+{- 
 showDetail0 :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType]) -> IO ()
 showDetail0 (txt,lma,pt,tmxs) = do
   putStrLn "--------------------------------------------------------------------------------------------------------------------"
@@ -75,3 +80,4 @@ showDetail0 (txt,lma,pt,tmxs) = do
     case find (\z -> getRoot (current z) ^? _Left . _1  == Just rng) $ getNodes (mkBitreeZipper [] lemmapt) of
       Nothing -> return ()
       Just z -> print $ hasEmptyPreposition z
+-}

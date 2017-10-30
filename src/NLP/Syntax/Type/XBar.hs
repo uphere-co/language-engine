@@ -12,7 +12,7 @@ module NLP.Syntax.Type.XBar
 , compVPToRange
 ) where
 
-import           Control.Lens                       ((^.),_1,to)
+import           Control.Lens                       ((^.),_1,_2,to)
 import           Data.Foldable                      (toList)
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
@@ -30,8 +30,8 @@ getTokens :: BitreeICP as -> Text
 getTokens = T.intercalate " " . map (tokenWord.snd) . toList
 
 
-tokensByRange :: (Foldable t) => Range -> t (Int, ALeaf a) -> [Text]
-tokensByRange rng = map snd . filter (^._1.to (\i -> i `isInside` rng)) . map (\(i,x)->(i,tokenWord x)) . toList
+tokensByRange :: TaggedLemma t -> Range -> [Text]
+tokensByRange tagged rng = map (^._2._2) . filter (^._1.to (\i -> i `isInside` rng)) $ tagged^.lemmaList
 
 
 {- 
@@ -39,8 +39,8 @@ headRange :: DetP t -> Range
 headRange x = x^.headX
 -}
 
-headText :: DetP t -> Text
-headText x = (x^.maximalProjection.original.to (T.intercalate " " . tokensByRange (x^.headX) . current))
+headText :: TaggedLemma t -> DetP t -> Text
+headText tagged x = T.intercalate " " (tokensByRange tagged (x^.headX))
 
 -- (x^.maximalProjection)
 
@@ -54,15 +54,15 @@ compVPToEither (CompVP_PP y)         = Right (y^.complement)
 
 
 
-compVPToHeadText :: CompVP as -> Text
-compVPToHeadText (CompVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
-compVPToHeadText (CompVP_CP z)         = z^.maximalProjection.to (T.intercalate " " . map (tokenWord.snd) . toList . current)
-compVPToHeadText (CompVP_DP z)         = headText z
-compVPToHeadText (CompVP_PP z)         = headText (z^.complement)
+compVPToHeadText :: TaggedLemma as -> CompVP as -> Text
+compVPToHeadText tagged (CompVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
+compVPToHeadText tagged (CompVP_CP z)         = z^.maximalProjection.to (T.intercalate " " . map (tokenWord.snd) . toList . current)
+compVPToHeadText tagged (CompVP_DP z)         = headText tagged z
+compVPToHeadText tagged (CompVP_PP z)         = headText tagged (z^.complement)
 
 
 
 compVPToRange :: CompVP as -> Range
-compVPToRange = either (getRange.current) (\dp->dp^.maximalProjection.maximal) . compVPToEither
+compVPToRange = either (getRange.current) (\dp->dp^.maximalProjection) . compVPToEither
 
 --  (\dp->dp^.maximalProjection.to (getRange.current)) . compVPToEither 
