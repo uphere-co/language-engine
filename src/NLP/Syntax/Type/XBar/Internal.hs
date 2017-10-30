@@ -30,9 +30,10 @@ type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
 data MarkType = MarkTime | MarkEntity
               deriving (Show,Eq,Ord)
 
-data TaggedLemma = TaggedLemma { _lemmaList :: [(Int,(Lemma,Text))]
-                               , _tagList :: [TagPos TokIdx MarkType]
-                               }
+data TaggedLemma t = TaggedLemma { _pennTree  :: BitreeICP t
+                                 , _lemmaList :: [(Int,(Lemma,Text))]
+                                 , _tagList   :: [TagPos TokIdx MarkType]
+                                 }
 
 data XType = X_V | X_T | X_C | X_D | X_P
 

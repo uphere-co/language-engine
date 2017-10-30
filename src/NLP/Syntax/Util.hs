@@ -97,13 +97,14 @@ beginEndToRange :: BeginEnd TokIdx -> Range
 beginEndToRange (TokIdx b,TokIdx e) = (b,e-1)
 
 
+{- 
 findZipperForRangeICP :: Range -> BitreeICP a -> Maybe (Zipper a)
 findZipperForRangeICP rng tr = getFirst (bifoldMap check check (mkBitreeZipper [] tr))
   where check z = First $ do
                     rng' <-  z ^? to current . to getRange
                     guard (rng' == rng)
                     return z
-
+-}
 
 
 

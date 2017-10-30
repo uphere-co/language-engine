@@ -30,11 +30,8 @@ getTokens :: BitreeICP as -> Text
 getTokens = T.intercalate " " . map (tokenWord.snd) . toList
 
 
-tokensByRange :: TaggedLemma {- t (Int, ALeaf a) -} -> Range -> [Text]
+tokensByRange :: TaggedLemma t -> Range -> [Text]
 tokensByRange tagged rng = map (^._2._2) . filter (^._1.to (\i -> i `isInside` rng)) $ tagged^.lemmaList
-
-
-  -- . map (\(i,x)->(i,tokenWord x)) . toList
 
 
 {- 
@@ -42,7 +39,7 @@ headRange :: DetP t -> Range
 headRange x = x^.headX
 -}
 
-headText :: TaggedLemma -> DetP t -> Text
+headText :: TaggedLemma t -> DetP t -> Text
 headText tagged x = T.intercalate " " (tokensByRange tagged (x^.headX))
 
 -- (x^.maximalProjection)
@@ -57,7 +54,7 @@ compVPToEither (CompVP_PP y)         = Right (y^.complement)
 
 
 
-compVPToHeadText :: TaggedLemma -> CompVP as -> Text
+compVPToHeadText :: TaggedLemma as -> CompVP as -> Text
 compVPToHeadText tagged (CompVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
 compVPToHeadText tagged (CompVP_CP z)         = z^.maximalProjection.to (T.intercalate " " . map (tokenWord.snd) . toList . current)
 compVPToHeadText tagged (CompVP_DP z)         = headText tagged z

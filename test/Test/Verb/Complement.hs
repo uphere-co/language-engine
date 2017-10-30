@@ -8,6 +8,7 @@
 module Test.Verb.Complement where
 
 import           Control.Lens               hiding (levels)
+import qualified Data.IntMap                as IM
 import           Data.List                         (find,intercalate)
 import           Data.Maybe                        (fromMaybe)
 import           Data.Monoid                       (All(All,getAll),mconcat)
@@ -19,14 +20,15 @@ import           Data.Bitree
 import           Data.BitreeZipper                 (current)
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
-import qualified NLP.Type.PennTreebankII.Separated      as N
+import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos
 --
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
-import           NLP.Syntax.Type                             (MarkType(..),pa_CP)
+import           NLP.Syntax.Type                   (MarkType(..),pa_CP)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
+import           NLP.Syntax.Util                   (mkBitreeICP)
 --
 import           Test.Common
 import           Test.Tasty.HUnit
@@ -34,7 +36,7 @@ import           Test.Tasty
 
 import Debug.Trace
 
-  
+
 type TestVerbComplement = (Text
                           ,Int
                           ,(Text,[Text],[Text])   -- (subject,complements,adjuncts)
@@ -175,7 +177,9 @@ complexNP
 
 formatTP :: TestVerbComplement -> [String]
 formatTP (txt,i,_,lmatknlst,pt,taglst) =
-  let tagged = TaggedLemma lmatknlst taglst
+  let lmap1 = IM.fromList (map (_2 %~ (^._1)) lmatknlst)
+      lemmapt = mkBitreeICP lmap1 pt
+      tagged = TaggedLemma lemmapt lmatknlst taglst
       vps = mkVPS lmatknlst pt
       ipt = mkPennTreeIdx pt
       clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id ipt)
@@ -193,7 +197,7 @@ formatTP (txt,i,_,lmatknlst,pt,taglst) =
                   ] ++ case (^.pa_CP) <$> findPAWS tagged clausetr vp x'tr of
                          Nothing -> ["not successful in constructing CP"]
                          Just cp -> [ formatCP cp
-                                    , maybe "no subject?"  T.unpack (cp^?complement.specifier.trResolved._Just.to (either (getTokens . current) headText))
+                                    , maybe "no subject?"  T.unpack (cp^?complement.specifier.trResolved._Just.to (either (getTokens . current) (headText tagged)))
                                     ]
                     ++ [T.unpack cltxts]
                     ++ map (T.unpack . formatX'Tree) x'tr
@@ -221,7 +225,7 @@ mainShow = do
 
 checkSubjCompAdjunct :: TestVerbComplement -> Bool
 checkSubjCompAdjunct c = fromMaybe False $ do
-  let tagged = TaggedLemma (c^._4) (c^._6)
+  let tagged = mkTaggedLemma (c^._4) (c^._5) (c^._6)
       vps = mkVPS (c^._4) (c^._5)
       clausetr = clauseStructure tagged vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
@@ -230,12 +234,12 @@ checkSubjCompAdjunct c = fromMaybe False $ do
   paws <- findPAWS tagged clausetr vp x'tr
   let cp = paws^.pa_CP
       -- test subjects
-      subj = cp^?complement.specifier.trResolved._Just.to (either (getTokens . current) headText)
+      subj = cp^?complement.specifier.trResolved._Just.to (either (getTokens . current) (headText tagged))
       subj_test = c^._3._1
       b_subj = subj == Just subj_test
       -- test complements
       -- lst_comps :: [Maybe Text]
-      lst_comps = cp^..complement.complement.complement.traverse.trResolved.to (fmap compVPToHeadText)
+      lst_comps = cp^..complement.complement.complement.traverse.trResolved.to (fmap (compVPToHeadText tagged))
       -- lst_comps_test :: [Text]
       lst_comps_test = c^._3._2
       b_comps = getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst_comps lst_comps_test)) && (length lst_comps == length lst_comps_test)

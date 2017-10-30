@@ -23,6 +23,7 @@ import           NLP.Syntax.Type                 (MarkType(..))
 import           NLP.Syntax.Type.XBar            (Zipper,TaggedLemma(..),getTokens,headX,mkOrdDP)
 import           NLP.Syntax.Util                 (mkBitreeICP)
 --
+import           Test.Common
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
@@ -93,7 +94,7 @@ checkBNM x =
               g = (^._1.to show.to T.pack) -}
       z :: Zipper '[Lemma]
       z = getRoot1 $ mkBitreeZipper [] lemmapt
-      tagged = TaggedLemma (x^._3) (x^._5)
+      tagged = mkTaggedLemma (x^._3) (x^._4) (x^._5)
       y = splitDP tagged (mkOrdDP z)
   in y^.headX == x^._2
 

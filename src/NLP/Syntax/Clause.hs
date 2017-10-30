@@ -91,7 +91,7 @@ complementCandidates vprop z_vp =
                       Right p    -> isNoun p == Yes
 
 
-complementsOfVerb :: TaggedLemma
+complementsOfVerb :: TaggedLemma (Lemma ': as)
                   -> VerbProperty (Zipper (Lemma ': as))
                   -> Zipper (Lemma ': as)
                   -> ([TraceChain (CompVP (Lemma ': as))],[Zipper (Lemma ': as)])
@@ -133,7 +133,7 @@ allAdjunctCPOfVerb vprop =
 
 
 
-identifySubject :: TaggedLemma
+identifySubject :: TaggedLemma (Lemma ': as)
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)   -- ^ Verb maximal projection
                 -> TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as)))
@@ -149,7 +149,7 @@ identifySubject tagged tag vp = maybe nul smp r
 --
 -- | Constructing CP umbrella and all of its ingrediant.
 --
-constructCP :: TaggedLemma
+constructCP :: TaggedLemma (Lemma ': as)
             -> VerbProperty (Zipper (Lemma ': as))
             -> Maybe (CP (Lemma ': as),[Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))])
 constructCP tagged vprop = do
@@ -208,13 +208,13 @@ hierarchyBits (cp,zs) = do
   let rng = cpRange cp
   let cpbit = (rng,(rng,CPCase cp))
 
-  let f z = let rng' = z^.maximalProjection.maximal
+  let f z = let rng' = z^.maximalProjection
             in (rng',(rng',DPCase z))
   return (cpbit:map f zs)
 
 
 
-identifyCPHierarchy :: TaggedLemma
+identifyCPHierarchy :: TaggedLemma (Lemma ': as)
                     -> [VerbProperty (Zipper (Lemma ': as))]
                     -> [X'Tree (Lemma ': as)]
 identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
@@ -237,7 +237,7 @@ rewriteX'TreeForModifier :: ((Range, CPDP as) -> (Range, CPDP as))
              -> DetP as
              -> MaybeT (State (X'Tree as)) ()
 rewriteX'TreeForModifier f w z = do
-  let dprng = z^.maximalProjection.maximal
+  let dprng = z^.maximalProjection
       -- rewrite X'Tree by modifier relation.
   case extractZipperById dprng (toBitree w) of
     Nothing -> do let newtr (PN y ys) = PN (dprng,DPCase z) [PN (f y) ys]
@@ -278,7 +278,7 @@ rewriteX'TreeForFreeWH rng ps w z' = do
   return (replaceFocusItem rf rf w_dom)
 
 
-whMovement :: TaggedLemma
+whMovement :: TaggedLemma (Lemma ': as)
            -> (X'Zipper (Lemma ': as),CP (Lemma ': as))
            -> State (X'Tree (Lemma ': as))
                     (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
@@ -336,7 +336,7 @@ whMovement tagged (w,cp) = do
       return spec
 
 
-resolveSilentPRO :: TaggedLemma
+resolveSilentPRO :: TaggedLemma (Lemma ': as)
                  -> (X'Zipper (Lemma ': as),CP (Lemma ': as))
                  -> MaybeT (State (X'Tree (Lemma ': as))) (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 resolveSilentPRO tagged (z,cp) = do
@@ -388,7 +388,7 @@ resolveVPComp rng spec = do
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
-resolveDP :: TaggedLemma
+resolveDP :: TaggedLemma (Lemma ': as)
           -> Range
           -> State (X'Tree (Lemma ': as)) (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))))
 resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
@@ -480,7 +480,7 @@ connectRaisedDP rng = do
 --
 -- | This is the final step to bind inter-clause trace chain
 --
-bindingAnalysis :: TaggedLemma -> X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
+bindingAnalysis :: TaggedLemma (Lemma ': as) -> X'Tree (Lemma ': as) -> X'Tree (Lemma ': as)
 bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= bindingSpec rng
 
 
@@ -518,7 +518,7 @@ predicateArgWS cp z adjs =
                                 Just z' -> map extractArg (z':iterateMaybe next z')
                               ++ let f x = flip fmap (mkPPFromZipper PC_Time x) $ \pp ->
                                              let prep = fromMaybe "" (pp^?headX._1._Prep_WORD)
-                                                 rng = pp ^. maximalProjection.to (getRange.current)
+                                                 rng = pp ^. maximalProjection -- .to (getRange.current)
                                              in Left (rng,S_PP prep PC_Time False)
                                  in mapMaybe f adjs
 
@@ -534,7 +534,7 @@ predicateArgWS cp z adjs =
             Just x' -> x': iterateMaybe f x'
 
 
-findPAWS :: TaggedLemma
+findPAWS :: TaggedLemma (Lemma ': as)
          -> ClauseTree
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
          -> [X'Tree (Lemma ': as)]
@@ -577,7 +577,7 @@ promote_PP_CP_from_NP x = [x]
 
 
 
-clauseStructure :: TaggedLemma
+clauseStructure :: TaggedLemma '[Lemma]
                 -> [VerbProperty (Zipper '[Lemma])]
                 -> PennTreeIdxG N.CombinedTag (POSTag,Text)
                 -> ClauseTree

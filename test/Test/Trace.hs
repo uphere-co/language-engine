@@ -6,6 +6,7 @@ module Test.Trace where
 
 import           Control.Lens               hiding (levels)
 import           Data.Foldable
+import qualified Data.IntMap                as IM
 import           Data.Maybe                        (fromMaybe)
 import           Data.Monoid
 import           Data.Text                         (Text)
@@ -25,6 +26,7 @@ import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
+import           NLP.Syntax.Util                   (mkBitreeICP)
 --
 import           Test.Common
 import           Test.Tasty
@@ -201,13 +203,15 @@ testcases = [ test_silent_pronoun
             , test_free_relative_clause_subject_1
             , test_free_relative_clause_subject_2
             , test_free_relative_clause_object_1
-            , test_free_relative_clause_object_2            
+            , test_free_relative_clause_object_2
             ]
 
 checkTrace :: TestTrace -> Bool
 checkTrace c =
   fromMaybe False $ do
-    let tagged = TaggedLemma (c^._4) (c^._6)
+    let --lmap1 = IM.fromList (map (_2 %~ (^._1)) (c^._4))
+        --lemmapt = mkBitreeICP lmap1 (c^._5)
+        tagged = mkTaggedLemma (c^._4) (c^._5) (c^._6)
         vps = mkVPS (c^._4) (c^._5)
         clausetr = clauseStructure tagged vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
         cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
@@ -216,11 +220,11 @@ checkTrace c =
     paws <- findPAWS tagged clausetr vp cpstr
     let cp = paws^.pa_CP
     case c^._3._1 of
-      Subj   -> let dp = fmap (either (const "") headText) (cp ^.complement.specifier)  -- for the time being. ignore CP subject
+      Subj   -> let dp = fmap (either (const "") (headText tagged)) (cp ^.complement.specifier)  -- for the time being. ignore CP subject
                 in return (dp == c ^._3._2)
       Comp n -> do let comps = cp ^.complement.complement.complement
                    comp <- comps ^? ix (n-1)
-                   let dp = fmap compVPToHeadText comp
+                   let dp = fmap (compVPToHeadText tagged) comp
                    return (dp == c ^._3._2)
 
 

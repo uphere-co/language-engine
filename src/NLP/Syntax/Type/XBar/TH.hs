@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE TemplateHaskell            #-}
 
 module NLP.Syntax.Type.XBar.TH where
@@ -27,4 +29,3 @@ makePrisms ''SpecCP
 makePrisms ''AdjunctCP
 
 makePrisms ''CPDP
-
