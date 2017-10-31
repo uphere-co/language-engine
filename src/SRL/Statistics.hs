@@ -8,7 +8,9 @@ import           Data.Graph
 import           Data.Maybe        (mapMaybe)
 --
 import           SRL.Analyze.Type  (MGVertex(..),SentStructure(..),MeaningGraph
-                                   ,me_start,me_end,mg_edges,mg_vertices,mv_id)
+                                   ,me_start,me_end,mg_edges,mg_vertices,mv_id
+                                   ,ss_verbStructures
+                                   )
 
 
 -- DocStructure mtokenss sentitems mergedtags sstrs
@@ -25,7 +27,7 @@ getGraphFromMG mg =
 
 
 numberOfPredicate :: SentStructure -> Int
-numberOfPredicate (SentStructure _ _ _ _ _ _ vstrs) = length vstrs
+numberOfPredicate ss = length (ss^.ss_verbStructures) -- (SentStructure _ _ _ _ _ _ _ vstrs) = length vstrs
 
 
 numberOfMGVerbPredicate :: MeaningGraph -> Int

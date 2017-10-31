@@ -33,7 +33,7 @@ import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CompVP(..),Prep(..),PrepClass(..),X'Tree
+import           NLP.Syntax.Type.XBar                    (CompVP(..),Prep(..),PrepClass(..),TaggedLemma,X'Tree
                                                          ,headText,headX,complement,maximalProjection)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
@@ -179,7 +179,7 @@ formatDocStructure showdetail (DocStructure mtokenss sentitems mergedtags sstrs)
 
 
 formatSentStructure :: Bool -> SentStructure -> [Text]
-formatSentStructure showdetail (SentStructure i ptr _ clausetr cpstr _ vstrs) =
+formatSentStructure showdetail (SentStructure i ptr _ clausetr cpstr _ tagged vstrs) =
    let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                   , formatIndexTokensFromTree 0 ptr
                   ]
@@ -187,24 +187,24 @@ formatSentStructure showdetail (SentStructure i ptr _ clausetr cpstr _ vstrs) =
                     , formatClauseStructure clausetr
                     , "================================================================================================="
                     ]
-       subline2 = map (formatVerbStructure clausetr cpstr) vstrs
+       subline2 = map (formatVerbStructure tagged clausetr cpstr) vstrs
    in subline1 ++ (if showdetail then subline1_1 else []) ++ concat subline2
 
 
-formatVerbStructure :: ClauseTree -> [X'Tree '[Lemma]] -> VerbStructure -> [Text]
-formatVerbStructure clausetr cpstr (VerbStructure vp senses mrmmtoppatts) =
-  [ formatVPwithPAWS [] clausetr cpstr vp        -- for the time being
+formatVerbStructure :: TaggedLemma '[Lemma] -> ClauseTree -> [X'Tree '[Lemma]] -> VerbStructure -> [Text]
+formatVerbStructure tagged clausetr x'tr (VerbStructure vp senses mrmmtoppatts) =
+  [ formatVPwithPAWS tagged clausetr x'tr vp
   , T.pack (printf "Verb: %-20s" (vp^.vp_lemma.to unLemma))
   , T.pack (formatSenses False senses mrmmtoppatts)
   ]
 
-showMatchedFE :: (FNFrameElement, CompVP '[Lemma]) -> String
+showMatchedFE :: TaggedLemma '[Lemma] -> (FNFrameElement, CompVP '[Lemma]) -> String
 --                                         FE   range prep text
-showMatchedFE (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (dp^.headX.to show) ("" :: Text) (headText dp)
-showMatchedFE (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("" :: Text) (gettext z)
+showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (dp^.headX.to show) ("" :: Text) (headText tagged dp)
+showMatchedFE tagged (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("" :: Text) (gettext z)
   where z = cp^.maximalProjection
         gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
-showMatchedFE (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s(%4s) %s" fe (dp^.headX.to show) prep pclass (headText dp)
+showMatchedFE tagged (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s(%4s) %s" fe (dp^.headX.to show) prep pclass (headText tagged dp)
   where dp = pp^.complement
         prep = case pp^.headX._1 of
                  Prep_NULL -> ""
@@ -213,12 +213,12 @@ showMatchedFE (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s(%4s) %s" fe (dp^.headX
         pclass = case pp^.headX._2 of
                    PC_Time -> "time"
                    PC_Other -> ""
-showMatchedFE (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
+showMatchedFE tagged (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
   where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 
 
 
-showMatchedFrame :: [TagPos TokIdx MarkType]
+showMatchedFrame :: TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
                  -> (VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
                  -> IO ()
 showMatchedFrame tagged (vstr,paws) = do
@@ -227,7 +227,7 @@ showMatchedFrame tagged (vstr,paws) = do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> frame)
-    flip traverse_ mselected $ \(_,felst) -> mapM_ (putStrLn . showMatchedFE) felst
+    flip traverse_ mselected $ \(_,felst) -> mapM_ (putStrLn . showMatchedFE tagged) felst
 
 
 
