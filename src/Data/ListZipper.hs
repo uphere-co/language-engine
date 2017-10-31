@@ -37,7 +37,7 @@ mergeRightLZ l1 (LZ ps x ns) = LZ (ps++reverse (lzToList l1)) x ns
 
 
 genListZippers :: [a] -> [ListZipper a]
-genListZippers [] = error "cannot make a zipper for empty list"
+genListZippers [] = []
 genListZippers (k:ks) = l1 : unfoldr succ l1
   where l1 = LZ [] k ks
         succ (LZ xs y [])     = Nothing
