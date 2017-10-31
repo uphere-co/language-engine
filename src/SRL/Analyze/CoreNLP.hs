@@ -22,6 +22,16 @@ import           SRL.Analyze.Type                             (DocAnalysisInput(
 import           SRL.Analyze.Util                             (addText,listTimexToTagPos,getSentenceOffsets)
 
 
+emptyDocAnalysisInput = DocAnalysisInput
+  { _dainput_sents     = []
+  , _dainput_sentidxs  = []
+  , _dainput_sentitems = []
+  , _dainput_tokss     = [[]]
+  , _dainput_mptrs     = []
+  , _dainput_deps      = []
+  , _dainput_mtmxs     = Nothing
+  }
+
 runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> Text
           -> IO DocAnalysisInput
@@ -35,13 +45,15 @@ runParser pp txt = do
       parsetrees = map (\x -> pure . decodeToPennTree =<< (x^.S.parseTree) ) psents
       sentidxs = map (convertSentence pdoc) psents
       sents = map (convertPsent) psents
-      Right deps = mapM sentToDep psents
+      edeps = mapM sentToDep psents
       tktokss = map (getTKTokens) psents
       tokss = map (mapMaybe convertToken) tktokss
   mtmx <- case fmap fst (messageGet lbstr_sutime) :: Either String T.ListTimex of
     Left _ -> return Nothing
     Right rsutime -> return (Just (listTimexToTagPos rsutime))
-  return (DocAnalysisInput sents sentidxs sentitems tokss parsetrees deps mtmx)
+  case edeps of
+    Left  _    -> return emptyDocAnalysisInput
+    Right deps -> return (DocAnalysisInput sents sentidxs sentitems tokss parsetrees deps mtmx)
 
 
 preRunParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
