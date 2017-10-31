@@ -28,4 +28,4 @@ makePrisms ''SpecCP
 
 makePrisms ''AdjunctCP
 
-makePrisms ''CPDP
+makePrisms ''CPDPPP

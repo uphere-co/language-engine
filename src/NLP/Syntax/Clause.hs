@@ -203,14 +203,13 @@ cpRange :: CP xs -> Range
 cpRange cp = cp^.maximalProjection.to (getRange . current)
 
 
-hierarchyBits :: (CP as, [DetP as]) -> Maybe [(Range, (Range, CPDP as))]
-hierarchyBits (cp,zs) = do
+hierarchyBits :: (CP t, [DetP t]) -> Maybe [(Range, (Range, CPDPPP t))]
+hierarchyBits (cp,dps) = do
   let rng = cpRange cp
-  let cpbit = (rng,(rng,CPCase cp))
-
-  let f z = let rng' = z^.maximalProjection
-            in (rng',(rng',DPCase z))
-  return (cpbit:map f zs)
+      cpbit = (rng,(rng,CPCase cp))
+      f dp = let rng' = dp^.maximalProjection
+            in (rng',(rng',DPCase dp))
+  return (cpbit:map f dps)
 
 
 
@@ -224,15 +223,15 @@ identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull toful
         tofull rng = HM.lookup rng cpmap
 
 
-currentCPDP :: X'Zipper as -> CPDP as
-currentCPDP = snd . getRoot1 . current
+currentCPDPPP :: X'Zipper as -> CPDPPP as
+currentCPDPPP = snd . getRoot1 . current
 
 
 --
 -- | rewrite X'Tree. Now it's focusing on modifier relation, but this should
 --   be more generalized.
 --
-rewriteX'TreeForModifier :: ((Range, CPDP as) -> (Range, CPDP as))
+rewriteX'TreeForModifier :: ((Range, CPDPPP as) -> (Range, CPDPPP as))
              -> X'Zipper as
              -> DetP as
              -> MaybeT (State (X'Tree as)) ()
@@ -260,14 +259,14 @@ retrieveWCP :: Range -> MaybeT (State (X'Tree t)) (X'Zipper t,CP t)
 retrieveWCP rng = do
   tr <- lift get
   w <- hoistMaybe (extractZipperById rng tr)
-  cp <- hoistMaybe (currentCPDP w ^? _CPCase)
+  cp <- hoistMaybe (currentCPDPPP w ^? _CPCase)
   return (w,cp)
 
 
 rewriteX'TreeForFreeWH :: Range -> [TraceType] -> X'Zipper t -> DetP t -> Maybe (X'Zipper t)
 rewriteX'TreeForFreeWH rng ps w z' = do
   w_dom <- parent w
-  cp_dom <- w_dom^?to currentCPDP._CPCase
+  cp_dom <- w_dom^?to currentCPDPPP._CPCase
   let vp_dom = cp_dom^.complement.complement
       comps = vp_dom^.complement
       comps' = flip map comps $ \comp -> fromMaybe comp $ do
@@ -344,13 +343,13 @@ resolveSilentPRO tagged (z,cp) = do
   case spec^.trChain of
     Right _ -> return spec
     Left (xs@(LZ _ c _)) -> case c of
-      NULL      -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDP =<< parent z)
+      NULL      -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
                         let rng' = cpRange cp'
                         TraceChain exs' x' <- lift (resolveDP tagged rng')
                         return (TraceChain (mergeLeftELZ (Left (replaceLZ SilentPRO xs)) exs') x'))
                     <|>
                     return (TraceChain (Left (replaceLZ SilentPRO xs)) Nothing))
-      SilentPRO -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDP =<< parent z)
+      SilentPRO -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
                         let rng' = cpRange cp'
                         TraceChain exs' x' <- lift (resolveDP tagged rng')
                         -- let xs' = either lzToList id exs'
@@ -543,7 +542,7 @@ findPAWS tagged tr vp x'tr = do
   cp <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                            -- anyway need to be rewritten.
   let rng = cpRange cp
-  cp' <- (^? _CPCase) . currentCPDP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
+  cp' <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
   predicateArgWS cp' <$> findVerb (vp^.vp_index) tr <*> pure (cp' ^. complement.complement.adjunct)
 
 
