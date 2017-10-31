@@ -50,7 +50,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 -- | This function is very ad hoc. Later we should have PP according to X-bar theory
 --   (We should get rid of this function soon.)
 --
-splitPP :: {- [TagPos TokIdx MarkType] -> -} TaggedLemma (Lemma ': as) ->  Zipper (Lemma ': as) -> DetP (Lemma ': as)
+splitPP :: TaggedLemma (Lemma ': as) ->  Zipper (Lemma ': as) -> DetP (Lemma ': as)
 splitPP tagged z = fromMaybe (mkOrdDP z) $ do
   guard (isChunkAs PP (current z))
   p <- child1 z
@@ -130,7 +130,7 @@ matchObjects rolemap verbp patt = do
 
 
 
-matchPP :: TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
+matchPP :: TaggedLemma '[Lemma]
         -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
         -> (Maybe Text,Maybe PrepClass,Maybe Bool)
         -> Maybe (Text,Zipper '[Lemma],DetP '[Lemma])
@@ -147,7 +147,7 @@ matchPP tagged paws (mprep,mpclass,mising) = do
 
 
 matchPrepArgs :: [(PBArg,FNFrameElement)]
-              -> TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
+              -> TaggedLemma '[Lemma]
               -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
               -> ArgPattern p GRel
               -> [(FNFrameElement, CompVP '[Lemma])]
@@ -164,7 +164,7 @@ matchPrepArgs rolemap tagged paws patt felst = do
 
 
 matchAgentForPassive :: [(PBArg,FNFrameElement)]
-                     -> TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
+                     -> TaggedLemma '[Lemma]
                      -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
                      -> ArgPattern p GRel
                      -> Maybe (FNFrameElement, CompVP '[Lemma])
@@ -176,7 +176,7 @@ matchAgentForPassive rolemap tagged paws patt = do
 
 
 matchSO :: [(PBArg,FNFrameElement)]
-        -> TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
+        -> TaggedLemma '[Lemma]
         -> ( Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
            , VerbP '[Lemma]
            , PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
@@ -189,7 +189,6 @@ matchSO rolemap tagged (mDP,verbp,paws) (patt,num) =
       rmatched1 = rmatched0 ++ maybeToList (matchExtraRolesForPPTime tagged paws rmatched0)
   in (rpatt,rmatched1 ++ matchPrepArgs rolemap tagged paws patt rmatched1)
 
--- ++ matchPrepArgs rolemap tagged paws patt)
 
 extendRoleMapForDual :: (Text,SenseID,[(PBArg,FNFrameElement)])
                      -> (Text,SenseID,[(PBArg,FNFrameElement)])
@@ -208,7 +207,7 @@ numMatchedRoles = lengthOf (_2.folded)
 
 
 matchRoles :: [(PBArg,FNFrameElement)]
-           -> TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
+           -> TaggedLemma '[Lemma]
            -> VerbP '[Lemma]
            -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
            -> [(ArgPattern () GRel, Int)]
@@ -223,7 +222,7 @@ matchRoles rolemap tagged verbp paws toppattstats mDP =
 
 
 
-matchFrameRolesForCauseDual :: TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
+matchFrameRolesForCauseDual :: TaggedLemma '[Lemma]
                             -> VerbP '[Lemma]
                             -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
                             -> [(ArgPattern () GRel,Int)]
@@ -246,10 +245,10 @@ matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sen
            GT -> (frame1,(sense1,False),mselected1)
            LT -> (frame2,(sense2,True),mselected2)
            EQ -> (frame1,(sense1,False),mselected1)   -- choose intransitive because transitive should
-                                              -- have one more argument in general.
+                                                      -- have one more argument in general.
 
 
-matchFrameRolesAll :: TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
+matchFrameRolesAll :: TaggedLemma '[Lemma]
                    -> VerbP '[Lemma]
                    -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
                    -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
@@ -265,7 +264,7 @@ matchFrameRolesAll tagged verbp paws mDP rmtoppatts = do
   return (matchFrameRolesForCauseDual tagged verbp paws toppatts mDP causetype (frame1,sense1,rolemap1),stat)
 
 
-matchExtraRolesForPPTime :: TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
+matchExtraRolesForPPTime :: TaggedLemma '[Lemma]
                          -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
                          -> [(FNFrameElement, CompVP '[Lemma])]
                          -> Maybe (FNFrameElement,CompVP '[Lemma])
@@ -280,7 +279,7 @@ matchExtraRolesForPPTime tagged paws felst = do
 
 matchExtraRolesForPPing :: Text
                         -> FNFrameElement
-                        -> TaggedLemma '[Lemma]  -- [TagPos TokIdx MarkType]
+                        -> TaggedLemma '[Lemma]
                         -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
                         -> [(FNFrameElement, CompVP '[Lemma])]
                         -> Maybe (FNFrameElement,CompVP '[Lemma])
@@ -343,7 +342,7 @@ toInfinitive x =
 
 -- | this function should be generalized.
 --
-matchExtraRoles :: TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
+matchExtraRoles :: TaggedLemma '[Lemma]
                 -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
                 -> [(FNFrameElement, CompVP '[Lemma])]
                 -> [(FNFrameElement, CompVP '[Lemma])]
@@ -399,21 +398,21 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
             rng'@(b',_) = z'^.maximalProjection
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
-          then let z'' = ((headX .~  (b',b-1)) . (maximalProjection .~ (b,e)) . (adjunct .~ Nothing)) z'
+          then let z'' = ((headX .~  (b',b-1)) . (maximalProjection .~ (b,e)) . (adjunct .~ [])) z'
                in (fe',CompVP_PP (XP prep' o' () () z''))
           else (fe',CompVP_PP (XP prep' o' () () z'))
     f (fe,rng@(b,e)) (fe',CompVP_DP dp)
       = let rng'@(b',_) = dp^.maximalProjection
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
-          then let dp' = ((headX .~ (b',b-1)) . (maximalProjection .~ (b,e)) . (adjunct .~ Nothing)) dp
+          then let dp' = ((headX .~ (b',b-1)) . (maximalProjection .~ (b,e)) . (adjunct .~ [])) dp
                in (fe', CompVP_DP dp')
           else (fe', CompVP_DP dp)
     f _ x = x
 
 
 
-matchFrame :: TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
+matchFrame :: TaggedLemma '[Lemma]
            -> (VerbStructure,PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag)))
            -> Maybe (Range,VerbProperty (Zipper '[Lemma])
                     ,Text
@@ -446,14 +445,9 @@ entityFromDP tagged dp =
   let rng = dp^.headX
       txt = headText tagged dp
       mrngtxt' = do rng_sub <- case (dp^.adjunct, dp^.complement) of
-                                 (Just r,_) -> return r -- for the time being
-                                 _          -> Nothing
+                                 (AdjunctDP_Unresolved r:_,_) -> return r -- for the time being
+                                 _                            -> Nothing
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
-                        {-  dp ^. maximalProjection
-                                      . original
-                                      . to current
-                                      . to (tokensByRange rng_sub)
-                                      . to (T.intercalate " ") -}
                     return (rng_sub,txt_sub)
   in (rng,txt,mrngtxt')
 
