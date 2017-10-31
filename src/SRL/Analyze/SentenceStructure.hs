@@ -8,6 +8,7 @@ module SRL.Analyze.SentenceStructure where
 import           Control.Lens                              ((^.),(^..),_1,_2,_3,to)
 import           Data.Bifunctor                            (bimap,first)
 import           Data.Either                               (lefts)
+import           Data.Foldable                             (toList)
 import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
@@ -31,6 +32,7 @@ import           NLP.Syntax.Verb                           (verbPropertyFromPenn
 import           NLP.Syntax.Type                           (MarkType(..))
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
 import           NLP.Syntax.Type.XBar                      (Zipper)
+import           NLP.Syntax.Util                           (mkTaggedLemma)
 import qualified NLP.Type.NamedEntity              as N
 import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,sentenceToken,sentenceLemma,sent_tokenRange)
 
@@ -60,7 +62,7 @@ linkedMentionToTagPos linked_mention =
 
 mkWikiList :: SentStructure -> [((Int, Int), Text)]
 mkWikiList sstr =
-  let tagposs = sstr ^.. ss_tagged . traverse . to (fmap fst)
+  let tagposs = sstr ^.. ss_tagged_full . traverse . to (fmap fst)
       wikiel  = lefts $ map (\(TagPos (i,j,e)) -> first (unTokIdx i,unTokIdx j,) e) tagposs
       wikilst = mapMaybe  (\(i,j,w) -> ((i,j-1),) <$> getNEFunc w) wikiel
       getNEFunc e =
@@ -171,16 +173,18 @@ sentStructure :: AnalyzePredata
               -> [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text))]
               -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree)
               -> Maybe SentStructure
-sentStructure apredata tagged (i,midx,lmas,mptr) =
+sentStructure apredata taglst (i,midx,lmas,mptr) =
   flip fmap mptr $ \ptr ->
-    let tagged' = adjustTokenIndexForSentence midx tagged
-        taggedMarkOnly = map (fmap snd) tagged'
+    let taglst' = adjustTokenIndexForSentence midx taglst
+        taglstMarkOnly = map (fmap snd) taglst'
+        lmatkns = (zip [0..] . zip lmas . map (^._2) . toList) ptr
         lemmamap = (mkLemmaMap' . map unLemma) lmas
+        taggedMarkOnly = mkTaggedLemma lmatkns ptr taglstMarkOnly        
         vps = verbPropertyFromPennTree lemmamap ptr
         clausetr = clauseStructure taggedMarkOnly vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
         cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis taggedMarkOnly) . identifyCPHierarchy taggedMarkOnly) vps
         verbStructures = map (verbStructure apredata) vps
-    in SentStructure i ptr vps clausetr cpstr tagged' verbStructures
+    in SentStructure i ptr vps clausetr cpstr taglst' taggedMarkOnly verbStructures
 
 
 verbStructure :: AnalyzePredata -> VerbProperty (Zipper '[Lemma]) -> VerbStructure
