@@ -18,16 +18,13 @@ import           NLP.Type.PennTreebankII (ChunkTag(..),Lemma(..),POSTag(..)
                                          ,getRange,posTag,tokenWord)
 import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 --
-import           NLP.Syntax.Util         (beginEndToRange
-                                         -- ,findZipperForRangeICP
-                                         ,isChunkAs)
+import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
 import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP
                                          ,TaggedLemma(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
-                                         ,mkOrdDP,mkPP
-                                         )
+                                         ,mkOrdDP,mkPP)
 
 
 hasEmptyPreposition :: TaggedLemma t -> Range -> Bool
@@ -48,8 +45,7 @@ isMatchedTime rng (TagPos (b,e,t)) = beginEndToRange (b,e) == rng && t == MarkTi
 
 checkEmptyPrep :: TaggedLemma t -> DetP t -> CompVP t
 checkEmptyPrep tagged dp =
-  let -- z = dp^.maximalProjection.original
-      rng = dp^.maximalProjection -- getRange (current z)
+  let rng = dp^.maximalProjection
       r = fromMaybe False $ do
             -- check bare noun adverb
             find (isMatchedTime rng) (tagged^.tagList)
@@ -62,16 +58,12 @@ checkEmptyPrep tagged dp =
 checkTimePrep :: TaggedLemma t -> PP t -> CompVP t
 checkTimePrep tagged pp =
   let dp = pp^.complement
-      -- z = dp^.maximalProjection.original
       (prep,_pclass) = pp^.headX
       r = fromMaybe False $ do
-            let rng = dp^.maximalProjection -- getRange (current z)
+            let rng = dp^.maximalProjection
             find (isMatchedTime rng) (tagged^.tagList)
             return True
   in if r then CompVP_PP ((headX .~ (prep,PC_Time)) pp) else CompVP_PP pp
-
-
-
 
 
 mkPPFromZipper :: PrepClass -> Zipper (Lemma ': as) -> Maybe (PP (Lemma ': as))
