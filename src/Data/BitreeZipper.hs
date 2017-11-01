@@ -4,6 +4,7 @@
 module Data.BitreeZipper where
 
 import           Control.Lens
+import           Control.Lens.Extras     (is)
 import           Data.Bifoldable         (bifoldMap,biList)
 import           Data.List               (find,unfoldr)
 import           Data.Monoid             (First(..))
@@ -79,6 +80,12 @@ child1 (TZ (PL _) _) = Nothing
 child1 (TZ (PN c (x:xs)) ys) = Just (TZ x ((TC c [] xs):ys))
 child1 (TZ (PN _ []    ) _ ) = Nothing -- this should not happen. 
 
+
+childLast :: BitreeZipper c t -> Maybe (BitreeZipper c t)
+childLast z = do
+  c <- child1 z
+  let (lst,_) = (break (is _Nothing) . iterate ((=<<) next)) (Just c)   -- c: unfoldr (\x -> (x,) <$> next x) c
+  last lst
 
 
 root :: BitreeZipper c t -> BitreeZipper c t
