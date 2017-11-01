@@ -16,7 +16,7 @@ import           Data.Monoid              (Last(..))
 import qualified Data.Text           as T
 --
 import           Data.Bitree              (_PL)
-import           Data.BitreeZipper        (child1,current,next,extractZipperByRange)
+import           Data.BitreeZipper        (child1,childLast,current,next,extractZipperByRange)
 import           Data.BitreeZipper.Util   (firstSiblingBy)
 import           Data.Range               (Range)
 import           NLP.Type.PennTreebankII  (ChunkTag(..),Lemma,POSTag(..),TernaryLogic(..)
