@@ -24,9 +24,9 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,TaggedLemma
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 
 
-splitDP :: TaggedLemma (Lemma ': as)
-        -> DetP (Lemma ': as)
-        -> DetP (Lemma ': as)
+splitDP :: TaggedLemma t -- (Lemma ': as)
+        -> DetP t -- (Lemma ': as)
+        -> DetP t -- (Lemma ': as)
 splitDP tagged dp0 =
   bareNounModifier tagged . fromMaybe dp0 $ do
     let rng0 = dp0^.maximalProjection
@@ -41,7 +41,9 @@ splitDP tagged dp0 =
      (splitParentheticalModifier tagged z))
 
 
-splitParentheticalModifier :: TaggedLemma (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))
+splitParentheticalModifier :: TaggedLemma t -- (Lemma ': as)
+                           -> Zipper t -- (Lemma ': as)
+                           -> Maybe (DetP t {- (Lemma ': as) -})
 splitParentheticalModifier tagged z = do
   guard (isChunkAs NP (current z))         -- dominating phrase must be NP
   dp1 <- child1 z
@@ -86,9 +88,9 @@ checkProperNoun tagged (b,e) =
 --   I did not implement the already-splitted case. We need multiple-adjunct
 --   structure.
 --
-bareNounModifier :: TaggedLemma (Lemma ': as)
-                 -> DetP (Lemma ': as)
-                 -> DetP (Lemma ': as)
+bareNounModifier :: TaggedLemma t --  (Lemma ': as)
+                 -> DetP t -- (Lemma ': as)
+                 -> DetP t -- (Lemma ': as)
 bareNounModifier tagged x = fromMaybe x $ do
   let rng@(b0,_e0) = x^.maximalProjection
   z <- extractZipperByRange rng (tagged^.pennTree)
