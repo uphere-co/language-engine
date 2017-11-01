@@ -67,16 +67,6 @@ checkTimePrep tagged pp =
   in if r then CompVP_PP ((headX .~ (prep,PC_Time)) pp) else CompVP_PP pp
 
 
-mkPPFromZipper :: TaggedLemma t -> PrepClass -> Zipper t -> Maybe (PP t)
-mkPPFromZipper tagged pclass z = do
-  guard (isChunkAs PP (current z))
-  z_prep <- child1 z
-  t <- z_prep ^? to current . _PL . _2 . to posTag
-  guard (t == IN || t == TO)
-  lma <- z_prep ^? to current . _PL . _2 . to tokenWord
-  z_dp <- firstSiblingBy next (isChunkAs NP) z_prep
-  return (mkPP (Prep_WORD lma,pclass) (getRange (current z)) (splitDP tagged (mkOrdDP z_dp)))
-
 
 identifyInternalTimePrep :: TaggedLemma t
                          -> DetP t
