@@ -30,6 +30,7 @@ import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_caus
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,findPAWS)
 import           NLP.Syntax.Noun              (splitDP)
+import           NLP.Syntax.Preposition       (mkPPFromZipper)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -45,18 +46,6 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,me_relation,mv_text,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges)
 --
 
-
---
--- | This function is very ad hoc. Later we should have PP according to X-bar theory
---   (We should get rid of this function soon.)
---
-splitPP :: {- [TagPos TokIdx MarkType] -> -} TaggedLemma (Lemma ': as) ->  Zipper (Lemma ': as) -> DetP (Lemma ': as)
-splitPP tagged z = fromMaybe (mkOrdDP z) $ do
-  guard (isChunkAs PP (current z))
-  p <- child1 z
-  guard (isPOSAs TO (current p) || isPOSAs IN (current p))
-  z_dp <- next p
-  return (splitDP tagged (mkOrdDP z_dp))
 
 
 
@@ -133,12 +122,16 @@ matchObjects rolemap verbp patt = do
 matchPP :: TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
         -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
         -> (Maybe Text,Maybe PrepClass,Maybe Bool)
-        -> Maybe (Text,Zipper '[Lemma],DetP '[Lemma])
+        -> Maybe (PP '[Lemma]) -- Maybe (Text,Zipper '[Lemma],PP '[Lemma])
 matchPP tagged paws (mprep,mpclass,mising) = do
     Left (rng,S_PP prep' _ _) <- find ppcheck (paws^.pa_candidate_args)
     let tr = paws^.pa_CP.maximalProjection.to root.to current
     z' <- (find (\z -> z^?to current._PN._1._1 == Just rng) . getNodes .mkBitreeZipper []) tr
-    return (prep',z',splitPP tagged z')
+    -- return (prep',z',splitPP tagged z')  -- <- should be changed.
+    let pclass = case mpclass of
+                   Nothing -> PC_Other
+                   Just pclass -> pclass
+    mkPPFromZipper tagged pclass z'
   where
     ppcheck (Left (_,S_PP prep' pclass' ising')) = maybe True (== prep')   mprep   &&
                                                    maybe True (== pclass') mpclass &&
@@ -156,8 +149,8 @@ matchPrepArgs rolemap tagged paws patt felst = do
   (p,(prep,mising)) <- pbArgForPP patt
   role <- maybeToList (lookup p rolemap)
 
-  (_,o,dp) <- maybeToList (matchPP tagged paws (Just prep,Nothing,mising))
-  let comp = CompVP_PP (mkPP (Prep_WORD prep,PC_Other) (getRange (current o)) dp)
+  pp <- maybeToList (matchPP tagged paws (Just prep,Nothing,mising))
+  let comp = CompVP_PP pp -- (mkPP (Prep_WORD prep,PC_Other) (getRange (current o)) dp)
       rng = compVPToRange comp
   guard (is _Nothing (find (\x -> x^?_2.to compVPToRange == Just rng) felst))
   return (role, comp)
@@ -170,8 +163,8 @@ matchAgentForPassive :: [(PBArg,FNFrameElement)]
                      -> Maybe (FNFrameElement, CompVP '[Lemma])
 matchAgentForPassive rolemap tagged paws patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
-    (_,o,dp) <- matchPP tagged paws (Just "by",Just PC_Other,Nothing)
-    let comp = CompVP_PP (mkPP (Prep_WORD "by",PC_Other) (getRange (current o)) dp)
+    pp  <- matchPP tagged paws (Just "by",Just PC_Other,Nothing)
+    let comp = CompVP_PP pp -- (mkPP (Prep_WORD "by",PC_Other) (getRange (current o)) dp)
     (,comp) <$> lookup p rolemap
 
 
@@ -271,10 +264,10 @@ matchExtraRolesForPPTime :: TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
                          -> Maybe (FNFrameElement,CompVP '[Lemma])
 matchExtraRolesForPPTime tagged paws felst = do
   guard (isNothing (find (\x -> x^._1 == "Time") felst))
-  (prep,o,dp) <-matchPP tagged paws (Nothing,Just PC_Time,Just False)
-  let rng = dp^.headX
-      comp = CompVP_PP (mkPP (Prep_WORD prep,PC_Time) (getRange (current o)) dp)
-  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.headX == Just rng) felst))
+  pp <- matchPP tagged paws (Nothing,Just PC_Time,Just False)
+  let -- rng = dp^.headX
+      comp = CompVP_PP pp -- (mkPP (Prep_WORD prep,PC_Time) (getRange (current o)) dp)
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.headX == Just (pp^.complement.headX)) felst))
   return ("Time",comp)
 
 
@@ -286,10 +279,10 @@ matchExtraRolesForPPing :: Text
                         -> Maybe (FNFrameElement,CompVP '[Lemma])
 matchExtraRolesForPPing prep role tagged paws felst = do
   guard (isNothing (find (\x -> x^._1 == role) felst))
-  (_,o,dp) <-matchPP tagged paws (Just prep,Just PC_Other,Just True)
-  let rng = dp^.headX
-      comp = CompVP_PP (mkPP (Prep_WORD prep,PC_Other) (getRange (current o)) dp)
-  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.headX == Just rng) felst))
+  pp <- matchPP tagged paws (Just prep,Just PC_Other,Just True)
+  let -- rng = dp^.headX
+      comp = CompVP_PP pp  -- (mkPP (Prep_WORD prep,PC_Other) (getRange (current o)) dp)
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.headX == Just (pp^.complement.headX)) felst))
   return (role,comp)
 
 
