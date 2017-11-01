@@ -5,12 +5,14 @@
 module NLP.Syntax.Noun where
 
 import           Control.Applicative      ((<|>))
-import           Control.Lens             ((^.),(^?),(%~),(&),to,_1,_2)
+import           Control.Lens             ((^.),(^?),(%~),(&),to,_1,_2,_Nothing)
+import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
-import           Data.Foldable            (toList)
+import           Data.Foldable            (toList,foldMap)
 import           Data.List                (find,unfoldr)
 import           Data.Maybe               (fromMaybe,isNothing,maybeToList)
+import           Data.Monoid              (Last(..))
 import qualified Data.Text           as T
 --
 import           Data.Bitree              (_PL)
@@ -26,14 +28,14 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
                                           ,PP, AdjunctDP(..)
                                           ,TaggedLemma
-                                          ,adjunct,maximalProjection,tokensByRange,mkOrdDP,mkPP
+                                          ,adjunct,headX,maximalProjection
+                                          ,tokensByRange,mkOrdDP,mkPP
                                           ,mkSplittedDP,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
+--
+import Debug.Trace
 
 
-childLast z = do
-  c <- child1 z
-  return (last (c: unfoldr (\x -> (x,) <$> next x) c))
 
 
 mkPPFromZipper :: TaggedLemma t -> PrepClass -> Zipper t -> Maybe (PP t)
@@ -55,7 +57,10 @@ splitDP tagged dp0 =
               z <- extractZipperByRange rng0 (tagged^.pennTree)
               z_pp <- childLast z
               guard (isChunkAs PP (current z_pp))
-              return (dp0 & adjunct %~ (++ maybeToList (AdjunctDP_PP <$> (mkPPFromZipper tagged PC_Other z_pp))))
+              pp <- mkPPFromZipper tagged PC_Other z_pp
+              let (b_pp,_) = pp^.maximalProjection
+              return (dp0 & (headX %~ (\(b,_) -> (b,b_pp-1)))
+                          . (adjunct %~ (++ [AdjunctDP_PP pp])))
               
   in bareNounModifier tagged . fromMaybe dp1 $ do
        let rng1 = dp1^.maximalProjection

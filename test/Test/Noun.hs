@@ -83,21 +83,34 @@ test_paren_modifier_1 =
   , [TagPos (TokIdx 3, TokIdx 5, MarkEntity)]
   )
 
+-- |
+test_prep_modifier_1 :: TestBNM
+test_prep_modifier_1 = 
+  ( "an initial public offering on the country's stock exchange"
+  , (0,3)
+  , [(0,("a","an")),(1,("initial","initial")),(2,("public","public")),(3,("offering","offering")),(4,("on","on")),(5,("the","the")),(6,("country","country")),(7,("'s","'s")),(8,("stock","stock")),(9,("exchange","exchange"))]
+  , PN "NP" [PN "NP" [PL ("DT","an"),PL ("JJ","initial"),PL ("JJ","public"),PL ("NN","offering")],PN "PP" [PL ("IN","on"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","country"),PL ("POS","'s")],PL ("NN","stock"),PL ("NN","exchange")]]]
+  , []
+  )
+
+mkDPFromTest x = 
+  let lmap1 = IM.fromList (map (_2 %~ (^._1)) (x^._3))
+      lemmapt = mkBitreeICP lmap1 (x^._4)
+      z = getRoot1 $ mkBitreeZipper [] lemmapt
+      tagged = mkTaggedLemma (x^._3) (x^._4) (x^._5)
+  in splitDP tagged (mkOrdDP z)
+
 
 
 checkBNM :: TestBNM -> Bool
-checkBNM x =
-  let lmap1 = IM.fromList (map (_2 %~ (^._1)) (x^._3))
+checkBNM x = (mkDPFromTest x)^.headX == x^._2
+{-   let lmap1 = IM.fromList (map (_2 %~ (^._1)) (x^._3))
       lemmapt = mkBitreeICP lmap1 (x^._4)
-      {- tr = toTree (bimap f g lemmapt)
-        where f = (^._1.to show.to T.pack)
-              g = (^._1.to show.to T.pack) -}
-      z :: Zipper '[Lemma]
       z = getRoot1 $ mkBitreeZipper [] lemmapt
       tagged = mkTaggedLemma (x^._3) (x^._4) (x^._5)
       y = splitDP tagged (mkOrdDP z)
   in y^.headX == x^._2
-
+-}
 --  T.IO.putStrLn (linePrint id tr)
 
 
@@ -107,14 +120,18 @@ testcases = [ test_bare_noun_modifier_1
             , test_bare_noun_modifier_3
             , test_bare_noun_modifier_4
             , test_paren_modifier_1
+            , test_prep_modifier_1
             ]
 
 
 unitTests :: TestTree
 unitTests = testGroup "Bare Noun Modifier test" . flip map testcases $ \c ->
               testCase (T.unpack (c^._1)) $
-                checkBNM c @? "error"
-
+                checkBNM c @? (let (txt,_,lma,pt,taglst) = c
+                               in T.unpack $ T.intercalate "\n" (formatDetail (txt,lma,pt,taglst)) <>
+                                             "\n" <>
+                                             formatDP (mkDPFromTest c)
+                              )
 
 
 
