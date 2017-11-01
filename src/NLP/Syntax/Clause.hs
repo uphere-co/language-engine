@@ -36,9 +36,9 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Voice(..))
 import           NLP.Type.TagPos                        (TagPos(..),TokIdx)
 --
-import           NLP.Syntax.Noun                        (splitDP)
+import           NLP.Syntax.Noun                        (splitDP,mkPPFromZipper)
 import           NLP.Syntax.Preposition                 (checkEmptyPrep,isMatchedTime
-                                                        ,identifyInternalTimePrep,mkPPFromZipper)
+                                                        ,identifyInternalTimePrep)
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),MarkType(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -163,7 +163,6 @@ constructCP tagged vprop = do
         let (comps,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
-            -- nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
             subj0 = identifySubject tagged s z_vp
             (subj,subj_dps,sadjs) = fromMaybe (subj0,[],[]) $ do
               dp_subj <- subj0 ^? trResolved . _Just . _Right
@@ -203,14 +202,22 @@ cpRange :: CP xs -> Range
 cpRange cp = cp^.maximalProjection.to (getRange . current)
 
 
-hierarchyBits :: (CP as, [DetP as]) -> Maybe [(Range, (Range, CPDP as))]
-hierarchyBits (cp,zs) = do
+hierarchyBits :: TaggedLemma t -> (CP t, [DetP t]) -> Maybe [(Range, (Range, CPDPPP t))]
+hierarchyBits tagged (cp,dps) = do
   let rng = cpRange cp
-  let cpbit = (rng,(rng,CPCase cp))
-
-  let f z = let rng' = z^.maximalProjection
-            in (rng',(rng',DPCase z))
-  return (cpbit:map f zs)
+      cpbit = (rng,(rng,CPCase cp))
+      f dp = let rng' = dp^.maximalProjection
+                 dpbit = (rng',(rng',DPCase dp))
+                 lst = do adj <- dp^.adjunct
+                          case adj of
+                            AdjunctDP_PP pp ->
+                              let rng_pp = pp^.maximalProjection
+                              in return (rng_pp,(rng_pp,PPCase pp))
+                            AdjunctDP_Unresolved rng_pp -> maybeToList $ do
+                              z_pp <- extractZipperByRange rng_pp (tagged^.pennTree)
+                              (rng_pp,) . (rng_pp,) . PPCase <$> mkPPFromZipper tagged PC_Other z_pp
+             in dpbit : lst
+  return (cpbit:concatMap f dps)
 
 
 
@@ -218,21 +225,21 @@ identifyCPHierarchy :: TaggedLemma (Lemma ': as)
                     -> [VerbProperty (Zipper (Lemma ': as))]
                     -> [X'Tree (Lemma ': as)]
 identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
-  where cpmap = (HM.fromList . concat . mapMaybe (hierarchyBits . (_2 %~ rights) <=< constructCP tagged)) vps
-        rngs = HM.keys cpmap
+  where x'map = (HM.fromList . concat . mapMaybe (hierarchyBits tagged . (_2 %~ rights) <=< constructCP tagged)) vps
+        rngs = HM.keys x'map
         rtr = rangeTree rngs
-        tofull rng = HM.lookup rng cpmap
+        tofull rng = HM.lookup rng x'map
 
 
-currentCPDP :: X'Zipper as -> CPDP as
-currentCPDP = snd . getRoot1 . current
+currentCPDPPP :: X'Zipper as -> CPDPPP as
+currentCPDPPP = snd . getRoot1 . current
 
 
 --
 -- | rewrite X'Tree. Now it's focusing on modifier relation, but this should
 --   be more generalized.
 --
-rewriteX'TreeForModifier :: ((Range, CPDP as) -> (Range, CPDP as))
+rewriteX'TreeForModifier :: ((Range, CPDPPP as) -> (Range, CPDPPP as))
              -> X'Zipper as
              -> DetP as
              -> MaybeT (State (X'Tree as)) ()
@@ -260,14 +267,14 @@ retrieveWCP :: Range -> MaybeT (State (X'Tree t)) (X'Zipper t,CP t)
 retrieveWCP rng = do
   tr <- lift get
   w <- hoistMaybe (extractZipperById rng tr)
-  cp <- hoistMaybe (currentCPDP w ^? _CPCase)
+  cp <- hoistMaybe (currentCPDPPP w ^? _CPCase)
   return (w,cp)
 
 
 rewriteX'TreeForFreeWH :: Range -> [TraceType] -> X'Zipper t -> DetP t -> Maybe (X'Zipper t)
 rewriteX'TreeForFreeWH rng ps w z' = do
   w_dom <- parent w
-  cp_dom <- w_dom^?to currentCPDP._CPCase
+  cp_dom <- w_dom^?to currentCPDPPP._CPCase
   let vp_dom = cp_dom^.complement.complement
       comps = vp_dom^.complement
       comps' = flip map comps $ \comp -> fromMaybe comp $ do
@@ -344,13 +351,13 @@ resolveSilentPRO tagged (z,cp) = do
   case spec^.trChain of
     Right _ -> return spec
     Left (xs@(LZ _ c _)) -> case c of
-      NULL      -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDP =<< parent z)
+      NULL      -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
                         let rng' = cpRange cp'
                         TraceChain exs' x' <- lift (resolveDP tagged rng')
                         return (TraceChain (mergeLeftELZ (Left (replaceLZ SilentPRO xs)) exs') x'))
                     <|>
                     return (TraceChain (Left (replaceLZ SilentPRO xs)) Nothing))
-      SilentPRO -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDP =<< parent z)
+      SilentPRO -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
                         let rng' = cpRange cp'
                         TraceChain exs' x' <- lift (resolveDP tagged rng')
                         -- let xs' = either lzToList id exs'
@@ -544,7 +551,7 @@ findPAWS tagged tr vp x'tr = do
   cp <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                            -- anyway need to be rewritten.
   let rng = cpRange cp
-  cp' <- (^? _CPCase) . currentCPDP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
+  cp' <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
   predicateArgWS tagged cp' <$> findVerb (vp^.vp_index) tr <*> pure (cp' ^. complement.complement.adjunct)
 
 

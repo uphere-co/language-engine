@@ -16,31 +16,42 @@ import           NLP.Syntax.Type.XBar
 
 
 rangeText :: Either (Zipper as) (DetP as) -> Text
-rangeText (Right x) = x ^. headX . _2 . to show . to T.pack
+rangeText (Right x) = x ^. headX . to show . to T.pack
 rangeText (Left x ) = (T.pack.show.getRange.current) x
 
 
+formatCompDP :: CompDP t -> Text
+formatCompDP (CompDP_Unresolved rng) = T.pack (show rng)
+formatCompDP (CompDP_CP cp) = case cp^.headX of
+                                C_PHI -> "CP" <> rangeText (Left (cp^.maximalProjection))
+                                C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'
+                                                   <> rangeText (Left (cp^.maximalProjection))
 
-formatDP :: DetP as -> Text
-formatDP x = case (x^.adjunct,x^.complement) of
-               (Nothing,Nothing)    -> "DP"          <> rangeText (Right x)
-               (Nothing,Just rng)   -> "DP-comp"     <> rangeText (Right x)
-                                                     <> T.pack (show rng)
-               (Just rng,Nothing)   -> "DP-adj"      <> rangeText (Right x)
-                                                     <> T.pack (show rng)
-               (Just rng,Just rng') -> "DP-comp-adj" <> rangeText (Right x)
-                                                     <> T.pack (show rng')
-                                                     <> T.pack (show rng)
+
+formatAdjunctDP :: AdjunctDP t -> Text
+formatAdjunctDP (AdjunctDP_Unresolved rng) = T.pack (show rng)
+formatAdjunctDP (AdjunctDP_PP pp) = formatPP pp
+
+
+formatPP :: PP t -> Text
+formatPP pp = "PP-" <> formatDP (pp^.complement)
+
+
+formatDP :: DetP t -> Text
+formatDP dp = "DP"         <> rangeText (Right dp) <>
+              " comp: "    <> maybe "" formatCompDP  (dp^.complement) <>
+              " adjunct: " <> (T.intercalate " " . map formatAdjunctDP) (dp^.adjunct)
+
 
 
 formatCompVP :: CompVP as -> Text
 formatCompVP (CompVP_Unresolved z)  = "unresolved" <> T.pack (show (getRange (current z)))
-formatCompVP (CompVP_CP z) = case z^.headX of
-                               C_PHI -> "CP" <> rangeText (Left (z^.maximalProjection))
-                               C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'
-                                                  <> rangeText (Left (z^.maximalProjection))
-formatCompVP (CompVP_DP z)          = formatDP z
-formatCompVP (CompVP_PP z) = "PP-" <> formatDP (z^.complement)
+formatCompVP (CompVP_CP cp) = case cp^.headX of
+                                C_PHI -> "CP" <> rangeText (Left (cp^.maximalProjection))
+                                C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'
+                                                   <> rangeText (Left (cp^.maximalProjection))
+formatCompVP (CompVP_DP dp) = formatDP dp
+formatCompVP (CompVP_PP pp) = formatPP pp
 
 
 

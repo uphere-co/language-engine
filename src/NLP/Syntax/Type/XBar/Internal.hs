@@ -89,33 +89,22 @@ data SplitType = CLMod | BNMod | APMod
                deriving (Show,Eq,Ord)
 
 
-{- 
-data MaximalDP t = Intact { _original :: Zipper t
-                          , _maximal :: Range
-                          }
-                 | Seperated { _original :: Zipper t
-                             , _maximal :: Range
-                             }
+data CompDP t = CompDP_Unresolved Range
+              | CompDP_CP (CP t)
 
+data AdjunctDP t = AdjunctDP_Unresolved Range
+                 | AdjunctDP_PP (PP t)
 
-
-original :: Simple Lens (MaximalDP t) (Zipper t)
-original = lens _original (\f a -> f { _original = a })
-
-
-maximal :: Simple Lens (MaximalDP t) Range
-maximal = lens _maximal (\f a -> f { _maximal = a })
--}
 
 
 --
 -- this definition is not truly X-bar-theoretic, but for the time being
 --
-type instance Property   'X_D t = Range -- head -- (original,head)
-type instance Maximal    'X_D t = Range -- MaximalDP t
+type instance Property   'X_D t = Range -- head
+type instance Maximal    'X_D t = Range
 type instance Specifier  'X_D t = ()
-type instance Adjunct    'X_D t = Maybe Range
-type instance Complement 'X_D t = Maybe Range
+type instance Adjunct    'X_D t = [AdjunctDP t] -- Maybe Range
+type instance Complement 'X_D t = Maybe (CompDP t) -- Maybe Range
 
 type DetP = XP 'X_D
 
@@ -123,16 +112,23 @@ type DetP = XP 'X_D
 -- | These functions, mkOrdDP and mkSplittedDP, should be rewritten in a
 --   better representation.
 --
-mkOrdDP :: Zipper a -> DetP a
-mkOrdDP z = XP (rf z) (rf z) () Nothing Nothing
+mkOrdDP :: Zipper t -> DetP t
+mkOrdDP z = XP (rf z) (rf z) () [] Nothing
   where rf = getRange . current
 
 
-mkSplittedDP :: SplitType -> Range -> Range -> Zipper a -> DetP a
+
+
+mkSplittedDP :: SplitType
+             -> Range        -- head
+             -> Range
+             -> Zipper t     -- zipper for maximal projection
+             -> DetP t
 mkSplittedDP typ h m o = case typ of
-                           CLMod -> XP h (rf o) () Nothing  (Just m)
-                           BNMod -> XP h (rf o) () (Just m) Nothing
-                           APMod -> XP h (rf o) () (Just m) Nothing  -- apposition is an adjunct.
+                           CLMod -> XP h (rf o) () []                       (Just (CompDP_Unresolved m))
+                           BNMod -> XP h (rf o) () [AdjunctDP_Unresolved m] Nothing
+                           -- apposition is regarded as an adjunct.
+                           APMod -> XP h (rf o) () [AdjunctDP_Unresolved m] Nothing
   where rf = getRange . current
 
 
@@ -155,7 +151,7 @@ type instance Complement 'X_P t = DetP t
 type PP = XP 'X_P
 
 mkPP :: (Prep,PrepClass) -> Range -> DetP t -> PP t
-mkPP (prep,pclass) rng dp = XP (prep,pclass) rng () () dp 
+mkPP (prep,pclass) rng dp = XP (prep,pclass) rng () () dp
 
 
 data CompVP t = CompVP_Unresolved (Zipper t)
@@ -213,10 +209,11 @@ mkCP :: Complementizer t -> Zipper t -> Maybe (SpecCP t) -> [AdjunctCP t] -> TP 
 mkCP mc cp spec adjs tp = XP mc cp spec adjs tp
 
 
-data CPDP a = CPCase (CP a)
-            | DPCase (DetP a)
+data CPDPPP t = CPCase (CP t)
+              | DPCase (DetP t)
+              | PPCase (PP t)
 
 
-type X'Tree t = Bitree (Range,CPDP t) (Range,CPDP t)
+type X'Tree t = Bitree (Range,CPDPPP t) (Range,CPDPPP t)
 
-type X'Zipper t = BitreeZipper (Range,CPDP t) (Range,CPDP t)
+type X'Zipper t = BitreeZipper (Range,CPDPPP t) (Range,CPDPPP t)

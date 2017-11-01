@@ -1,49 +1,81 @@
 {-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeOperators #-}
 
 module NLP.Syntax.Noun where
 
 import           Control.Applicative      ((<|>))
-import           Control.Lens             ((^.),(^?),to,_1,_2)
+import           Control.Lens             ((^.),(^?),(%~),(&),to,_1,_2,_Nothing)
+import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
-import           Data.Foldable            (toList)
-import           Data.List                (find)
-import           Data.Maybe               (fromMaybe,isNothing)
+import           Data.Foldable            (toList,foldMap)
+import           Data.List                (find,unfoldr)
+import           Data.Maybe               (fromMaybe,isNothing,maybeToList)
+import           Data.Monoid              (Last(..))
 import qualified Data.Text           as T
 --
-import           Data.BitreeZipper        (child1,current,next,extractZipperByRange)
+import           Data.Bitree              (_PL)
+import           Data.BitreeZipper        (child1,childLast,current,next,extractZipperByRange)
+import           Data.BitreeZipper.Util   (firstSiblingBy)
 import           Data.Range               (Range)
 import           NLP.Type.PennTreebankII  (ChunkTag(..),Lemma,POSTag(..),TernaryLogic(..)
-                                          ,getRange,isNoun,posTag)
+                                          ,getRange,isNoun,posTag,tokenWord)
 import           NLP.Type.TagPos          (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Type          (MarkType(..))
-import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,TaggedLemma
-                                          ,maximalProjection,tokensByRange,mkSplittedDP,pennTree,tagList)
+import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
+                                          ,Prep(..),PrepClass(..),DetP
+                                          ,PP, AdjunctDP(..)
+                                          ,TaggedLemma
+                                          ,adjunct,headX,maximalProjection
+                                          ,tokensByRange,mkOrdDP,mkPP
+                                          ,mkSplittedDP,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
+--
+import Debug.Trace
 
 
-splitDP :: TaggedLemma t -- (Lemma ': as)
-        -> DetP t -- (Lemma ': as)
-        -> DetP t -- (Lemma ': as)
+
+
+mkPPFromZipper :: TaggedLemma t -> PrepClass -> Zipper t -> Maybe (PP t)
+mkPPFromZipper tagged pclass z = do
+  guard (isChunkAs PP (current z))
+  z_prep <- child1 z
+  t <- z_prep ^? to current . _PL . _2 . to posTag
+  guard (t == IN || t == TO)
+  lma <- z_prep ^? to current . _PL . _2 . to tokenWord
+  z_dp <- firstSiblingBy next (isChunkAs NP) z_prep
+  return (mkPP (Prep_WORD lma,pclass) (getRange (current z)) (splitDP tagged (mkOrdDP z_dp)))
+
+
+
+splitDP :: TaggedLemma t -> DetP t -> DetP t
 splitDP tagged dp0 =
-  bareNounModifier tagged . fromMaybe dp0 $ do
-    let rng0 = dp0^.maximalProjection
-    z <- extractZipperByRange rng0 (tagged^.pennTree)
-    guard (isChunkAs NP (current z))
-    dp <- child1 z
-    guard (isChunkAs NP (current dp))
-    sbar <- next dp
-    let rf = getRange . current
-    ((guard (isChunkAs SBAR (current sbar)) >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
-     (guard (isChunkAs VP (current sbar))   >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
-     (splitParentheticalModifier tagged z))
+  let dp1 = fromMaybe dp0 $ do
+              let rng0 = dp0^.maximalProjection
+              z <- extractZipperByRange rng0 (tagged^.pennTree)
+              z_pp <- childLast z
+              guard (isChunkAs PP (current z_pp))
+              pp <- mkPPFromZipper tagged PC_Other z_pp
+              let (b_pp,_) = pp^.maximalProjection
+              return (dp0 & (headX %~ (\(b,_) -> (b,b_pp-1)))
+                          . (adjunct %~ (++ [AdjunctDP_PP pp])))
+              
+  in bareNounModifier tagged . fromMaybe dp1 $ do
+       let rng1 = dp1^.maximalProjection
+       z <- extractZipperByRange rng1 (tagged^.pennTree)
+       guard (isChunkAs NP (current z))
+       dp <- child1 z
+       guard (isChunkAs NP (current dp))
+       sbar <- next dp
+       let rf = getRange . current
+       ((guard (isChunkAs SBAR (current sbar)) >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
+        (guard (isChunkAs VP (current sbar))   >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
+        (splitParentheticalModifier tagged z))
 
 
-splitParentheticalModifier :: TaggedLemma t -- (Lemma ': as)
-                           -> Zipper t -- (Lemma ': as)
-                           -> Maybe (DetP t {- (Lemma ': as) -})
+splitParentheticalModifier :: TaggedLemma t -> Zipper t -> Maybe (DetP t)
 splitParentheticalModifier tagged z = do
   guard (isChunkAs NP (current z))         -- dominating phrase must be NP
   dp1 <- child1 z

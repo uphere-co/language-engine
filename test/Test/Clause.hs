@@ -196,6 +196,8 @@ showDetail (txt,lma,pt,tmxs) = do
 
 -}
 
+showDetail = T.IO.putStrLn . T.intercalate "\n" . formatDetail
+
 mainShow :: IO ()
 mainShow = mapM_ showDetail [ test_coordination
                             , test_complex_noun_phrase
@@ -205,5 +207,5 @@ mainShow = mapM_ showDetail [ test_coordination
                             , test_sub_clause
                             , test_gerundive
                             , test_temporal
-                            -- , test_nonrestrictive_relative_clause
+                            -- -- , test_nonrestrictive_relative_clause
                             ]
