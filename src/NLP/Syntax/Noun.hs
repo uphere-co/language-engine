@@ -24,6 +24,21 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),DetP,TaggedLemma
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 
 
+{- 
+--
+-- | This function is very ad hoc. Later we should have PP according to X-bar theory
+--   (We should get rid of this function soon.)
+--
+splitPP :: TaggedLemma (Lemma ': as) ->  Zipper (Lemma ': as) -> DetP (Lemma ': as)
+splitPP tagged z = fromMaybe (mkOrdDP z) $ do
+  guard (isChunkAs PP (current z))
+  p <- child1 z
+  guard (isPOSAs TO (current p) || isPOSAs IN (current p))
+  z_dp <- next p
+  return (splitDP tagged (mkOrdDP z_dp))
+
+-}
+
 splitDP :: TaggedLemma (Lemma ': as)
         -> DetP (Lemma ': as)
         -> DetP (Lemma ': as)

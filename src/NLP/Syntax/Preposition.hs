@@ -66,7 +66,7 @@ checkTimePrep tagged pp =
   in if r then CompVP_PP ((headX .~ (prep,PC_Time)) pp) else CompVP_PP pp
 
 
-mkPPFromZipper :: PrepClass -> Zipper (Lemma ': as) -> Maybe (PP (Lemma ': as))
+mkPPFromZipper :: PrepClass -> Zipper t -> Maybe (PP t)
 mkPPFromZipper pclass z = do
   guard (isChunkAs PP (current z))
   z_prep <- child1 z
@@ -81,22 +81,16 @@ identifyInternalTimePrep :: TaggedLemma t
                          -> DetP t
                          -> (DetP t,[Zipper t])
 identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
-  let -- z_dp = dp^.maximalProjection.original
-      rng_dp@(b_dp,_e_dp) = dp^.maximalProjection -- .maximal
+  let rng_dp@(b_dp,_e_dp) = dp^.maximalProjection
   TagPos (b0,e0,_)
     <- find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) (tagged^.tagList)
   let rng_time = beginEndToRange (b0,e0)
-  z_tdp <- extractZipperByRange rng_time (tagged^.pennTree) -- (current z_dp)
+  z_tdp <- extractZipperByRange rng_time (tagged^.pennTree)
   z_tpp <- parent z_tdp
   guard (isChunkAs PP (current z_tpp))
   let (b_tpp,_e_tpp) = getRange (current z_tpp)
       rng_dp' = (b_dp,b_tpp-1)
       rng_head = let (b_h,e_h) = dp^.headX
                  in if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
-  dp' <- ((do z_dp' <- extractZipperByRange rng_dp' (tagged^.pennTree) -- (toBitree z_dp)
-              return (dp & (headX .~ rng_head) . (maximalProjection .~ rng_dp'))
-          )
-          <|>
-          (return (dp & (headX .~ rng_head) . (maximalProjection .~ rng_dp'))))
-
+      dp' = dp & (headX .~ rng_head) . (maximalProjection .~ rng_dp')
   return (dp',[z_tpp])

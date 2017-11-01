@@ -16,7 +16,7 @@ import           NLP.Syntax.Type.XBar
 
 
 rangeText :: Either (Zipper as) (DetP as) -> Text
-rangeText (Right x) = x ^. headX . _2 . to show . to T.pack
+rangeText (Right x) = x ^. headX . to show . to T.pack
 rangeText (Left x ) = (T.pack.show.getRange.current) x
 
 
@@ -43,16 +43,6 @@ formatDP dp = "DP"         <> rangeText (Right dp) <>
               " adjunct: " <> (T.intercalate " " . map formatAdjunctDP) (dp^.adjunct)
 
 
-  {- case (x^.adjunct,x^.complement) of
-               ([],Nothing)    -> "DP"          <> rangeText (Right x)
-               ([],Just rng)   -> "DP-comp"     <> rangeText (Right x)
-                                                     <> T.pack (show rng)
-               (rng,Nothing)   -> "DP-adj"      <> rangeText (Right x)
-                                                     <> T.pack (show rng)
-               (Just rng,Just rng') -> "DP-comp-adj" <> rangeText (Right x)
-                                                     <> T.pack (show rng')
-                                                     <> T.pack (show rng)
--}
 
 formatCompVP :: CompVP as -> Text
 formatCompVP (CompVP_Unresolved z)  = "unresolved" <> T.pack (show (getRange (current z)))

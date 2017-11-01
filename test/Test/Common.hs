@@ -40,9 +40,7 @@ mkVPS lmatknlst pt =
 
 formatDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType]) -> [Text]
 formatDetail (_txt,lma,pt,taglst) =
-  let -- lmap1 = IM.fromList (map (_2 %~ (^._1)) lma)
-      -- lemmapt = mkBitreeICP lmap1 pt
-      tagged = mkTaggedLemma lma pt taglst
+  let tagged = mkTaggedLemma lma pt taglst
       vps  = mkVPS lma pt
       clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps

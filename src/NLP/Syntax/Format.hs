@@ -149,6 +149,7 @@ formatX'Tree tr = formatBitree fmt tr
   where
         fmt (rng,CPCase _) = "CP" <> showRange rng
         fmt (_  ,DPCase x) = formatDP x
+        fmt (_  ,PPCase x) = formatPP x
 
 
 formatClauseStructure :: ClauseTree -> Text

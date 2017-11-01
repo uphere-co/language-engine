@@ -127,7 +127,8 @@ mkSplittedDP :: SplitType
 mkSplittedDP typ h m o = case typ of
                            CLMod -> XP h (rf o) () []                       (Just (CompDP_Unresolved m))
                            BNMod -> XP h (rf o) () [AdjunctDP_Unresolved m] Nothing
-                           APMod -> XP h (rf o) () [AdjunctDP_Unresolved m] Nothing                      -- apposition is regarded as an adjunct.
+                           -- apposition is regarded as an adjunct.
+                           APMod -> XP h (rf o) () [AdjunctDP_Unresolved m] Nothing
   where rf = getRange . current
 
 

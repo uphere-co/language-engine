@@ -163,7 +163,6 @@ constructCP tagged vprop = do
         let (comps,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
-            -- nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
             subj0 = identifySubject tagged s z_vp
             (subj,subj_dps,sadjs) = fromMaybe (subj0,[],[]) $ do
               dp_subj <- subj0 ^? trResolved . _Just . _Right
@@ -203,24 +202,35 @@ cpRange :: CP xs -> Range
 cpRange cp = cp^.maximalProjection.to (getRange . current)
 
 
-hierarchyBits :: (CP t, [DetP t]) -> Maybe [(Range, (Range, CPDPPP t))]
-hierarchyBits (cp,dps) = do
+hierarchyBits :: TaggedLemma t -> (CP t, [DetP t]) -> Maybe [(Range, (Range, CPDPPP t))]
+hierarchyBits tagged (cp,dps) = do
   let rng = cpRange cp
       cpbit = (rng,(rng,CPCase cp))
       f dp = let rng' = dp^.maximalProjection
-            in (rng',(rng',DPCase dp))
-  return (cpbit:map f dps)
+                 dpbit = trace ("hierarchyBits: " ++ show rng' ++ ", " ++ show (dp^.maximalProjection) ++ "," ++ show (length (dp^.adjunct))) $ (rng',(rng',DPCase dp))
+                 lst = do adj <- dp^.adjunct
+                          case adj of
+                            AdjunctDP_PP pp ->
+                              let rng_pp = pp^.maximalProjection
+                              in return (rng_pp,(rng_pp,PPCase pp))
+                            AdjunctDP_Unresolved rng_pp -> maybeToList $ do
+                              z_pp <- extractZipperByRange rng_pp (tagged^.pennTree)
+                              (rng_pp,) . (rng_pp,) . PPCase <$> mkPPFromZipper PC_Other z_pp
+             in dpbit : lst
+  return (cpbit:concatMap f dps)
 
 
 
 identifyCPHierarchy :: TaggedLemma (Lemma ': as)
                     -> [VerbProperty (Zipper (Lemma ': as))]
                     -> [X'Tree (Lemma ': as)]
-identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
-  where cpmap = (HM.fromList . concat . mapMaybe (hierarchyBits . (_2 %~ rights) <=< constructCP tagged)) vps
-        rngs = HM.keys cpmap
+identifyCPHierarchy tagged vps = 
+  trace (show rngs) 
+   $ fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
+  where x'map = (HM.fromList . concat . mapMaybe (hierarchyBits tagged . (_2 %~ rights) <=< constructCP tagged)) vps
+        rngs = HM.keys x'map
         rtr = rangeTree rngs
-        tofull rng = HM.lookup rng cpmap
+        tofull rng = HM.lookup rng x'map
 
 
 currentCPDPPP :: X'Zipper as -> CPDPPP as
