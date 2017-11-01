@@ -215,7 +215,7 @@ hierarchyBits tagged (cp,dps) = do
                               in return (rng_pp,(rng_pp,PPCase pp))
                             AdjunctDP_Unresolved rng_pp -> maybeToList $ do
                               z_pp <- extractZipperByRange rng_pp (tagged^.pennTree)
-                              (rng_pp,) . (rng_pp,) . PPCase <$> mkPPFromZipper PC_Other z_pp
+                              (rng_pp,) . (rng_pp,) . PPCase <$> mkPPFromZipper tagged PC_Other z_pp
              in dpbit : lst
   return (cpbit:concatMap f dps)
 
@@ -516,16 +516,17 @@ rewriteTree action xtr = execState (go rng0) xtr
 
 
 
-predicateArgWS :: CP (Lemma ': as)
+predicateArgWS :: TaggedLemma (Lemma ': as)
+               -> CP (Lemma ': as)
                -> ClauseTreeZipper
                -> [Zipper (Lemma ': as)]
                -> PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag))
-predicateArgWS cp z adjs =
+predicateArgWS tagged cp z adjs =
   PAWS { _pa_CP = cp
        , _pa_candidate_args = case child1 z of
                                 Nothing -> []
                                 Just z' -> map extractArg (z':iterateMaybe next z')
-                              ++ let f x = flip fmap (mkPPFromZipper PC_Time x) $ \pp ->
+                              ++ let f x = flip fmap (mkPPFromZipper tagged PC_Time x) $ \pp ->
                                              let prep = fromMaybe "" (pp^?headX._1._Prep_WORD)
                                                  rng = pp ^. maximalProjection -- .to (getRange.current)
                                              in Left (rng,S_PP prep PC_Time False)
@@ -553,7 +554,7 @@ findPAWS tagged tr vp x'tr = do
                                            -- anyway need to be rewritten.
   let rng = cpRange cp
   cp' <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
-  predicateArgWS cp' <$> findVerb (vp^.vp_index) tr <*> pure (cp' ^. complement.complement.adjunct)
+  predicateArgWS tagged cp' <$> findVerb (vp^.vp_index) tr <*> pure (cp' ^. complement.complement.adjunct)
 
 
 ---------
