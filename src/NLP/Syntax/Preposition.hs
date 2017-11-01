@@ -18,9 +18,8 @@ import           NLP.Type.PennTreebankII (ChunkTag(..),Lemma(..),POSTag(..)
                                          ,getRange,posTag,tokenWord)
 import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 --
-import           NLP.Syntax.Util         (beginEndToRange
-                                         -- ,findZipperForRangeICP
-                                         ,isChunkAs)
+import           NLP.Syntax.Noun         (splitDP)
+import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
 import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP
@@ -71,18 +70,15 @@ checkTimePrep tagged pp =
   in if r then CompVP_PP ((headX .~ (prep,PC_Time)) pp) else CompVP_PP pp
 
 
-
-
-
-mkPPFromZipper :: PrepClass -> Zipper (Lemma ': as) -> Maybe (PP (Lemma ': as))
-mkPPFromZipper pclass z = do
+mkPPFromZipper :: TaggedLemma t -> PrepClass -> Zipper t -> Maybe (PP t)
+mkPPFromZipper tagged pclass z = do
   guard (isChunkAs PP (current z))
   z_prep <- child1 z
   t <- z_prep ^? to current . _PL . _2 . to posTag
   guard (t == IN || t == TO)
   lma <- z_prep ^? to current . _PL . _2 . to tokenWord
   z_dp <- firstSiblingBy next (isChunkAs NP) z_prep
-  return (mkPP (Prep_WORD lma,pclass) (getRange (current z)) (mkOrdDP z_dp))
+  return (mkPP (Prep_WORD lma,pclass) (getRange (current z)) (splitDP tagged (mkOrdDP z_dp)))
 
 
 identifyInternalTimePrep :: TaggedLemma t
