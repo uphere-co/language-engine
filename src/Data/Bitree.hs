@@ -6,16 +6,12 @@
 
 module Data.Bitree where
 
-import           Control.Applicative
 import           Control.Lens
 import           Data.Aeson
 import           Data.Bifoldable
-import           Data.Bifunctor
 import           Data.Binary
 import           Data.Bitraversable
-import           Data.Foldable
 import           Data.Monoid
-import           Data.Traversable
 import qualified Data.Tree            as Tr
 import           GHC.Generics
 
@@ -30,15 +26,15 @@ makePrisms ''Bitree
 
 instance Bifunctor Bitree where
   bimap f g (PN x xs) = PN (f x) (map (bimap f g) xs)
-  bimap f g (PL y)    = PL (g y)
+  bimap _ g (PL y)    = PL (g y)
 
 instance Bifoldable Bitree where
   bifoldMap f g (PN x xs) = f x <> foldMap (bifoldMap f g) xs
-  bifoldMap f g (PL y)    = g y
+  bifoldMap _ g (PL y)    = g y
 
 instance Bitraversable Bitree where
   bitraverse f g (PN x xs) = PN <$> f x <*> traverse (bitraverse f g) xs
-  bitraverse f g (PL y)    = PL <$> g y
+  bitraverse _ g (PL y)    = PL <$> g y
 
 instance (FromJSON n, FromJSON l) => FromJSON (Bitree n l) where
   parseJSON = genericParseJSON defaultOptions

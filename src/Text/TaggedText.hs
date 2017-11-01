@@ -4,7 +4,6 @@
 
 module Text.TaggedText where
 
-import           Control.Lens          ((^.))
 import           Control.Lens.TH       (makeLenses)
 import           Data.Text             (Text)
 

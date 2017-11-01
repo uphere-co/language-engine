@@ -4,12 +4,13 @@
 module Data.BitreeZipper where
 
 import           Control.Lens
-import           Data.Bifoldable         (biList)
+import           Data.Bifoldable         (bifoldMap,biList)
 import           Data.List               (find,unfoldr)
+import           Data.Monoid             (First(..))
 --
 import           Data.Bitree
 import           Data.ListZipper
-
+import           Data.Range
 
 -- | Surrounding context of the focused item at current level
 data BitreeContext c t = TC { _tc_node_content :: c
@@ -33,13 +34,21 @@ makeLenses ''BitreeZipper
 
 
 mkBitreeZipper :: [BitreeContext c t] -> Bitree c t -> Bitree (BitreeZipper c t) (BitreeZipper c t)
-mkBitreeZipper zs p@(PL x)    = PL (TZ p zs)
+mkBitreeZipper zs p@(PL _)    = PL (TZ p zs)
 mkBitreeZipper zs p@(PN x xs) = PN (TZ p zs) lst
   where lst = map (\(LZ xs1 y xs2) -> mkBitreeZipper ((TC x xs1 xs2):zs) y) (genListZippers xs)
 
 
 extractZipperById :: (Eq i) => i -> Bitree (i,a) (i,a) -> Maybe (BitreeZipper (i,a) (i,a))
 extractZipperById rng tr = find (\z -> fst (getRoot1 (current z)) == rng) $ biList (mkBitreeZipper [] tr)
+
+
+extractZipperByRange :: Range -> Bitree (Range,a) (Int,b) -> Maybe (BitreeZipper (Range,a) (Int,b))
+extractZipperByRange rng tr = getFirst (bifoldMap f f (mkBitreeZipper [] tr))
+  where f z = let rng' = case current z of
+                           PN (r,_) _ -> r
+                           PL (n,_)   -> (n,n)
+              in if rng == rng' then First (Just z) else First Nothing
 
 
 current :: BitreeZipper c t -> Bitree c t
@@ -61,13 +70,14 @@ parent :: BitreeZipper c t -> Maybe (BitreeZipper c t)
 parent (TZ x (y:ys)) =
   case y of
     TC c zs ws -> Just (TZ (PN c (f (x:ws))) ys)
-      where f = foldr (\x acc -> acc . (x:)) id zs
+      where f = foldr (\z acc -> acc . (z:)) id zs
 parent _             = Nothing
 
 
 child1 :: BitreeZipper c t -> Maybe (BitreeZipper c t)
 child1 (TZ (PL _) _) = Nothing
 child1 (TZ (PN c (x:xs)) ys) = Just (TZ x ((TC c [] xs):ys))
+child1 (TZ (PN _ []    ) _ ) = Nothing -- this should not happen. 
 
 
 

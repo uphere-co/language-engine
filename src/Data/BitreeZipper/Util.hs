@@ -4,7 +4,7 @@ import           Control.Monad.Loops (iterateUntilM)
 import           Data.List           (unfoldr)
 --
 import           Data.Bitree         (Bitree)
-import           Data.BitreeZipper   (BitreeZipper,current,parent)
+import           Data.BitreeZipper   (BitreeZipper,current)
 
 
 firstSiblingBy :: (BitreeZipper c t -> Maybe (BitreeZipper c t))

@@ -96,7 +96,7 @@ dependencyIndexTree (Dependency root nods edgs0) =
 
 
 dependencyLabeledTree :: Dependency -> Tree (G.Vertex,U.DependencyRelation)
-dependencyLabeledTree dep@(Dependency root nods edgs0) =
+dependencyLabeledTree dep@(Dependency _root _nods edgs0) =
   let tr = dependencyIndexTree dep
       emap = IM.fromList (map (\((_,i),rel) -> (i,rel)) edgs0)
   in normalizeOrder (fmap (\i -> (i,fromMaybe U.ROOT (IM.lookup i emap))) tr)
