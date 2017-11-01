@@ -207,7 +207,7 @@ hierarchyBits tagged (cp,dps) = do
   let rng = cpRange cp
       cpbit = (rng,(rng,CPCase cp))
       f dp = let rng' = dp^.maximalProjection
-                 dpbit = trace ("hierarchyBits: " ++ show rng' ++ ", " ++ show (dp^.maximalProjection) ++ "," ++ show (length (dp^.adjunct))) $ (rng',(rng',DPCase dp))
+                 dpbit = (rng',(rng',DPCase dp))
                  lst = do adj <- dp^.adjunct
                           case adj of
                             AdjunctDP_PP pp ->
@@ -224,9 +224,7 @@ hierarchyBits tagged (cp,dps) = do
 identifyCPHierarchy :: TaggedLemma (Lemma ': as)
                     -> [VerbProperty (Zipper (Lemma ': as))]
                     -> [X'Tree (Lemma ': as)]
-identifyCPHierarchy tagged vps = 
-  trace (show rngs) 
-   $ fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
+identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
   where x'map = (HM.fromList . concat . mapMaybe (hierarchyBits tagged . (_2 %~ rights) <=< constructCP tagged)) vps
         rngs = HM.keys x'map
         rtr = rangeTree rngs

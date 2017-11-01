@@ -175,6 +175,16 @@ complexNP
     , [TagPos (TokIdx 20, TokIdx 21, MarkTime)]
     )
 
+complexNP_2 :: TestVerbComplement
+complexNP_2
+  = ( "The event was the first initial public offering on the country's stock exchange."
+    , 2
+    , ("The event", ["the first initial public offering"],[])
+    , [(0,("the","The")),(1,("event","event")),(2,("be","was")),(3,("the","the")),(4,("first","first")),(5,("initial","initial")),(6,("public","public")),(7,("offering","offering")),(8,("on","on")),(9,("the","the")),(10,("country","country")),(11,("'s","'s")),(12,("stock","stock")),(13,("exchange","exchange")),(14,(".","."))]
+    , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","The"),PL ("NN","event")],PN "VP" [PL ("VBD","was"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("JJ","first"),PL ("JJ","initial"),PL ("JJ","public"),PL ("NN","offering")],PN "PP" [PL ("IN","on"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","country"),PL ("POS","'s")],PL ("NN","stock"),PL ("NN","exchange")]]]],PL (".",".")]]
+    , []
+    )
+
 formatTP :: TestVerbComplement -> [String]
 formatTP (txt,i,_,lmatknlst,pt,taglst) =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) lmatknlst)
@@ -263,6 +273,7 @@ testcases = [ -- main_finite_1
             , preposedTemporalAdjunct
             , preposedCP
             , complexNP
+            , complexNP_2
             ]
 
 unitTests :: TestTree

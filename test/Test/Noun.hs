@@ -85,7 +85,7 @@ test_paren_modifier_1 =
 
 -- |
 test_prep_modifier_1 :: TestBNM
-test_prep_modifier_1 = 
+test_prep_modifier_1 =
   ( "an initial public offering on the country's stock exchange"
   , (0,3)
   , [(0,("a","an")),(1,("initial","initial")),(2,("public","public")),(3,("offering","offering")),(4,("on","on")),(5,("the","the")),(6,("country","country")),(7,("'s","'s")),(8,("stock","stock")),(9,("exchange","exchange"))]
@@ -93,7 +93,7 @@ test_prep_modifier_1 =
   , []
   )
 
-mkDPFromTest x = 
+mkDPFromTest x =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) (x^._3))
       lemmapt = mkBitreeICP lmap1 (x^._4)
       z = getRoot1 $ mkBitreeZipper [] lemmapt
