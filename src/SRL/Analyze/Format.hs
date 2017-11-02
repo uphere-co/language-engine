@@ -222,11 +222,11 @@ showMatchedFE tagged (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe (
 
 
 showMatchedFrame :: TaggedLemma '[Lemma]
-                 -> (VerbStructure, CP '[Lemma] {- PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)) -})
+                 -> (VerbStructure, CP '[Lemma])
                  -> IO ()
-showMatchedFrame tagged (vstr,cp {- paws -}) = do
+showMatchedFrame tagged (vstr,cp) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame tagged (vstr,cp {- paws -})) $ \(rng,_,frame,_,mselected) -> do
+  flip traverse_ (matchFrame tagged (vstr,cp)) $ \(rng,_,frame,_,mselected) -> do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> frame)
@@ -240,7 +240,7 @@ formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}]
                    ,e^.me_end
                    ,e^.me_relation <> maybe "" (":" <>) (e^.me_prep)
                    ,if (e^.me_ismodifier) then "bold" else "solid" :: Text
-                   ,"" :: Text -- (if (e^.me_ismodifier) then "constraint=false" else "" :: Text)
+                   ,"" :: Text
                    )
                  <>
                  if (e^.me_ismodifier)
@@ -288,7 +288,6 @@ dotMeaningGraph :: Text -> MeaningGraph -> Text
 dotMeaningGraph title mg = format "digraph G {\n  {}\n  {}\n  {}\n}" (vtxt,etxt,ttxt)
   where
     format fmt ps = T.L.toStrict (T.F.format fmt ps)
-    -- vtxt :: String
     vtxt = let vertices = mg^.mg_vertices
                verbs = mapMaybe formatMGVerb vertices
                entities = mapMaybe formatMGEntity vertices
@@ -296,8 +295,6 @@ dotMeaningGraph title mg = format "digraph G {\n  {}\n  {}\n  {}\n}" (vtxt,etxt,
            in (T.intercalate "\n  " . map (\(i,t) -> format "i{} [shape=plaintext, margin=0, style=filled, fillcolor=grey label=<{}>];" (i,t))) verbs <>  "\n  " <>
               (T.intercalate "\n  " . map (\(i,t) -> format "i{} [shape=plaintext, margin=0, label=<{}>];" (i,t))) entities
     --
-    -- etxt :: String
     etxt = let edges = mg^.mg_edges in (T.intercalate "\n  " . map formatMGEdge) edges
     --
-    -- ttxt :: String
     ttxt = "labelloc=\"t\"; \n " <> "label=\"" <> title <> "\"; \n "
