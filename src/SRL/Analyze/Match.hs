@@ -29,8 +29,7 @@ import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_caus
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,findPAWS)
-import           NLP.Syntax.Noun              (splitDP)
-import           NLP.Syntax.Preposition       (mkPPFromZipper)
+import           NLP.Syntax.Noun              (splitDP,mkPPFromZipper)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
