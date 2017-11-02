@@ -163,6 +163,14 @@ test_temporal =
   , [TagPos (TokIdx 6,TokIdx 7,MarkTime)]
   )
 
+test_pp_gerund =
+  ( "It was the plan in targeting the league on taxes."
+  , [(0,("it","It")),(1,("be","was")),(2,("the","the")),(3,("plan","plan")),(4,("in","in")),(5,("target","targeting")),(6,("the","the")),(7,("league","league")),(8,("on","on")),(9,("tax","taxes")),(10,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","It")],PN "VP" [PL ("VBD","was"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","plan")],PN "PP" [PL ("IN","in"),PN "S" [PN "VP" [PL ("VBG","targeting"),PN "NP" [PL ("DT","the"),PL ("NN","league")],PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNS","taxes")]]]]]]],PL (".",".")]]
+  , []
+  )
+  
+
 
 -- |
 {-
@@ -208,4 +216,5 @@ mainShow = mapM_ showDetail [ test_coordination
                             , test_gerundive
                             , test_temporal
                             -- -- , test_nonrestrictive_relative_clause
+                            , test_pp_gerund
                             ]
