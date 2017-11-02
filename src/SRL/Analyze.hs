@@ -97,7 +97,7 @@ queryProcess config pp apredata netagger =
       ":v " -> do dstr <- docStructure apredata netagger <$> runParser pp rest
                   mapM_ (T.IO.putStrLn . formatX'Tree) (dstr ^.. ds_sentStructures . traverse . _Just . ss_cpstr . traverse)
                   when (config^.Analyze.showDetail) $ do
-                    print (dstr^.ds_mergedtags)
+                    -- print (dstr^.ds_mergedtags)
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
 
                   mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)

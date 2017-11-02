@@ -29,7 +29,7 @@ import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
-import           NLP.Syntax.Clause            (cpRange,constructCP,currentCPDPPP {- findPAWS -})
+import           NLP.Syntax.Clause            (cpRange,constructCP,currentCPDPPP)
 import           NLP.Syntax.Format            (formatPAWS)
 import           NLP.Syntax.Noun              (splitDP,mkPPFromZipper)
 import           NLP.Syntax.Type
@@ -112,12 +112,12 @@ matchObjects :: [(PBArg,FNFrameElement)]
              -> ArgPattern p GRel
              -> [(FNFrameElement, CompVP '[Lemma])]
 matchObjects rolemap verbp patt = do
-  (garg,obj) <- zip [GA1,GA2] (verbp^..complement.traverse.trResolved._Just)
-  guard (case obj of CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False)
+  (garg,obj) <- zip [GA1,GA2] (filter (\case CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False) (verbp^..complement.traverse.trResolved._Just))
+  -- guard ()
   (p,a) <- maybeToList (pbArgForGArg garg patt)
   case obj of
     CompVP_CP cp -> guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
-    CompVP_DP _  -> guard (a == GR_NP   (Just garg))
+    CompVP_DP _  -> guard (a == GR_NP (Just garg))
     _            -> []
   fe <- maybeToList (lookup p rolemap)
   return (fe, obj)
@@ -130,20 +130,24 @@ matchPP :: TaggedLemma '[Lemma]
         -> Maybe (PP '[Lemma])
 matchPP tagged cp (mprep,mpclass,mising) = do
     -- Left (rng,S_PP prep' _ _) <- find ppcheck (paws^.pa_candidate_args)
-    let rng = (-1,-1)
-        prep' = Prep_NULL
+    let candidates = cp^..complement.complement.complement.traverse.trResolved._Just._CompVP_PP
+    find ppcheck candidates
+    {-
+    -- let rng = (-1,-1)
+    --    prep' = Prep_NULL
     let tr = cp^.maximalProjection.to root.to current
     z' <- (find (\z -> z^?to current._PN._1._1 == Just rng) . getNodes .mkBitreeZipper []) tr
     let pclass = case mpclass of
                    Nothing -> PC_Other
                    Just pclass -> pclass
-    mkPPFromZipper tagged pclass z'
-{-   where
-    ppcheck (Left (_,S_PP prep' pclass' ising')) = maybe True (== prep')   mprep   &&
-                                                   maybe True (== pclass') mpclass &&
-                                                   maybe True (\ising -> ising == ising') mising
-    ppcheck _                            = False
--}
+    mkPPFromZipper tagged pclass z' -}
+  where
+    ppcheck pp = let (prep',pclass') = pp^.headX
+                     ising' = is _Just (pp^?complement._CompPP_Gerund)
+                 in maybe True (\prep -> Just prep == prep'^?_Prep_WORD) mprep &&
+                    maybe True (== pclass') mpclass &&
+                    maybe True (== ising') mising
+
 
 matchPrepArgs :: [(PBArg,FNFrameElement)]
               -> TaggedLemma '[Lemma]
@@ -267,7 +271,7 @@ matchExtraRolesForPPTime :: TaggedLemma '[Lemma]
                          -> Maybe (FNFrameElement,CompVP '[Lemma])
 matchExtraRolesForPPTime tagged cp felst = do
   guard (isNothing (find (\x -> x^._1 == "Time") felst))
-  pp <- matchPP tagged cp {- paws -} (Nothing,Just PC_Time,Just False)
+  pp <- matchPP tagged cp (Nothing,Just PC_Time,Just False)
   let comp = CompVP_PP pp
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
   return ("Time",comp)
