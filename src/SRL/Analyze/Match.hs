@@ -29,6 +29,7 @@ import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_caus
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,findPAWS)
+import           NLP.Syntax.Format            (formatPAWS)
 import           NLP.Syntax.Noun              (splitDP,mkPPFromZipper)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
@@ -44,7 +45,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,vs_roleTopPatts,vs_vp
                                               ,me_relation,mv_text,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges)
 --
-
+-- import Debug.Trace
 
 
 
@@ -121,12 +122,11 @@ matchObjects rolemap verbp patt = do
 matchPP :: TaggedLemma '[Lemma]
         -> PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag))
         -> (Maybe Text,Maybe PrepClass,Maybe Bool)
-        -> Maybe (PP '[Lemma]) -- Maybe (Text,Zipper '[Lemma],PP '[Lemma])
+        -> Maybe (PP '[Lemma])
 matchPP tagged paws (mprep,mpclass,mising) = do
     Left (rng,S_PP prep' _ _) <- find ppcheck (paws^.pa_candidate_args)
     let tr = paws^.pa_CP.maximalProjection.to root.to current
     z' <- (find (\z -> z^?to current._PN._1._1 == Just rng) . getNodes .mkBitreeZipper []) tr
-    -- return (prep',z',splitPP tagged z')  -- <- should be changed.
     let pclass = case mpclass of
                    Nothing -> PC_Other
                    Just pclass -> pclass
@@ -149,7 +149,7 @@ matchPrepArgs rolemap tagged paws patt felst = do
   role <- maybeToList (lookup p rolemap)
 
   pp <- maybeToList (matchPP tagged paws (Just prep,Nothing,mising))
-  let comp = CompVP_PP pp -- (mkPP (Prep_WORD prep,PC_Other) (getRange (current o)) dp)
+  let comp = CompVP_PP pp
       rng = compVPToRange comp
   guard (is _Nothing (find (\x -> x^?_2.to compVPToRange == Just rng) felst))
   return (role, comp)
@@ -163,7 +163,7 @@ matchAgentForPassive :: [(PBArg,FNFrameElement)]
 matchAgentForPassive rolemap tagged paws patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
     pp  <- matchPP tagged paws (Just "by",Just PC_Other,Nothing)
-    let comp = CompVP_PP pp -- (mkPP (Prep_WORD "by",PC_Other) (getRange (current o)) dp)
+    let comp = CompVP_PP pp
     (,comp) <$> lookup p rolemap
 
 
@@ -263,9 +263,8 @@ matchExtraRolesForPPTime :: TaggedLemma '[Lemma]
 matchExtraRolesForPPTime tagged paws felst = do
   guard (isNothing (find (\x -> x^._1 == "Time") felst))
   pp <- matchPP tagged paws (Nothing,Just PC_Time,Just False)
-  let -- rng = dp^.headX
-      comp = CompVP_PP pp -- (mkPP (Prep_WORD prep,PC_Time) (getRange (current o)) dp)
-  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.headX == Just (pp^.complement.headX)) felst))
+  let comp = CompVP_PP pp
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
   return ("Time",comp)
 
 
@@ -278,9 +277,8 @@ matchExtraRolesForPPing :: Text
 matchExtraRolesForPPing prep role tagged paws felst = do
   guard (isNothing (find (\x -> x^._1 == role) felst))
   pp <- matchPP tagged paws (Just prep,Just PC_Other,Just True)
-  let -- rng = dp^.headX
-      comp = CompVP_PP pp  -- (mkPP (Prep_WORD prep,PC_Other) (getRange (current o)) dp)
-  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.headX == Just (pp^.complement.headX)) felst))
+  let comp = CompVP_PP pp
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
   return (role,comp)
 
 
@@ -294,7 +292,7 @@ matchExtraRolesForCPInCompVP check role paws felst = do
   let candidates = paws^..pa_CP.complement.complement.complement.traverse.trResolved._Just._CompVP_CP
   cp <- find check candidates
   let rng = cp^.maximalProjection.to current.to getRange
-  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.headX == Just rng) felst))
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just rng) felst))
   guard (is _Nothing (find (\x -> x^?_2._CompVP_CP.to cpRange == Just rng) felst))
   let comp = CompVP_CP cp
   return (role,comp)
@@ -313,7 +311,7 @@ matchExtraRolesForCPInAdjunctCP mcheck role paws felst = do
           Nothing -> (rightMay . headErr ("no adjuncts" :: String)) candidates
           Just check -> find check candidates
   let rng = cp^.maximalProjection.to current.to getRange
-  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.headX == Just rng) felst))
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just rng) felst))
   guard (is _Nothing (find (\x -> x^?_2._CompVP_CP.to cpRange == Just rng) felst))
   let comp = CompVP_CP cp
   return (role,comp)
@@ -386,13 +384,14 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
     f (fe,rng@(b,e)) (fe',CompVP_PP pp)
       = let prep' = pp^.headX
             o'    = pp^.maximalProjection
-            z'    = pp^.complement
-            rng'@(b',_) = z'^.maximalProjection
-        in -- for the time being, use this ad hoc algorithm
-          if fe /= fe' && rng `isInsideR` rng' && b /= b'
-          then let z'' = ((headX .~  (b',b-1)) . (maximalProjection .~ (b,e)) . (adjunct .~ [])) z'
-               in (fe',CompVP_PP (XP prep' o' () () z''))
-          else (fe',CompVP_PP (XP prep' o' () () z'))
+        in case pp^.complement of
+             CompPP_DP dp    -> let rng'@(b',_) = dp^.maximalProjection
+                                in -- for the time being, use this ad hoc algorithm
+                                   if fe /= fe' && rng `isInsideR` rng' && b /= b'
+                                   then let dp' = ((headX .~  (b',b-1)) . (maximalProjection .~ (b,e)) . (adjunct .~ [])) dp
+                                        in (fe',CompVP_PP (mkPP prep' o' dp'))
+                                   else (fe',CompVP_PP pp)
+             CompPP_Gerund z -> (fe',CompVP_PP pp)
     f (fe,rng@(b,e)) (fe',CompVP_DP dp)
       = let rng'@(b',_) = dp^.maximalProjection
         in -- for the time being, use this ad hoc algorithm
@@ -463,7 +462,7 @@ meaningGraph sstr =
                        CompVP_Unresolved _ -> []
                        CompVP_CP _cp -> [] -- CP is not an entity.
                        CompVP_DP dp -> return (entityFromDP tagged dp)
-                       CompVP_PP pp -> return (entityFromDP tagged (pp^.complement))
+                       CompVP_PP pp -> maybeToList (entityFromDP tagged <$> (pp^?complement._CompPP_DP))
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
@@ -504,7 +503,7 @@ meaningGraph sstr =
                                                                                  >>= \prep -> if prep == "that" then Nothing else return prep
                                                     in return (getRange (current z_cp),mprep)
                                     CompVP_DP dp -> return (dp^.headX,Nothing)
-                                    CompVP_PP pp -> return (pp^.complement.headX,pp^?headX._1._Prep_WORD)
+                                    CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX._1._Prep_WORD)
                   i' <- maybeToList (HM.lookup (0,rng') rngidxmap)  -- frame element
                   let b = isJust (find (== (rng',rng)) depmap)
                   return (MGEdge fe b mprep i i')
