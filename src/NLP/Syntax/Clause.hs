@@ -36,7 +36,7 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Voice(..))
 --
 import           NLP.Syntax.Noun                        (splitDP,mkPPFromZipper)
-import           NLP.Syntax.Preposition                 (checkEmptyPrep,isMatchedTime
+import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTimePrep,isMatchedTime
                                                         ,identifyInternalTimePrep)
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
@@ -44,7 +44,8 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
 --
 import Debug.Trace
-
+import qualified Data.Text as T
+import NLP.Syntax.Format.Internal
 
 hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
 hoistMaybe = MaybeT . return
@@ -82,6 +83,7 @@ complementCandidates vprop z_vp =
                         return n
     checkNPSBAR z = case rootTag z of
                       Left NP    -> True
+                      Left PP    -> True
                       Left SBAR  -> True
                       Left S     -> True
                       Left SBARQ -> True
@@ -101,13 +103,16 @@ complementsOfVerb tagged vprop z_vp =
        Active -> (cs,zs)
        Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,zs)
   where
-    -- xform_pp = TraceChain (Right []) . Just . checkTimePrep tagged
     xform_dp z = let dp = splitDP tagged (mkOrdDP z)
                      (dp',zs) = identifyInternalTimePrep tagged dp
                  in (TraceChain (Right []) (Just (checkEmptyPrep tagged dp')), zs)
+    xform_pp z = (TraceChain (Right []) (checkTimePrep tagged <$> mkPPFromZipper tagged PC_Other z), [])
+      -- checkTimePrep tagged
+                    
     xform_cp z = (TraceChain (Right []) (Just (CompVP_Unresolved z)), [])
     xform z = case rootTag (current z) of
                 Left NP    -> xform_dp z
+                Left PP    -> xform_pp z
                 Left _     -> xform_cp z
                 Right p    -> if isNoun p == Yes then xform_dp z else xform_cp z
 
