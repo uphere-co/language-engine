@@ -5,13 +5,10 @@
 
 module NLP.Syntax.Util where
 
-import           Control.Lens                      ((^.),(^?),(%~),_1,_2,to)
-import           Control.Monad                     (guard)
+import           Control.Lens                      ((^.),(%~),_1,_2)
 import           Data.Bifunctor                    (bimap)
-import           Data.Bifoldable                   (bifoldMap)
 import           Data.IntMap                       (IntMap)
 import qualified Data.IntMap                 as IM
-import           Data.Monoid                       (First(..))
 import           Data.Text                         (Text)
 --
 import           CoreNLP.Simple.Convert            (lemmatize)

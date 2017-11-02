@@ -9,19 +9,18 @@ import           Control.Lens             ((^.),(^?),(%~),(&),to,_1,_2,_Nothing)
 import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
-import           Data.Foldable            (toList,foldMap)
-import           Data.List                (find,unfoldr)
-import           Data.Maybe               (fromMaybe,isNothing,maybeToList)
-import           Data.Monoid              (Last(..))
+import           Data.Foldable            (toList)
+import           Data.List                (find)
+import           Data.Maybe               (fromMaybe)
 import qualified Data.Text           as T
 --
 import           Data.Bitree              (_PL)
 import           Data.BitreeZipper        (child1,childLast,current,next,extractZipperByRange)
 import           Data.BitreeZipper.Util   (firstSiblingBy)
 import           Data.Range               (Range)
-import           NLP.Type.PennTreebankII  (ChunkTag(..),Lemma,POSTag(..),TernaryLogic(..)
+import           NLP.Type.PennTreebankII  (ChunkTag(..),POSTag(..),TernaryLogic(..)
                                           ,getRange,isNoun,posTag,tokenWord)
-import           NLP.Type.TagPos          (TagPos(..),TokIdx)
+import           NLP.Type.TagPos          (TagPos(..))
 --
 import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
@@ -33,7 +32,6 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,mkSplittedDP,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 --
-import Debug.Trace
 
 
 
@@ -86,9 +84,9 @@ splitParentheticalModifier tagged z = do
   -- followed by comma and end, or just end.
   ((do comma2 <- next z2
        guard (isPOSAs M_COMMA (current comma2))
-       guard (isNothing (next comma2)))
+       guard (is _Nothing (next comma2)))
    <|>
-   (guard (isNothing (next z2))))
+   (guard (is _Nothing (next z2))))
 
   let rf = getRange . current
   -- phrase inside parenthetical commas must be NP or clause

@@ -19,7 +19,7 @@ import qualified Data.Text                     as T
 --
 import           Data.BitreeZipper                  (current)
 import           Data.Range                         (Range,isInside)
-import           NLP.Type.PennTreebankII            (ALeaf,tokenWord,getRange)
+import           NLP.Type.PennTreebankII            (tokenWord,getRange)
 --
 import           NLP.Syntax.Type.XBar.Internal
 import           NLP.Syntax.Type.XBar.TH
@@ -55,10 +55,10 @@ compVPToEither (CompVP_PP y)         = Right (y^.complement)
 
 
 compVPToHeadText :: TaggedLemma as -> CompVP as -> Text
-compVPToHeadText tagged (CompVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
-compVPToHeadText tagged (CompVP_CP z)         = z^.maximalProjection.to (T.intercalate " " . map (tokenWord.snd) . toList . current)
-compVPToHeadText tagged (CompVP_DP z)         = headText tagged z
-compVPToHeadText tagged (CompVP_PP z)         = headText tagged (z^.complement)
+compVPToHeadText _tagged (CompVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
+compVPToHeadText _tagged (CompVP_CP z)         = z^.maximalProjection.to (T.intercalate " " . map (tokenWord.snd) . toList . current)
+compVPToHeadText tagged  (CompVP_DP z)         = headText tagged z
+compVPToHeadText tagged  (CompVP_PP z)         = headText tagged (z^.complement)
 
 
 

@@ -4,28 +4,23 @@
 
 module NLP.Syntax.Preposition where
 
-import           Control.Applicative     ((<|>))
-import           Control.Lens            ((^.),(^?),(.~),(&),_2,to)
+import           Control.Lens            ((^.),(.~),(&))
 import           Control.Monad           (guard)
 import           Data.List               (find)
 import           Data.Maybe              (fromMaybe)
 --
-import           Data.Bitree             (_PL)
-import           Data.BitreeZipper       (child1,current,next,parent,toBitree,extractZipperByRange)
-import           Data.BitreeZipper.Util  (firstSiblingBy)
+import           Data.BitreeZipper       (current,parent,extractZipperByRange)
 import           Data.Range              (isInsideR,Range)
-import           NLP.Type.PennTreebankII (ChunkTag(..),Lemma(..),POSTag(..)
-                                         ,getRange,posTag,tokenWord)
+import           NLP.Type.PennTreebankII (ChunkTag(..),getRange)
 import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 --
-import           NLP.Syntax.Noun         (splitDP)
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
 import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP
                                          ,TaggedLemma(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
-                                         ,mkOrdDP,mkPP)
+                                         ,mkPP)
 
 
 hasEmptyPreposition :: TaggedLemma t -> Range -> Bool

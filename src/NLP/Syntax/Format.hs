@@ -24,7 +24,6 @@ import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
-import           NLP.Type.TagPos                        (TagPos,TokIdx)
 import           Text.Format.Tree
 --
 import           NLP.Syntax.Clause

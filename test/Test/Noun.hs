@@ -11,16 +11,15 @@ import           Data.Text                       (Text)
 import qualified Data.Text               as T
 --
 import           Data.Bitree                     (Bitree(..),getRoot1)
-import           Data.BitreeZipper               (current,mkBitreeZipper)
+import           Data.BitreeZipper               (mkBitreeZipper)
 import           Data.Range                      (Range)
 import           NLP.Type.PennTreebankII         (PennTree,Lemma)
 import           NLP.Type.TagPos                 (TagPos(..),TokIdx(..))
 --
 import           NLP.Syntax.Format.Internal      (formatDP)
 import           NLP.Syntax.Noun                 (splitDP)
-import           NLP.Syntax.Preposition          (identifyInternalTimePrep)
 import           NLP.Syntax.Type                 (MarkType(..))
-import           NLP.Syntax.Type.XBar            (Zipper,TaggedLemma(..),getTokens,headX,mkOrdDP)
+import           NLP.Syntax.Type.XBar            (DetP,headX,mkOrdDP)
 import           NLP.Syntax.Util                 (mkBitreeICP,mkTaggedLemma)
 --
 import           Test.Common
@@ -93,6 +92,7 @@ test_prep_modifier_1 =
   , []
   )
 
+mkDPFromTest :: TestBNM -> DetP '[Lemma]
 mkDPFromTest x =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) (x^._3))
       lemmapt = mkBitreeICP lmap1 (x^._4)

@@ -2,7 +2,7 @@
 
 module NLP.Syntax.Format.Internal where
 
-import           Control.Lens                       ((^.),_2,to)
+import           Control.Lens                       ((^.),to)
 import           Data.Foldable                      (toList)
 import           Data.Monoid                        ((<>))
 import           Data.Text                          (Text)
