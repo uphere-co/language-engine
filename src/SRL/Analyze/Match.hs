@@ -428,9 +428,9 @@ matchFrame tagged (vstr,cp) = do
 
 
 
-depCPDP :: X'Tree p -> [(Range,Range)]
-depCPDP (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap depCPDP xs
-depCPDP (PL _)           = []
+dependencyOfX'Tree :: X'Tree p -> [(Range,Range)]
+dependencyOfX'Tree (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap dependencyOfX'Tree xs
+dependencyOfX'Tree (PL _)           = []
 
 
 
@@ -438,9 +438,9 @@ entityFromDP :: TaggedLemma t -> DetP t -> (Range,Text,Maybe (Range,Text))
 entityFromDP tagged dp =
   let rng = dp^.headX
       txt = headText tagged dp
-      mrngtxt' = do rng_sub <- case (dp^.adjunct, dp^.complement) of
-                                 (AdjunctDP_Unresolved r:_,_) -> return r -- for the time being
-                                 _                            -> Nothing
+      mrngtxt' = do rng_sub <- case (dp^.specifier, dp^.complement) of
+                                 (r:_,_) -> return r -- for the time being
+                                 _       -> Nothing
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (rng_sub,txt_sub)
   in (rng,txt,mrngtxt')
@@ -451,7 +451,7 @@ meaningGraph sstr =
   let (x'tr,lst_vstrcp) = mkTriples sstr
       tagged = sstr^.ss_tagged
       matched = mapMaybe (matchFrame tagged) lst_vstrcp
-      depmap = depCPDP =<< x'tr
+      depmap = dependencyOfX'Tree =<< x'tr
       --
       preds = flip map matched $ \(rng,vprop,frame,sense,_mselected) i
                                    -> MGPredicate i rng frame sense (simplifyVProp vprop)
