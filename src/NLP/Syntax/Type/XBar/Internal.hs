@@ -139,19 +139,24 @@ data PrepClass = PC_Time
                | PC_Other
                deriving (Show,Eq,Ord)
 
+data CompPP t = CompPP_DP (DetP t)
+              | CompPP_Gerund (Zipper t)
 
 --
 type instance Property   'X_P t = (Prep,PrepClass)
 type instance Maximal    'X_P t = Range -- Zipper t
 type instance Specifier  'X_P t = ()
 type instance Adjunct    'X_P t = ()
-type instance Complement 'X_P t = DetP t
+type instance Complement 'X_P t = CompPP t
 
 type PP = XP 'X_P
 
 mkPP :: (Prep,PrepClass) -> Range -> DetP t -> PP t
-mkPP (prep,pclass) rng dp = XP (prep,pclass) rng () () dp
+mkPP (prep,pclass) rng dp = XP (prep,pclass) rng () () (CompPP_DP dp)
 
+
+mkPPGerund :: (Prep,PrepClass) -> Range -> Zipper t -> PP t
+mkPPGerund (prep,pclass) rng z = XP (prep,pclass) rng () () (CompPP_Gerund z)
 
 data CompVP t = CompVP_Unresolved (Zipper t)
               | CompVP_CP (CP t)
@@ -216,3 +221,5 @@ data CPDPPP t = CPCase (CP t)
 type X'Tree t = Bitree (Range,CPDPPP t) (Range,CPDPPP t)
 
 type X'Zipper t = BitreeZipper (Range,CPDPPP t) (Range,CPDPPP t)
+
+

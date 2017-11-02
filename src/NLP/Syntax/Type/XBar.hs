@@ -47,18 +47,22 @@ headText tagged x = T.intercalate " " (tokensByRange tagged (x^.headX))
 
 compVPToEither :: CompVP t -> Either (Zipper t) (DetP t)
 compVPToEither (CompVP_Unresolved x) = Left  x
-compVPToEither (CompVP_CP z)         = Left (z^.maximalProjection)
+compVPToEither (CompVP_CP cp)        = Left (cp^.maximalProjection)
 compVPToEither (CompVP_DP y)         = Right y
-compVPToEither (CompVP_PP y)         = Right (y^.complement)
+compVPToEither (CompVP_PP y)         = case y^.complement of
+                                         CompPP_DP dp -> Right dp
+                                         CompPP_Gerund z -> Left z
 
 
 
 
 compVPToHeadText :: TaggedLemma as -> CompVP as -> Text
 compVPToHeadText _tagged (CompVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
-compVPToHeadText _tagged (CompVP_CP z)         = z^.maximalProjection.to (T.intercalate " " . map (tokenWord.snd) . toList . current)
-compVPToHeadText tagged  (CompVP_DP z)         = headText tagged z
-compVPToHeadText tagged  (CompVP_PP z)         = headText tagged (z^.complement)
+compVPToHeadText _tagged (CompVP_CP cp)        = cp^.maximalProjection.to (T.intercalate " " . map (tokenWord.snd) . toList . current)
+compVPToHeadText tagged  (CompVP_DP dp)        = headText tagged dp
+compVPToHeadText tagged  (CompVP_PP pp)        = case pp^.complement of
+                                                   CompPP_DP dp -> headText tagged dp
+                                                   CompPP_Gerund z -> (T.intercalate " " . map (tokenWord.snd) . toList . current) z
 
 
 
