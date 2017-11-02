@@ -156,7 +156,7 @@ preposedCP :: TestVerbComplement
 preposedCP
   = ( "Brazilian steelmaker Companhia Siderugica Nacional SA plans to sell bonds on international markets in an effort to improve its debt profile, Benjamin Steinbruch, chief executive officer, said on Friday."
     , 29
-    , ("Benjamin Steinbruch", ["Brazilian steelmaker Companhia Siderugica Nacional SA plans to sell bonds on international markets in an effort to improve its debt profile"], [])
+    , ("Benjamin Steinbruch", ["Friday", "Brazilian steelmaker Companhia Siderugica Nacional SA plans to sell bonds on international markets in an effort to improve its debt profile"], [])
     , [(0,("brazilian","Brazilian")),(1,("steelmaker","steelmaker")),(2,("Companhia","Companhia")),(3,("Siderugica","Siderugica")),(4,("Nacional","Nacional")),(5,("SA","SA")),(6,("plan","plans")),(7,("to","to")),(8,("sell","sell")),(9,("bond","bonds")),(10,("on","on")),(11,("international","international")),(12,("market","markets")),(13,("in","in")),(14,("a","an")),(15,("effort","effort")),(16,("to","to")),(17,("improve","improve")),(18,("its","its")),(19,("debt","debt")),(20,("profile","profile")),(21,(",",",")),(22,("Benjamin","Benjamin")),(23,("Steinbruch","Steinbruch")),(24,(",",",")),(25,("chief","chief")),(26,("executive","executive")),(27,("officer","officer")),(28,(",",",")),(29,("say","said")),(30,("on","on")),(31,("Friday","Friday")),(32,(".","."))]
     , PN "ROOT" [PN "S" [PN "S" [PN "NP" [PL ("JJ","Brazilian"),PL ("NN","steelmaker"),PL ("NNP","Companhia"),PL ("NNP","Siderugica"),PL ("NNP","Nacional"),PL ("NNP","SA")],PN "VP" [PL ("VBZ","plans"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","sell"),PN "NP" [PN "NP" [PL ("NNS","bonds")],PN "PP" [PL ("IN","on"),PN "NP" [PL ("JJ","international"),PL ("NNS","markets")]]],PN "PP" [PL ("IN","in"),PN "NP" [PL ("DT","an"),PL ("NN","effort"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","improve"),PN "NP" [PL ("PRP$","its"),PL ("NN","debt"),PL ("NN","profile")]]]]]]]]]]],PL (",",","),PN "NP" [PN "NP" [PL ("NNP","Benjamin"),PL ("NNP","Steinbruch")],PL (",",","),PN "NP" [PL ("JJ","chief"),PL ("NN","executive"),PL ("NN","officer")],PL (",",",")],PN "VP" [PL ("VBD","said"),PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Friday")]]],PL (".",".")]]
     , []
@@ -182,6 +182,17 @@ complexNP_2
     , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","The"),PL ("NN","event")],PN "VP" [PL ("VBD","was"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("JJ","first"),PL ("JJ","initial"),PL ("JJ","public"),PL ("NN","offering")],PN "PP" [PL ("IN","on"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","country"),PL ("POS","'s")],PL ("NN","stock"),PL ("NN","exchange")]]]],PL (".",".")]]
     , []
     )
+
+prepComplement :: TestVerbComplement
+prepComplement
+  = ( "Virgin Group has invested in the company."
+    , 3
+    , ("Virgin Group", ["the company"], [])
+    , [(0,("Virgin","Virgin")),(1,("Group","Group")),(2,("have","has")),(3,("invest","invested")),(4,("in","in")),(5,("the","the")),(6,("company","company")),(7,(".","."))]
+    , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","Virgin"),PL ("NNP","Group")],PN "VP" [PL ("VBZ","has"),PN "VP" [PL ("VBN","invested"),PN "PP" [PL ("IN","in"),PN "NP" [PL ("DT","the"),PL ("NN","company")]]]],PL (".",".")]]
+    , [TagPos (TokIdx 0, TokIdx 2, MarkTime)]
+    )
+
 
 formatTP :: TestVerbComplement -> [String]
 formatTP (txt,i,_,lmatknlst,pt,taglst) =
@@ -272,6 +283,7 @@ testcases = [ -- main_finite_1
             , preposedCP
             , complexNP
             , complexNP_2
+            , prepComplement
             ]
 
 unitTests :: TestTree

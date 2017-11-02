@@ -44,7 +44,8 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
 --
 import Debug.Trace
-
+import qualified Data.Text as T
+import NLP.Syntax.Format.Internal
 
 hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
 hoistMaybe = MaybeT . return
@@ -82,6 +83,7 @@ complementCandidates vprop z_vp =
                         return n
     checkNPSBAR z = case rootTag z of
                       Left NP    -> True
+                      Left PP    -> True
                       Left SBAR  -> True
                       Left S     -> True
                       Left SBARQ -> True
