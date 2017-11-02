@@ -45,7 +45,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,vs_roleTopPatts,vs_vp
                                               ,me_relation,mv_text,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges)
 --
-import Debug.Trace
+-- import Debug.Trace
 
 
 
@@ -130,8 +130,7 @@ matchPP tagged paws (mprep,mpclass,mising) = do
     let pclass = case mpclass of
                    Nothing -> PC_Other
                    Just pclass -> pclass
-    trace ("matchPP:" ++ show (mprep,mpclass,mising)) $ 
-      mkPPFromZipper tagged pclass z'
+    mkPPFromZipper tagged pclass z'
   where
     ppcheck (Left (_,S_PP prep' pclass' ising')) = maybe True (== prep')   mprep   &&
                                                    maybe True (== pclass') mpclass &&
@@ -275,14 +274,12 @@ matchExtraRolesForPPing :: Text
                         -> PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))
                         -> [(FNFrameElement, CompVP '[Lemma])]
                         -> Maybe (FNFrameElement,CompVP '[Lemma])
-matchExtraRolesForPPing prep role tagged paws felst = trace ("matchExtraRolesForPPing: " ++ show prep ++ " " ++ show role  ) $ do
+matchExtraRolesForPPing prep role tagged paws felst = do
   guard (isNothing (find (\x -> x^._1 == role) felst))
-  trace ("phase1:" ++ formatPAWS paws) $ do
-    pp <- matchPP tagged paws (Just prep,Just PC_Other,Just True)
-    trace "phase2" $ do
-      let comp = CompVP_PP pp
-      guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
-      trace "phase3" $ return (role,comp)
+  pp <- matchPP tagged paws (Just prep,Just PC_Other,Just True)
+  let comp = CompVP_PP pp
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
+  return (role,comp)
 
 
 matchExtraRolesForCPInCompVP :: (CP '[Lemma] -> Bool)
