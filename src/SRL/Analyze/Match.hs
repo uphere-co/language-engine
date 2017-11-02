@@ -442,9 +442,7 @@ entityFromDP :: TaggedLemma t -> DetP t -> (Range,Text,Maybe (Range,Text))
 entityFromDP tagged dp =
   let rng = dp^.headX
       txt = headText tagged dp
-      mrngtxt' = do rng_sub <- case (dp^.specifier, dp^.complement) of
-                                 (r:_,_) -> return r -- for the time being
-                                 _       -> Nothing
+      mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (rng_sub,txt_sub)
   in (rng,txt,mrngtxt')
