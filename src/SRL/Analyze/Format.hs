@@ -33,7 +33,7 @@ import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),TaggedLemma,X'Tree
+import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),TaggedLemma,X'Tree,CP
                                                          ,headText,headX,complement,maximalProjection)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
@@ -221,12 +221,12 @@ showMatchedFE tagged (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe (
 
 
 
-showMatchedFrame :: TaggedLemma '[Lemma] -- [TagPos TokIdx MarkType]
-                 -> (VerbStructure, PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)))
+showMatchedFrame :: TaggedLemma '[Lemma]
+                 -> (VerbStructure, CP '[Lemma] {- PredArgWorkspace '[Lemma] (Either (Range, STag) (Int, POSTag)) -})
                  -> IO ()
-showMatchedFrame tagged (vstr,paws) = do
+showMatchedFrame tagged (vstr,cp {- paws -}) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame tagged (vstr,paws)) $ \(rng,_,frame,_,mselected) -> do
+  flip traverse_ (matchFrame tagged (vstr,cp {- paws -})) $ \(rng,_,frame,_,mselected) -> do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> frame)

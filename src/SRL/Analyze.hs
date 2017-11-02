@@ -59,7 +59,7 @@ import           SRL.Analyze.ARB               (mkARB)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP           (runParser)
 import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructure,showMatchedFrame)
-import           SRL.Analyze.Match             (mkPAWSTriples,meaningGraph,tagMG)
+import           SRL.Analyze.Match             (mkTriples,meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure (docStructure,mkWikiList)
 import           SRL.Analyze.Type
 -- import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
@@ -92,7 +92,7 @@ queryProcess config pp apredata netagger =
                   dstr <- docStructure apredata netagger <$> runParser pp txt
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkPAWSTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
+                  mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
 
       ":v " -> do dstr <- docStructure apredata netagger <$> runParser pp rest
                   mapM_ (T.IO.putStrLn . formatX'Tree) (dstr ^.. ds_sentStructures . traverse . _Just . ss_cpstr . traverse)
@@ -100,7 +100,7 @@ queryProcess config pp apredata netagger =
                     print (dstr^.ds_mergedtags)
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
 
-                  mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkPAWSTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
+                  mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
                   --
                   printMeaningGraph (apredata^.analyze_rolemap) dstr
       _     ->    putStrLn "cannot understand the command"
