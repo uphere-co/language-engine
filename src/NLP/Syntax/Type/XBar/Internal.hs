@@ -102,8 +102,8 @@ data AdjunctDP t = AdjunctDP_Unresolved Range
 type instance Property   'X_D t = Range -- head
 type instance Maximal    'X_D t = Range
 type instance Specifier  'X_D t = ()
-type instance Adjunct    'X_D t = [AdjunctDP t] -- Maybe Range
-type instance Complement 'X_D t = Maybe (CompDP t) -- Maybe Range
+type instance Adjunct    'X_D t = [AdjunctDP t]
+type instance Complement 'X_D t = Maybe (CompDP t)
 
 type DetP = XP 'X_D
 
@@ -144,7 +144,7 @@ data CompPP t = CompPP_DP (DetP t)
 
 --
 type instance Property   'X_P t = (Prep,PrepClass)
-type instance Maximal    'X_P t = Range -- Zipper t
+type instance Maximal    'X_P t = Range
 type instance Specifier  'X_P t = ()
 type instance Adjunct    'X_P t = ()
 type instance Complement 'X_P t = CompPP t
