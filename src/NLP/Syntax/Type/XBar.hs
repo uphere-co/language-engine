@@ -28,15 +28,9 @@ tokensByRange :: TaggedLemma t -> Range -> [Text]
 tokensByRange tagged rng = map (^._2._2) . filter (^._1.to (\i -> i `isInside` rng)) $ tagged^.lemmaList
 
 
-{- 
-headRange :: DetP t -> Range
-headRange x = x^.headX
--}
-
 headText :: TaggedLemma t -> DetP t -> Text
 headText tagged x = T.intercalate " " (tokensByRange tagged (x^.headX))
 
--- (x^.maximalProjection)
 
 
 compVPToEither :: CompVP t -> Either (Zipper t) (DetP t)
