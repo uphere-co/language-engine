@@ -3,13 +3,7 @@
 module NLP.Syntax.Type.XBar
 ( module NLP.Syntax.Type.XBar.Internal
 , module NLP.Syntax.Type.XBar.TH
-, getTokens
-, tokensByRange
--- , headRange
-, headText
-, compVPToEither
-, compVPToHeadText
-, compVPToRange
+, module NLP.Syntax.Type.XBar
 ) where
 
 import           Control.Lens                       ((^.),_1,_2,to)
@@ -66,7 +60,10 @@ compVPToHeadText tagged  (CompVP_PP pp)        = case pp^.complement of
 
 
 
-compVPToRange :: CompVP as -> Range
+compVPToRange :: CompVP t -> Range
 compVPToRange = either (getRange.current) (\dp->dp^.maximalProjection) . compVPToEither
 
---  (\dp->dp^.maximalProjection.to (getRange.current)) . compVPToEither 
+
+compPPToRange :: CompPP t -> Range
+compPPToRange (CompPP_DP dp) = dp^.headX
+compPPToRange (CompPP_Gerund z) = getRange (current z)
