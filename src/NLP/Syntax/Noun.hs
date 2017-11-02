@@ -28,11 +28,11 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,PP, AdjunctDP(..)
                                           ,TaggedLemma
                                           ,adjunct,headX,maximalProjection
-                                          ,tokensByRange,mkOrdDP,mkPP
+                                          ,tokensByRange,mkOrdDP,mkPP,mkPPGerund
                                           ,mkSplittedDP,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 --
-
+import Debug.Trace
 
 
 
@@ -43,8 +43,15 @@ mkPPFromZipper tagged pclass z = do
   t <- z_prep ^? to current . _PL . _2 . to posTag
   guard (t == IN || t == TO)
   lma <- z_prep ^? to current . _PL . _2 . to tokenWord
-  z_dp <- firstSiblingBy next (isChunkAs NP) z_prep
-  return (mkPP (Prep_WORD lma,pclass) (getRange (current z)) (splitDP tagged (mkOrdDP z_dp)))
+  ((do z_dp <- firstSiblingBy next (isChunkAs NP) z_prep
+       return (mkPP (Prep_WORD lma,pclass) (getRange (current z)) (splitDP tagged (mkOrdDP z_dp))))
+   <|>
+   (do z_s <- firstSiblingBy next (isChunkAs S) z_prep
+       z_vp <- child1 z_s
+       guard (isChunkAs VP (current z_vp))
+       z_v <- child1 z_vp
+       guard (isPOSAs VBG (current z_v))
+       return (mkPPGerund (Prep_WORD lma,pclass) (getRange (current z)) z_s)))
 
 
 

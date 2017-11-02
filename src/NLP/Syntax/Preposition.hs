@@ -4,7 +4,7 @@
 
 module NLP.Syntax.Preposition where
 
-import           Control.Lens            ((^.),(.~),(&))
+import           Control.Lens            ((^.),(^?),(.~),(&))
 import           Control.Monad           (guard)
 import           Data.List               (find)
 import           Data.Maybe              (fromMaybe)
@@ -17,7 +17,7 @@ import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
 import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..)
-                                         ,Prep(..),PrepClass(..),PP
+                                         ,Prep(..),PrepClass(..),PP,_CompPP_DP
                                          ,TaggedLemma(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
                                          ,mkPP)
@@ -52,14 +52,14 @@ checkEmptyPrep tagged dp =
 
 
 checkTimePrep :: TaggedLemma t -> PP t -> CompVP t
-checkTimePrep tagged pp =
-  let dp = pp^.complement
-      (prep,_pclass) = pp^.headX
-      r = fromMaybe False $ do
+checkTimePrep tagged pp = fromMaybe (CompVP_PP pp) $ do
+  dp <- pp^? complement . _CompPP_DP
+  let (prep,_pclass) = pp^.headX
+  guard $ fromMaybe False $ do
             let rng = dp^.maximalProjection
             find (isMatchedTime rng) (tagged^.tagList)
             return True
-  in if r then CompVP_PP ((headX .~ (prep,PC_Time)) pp) else CompVP_PP pp
+  return (CompVP_PP ((headX .~ (prep,PC_Time)) pp))
 
 
 

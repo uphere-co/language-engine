@@ -34,7 +34,9 @@ formatAdjunctDP (AdjunctDP_PP pp) = formatPP pp
 
 
 formatPP :: PP t -> Text
-formatPP pp = "PP-" <> formatDP (pp^.complement)
+formatPP pp = "PP-" <> case pp^.complement of
+                         CompPP_DP dp    -> formatDP dp
+                         CompPP_Gerund z -> "ing" <> T.pack (show (getRange (current z)))
 
 
 formatDP :: DetP t -> Text
