@@ -90,6 +90,7 @@ data SplitType = CLMod | BNMod | APMod
 
 data CompDP t = CompDP_Unresolved Range
               | CompDP_CP (CP t)
+              | CompDP_PP (PP t)
 
 data AdjunctDP t = AdjunctDP_Unresolved Range
                  | AdjunctDP_PP (PP t)
@@ -101,7 +102,7 @@ data AdjunctDP t = AdjunctDP_Unresolved Range
 --
 type instance Property   'X_D t = Range -- head
 type instance Maximal    'X_D t = Range
-type instance Specifier  'X_D t = [Range]  -- appositive for the time being
+type instance Specifier  'X_D t = Maybe Range  -- appositive for the time being
 type instance Adjunct    'X_D t = [AdjunctDP t]
 type instance Complement 'X_D t = Maybe (CompDP t)
 
@@ -112,7 +113,7 @@ type DetP = XP 'X_D
 --   better representation.
 --
 mkOrdDP :: Zipper t -> DetP t
-mkOrdDP z = XP (rf z) (rf z) [] [] Nothing
+mkOrdDP z = XP (rf z) (rf z) Nothing [] Nothing
   where rf = getRange . current
 
 
@@ -124,10 +125,10 @@ mkSplittedDP :: SplitType
              -> Zipper t     -- zipper for maximal projection
              -> DetP t
 mkSplittedDP typ h m o = case typ of
-                           CLMod -> XP h (rf o) []   [] (Just (CompDP_Unresolved m))
-                           BNMod -> XP h (rf o) [m]  [] Nothing
+                           CLMod -> XP h (rf o) Nothing   [] (Just (CompDP_Unresolved m))
+                           BNMod -> XP h (rf o) (Just m)  [] Nothing
                            -- apposition is regarded as an adjunct.
-                           APMod -> XP h (rf o) [m]  [] Nothing
+                           APMod -> XP h (rf o) (Just m)  [] Nothing
   where rf = getRange . current
 
 
