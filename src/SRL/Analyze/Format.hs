@@ -33,7 +33,7 @@ import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CompVP(..),Prep(..),PrepClass(..),TaggedLemma,X'Tree
+import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),TaggedLemma,X'Tree
                                                          ,headText,headX,complement,maximalProjection)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
@@ -204,15 +204,18 @@ showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (dp^.hea
 showMatchedFE tagged (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("" :: Text) (gettext z)
   where z = cp^.maximalProjection
         gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
-showMatchedFE tagged (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s(%4s) %s" fe (dp^.headX.to show) prep pclass (headText tagged dp)
-  where dp = pp^.complement
-        prep = case pp^.headX._1 of
-                 Prep_NULL -> ""
-                 Prep_WORD p -> p
-        pclass :: Text
-        pclass = case pp^.headX._2 of
-                   PC_Time -> "time"
-                   PC_Other -> ""
+showMatchedFE tagged (fe,CompVP_PP pp) =
+  let prep = case pp^.headX._1 of
+               Prep_NULL -> ""
+               Prep_WORD p -> p
+      pclass :: Text
+      pclass = case pp^.headX._2 of
+                 PC_Time -> "time"
+                 PC_Other -> ""
+  in case pp^.complement of
+       CompPP_DP dp    -> printf "%-15s: %-7s %3s(%4s) %s" fe (dp^.headX.to show) prep pclass (headText tagged dp)
+       CompPP_Gerund z -> printf "%-15s: %-7s %3s(%4s) %s" fe ((show.getRange.current) z) prep pclass (gettext z)
+  where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 showMatchedFE tagged (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
   where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 
