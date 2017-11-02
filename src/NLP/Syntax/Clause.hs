@@ -468,7 +468,6 @@ connectRaisedDP rng = do
   c1:c2:[] <- return (cp^.complement.complement.complement)
   rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.headX)
   cp' <- hoistMaybe (c2^?trResolved._Just._CompVP_CP)
-  -- let rng' = cpRange cp'
   rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.headX)
   if rng1 == rng_dp
     then do
@@ -525,7 +524,7 @@ predicateArgWS tagged cp z adjs =
                                 Just z' -> map extractArg (z':iterateMaybe next z')
                               ++ let f x = flip fmap (mkPPFromZipper tagged PC_Time x) $ \pp ->
                                              let prep = fromMaybe "" (pp^?headX._1._Prep_WORD)
-                                                 rng = pp ^. maximalProjection -- .to (getRange.current)
+                                                 rng = pp ^. maximalProjection
                                              in Left (rng,S_PP prep PC_Time False)
                                  in mapMaybe f adjs
 

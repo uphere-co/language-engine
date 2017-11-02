@@ -124,7 +124,6 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
-        -- getposchunk = bimap (chunkTag . snd) (posTag . snd) . getRoot . current
         --
         formatposchunk (Left c) = show c
         formatposchunk (Right p) = "(" ++ show p ++ ")"
