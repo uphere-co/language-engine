@@ -6,27 +6,22 @@ module Test.Trace where
 
 import           Control.Lens               hiding (levels)
 import           Data.Foldable
-import qualified Data.IntMap                as IM
 import           Data.Maybe                        (fromMaybe)
-import           Data.Monoid
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 --
 import           Data.Bitree
-import           Data.BitreeZipper
 import           Data.ListZipper
-import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos
 --
 import           NLP.Syntax.Clause
-import           NLP.Syntax.Format
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                   (mkBitreeICP,mkTaggedLemma)
+import           NLP.Syntax.Util                   (mkTaggedLemma)
 --
 import           Test.Common
 import           Test.Tasty
@@ -113,6 +108,7 @@ test_passive =
 --
 -- | raising construction associated with passive ECM verb
 --
+test_passive_raising :: TestTrace
 test_passive_raising =
   ( "You are expected to call."
   , 4, (Subj,TraceChain (Left (LZ [] SilentPRO [Moved,Moved])) (Just "You"))
@@ -124,6 +120,7 @@ test_passive_raising =
 --
 -- | ECM
 --
+test_ECM :: TestTrace
 test_ECM =
   ( "I expected him to call her."
   , 4, (Subj,TraceChain (Right []) (Just "him"))
@@ -133,6 +130,7 @@ test_ECM =
   )
 
 
+test_nonrestrictive_relative_clause :: TestTrace
 test_nonrestrictive_relative_clause =
   ( "Toyota said it would begin testing self-driving electric cars, which will use artificial intelligence to engage with drivers."
   , 12, (Subj,TraceChain (Left (LZ [] Moved [WHPRO])) (Just "self-driving electric cars"))
@@ -142,7 +140,7 @@ test_nonrestrictive_relative_clause =
   )
 
 
-
+test_free_relative_clause_subject_1 :: TestTrace
 test_free_relative_clause_subject_1 =
   ( "President Donald Trump doesn't know who will be the next Fed chair."
   , 8, (Subj, TraceChain (Left (LZ [] Moved [WHPRO])) (Just "who"))
@@ -151,6 +149,8 @@ test_free_relative_clause_subject_1 =
   , []
   )
 
+
+test_free_relative_clause_subject_2 :: TestTrace
 test_free_relative_clause_subject_2 =
   ( "President Donald Trump doesn't know who will be the next Fed chair."
   , 5, (Comp 1, TraceChain (Right [Moved,WHPRO]) (Just "who"))
@@ -159,6 +159,8 @@ test_free_relative_clause_subject_2 =
   , []
   )
 
+
+test_free_relative_clause_object_1 :: TestTrace
 test_free_relative_clause_object_1 =
   ( "President Donald Trump doesn't know who the next Fed chair will be."
   , 12, (Comp 1, TraceChain (Left (LZ [] Moved [WHPRO])) (Just "who"))
@@ -167,6 +169,8 @@ test_free_relative_clause_object_1 =
   , []
   )
 
+
+test_free_relative_clause_object_2 :: TestTrace
 test_free_relative_clause_object_2 =
   ( "President Donald Trump doesn't know who the next Fed chair will be."
   , 5, (Comp 1, TraceChain (Right [Moved,WHPRO]) (Just "who"))

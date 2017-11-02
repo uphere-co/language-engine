@@ -9,7 +9,6 @@
 
 module NLP.Syntax.Type.XBar.Internal where
 
-import           Control.Lens
 import           Data.Text                   (Text)
 --
 import           Data.Bitree

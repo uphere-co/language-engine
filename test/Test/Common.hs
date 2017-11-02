@@ -6,14 +6,10 @@ module Test.Common where
 import           Control.Lens
 import           Data.Foldable                   (toList)
 import qualified Data.IntMap             as IM
-import           Data.List                       (find)
 import           Data.Monoid                     ((<>))
 import           Data.Text                       (Text)
 import qualified Data.Text               as T
-import qualified Data.Text.IO            as T.IO
 --
-import           Data.Bitree
-import           Data.BitreeZipper
 import           NLP.Printer.PennTreebankII      (prettyPrint)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -21,7 +17,6 @@ import           NLP.Type.TagPos
 --
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
-import           NLP.Syntax.Preposition
 import           NLP.Syntax.Verb
 import           NLP.Syntax.Type                 (MarkType(..))
 import           NLP.Syntax.Type.Verb

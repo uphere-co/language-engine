@@ -9,7 +9,7 @@ module Test.Verb.Complement where
 
 import           Control.Lens               hiding (levels)
 import qualified Data.IntMap                as IM
-import           Data.List                         (find,intercalate)
+import           Data.List                         (find)
 import           Data.Maybe                        (fromMaybe)
 import           Data.Monoid                       (All(All,getAll),mconcat)
 import           Data.Text                         (Text)
@@ -33,8 +33,6 @@ import           NLP.Syntax.Util                   (mkBitreeICP,mkTaggedLemma)
 import           Test.Common
 import           Test.Tasty.HUnit
 import           Test.Tasty
-
-import Debug.Trace
 
 
 type TestVerbComplement = (Text
@@ -279,4 +277,4 @@ testcases = [ -- main_finite_1
 unitTests :: TestTree
 unitTests = testGroup "Subject and direct/indirect object identification" . flip map testcases $ \c ->
               testCase (T.unpack (c^._1)) $
-                (checkSubjCompAdjunct c == True) @? (let (txt,i,_,lmatknlst,pt,tagged)=c in T.unpack (T.intercalate "\n" (formatDetail  (txt,lmatknlst,pt,tagged))))
+                (checkSubjCompAdjunct c == True) @? (let (txt,_,_,lmatknlst,pt,tagged)=c in T.unpack (T.intercalate "\n" (formatDetail  (txt,lmatknlst,pt,tagged))))
