@@ -58,6 +58,12 @@ compVPToRange :: CompVP t -> Range
 compVPToRange = either (getRange.current) (\dp->dp^.maximalProjection) . compVPToEither
 
 
+compDPToRange :: CompDP t -> Range
+compDPToRange (CompDP_Unresolved rng) = rng
+compDPToRange (CompDP_CP cp) = cp^.maximalProjection.to current.to getRange
+compDPToRange (CompDP_PP pp) = pp^.maximalProjection
+
+
 compPPToRange :: CompPP t -> Range
 compPPToRange (CompPP_DP dp) = dp^.headX
 compPPToRange (CompPP_Gerund z) = getRange (current z)

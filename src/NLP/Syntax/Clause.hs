@@ -218,7 +218,7 @@ hierarchyBits tagged (cp,dps) = do
                               let rng_pp = pp^.maximalProjection
                               in return (rng_pp,(rng_pp,PPCase pp))
                             AdjunctDP_Unresolved rng_pp -> maybeToList $ do
-                              z_pp <- extractZipperByRange rng_pp (tagged^.pennTree)
+                              z_pp <- find (isChunkAs PP . current) (extractZipperByRange rng_pp (tagged^.pennTree))
                               (rng_pp,) . (rng_pp,) . PPCase <$> mkPPFromZipper tagged PC_Other z_pp
              in dpbit : lst
   return (cpbit:concatMap f dps)
