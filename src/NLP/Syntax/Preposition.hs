@@ -26,8 +26,8 @@ import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..)
 hasEmptyPreposition :: TaggedLemma t -> Range -> Bool
 hasEmptyPreposition tagged rng =
   fromMaybe False $ do
-    z <- extractZipperByRange rng (tagged^.pennTree)
-    guard (isChunkAs NP (current z))
+    z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTree))
+    -- guard (isChunkAs NP (current z))
     case parent z of
       Nothing -> return True
       Just z' -> do
@@ -71,7 +71,7 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   TagPos (b0,e0,_)
     <- find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) (tagged^.tagList)
   let rng_time = beginEndToRange (b0,e0)
-  z_tdp <- extractZipperByRange rng_time (tagged^.pennTree)
+  z_tdp <- find (isChunkAs NP . current) (extractZipperByRange rng_time (tagged^.pennTree))
   z_tpp <- parent z_tdp
   guard (isChunkAs PP (current z_tpp))
   let (b_tpp,_e_tpp) = getRange (current z_tpp)

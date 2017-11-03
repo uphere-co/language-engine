@@ -1,11 +1,13 @@
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE TypeOperators       #-}
 
 module NLP.Syntax.Noun where
 
 import           Control.Applicative      ((<|>))
-import           Control.Lens             ((^.),(^?),(%~),(&),to,_1,_2,_Nothing)
+import           Control.Lens             ((^.),(^?),(.~),(%~),(&),to,_1,_2,_Nothing)
 import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
@@ -25,15 +27,15 @@ import           NLP.Type.TagPos          (TagPos(..))
 import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
-                                          ,PP, AdjunctDP(..)
+                                          ,PP, AdjunctDP(..), CompDP(..)
                                           ,TaggedLemma
-                                          ,adjunct,headX,maximalProjection
+                                          ,adjunct,complement,headX,maximalProjection
                                           ,tokensByRange,mkOrdDP,mkPP,mkPPGerund
                                           ,mkSplittedDP,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 --
 import Debug.Trace
-
+import NLP.Syntax.Format.Internal
 
 
 mkPPFromZipper :: TaggedLemma t -> PrepClass -> Zipper t -> Maybe (PP t)
@@ -55,22 +57,26 @@ mkPPFromZipper tagged pclass z = do
 
 
 
-splitDP :: TaggedLemma t -> DetP t -> DetP t
+splitDP :: forall t. TaggedLemma t -> DetP t -> DetP t
 splitDP tagged dp0 =
   let dp1 = fromMaybe dp0 $ do
               let rng0 = dp0^.maximalProjection
-              z <- extractZipperByRange rng0 (tagged^.pennTree)
+
+              z <- find (isChunkAs NP . current) (extractZipperByRange rng0 (tagged^.pennTree))
               z_pp <- childLast z
               guard (isChunkAs PP (current z_pp))
               pp <- mkPPFromZipper tagged PC_Other z_pp
+              let -- ppreplace :: DetP t -> DetP t
+                  ppreplace = case pp^.headX._1 of
+                                Prep_WORD "of" -> complement .~ (Just (CompDP_PP pp))
+                                _              -> adjunct %~ (++ [AdjunctDP_PP pp])
               let (b_pp,_) = pp^.maximalProjection
-              return (dp0 & (headX %~ (\(b,_) -> (b,b_pp-1)))
-                          . (adjunct %~ (++ [AdjunctDP_PP pp])))
-              
+              return (dp0 & (headX %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
+
   in bareNounModifier tagged . fromMaybe dp1 $ do
        let rng1 = dp1^.maximalProjection
-       z <- extractZipperByRange rng1 (tagged^.pennTree)
-       guard (isChunkAs NP (current z))
+       z <- find (isChunkAs NP . current) (extractZipperByRange rng1 (tagged^.pennTree))
+       -- guard (isChunkAs NP (current z))
        dp <- child1 z
        guard (isChunkAs NP (current dp))
        sbar <- next dp
@@ -118,20 +124,17 @@ identApposHead tagged rng1 rng2 z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $
 --
 checkProperNoun :: TaggedLemma t -> Range -> Bool
 checkProperNoun tagged (b,e) =
-  let toks = tokensByRange tagged (b,e) -- (toList (current z))
+  let toks = tokensByRange tagged (b,e)
   in (not.null) toks && isUpper (T.head (head toks))   -- unsafe!
 
 -- | Identify bare noun subexpression inside noun phrase as modifier.
 --   I did not implement the already-splitted case. We need multiple-adjunct
 --   structure.
 --
-bareNounModifier :: TaggedLemma t --  (Lemma ': as)
-                 -> DetP t -- (Lemma ': as)
-                 -> DetP t -- (Lemma ': as)
+bareNounModifier :: TaggedLemma t -> DetP t -> DetP t
 bareNounModifier tagged x = fromMaybe x $ do
   let rng@(b0,_e0) = x^.maximalProjection
-  z <- extractZipperByRange rng (tagged^.pennTree)
-  guard (isChunkAs NP (current z))
+  z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTree))
   -- check entity for the last words
   let f (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun tagged (yb,ye)
   TagPos (b1'',e1'',_t)

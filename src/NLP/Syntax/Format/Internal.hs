@@ -26,6 +26,8 @@ formatCompDP (CompDP_CP cp) = case cp^.headX of
                                 C_PHI -> "CP" <> rangeText (Left (cp^.maximalProjection))
                                 C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'
                                                    <> rangeText (Left (cp^.maximalProjection))
+formatCompDP (CompDP_PP pp) = formatPP pp
+
 
 
 formatAdjunctDP :: AdjunctDP t -> Text

@@ -134,7 +134,7 @@ mkSplittedDP typ h m o = case typ of
 
 data Prep = Prep_NULL
           | Prep_WORD Text
-
+          deriving (Show,Eq,Ord)
 
 data PrepClass = PC_Time
                | PC_Other
