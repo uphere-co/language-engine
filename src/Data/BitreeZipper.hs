@@ -6,7 +6,9 @@ module Data.BitreeZipper where
 import           Control.Lens
 import           Control.Lens.Extras     (is)
 import           Data.Bifoldable         (bifoldMap,biList)
+import           Data.Bitraversable      (bitraverse)
 import           Data.List               (find,unfoldr)
+import           Data.Maybe              (catMaybes)
 import           Data.Monoid             (First(..))
 --
 import           Data.Bitree
@@ -44,12 +46,12 @@ extractZipperById :: (Eq i) => i -> Bitree (i,a) (i,a) -> Maybe (BitreeZipper (i
 extractZipperById rng tr = find (\z -> fst (getRoot1 (current z)) == rng) $ biList (mkBitreeZipper [] tr)
 
 
-extractZipperByRange :: Range -> Bitree (Range,a) (Int,b) -> Maybe (BitreeZipper (Range,a) (Int,b))
-extractZipperByRange rng tr = getFirst (bifoldMap f f (mkBitreeZipper [] tr))
+extractZipperByRange :: Range -> Bitree (Range,a) (Int,b) -> [BitreeZipper (Range,a) (Int,b)]
+extractZipperByRange rng tr = bifoldMap f f (mkBitreeZipper [] tr)
   where f z = let rng' = case current z of
                            PN (r,_) _ -> r
                            PL (n,_)   -> (n,n)
-              in if rng == rng' then First (Just z) else First Nothing
+              in if rng == rng' then [z] else []
 
 
 current :: BitreeZipper c t -> Bitree c t
