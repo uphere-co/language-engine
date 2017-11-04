@@ -263,6 +263,16 @@ formatMGVerb (MGPredicate i _ f (PredVerb _ v))
              "<td>" <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect) <> "</td>" <>
              "</tr>" <>
              "</table>" )
+formatMGVerb (MGPredicate i _ f (PredPrep p))
+  = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+             "<tr><td colspan=\"4\">" <> f <> "</td></tr>" <>
+             "<tr>" <>
+             "<td width=\"20\">" <>          " </td>" <>
+             "<td width=\"20\">" <>          " </td>" <>
+             "<td>"              <> p      <> "</td>" <>
+             "<td>"              <> "prep" <> "</td>" <>
+             "</tr>" <>
+             "</table>" )
 formatMGVerb (MGPredicate i _ f PredNoun)
   = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
              "<tr><td colspan=\"4\">" <> f <> "</td></tr>" <>

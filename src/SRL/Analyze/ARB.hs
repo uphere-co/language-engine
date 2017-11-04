@@ -75,6 +75,7 @@ findLabel mvs i = do
     MGEntity {..}           -> Just _mv_text
     MGPredicate {..}        -> case _mv_pred_info of
                                  PredVerb _ vrb -> Just (vrb ^. vp_lemma . to unLemma)
+                                 PredPrep p     -> Just p
                                  PredNoun       -> Just _mv_frame
 
 
@@ -89,6 +90,7 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
                             MGPredicate        {..} ->
                               case _mv_pred_info of
                                 PredVerb sns vrb -> return (_mv_frame,Just sns,vrb^.vp_negation)
+                                PredPrep _       -> return (_mv_frame,Nothing,Nothing)
                                 PredNoun         -> return (_mv_frame,Nothing,Nothing)
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) children
