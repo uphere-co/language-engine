@@ -46,6 +46,7 @@ import           SRL.Analyze.Match                       (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,MGEdge(..),MGVertex(..),MeaningGraph
+                                                         ,PredicateInfo(..)
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
                                                          ,onfn_senseID,onfn_definition,onfn_frame
@@ -253,7 +254,7 @@ formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}]
 
 formatMGVerb :: MGVertex -> Maybe (Int,Text)
 formatMGVerb (MGEntity    _ _ _ _) = Nothing
-formatMGVerb (MGPredicate i _ f _ v)
+formatMGVerb (MGPredicate i _ f (PredVerb _ v))
   = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
              "<tr><td colspan=\"4\">" <> f <> "</td></tr>" <>
              "<tr>" <>
@@ -263,7 +264,7 @@ formatMGVerb (MGPredicate i _ f _ v)
              "<td>" <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect) <> "</td>" <>
              "</tr>" <>
              "</table>" )
-formatMGVerb (MGNominalPredicate i _ f)
+formatMGVerb (MGPredicate i _ f PredNoun)
   = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
              "<tr><td colspan=\"4\">" <> f <> "</td></tr>" <>
              "<tr>" <>
@@ -276,12 +277,12 @@ formatMGVerb (MGNominalPredicate i _ f)
 
 
 formatMGEntity :: MGVertex -> Maybe (Int,Text)
-formatMGEntity (MGEntity i _ t ns  )      = Just (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-                                                    "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
-                                                    T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>
+formatMGEntity (MGEntity i _ t ns)   = Just (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+                                               "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
+                                               T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>
                                                "</table>")
-formatMGEntity (MGPredicate _ _ _ _ _)    = Nothing
-formatMGEntity (MGNominalPredicate _ _ _) = Nothing
+formatMGEntity (MGPredicate _ _ _ _) = Nothing
+
 
 
 dotMeaningGraph :: Text -> MeaningGraph -> Text

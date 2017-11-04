@@ -35,7 +35,6 @@ type VertexARB = (Vertex, Vertex, [Vertex])
 isFrame :: MGVertex -> Bool
 isFrame (MGEntity {..})           = False
 isFrame (MGPredicate {..})        = True
-isFrame (MGNominalPredicate {..}) = True
 
 
 isEntity :: MGVertex -> Bool
@@ -73,9 +72,10 @@ findLabel :: [MGVertex] -> Int -> Maybe Text
 findLabel mvs i = do
   v <- findVertex mvs i
   case v of
-    MGEntity {..}           -> Just (v ^. mv_text)
-    MGPredicate {..}        -> Just (v ^. mv_verb . vp_lemma . to unLemma)
-    MGNominalPredicate {..} -> Just (v ^. mv_frame)
+    MGEntity {..}           -> Just _mv_text
+    MGPredicate {..}        -> case _mv_pred_info of
+                                 PredVerb _ vrb -> Just (vrb ^. vp_lemma . to unLemma)
+                                 PredNoun       -> Just _mv_frame
 
 
 findSubjectObjects :: ([RoleInstance],MeaningGraph,Graph)
@@ -86,8 +86,10 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
   v <- hoistMaybe $ findVertex (mg^.mg_vertices) frmid
   (frmtxt,msense,mneg) <- case v of
                             MGEntity           {..} -> hoistMaybe Nothing
-                            MGPredicate        {..} -> return (_mv_frame,Just _mv_sense,_mv_verb^.vp_negation)
-                            MGNominalPredicate {..} -> return (_mv_frame,Nothing,Nothing)
+                            MGPredicate        {..} ->
+                              case _mv_pred_info of
+                                PredVerb sns vrb -> return (_mv_frame,Just sns,vrb^.vp_negation)
+                                PredNoun         -> return (_mv_frame,Nothing,Nothing)
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) children
   (sidx,subject) <- hoistMaybe $ do

@@ -42,9 +42,11 @@ import           NLP.Type.SyntaxProperty      (Voice(..))
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,SentStructure,VerbStructure
+                                              ,PredicateInfo(..)
+                                              ,_PredNoun,_MGPredicate
                                               ,ss_clausetr,ss_cpstr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
-                                              ,me_relation,mv_text,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges)
+                                              ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
 --
 -- import Debug.Trace
 
@@ -446,7 +448,7 @@ meaningGraph sstr =
       depmap = dependencyOfX'Tree =<< x'tr
       --
       preds = flip map matched $ \(rng,vprop,frame,sense,_mselected) i
-                                   -> MGPredicate i rng frame sense (simplifyVProp vprop)
+                                   -> MGPredicate i rng frame (PredVerb sense (simplifyVProp vprop))
       ipreds = zipWith ($) preds [1..]
       --
 
@@ -471,7 +473,7 @@ meaningGraph sstr =
       mkEntityFun (rng,txt,mrngtxt') =
         (\i -> MGEntity i rng txt []) :
           flip (maybe []) mrngtxt' (\(rng',txt') -> [ \i'  -> MGEntity i' rng' txt' []
-                                                    , \i'' -> MGNominalPredicate i'' rng' "Instance"
+                                                    , \i'' -> MGPredicate i'' rng' "Instance" PredNoun
                                                     ]
                                    )
 
@@ -481,9 +483,11 @@ meaningGraph sstr =
       vertices = ipreds ++ zipWith ($) entities (enumFrom (length ipreds+1))
       --
       rangeid :: MGVertex -> (Int,Range)
-      rangeid (MGEntity _ rng _ _)         = (0,rng)
+      rangeid mv = (if mv^?_MGPredicate._4._PredNoun == Just () then 1 else 0, mv^.mv_range)
+{-
+        (MGEntity _ rng _ _)         = (0,rng)
       rangeid (MGPredicate _ rng _ _ _)    = (0,rng)
-      rangeid (MGNominalPredicate _ rng _) = (1,rng)
+      rangeid (MGNominalPredicate _ rng _) = (1,rng) -}
       rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
       edges0 = do (rng,_,_,_,mselected) <- matched
                   i <- maybeToList (HM.lookup (0,rng) rngidxmap)   -- frame
@@ -523,7 +527,7 @@ tagMG mg wikilst =
   let mg' = mg ^.. mg_vertices
                  . traverse
                  . to (\x -> if (x ^. mv_range) `elemRevIsInsideR` (map fst wikilst) && isEntity x
-                             then x & (mv_resolved_entities .~ map (^. _2) (filter (\w -> (w ^. _1) `isInsideR` (x ^. mv_range)) wikilst))
+                             then x { _mv_resolved_entities = map (^. _2) (filter (\w -> (w ^. _1) `isInsideR` (x ^. mv_range)) wikilst)}
                              else x )
   in MeaningGraph mg' (mg ^. mg_edges)
 
@@ -536,8 +540,7 @@ changeMGText mg =
       mg'' = mg ^.. mg_vertices
                   . traverse
                   . to (\x -> case x of
-                           MGEntity {..} -> x & (mv_text .~ (T.replace "&" "-AND-" (x ^. mv_text)))
+                           MGEntity {..} -> x { _mv_text = T.replace "&" "-AND-" _mv_text }
                            MGPredicate {..} -> x
-                           MGNominalPredicate {..} -> x
                        )
   in MeaningGraph mg'' mg'
