@@ -194,7 +194,6 @@ loadConfig bypass_ner cfg = do
 
 loadAnalyzePredata :: LexDataConfig -> IO AnalyzePredata
 loadAnalyzePredata cfg = do
-  -- let cfg = cfgG
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   let ontomap = HM.fromList mapFromONtoFN
   sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)

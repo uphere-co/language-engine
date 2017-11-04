@@ -45,14 +45,13 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,vs_roleTopPatts,vs_vp
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
 --
--- import Debug.Trace
+import Debug.Trace
 
 
 
 mkTriples :: SentStructure -> ([X'Tree '[Lemma]],[(VerbStructure, CP '[Lemma])])
 mkTriples sstr =
-  let -- clausetr = sstr^.ss_clausetr
-      x'tr = sstr^.ss_cpstr
+  let x'tr = sstr^.ss_cpstr
   in ( x'tr
      , [(vstr,cp)| vstr <- sstr ^.ss_verbStructures
                  , let vp = vstr^.vs_vp
@@ -335,12 +334,12 @@ matchExtraRoles :: TaggedLemma '[Lemma]
 matchExtraRoles tagged cp felst =
   let mmeans = matchExtraRolesForPPing "by" "Means" tagged cp felst
       felst' = felst ++ maybeToList mmeans
-      mcomp  = matchExtraRolesForCPInCompVP (hasComplementizer ["after","before"]) "Time_vector" cp felst' <|>    -- for the time being
+      mcomp  = -- matchExtraRolesForCPInCompVP (hasComplementizer ["after","before"]) "Time_vector" cp felst' <|>    -- for the time being
                matchExtraRolesForCPInCompVP toInfinitive                           "Purpose"     cp felst' <|>
                matchExtraRolesForPPing "after"  "Time_vector" tagged cp felst'                             <|>
                matchExtraRolesForPPing "before" "Time_vector" tagged cp felst'
       felst'' = felst' ++ maybeToList mcomp
-      madj   = matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["after","before"])) "Time_vector"            cp felst'' <|>
+      madj   = -- matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["after","before"])) "Time_vector"            cp felst'' <|>
                matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["while"]))          "Contrary_circumstances" cp felst'' <|>
                matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["as"]))             "Explanation"            cp felst'' <|>
                matchExtraRolesForCPInAdjunctCP (Just toInfinitive)                           "Purpose"                cp felst'' <|>
@@ -405,7 +404,10 @@ matchFrame :: TaggedLemma '[Lemma]
            -> Maybe (Range,VerbProperty (Zipper '[Lemma])
                     ,Text
                     ,(SenseID,Bool)
-                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])]))
+                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])
+                    -- ,Maybe (Frame,[(FNFrameElement,Range)])
+
+                    )
 matchFrame tagged (vstr,cp) = do
   let verbp = cp^.complement.complement
       mDP = cp^.complement.specifier.trResolved
@@ -507,7 +509,7 @@ meaningGraph sstr =
                   i_type     <- maybeToList (HM.lookup (0,rng') rngidxmap)
                   [MGEdge "Instance" True Nothing i_frame i_instance, MGEdge "Type" False Nothing i_frame i_type]
 
-  in MeaningGraph vertices (edges0 ++ edges1)
+  in trace (show depmap) $ MeaningGraph vertices (edges0 ++ edges1)
 
 
 isEntity :: MGVertex -> Bool
