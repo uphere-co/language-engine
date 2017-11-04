@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns          #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE LambdaCase            #-}
@@ -47,6 +48,7 @@ import           NLP.Type.CoreNLP                       (Dependency)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.PennTreebankII.Match
 import qualified NLP.Type.PennTreebankII.Separated as N
+import           NLP.Type.SyntaxProperty                (Voice)
 import           OntoNotes.Corpus.Load
 import           OntoNotes.Corpus.PropBank
 import           OntoNotes.Parser.Sense
@@ -54,7 +56,7 @@ import           OntoNotes.Type.Sense
 import           OntoNotes.Type.SenseInventory
 import           PropBank.Match
 import           PropBank.Query
-import           PropBank.Type.Frame             hiding (ProgOption)
+import           PropBank.Type.Frame             hiding (ProgOption,Voice)
 import           PropBank.Type.Match
 import           PropBank.Type.Prop
 --
@@ -96,7 +98,7 @@ maybeNumberedArgument _                    = Nothing
 
 
 formatArgMap :: Bool -> [(Text,Text)] -> String
-formatArgMap isStat argmap = 
+formatArgMap isStat argmap =
   (if isStat
      then printf " %-20s " (fromMaybe "frame" (lookup "frame" argmap))
      else printf " %-20s         " (fromMaybe "frame" (lookup "frame" argmap)))
@@ -131,7 +133,7 @@ dummyMatch tr0 inst
         itr = mkIndexedTree tr
     in
     MatchedInstance
-  
+
     { _mi_instance = inst
     , _mi_arguments
         = do a <- inst^.inst_arguments
@@ -166,13 +168,13 @@ formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,_sense) =
       lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
       -- no more use of CoreNLP result. we directly extract information from PropBank instances.
       -- coretr = corenlp^._1
-      coretr = proptr
+      -- coretr = proptr
       minst = dummyMatch proptr inst
       nlemmamapfull = adjustedLemmaMap lemmamap proptr
       nlemmamap = fmap (^._1) nlemmamapfull
       verbprops = verbPropertyFromPennTree nlemmamap proptr
-      tagged = mkTaggedLemma (IM.toList nlemmamapfull) proptr []  -- for the time being 
-      clausetr = clauseStructure tagged verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx coretr))
+      tagged = mkTaggedLemma (IM.toList nlemmamapfull) proptr []  -- for the time being
+      clausetr = clauseStructure tagged verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr)) -- coretr))
       l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
       mvpmva =  matchVerbPropertyWithRelation tagged verbprops clausetr minst
@@ -214,7 +216,7 @@ formatStatInst doesShowDetail rolemap lma ((sense,sense_num),count) (mdefn,insts
   in "\n============================================================================\n"
      ++ printf "%20s : %6d :  %s\n" sensetxt  count (fromMaybe "" mdefn)
      ++ "============================================================================\n"
-     ++ maybe "" (formatArgMap False) margmap 
+     ++ maybe "" (formatArgMap False) margmap
      ++ (intercalate "\n" . map (formatInst doesShowDetail)) insts
 
 
@@ -225,7 +227,7 @@ printHeader (lma,count) = do
   putStrLn "*************************************************************"
   putStrLn "****                                                     ****"
   putStrLn (printf "****             %27s             ****" headstr)
-  putStrLn "****                                                     ****"    
+  putStrLn "****                                                     ****"
   putStrLn "*************************************************************"
   putStrLn "*************************************************************"
 
@@ -244,11 +246,40 @@ getDefInst sensedb instmap (sense,sense_num) =
 countSenseForLemma :: Text -> [((Text,Text),[a])] -> [((Text,Text),Int)]
 countSenseForLemma lma = sortBy (compare `on` (^._1))
                            . map (_2 %~ length)
-                           . filter (\((sense,_),_) -> sense == lma <> "-v") 
+                           . filter (\((sense,_),_) -> sense == lma <> "-v")
+
+
+
+updateStatMap :: HashMap (ArgPattern Voice GRel) Int
+              -> ((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)
+              -> HashMap (ArgPattern Voice GRel) Int
+updateStatMap !acc (filesidtid,corenlp,proptr,inst,_sense) =
+  let args = inst^.inst_arguments
+      iproptr = mkPennTreeIdx proptr
+      l2p = linkID2PhraseNode proptr
+      minst = dummyMatch proptr inst
+      lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
+      nlemmamapfull = adjustedLemmaMap lemmamap proptr
+      nlemmamap = fmap (^._1) nlemmamapfull
+      tagged = mkTaggedLemma (IM.toList nlemmamapfull) proptr []  -- for the time being
+      verbprops = verbPropertyFromPennTree nlemmamap proptr
+
+      clausetr = clauseStructure tagged verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr))
+      mvpmva = matchVerbPropertyWithRelation tagged verbprops clausetr minst
+      mtp = do (vp,_) <- mvpmva
+               constructCP tagged vp^? _Just._1.complement
+      argtable0 = mkArgTable iproptr l2p filesidtid args
+      argtable1 = zipperArgTable iproptr argtable0
+      argtable = fmap pnt argtable1
+        where pnt :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> ATNode GRel
+              pnt = fmap (phraseNodeType mtp)
+      argpatt = mkArgPattern mtp argtable
+  in HM.alter (\case Nothing -> Just 1 ; Just n -> Just (n+1)) argpatt acc
+
 
 
 showStat :: Bool                        -- ^ is tab separated format
-         -> [RoleInstance] 
+         -> [RoleInstance]
          -> HashMap Text Inventory
          -> [(Text,Int)]                -- ^ lemmastat
          -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
@@ -259,38 +290,17 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
     when (not isTSV) $ printHeader (lma,f)
     forM_ (countSenseForLemma lma lst) $ \((sense,sense_num),count) -> do
       let (mdefn,insts) = getDefInst sensedb classified_inst_map (sense,sense_num)
-          statmap = foldl' addfunc HM.empty insts
-            where addfunc acc (filesidtid,corenlp,proptr,inst,_sense) =
-                    let args = inst^.inst_arguments
-                        iproptr = mkPennTreeIdx proptr
-                        l2p = linkID2PhraseNode proptr
-                        minst = dummyMatch proptr inst
-                        lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
-                        nlemmamapfull = adjustedLemmaMap lemmamap proptr
-                        nlemmamap = fmap (^._1) nlemmamapfull
-                        tagged = mkTaggedLemma (IM.toList nlemmamapfull) proptr []  -- for the time being 
-                        verbprops = verbPropertyFromPennTree nlemmamap proptr
-                        
-                        clausetr = clauseStructure tagged verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr))
-                        mvpmva = matchVerbPropertyWithRelation tagged verbprops clausetr minst
-                        mtp = do (vp,_) <- mvpmva
-                                 constructCP tagged vp^? _Just._1.complement
-                        argtable0 = mkArgTable iproptr l2p filesidtid args
-                        argtable1 = zipperArgTable iproptr argtable0
-                        argtable = fmap pnt argtable1
-                          where pnt :: ATNode (BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text))) -> ATNode GRel
-                                pnt = fmap (phraseNodeType mtp)
-                        argpatt = mkArgPattern mtp argtable
-                    in HM.alter (\case Nothing -> Just 1 ; Just n -> Just (n+1)) argpatt acc
+          statmap = foldl' updateStatMap HM.empty insts
+
           statlst = (sortBy (flip compare `on` snd) . HM.toList) statmap
-          sensetxt = sense <> "." <> sense_num          
+          sensetxt = sense <> "." <> sense_num
           senseheader = "\n============================================================================\n"
                         ++ printf "%20s : %6d :  %s\n" sensetxt count (fromMaybe "" mdefn)
                         ++ "============================================================================\n"
       if (not isTSV)
         then do
           putStrLn senseheader
-          let margmap = getArgMapFromRoleMap (lma,sense_num) rolemap 
+          let margmap = getArgMapFromRoleMap (lma,sense_num) rolemap
           traverse_ (putStrLn . formatArgMap True) margmap
           forM_ statlst $ \(patt,n :: Int) -> do
             let str1 = formatArgPatt "voice" patt :: String
@@ -300,7 +310,7 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
             putStrLn $ printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d"
                          sense
                          sense_num
-                         (maybe "null" show (patt^.patt_property)) 
+                         (maybe "null" show (patt^.patt_property))
                          (maybe "null" formatGRel (patt^.patt_arg0))
                          (maybe "null" formatGRel (patt^.patt_arg1))
                          (maybe "null" formatGRel (patt^.patt_arg2))
@@ -309,7 +319,7 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
                          n
 
 showStatInst :: Bool
-             -> [RoleInstance] 
+             -> [RoleInstance]
              -> HashMap Text Inventory
              -> [(Text,Int)]                -- ^ lemmastat
              -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
@@ -338,7 +348,7 @@ readSenseInsts sensefile = fmap (rights . map parseSenseInst . map T.words . T.l
 --
 mergePropSense :: PennTree -> [Instance] -> [SenseInstance] -> [(Int, Maybe Instance, SenseInstance)]
 mergePropSense proptr insts senses =
-  let nonelist = map fst . filter (isNone.fst.snd) . zip [0..] . toList . getADTPennTree 
+  let nonelist = map fst . filter (isNone.fst.snd) . zip [0..] . toList . getADTPennTree
       adj = adjustIndex (nonelist proptr)
       lst = makeKeyAttrib (^.sinst_token_id) senses
   in map toTuple (joinAttrib (\x -> (either id id . adj) (x^.inst_predicate_id)) insts lst)
@@ -347,14 +357,14 @@ mergePropSense proptr insts senses =
 process :: LexDataConfig -> (Bool,Bool,Bool) -> HashMap Text Inventory -> [FilePath] -> IO ()
 process cfg (statonly,tsv,showdetail) sensedb fps = do
   let parsefiles = filter (\x -> takeExtensions x == ".parse") fps
-      propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps      
+      propfiles  = filter (\x -> takeExtensions x == ".prop" ) fps
       sensefiles = filter (\x -> takeExtensions x == ".sense") fps
       lst = map (\x -> fromTuple (takeBaseName x,x)) parsefiles
-      joiner = joinAttrib takeBaseName 
-     
+      joiner = joinAttrib takeBaseName
+
       lst' = mapMaybe (\(i,mf1,mf2,f3) -> (i,,,) <$> mf1 <*> mf2 <*> pure f3)
            . map toTuple $ sensefiles `joiner` (propfiles `joiner` lst)
-      
+
   matchedpairs <- fmap (concat . catMaybes) $ do
     flip traverse lst' $ \(article,sensefile,_propfile,_parsefile) -> do
       hPutStrLn stderr article
@@ -365,7 +375,7 @@ process cfg (statonly,tsv,showdetail) sensedb fps = do
       let match (i,r) = let ss = filter (\s -> s^.sinst_sentence_id == i) senses
                         in ((article,i),(r,ss))
       return . fmap (map match) $ mprops
-      
+
   let flatMatchedPairs = do ((f,sid),((((coretr,_,corelma),proptr),insts),senses)) <- matchedpairs
                             (tid,minst,sense) <- mergePropSense proptr insts senses
                             inst <- maybeToList minst
@@ -377,7 +387,7 @@ process cfg (statonly,tsv,showdetail) sensedb fps = do
   rolesetstat <- loadStatistics (cfg^.cfg_statistics)
   let lemmastat = mergeStatPB2Lemma rolesetstat
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
-  
+
   if statonly
-    then showStat tsv rolemap sensedb lemmastat classified_inst_map 
+    then showStat tsv rolemap sensedb lemmastat classified_inst_map
     else showStatInst showdetail rolemap sensedb lemmastat classified_inst_map
