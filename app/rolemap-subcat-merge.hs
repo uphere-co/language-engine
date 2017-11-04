@@ -21,13 +21,13 @@ import           Lexicon.Type              (ArgPattern(..))
 
 
 main = do
-  let verb_subcat_file = "/scratch/wavewave/run/20170820/verbsubcat_propbank_ontonotes_statonly.tsv"
-      rolemap_file = "/home/wavewave/repo/srcp/OntoNotes/mapping/final.txt"
+  let verb_subcat_file = "/scratch/wavewave/run/20170919/20170919_verbsubcat_ing.tsv"
+      rolemap_file = "/home/wavewave/repo/srcp/lexicon-builder/mapping/final.txt"
   subcats <- loadRolePattInsts verb_subcat_file
   rolemap <- loadRoleInsts rolemap_file
 
 
-  flip mapM_ subcats $ \subcat -> do
+  flip mapM_ (filter ((\x -> x == "tell" || x == "want") . (^._1._1)) subcats) $ \subcat -> do
     let pattstats0 = subcat^._2
         pattstats = mergePatterns pattstats0
         ipattstats = zip [1..] pattstats
