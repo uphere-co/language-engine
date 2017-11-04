@@ -31,10 +31,10 @@ type SenseID = (Text,POSVorN,Text)
 type PBArg = Text
 
 newtype FNFrameElement = FNFrameElement { unFNFrameElement :: Text }
-                       deriving (IsString,Show,Eq,Ord,Hashable)
+                       deriving (IsString,Show,Eq,Ord,Hashable,FromJSON,ToJSON)
 
 newtype FNFrame = FNFrame { unFNFrame :: Text }
-                deriving (IsString,Show,Eq,Ord,Hashable)
+                deriving (IsString,Show,Eq,Ord,Hashable,FromJSON,ToJSON)
 
 -- | LVSingle = single causation (either with CAUSE or without CAUSE) e.g. rise, raise
 --   LVDual   = dual causation (both with CAUSE and without CAUSE)    e.g. begin
