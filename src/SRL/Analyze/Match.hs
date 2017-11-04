@@ -484,10 +484,7 @@ meaningGraph sstr =
       --
       rangeid :: MGVertex -> (Int,Range)
       rangeid mv = (if mv^?_MGPredicate._4._PredNoun == Just () then 1 else 0, mv^.mv_range)
-{-
-        (MGEntity _ rng _ _)         = (0,rng)
-      rangeid (MGPredicate _ rng _ _ _)    = (0,rng)
-      rangeid (MGNominalPredicate _ rng _) = (1,rng) -}
+      --
       rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
       edges0 = do (rng,_,_,_,mselected) <- matched
                   i <- maybeToList (HM.lookup (0,rng) rngidxmap)   -- frame

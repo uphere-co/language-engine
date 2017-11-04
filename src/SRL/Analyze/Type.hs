@@ -138,14 +138,8 @@ data MGVertex = MGEntity    { _mv_id :: Int
                             , _mv_frame :: Text
                             , _mv_pred_info :: PredicateInfo
                             }
-{-              | MGNominalPredicate { _mv_id    :: Int
-                                   , _mv_range :: Range
-                                   , _mv_frame :: Text
-                                   }
--}
               deriving (Generic, Show)
 
--- makeLenses ''MGVertex
 
 mv_id :: Simple Lens MGVertex Int
 mv_id = lens _mv_id (\f a -> f { _mv_id = a })

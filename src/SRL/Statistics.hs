@@ -30,26 +30,16 @@ getGraphFromMG mg =
 
 
 numberOfPredicate :: SentStructure -> Int
-numberOfPredicate ss = length (ss^.ss_verbStructures) -- (SentStructure _ _ _ _ _ _ _ vstrs) = length vstrs
+numberOfPredicate ss = length (ss^.ss_verbStructures)
 
 
 numberOfMGVerbPredicate :: MeaningGraph -> Int
 numberOfMGVerbPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
   where
     fmtVerb mv = mv^?_MGPredicate._4._PredVerb >> return (mv^.mv_id)
-{-
-    MGEntity           {..} = Nothing
-    fmtVerb MGPredicate        {..} = Just _mv_id
-    fmtVerb MGNominalPredicate {..} = Nothing
--}
+
 
 numberOfMGPredicate :: MeaningGraph -> Int
 numberOfMGPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
   where
     fmtVerb mv = mv^?_MGPredicate >> return (mv^.mv_id)
-
-{-
-    MGEntity           {..} = Nothing
-    fmtVerb MGPredicate        {..} = Just _mv_id
-    fmtVerb MGNominalPredicate {..} = Just _mv_id
--}
