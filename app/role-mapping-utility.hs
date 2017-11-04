@@ -33,7 +33,9 @@ import           FrameNet.Type.Frame
 import           Lexicon.Format                   (formatArgPatt,formatRoleMap,formatRoleMapTSV)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query
-import           Lexicon.Type                     (POSVorN(..),RoleInstance,RolePattInstance,SenseID)
+import           Lexicon.Type                     (POSVorN(..),RoleInstance,RolePattInstance,SenseID
+                                                  ,FNFrame(..)
+                                                  )
 import           NLP.Type.SyntaxProperty          (Voice)
 import           OntoNotes.Type.SenseInventory
 import           PropBank.Query                   (PredicateDB,RoleSetDB
@@ -71,7 +73,7 @@ createONFN subcats sensemap framedb rolesetdb = do
   osense <- maybeToList $
               find (\s -> T.head (s^.sense_group) == g && s^.sense_n == n)
                    (si^.inventory_senses)
-  frame <- maybeToList $ HM.lookup frtxt (framedb^.frameDB)
+  frame <- maybeToList $ HM.lookup (unFNFrame frtxt) (framedb^.frameDB)
   let pbids = T.splitOn "," (osense^.sense_mappings.mappings_pb)
       pbs = mapMaybe (\pb -> HM.lookup pb (rolesetdb^.rolesetDB)) pbids
   return (lma,osense,frame,pbs,subcat)
