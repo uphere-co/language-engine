@@ -5,12 +5,13 @@ module Lexicon.Mapping.Causation where
 
 import           Control.Lens
 import           Data.Text      (Text)
+--
+import           Lexicon.Type   (FNFrame,FNFrameElement)
 
-
-data CauseDual = CauseDual { _cm_baseFrame :: Text
-                           , _cm_causativeFrame :: Text
-                           , _cm_externalAgent :: Text
-                           , _cm_extraMapping :: [(Text,Text)]
+data CauseDual = CauseDual { _cm_baseFrame :: FNFrame
+                           , _cm_causativeFrame :: FNFrame
+                           , _cm_externalAgent :: FNFrameElement
+                           , _cm_extraMapping :: [(FNFrameElement,FNFrameElement)]
                            }
                deriving Show
 
