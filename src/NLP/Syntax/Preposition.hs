@@ -1,6 +1,7 @@
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE TypeFamilies  #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module NLP.Syntax.Preposition where
 
@@ -8,6 +9,7 @@ import           Control.Lens            ((^.),(^?),(.~),(&))
 import           Control.Monad           (guard)
 import           Data.List               (find)
 import           Data.Maybe              (fromMaybe)
+import           Data.Text               (Text)
 --
 import           Data.BitreeZipper       (current,parent,extractZipperByRange)
 import           Data.Range              (isInsideR,Range)
@@ -80,3 +82,167 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
                  in if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
       dp' = dp & (headX .~ rng_head) . (maximalProjection .~ rng_dp')
   return (dp',[z_tpp])
+
+
+--
+-- | This is the list of English prepositions.
+--   source: https://en.wikipedia.org/wiki/List_of_English_prepositions
+--   I commented out (law,archaic,poetic,abbreviation,rare,formal,hyphenated,colonated)
+--
+singleWordPrepositions :: [Text]
+singleWordPrepositions = [ "aboard"
+                         , "about"
+                         , "above"
+                         -- , "absent"
+                         , "across"
+                         -- , "cross"
+                         , "after"
+                         , "against"
+                         , "along"
+                         , "alongside"
+                         , "amid"
+                         , "among"
+                         -- , "apropos"
+                         -- , "apud"
+                         , "around"
+                         , "as"
+                         , "astride"
+                         , "at"
+                         , "on"
+                         , "atop"
+                         , "ontop"
+                         , "bar"
+                         , "before"
+                         , "behind"
+                         , "below"
+                         , "beneath"
+                         , "beside"
+                         , "besides"
+                         , "between"
+                         , "beyond"
+                         , "but"
+                         , "by"
+                         -- , "chez"
+                         , "circa"
+                         , "come"
+                         , "despite"
+                         , "down"
+                         , "during"
+                         , "except"
+                         , "for"
+                         , "from"
+                         , "in"
+                         , "inside"
+                         , "into"
+                         , "less"
+                         , "like"
+                         , "minus"
+                         , "near"
+                         , "notwithstanding"
+                         , "of"
+                         , "off"
+                         , "on"
+                         , "onto"
+                         , "opposite"
+                         , "out"
+                         , "outside"
+                         , "over"
+                         -- , "pace"
+                         , "past"
+                         , "per"
+                         -- , "post"
+                         -- , "pre"
+                         -- , "pro"
+                         -- , "qua"
+                         -- , "re"
+                         -- , "sans"
+                         , "save"
+                         , "short"
+                         , "since"
+                         , "than"
+                         , "through"
+                         , "througout"
+                         , "to"
+                         , "toward"
+                         , "towards"
+                         , "under"
+                         , "underneath"
+                         , "unlike"
+                         , "until"
+                         , "till"
+                         , "up"
+                         , "upon"
+                         , "upside"
+                         , "versus"
+                         , "via"
+                         -- , "vice"
+                         -- , "vis-a-vis"
+                         , "with"
+                         , "within"
+                         , "without"
+                         , "worth"
+                         ]
+
+
+multiWordPrepositions :: [Text]
+multiWordPrepositions = [ -- two words
+                          "according to"
+                        , "adjacent to"
+                        , "ahead of"
+                        , "apart from"
+                        , "as for"
+                        , "as of"
+                        , "as per"
+                        , "as regards"
+                        , "aside from"
+                        , "back to"
+                        , "because of"
+                        , "close to"
+                        , "due to"
+                        , "except for"
+                        , "far from"
+                        , "inside of"
+                        , "instead of"
+                        , "left of"
+                        , "near to"
+                        , "next to"
+                        , "opposite of"
+                        , "opposite to"
+                        , "out from"
+                        , "out of"
+                        , "outside of"
+                        , "owing to"
+                        , "prior to"
+                        , "pursuant to"
+                        , "rather than"
+                        , "regardless of"
+                        , "right of"
+                        , "subsequent to"
+                        , "such as"
+                        , "thanks to"
+                        , "up to"
+                          -- three words
+                        , "as far as"
+                        , "as opposed to"
+                        , "as soon as"
+                        , "as well as"
+                          -- more words
+                        , "at the behest of"
+                        , "by means of"
+                        , "by virtue of"
+                        , "for the sake of"
+                        , "in accordance with"
+                        , "in addition to"
+                        , "in case of"
+                        , "in front of"
+                        , "in lieu of"
+                        , "in place of"
+                        , "in popint of"
+                        , "in spite of"
+                        , "on account of"
+                        , "on behalf of"
+                        , "on top of"
+                        , "with regard to"
+                        , "with respect to"
+                        , "with a view to"
+                        ]
