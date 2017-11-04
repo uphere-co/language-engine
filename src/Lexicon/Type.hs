@@ -1,16 +1,18 @@
-{-# LANGUAGE DeriveFoldable    #-}
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE DeriveFoldable             #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DeriveTraversable          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 module Lexicon.Type where
 
 import           Control.Lens         (makeLenses)
 import           Data.Aeson           (FromJSON,ToJSON)
 import           Data.Hashable        (Hashable)
+import           Data.String          (IsString)
 import           Data.Text            (Text)
 -- import qualified Data.Text    as T
 -- import qualified Data.Text.IO as T.IO
@@ -28,8 +30,11 @@ type SenseID = (Text,POSVorN,Text)
 
 type PBArg = Text
 
-type FNFrameElement = Text
+newtype FNFrameElement = FNFrameElement { unFNFrameElement :: Text }
+                       deriving (IsString,Show,Eq,Ord,Hashable,FromJSON,ToJSON)
 
+newtype FNFrame = FNFrame { unFNFrame :: Text }
+                deriving (IsString,Show,Eq,Ord,Hashable,FromJSON,ToJSON)
 
 -- | LVSingle = single causation (either with CAUSE or without CAUSE) e.g. rise, raise
 --   LVDual   = dual causation (both with CAUSE and without CAUSE)    e.g. begin
