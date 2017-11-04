@@ -23,15 +23,19 @@ import           Lexicon.Data
 import           Lexicon.App.VerbSubcat
 
 
-data ProgOption = ProgOption { showDetail :: Bool
-                             , statOnly   :: Bool
-                             , tsvFormat  :: Bool
+data ProgOption = ProgOption { _showDetail :: Bool
+                             , _statOnly   :: Bool
+                             , _tsvFormat  :: Bool
+                             , _configFile :: FilePath
                              } deriving Show
+
+makeLenses ''ProgOption
 
 pOptions :: Parser ProgOption
 pOptions = ProgOption <$> switch (long "detail" <> short 'd' <> help "Whether to show detail")
                       <*> switch (long "stat" <> short 's' <> help "Calculate statistics")
                       <*> switch (long "tsv" <> short 't' <> help "tsv format")
+                      <*> strOption (long "config" <> short 'c' <> help "config file")
 
 progOption :: ParserInfo ProgOption 
 progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant to verb subcategorization")
@@ -40,11 +44,11 @@ progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant t
 main :: IO ()
 main = do
   opt <- execParser progOption
-  cfg  <- loadLexDataConfig "config.json" >>= \case Left err -> error err
-                                                    Right x  -> return x
+  cfg  <- loadLexDataConfig (opt^.configFile) >>= \case Left err -> error err
+                                                        Right x  -> return x
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   
   dtr <- build (cfg^.cfg_wsj_directory)
   let fps = sort (toList (dirTree dtr))
-  process cfg (statOnly opt,tsvFormat opt,showDetail opt) sensedb fps
+  process cfg (opt^.statOnly,opt^.tsvFormat,opt^.showDetail) sensedb fps
 
