@@ -3,14 +3,17 @@
 
 module SRL.Statistics where
 
-import           Control.Lens      ((^.),(^..),to,traverse)
+import           Control.Lens        ((^.),(^..),(^?),to,traverse,_4,_Just)
+import           Control.Lens.Extras (is)
+import           Control.Monad       (guard)
 import           Data.Graph
-import           Data.Maybe        (mapMaybe)
+import           Data.Maybe          (mapMaybe)
 --
-import           SRL.Analyze.Type  (MGVertex(..),SentStructure(..),MeaningGraph
-                                   ,me_start,me_end,mg_edges,mg_vertices,mv_id
-                                   ,ss_verbStructures
-                                   )
+import           SRL.Analyze.Type    (MGVertex(..),SentStructure(..),MeaningGraph
+                                     ,_MGPredicate,_PredVerb
+                                     ,me_start,me_end,mg_edges,mg_vertices,mv_id
+                                     ,ss_verbStructures
+                                     )
 
 
 -- DocStructure mtokenss sentitems mergedtags sstrs
@@ -27,20 +30,16 @@ getGraphFromMG mg =
 
 
 numberOfPredicate :: SentStructure -> Int
-numberOfPredicate ss = length (ss^.ss_verbStructures) -- (SentStructure _ _ _ _ _ _ _ vstrs) = length vstrs
+numberOfPredicate ss = length (ss^.ss_verbStructures)
 
 
 numberOfMGVerbPredicate :: MeaningGraph -> Int
 numberOfMGVerbPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
   where
-    fmtVerb MGEntity           {..} = Nothing
-    fmtVerb MGPredicate        {..} = Just _mv_id
-    fmtVerb MGNominalPredicate {..} = Nothing
+    fmtVerb mv = mv^?_MGPredicate._4._PredVerb >> return (mv^.mv_id)
 
 
 numberOfMGPredicate :: MeaningGraph -> Int
 numberOfMGPredicate mg = length $ mapMaybe fmtVerb (mg ^. mg_vertices)
   where
-    fmtVerb MGEntity           {..} = Nothing
-    fmtVerb MGPredicate        {..} = Just _mv_id
-    fmtVerb MGNominalPredicate {..} = Just _mv_id
+    fmtVerb mv = mv^?_MGPredicate >> return (mv^.mv_id)

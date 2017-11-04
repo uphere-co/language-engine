@@ -42,9 +42,11 @@ import           NLP.Type.SyntaxProperty      (Voice(..))
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,SentStructure,VerbStructure
+                                              ,PredicateInfo(..)
+                                              ,_PredNoun,_MGPredicate
                                               ,ss_clausetr,ss_cpstr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
-                                              ,me_relation,mv_text,mv_range,mv_id,mv_resolved_entities,mg_vertices,mg_edges)
+                                              ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
 --
 -- import Debug.Trace
 
@@ -113,7 +115,6 @@ matchObjects :: [(PBArg,FNFrameElement)]
              -> [(FNFrameElement, CompVP '[Lemma])]
 matchObjects rolemap verbp patt = do
   (garg,obj) <- zip [GA1,GA2] (filter (\case CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False) (verbp^..complement.traverse.trResolved._Just))
-  -- guard ()
   (p,a) <- maybeToList (pbArgForGArg garg patt)
   case obj of
     CompVP_CP cp -> guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
@@ -129,18 +130,8 @@ matchPP :: TaggedLemma '[Lemma]
         -> (Maybe Text,Maybe PrepClass,Maybe Bool)
         -> Maybe (PP '[Lemma])
 matchPP tagged cp (mprep,mpclass,mising) = do
-    -- Left (rng,S_PP prep' _ _) <- find ppcheck (paws^.pa_candidate_args)
     let candidates = cp^..complement.complement.complement.traverse.trResolved._Just._CompVP_PP
     find ppcheck candidates
-    {-
-    -- let rng = (-1,-1)
-    --    prep' = Prep_NULL
-    let tr = cp^.maximalProjection.to root.to current
-    z' <- (find (\z -> z^?to current._PN._1._1 == Just rng) . getNodes .mkBitreeZipper []) tr
-    let pclass = case mpclass of
-                   Nothing -> PC_Other
-                   Just pclass -> pclass
-    mkPPFromZipper tagged pclass z' -}
   where
     ppcheck pp = let (prep',pclass') = pp^.headX
                      ising' = is _Just (pp^?complement._CompPP_Gerund)
@@ -347,15 +338,16 @@ matchExtraRoles :: TaggedLemma '[Lemma]
 matchExtraRoles tagged cp felst =
   let mmeans = matchExtraRolesForPPing "by" "Means" tagged cp felst
       felst' = felst ++ maybeToList mmeans
-      mcomp  = matchExtraRolesForCPInCompVP (hasComplementizer ["after","before"]) "Relative_time" cp felst' <|>    -- for the time being
-               matchExtraRolesForCPInCompVP toInfinitive                           "Purpose"       cp felst' <|>
-               matchExtraRolesForPPing "after"  "Relative_time" tagged cp felst'                             <|>
-               matchExtraRolesForPPing "before" "Relative_time" tagged cp felst'
+      mcomp  = matchExtraRolesForCPInCompVP (hasComplementizer ["after","before"]) "Time_vector" cp felst' <|>    -- for the time being
+               matchExtraRolesForCPInCompVP toInfinitive                           "Purpose"     cp felst' <|>
+               matchExtraRolesForPPing "after"  "Time_vector" tagged cp felst'                             <|>
+               matchExtraRolesForPPing "before" "Time_vector" tagged cp felst'
       felst'' = felst' ++ maybeToList mcomp
-      madj   = matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["after","before"])) "Relative_time" cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["while","as"]))     "Manner"        cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP (Just toInfinitive)                           "Purpose"       cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP Nothing                                       "Manner"        cp felst''
+      madj   = matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["after","before"])) "Time_vector"            cp felst'' <|>
+               matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["while"]))          "Contrary_circumstances" cp felst'' <|>
+               matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["as"]))             "Explanation"            cp felst'' <|>
+               matchExtraRolesForCPInAdjunctCP (Just toInfinitive)                           "Purpose"                cp felst'' <|>
+               matchExtraRolesForCPInAdjunctCP Nothing                                       "Event_description"      cp felst''
   in felst'' ++ maybeToList madj
 
 
@@ -456,7 +448,7 @@ meaningGraph sstr =
       depmap = dependencyOfX'Tree =<< x'tr
       --
       preds = flip map matched $ \(rng,vprop,frame,sense,_mselected) i
-                                   -> MGPredicate i rng frame sense (simplifyVProp vprop)
+                                   -> MGPredicate i rng frame (PredVerb sense (simplifyVProp vprop))
       ipreds = zipWith ($) preds [1..]
       --
 
@@ -481,7 +473,7 @@ meaningGraph sstr =
       mkEntityFun (rng,txt,mrngtxt') =
         (\i -> MGEntity i rng txt []) :
           flip (maybe []) mrngtxt' (\(rng',txt') -> [ \i'  -> MGEntity i' rng' txt' []
-                                                    , \i'' -> MGNominalPredicate i'' rng' "Instance"
+                                                    , \i'' -> MGPredicate i'' rng' "Instance" PredNoun
                                                     ]
                                    )
 
@@ -491,9 +483,8 @@ meaningGraph sstr =
       vertices = ipreds ++ zipWith ($) entities (enumFrom (length ipreds+1))
       --
       rangeid :: MGVertex -> (Int,Range)
-      rangeid (MGEntity _ rng _ _)         = (0,rng)
-      rangeid (MGPredicate _ rng _ _ _)    = (0,rng)
-      rangeid (MGNominalPredicate _ rng _) = (1,rng)
+      rangeid mv = (if mv^?_MGPredicate._4._PredNoun == Just () then 1 else 0, mv^.mv_range)
+      --
       rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
       edges0 = do (rng,_,_,_,mselected) <- matched
                   i <- maybeToList (HM.lookup (0,rng) rngidxmap)   -- frame
@@ -533,7 +524,7 @@ tagMG mg wikilst =
   let mg' = mg ^.. mg_vertices
                  . traverse
                  . to (\x -> if (x ^. mv_range) `elemRevIsInsideR` (map fst wikilst) && isEntity x
-                             then x & (mv_resolved_entities .~ map (^. _2) (filter (\w -> (w ^. _1) `isInsideR` (x ^. mv_range)) wikilst))
+                             then x { _mv_resolved_entities = map (^. _2) (filter (\w -> (w ^. _1) `isInsideR` (x ^. mv_range)) wikilst)}
                              else x )
   in MeaningGraph mg' (mg ^. mg_edges)
 
@@ -546,8 +537,7 @@ changeMGText mg =
       mg'' = mg ^.. mg_vertices
                   . traverse
                   . to (\x -> case x of
-                           MGEntity {..} -> x & (mv_text .~ (T.replace "&" "-AND-" (x ^. mv_text)))
+                           MGEntity {..} -> x { _mv_text = T.replace "&" "-AND-" _mv_text }
                            MGPredicate {..} -> x
-                           MGNominalPredicate {..} -> x
                        )
   in MeaningGraph mg'' mg'

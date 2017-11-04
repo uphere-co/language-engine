@@ -7,7 +7,7 @@
 
 module SRL.Analyze.Type where
 
-import           Control.Lens                  ((^.),_2,makeLenses,makePrisms)
+import           Control.Lens                  -- ((^.),_2,makeLenses,makePrisms)
 import           Data.Aeson
 import           Data.Function                 (on)
 import           Data.HashMap.Strict           (HashMap)
@@ -119,6 +119,13 @@ instance FromJSON DocAnalysisInput where
   parseJSON = genericParseJSON defaultOptions
 
 
+data PredicateInfo = PredVerb { _pi_sense :: (SenseID,Bool)  -- ^ (ON sense ID, causation)
+                              , _pi_verb  :: VerbProperty Text
+                              }
+                   | PredNoun
+                   deriving (Generic, Show)
+
+makePrisms ''PredicateInfo
 
 
 data MGVertex = MGEntity    { _mv_id :: Int
@@ -129,17 +136,18 @@ data MGVertex = MGEntity    { _mv_id :: Int
               | MGPredicate { _mv_id    :: Int
                             , _mv_range :: Range
                             , _mv_frame :: Text
-                            , _mv_sense :: (SenseID,Bool)  -- ^ (ON sense ID, causation)
-                            , _mv_verb  :: VerbProperty Text
+                            , _mv_pred_info :: PredicateInfo
                             }
-              | MGNominalPredicate { _mv_id    :: Int
-                                   , _mv_range :: Range
-                                   , _mv_frame :: Text
-                                   }
-
               deriving (Generic, Show)
 
-makeLenses ''MGVertex
+
+mv_id :: Simple Lens MGVertex Int
+mv_id = lens _mv_id (\f a -> f { _mv_id = a })
+
+mv_range :: Simple Lens MGVertex Range
+mv_range = lens _mv_range (\f a -> f { _mv_range = a })
+
+
 makePrisms ''MGVertex
 
 -- orphan
@@ -151,8 +159,12 @@ instance ToJSON (VerbProperty Text)
 -- orphan
 instance FromJSON (VerbProperty Text)
 
+instance FromJSON PredicateInfo
+
+instance ToJSON PredicateInfo
 
 instance ToJSON MGVertex
+
 instance FromJSON MGVertex
 
 data MGEdge = MGEdge { _me_relation :: Text
