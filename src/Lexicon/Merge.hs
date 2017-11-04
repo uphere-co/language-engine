@@ -15,13 +15,11 @@ import           NLP.Type.PennTreebankII       (TernaryLogic(..))
 import           NLP.Type.SyntaxProperty       (Voice(..))
 --
 import           Lexicon.Type                  (ArgPattern(..), GArg(..), GRel(..)
-                                               ,patt_property
-                                               ,patt_arg0
-                                               ,patt_arg1
-                                               ,patt_arg2
-                                               ,patt_arg3
-                                               ,patt_arg4
-                                               )
+                                               ,patt_property,patt_arg0,patt_arg1
+                                               ,patt_arg2,patt_arg3,patt_arg4
+                                               ,findGArg)
+
+import Debug.Trace
 
 
 convertPassive :: ArgPattern Voice GRel -> ArgPattern () GRel
@@ -43,8 +41,11 @@ convertPassive patt =
                         (patt^.patt_arg4)
 
   where
+    arglst = [patt^.patt_arg0,patt^.patt_arg1,patt^.patt_arg2,patt^.patt_arg3,patt^.patt_arg4]
+    gargs = mapMaybe (>>= findGArg) arglst
+
     conv (GR_PP (Just ("by",_))) = GR_NP (Just GASBJ)
-    conv (GR_NP (Just GASBJ))    = GR_NP (Just GA1)
+    conv (GR_NP (Just GASBJ))    = if not (GA1 `elem` gargs) then GR_NP (Just GA1) else GR_NP Nothing
     conv x                       = x
 
 
@@ -52,9 +53,11 @@ convertPassive patt =
 convertNP :: ArgPattern () GRel -> ArgPattern () GRel
 convertNP patt =
   let arglst = [patt^.patt_arg0,patt^.patt_arg1,patt^.patt_arg2,patt^.patt_arg3,patt^.patt_arg4]
-  in if | not (Just (GR_NP (Just GASBJ)) `elem` arglst) && patt^.patt_arg0 == Just (GR_NP Nothing) -> (patt_arg0 .~ Just (GR_NP (Just GASBJ))) patt
-        | not (Just (GR_NP (Just GA1)) `elem` arglst) && patt^.patt_arg1 == Just (GR_NP Nothing) -> (patt_arg1 .~ Just (GR_NP (Just GA1))) patt
-        | otherwise                                                                                -> patt
+      gargs = mapMaybe (>>= findGArg) arglst
+  in if | not (GASBJ `elem` gargs) && patt^.patt_arg0 == Just (GR_NP Nothing) -> (patt_arg0 .~ Just (GR_NP (Just GASBJ))) patt
+        | not (GA1   `elem` gargs) && patt^.patt_arg1 == Just (GR_NP Nothing) -> (patt_arg1 .~ Just (GR_NP (Just GA1))) patt
+        | not (GA2   `elem` gargs) && patt^.patt_arg1 == Just (GR_NP Nothing) -> (patt_arg1 .~ Just (GR_NP (Just GA2))) patt
+        | otherwise                                                           -> patt
 
 
 mergeS (GR_S x) = GR_SBAR x
@@ -72,9 +75,11 @@ convertS = (patt_arg0 %~ fmap mergeS)
 convertSBAR :: ArgPattern () GRel -> ArgPattern () GRel
 convertSBAR patt =
   let arglst = [patt^.patt_arg0,patt^.patt_arg1,patt^.patt_arg2,patt^.patt_arg3,patt^.patt_arg4]
-  in if | not (Just (GR_S (Just GASBJ)) `elem` arglst)  && patt^.patt_arg0 == Just (GR_SBAR Nothing) -> (patt_arg0 .~ Just (GR_SBAR (Just GASBJ))) patt
-        | not (Just (GR_SBAR (Just GA1)) `elem` arglst) && patt^.patt_arg1 == Just (GR_SBAR Nothing) -> (patt_arg1 .~ Just (GR_SBAR (Just GA1))) patt
-        | otherwise                                                                                  -> patt
+      gargs = mapMaybe (>>= findGArg) arglst
+  in if | not (GASBJ `elem` gargs) && patt^.patt_arg0 == Just (GR_SBAR Nothing) -> (patt_arg0 .~ Just (GR_SBAR (Just GASBJ))) patt
+        | not (GA1   `elem` gargs) && patt^.patt_arg1 == Just (GR_SBAR Nothing) -> (patt_arg1 .~ Just (GR_SBAR (Just GA1))) patt
+        | not (GA2   `elem` gargs) && patt^.patt_arg1 == Just (GR_SBAR Nothing) -> (patt_arg1 .~ Just (GR_SBAR (Just GA2))) patt
+        | otherwise                                                             -> patt
 
 
 mergePatterns :: [(ArgPattern Voice GRel,Int)] -> [(ArgPattern () GRel,Int)]
@@ -133,8 +138,7 @@ topPatterns ipatts slst = do
 
 
 constructTopPatterns :: [(ArgPattern Voice GRel,Int)] -> [(ArgPattern () GRel,Int)]
-constructTopPatterns insts = 
+constructTopPatterns insts =
   let ipattstats = (zip [1..] . mergePatterns) insts
       supersub = listOfSupersetSubset . patternGraph (patternRelation `on` (^._1)) $ ipattstats
   in sortBy (flip compare `on` snd) (topPatterns ipattstats supersub)
-
