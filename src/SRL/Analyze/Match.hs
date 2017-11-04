@@ -23,19 +23,16 @@ import           Data.Monoid                  (First(..))
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
-import           Data.Bitree                  (getNodes,getRoot1,_PN)
-import           Data.BitreeZipper            (child1,current,mkBitreeZipper,next,root,extractZipperById)
+import           Data.Bitree                  (getRoot1)
+import           Data.BitreeZipper            (current,extractZipperById)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,constructCP,currentCPDPPP)
-import           NLP.Syntax.Format            (formatPAWS)
-import           NLP.Syntax.Noun              (splitDP,mkPPFromZipper)
-import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemma0,isChunkAs,isPOSAs)
+import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemma0)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 --
@@ -44,7 +41,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,SentStructure,VerbStructure
                                               ,PredicateInfo(..)
                                               ,_PredNoun,_MGPredicate
-                                              ,ss_clausetr,ss_cpstr,ss_tagged,ss_verbStructures
+                                              ,ss_cpstr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
 --
@@ -54,7 +51,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 
 mkTriples :: SentStructure -> ([X'Tree '[Lemma]],[(VerbStructure, CP '[Lemma])])
 mkTriples sstr =
-  let clausetr = sstr^.ss_clausetr
+  let -- clausetr = sstr^.ss_clausetr
       x'tr = sstr^.ss_cpstr
   in ( x'tr
      , [(vstr,cp)| vstr <- sstr ^.ss_verbStructures
@@ -129,7 +126,7 @@ matchPP :: TaggedLemma '[Lemma]
         -> CP '[Lemma]
         -> (Maybe Text,Maybe PrepClass,Maybe Bool)
         -> Maybe (PP '[Lemma])
-matchPP tagged cp (mprep,mpclass,mising) = do
+matchPP _tagged cp (mprep,mpclass,mising) = do
     let candidates = cp^..complement.complement.complement.traverse.trResolved._Just._CompVP_PP
     find ppcheck candidates
   where
@@ -391,7 +388,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
                                    then let dp' = ((headX .~  (b',b-1)) . (maximalProjection .~ (b,e)) . (adjunct .~ [])) dp
                                         in (fe',CompVP_PP (mkPP prep' o' dp'))
                                    else (fe',CompVP_PP pp)
-             CompPP_Gerund z -> (fe',CompVP_PP pp)
+             CompPP_Gerund _ -> (fe',CompVP_PP pp)
     f (fe,rng@(b,e)) (fe',CompVP_DP dp)
       = let rng'@(b',_) = dp^.maximalProjection
         in -- for the time being, use this ad hoc algorithm

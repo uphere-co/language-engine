@@ -25,7 +25,6 @@ import           Text.Printf                             (printf)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens')
 import           Data.BitreeZipper
-import           Data.Range
 import qualified HTMLEntities.Text             as HTMLT
 import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
 import           Lexicon.Type                            (ArgPattern(..),RoleInstance,GRel(..),FNFrameElement)
@@ -202,7 +201,7 @@ formatVerbStructure tagged clausetr x'tr (VerbStructure vp senses mrmmtoppatts) 
 showMatchedFE :: TaggedLemma '[Lemma] -> (FNFrameElement, CompVP '[Lemma]) -> String
 --                                         FE   range prep text
 showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (dp^.headX.to show) ("" :: Text) (headText tagged dp)
-showMatchedFE tagged (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("" :: Text) (gettext z)
+showMatchedFE _      (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("" :: Text) (gettext z)
   where z = cp^.maximalProjection
         gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 showMatchedFE tagged (fe,CompVP_PP pp) =
@@ -217,7 +216,7 @@ showMatchedFE tagged (fe,CompVP_PP pp) =
        CompPP_DP dp    -> printf "%-15s: %-7s %3s(%4s) %s" fe (dp^.headX.to show) prep pclass (headText tagged dp)
        CompPP_Gerund z -> printf "%-15s: %-7s %3s(%4s) %s" fe ((show.getRange.current) z) prep pclass (gettext z)
   where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
-showMatchedFE tagged (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
+showMatchedFE _      (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
   where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 
 

@@ -3,13 +3,13 @@
 
 module SRL.Statistics where
 
-import           Control.Lens        ((^.),(^..),(^?),to,traverse,_4,_Just)
-import           Control.Lens.Extras (is)
-import           Control.Monad       (guard)
+import           Control.Lens        ((^.),(^..),(^?),to,traverse,_4)
+-- import           Control.Lens.Extras (is)
+-- import           Control.Monad       (guard)
 import           Data.Graph
 import           Data.Maybe          (mapMaybe)
 --
-import           SRL.Analyze.Type    (MGVertex(..),SentStructure(..),MeaningGraph
+import           SRL.Analyze.Type    (SentStructure(..),MeaningGraph
                                      ,_MGPredicate,_PredVerb
                                      ,me_start,me_end,mg_edges,mg_vertices,mv_id
                                      ,ss_verbStructures

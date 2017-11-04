@@ -122,6 +122,7 @@ instance FromJSON DocAnalysisInput where
 data PredicateInfo = PredVerb { _pi_sense :: (SenseID,Bool)  -- ^ (ON sense ID, causation)
                               , _pi_verb  :: VerbProperty Text
                               }
+                   --   | PredPrep { _pi_prep :: Text }
                    | PredNoun
                    deriving (Generic, Show)
 

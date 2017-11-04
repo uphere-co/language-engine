@@ -22,6 +22,7 @@ import           SRL.Analyze.Type                             (DocAnalysisInput(
 import           SRL.Analyze.Util                             (addText,listTimexToTagPos,getSentenceOffsets)
 
 
+emptyDocAnalysisInput :: DocAnalysisInput
 emptyDocAnalysisInput = DocAnalysisInput
   { _dainput_sents     = []
   , _dainput_sentidxs  = []
