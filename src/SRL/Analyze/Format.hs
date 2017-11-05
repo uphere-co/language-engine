@@ -25,10 +25,10 @@ import           Text.Printf                             (printf)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens')
 import           Data.BitreeZipper
-import           Data.Range
 import qualified HTMLEntities.Text             as HTMLT
 import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
-import           Lexicon.Type                            (ArgPattern(..),RoleInstance,GRel(..),FNFrameElement)
+import           Lexicon.Type                            (ArgPattern(..),RoleInstance,GRel(..)
+                                                         ,FNFrame(..),FNFrameElement(..))
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
 import           NLP.Syntax.Type
@@ -201,8 +201,8 @@ formatVerbStructure tagged clausetr x'tr (VerbStructure vp senses mrmmtoppatts) 
 
 showMatchedFE :: TaggedLemma '[Lemma] -> (FNFrameElement, CompVP '[Lemma]) -> String
 --                                         FE   range prep text
-showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (dp^.headX.to show) ("" :: Text) (headText tagged dp)
-showMatchedFE tagged (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("" :: Text) (gettext z)
+showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (dp^.headX.to show) ("" :: Text) (headText tagged dp)
+showMatchedFE _      (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ((show.getRange.current) z) ("" :: Text) (gettext z)
   where z = cp^.maximalProjection
         gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 showMatchedFE tagged (fe,CompVP_PP pp) =
@@ -214,10 +214,10 @@ showMatchedFE tagged (fe,CompVP_PP pp) =
                  PC_Time -> "time"
                  PC_Other -> ""
   in case pp^.complement of
-       CompPP_DP dp    -> printf "%-15s: %-7s %3s(%4s) %s" fe (dp^.headX.to show) prep pclass (headText tagged dp)
-       CompPP_Gerund z -> printf "%-15s: %-7s %3s(%4s) %s" fe ((show.getRange.current) z) prep pclass (gettext z)
+       CompPP_DP dp    -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) (dp^.headX.to show) prep pclass (headText tagged dp)
+       CompPP_Gerund z -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) ((show.getRange.current) z) prep pclass (gettext z)
   where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
-showMatchedFE tagged (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
+showMatchedFE _      (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
   where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 
 
@@ -230,7 +230,7 @@ showMatchedFrame tagged (vstr,cp) = do
   flip traverse_ (matchFrame tagged (vstr,cp)) $ \(rng,_,frame,_,mselected) -> do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
-    T.IO.putStrLn ("Frame: " <> frame)
+    T.IO.putStrLn ("Frame: " <> unFNFrame frame)
     flip traverse_ mselected $ \(_,felst) -> mapM_ (putStrLn . showMatchedFE tagged) felst
 
 
@@ -239,7 +239,7 @@ formatMGEdge :: MGEdge -> Text
 formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}];"
                    (e^.me_start
                    ,e^.me_end
-                   ,e^.me_relation <> maybe "" (":" <>) (e^.me_prep)
+                   ,unFNFrameElement (e^.me_relation) <> maybe "" (":" <>) (e^.me_prep)
                    ,if (e^.me_ismodifier) then "bold" else "solid" :: Text
                    ,"" :: Text
                    )
@@ -256,7 +256,7 @@ formatMGVerb :: MGVertex -> Maybe (Int,Text)
 formatMGVerb (MGEntity    _ _ _ _) = Nothing
 formatMGVerb (MGPredicate i _ f (PredVerb _ v))
   = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-             "<tr><td colspan=\"4\">" <> f <> "</td></tr>" <>
+             "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
              "<tr>" <>
              "<td width=\"20\">" <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> "</td>" <>
              "<td width=\"20\">" <> fromMaybe "" (v^?vp_negation._Just._1)           <> "</td>" <>
@@ -266,7 +266,7 @@ formatMGVerb (MGPredicate i _ f (PredVerb _ v))
              "</table>" )
 formatMGVerb (MGPredicate i _ f PredNoun)
   = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-             "<tr><td colspan=\"4\">" <> f <> "</td></tr>" <>
+             "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
              "<tr>" <>
              "<td width=\"20\">" <> " </td>" <>
              "<td width=\"20\">" <> " </td>" <>

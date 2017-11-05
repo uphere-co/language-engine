@@ -7,7 +7,7 @@
 
 module SRL.Analyze where
 
-import           Control.Lens                 ((^.),(^..),(.~),(&),_Just,to,_1,_3)
+import           Control.Lens                 ((^.),(^..),(.~),(&),_Just,_1,_3)
 import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
@@ -34,7 +34,7 @@ import           CoreNLP.Simple.Type          (tokenizer,words2sentences,postagg
 import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts)
-import           Lexicon.Type                 (RoleInstance,RolePattInstance)
+import           Lexicon.Type                 (FNFrame,RoleInstance,RolePattInstance)
 import           Lexicon.Data                 (LexDataConfig(..),cfg_framenet_framedir
                                               ,cfg_rolemap_file
                                               ,cfg_sense_inventory_file
@@ -209,7 +209,7 @@ getAnalysis :: DocAnalysisInput
             -> (HashMap Text Inventory
                ,HashMap (Text,Text) Int
                ,FrameDB
-               ,HashMap Text [(Text,Text)]
+               ,HashMap Text [(Text,FNFrame)]
                ,([Sentence] -> [EntityMention Text])
                ,[RoleInstance]
                ,[RolePattInstance Voice])

@@ -23,19 +23,16 @@ import           Data.Monoid                  (First(..))
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
-import           Data.Bitree                  (getNodes,getRoot1,_PN)
-import           Data.BitreeZipper            (child1,current,mkBitreeZipper,next,root,extractZipperById)
+import           Data.Bitree                  (getRoot1)
+import           Data.BitreeZipper            (current,extractZipperById)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,constructCP,currentCPDPPP)
-import           NLP.Syntax.Format            (formatPAWS)
-import           NLP.Syntax.Noun              (splitDP,mkPPFromZipper)
-import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemma0,isChunkAs,isPOSAs)
+import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemma0)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 --
@@ -44,7 +41,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,SentStructure,VerbStructure
                                               ,PredicateInfo(..)
                                               ,_PredNoun,_MGPredicate
-                                              ,ss_clausetr,ss_cpstr,ss_tagged,ss_verbStructures
+                                              ,ss_cpstr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
 --
@@ -54,7 +51,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 
 mkTriples :: SentStructure -> ([X'Tree '[Lemma]],[(VerbStructure, CP '[Lemma])])
 mkTriples sstr =
-  let clausetr = sstr^.ss_clausetr
+  let -- clausetr = sstr^.ss_clausetr
       x'tr = sstr^.ss_cpstr
   in ( x'tr
      , [(vstr,cp)| vstr <- sstr ^.ss_verbStructures
@@ -92,14 +89,14 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
                              _           -> Nothing
 
 
-matchSubject :: [(PBArg,FNFrameElement)]
+matchSubject :: [(PBArg,Text)]
              -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
              -> ArgPattern p GRel
              -> Maybe (FNFrameElement, CompVP '[Lemma])
 matchSubject rolemap mDP patt = do
   dp <- mDP^?_Just._Right            -- for the time being
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
-  (,CompVP_DP dp) <$> lookup p rolemap
+  (,CompVP_DP dp) . FNFrameElement <$> lookup p rolemap
 
 
 isPhiOrThat :: (GetIntLemma t) => CP t -> Bool
@@ -109,7 +106,7 @@ isPhiOrThat cp = case cp^.headX of
 
 
 
-matchObjects :: [(PBArg,FNFrameElement)]
+matchObjects :: [(PBArg,Text)]
              -> VerbP '[Lemma]
              -> ArgPattern p GRel
              -> [(FNFrameElement, CompVP '[Lemma])]
@@ -120,7 +117,7 @@ matchObjects rolemap verbp patt = do
     CompVP_CP cp -> guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
     CompVP_DP _  -> guard (a == GR_NP (Just garg))
     _            -> []
-  fe <- maybeToList (lookup p rolemap)
+  fe <- FNFrameElement <$> maybeToList (lookup p rolemap)
   return (fe, obj)
 
 
@@ -129,7 +126,7 @@ matchPP :: TaggedLemma '[Lemma]
         -> CP '[Lemma]
         -> (Maybe Text,Maybe PrepClass,Maybe Bool)
         -> Maybe (PP '[Lemma])
-matchPP tagged cp (mprep,mpclass,mising) = do
+matchPP _tagged cp (mprep,mpclass,mising) = do
     let candidates = cp^..complement.complement.complement.traverse.trResolved._Just._CompVP_PP
     find ppcheck candidates
   where
@@ -140,7 +137,7 @@ matchPP tagged cp (mprep,mpclass,mising) = do
                     maybe True (== ising') mising
 
 
-matchPrepArgs :: [(PBArg,FNFrameElement)]
+matchPrepArgs :: [(PBArg,Text)]
               -> TaggedLemma '[Lemma]
               -> CP '[Lemma]
               -> ArgPattern p GRel
@@ -148,7 +145,7 @@ matchPrepArgs :: [(PBArg,FNFrameElement)]
               -> [(FNFrameElement, CompVP '[Lemma])]
 matchPrepArgs rolemap tagged cp patt felst = do
   (p,(prep,mising)) <- pbArgForPP patt
-  role <- maybeToList (lookup p rolemap)
+  role <- FNFrameElement <$> maybeToList (lookup p rolemap)
 
   pp <- maybeToList (matchPP tagged cp (Just prep,Nothing,mising))
   let comp = CompVP_PP pp
@@ -157,7 +154,7 @@ matchPrepArgs rolemap tagged cp patt felst = do
   return (role, comp)
 
 
-matchAgentForPassive :: [(PBArg,FNFrameElement)]
+matchAgentForPassive :: [(PBArg,Text)]
                      -> TaggedLemma '[Lemma]
                      -> CP '[Lemma]
                      -> ArgPattern p GRel
@@ -166,10 +163,10 @@ matchAgentForPassive rolemap tagged cp patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
     pp  <- matchPP tagged cp (Just "by",Just PC_Other,Nothing)
     let comp = CompVP_PP pp
-    (,comp) <$> lookup p rolemap
+    (,comp) . FNFrameElement <$> lookup p rolemap
 
 
-matchSO :: [(PBArg,FNFrameElement)]
+matchSO :: [(PBArg,Text)]
         -> TaggedLemma '[Lemma]
         -> ( Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma])), VerbP '[Lemma], CP '[Lemma])
         -> (ArgPattern p GRel, Int)
@@ -182,15 +179,15 @@ matchSO rolemap tagged (mDP,verbp,cp) (patt,num) =
   in (rpatt,rmatched1 ++ matchPrepArgs rolemap tagged cp patt rmatched1)
 
 
-extendRoleMapForDual :: (Text,SenseID,[(PBArg,FNFrameElement)])
-                     -> (Text,SenseID,[(PBArg,FNFrameElement)])
+extendRoleMapForDual :: (FNFrame,SenseID,[(PBArg,Text)])
+                     -> (FNFrame,SenseID,[(PBArg,Text)])
 extendRoleMapForDual (frame,sense,rolemap) = fromMaybe (frame,sense,rolemap) $ do
   dualmap <- lookup frame $ map (\c -> (c^.cm_baseFrame,c)) causeDualMap
   let frame' = dualmap^.cm_causativeFrame
       rolemap' = filter (\(k,_v) -> k /= "frame" && k /= "arg0") rolemap
       rolemap'' =  map f rolemap'
-        where f (k,v) = maybe (k,v) (k,) (lookup v (dualmap^.cm_extraMapping))
-      rolemap''' = ("arg0",dualmap^.cm_externalAgent) : rolemap''
+        where f (k,v) = maybe (k,v) ((k,).unFNFrameElement) (lookup (FNFrameElement v) (dualmap^.cm_extraMapping))
+      rolemap''' = ("arg0",unFNFrameElement (dualmap^.cm_externalAgent)) : rolemap''
   return (frame',sense,rolemap''')
 
 
@@ -198,7 +195,7 @@ numMatchedRoles :: ((ArgPattern () GRel, Int), [(FNFrameElement, a)]) -> Int
 numMatchedRoles = lengthOf (_2.folded)
 
 
-matchRoles :: [(PBArg,FNFrameElement)]
+matchRoles :: [(PBArg,Text)]
            -> TaggedLemma '[Lemma]
            -> VerbP '[Lemma]
            -> CP '[Lemma]
@@ -220,8 +217,8 @@ matchFrameRolesForCauseDual :: TaggedLemma '[Lemma]
                             -> [(ArgPattern () GRel,Int)]
                             -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
                             -> LittleV
-                            -> (Text, SenseID, [(PBArg, FNFrameElement)])
-                            -> (Text, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])]))
+                            -> (FNFrame, SenseID, [(PBArg, Text)])
+                            -> (FNFrame, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])]))
 matchFrameRolesForCauseDual tagged verbp cp toppatts mDP causetype (frame1,sense1,rolemap1) =
   let (frame2,sense2,rolemap2) = if causetype == LVDual
                                  then extendRoleMapForDual (frame1,sense1,rolemap1)
@@ -245,13 +242,13 @@ matchFrameRolesAll :: TaggedLemma '[Lemma]
                    -> CP '[Lemma]
                    -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
                    -> [((RoleInstance,Int),[(ArgPattern () GRel,Int)])]
-                   -> [((Text,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])),Int)]
+                   -> [((FNFrame,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])),Int)]
 matchFrameRolesAll tagged verbp cp mDP rmtoppatts = do
   (rm,toppatts) <- rmtoppatts
   let sense1 = rm^._1._1
       rolemap1 = rm^._1._2
       stat = rm^._2
-  frame1 <- maybeToList (lookup "frame" rolemap1)
+  frame1 <- FNFrame <$> maybeToList (lookup "frame" rolemap1)
   causetype <- (\x -> if x == "dual" then LVDual else LVSingle) <$> maybeToList (lookup "cause" rolemap1)
   return (matchFrameRolesForCauseDual tagged verbp cp toppatts mDP causetype (frame1,sense1,rolemap1),stat)
 
@@ -356,7 +353,7 @@ matchExtraRoles tagged cp felst =
 --   This version is ad hoc, so it will be updated when we come up with a better algorithm.
 --
 scoreSelectedFrame :: Int
-                   -> ((Text,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,a)])),Int)
+                   -> ((FNFrame,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,a)])),Int)
                    -> Double
 scoreSelectedFrame total ((_,_,mselected),n) =
   let mn = maybe 0 fromIntegral (mselected^?_Just.to numMatchedRoles)
@@ -391,7 +388,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
                                    then let dp' = ((headX .~  (b',b-1)) . (maximalProjection .~ (b,e)) . (adjunct .~ [])) dp
                                         in (fe',CompVP_PP (mkPP prep' o' dp'))
                                    else (fe',CompVP_PP pp)
-             CompPP_Gerund z -> (fe',CompVP_PP pp)
+             CompPP_Gerund _ -> (fe',CompVP_PP pp)
     f (fe,rng@(b,e)) (fe',CompVP_DP dp)
       = let rng'@(b',_) = dp^.maximalProjection
         in -- for the time being, use this ad hoc algorithm
@@ -406,7 +403,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
 matchFrame :: TaggedLemma '[Lemma]
            -> (VerbStructure,CP '[Lemma])
            -> Maybe (Range,VerbProperty (Zipper '[Lemma])
-                    ,Text
+                    ,FNFrame
                     ,(SenseID,Bool)
                     ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])]))
 matchFrame tagged (vstr,cp) = do
@@ -533,7 +530,7 @@ changeMGText :: MeaningGraph -> MeaningGraph
 changeMGText mg =
   let mg' = mg ^.. mg_edges
                  . traverse
-                 . to (\x -> x & (me_relation .~ (T.replace "&" "-AND-" (x ^. me_relation))))
+                 . to (\x -> x & (me_relation .~ (FNFrameElement . T.replace "&" "-AND-" . unFNFrameElement) (x ^. me_relation)))
       mg'' = mg ^.. mg_vertices
                   . traverse
                   . to (\x -> case x of
