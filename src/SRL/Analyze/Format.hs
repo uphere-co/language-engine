@@ -227,7 +227,7 @@ showMatchedFrame :: TaggedLemma '[Lemma]
                  -> IO ()
 showMatchedFrame tagged (vstr,cp) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame tagged (vstr,cp)) $ \(rng,_,frame,_,mselected) -> do
+  flip traverse_ (matchFrame tagged (vstr,cp)) $ \(rng,_,frame,_,mselected,_) -> do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> unFNFrame frame)
@@ -262,6 +262,16 @@ formatMGVerb (MGPredicate i _ f (PredVerb _ v))
              "<td width=\"20\">" <> fromMaybe "" (v^?vp_negation._Just._1)           <> "</td>" <>
              "<td>" <> v^.vp_lemma.to unLemma                           <> "</td>" <>
              "<td>" <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect) <> "</td>" <>
+             "</tr>" <>
+             "</table>" )
+formatMGVerb (MGPredicate i _ f (PredPrep p))
+  = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+             "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
+             "<tr>" <>
+             "<td width=\"20\">" <>          " </td>" <>
+             "<td width=\"20\">" <>          " </td>" <>
+             "<td>"              <> p      <> "</td>" <>
+             "<td>"              <> "prep" <> "</td>" <>
              "</tr>" <>
              "</table>" )
 formatMGVerb (MGPredicate i _ f PredNoun)
