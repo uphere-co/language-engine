@@ -346,15 +346,16 @@ matchExtraRoles tagged cp felst =
 
 
 matchSubFrame :: (CP '[Lemma] -> Bool)
-              -> FNFrame
+              -> Text
+              -> (FNFrame,FNFrameElement,FNFrameElement)
               -> CP '[Lemma]
-              -> Maybe (FNFrame,Text,[(FNFrameElement,Range)])
-matchSubFrame check frm cp0 = do
+              -> Maybe (FNFrame,Text,[(FNFrameElement,(Bool,Range))])
+matchSubFrame check prep (frm,fe0,fe1) cp0 = do
+  let rng0 = cp0^.maximalProjection.to current.to getRange
   let candidates = cp0 ^..complement.complement.complement.traverse.trResolved._Just._CompVP_CP ++ cp0^..adjunct.traverse._AdjunctCP_CP
-  cp <- find check candidates
-  let rng = cp^.maximalProjection.to current.to getRange
-  return (frm,"",[])
-
+  cp1 <- find check candidates
+  let rng1 = cp1^.maximalProjection.to current.to getRange
+  return (frm,prep,[(fe0,(True,rng0)),(fe1,(False,rng1))])
 
 
 --
@@ -415,7 +416,7 @@ matchFrame :: TaggedLemma '[Lemma]
                     ,FNFrame
                     ,(SenseID,Bool)
                     ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])
-                    ,[(FNFrame,Text,[(FNFrameElement,Range)])]
+                    ,[(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
                     )
 matchFrame tagged (vstr,cp) = do
   let verbp = cp^.complement.complement
@@ -427,7 +428,10 @@ matchFrame tagged (vstr,cp) = do
   ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
   let mselected1 = (_Just . _2 %~ matchExtraRoles tagged cp) mselected0
       mselected  = (_Just . _2 %~ resolveAmbiguityInDP) mselected1
-      subfrms = mapMaybe (\(chk,frm) -> matchSubFrame chk frm cp) [(const True,"Time_vector")]
+      subfrms = mapMaybe (\(chk,prep,frm) -> matchSubFrame chk prep frm cp)
+                  [(hasComplementizer ["after"] , "after" , ("Time_vector","Event","Landmark_event"))
+                  ,(hasComplementizer ["before"], "before", ("Time_vector","Event","Landmark_event"))
+                  ]
   return (rng,vprop,frame,sense,mselected,subfrms)
 
 
@@ -473,11 +477,11 @@ meaningGraph sstr =
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
 
-      entities1 = filterFrame
-                . map head
-                . groupBy ((==) `on` (^._1))
-                . sortBy (compare `on` (^._1))
-                $ entities0
+      entities1_0 = filterFrame
+                  . map head
+                  . groupBy ((==) `on` (^._1))
+                  . sortBy (compare `on` (^._1))
+                  $ entities0
 
       mkEntityFun (rng,txt,mrngtxt') =
         (\i -> MGEntity i rng txt []) :
@@ -486,19 +490,18 @@ meaningGraph sstr =
                                                     ]
                                    )
 
+      entities1 = concatMap mkEntityFun entities1_0
 
       entities2 = do (_,_,_,_,_,lst) <- matched
                      (frm,prep,felst) <- lst
                      -- (fe,rng) <- felst
-                     return (\i -> MGPredicate i Nothing frm (PredPrep prep))
-{-                     case x of
-                       CompVP_Unresolved _ -> []
-                       CompVP_CP _cp -> [] -- CP is not an entity.
-                       CompVP_DP dp -> return (entityFromDP tagged dp)
-                       CompVP_PP pp -> maybeToList (entityFromDP tagged <$> (pp^?complement._CompPP_DP)) -}
-      entities = concatMap mkEntityFun entities1 ++ entities2
-
-      vertices = ipreds ++ zipWith ($) entities (enumFrom (length ipreds+1))
+                     return (\i -> ((i,frm,prep,felst),MGPredicate i Nothing frm (PredPrep prep)))
+      n_ipreds = length ipreds
+      n_entities1 = length entities1
+      n_entities2 = length entities2
+      ientities1 = zipWith ($) entities1 (enumFrom (n_ipreds+1))
+      ientities2 = zipWith ($) entities2 (enumFrom (n_ipreds+n_entities1+1))
+      vertices = ipreds ++ ientities1 ++ (map snd ientities2)
       --
       rangeid :: MGVertex -> (Int,Maybe Range)
       rangeid mv = (if mv^?_MGPredicate._4._PredNoun == Just () then 1 else 0, mv^.mv_range)
@@ -521,14 +524,18 @@ meaningGraph sstr =
                   i' <- maybeToList (HM.lookup (0,Just rng') rngidxmap)  -- frame element
                   let b = isJust (find (== (rng',rng)) depmap)
                   return (MGEdge fe b mprep i i')
-      edges1 = do (mrng,_,mrngtxt') <- entities1
+      edges1 = do (mrng,_,mrngtxt') <- entities1_0
                   (rng',_) <- maybeToList mrngtxt'
                   i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
                   i_instance <- maybeToList (HM.lookup (0,mrng) rngidxmap)
                   i_type     <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
                   [MGEdge "Instance" True Nothing i_frame i_instance, MGEdge "Type" False Nothing i_frame i_type]
+      edges2 = do (i_frame,frm,prep,felst) <- map fst ientities2
+                  (fe,(b,rng)) <- felst
+                  i_elem <- maybeToList (HM.lookup (0,Just rng) rngidxmap)
+                  [MGEdge fe b Nothing i_frame i_elem]
 
-  in trace (show depmap) $ MeaningGraph vertices (edges0 ++ edges1)
+  in MeaningGraph vertices (edges0 ++ edges1 ++ edges2)
 
 
 isEntity :: MGVertex -> Bool
