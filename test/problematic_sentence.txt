@@ -87,5 +87,12 @@ Toyota said it would begin testing self-driving electric cars around 2020, which
 Los-Angeles-based company, Hyperloop One said billionaire Richard Branson's Virgin Group has invested in the company to form a strategic partnership
 
 
--- | both Time_vector and Event_description
+-- | both Time_vector and Event_description -> solved.
 Motorized revenue fell 4.4% to $226.2 million, while towable revenue increased to $228.7 million from $26.6 million, boosted by the addition of $193.4 million in revenue from the Grand Design acquisition.
+
+
+-- | two hypothetical event in Likelihood frame?
+Adults tend to lose this enzyme unless they continue taking cow's milk.
+
+-- | parenthetical nonrestricted relative clause. not well recognized.
+Toyota Motor Corp would begin testing self-driving cars, which needs technology advances, around 2020.
