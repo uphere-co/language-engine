@@ -19,7 +19,7 @@ import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
 import           Data.Maybe                   (catMaybes,fromMaybe,isJust,isNothing,listToMaybe,mapMaybe,maybeToList)
-import           Data.Monoid                  (First(..))
+import           Data.Monoid                  (First(..),(<>))
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
@@ -450,8 +450,16 @@ dependencyOfX'Tree (PL _)           = []
 entityFromDP :: TaggedLemma t -> DetP t -> (Range,Text,Maybe (Range,Text))
 entityFromDP tagged dp =
   let rng = dp^.headX
-      txt = headText tagged dp
-      mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being
+      headtxt = headText tagged dp
+      txt = case dp^.complement of
+              Just (CompDP_PP pp) ->
+                let prep = pp^.headX._1
+                    rng_pp = pp^.maximalProjection
+                in if prep == Prep_WORD "of"
+                   then headtxt <> " " <> T.intercalate " " (tokensByRange tagged rng_pp)
+                   else headtxt
+              _ -> headtxt
+      mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being, specifier is used as attribute appositive
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (rng_sub,txt_sub)
   in (rng,txt,mrngtxt')
