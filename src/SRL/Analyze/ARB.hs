@@ -45,8 +45,9 @@ squashRelFrame mg0 = last (mg0 : unfoldr f mg0)
 
          j0 <- (^.me_end) <$> find (\e -> (e^.me_start) == i && (e^.me_ismodifier)) es
          j1 <- (^.me_end) <$> find (\e -> (e^.me_start) == i && not (e^.me_ismodifier)) es
-         frm <- unFNFrame <$> (v ^? _MGPredicate._3)
-         let e' = MGEdge (FNFrameElement frm) False Nothing j0 j1
+         (_,_,frm,info) <- v ^? _MGPredicate
+         prep <- info^?_PredPrep
+         let e' = MGEdge (FNFrameElement (unFNFrame frm)) False (Just prep) j0 j1
              es' = filter ((/= i) . (^.me_start)) es ++ [e']
              mg' = mg & (mg_vertices .~ vs') . (mg_edges .~ es')
 
