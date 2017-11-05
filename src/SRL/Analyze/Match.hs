@@ -341,7 +341,7 @@ matchExtraRoles tagged cp felst =
                -- matchExtraRolesForCPInAdjunctCP (hasComplementizer ["while"])          "Contrary_circumstances" cp felst'' <|>
                matchExtraRolesForCPInAdjunctCP (hasComplementizer ["as"])             "Explanation"            cp felst'' <|>
                matchExtraRolesForCPInAdjunctCP toInfinitive                           "Purpose"                cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP (const True)                           "Event_description"      cp felst''
+               matchExtraRolesForCPInAdjunctCP (not.hasComplementizer ["after","before","as","while","if","though","although","unless"]) "Event_description" cp felst'' --for the time being
   in felst'' ++ maybeToList madj
 
 

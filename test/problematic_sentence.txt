@@ -85,3 +85,7 @@ Toyota said it would begin testing self-driving electric cars around 2020, which
 
 -- | Hyperloop is HEAD, Los-Angeles-based company is ATTRIB -> solved.
 Los-Angeles-based company, Hyperloop One said billionaire Richard Branson's Virgin Group has invested in the company to form a strategic partnership
+
+
+-- | both Time_vector and Event_description
+Motorized revenue fell 4.4% to $226.2 million, while towable revenue increased to $228.7 million from $26.6 million, boosted by the addition of $193.4 million in revenue from the Grand Design acquisition.
