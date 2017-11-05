@@ -55,17 +55,13 @@ import           WikiEL.Type                  (EntityMention,PreNE(..),UIDCite(.
 import qualified WikiEL.WikiEntityClass             as WEC
 import qualified WikiEL.WikiEntityTagger            as WET
 --
-import           SRL.Analyze.ARB               (mkARB)
+import           SRL.Analyze.ARB               (mkARB,squashRelFrame)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP           (runParser)
 import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructure,showMatchedFrame)
 import           SRL.Analyze.Match             (mkTriples,meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure (docStructure,mkWikiList)
 import           SRL.Analyze.Type
--- import           SRL.Analyze.WikiEL            (brandItemFile,buildingItemFile,humanRuleItemFile,locationItemFile
---                                                ,occupationItemFile,orgItemFile,personItemFile,reprFile)
--- import           SRL.Analyze.WikiEL            (mkWikiList)
-
 import           SRL.Statistics (getGraphFromMG)
 --
 import qualified WikiEL.EntityLinking   as EL
@@ -125,8 +121,15 @@ printMeaningGraph rolemap dstr = do
     let title = mkTextFromToken mtks
         wikilst = mkWikiList sstr -- sstrs1
         mg = tagMG mg' wikilst
-    mapM_ print (mg^.mg_vertices)
-    mapM_ print (mg^.mg_edges)
+    -- mapM_ print (mg^.mg_vertices)
+    -- mapM_ print (mg^.mg_edges)
+    -- putStrLn "====================="
+    -- print mg
+    -- putStrLn "====================="
+    -- let mg' = squashRelFrame mg
+    -- putStrLn "====================="
+
+
     putStrLn "-----------------"
     putStrLn "meaning graph ARB"
     putStrLn "-----------------"

@@ -6,7 +6,9 @@
 module SRL.Analyze.ARB where
 
 import           Control.Applicative       ((<|>))
-import           Control.Lens              ((^.),to)
+import           Control.Lens              -- ((^.),to)
+import Control.Lens.Extras
+import Data.List
 import           Control.Monad.Loops       (unfoldM)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -30,6 +32,26 @@ import           SRL.Statistics
 
 
 type VertexARB = (Vertex, Vertex, [Vertex])
+
+squashRelFrame :: MeaningGraph -> MeaningGraph
+squashRelFrame mg0 = last (mg0 : unfoldr f mg0)
+  where f mg = do
+         let vs = mg^.mg_vertices
+             es = mg^.mg_edges
+         v <- find (is _Nothing . (^.mv_range)) vs
+         let i = v^.mv_id
+             vs' = filter ((/= i) . (^.mv_id)) vs
+
+
+         j0 <- (^.me_end) <$> find (\e -> (e^.me_start) == i && (e^.me_ismodifier)) es
+         j1 <- (^.me_end) <$> find (\e -> (e^.me_start) == i && not (e^.me_ismodifier)) es
+         (_,_,frm,info) <- v ^? _MGPredicate
+         prep <- info^?_PredPrep
+         let e' = MGEdge (FNFrameElement (unFNFrame frm)) False (Just prep) j0 j1
+             es' = filter ((/= i) . (^.me_start)) es ++ [e']
+             mg' = mg & (mg_vertices .~ vs') . (mg_edges .~ es')
+
+         return (mg',mg')
 
 
 isFrame :: MGVertex -> Bool
@@ -128,8 +150,9 @@ mkARB1 (rolemap,mg,graph) = do
 
 
 mkARB :: [RoleInstance] -> MeaningGraph -> [ARB]
-mkARB rolemap mg = catMaybes $ do
-  let mgraph = getGraphFromMG mg
+mkARB rolemap mg0 = catMaybes $ do
+  let mg = squashRelFrame mg0
+      mgraph = getGraphFromMG mg
   graph <- maybeToList mgraph
   let framelst = map (^.mv_id) $ filter isFrame $ mg^. mg_vertices
       vs = filter (`elem` framelst) $ topSort graph
