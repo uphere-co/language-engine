@@ -338,7 +338,7 @@ matchExtraRoles tagged cp felst =
                matchExtraRolesForPPing "before" "Time_vector" tagged cp felst'
       felst'' = felst' ++ maybeToList mcomp
       madj   = -- matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["after","before"])) "Time_vector"            cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP (hasComplementizer ["while"])          "Contrary_circumstances" cp felst'' <|>
+               -- matchExtraRolesForCPInAdjunctCP (hasComplementizer ["while"])          "Contrary_circumstances" cp felst'' <|>
                matchExtraRolesForCPInAdjunctCP (hasComplementizer ["as"])             "Explanation"            cp felst'' <|>
                matchExtraRolesForCPInAdjunctCP toInfinitive                           "Purpose"                cp felst'' <|>
                matchExtraRolesForCPInAdjunctCP (const True)                           "Event_description"      cp felst''
@@ -431,6 +431,10 @@ matchFrame tagged (vstr,cp) = do
       subfrms = mapMaybe (\(chk,prep,frm) -> matchSubFrame chk prep frm cp)
                   [(hasComplementizer ["after"] , "after" , ("Time_vector","Event","Landmark_event"))
                   ,(hasComplementizer ["before"], "before", ("Time_vector","Event","Landmark_event"))
+                  ,(hasComplementizer ["while"] , "while" , ("Concessive","Main_assertion","Conceded_state_of_affairs"))
+                  ,(hasComplementizer ["though","although"], "though", ("Concessive","Main_assertion","Conceded_state_of_affairs"))
+                  ,(hasComplementizer ["if"]    , "if"    , ("Conditional_occurrence","Consequence","Profiled_possibility"))
+                  ,(hasComplementizer ["unless"], "unless", ("Negative_conditional","Anti_consequence","Profiled_possibility"))
                   ]
   return (rng,vprop,frame,sense,mselected,subfrms)
 
