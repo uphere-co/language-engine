@@ -131,12 +131,12 @@ makePrisms ''PredicateInfo
 
 
 data MGVertex = MGEntity    { _mv_id :: Int
-                            , _mv_range :: Range
+                            , _mv_range :: Maybe Range
                             , _mv_text :: Text
                             , _mv_resolved_entities :: [Text]   -- resolved named entity candidates
                             }
               | MGPredicate { _mv_id    :: Int
-                            , _mv_range :: Range
+                            , _mv_range :: Maybe Range
                             , _mv_frame :: FNFrame
                             , _mv_pred_info :: PredicateInfo
                             }
@@ -146,7 +146,7 @@ data MGVertex = MGEntity    { _mv_id :: Int
 mv_id :: Simple Lens MGVertex Int
 mv_id = lens _mv_id (\f a -> f { _mv_id = a })
 
-mv_range :: Simple Lens MGVertex Range
+mv_range :: Simple Lens MGVertex (Maybe Range)
 mv_range = lens _mv_range (\f a -> f { _mv_range = a })
 
 

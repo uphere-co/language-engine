@@ -294,17 +294,15 @@ matchExtraRolesForCPInCompVP check role cp0 felst = do
   return (role,comp)
 
 
-matchExtraRolesForCPInAdjunctCP :: Maybe (CP '[Lemma] -> Bool)
+matchExtraRolesForCPInAdjunctCP :: (CP '[Lemma] -> Bool)
                                 -> FNFrameElement
                                 -> CP '[Lemma]
                                 -> [(FNFrameElement, CompVP '[Lemma])]
                                 -> Maybe (FNFrameElement,CompVP '[Lemma])
-matchExtraRolesForCPInAdjunctCP mcheck role cp0 felst = do
+matchExtraRolesForCPInAdjunctCP check role cp0 felst = do
   guard (is _Nothing (find (\x -> x^._1 == role) felst))
   let candidates = cp0^..adjunct.traverse._AdjunctCP_CP
-  cp <- case mcheck of
-          Nothing -> (rightMay . headErr ("no adjuncts" :: String)) candidates
-          Just check -> find check candidates
+  cp <- find check candidates
   let rng = cp^.maximalProjection.to current.to getRange
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just rng) felst))
   guard (is _Nothing (find (\x -> x^?_2._CompVP_CP.to cpRange == Just rng) felst))
@@ -340,11 +338,23 @@ matchExtraRoles tagged cp felst =
                matchExtraRolesForPPing "before" "Time_vector" tagged cp felst'
       felst'' = felst' ++ maybeToList mcomp
       madj   = -- matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["after","before"])) "Time_vector"            cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["while"]))          "Contrary_circumstances" cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP (Just (hasComplementizer ["as"]))             "Explanation"            cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP (Just toInfinitive)                           "Purpose"                cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP Nothing                                       "Event_description"      cp felst''
+               matchExtraRolesForCPInAdjunctCP (hasComplementizer ["while"])          "Contrary_circumstances" cp felst'' <|>
+               matchExtraRolesForCPInAdjunctCP (hasComplementizer ["as"])             "Explanation"            cp felst'' <|>
+               matchExtraRolesForCPInAdjunctCP toInfinitive                           "Purpose"                cp felst'' <|>
+               matchExtraRolesForCPInAdjunctCP (const True)                           "Event_description"      cp felst''
   in felst'' ++ maybeToList madj
+
+
+matchSubFrame :: (CP '[Lemma] -> Bool)
+              -> FNFrame
+              -> CP '[Lemma]
+              -> Maybe (FNFrame,Text,[(FNFrameElement,Range)])
+matchSubFrame check frm cp0 = do
+  let candidates = cp0 ^..complement.complement.complement.traverse.trResolved._Just._CompVP_CP ++ cp0^..adjunct.traverse._AdjunctCP_CP
+  cp <- find check candidates
+  let rng = cp^.maximalProjection.to current.to getRange
+  return (frm,"",[])
+
 
 
 --
@@ -405,8 +415,7 @@ matchFrame :: TaggedLemma '[Lemma]
                     ,FNFrame
                     ,(SenseID,Bool)
                     ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])
-                    -- ,Maybe (Frame,[(FNFrameElement,Range)])
-
+                    ,[(FNFrame,Text,[(FNFrameElement,Range)])]
                     )
 matchFrame tagged (vstr,cp) = do
   let verbp = cp^.complement.complement
@@ -418,7 +427,8 @@ matchFrame tagged (vstr,cp) = do
   ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
   let mselected1 = (_Just . _2 %~ matchExtraRoles tagged cp) mselected0
       mselected  = (_Just . _2 %~ resolveAmbiguityInDP) mselected1
-  return (rng,vprop,frame,sense,mselected)
+      subfrms = mapMaybe (\(chk,frm) -> matchSubFrame chk frm cp) [(const True,"Time_vector")]
+  return (rng,vprop,frame,sense,mselected,subfrms)
 
 
 
@@ -446,19 +456,19 @@ meaningGraph sstr =
       matched = mapMaybe (matchFrame tagged) lst_vstrcp
       depmap = dependencyOfX'Tree =<< x'tr
       --
-      preds = flip map matched $ \(rng,vprop,frame,sense,_mselected) i
-                                   -> MGPredicate i rng frame (PredVerb sense (simplifyVProp vprop))
+      preds = flip map matched $ \(rng,vprop,frame,sense,_mselected,_) i
+                                   -> MGPredicate i (Just rng) frame (PredVerb sense (simplifyVProp vprop))
       ipreds = zipWith ($) preds [1..]
       --
 
-      entities0 = do (_,_,_,_,mselected) <- matched
+      entities0 = do (_,_,_,_,mselected,_) <- matched
                      (_,felst) <- maybeToList mselected
                      (_fe,x) <- felst
                      case x of
                        CompVP_Unresolved _ -> []
                        CompVP_CP _cp -> [] -- CP is not an entity.
-                       CompVP_DP dp -> return (entityFromDP tagged dp)
-                       CompVP_PP pp -> maybeToList (entityFromDP tagged <$> (pp^?complement._CompPP_DP))
+                       CompVP_DP dp -> (return . (_1 %~ Just) . entityFromDP tagged) dp
+                       CompVP_PP pp -> maybeToList ((_1 %~ Just) . entityFromDP tagged <$> (pp^?complement._CompPP_DP))
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
@@ -471,22 +481,31 @@ meaningGraph sstr =
 
       mkEntityFun (rng,txt,mrngtxt') =
         (\i -> MGEntity i rng txt []) :
-          flip (maybe []) mrngtxt' (\(rng',txt') -> [ \i'  -> MGEntity i' rng' txt' []
-                                                    , \i'' -> MGPredicate i'' rng' "Instance" PredNoun
+          flip (maybe []) mrngtxt' (\(rng',txt') -> [ \i'  -> MGEntity i' (Just rng') txt' []
+                                                    , \i'' -> MGPredicate i'' (Just rng') "Instance" PredNoun
                                                     ]
                                    )
 
 
-      entities = concatMap mkEntityFun entities1
+      entities2 = do (_,_,_,_,_,lst) <- matched
+                     (frm,prep,felst) <- lst
+                     -- (fe,rng) <- felst
+                     return (\i -> MGPredicate i Nothing frm (PredPrep prep))
+{-                     case x of
+                       CompVP_Unresolved _ -> []
+                       CompVP_CP _cp -> [] -- CP is not an entity.
+                       CompVP_DP dp -> return (entityFromDP tagged dp)
+                       CompVP_PP pp -> maybeToList (entityFromDP tagged <$> (pp^?complement._CompPP_DP)) -}
+      entities = concatMap mkEntityFun entities1 ++ entities2
 
       vertices = ipreds ++ zipWith ($) entities (enumFrom (length ipreds+1))
       --
-      rangeid :: MGVertex -> (Int,Range)
+      rangeid :: MGVertex -> (Int,Maybe Range)
       rangeid mv = (if mv^?_MGPredicate._4._PredNoun == Just () then 1 else 0, mv^.mv_range)
       --
       rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
-      edges0 = do (rng,_,_,_,mselected) <- matched
-                  i <- maybeToList (HM.lookup (0,rng) rngidxmap)   -- frame
+      edges0 = do (rng,_,_,_,mselected,_) <- matched
+                  i <- maybeToList (HM.lookup (0,Just rng) rngidxmap)   -- frame
                   (_,felst) <- maybeToList mselected
                   (fe,x) <- felst
                   (rng',mprep) <- case x of
@@ -499,14 +518,14 @@ meaningGraph sstr =
                                                     in return (getRange (current z_cp),mprep)
                                     CompVP_DP dp -> return (dp^.headX,Nothing)
                                     CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX._1._Prep_WORD)
-                  i' <- maybeToList (HM.lookup (0,rng') rngidxmap)  -- frame element
+                  i' <- maybeToList (HM.lookup (0,Just rng') rngidxmap)  -- frame element
                   let b = isJust (find (== (rng',rng)) depmap)
                   return (MGEdge fe b mprep i i')
-      edges1 = do (rng,_,mrngtxt') <- entities1
+      edges1 = do (mrng,_,mrngtxt') <- entities1
                   (rng',_) <- maybeToList mrngtxt'
-                  i_frame <- maybeToList (HM.lookup (1,rng') rngidxmap)
-                  i_instance <- maybeToList (HM.lookup (0,rng) rngidxmap)
-                  i_type     <- maybeToList (HM.lookup (0,rng') rngidxmap)
+                  i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
+                  i_instance <- maybeToList (HM.lookup (0,mrng) rngidxmap)
+                  i_type     <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
                   [MGEdge "Instance" True Nothing i_frame i_instance, MGEdge "Type" False Nothing i_frame i_type]
 
   in trace (show depmap) $ MeaningGraph vertices (edges0 ++ edges1)
@@ -522,9 +541,12 @@ tagMG :: MeaningGraph -> [(Range,Text)] -> MeaningGraph
 tagMG mg wikilst =
   let mg' = mg ^.. mg_vertices
                  . traverse
-                 . to (\x -> if (x ^. mv_range) `elemRevIsInsideR` (map fst wikilst) && isEntity x
-                             then x { _mv_resolved_entities = map (^. _2) (filter (\w -> (w ^. _1) `isInsideR` (x ^. mv_range)) wikilst)}
-                             else x )
+                 . to (\x -> case x^.mv_range of
+                               Nothing -> x
+                               Just rng -> if (rng `elemRevIsInsideR` map fst wikilst) && isEntity x
+                                           then x { _mv_resolved_entities = map (^. _2) (filter (\w -> (w^._1) `isInsideR` rng) wikilst)}
+                                           else x
+                      )
   in MeaningGraph mg' (mg ^. mg_edges)
 
 
