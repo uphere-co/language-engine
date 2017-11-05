@@ -24,7 +24,7 @@ import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
 import           Lexicon.Merge                             (constructTopPatterns)
 import           Lexicon.Query                             (cutHistogram)
-import           Lexicon.Type                              (POSVorN(..),GRel
+import           Lexicon.Type                              (POSVorN(..),FNFrame(..),GRel
                                                            ,RoleInstance,RolePattInstance
                                                            ,ArgPattern)
 import           NLP.Syntax.Clause                         (bindingAnalysis,bindingAnalysisRaising,clauseStructure,identifyCPHierarchy,resolveCP)
@@ -78,7 +78,7 @@ getSenses :: Text
           -> HashMap Text Inventory
           -> HashMap (Text,Text) Int
           -> FrameDB
-          -> HashMap Text [(Text,Text)]
+          -> HashMap Text [(Text,FNFrame)]
           -> [(ONSenseFrameNetInstance,Int)]
 getSenses lma sensemap sensestat framedb ontomap = do
   let lmav = lma <> "-v"
@@ -89,7 +89,7 @@ getSenses lma sensemap sensestat framedb ontomap = do
       txt_def = s^.sense_name
       tframe = fromMaybe (Left FrameNone) $ do
         lst <- HM.lookup lma ontomap
-        frtxt <- lookup (s^.sense_group <> "." <> s^.sense_n) lst
+        frtxt <- unFNFrame <$> lookup (s^.sense_group <> "." <> s^.sense_n) lst
         case frtxt of
           "copula"    -> return (Left FrameCopula)
           "idioms"    -> return (Left FrameIdiom)

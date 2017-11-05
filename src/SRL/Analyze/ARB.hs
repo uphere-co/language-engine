@@ -19,7 +19,7 @@ import           Data.Maybe                (catMaybes,fromMaybe
 import           Data.Text                 (Text)
 --
 import           Lexicon.Mapping.Causation (causeDualMap,cm_causativeFrame,cm_externalAgent)
-import           Lexicon.Type              (FNFrameElement,RoleInstance,SenseID)
+import           Lexicon.Type              (FNFrame(..),FNFrameElement(..),RoleInstance,SenseID)
 import           NLP.Syntax.Clause         (hoistMaybe) -- this should be moved somewhere
 import           NLP.Syntax.Type.Verb      (vp_lemma,vp_negation)
 import           NLP.Type.PennTreebankII   (Lemma(..))
@@ -47,7 +47,7 @@ subjectList = [ "Agent","Speaker","Owner","Cognizer","Actor","Author","Cognizer_
               ]
 
 
-isSubject :: [RoleInstance] -> Text -> Maybe (SenseID,Bool) -> FNFrameElement -> Bool
+isSubject :: [RoleInstance] -> FNFrame -> Maybe (SenseID,Bool) -> FNFrameElement -> Bool
 isSubject _       _     Nothing rel = any (==rel) subjectList
 isSubject rolemap frame (Just (sense,cause)) rel =
   fromMaybe False $ do
@@ -57,9 +57,9 @@ isSubject rolemap frame (Just (sense,cause)) rel =
         m <- find (\m -> m^.cm_causativeFrame == frame) causeDualMap
         return (m^.cm_externalAgent == rel)
       else
-        (((==rel) <$> lookup "arg0" roles)
+        (((==unFNFrameElement rel) <$> lookup "arg0" roles)
          <|>
-        ((==rel) <$> lookup "arg1" roles))
+        ((==unFNFrameElement rel) <$> lookup "arg1" roles))
 
 
 findRel :: [MGEdge] -> Int -> Int -> Maybe MGEdge
@@ -75,7 +75,7 @@ findLabel mvs i = do
     MGEntity {..}           -> Just _mv_text
     MGPredicate {..}        -> case _mv_pred_info of
                                  PredVerb _ vrb -> Just (vrb ^. vp_lemma . to unLemma)
-                                 PredNoun       -> Just _mv_frame
+                                 PredNoun       -> Just (unFNFrame _mv_frame)
 
 
 findSubjectObjects :: ([RoleInstance],MeaningGraph,Graph)
@@ -88,19 +88,19 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
                             MGEntity           {..} -> hoistMaybe Nothing
                             MGPredicate        {..} ->
                               case _mv_pred_info of
-                                PredVerb sns vrb -> return (_mv_frame,Just sns,vrb^.vp_negation)
-                                PredNoun         -> return (_mv_frame,Nothing,Nothing)
+                                PredVerb sns vrb -> return (unFNFrame _mv_frame,Just sns,vrb^.vp_negation)
+                                PredNoun         -> return (unFNFrame _mv_frame,Nothing,Nothing)
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) children
   (sidx,subject) <- hoistMaybe $ do
-                      e <- find (\e -> isSubject rolemap frmtxt msense (e^.me_relation)) rels
+                      e <- find (\e -> isSubject rolemap (FNFrame frmtxt) msense (e^.me_relation)) rels
                       let sidx = e^.me_end
-                      (sidx,) . (e^.me_relation,) <$> findLabel (mg^.mg_vertices) sidx
-  (objs :: [(Text,Either (PrepOr ARB) (PrepOr Text))]) <- lift $ do
+                      (sidx,) . (unFNFrameElement (e^.me_relation),) <$> findLabel (mg^.mg_vertices) sidx
+  (objs :: [(FrameElement,Either (PrepOr ARB) (PrepOr Text))]) <- lift $ do
     fmap catMaybes . flip mapM (filter (\e -> e ^.me_end /= sidx) rels) $ \o -> do
       let oidx = o^.me_end
           oprep = o^.me_prep
-          orole = o^.me_relation
+          orole = unFNFrameElement (o^.me_relation)
       runMaybeT $ do
         v' <- hoistMaybe (findVertex (mg^.mg_vertices) oidx)
         if isFrame v'

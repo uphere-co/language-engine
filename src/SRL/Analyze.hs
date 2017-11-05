@@ -34,7 +34,7 @@ import           CoreNLP.Simple.Type          (tokenizer,words2sentences,postagg
 import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts)
-import           Lexicon.Type                 (RoleInstance,RolePattInstance)
+import           Lexicon.Type                 (FNFrame,RoleInstance,RolePattInstance)
 import           Lexicon.Data                 (LexDataConfig(..),cfg_framenet_framedir
                                               ,cfg_rolemap_file
                                               ,cfg_sense_inventory_file
@@ -209,7 +209,7 @@ getAnalysis :: DocAnalysisInput
             -> (HashMap Text Inventory
                ,HashMap (Text,Text) Int
                ,FrameDB
-               ,HashMap Text [(Text,Text)]
+               ,HashMap Text [(Text,FNFrame)]
                ,([Sentence] -> [EntityMention Text])
                ,[RoleInstance]
                ,[RolePattInstance Voice])
