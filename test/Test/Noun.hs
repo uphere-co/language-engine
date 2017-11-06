@@ -20,7 +20,7 @@ import           NLP.Syntax.Format.Internal      (formatDP)
 import           NLP.Syntax.Noun                 (splitDP)
 import           NLP.Syntax.Type                 (MarkType(..))
 import           NLP.Syntax.Type.XBar            (TaggedLemma,DetP,AdjunctDP(..)
-                                                 ,adjunct,complement,headX,maximalProjection,specifier
+                                                 ,adjunct,complement,maximalProjection,specifier
                                                  ,headText,tokensByRange,mkOrdDP,compDPToRange)
 import           NLP.Syntax.Util                 (mkBitreeICP,mkTaggedLemma)
 --
@@ -29,7 +29,6 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 
-import Debug.Trace
 
 type TestNoun = (Text
                 ,(Text,Maybe Text,Maybe Text,[Text])  -- ^ (head,spec,complement,adjunct)
@@ -128,6 +127,7 @@ mkDPFromTest tagged x =
 
 
 
+adjunctDPToRange :: AdjunctDP t -> Range
 adjunctDPToRange (AdjunctDP_Unresolved rng) = rng
 adjunctDPToRange (AdjunctDP_PP pp) = pp^.maximalProjection
 
