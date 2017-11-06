@@ -92,10 +92,16 @@ data CompDP t = CompDP_Unresolved Range
               | CompDP_CP (CP t)
               | CompDP_PP (PP t)
 
+
 data AdjunctDP t = AdjunctDP_Unresolved Range
                  | AdjunctDP_PP (PP t)
 
 
+data NomClass = RExp
+              | Pronoun
+              deriving (Show,Eq,Ord)
+
+-- data HeadDP = HeadDP { dp Property
 
 --
 -- this definition is not truly X-bar-theoretic, but for the time being
@@ -142,11 +148,17 @@ data PrepClass = PC_Time
                | PC_Other
                deriving (Show,Eq,Ord)
 
+data HeadPP = HeadPP { _hp_prep :: Prep
+                     , _hp_pclass :: PrepClass }
+
+
+
+
 data CompPP t = CompPP_DP (DetP t)
               | CompPP_Gerund (Zipper t)
 
 --
-type instance Property   'X_P t = (Prep,PrepClass)
+type instance Property   'X_P t = HeadPP -- (Prep,PrepClass)
 type instance Maximal    'X_P t = Range
 type instance Specifier  'X_P t = ()
 type instance Adjunct    'X_P t = ()
@@ -155,11 +167,11 @@ type instance Complement 'X_P t = CompPP t
 type PP = XP 'X_P
 
 mkPP :: (Prep,PrepClass) -> Range -> DetP t -> PP t
-mkPP (prep,pclass) rng dp = XP (prep,pclass) rng () () (CompPP_DP dp)
+mkPP (prep,pclass) rng dp = XP (HeadPP prep pclass) rng () () (CompPP_DP dp)
 
 
 mkPPGerund :: (Prep,PrepClass) -> Range -> Zipper t -> PP t
-mkPPGerund (prep,pclass) rng z = XP (prep,pclass) rng () () (CompPP_Gerund z)
+mkPPGerund (prep,pclass) rng z = XP (HeadPP prep pclass) rng () () (CompPP_Gerund z)
 
 data CompVP t = CompVP_Unresolved (Zipper t)
               | CompVP_CP (CP t)

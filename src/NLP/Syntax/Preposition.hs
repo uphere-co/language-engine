@@ -22,14 +22,13 @@ import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP,_CompPP_DP
                                          ,TaggedLemma(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
-                                         ,mkPP)
+                                         ,mkPP,hp_prep,hp_pclass)
 
 
 hasEmptyPreposition :: TaggedLemma t -> Range -> Bool
 hasEmptyPreposition tagged rng =
   fromMaybe False $ do
     z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTree))
-    -- guard (isChunkAs NP (current z))
     case parent z of
       Nothing -> return True
       Just z' -> do
@@ -56,12 +55,11 @@ checkEmptyPrep tagged dp =
 checkTimePrep :: TaggedLemma t -> PP t -> CompVP t
 checkTimePrep tagged pp = fromMaybe (CompVP_PP pp) $ do
   dp <- pp^? complement . _CompPP_DP
-  let (prep,_pclass) = pp^.headX
   guard $ fromMaybe False $ do
             let rng = dp^.maximalProjection
             find (isMatchedTime rng) (tagged^.tagList)
             return True
-  return (CompVP_PP ((headX .~ (prep,PC_Time)) pp))
+  (return . CompVP_PP . (headX.hp_prep .~ pp^.headX.hp_prep) . (headX.hp_pclass .~ PC_Time)) pp
 
 
 

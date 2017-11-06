@@ -30,8 +30,9 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,PP, AdjunctDP(..), CompDP(..), XP(..)
                                           ,TaggedLemma
                                           ,adjunct,complement,headX,maximalProjection
-                                          ,tokensByRange,mkOrdDP,mkPP,mkPPGerund
-                                          ,mkSplittedDP,pennTree,tagList)
+                                          ,tokensByRange,mkOrdDP,mkSplittedDP
+                                          ,mkPP,mkPPGerund,hp_prep
+                                          ,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 --
 import Debug.Trace
@@ -67,7 +68,7 @@ splitDP tagged dp0 =
               guard (isChunkAs PP (current z_pp))
               pp <- mkPPFromZipper tagged PC_Other z_pp
               let -- ppreplace :: DetP t -> DetP t
-                  ppreplace = case pp^.headX._1 of
+                  ppreplace = case pp^.headX.hp_prep of
                                 Prep_WORD "of" -> complement .~ (Just (CompDP_PP pp))
                                 _              -> adjunct %~ (++ [AdjunctDP_PP pp])
               let (b_pp,_) = pp^.maximalProjection

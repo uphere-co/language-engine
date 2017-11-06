@@ -528,7 +528,7 @@ predicateArgWS tagged cp z adjs =
                                 Nothing -> []
                                 Just z' -> map extractArg (z':iterateMaybe next z')
                               ++ let f x = flip fmap (mkPPFromZipper tagged PC_Time x) $ \pp ->
-                                             let prep = fromMaybe "" (pp^?headX._1._Prep_WORD)
+                                             let prep = fromMaybe "" (pp^?headX.hp_prep._Prep_WORD)
                                                  rng = pp ^. maximalProjection
                                              in Left (rng,S_PP prep PC_Time False)
                                  in mapMaybe f adjs
