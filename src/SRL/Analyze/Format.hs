@@ -227,7 +227,7 @@ showMatchedFrame :: TaggedLemma '[Lemma]
                  -> IO ()
 showMatchedFrame tagged (vstr,cp) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame tagged (vstr,cp)) $ \(rng,_,frame,_,mselected,_) -> do
+  flip traverse_ (matchFrame (vstr,cp)) $ \(rng,_,frame,_,mselected,_) -> do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> unFNFrame frame)
