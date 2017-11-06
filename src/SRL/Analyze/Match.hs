@@ -129,7 +129,9 @@ matchPP cp (mprep,mpclass,mising) = do
     let compvps = cp^..complement.complement.complement.traverse.trResolved._Just
         candidates = do compvp <- compvps
                         case compvp of
-                          CompVP_PP pp -> return pp
+                          CompVP_PP pp ->
+                            let pp's = pp^..complement._CompPP_DP.adjunct.traverse._AdjunctDP_PP
+                            in (pp:pp's)
                           CompVP_DP dp -> dp^..adjunct.traverse._AdjunctDP_PP
                           _            -> []
     find ppcheck candidates
