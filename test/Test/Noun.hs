@@ -29,6 +29,8 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 
+import Debug.Trace
+
 type TestNoun = (Text
                 ,(Text,Maybe Text,Maybe Text,[Text])  -- ^ (head,spec,complement,adjunct)
                 ,[(Int,(Lemma,Text))]
@@ -129,6 +131,7 @@ mkDPFromTest tagged x =
 adjunctDPToRange (AdjunctDP_Unresolved rng) = rng
 adjunctDPToRange (AdjunctDP_PP pp) = pp^.maximalProjection
 
+
 checkBNM :: TestNoun -> Bool
 checkBNM x =
   let tagged = mkTaggedLemma (x^._3) (x^._4) (x^._5)
@@ -150,6 +153,7 @@ testcases = [ test_bare_noun_modifier_1
             , test_paren_modifier_1
             , test_prep_modifier_1
             , test_prep_modifier_2
+            , test_prep_modifier_3
             ]
 
 
