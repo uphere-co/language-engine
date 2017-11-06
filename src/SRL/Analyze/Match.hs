@@ -30,6 +30,7 @@ import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_caus
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,constructCP,currentCPDPPP)
+import           NLP.Syntax.Format.Internal   (formatCompVP,formatPP)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemma0)
@@ -125,7 +126,12 @@ matchPP :: CP '[Lemma]
         -> (Maybe Text,Maybe PrepClass,Maybe Bool)
         -> Maybe (PP '[Lemma])
 matchPP cp (mprep,mpclass,mising) = do
-    let candidates = cp^..complement.complement.complement.traverse.trResolved._Just._CompVP_PP
+    let compvps = cp^..complement.complement.complement.traverse.trResolved._Just
+        candidates = do compvp <- compvps
+                        case compvp of
+                          CompVP_PP pp -> return pp
+                          CompVP_DP dp -> dp^..adjunct.traverse._AdjunctDP_PP
+                          _            -> []
     find ppcheck candidates
   where
     ppcheck pp = let (prep',pclass') = pp^.headX
