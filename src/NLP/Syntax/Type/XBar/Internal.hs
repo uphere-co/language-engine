@@ -96,17 +96,23 @@ data CompDP t = CompDP_Unresolved Range
 data AdjunctDP t = AdjunctDP_Unresolved Range
                  | AdjunctDP_PP (PP t)
 
-
+--
+-- | noun class
+--
 data NomClass = RExp
               | Pronoun
               deriving (Show,Eq,Ord)
 
--- data HeadDP = HeadDP { dp Property
+
+data HeadDP = HeadDP { _hd_range :: Range
+                     , _hd_class :: NomClass
+                     }
+
 
 --
 -- this definition is not truly X-bar-theoretic, but for the time being
 --
-type instance Property   'X_D t = Range -- head
+type instance Property   'X_D t = HeadDP -- Range -- head
 type instance Maximal    'X_D t = Range
 type instance Specifier  'X_D t = Maybe Range  -- appositive for the time being
 type instance Adjunct    'X_D t = [AdjunctDP t]
@@ -119,7 +125,7 @@ type DetP = XP 'X_D
 --   better representation.
 --
 mkOrdDP :: Zipper t -> DetP t
-mkOrdDP z = XP (rf z) (rf z) Nothing [] Nothing
+mkOrdDP z = XP (HeadDP (rf z) RExp) (rf z) Nothing [] Nothing
   where rf = getRange . current
 
 
@@ -133,25 +139,30 @@ mkSplittedDP :: SplitType
              -> DetP t
 mkSplittedDP typ h m o
   = case typ of
-      CLMod -> XP h (rf o) Nothing   [] (Just (CompDP_Unresolved m))
-      BNMod -> XP h (rf o) (Just m)  [] Nothing
-      -- apposition is regarded as an adjunct.
-      APMod -> XP h (rf o) (Just m)  [] Nothing
+      CLMod -> XP (HeadDP h RExp) (rf o) Nothing   [] (Just (CompDP_Unresolved m))
+      BNMod -> XP (HeadDP h RExp) (rf o) (Just m)  [] Nothing
+      APMod -> XP (HeadDP h RExp) (rf o) (Just m)  [] Nothing -- apposition is regarded as an adjunct.
   where rf = getRange . current
 
-
+--
+-- | preposition word, including null preposition (for temporal expressions, numeral..)
+--
 data Prep = Prep_NULL
           | Prep_WORD Text
           deriving (Show,Eq,Ord)
 
+--
+-- | denote semantic class of preposition
+--
 data PrepClass = PC_Time
                | PC_Other
                deriving (Show,Eq,Ord)
 
+--
+-- | {Head,PP} has preposition word and semantic category.
+--
 data HeadPP = HeadPP { _hp_prep :: Prep
                      , _hp_pclass :: PrepClass }
-
-
 
 
 data CompPP t = CompPP_DP (DetP t)
@@ -236,5 +247,3 @@ data CPDPPP t = CPCase (CP t)
 type X'Tree t = Bitree (Range,CPDPPP t) (Range,CPDPPP t)
 
 type X'Zipper t = BitreeZipper (Range,CPDPPP t) (Range,CPDPPP t)
-
-

@@ -16,7 +16,7 @@ import           NLP.Syntax.Type.XBar
 
 
 rangeText :: Either (Zipper as) (DetP as) -> Text
-rangeText (Right x) = x ^. headX . to show . to T.pack
+rangeText (Right x) = x^.headX.hd_range.to show.to T.pack
 rangeText (Left x ) = (T.pack.show.getRange.current) x
 
 

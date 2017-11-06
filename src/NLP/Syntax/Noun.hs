@@ -27,10 +27,12 @@ import           NLP.Type.TagPos          (TagPos(..))
 import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
-                                          ,PP, AdjunctDP(..), CompDP(..), XP(..)
+                                          ,PP, AdjunctDP(..), CompDP(..),HeadDP(..), NomClass(..)
+                                          ,XP(..)
                                           ,TaggedLemma
                                           ,adjunct,complement,headX,maximalProjection
-                                          ,tokensByRange,mkOrdDP,mkSplittedDP
+                                          ,tokensByRange
+                                          ,mkOrdDP,mkSplittedDP,hd_range
                                           ,mkPP,mkPPGerund,hp_prep
                                           ,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
@@ -67,12 +69,11 @@ splitDP tagged dp0 =
               z_pp <- childLast z
               guard (isChunkAs PP (current z_pp))
               pp <- mkPPFromZipper tagged PC_Other z_pp
-              let -- ppreplace :: DetP t -> DetP t
-                  ppreplace = case pp^.headX.hp_prep of
+              let ppreplace = case pp^.headX.hp_prep of
                                 Prep_WORD "of" -> complement .~ (Just (CompDP_PP pp))
                                 _              -> adjunct %~ (++ [AdjunctDP_PP pp])
               let (b_pp,_) = pp^.maximalProjection
-              return (dp0 & (headX %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
+              return (dp0 & (headX.hd_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
 
   in bareNounModifier tagged . fromMaybe dp1 $ do
        let rng1 = dp1^.maximalProjection
@@ -109,7 +110,7 @@ splitParentheticalModifier tagged z = do
    (guard (isChunkAs SBAR (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z))  <|>
    (do guard (isChunkAs PP (current z2))
        pp <- mkPPFromZipper tagged PC_Other z2
-       return (XP (rf dp1) (rf z) Nothing [AdjunctDP_PP pp] Nothing)))
+       return (XP (HeadDP (rf dp1) RExp) (rf z) Nothing [AdjunctDP_PP pp] Nothing)))
 
 
 
