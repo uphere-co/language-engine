@@ -29,6 +29,8 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 
+import Debug.Trace
+
 type TestNoun = (Text
                 ,(Text,Maybe Text,Maybe Text,[Text])  -- ^ (head,spec,complement,adjunct)
                 ,[(Int,(Lemma,Text))]
@@ -107,6 +109,15 @@ test_prep_modifier_2 =
   , []
   )
 
+test_prep_modifier_3 :: TestNoun
+test_prep_modifier_3 =
+  ( "Hain Celestial Group Inc, under pressure from activist investor Engaged Capital LLC,"
+  , ("Hain Celestial Group Inc",Nothing,Nothing,["under pressure from activist investor Engaged Capital LLC"])
+  , [(0,("Hain","Hain")),(1,("Celestial","Celestial")),(2,("Group","Group")),(3,("Inc","Inc")),(4,(",",",")),(5,("under","under")),(6,("pressure","pressure")),(7,("from","from")),(8,("activist","activist")),(9,("investor","investor")),(10,("Engaged","Engaged")),(11,("Capital","Capital")),(12,("LLC","LLC")),(13,(",",","))]
+  , PN "NP" [PN "NP" [PL ("NNP","Hain"),PL ("NNP","Celestial"),PL ("NNP","Group"),PL ("NNP","Inc")],PL (",",","),PN "PP" [PL ("IN","under"),PN "NP" [PN "NP" [PL ("NN","pressure")],PN "PP" [PL ("IN","from"),PN "NP" [PL ("JJ","activist"),PL ("NN","investor"),PL ("NNP","Engaged"),PL ("NNP","Capital"),PL ("NNP","LLC")]]]],PL (",",",")]
+  , [TagPos (TokIdx 0,TokIdx 4,MarkEntity), TagPos (TokIdx 10,TokIdx 13,MarkEntity)]
+  )
+
 
 mkDPFromTest :: TaggedLemma '[Lemma] -> TestNoun -> DetP '[Lemma]
 mkDPFromTest tagged x =
@@ -119,6 +130,7 @@ mkDPFromTest tagged x =
 
 adjunctDPToRange (AdjunctDP_Unresolved rng) = rng
 adjunctDPToRange (AdjunctDP_PP pp) = pp^.maximalProjection
+
 
 checkBNM :: TestNoun -> Bool
 checkBNM x =
@@ -141,6 +153,7 @@ testcases = [ test_bare_noun_modifier_1
             , test_paren_modifier_1
             , test_prep_modifier_1
             , test_prep_modifier_2
+            , test_prep_modifier_3
             ]
 
 

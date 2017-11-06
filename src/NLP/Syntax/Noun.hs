@@ -17,7 +17,7 @@ import           Data.Maybe               (fromMaybe)
 import qualified Data.Text           as T
 --
 import           Data.Bitree              (_PL)
-import           Data.BitreeZipper        (child1,childLast,current,next,extractZipperByRange)
+import           Data.BitreeZipper        (child1,childLast,current,next,prev,extractZipperByRange)
 import           Data.BitreeZipper.Util   (firstSiblingBy)
 import           Data.Range               (Range)
 import           NLP.Type.PennTreebankII  (ChunkTag(..),POSTag(..),TernaryLogic(..)
@@ -27,7 +27,7 @@ import           NLP.Type.TagPos          (TagPos(..))
 import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
-                                          ,PP, AdjunctDP(..), CompDP(..)
+                                          ,PP, AdjunctDP(..), CompDP(..), XP(..)
                                           ,TaggedLemma
                                           ,adjunct,complement,headX,maximalProjection
                                           ,tokensByRange,mkOrdDP,mkPP,mkPPGerund
@@ -103,11 +103,12 @@ splitParentheticalModifier tagged z = do
 
   let rf = getRange . current
   -- phrase inside parenthetical commas must be NP or clause
-  ((guard (isChunkAs NP (current z2)) >> return (identApposHead tagged (rf dp1) (rf z2) z))
-   <|>
-   (guard (isChunkAs VP (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z))
-   <|>
-   (guard (isChunkAs SBAR (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z)))
+  ((guard (isChunkAs NP (current z2)) >> return (identApposHead tagged (rf dp1) (rf z2) z)) <|>
+   (guard (isChunkAs VP (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z))    <|>
+   (guard (isChunkAs SBAR (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z))  <|>
+   (do guard (isChunkAs PP (current z2))
+       pp <- mkPPFromZipper tagged PC_Other z2
+       return (XP (rf dp1) (rf z) Nothing [AdjunctDP_PP pp] Nothing)))
 
 
 

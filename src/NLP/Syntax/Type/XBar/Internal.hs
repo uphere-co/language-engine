@@ -117,18 +117,20 @@ mkOrdDP z = XP (rf z) (rf z) Nothing [] Nothing
   where rf = getRange . current
 
 
-
-
+--
+-- | This function is very ad hoc, should be eliminated.
+--
 mkSplittedDP :: SplitType
              -> Range        -- head
              -> Range
              -> Zipper t     -- zipper for maximal projection
              -> DetP t
-mkSplittedDP typ h m o = case typ of
-                           CLMod -> XP h (rf o) Nothing   [] (Just (CompDP_Unresolved m))
-                           BNMod -> XP h (rf o) (Just m)  [] Nothing
-                           -- apposition is regarded as an adjunct.
-                           APMod -> XP h (rf o) (Just m)  [] Nothing
+mkSplittedDP typ h m o
+  = case typ of
+      CLMod -> XP h (rf o) Nothing   [] (Just (CompDP_Unresolved m))
+      BNMod -> XP h (rf o) (Just m)  [] Nothing
+      -- apposition is regarded as an adjunct.
+      APMod -> XP h (rf o) (Just m)  [] Nothing
   where rf = getRange . current
 
 
