@@ -17,7 +17,7 @@ import           Data.Maybe               (fromMaybe)
 import qualified Data.Text           as T
 --
 import           Data.Bitree              (_PL)
-import           Data.BitreeZipper        (child1,childLast,current,next,prev,extractZipperByRange)
+import           Data.BitreeZipper        (child1,childLast,current,next,extractZipperByRange)
 import           Data.BitreeZipper.Util   (firstSiblingBy)
 import           Data.Range               (Range)
 import           NLP.Type.PennTreebankII  (ChunkTag(..),POSTag(..),TernaryLogic(..)
@@ -27,15 +27,16 @@ import           NLP.Type.TagPos          (TagPos(..))
 import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
-                                          ,PP, AdjunctDP(..), CompDP(..), XP(..)
+                                          ,PP, AdjunctDP(..), CompDP(..),HeadDP(..), NomClass(..)
+                                          ,XP(..)
                                           ,TaggedLemma
                                           ,adjunct,complement,headX,maximalProjection
-                                          ,tokensByRange,mkOrdDP,mkPP,mkPPGerund
-                                          ,mkSplittedDP,pennTree,tagList)
+                                          ,tokensByRange
+                                          ,mkOrdDP,mkSplittedDP,hd_range,hd_class
+                                          ,mkPP,mkPPGerund,hp_prep
+                                          ,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
 --
-import Debug.Trace
-import NLP.Syntax.Format.Internal
 
 
 mkPPFromZipper :: TaggedLemma t -> PrepClass -> Zipper t -> Maybe (PP t)
@@ -66,17 +67,15 @@ splitDP tagged dp0 =
               z_pp <- childLast z
               guard (isChunkAs PP (current z_pp))
               pp <- mkPPFromZipper tagged PC_Other z_pp
-              let -- ppreplace :: DetP t -> DetP t
-                  ppreplace = case pp^.headX._1 of
+              let ppreplace = case pp^.headX.hp_prep of
                                 Prep_WORD "of" -> complement .~ (Just (CompDP_PP pp))
                                 _              -> adjunct %~ (++ [AdjunctDP_PP pp])
               let (b_pp,_) = pp^.maximalProjection
-              return (dp0 & (headX %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
+              return (dp0 & (headX.hd_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
 
-  in bareNounModifier tagged . fromMaybe dp1 $ do
+  in identifyPronoun tagged . bareNounModifier tagged . fromMaybe dp1 $ do
        let rng1 = dp1^.maximalProjection
        z <- find (isChunkAs NP . current) (extractZipperByRange rng1 (tagged^.pennTree))
-       -- guard (isChunkAs NP (current z))
        dp <- child1 z
        guard (isChunkAs NP (current dp))
        sbar <- next dp
@@ -108,7 +107,7 @@ splitParentheticalModifier tagged z = do
    (guard (isChunkAs SBAR (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z))  <|>
    (do guard (isChunkAs PP (current z2))
        pp <- mkPPFromZipper tagged PC_Other z2
-       return (XP (rf dp1) (rf z) Nothing [AdjunctDP_PP pp] Nothing)))
+       return (XP (HeadDP (rf dp1) RExp) (rf z) Nothing [AdjunctDP_PP pp] Nothing)))
 
 
 
@@ -120,13 +119,26 @@ identApposHead tagged rng1 rng2 z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $
    (do find (\(TagPos (b,e,t)) -> rng2 == beginEndToRange (b,e) && t == MarkEntity) (tagged^.tagList)
        return (mkSplittedDP APMod rng2 rng1 z)))
 
-
+--
 -- | starting with capital letter
 --
 checkProperNoun :: TaggedLemma t -> Range -> Bool
 checkProperNoun tagged (b,e) =
   let toks = tokensByRange tagged (b,e)
   in (not.null) toks && isUpper (T.head (head toks))   -- unsafe!
+
+
+--
+-- | check whether DP is pronoun and change NomClass accordingly
+-- 
+identifyPronoun :: TaggedLemma t -> DetP t -> DetP t
+identifyPronoun tagged dp = fromMaybe dp $ do
+  let rng = dp^.headX.hd_range
+  find (isPOSAs PRP . current) (extractZipperByRange rng (tagged^.pennTree))
+  (return . (headX.hd_class .~ Pronoun)) dp
+
+
+
 
 -- | Identify bare noun subexpression inside noun phrase as modifier.
 --   I did not implement the already-splitted case. We need multiple-adjunct

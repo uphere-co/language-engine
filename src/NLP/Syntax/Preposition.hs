@@ -22,14 +22,14 @@ import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP,_CompPP_DP
                                          ,TaggedLemma(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
-                                         ,mkPP)
+                                         ,hd_range
+                                         ,mkPP,hp_prep,hp_pclass)
 
 
 hasEmptyPreposition :: TaggedLemma t -> Range -> Bool
 hasEmptyPreposition tagged rng =
   fromMaybe False $ do
     z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTree))
-    -- guard (isChunkAs NP (current z))
     case parent z of
       Nothing -> return True
       Just z' -> do
@@ -56,12 +56,11 @@ checkEmptyPrep tagged dp =
 checkTimePrep :: TaggedLemma t -> PP t -> CompVP t
 checkTimePrep tagged pp = fromMaybe (CompVP_PP pp) $ do
   dp <- pp^? complement . _CompPP_DP
-  let (prep,_pclass) = pp^.headX
   guard $ fromMaybe False $ do
             let rng = dp^.maximalProjection
             find (isMatchedTime rng) (tagged^.tagList)
             return True
-  return (CompVP_PP ((headX .~ (prep,PC_Time)) pp))
+  (return . CompVP_PP . (headX.hp_prep .~ pp^.headX.hp_prep) . (headX.hp_pclass .~ PC_Time)) pp
 
 
 
@@ -78,33 +77,17 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   guard (isChunkAs PP (current z_tpp))
   let (b_tpp,_e_tpp) = getRange (current z_tpp)
       rng_dp' = (b_dp,b_tpp-1)
-      rng_head = let (b_h,e_h) = dp^.headX
+      rng_head = let (b_h,e_h) = dp^.headX.hd_range
                  in if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
-      dp' = dp & (headX .~ rng_head) . (maximalProjection .~ rng_dp')
+      dp' = dp & (headX.hd_range .~ rng_head) . (maximalProjection .~ rng_dp')
   return (dp',[z_tpp])
-
-
--- "aboard"                   --
-                          -- , "absent"
-                         -- , "cross"
-                         -- , "apropos"
-                         -- , "apud"
-                         -- , "chez"                  --
-                         -- , "pace"                  --
-                         -- , "post"
-                         -- , "pre"
-                         -- , "pro"
-                         -- , "qua"
-                         -- , "re"
-                         -- , "sans"
-                         -- , "vice"
-                         -- , "vis-a-vis"
 
 
 --
 -- | This is the list of English prepositions.
 --   Main source: https://en.wikipedia.org/wiki/List_of_English_prepositions
 --   I commented out (law,archaic,poetic,abbreviation,rare,formal,hyphenated,colonated)
+--   such as aboard, absent, cross, apropos, apud, chez, pace, post, pre, pro, qua, re, sans, vice, vis-a-vis
 --
 singleWordPrepositions :: [(Text,[Text])]                      -- FrameNet Frames
 singleWordPrepositions = [ ("about"     , ["Topic", "Proportional_quantity"])

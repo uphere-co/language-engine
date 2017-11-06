@@ -44,8 +44,6 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
 --
 import Debug.Trace
-import qualified Data.Text as T
-import NLP.Syntax.Format.Internal
 
 hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
 hoistMaybe = MaybeT . return
@@ -471,9 +469,9 @@ connectRaisedDP rng = do
   (w,cp) <- retrieveWCP rng
   guard (cp ^. complement.complement.headX.vp_voice == Passive)
   c1:c2:[] <- return (cp^.complement.complement.complement)
-  rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.headX)
+  rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.headX.hd_range)
   cp' <- hoistMaybe (c2^?trResolved._Just._CompVP_CP)
-  rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.headX)
+  rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.headX.hd_range)
   if rng1 == rng_dp
     then do
       let rf = (_2._CPCase.complement.specifier .~ emptyTraceChain)
@@ -528,7 +526,7 @@ predicateArgWS tagged cp z adjs =
                                 Nothing -> []
                                 Just z' -> map extractArg (z':iterateMaybe next z')
                               ++ let f x = flip fmap (mkPPFromZipper tagged PC_Time x) $ \pp ->
-                                             let prep = fromMaybe "" (pp^?headX._1._Prep_WORD)
+                                             let prep = fromMaybe "" (pp^?headX.hp_prep._Prep_WORD)
                                                  rng = pp ^. maximalProjection
                                              in Left (rng,S_PP prep PC_Time False)
                                  in mapMaybe f adjs

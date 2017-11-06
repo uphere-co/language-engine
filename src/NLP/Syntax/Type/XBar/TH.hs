@@ -14,16 +14,20 @@ makeLenses ''XP
 
 makeLenses ''TraceChain
 
--- makePrisms ''MaximalDP
+makeLenses ''HeadDP
+
 makePrisms ''CompDP
 
 makePrisms ''AdjunctDP
 
-makePrisms ''CompPP
 
 makePrisms ''Prep
 
 makePrisms ''PrepClass
+
+makeLenses ''HeadPP
+
+makePrisms ''CompPP
 
 makePrisms ''CompVP
 
