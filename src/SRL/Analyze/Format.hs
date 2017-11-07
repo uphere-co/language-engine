@@ -181,22 +181,22 @@ formatDocStructure showdetail (DocStructure mtokenss sentitems mergedtags sstrs)
 
 
 formatSentStructure :: Bool -> SentStructure -> [Text]
-formatSentStructure showdetail (SentStructure i ptr _ clausetr cpstr _ tagged vstrs) =
+formatSentStructure showdetail (SentStructure i ptr _ x'tr _ tagged vstrs) =
    let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                   , formatIndexTokensFromTree 0 ptr
                   ]
-       subline1_1 = [ "--------------------------------------------------------------------------------------------------"
-                    , formatClauseStructure clausetr
-                    , "================================================================================================="
-                    ]
-       subline2 = map (formatVerbStructure tagged clausetr cpstr) vstrs
-   in subline1 ++ (if showdetail then subline1_1 else []) ++ concat subline2
+       --subline1_1 = [ "--------------------------------------------------------------------------------------------------"
+       --             , formatClauseStructure clausetr
+       --             , "================================================================================================="
+       --             ]
+       subline2 = map (formatVerbStructure tagged x'tr) vstrs
+   in subline1 ++ {- (if showdetail then subline1_1 else []) ++ -} concat subline2
 
 
-formatVerbStructure :: TaggedLemma '[Lemma] -> ClauseTree -> [X'Tree '[Lemma]] -> VerbStructure -> [Text]
-formatVerbStructure tagged clausetr x'tr (VerbStructure vp senses mrmmtoppatts) =
-  [ formatVPwithPAWS tagged clausetr x'tr vp
-  , T.pack (printf "Verb: %-20s" (vp^.vp_lemma.to unLemma))
+formatVerbStructure :: TaggedLemma '[Lemma] -> [X'Tree '[Lemma]] -> VerbStructure -> [Text]
+formatVerbStructure tagged x'tr (VerbStructure vp senses mrmmtoppatts) =
+  [--  formatVPwithPAWS tagged clausetr x'tr vp
+    T.pack (printf "Verb: %-20s" (vp^.vp_lemma.to unLemma))
   , T.pack (formatSenses False senses mrmmtoppatts)
   ]
 

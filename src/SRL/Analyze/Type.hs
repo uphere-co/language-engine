@@ -85,8 +85,8 @@ makeLenses ''VerbStructure
 data SentStructure = SentStructure { _ss_i              :: Int
                                    , _ss_ptr            :: PennTree
                                    , _ss_vps            :: [VerbProperty (Zipper '[Lemma])]
-                                   , _ss_clausetr       :: ClauseTree
-                                   , _ss_cpstr          :: [X'Tree '[Lemma]]
+                                   -- , _ss_clausetr       :: ClauseTree
+                                   , _ss_x'tr          :: [X'Tree '[Lemma]]
                                    , _ss_tagged_full    :: [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text), MarkType)]
                                    , _ss_tagged         :: TaggedLemma '[Lemma]
                                    , _ss_verbStructures :: [VerbStructure]
