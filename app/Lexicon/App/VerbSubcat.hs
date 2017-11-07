@@ -38,7 +38,9 @@ import           Lexicon.Query
 import           NLP.Printer.PennTreebankII
 import           NLP.Syntax.Argument
 import           NLP.Syntax.Clause
+import           NLP.Syntax.Clause.Old
 import           NLP.Syntax.Format
+import           NLP.Syntax.Format.Old
 import           NLP.Syntax.Type                        (PredArgWorkspace,STag)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
