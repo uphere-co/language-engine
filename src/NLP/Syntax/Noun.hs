@@ -20,7 +20,7 @@ import           Data.Bitree              (_PL)
 import           Data.BitreeZipper        (child1,childLast,current,next,extractZipperByRange)
 import           Data.BitreeZipper.Util   (firstSiblingBy)
 import           Data.Range               (Range)
-import           NLP.Type.PennTreebankII  (ChunkTag(..),POSTag(..),TernaryLogic(..)
+import           NLP.Type.PennTreebankII  (ChunkTag(..),POSTag(..),TernaryLogic(..),Lemma(..)
                                           ,getRange,isNoun,posTag,tokenWord)
 import           NLP.Type.TagPos          (TagPos(..))
 --
@@ -35,11 +35,12 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,mkOrdDP,mkSplittedDP,hd_range,hd_class
                                           ,mkPP,mkPPGerund,hp_prep
                                           ,pennTree,tagList)
-import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs)
+import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs)
 --
 
+import Debug.Trace
 
-mkPPFromZipper :: TaggedLemma t -> PrepClass -> Zipper t -> Maybe (PP t)
+mkPPFromZipper :: TaggedLemma (Lemma ': as) -> PrepClass -> Zipper (Lemma ': as) -> Maybe (PP (Lemma ': as))
 mkPPFromZipper tagged pclass z = do
   guard (isChunkAs PP (current z))
   z_prep <- child1 z
@@ -58,7 +59,7 @@ mkPPFromZipper tagged pclass z = do
 
 
 
-splitDP :: forall t. TaggedLemma t -> DetP t -> DetP t
+splitDP :: TaggedLemma (Lemma ': as) -> DetP (Lemma ': as) -> DetP (Lemma ': as)
 splitDP tagged dp0 =
   let dp1 = fromMaybe dp0 $ do
               let rng0 = dp0^.maximalProjection
@@ -85,7 +86,7 @@ splitDP tagged dp0 =
         (splitParentheticalModifier tagged z))
 
 
-splitParentheticalModifier :: TaggedLemma t -> Zipper t -> Maybe (DetP t)
+splitParentheticalModifier :: TaggedLemma (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))
 splitParentheticalModifier tagged z = do
   guard (isChunkAs NP (current z))         -- dominating phrase must be NP
   dp1 <- child1 z
@@ -94,19 +95,31 @@ splitParentheticalModifier tagged z = do
   guard (isPOSAs M_COMMA (current comma1)) -- followed by comma
   z2 <- next comma1                        -- followed by a phrase
   -- followed by comma and end, or just end.
-  ((do comma2 <- next z2
-       guard (isPOSAs M_COMMA (current comma2))
-       guard (is _Nothing (next comma2)))
-   <|>
-   (guard (is _Nothing (next z2))))
+  z_appos <-
+    ((do comma2 <- next z2
+         guard (isPOSAs M_COMMA (current comma2))
+         guard (is _Nothing (next comma2))
+         return z2)
+     <|>
+     (do let showf = show . map (tokenWord.snd) . toList . current
+         guard (isLemmaAs (Lemma "or") (current z2))
+         z3 <- next z2
+         comma2 <- next z3
+         guard (isPOSAs M_COMMA (current comma2))
+         guard (is _Nothing (next comma2))
+         return z3)
+     <|> 
+     (do guard (is _Nothing (next z2))
+         return z2)
+    )
 
   let rf = getRange . current
   -- phrase inside parenthetical commas must be NP or clause
-  ((guard (isChunkAs NP (current z2)) >> return (identApposHead tagged (rf dp1) (rf z2) z)) <|>
-   (guard (isChunkAs VP (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z))    <|>
-   (guard (isChunkAs SBAR (current z2)) >> return (mkSplittedDP CLMod (rf dp1) (rf z2) z))  <|>
-   (do guard (isChunkAs PP (current z2))
-       pp <- mkPPFromZipper tagged PC_Other z2
+  ((guard (isChunkAs NP (current z_appos)) >> return (identApposHead tagged (rf dp1) (rf z_appos) z)) <|>
+   (guard (isChunkAs VP (current z_appos)) >> return (mkSplittedDP CLMod (rf dp1) (rf z_appos) z))    <|>
+   (guard (isChunkAs SBAR (current z_appos)) >> return (mkSplittedDP CLMod (rf dp1) (rf z_appos) z))  <|>
+   (do guard (isChunkAs PP (current z_appos))
+       pp <- mkPPFromZipper tagged PC_Other z_appos
        return (XP (HeadDP (rf dp1) RExp) (rf z) Nothing [AdjunctDP_PP pp] Nothing)))
 
 

@@ -205,7 +205,9 @@ cpRange :: CP xs -> Range
 cpRange cp = cp^.maximalProjection.to (getRange . current)
 
 
-hierarchyBits :: TaggedLemma t -> (CP t, [DetP t]) -> Maybe [(Range, (Range, CPDPPP t))]
+hierarchyBits :: TaggedLemma (Lemma ': as)
+              -> (CP (Lemma ': as), [DetP (Lemma ': as)])
+              -> Maybe [(Range, (Range, CPDPPP (Lemma ': as)))]
 hierarchyBits tagged (cp,dps) = do
   let rng = cpRange cp
       cpbit = (rng,(rng,CPCase cp))
