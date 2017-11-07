@@ -221,8 +221,7 @@ data Complementizer t = C_PHI              -- ^ empty complementizer
 
 data SpecCP t = SpecCP_WHPHI           -- ^ empty Wh-word
               | SpecCP_WH (Zipper t)   -- ^ Wh-word
-              --   | SpecCP_Topic_Complement (TraceChain (CP t)) -- ^ topicalization from complement position
-              --   | SpecCP_Topic_Adjunct     -- ^ topicalization from adjunct position
+              | SpecCP_Topic (TraceChain (CompVP t)) -- ^ topicalization (AdjunctCP for the time being)
 
 
 

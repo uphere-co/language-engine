@@ -117,7 +117,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
         formatSpecCP Nothing              = ("","")
         formatSpecCP (Just SpecCP_WHPHI)  = ("phi_WH","")
         formatSpecCP (Just (SpecCP_WH z)) = (formatposchunk (rootTag (current z)), show (gettoken z))
-        --  formatSpecCP (Just (SpecCP_Topic_Complement _)) = ("Topic_Complement","Topic_Complement")
+        formatSpecCP (Just (SpecCP_Topic _)) = ("Topic","Topic")
         --
         (head1,head2) = formatComplementizer (cp^.headX)
         (spec1,spec2) = formatSpecCP (cp^.specifier)
