@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE GADTs               #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE KindSignatures      #-}
 {-# LANGUAGE LambdaCase          #-}
@@ -61,12 +62,12 @@ headVP :: VerbProperty (Zipper (Lemma ': as)) -> Maybe (Zipper (Lemma ': as))
 headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 
-complementCandidates :: VerbProperty (Zipper (Lemma ': as)) -> Zipper (Lemma ': as) -> [Zipper (Lemma ': as)]
+complementCandidates :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
+                        VerbProperty (Zipper t) -> Zipper t -> ([Zipper t],Maybe (Zipper t))
 complementCandidates vprop z_vp =
     let cs_ord = siblingsBy (nextNotComma) checkNPSBAR =<< maybeToList (headVP vprop)
         -- topicalized CP
-        cs_top = maybeToList $ do
-                   guard (isChunkAs VP (current z_vp))
+        c_top = do guard (isChunkAs VP (current z_vp))
                    z_np <- prev z_vp
                    guard (isChunkAs NP (current z_np))
                    z_comma <- prev z_np
@@ -74,7 +75,7 @@ complementCandidates vprop z_vp =
                    z_cp <- prev z_comma
                    (guard (isChunkAs S (current z_cp) || isChunkAs SBAR (current z_cp)))
                    return z_cp
-    in cs_ord ++ cs_top
+    in (cs_ord,c_top)
 
   where
     nextNotComma z = do n <- next z
@@ -91,16 +92,19 @@ complementCandidates vprop z_vp =
                       Right p    -> isNoun p == Yes
 
 
-complementsOfVerb :: TaggedLemma (Lemma ': as)
-                  -> VerbProperty (Zipper (Lemma ': as))
-                  -> Zipper (Lemma ': as)
-                  -> ([TraceChain (CompVP (Lemma ': as))],[Zipper (Lemma ': as)])
+complementsOfVerb :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
+                     TaggedLemma t
+                  -> VerbProperty (Zipper t)
+                  -> Zipper t
+                  -> ([TraceChain (CompVP t)],Maybe (TraceChain (CompVP t)), [Zipper t])
 complementsOfVerb tagged vprop z_vp =
-  let (cs,zs) = let lst = map xform (complementCandidates vprop z_vp)
-                in (map fst lst,concatMap snd lst)    
+  let (cs,mspec,zs) = let (xs,mtop) = complementCandidates vprop z_vp
+                          xs' = map xform xs ++ maybeToList (mtop >>= \top -> return (TraceChain (Left (singletonLZ Moved)) (Just (CompVP_Unresolved top)), []))
+                          mspec = mtop >>= \top -> return (TraceChain (Right [Moved]) (Just (CompVP_Unresolved top)))
+                      in (map fst xs',mspec,concatMap snd xs')
   in case vprop^.vp_voice of
-       Active -> (cs,zs)
-       Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,zs)
+       Active -> (cs,mspec,zs)
+       Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,mspec,zs)
   where
     xform_dp z = let dp = splitDP tagged (mkOrdDP z)
                      (dp',zs) = identifyInternalTimePrep tagged dp
@@ -157,13 +161,13 @@ constructCP :: TaggedLemma (Lemma ': as)
             -> Maybe (CP (Lemma ': as),[Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))])
 constructCP tagged vprop = do
     z_vp <- maximalProjectionVP vprop
-    tp <- parentOfVP vprop
-    tptag' <- N.convert <$> getchunk tp
+    z_tp <- parentOfVP vprop
+    tptag' <- N.convert <$> getchunk z_tp
     case tptag' of
       N.CL s -> do
-        cp' <- parent tp
-        cptag' <- N.convert <$> getchunk cp'
-        let (comps,cadjs) = complementsOfVerb tagged vprop z_vp
+        z_cp' <- parent z_tp
+        cptag' <- N.convert <$> getchunk z_cp'
+        let (comps,mtop,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
             subj0 = identifySubject tagged s z_vp
@@ -178,20 +182,23 @@ constructCP tagged vprop = do
             dps = subj_dps ++ comps_dps
         case cptag' of
           N.CL N.SBAR ->
-            let (cphead,cpspec) = case prev tp of
-                                    Nothing -> (C_PHI,Nothing)
-                                    Just z -> if (isChunkAs WHNP (current z))
-                                              then (C_PHI,Just (SpecCP_WH z))
-                                              else (C_WORD z,Nothing)
-            in return (mkCP cphead cp' cpspec adjs (mkTP tp subj verbp),dps)
+            let (cphead,cpspec) = case mtop of
+                                    Just top -> (C_PHI,Just (SpecCP_Topic top))
+                                    Nothing -> 
+                                      case prev z_tp of
+                                        Nothing -> (C_PHI,Nothing)
+                                        Just z -> if (isChunkAs WHNP (current z))
+                                                  then (C_PHI,Just (SpecCP_WH z))
+                                                  else (C_WORD z,Nothing)
+            in return (mkCP cphead z_cp' cpspec adjs (mkTP z_tp subj verbp),dps)
           N.CL _ ->
-            return (mkCP C_PHI tp Nothing adjs (mkTP tp subj verbp),dps)
+            return (mkCP C_PHI z_tp Nothing adjs (mkTP z_tp subj verbp),dps)
           N.RT   ->
-            return (mkCP C_PHI cp' Nothing adjs (mkTP tp subj verbp),dps)
+            return (mkCP C_PHI z_cp' Nothing adjs (mkTP z_tp subj verbp),dps)
           _      -> -- somewhat problematic case?
-            return (mkCP C_PHI tp Nothing adjs (mkTP tp subj verbp),dps)
+            return (mkCP C_PHI z_tp Nothing adjs (mkTP z_tp subj verbp),dps)
       _ -> -- reduced relative clause
-        let (comps,cadjs) = complementsOfVerb tagged vprop z_vp
+        let (comps,_,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
             verbp = mkVerbP z_vp vprop cadjs comps
