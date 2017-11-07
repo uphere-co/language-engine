@@ -36,7 +36,7 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 --
 import           NLP.Syntax.Type.XBar
 
-                       
+
 -- | workspace for predicate argument
 --
 data PredArgWorkspace as a = PAWS { _pa_CP :: CP as
@@ -44,9 +44,6 @@ data PredArgWorkspace as a = PAWS { _pa_CP :: CP as
                                   }
 
 makeLenses ''PredArgWorkspace
-
-
-
 
 ---------------
 --           --

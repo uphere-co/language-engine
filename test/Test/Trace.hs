@@ -7,11 +7,13 @@ module Test.Trace where
 import           Control.Lens               hiding (levels)
 import           Data.Foldable
 import           Data.Maybe                        (fromMaybe)
+import           Data.Monoid                       (First(..))
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 --
 import           Data.Bitree
+import           Data.BitreeZipper
 import           Data.ListZipper
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -229,12 +231,16 @@ checkTrace c =
         --lemmapt = mkBitreeICP lmap1 (c^._5)
         tagged = mkTaggedLemma (c^._4) (c^._5) (c^._6)
         vps = mkVPS (c^._4) (c^._5)
-        clausetr = clauseStructure tagged vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
-        cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
+        -- clausetr = clauseStructure tagged vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
+        x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
 
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-    paws <- findPAWS tagged clausetr vp cpstr
-    let cp = paws^.pa_CP
+    -- paws <- findPAWS tagged clausetr vp cpstr
+    -- let cp = paws^.pa_CP
+    cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
+                                             -- anyway need to be rewritten.
+    cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cpRange cp0))) x'tr)
+    
     case c^._3._1 of
       Subj   -> let dp = fmap (either (const "") (headText tagged)) (cp ^.complement.specifier)  -- for the time being. ignore CP subject
                 in return (dp == c ^._3._2)

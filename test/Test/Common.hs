@@ -37,7 +37,7 @@ formatDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType]) ->
 formatDetail (_txt,lma,pt,taglst) =
   let tagged = mkTaggedLemma lma pt taglst
       vps  = mkVPS lma pt
-      clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
+      -- clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
 
   in
@@ -46,7 +46,7 @@ formatDetail (_txt,lma,pt,taglst) =
   , "--------------------------------------------------------------------------------------------------------------------"
   ]
   ++ map formatX'Tree x'tr
-  ++ map (formatVPwithPAWS tagged clausetr x'tr) vps
+  -- ++ map (formatVPwithPAWS tagged clausetr x'tr) vps
   ++
   [ "--------------------------------------------------------------------------------------------------------------------"
   , prettyPrint 0 pt
