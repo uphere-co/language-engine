@@ -42,7 +42,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,SentStructure,VerbStructure
                                               ,PredicateInfo(..)
                                               ,_PredNoun,_MGPredicate
-                                              ,ss_cpstr,ss_tagged,ss_verbStructures
+                                              ,ss_x'tr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
 --
@@ -52,7 +52,7 @@ import Debug.Trace
 
 mkTriples :: SentStructure -> ([X'Tree '[Lemma]],[(VerbStructure, CP '[Lemma])])
 mkTriples sstr =
-  let x'tr = sstr^.ss_cpstr
+  let x'tr = sstr^.ss_x'tr
   in ( x'tr
      , [(vstr,cp)| vstr <- sstr ^.ss_verbStructures
                  , let vp = vstr^.vs_vp
