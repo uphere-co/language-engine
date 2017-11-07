@@ -117,6 +117,15 @@ test_prep_modifier_3 =
   , [TagPos (TokIdx 0,TokIdx 4,MarkEntity), TagPos (TokIdx 10,TokIdx 13,MarkEntity)]
   )
 
+test_appos_or_1 :: TestNoun
+test_appos_or_1 =
+  ("$154.5 million, or 54 cents a share,"
+  , ("$ 154.5 million",Just "54 cents a share",Nothing,[])
+  , [(0,("$","$")),(1,("154.5","154.5")),(2,("million","million")),(3,(",",",")),(4,("or","or")),(5,("54","54")),(6,("cent","cents")),(7,("a","a")),(8,("share","share")),(9,(",",","))]
+  , PN "NP" [PN "NP" [PN "QP" [PL ("$","$"),PL ("CD","154.5"),PL ("CD","million")]],PL (",",","),PL ("CC","or"),PN "NP" [PN "NP" [PL ("CD","54"),PL ("NNS","cents")],PN "NP" [PL ("DT","a"),PL ("NN","share")]],PL (",",",")]
+  , []
+  )
+
 
 mkDPFromTest :: TaggedLemma '[Lemma] -> TestNoun -> DetP '[Lemma]
 mkDPFromTest tagged x =
@@ -154,6 +163,7 @@ testcases = [ test_bare_noun_modifier_1
             , test_prep_modifier_1
             , test_prep_modifier_2
             , test_prep_modifier_3
+            , test_appos_or_1
             ]
 
 
