@@ -74,25 +74,6 @@ showRange rng = T.pack (printf "%-7s" (show rng))
 
 
 
-formatPAWS :: PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
-           -> String
-formatPAWS pa =
-  printf "              subject       : %s\n\
-         \              arg candidates: %s\n\
-         \              complements   : %s"
-         (formatTraceChain rangeText (pa^.pa_CP^.complement.specifier))
-         ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
-         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatTraceChain formatCompVP )))
-  where
-    fmtArg a = case a of
-                 Right (_  ,p)           -> show p
-                 Left  (_  ,(S_RT))      -> "ROOT"
-                 Left  (rng,(S_SBAR _))  -> "SBAR" ++ show rng
-                 Left  (rng,(S_CL c))    -> show c ++ show rng
-                 Left  (_  ,(S_VP _))    -> "VP"
-                 Left  (rng,(S_PP t c b))  -> "(PP " ++ show t ++ " " ++ show c ++ if b then " ing" else "" ++ ")" ++ show rng
-                 Left  (rng,(S_OTHER t)) -> show t ++ show rng
-
 
 formatAdjunctCP :: AdjunctCP t -> Text
 formatAdjunctCP (AdjunctCP_Unresolved z) = "unresolved" <> (showRange . getRange . current) z
@@ -136,6 +117,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
         formatSpecCP Nothing              = ("","")
         formatSpecCP (Just SpecCP_WHPHI)  = ("phi_WH","")
         formatSpecCP (Just (SpecCP_WH z)) = (formatposchunk (rootTag (current z)), show (gettoken z))
+        --  formatSpecCP (Just (SpecCP_Topic_Complement _)) = ("Topic_Complement","Topic_Complement")
         --
         (head1,head2) = formatComplementizer (cp^.headX)
         (spec1,spec2) = formatSpecCP (cp^.specifier)
@@ -150,46 +132,3 @@ formatX'Tree tr = formatBitree fmt tr
         fmt (_  ,PPCase x) = formatPP x
 
 
-formatClauseStructure :: ClauseTree -> Text
-formatClauseStructure clausetr =
-  let tr' = bimap (\(_rng,x)->f x) g (cutOutLevel0 clausetr)
-        where f (S_CL c,l)    = T.pack (show c) <> ":" <> T.pack (show l)
-              f (S_SBAR zs,l) = "SBAR:" <> T.pack (show zs) <> "," <> T.pack (show l)
-              f (S_VP zs,l)   = "VP:" <> T.pack (show zs) <> "," <> T.pack (show l)
-              f (S_PP p c b,_l) = "PP:" <> T.pack (show p) <> " " <> T.pack (show c) <> if b then "-ing" else ""
-              f (S_OTHER p,l) = T.pack (show p) <> ":" <> T.pack (show l)
-              f (S_RT  ,l)    = "ROOT" <> ":" <> T.pack (show l)
-              g (Left x)      = T.pack (show x)
-              g (Right x)     = T.pack (show x)
-  in formatBitree id tr'
-
-
-formatVPwithPAWS :: TaggedLemma (Lemma ': as)
-                 -> ClauseTree
-                 -> [X'Tree (Lemma ': as)]
-                 -> VerbProperty (BitreeZipperICP (Lemma ': as))
-                 -> Text
-formatVPwithPAWS tagged clausetr cpstr vp =
-  let mpaws = findPAWS tagged clausetr vp cpstr
-      mrng = cpRange . (^.pa_CP) <$> mpaws
-      fmt = either (const "") (tokenWord.snd) . getRoot . current
-  in case (,) <$> mpaws <*> mrng of
-       Nothing -> "fail in identifying PAWS"
-       Just (paws,rng) -> T.pack (printf "%7s:%-50s\n%s\n"
-                                   (show rng)
-                                   (formatVerbProperty fmt vp)
-                                   (maybe "" formatPAWS mpaws))
-                          <> "\n"
-                          <> T.pack (formatCP (paws^.pa_CP))
-                          <> "\n"
-
-
-
-showClauseStructure :: TaggedLemma '[Lemma] -> IntMap Lemma -> PennTree -> IO ()
-showClauseStructure tagged lemmamap ptree  = do
-  let vps  = verbPropertyFromPennTree lemmamap ptree
-      clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
-      xs = map (formatVPwithPAWS tagged clausetr cpstr) vps
-  mapM_ (T.IO.putStrLn . formatX'Tree) cpstr
-  flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)

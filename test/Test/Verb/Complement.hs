@@ -11,13 +11,13 @@ import           Control.Lens               hiding (levels)
 import qualified Data.IntMap                as IM
 import           Data.List                         (find)
 import           Data.Maybe                        (fromMaybe)
-import           Data.Monoid                       (All(All,getAll),mconcat)
+import           Data.Monoid                       (First(..),All(All,getAll),mconcat)
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import           Text.Printf
 --
 import           Data.Bitree
-import           Data.BitreeZipper                 (current)
+import           Data.BitreeZipper                 (current,extractZipperById)
 import           NLP.Printer.PennTreebankII
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -195,7 +195,7 @@ prepComplement
     , [TagPos (TokIdx 0, TokIdx 2, MarkTime)]
     )
 
-
+{- 
 formatTP :: TestVerbComplement -> [String]
 formatTP (txt,i,_,lmatknlst,pt,taglst) =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) lmatknlst)
@@ -203,7 +203,7 @@ formatTP (txt,i,_,lmatknlst,pt,taglst) =
       tagged = TaggedLemma lemmapt lmatknlst taglst
       vps = mkVPS lmatknlst pt
       ipt = mkPennTreeIdx pt
-      clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id ipt)
+      -- clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id ipt)
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
       cltxts = formatClauseStructure clausetr
   in case find (\vp -> vp^.vp_index == i) vps of
@@ -242,20 +242,24 @@ mainShow = do
   showTP ditransitive_4
   showTP preposedTemporalAdjunct
   showTP preposedCP
-
+-}
 
 checkSubjCompAdjunct :: TestVerbComplement -> Bool
 checkSubjCompAdjunct c = fromMaybe False $ do
   let tagged = mkTaggedLemma (c^._4) (c^._5) (c^._6)
       vps = mkVPS (c^._4) (c^._5)
-      clausetr = clauseStructure tagged vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
+      -- clausetr = clauseStructure tagged vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
 
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-  paws <- findPAWS tagged clausetr vp x'tr
-  let cp = paws^.pa_CP
+  -- paws <- findPAWS tagged clausetr vp x'tr
+  -- let cp = paws^.pa_CP
       -- test subjects
-      subj_test = c^._3._1
+  cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
+                                             -- anyway need to be rewritten.
+  cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cpRange cp0))) x'tr)
+        
+  let subj_test = c^._3._1
       b_subj = fromMaybe False $ do
                  subj <- cp^?complement.specifier.trResolved._Just
                  let sclass = subj^?_Right.headX.hd_class

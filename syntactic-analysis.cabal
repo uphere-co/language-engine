@@ -20,7 +20,9 @@ library
   exposed-modules:
                        NLP.Syntax.Argument
                        NLP.Syntax.Clause
+                       NLP.Syntax.Clause.Old
                        NLP.Syntax.Format
+                       NLP.Syntax.Format.Old
                        NLP.Syntax.Format.Internal
                        NLP.Syntax.Noun
                        NLP.Syntax.Preposition
