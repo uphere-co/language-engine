@@ -34,7 +34,8 @@ import           NLP.Printer.PennTreebankII              (formatIndexTokensFromT
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
 import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),TaggedLemma,X'Tree,CP
-                                                         ,headText,headX,complement,maximalProjection)
+                                                         ,headText,headX,complement,maximalProjection,hd_range
+                                                         ,hp_prep,hp_pclass)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
@@ -201,20 +202,20 @@ formatVerbStructure tagged clausetr x'tr (VerbStructure vp senses mrmmtoppatts) 
 
 showMatchedFE :: TaggedLemma '[Lemma] -> (FNFrameElement, CompVP '[Lemma]) -> String
 --                                         FE   range prep text
-showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (dp^.headX.to show) ("" :: Text) (headText tagged dp)
+showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (dp^.headX.hd_range.to show) ("" :: Text) (headText tagged dp)
 showMatchedFE _      (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ((show.getRange.current) z) ("" :: Text) (gettext z)
   where z = cp^.maximalProjection
         gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 showMatchedFE tagged (fe,CompVP_PP pp) =
-  let prep = case pp^.headX._1 of
+  let prep = case pp^.headX.hp_prep of
                Prep_NULL -> ""
                Prep_WORD p -> p
       pclass :: Text
-      pclass = case pp^.headX._2 of
+      pclass = case pp^.headX.hp_pclass of
                  PC_Time -> "time"
                  PC_Other -> ""
   in case pp^.complement of
-       CompPP_DP dp    -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) (dp^.headX.to show) prep pclass (headText tagged dp)
+       CompPP_DP dp    -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) (dp^.headX.hd_range.to show) prep pclass (headText tagged dp)
        CompPP_Gerund z -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) ((show.getRange.current) z) prep pclass (gettext z)
   where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 showMatchedFE _      (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)

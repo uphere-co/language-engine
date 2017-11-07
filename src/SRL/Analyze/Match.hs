@@ -136,7 +136,7 @@ matchPP cp (mprep,mpclass,mising) = do
                           _            -> []
     find ppcheck candidates
   where
-    ppcheck pp = let (prep',pclass') = pp^.headX
+    ppcheck pp = let HeadPP prep' pclass' = pp^.headX
                      ising' = is _Just (pp^?complement._CompPP_Gerund)
                  in maybe True (\prep -> Just prep == prep'^?_Prep_WORD) mprep &&
                     maybe True (== pclass') mpclass &&
@@ -380,17 +380,18 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
        -> [(FNFrameElement,CompVP '[Lemma])]
     go (fe,CompVP_PP pp) lst = let rng = pp^.maximalProjection
                                in map (f (fe,rng)) lst
-    go (fe,CompVP_DP dp) lst = map (f (fe,dp^.headX)) lst
+    go (fe,CompVP_DP dp) lst = map (f (fe,dp^.headX.hd_range)) lst
     go (_ ,_           ) lst = lst
 
     f (fe,rng@(b,e)) (fe',CompVP_PP pp)
-      = let prep' = pp^.headX
+      = let HeadPP p1 p2 = pp^.headX
+            prep' = (p1,p2)
             o'    = pp^.maximalProjection
         in case pp^.complement of
              CompPP_DP dp    -> let rng'@(b',_) = dp^.maximalProjection
                                 in -- for the time being, use this ad hoc algorithm
                                    if fe /= fe' && rng `isInsideR` rng' && b /= b'
-                                   then let dp' = ((headX .~  (b',b-1)) . (maximalProjection .~ (b,e)) . (adjunct .~ [])) dp
+                                   then let dp' = ((headX.hd_range .~  (b',b-1)) . (maximalProjection .~ (b,e)) . (adjunct .~ [])) dp
                                         in (fe',CompVP_PP (mkPP prep' o' dp'))
                                    else (fe',CompVP_PP pp)
              CompPP_Gerund _ -> (fe',CompVP_PP pp)
@@ -398,7 +399,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
       = let rng'@(b',_) = dp^.maximalProjection
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
-          then let dp' = ((headX .~ (b',b-1)) . (maximalProjection .~ (b,e)) . (adjunct .~ [])) dp
+          then let dp' = ((headX.hd_range .~ (b',b-1)) . (maximalProjection .~ (b,e)) . (adjunct .~ [])) dp
                in (fe', CompVP_DP dp')
           else (fe', CompVP_DP dp)
     f _ x = x
@@ -443,11 +444,11 @@ dependencyOfX'Tree (PL _)           = []
 
 entityFromDP :: TaggedLemma t -> DetP t -> (Range,Text,Maybe (Range,Text))
 entityFromDP tagged dp =
-  let rng = dp^.headX
+  let rng = dp^.headX.hd_range
       headtxt = headText tagged dp
       txt = case dp^.complement of
               Just (CompDP_PP pp) ->
-                let prep = pp^.headX._1
+                let prep = pp^.headX.hp_prep
                     rng_pp = pp^.maximalProjection
                 in if prep == Prep_WORD "of"
                    then headtxt <> " " <> T.intercalate " " (tokensByRange tagged rng_pp)
@@ -525,8 +526,8 @@ meaningGraph sstr =
                                                                   C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
                                                                                  >>= \prep -> if prep == "that" then Nothing else return prep
                                                     in return (getRange (current z_cp),mprep)
-                                    CompVP_DP dp -> return (dp^.headX,Nothing)
-                                    CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX._1._Prep_WORD)
+                                    CompVP_DP dp -> return (dp^.headX.hd_range,Nothing)
+                                    CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX.hp_prep._Prep_WORD)
                   i' <- maybeToList (HM.lookup (0,Just rng') rngidxmap)  -- frame element
                   let b = isJust (find (== (rng',rng)) depmap)
                   return (MGEdge fe b mprep i i')
