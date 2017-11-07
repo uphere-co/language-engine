@@ -63,17 +63,18 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 
 complementCandidates :: VerbProperty (Zipper (Lemma ': as)) -> Zipper (Lemma ': as) -> [Zipper (Lemma ': as)]
 complementCandidates vprop z_vp =
-    let cs0 = siblingsBy (nextNotComma) checkNPSBAR =<< maybeToList (headVP vprop)
-        cs1 = maybeToList $ do
-                guard (isChunkAs VP (current z_vp))
-                z_np <- prev z_vp
-                guard (isChunkAs NP (current z_np))
-                z_comma <- prev z_np
-                guard (isPOSAs M_COMMA (current z_comma))
-                z_cp <- prev z_comma
-                (guard (isChunkAs S (current z_cp) || isChunkAs SBAR (current z_cp)))
-                return z_cp
-    in cs0 ++ cs1
+    let cs_ord = siblingsBy (nextNotComma) checkNPSBAR =<< maybeToList (headVP vprop)
+        -- topicalized CP
+        cs_top = maybeToList $ do
+                   guard (isChunkAs VP (current z_vp))
+                   z_np <- prev z_vp
+                   guard (isChunkAs NP (current z_np))
+                   z_comma <- prev z_np
+                   guard (isPOSAs M_COMMA (current z_comma))
+                   z_cp <- prev z_comma
+                   (guard (isChunkAs S (current z_cp) || isChunkAs SBAR (current z_cp)))
+                   return z_cp
+    in cs_ord ++ cs_top
 
   where
     nextNotComma z = do n <- next z
