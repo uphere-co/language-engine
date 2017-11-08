@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
@@ -141,16 +142,17 @@ tagToMark :: Either (EntityMention Text) (Char,Maybe Text) -> Maybe MarkType
 tagToMark (Right _) = Just MarkTime -- time is special
 tagToMark (Left x)  = case entityPreNE x of
                         Resolved (_,c) ->
-                          if c `elem` [orgClass,personClass,brandClass]
-                          then Just MarkEntity  -- only organization, person and brand, for the time being
-                          else Nothing
+                          if | c == orgClass    -> Just (MarkEntity N.Org)
+                             | c == personClass -> Just (MarkEntity N.Person)
+                             | c == brandClass  -> Just (MarkEntity N.Other)
+                             | otherwise        -> Nothing
                         UnresolvedUID c ->
                           if c `elem` [N.Org,N.Person]
-                          then Just MarkEntity
+                          then Just (MarkEntity c)
                           else Nothing
                         AmbiguousUID (_,c) ->
                           if c `elem` [N.Org,N.Person]
-                          then Just MarkEntity
+                          then Just (MarkEntity c)
                           else Nothing
                         _ -> Nothing
 
@@ -181,10 +183,9 @@ sentStructure apredata taglst (i,midx,lmas,mptr) =
         lemmamap = (mkLemmaMap' . map unLemma) lmas
         taggedMarkOnly = mkTaggedLemma lmatkns ptr taglstMarkOnly        
         vps = verbPropertyFromPennTree lemmamap ptr
-        -- clausetr = clauseStructure taggedMarkOnly vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
         x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis taggedMarkOnly) . identifyCPHierarchy taggedMarkOnly) vps
         verbStructures = map (verbStructure apredata) vps
-    in SentStructure i ptr vps {- clausetr -} x'tr taglst' taggedMarkOnly verbStructures
+    in SentStructure i ptr vps x'tr taglst' taggedMarkOnly verbStructures
 
 
 verbStructure :: AnalyzePredata -> VerbProperty (Zipper '[Lemma]) -> VerbStructure

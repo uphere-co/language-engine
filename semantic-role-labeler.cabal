@@ -23,30 +23,30 @@ library
                        SRL.Analyze.CoreNLP
                        SRL.Analyze.Format
                        SRL.Analyze.Match
+                       SRL.Analyze.Match.Entity
                        SRL.Analyze.Parameter
                        SRL.Analyze.SentenceStructure
                        SRL.Analyze.Type
                        SRL.Analyze.Util
-                       -- SRL.Analyze.WikiEL
                        SRL.Statistics
 
-                       SRL.Old.CoNLL.CoNLL08.Parser
-                       SRL.Old.CoNLL.CoNLL08.Type
-                       SRL.Old.DataSet.PropBank
-                       SRL.Old.Feature.Dependency
-                       SRL.Old.Feature.ParseTreePath
-                       SRL.Old.Format
-                       SRL.Old.Init
-                       SRL.Old.PropBankMatch
-                       SRL.Old.Type
-                       SRL.Old.Util
-                       SRL.Old.Vectorize.Dense
-                       SRL.Old.Vectorize.Sparse
-                       SVM
+                       -- SRL.Old.CoNLL.CoNLL08.Parser
+                       -- SRL.Old.CoNLL.CoNLL08.Type
+                       -- SRL.Old.DataSet.PropBank
+                       -- SRL.Old.Feature.Dependency
+                       -- SRL.Old.Feature.ParseTreePath
+                       -- SRL.Old.Format
+                       -- SRL.Old.Init
+                       -- SRL.Old.PropBankMatch
+                       -- SRL.Old.Type
+                       -- SRL.Old.Util
+                       -- SRL.Old.Vectorize.Dense
+                       -- SRL.Old.Vectorize.Sparse
+                       -- SVM
 
-                       -- -- the following module cannot be compiled now
-                       -- SRL.Old.Feature
-                       -- SRL.Old.Train
+                       -- -- -- the following module cannot be compiled now
+                       -- -- SRL.Old.Feature
+                       -- -- SRL.Old.Train
 
   -- other-modules:
   -- other-extensions:
@@ -130,41 +130,8 @@ Executable analyze
                        semantic-role-labeler
 
 
-
-
-Executable dependency
-  Main-is:             dependency.hs
-  hs-source-dirs:      app
-  default-language:    Haskell2010
-  ghc-options:         -O2 -Wall
-                       -funbox-strict-fields
-                       -fno-warn-unused-do-bind
-                       -fno-warn-orphans
-  ghc-prof-options:    -caf-all -auto-all
-  other-modules:
-  build-depends:       base,
-                       --
-                       bytestring,
-                       containers,
-                       data-default,
-                       either,
-                       jvm,
-                       lens,
-                       nlp-types,
-                       text,
-                       time,
-                       transformers,
-                       --
-                       HCoreNLP,
-                       HCoreNLP-Proto,
-                       --
-                       semantic-role-labeler,
-                       foreign-store
-
-
-
--- Executable feature
---   Main-is:             feature.hs
+-- Executable dependency
+--   Main-is:             dependency.hs
 --   hs-source-dirs:      app
 --   default-language:    Haskell2010
 --   ghc-options:         -O2 -Wall
@@ -175,58 +142,19 @@ Executable dependency
 --   other-modules:
 --   build-depends:       base,
 --                        --
---                        attoparsec,
 --                        bytestring,
 --                        containers,
 --                        data-default,
 --                        either,
---                        filepath,
 --                        jvm,
 --                        lens,
---                        optparse-applicative,
+--                        nlp-types,
 --                        text,
 --                        time,
+--                        transformers,
 --                        --
 --                        HCoreNLP,
 --                        HCoreNLP-Proto,
---                        PropBank,
---                        nlp-types,
 --                        --
---                        semantic-role-labeler
-
-
-
--- Executable SRL
---   Main-is:             SRL.hs
---   hs-source-dirs:      app
---   default-language:    Haskell2010
---   ghc-options:         -O2 -Wall
---                        -funbox-strict-fields
---                        -fno-warn-unused-do-bind
---                        -fno-warn-orphans
---                        -threaded
---   ghc-prof-options:    -caf-all -auto-all
---   other-modules:
---   build-depends:       base,
---                        --
---                        attoparsec,
---                        bytestring,
---                        containers,
---                        data-default,
---                        either,
---                        filepath,
---                        jni,
---                        jvm,
---                        lens,
---                        optparse-applicative,
---                        text,
---                        time,
---                        vector,
---                        --
---                        fastText,
---                        HCoreNLP,
---                        HCoreNLP-Proto,
---                        PropBank,
---                        nlp-types,
---                        --
---                        semantic-role-labeler
+--                        semantic-role-labeler,
+--                        foreign-store

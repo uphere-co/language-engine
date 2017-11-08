@@ -37,6 +37,7 @@ import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemm
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 --
+import           SRL.Analyze.Match.Entity
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,SentStructure,VerbStructure
@@ -442,24 +443,6 @@ dependencyOfX'Tree (PL _)           = []
 
 
 
-entityFromDP :: TaggedLemma t -> DetP t -> (Range,Text,Maybe (Range,Text))
-entityFromDP tagged dp =
-  let rng = dp^.headX.hd_range
-      headtxt = headText tagged dp
-      txt = case dp^.complement of
-              Just (CompDP_PP pp) ->
-                let prep = pp^.headX.hp_prep
-                    rng_pp = pp^.maximalProjection
-                in if prep == Prep_WORD "of"
-                   then headtxt <> " " <> T.intercalate " " (tokensByRange tagged rng_pp)
-                   else headtxt
-              _ -> headtxt
-      mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being, specifier is used as attribute appositive
-                    let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
-                    return (rng_sub,txt_sub)
-  in (rng,txt,mrngtxt')
-
-
 meaningGraph :: SentStructure -> MeaningGraph
 meaningGraph sstr =
   let (x'tr,lst_vstrcp) = mkTriples sstr
@@ -478,8 +461,8 @@ meaningGraph sstr =
                      case x of
                        CompVP_Unresolved _ -> []
                        CompVP_CP _cp -> [] -- CP is not an entity.
-                       CompVP_DP dp -> (return . (_1 %~ Just) . entityFromDP tagged) dp
-                       CompVP_PP pp -> maybeToList ((_1 %~ Just) . entityFromDP tagged <$> (pp^?complement._CompPP_DP))
+                       CompVP_DP dp -> (return . (_1 %~ Just) . entityFromDP x'tr tagged) dp
+                       CompVP_PP pp -> maybeToList ((_1 %~ Just) . entityFromDP x'tr tagged <$> (pp^?complement._CompPP_DP))
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
@@ -490,7 +473,7 @@ meaningGraph sstr =
                   . sortBy (compare `on` (^._1))
                   $ entities0
 
-      mkEntityFun (rng,txt,mrngtxt') =
+      mkEntityFun (rng,txt,DI mrngtxt' _) =
         (\i -> MGEntity i rng txt []) :
           flip (maybe []) mrngtxt' (\(rng',txt') -> [ \i'  -> MGEntity i' (Just rng') txt' []
                                                     , \i'' -> MGPredicate i'' (Just rng') "Instance" PredNoun
@@ -531,7 +514,7 @@ meaningGraph sstr =
                   i' <- maybeToList (HM.lookup (0,Just rng') rngidxmap)  -- frame element
                   let b = isJust (find (== (rng',rng)) depmap)
                   return (MGEdge fe b mprep i i')
-      edges1 = do (mrng,_,mrngtxt') <- entities1_0
+      edges1 = do (mrng,_,DI mrngtxt' _) <- entities1_0
                   (rng',_) <- maybeToList mrngtxt'
                   i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
                   i_instance <- maybeToList (HM.lookup (0,mrng) rngidxmap)
@@ -541,8 +524,13 @@ meaningGraph sstr =
                   (fe,(b,rng)) <- felst
                   i_elem <- maybeToList (HM.lookup (0,Just rng) rngidxmap)
                   [MGEdge fe b Nothing i_frame i_elem]
+      edges3 = do (mrng,_,DI _ mrng') <- entities1_0
+                  rng' <- maybeToList mrng'
+                  i_0 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
+                  i_1 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
+                  [MGEdge "ref" False Nothing i_0 i_1]
 
-  in MeaningGraph vertices (edges0 ++ edges1 ++ edges2)
+  in MeaningGraph vertices (edges0 ++ edges1 ++ edges2 ++ edges3)
 
 
 isEntity :: MGVertex -> Bool

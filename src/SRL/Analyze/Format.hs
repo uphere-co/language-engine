@@ -241,8 +241,8 @@ formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}]
                    (e^.me_start
                    ,e^.me_end
                    ,unFNFrameElement (e^.me_relation) <> maybe "" (":" <>) (e^.me_prep)
-                   ,if (e^.me_ismodifier) then "bold" else "solid" :: Text
-                   ,"" :: Text
+                   ,if e^.me_relation == "ref" then "dotted" else if (e^.me_ismodifier) then "bold" else "solid" :: Text
+                   ,if e^.me_relation == "ref" then "constraint=false" else "" :: Text
                    )
                  <>
                  if (e^.me_ismodifier)
