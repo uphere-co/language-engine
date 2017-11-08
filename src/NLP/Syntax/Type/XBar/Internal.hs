@@ -16,6 +16,7 @@ import           Data.BitreeZipper
 import           Data.ListZipper
 import           Data.Range
 --
+import           NLP.Type.NamedEntity        (NamedEntityClass(..))
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos             (TagPos,TokIdx)
 --
@@ -26,8 +27,11 @@ type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
-data MarkType = MarkTime | MarkEntity
-              deriving (Show,Eq,Ord)
+data MarkType = MarkTime | MarkEntity NamedEntityClass
+              deriving (Show,Eq)
+
+-- isMarkEntity (MarkEntity _) = True
+-- isMarkEntity _              = False
 
 data TaggedLemma t = TaggedLemma { _pennTree  :: BitreeICP t
                                  , _lemmaList :: [(Int,(Lemma,Text))]

@@ -13,6 +13,7 @@ import qualified Data.Text               as T
 import           Data.Bitree                     (Bitree(..),getRoot1)
 import           Data.BitreeZipper               (mkBitreeZipper)
 import           Data.Range                      (Range)
+import           NLP.Type.NamedEntity            (NamedEntityClass(..))
 import           NLP.Type.PennTreebankII         (PennTree,Lemma)
 import           NLP.Type.TagPos                 (TagPos(..),TokIdx(..))
 --
@@ -42,7 +43,7 @@ test_bare_noun_modifier_1 =
   , ("Tom Steyer",Just "Billionaire environmentalist",Nothing,[])
   , [(0,("billionaire","Billionaire")),(1,("environmentalist","environmentalist")),(2,("Tom","Tom")),(3,("Steyer","Steyer"))]
   , PN "NP" [PL ("NN","Billionaire"),PL ("NN","environmentalist"),PL ("NNP","Tom"),PL ("NNP","Steyer")]
-  , [TagPos (TokIdx 2,TokIdx 4,MarkEntity)]
+  , [TagPos (TokIdx 2,TokIdx 4,MarkEntity Person)]
   )
 
 
@@ -53,7 +54,7 @@ test_bare_noun_modifier_2 =
   , ("Travis Kalanick",Just "Uber Technologies Inc. co-founder",Nothing,[])
   , [(0,("Uber","Uber")),(1,("Technologies","Technologies")),(2,("Inc.","Inc.")),(3,("co-founder","co-founder")),(4,("Travis","Travis")),(5,("Kalanick","Kalanick"))]
   , PN "NP" [PL ("NNP","Uber"),PL ("NNPS","Technologies"),PL ("NNP","Inc."),PL ("NN","co-founder"),PL ("NNP","Travis"),PL ("NNP","Kalanick")]
-  , [TagPos (TokIdx 0,TokIdx 3,MarkEntity),TagPos (TokIdx 4,TokIdx 6,MarkEntity)]
+  , [TagPos (TokIdx 0,TokIdx 3,MarkEntity Person),TagPos (TokIdx 4,TokIdx 6,MarkEntity Person)]
   )
 
 -- |
@@ -63,7 +64,7 @@ test_bare_noun_modifier_3 =
   , ("Pemex",Just "Mexican state oil company",Nothing,[])
   , [(0,("mexican","Mexican")),(1,("state","state")),(2,("oil","oil")),(3,("company","company")),(4,("Pemex","Pemex"))]
   , PN "NP" [PN "NP" [PL ("JJ","Mexican"),PL ("NN","state"),PL ("NN","oil"),PL ("NN","company")],PN "NP" [PL ("NNP","Pemex")]]
-  , [TagPos (TokIdx 4,TokIdx 5,MarkEntity)]
+  , [TagPos (TokIdx 4,TokIdx 5,MarkEntity Org)]
   )
 
 
@@ -74,7 +75,7 @@ test_bare_noun_modifier_4 =
   , ("its food delivery service",Nothing,Nothing,[])
   , [(0,("its","its")),(1,("food","food")),(2,("delivery","delivery")),(3,("service","service"))]
   , PN "NP" [PN "NP" [PL ("PRP$","its"),PL ("NN","food"),PL ("NN","delivery")],PN "NP" [PL ("NN","service")]]
-  , [TagPos (TokIdx 3, TokIdx 4,MarkEntity)]
+  , [TagPos (TokIdx 3, TokIdx 4,MarkEntity Other)]
   )
 
 
@@ -85,7 +86,7 @@ test_paren_modifier_1 =
   , ("Hyperloop One",Just "Los-Angeles-based company",Nothing,[])
   , [(0,("los-angeles-based","Los-Angeles-based")),(1,("company","company")),(2,(",",",")),(3,("Hyperloop","Hyperloop")),(4,("one","One"))]
   , PN "NP" [PN "NP" [PL ("JJ","Los-Angeles-based"),PL ("NN","company")],PL (",",","),PN "NP" [PL ("NNP","Hyperloop"),PL ("CD","One")]]
-  , [TagPos (TokIdx 3, TokIdx 5, MarkEntity)]
+  , [TagPos (TokIdx 3, TokIdx 5, MarkEntity Org)]
   )
 
 -- |
@@ -114,7 +115,7 @@ test_prep_modifier_3 =
   , ("Hain Celestial Group Inc",Nothing,Nothing,["under pressure from activist investor Engaged Capital LLC"])
   , [(0,("Hain","Hain")),(1,("Celestial","Celestial")),(2,("Group","Group")),(3,("Inc","Inc")),(4,(",",",")),(5,("under","under")),(6,("pressure","pressure")),(7,("from","from")),(8,("activist","activist")),(9,("investor","investor")),(10,("Engaged","Engaged")),(11,("Capital","Capital")),(12,("LLC","LLC")),(13,(",",","))]
   , PN "NP" [PN "NP" [PL ("NNP","Hain"),PL ("NNP","Celestial"),PL ("NNP","Group"),PL ("NNP","Inc")],PL (",",","),PN "PP" [PL ("IN","under"),PN "NP" [PN "NP" [PL ("NN","pressure")],PN "PP" [PL ("IN","from"),PN "NP" [PL ("JJ","activist"),PL ("NN","investor"),PL ("NNP","Engaged"),PL ("NNP","Capital"),PL ("NNP","LLC")]]]],PL (",",",")]
-  , [TagPos (TokIdx 0,TokIdx 4,MarkEntity), TagPos (TokIdx 10,TokIdx 13,MarkEntity)]
+  , [TagPos (TokIdx 0,TokIdx 4,MarkEntity Org), TagPos (TokIdx 10,TokIdx 13,MarkEntity Org)]
   )
 
 test_appos_or_1 :: TestNoun

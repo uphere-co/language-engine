@@ -8,6 +8,8 @@ import           Control.Lens
 --
 import           NLP.Syntax.Type.XBar.Internal
 
+makePrisms ''MarkType
+
 makeLenses ''TaggedLemma
 
 makeLenses ''XP
