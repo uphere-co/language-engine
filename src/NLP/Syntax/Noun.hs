@@ -31,7 +31,7 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
                                           ,PP, AdjunctDP(..), CompDP(..),HeadDP(..), NomClass(..)
                                           ,XP(..)
-                                          ,TaggedLemma
+                                          ,TaggedLemma, _MarkEntity, _RExp
                                           ,adjunct,complement,headX,maximalProjection
                                           ,tokensByRange
                                           ,mkOrdDP,mkSplittedDP,hd_range,hd_class
@@ -77,7 +77,7 @@ splitDP tagged dp0 =
               let (b_pp,_) = pp^.maximalProjection
               return (dp0 & (headX.hd_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
 
-  in identifyPronoun tagged . bareNounModifier tagged . fromMaybe dp1 $ do
+  in identifyPronoun tagged . identifyNamedEntity tagged . bareNounModifier tagged . fromMaybe dp1 $ do
        let rng1 = dp1^.maximalProjection
        z <- find (isChunkAs NP . current) (extractZipperByRange rng1 (tagged^.pennTree))
        dp <- child1 z
@@ -111,7 +111,7 @@ splitParentheticalModifier tagged z = do
          guard (isPOSAs M_COMMA (current comma2))
          guard (is _Nothing (next comma2))
          return z3)
-     <|> 
+     <|>
      (do guard (is _Nothing (next z2))
          return z2)
     )
@@ -123,16 +123,16 @@ splitParentheticalModifier tagged z = do
    (guard (isChunkAs SBAR (current z_appos)) >> return (mkSplittedDP CLMod (rf dp1) (rf z_appos) z))  <|>
    (do guard (isChunkAs PP (current z_appos))
        pp <- mkPPFromZipper tagged PC_Other z_appos
-       return (XP (HeadDP (rf dp1) RExp) (rf z) Nothing [AdjunctDP_PP pp] Nothing)))
+       return (XP (HeadDP (rf dp1) (RExp Nothing)) (rf z) Nothing [AdjunctDP_PP pp] Nothing)))
 
 
 
 identApposHead :: TaggedLemma t -> Range -> Range -> Zipper t -> DetP t
 identApposHead tagged rng1 rng2 z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $
-  ((do find (\(TagPos (b,e,t)) -> rng1 == beginEndToRange (b,e) && t == MarkEntity) (tagged^.tagList)
+  ((do find (\(TagPos (b,e,t)) -> rng1 == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
        return (mkSplittedDP APMod rng1 rng2 z))
    <|>
-   (do find (\(TagPos (b,e,t)) -> rng2 == beginEndToRange (b,e) && t == MarkEntity) (tagged^.tagList)
+   (do find (\(TagPos (b,e,t)) -> rng2 == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
        return (mkSplittedDP APMod rng2 rng1 z)))
 
 --
@@ -146,7 +146,7 @@ checkProperNoun tagged (b,e) =
 
 --
 -- | check whether DP is pronoun and change NomClass accordingly
--- 
+--
 identifyPronoun :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                    TaggedLemma t -> DetP t -> DetP t
 identifyPronoun tagged dp = fromMaybe dp $ do
@@ -170,9 +170,18 @@ bareNounModifier tagged x = fromMaybe x $ do
   -- check entity for the last words
   let f (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun tagged (yb,ye)
   TagPos (b1'',e1'',_t)
-    <- find (\(TagPos (b1',e1',t)) -> f rng (beginEndToRange (b1',e1')) && t == MarkEntity) (tagged^.tagList)
+    <- find (\(TagPos (b1',e1',t)) -> f rng (beginEndToRange (b1',e1')) && is _MarkEntity t) (tagged^.tagList)
   let (b1,e1) = beginEndToRange (b1'',e1'')
       idx_last_modifier_word = b1-1
   last_modifier_word <- find (\y -> y^._1 == idx_last_modifier_word) (toList (current z))
   guard (last_modifier_word^._2.to posTag.to isNoun == Yes)
   return (mkSplittedDP BNMod (b1,e1) (b0,idx_last_modifier_word) z)
+
+
+identifyNamedEntity :: TaggedLemma t -> DetP t -> DetP t
+identifyNamedEntity tagged dp = fromMaybe dp $ do
+  let rng = dp^.headX.hd_range
+  TagPos (_,_,MarkEntity nec)
+    <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
+  dp^?headX.hd_class._RExp
+  (return . (headX.hd_class .~ RExp (Just nec))) dp

@@ -16,6 +16,7 @@ import           Data.BitreeZipper
 import           Data.ListZipper
 import           Data.Range
 --
+import           NLP.Type.NamedEntity        (NamedEntityClass(..))
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos             (TagPos,TokIdx)
 --
@@ -26,8 +27,9 @@ type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
 type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
 
-data MarkType = MarkTime | MarkEntity
-              deriving (Show,Eq,Ord)
+data MarkType = MarkTime | MarkEntity NamedEntityClass
+              deriving (Show,Eq)
+
 
 data TaggedLemma t = TaggedLemma { _pennTree  :: BitreeICP t
                                  , _lemmaList :: [(Int,(Lemma,Text))]
@@ -118,9 +120,9 @@ identifyPronounType txt =
 --
 -- | noun class
 --
-data NomClass = RExp
+data NomClass = RExp (Maybe NamedEntityClass)
               | Pronoun PronounType
-              deriving (Show,Eq,Ord)
+              deriving (Show,Eq)
 
 
 data HeadDP = HeadDP { _hd_range :: Range
@@ -144,7 +146,7 @@ type DetP = XP 'X_D
 --   better representation.
 --
 mkOrdDP :: Zipper t -> DetP t
-mkOrdDP z = XP (HeadDP (rf z) RExp) (rf z) Nothing [] Nothing
+mkOrdDP z = XP (HeadDP (rf z) (RExp Nothing)) (rf z) Nothing [] Nothing
   where rf = getRange . current
 
 
@@ -158,9 +160,9 @@ mkSplittedDP :: SplitType
              -> DetP t
 mkSplittedDP typ h m o
   = case typ of
-      CLMod -> XP (HeadDP h RExp) (rf o) Nothing   [] (Just (CompDP_Unresolved m))
-      BNMod -> XP (HeadDP h RExp) (rf o) (Just m)  [] Nothing
-      APMod -> XP (HeadDP h RExp) (rf o) (Just m)  [] Nothing -- apposition is regarded as an adjunct.
+      CLMod -> XP (HeadDP h (RExp Nothing)) (rf o) Nothing   [] (Just (CompDP_Unresolved m))
+      BNMod -> XP (HeadDP h (RExp Nothing)) (rf o) (Just m)  [] Nothing
+      APMod -> XP (HeadDP h (RExp Nothing)) (rf o) (Just m)  [] Nothing -- apposition is regarded as an adjunct.
   where rf = getRange . current
 
 --
