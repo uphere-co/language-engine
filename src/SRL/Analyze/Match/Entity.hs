@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE MultiWayIf        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
@@ -17,6 +18,7 @@ import           Data.BitreeZipper
 import           Data.Range
 import           NLP.Syntax.Clause        (currentCPDPPP)
 import           NLP.Syntax.Type.XBar
+import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
 --
 import Debug.Trace
@@ -35,7 +37,10 @@ pronounResolution x'tr tagged dp = do
   w'' <- parent w'
   cp <- currentCPDPPP w'' ^? _CPCase
   dp' <- cp^?complement.specifier.trResolved._Just._Right
-  return (dp'^.headX.hd_range) --  (entityFromDP x'tr tagged dp')
+  nclass <- dp'^?headX.hd_class._RExp._Just
+  if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (dp'^.headX.hd_range)
+     | prnclass `elem` [P_It] && nclass == Org -> return (dp'^.headX.hd_range)
+     | otherwise -> Nothing
 
 data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
                  , _adi_coref :: Maybe Range
