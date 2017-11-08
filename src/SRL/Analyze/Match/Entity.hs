@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module SRL.Analyze.Match.Entity where
 
@@ -24,43 +25,40 @@ import Debug.Trace
 pronounResolution :: [X'Tree '[Lemma]]
                   -> TaggedLemma '[Lemma]
                   -> DetP '[Lemma]
-                  -> Maybe (Range,Text,Maybe (Range,Text))
+                  -> Maybe Range
 pronounResolution x'tr tagged dp = do
   let rng_dp = dp^.maximalProjection
-  trace ("pronounResolution1: "++ show (headText tagged dp)) $ do
-   prnclass <- dp^?headX.hd_class._Pronoun
-   trace ("pronounResolution2: "++ show (headText tagged dp)) $ do
-    w <- getFirst (foldMap (First . extractZipperById rng_dp) x'tr)
-    trace ("pronounResolution3: "++ show (headText tagged dp)) $ do
-     w' <- parent w
-     trace ("pronounResolution4: "++ show (headText tagged dp)) $ do
-      guard (is _Just (currentCPDPPP w' ^? _CPCase))
-      trace ("pronounResolution5: "++ show (headText tagged dp)) $ do
-       w'' <- parent w'
-       trace ("pronounResolution6: "++ show (headText tagged dp)) $ do
-        cp <- currentCPDPPP w'' ^? _CPCase
-        trace ("pronounResolution7: " ++ show (headText tagged dp) ) $ do
-         dp' <- cp^?complement.specifier.trResolved._Just._Right
-         trace ("pronounResolution8: " ++ show (headText tagged dp) ) $ do
-          return (entityFromDP x'tr tagged dp')
+  prnclass <- dp^?headX.hd_class._Pronoun
+  w <- getFirst (foldMap (First . extractZipperById rng_dp) x'tr)
+  w' <- parent w
+  guard (is _Just (currentCPDPPP w' ^? _CPCase))
+  w'' <- parent w'
+  cp <- currentCPDPPP w'' ^? _CPCase
+  dp' <- cp^?complement.specifier.trResolved._Just._Right
+  return (dp'^.headX.hd_range) --  (entityFromDP x'tr tagged dp')
+
+data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
+                 , _adi_coref :: Maybe Range
+                 }
 
 
-entityFromDP :: [X'Tree '[Lemma]] -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> (Range,Text,Maybe (Range,Text))
+makeLenses ''DPInfo
+
+
+entityFromDP :: [X'Tree '[Lemma]] -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> (Range,Text,DPInfo)
 entityFromDP x'tr tagged dp =
-  case pronounResolution x'tr tagged dp of
-    Just result -> result
-    Nothing -> 
-      let rng = dp^.headX.hd_range
-          headtxt = headText tagged dp
-          txt = case dp^.complement of
-                  Just (CompDP_PP pp) ->
-                    let prep = pp^.headX.hp_prep
-                        rng_pp = pp^.maximalProjection
-                    in if prep == Prep_WORD "of"
-                       then headtxt <> " " <> T.intercalate " " (tokensByRange tagged rng_pp)
-                       else headtxt
-                  _ -> headtxt
-          mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being, specifier is used as attribute appositive
-                        let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
-                        return (rng_sub,txt_sub)
-      in (rng,txt,mrngtxt')
+  let rng = dp^.headX.hd_range
+      headtxt = headText tagged dp
+      txt = case dp^.complement of
+              Just (CompDP_PP pp) ->
+                let prep = pp^.headX.hp_prep
+                    rng_pp = pp^.maximalProjection
+                in if prep == Prep_WORD "of"
+                   then headtxt <> " " <> T.intercalate " " (tokensByRange tagged rng_pp)
+                   else headtxt
+              _ -> headtxt
+      mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being, specifier is used as attribute appositive
+                    let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
+                    return (rng_sub,txt_sub)
+      mcoref = pronounResolution x'tr tagged dp
+  in (rng,txt,DI mrngtxt' mcoref)

@@ -37,7 +37,7 @@ import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemm
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 --
-import           SRL.Analyze.Match.Entity      (entityFromDP)
+import           SRL.Analyze.Match.Entity
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,SentStructure,VerbStructure
@@ -473,7 +473,7 @@ meaningGraph sstr =
                   . sortBy (compare `on` (^._1))
                   $ entities0
 
-      mkEntityFun (rng,txt,mrngtxt') =
+      mkEntityFun (rng,txt,DI mrngtxt' _) =
         (\i -> MGEntity i rng txt []) :
           flip (maybe []) mrngtxt' (\(rng',txt') -> [ \i'  -> MGEntity i' (Just rng') txt' []
                                                     , \i'' -> MGPredicate i'' (Just rng') "Instance" PredNoun
@@ -514,7 +514,7 @@ meaningGraph sstr =
                   i' <- maybeToList (HM.lookup (0,Just rng') rngidxmap)  -- frame element
                   let b = isJust (find (== (rng',rng)) depmap)
                   return (MGEdge fe b mprep i i')
-      edges1 = do (mrng,_,mrngtxt') <- entities1_0
+      edges1 = do (mrng,_,DI mrngtxt' _) <- entities1_0
                   (rng',_) <- maybeToList mrngtxt'
                   i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
                   i_instance <- maybeToList (HM.lookup (0,mrng) rngidxmap)
@@ -524,8 +524,13 @@ meaningGraph sstr =
                   (fe,(b,rng)) <- felst
                   i_elem <- maybeToList (HM.lookup (0,Just rng) rngidxmap)
                   [MGEdge fe b Nothing i_frame i_elem]
+      edges3 = do (mrng,_,DI _ mrng') <- entities1_0
+                  rng' <- maybeToList mrng'
+                  i_0 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
+                  i_1 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
+                  [MGEdge "ref" False Nothing i_0 i_1]
 
-  in MeaningGraph vertices (edges0 ++ edges1 ++ edges2)
+  in MeaningGraph vertices (edges0 ++ edges1 ++ edges2 ++ edges3)
 
 
 isEntity :: MGVertex -> Bool
