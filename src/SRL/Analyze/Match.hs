@@ -37,6 +37,7 @@ import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemm
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 --
+import           SRL.Analyze.Match.Entity      (entityFromDP)
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,SentStructure,VerbStructure
@@ -440,24 +441,6 @@ dependencyOfX'Tree :: X'Tree p -> [(Range,Range)]
 dependencyOfX'Tree (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap dependencyOfX'Tree xs
 dependencyOfX'Tree (PL _)           = []
 
-
-
-entityFromDP :: TaggedLemma t -> DetP t -> (Range,Text,Maybe (Range,Text))
-entityFromDP tagged dp =
-  let rng = dp^.headX.hd_range
-      headtxt = headText tagged dp
-      txt = case dp^.complement of
-              Just (CompDP_PP pp) ->
-                let prep = pp^.headX.hp_prep
-                    rng_pp = pp^.maximalProjection
-                in if prep == Prep_WORD "of"
-                   then headtxt <> " " <> T.intercalate " " (tokensByRange tagged rng_pp)
-                   else headtxt
-              _ -> headtxt
-      mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being, specifier is used as attribute appositive
-                    let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
-                    return (rng_sub,txt_sub)
-  in (rng,txt,mrngtxt')
 
 
 meaningGraph :: SentStructure -> MeaningGraph
