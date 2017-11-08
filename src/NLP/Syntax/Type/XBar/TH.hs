@@ -16,6 +16,8 @@ makeLenses ''XP
 
 makeLenses ''TraceChain
 
+makePrisms ''NomClass
+
 makeLenses ''HeadDP
 
 makePrisms ''CompDP
