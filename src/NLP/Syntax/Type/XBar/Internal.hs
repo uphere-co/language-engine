@@ -96,11 +96,30 @@ data CompDP t = CompDP_Unresolved Range
 data AdjunctDP t = AdjunctDP_Unresolved Range
                  | AdjunctDP_PP (PP t)
 
+
+data PronounType = P_I | P_You | P_He | P_She | P_It | P_They
+                 deriving (Show,Eq,Ord)
+
+
+identifyPronounType txt =
+  case txt of
+    "I"    -> Just P_I
+    "me"   -> Just P_I
+    "you"  -> Just P_You
+    "he"   -> Just P_He
+    "him"  -> Just P_He
+    "she"  -> Just P_She
+    "her"  -> Just P_She
+    "it"   -> Just P_It
+    "they" -> Just P_They
+    "them" -> Just P_They
+    _      -> Nothing
+
 --
 -- | noun class
 --
 data NomClass = RExp
-              | Pronoun
+              | Pronoun PronounType
               deriving (Show,Eq,Ord)
 
 

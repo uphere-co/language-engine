@@ -1,4 +1,6 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE KindSignatures      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
@@ -34,8 +36,9 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,tokensByRange
                                           ,mkOrdDP,mkSplittedDP,hd_range,hd_class
                                           ,mkPP,mkPPGerund,hp_prep
+                                          ,identifyPronounType
                                           ,pennTree,tagList)
-import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs)
+import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs,intLemma)
 --
 
 import Debug.Trace
@@ -144,11 +147,14 @@ checkProperNoun tagged (b,e) =
 --
 -- | check whether DP is pronoun and change NomClass accordingly
 -- 
-identifyPronoun :: TaggedLemma t -> DetP t -> DetP t
+identifyPronoun :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
+                   TaggedLemma t -> DetP t -> DetP t
 identifyPronoun tagged dp = fromMaybe dp $ do
   let rng = dp^.headX.hd_range
-  find (isPOSAs PRP . current) (extractZipperByRange rng (tagged^.pennTree))
-  (return . (headX.hd_class .~ Pronoun)) dp
+  z <- find (isPOSAs PRP . current) (extractZipperByRange rng (tagged^.pennTree))
+  (_,Lemma lma) <- intLemma z
+  ptyp <- identifyPronounType lma
+  (return . (headX.hd_class .~ Pronoun ptyp)) dp
 
 
 
