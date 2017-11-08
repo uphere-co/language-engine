@@ -461,8 +461,8 @@ meaningGraph sstr =
                      case x of
                        CompVP_Unresolved _ -> []
                        CompVP_CP _cp -> [] -- CP is not an entity.
-                       CompVP_DP dp -> (return . (_1 %~ Just) . entityFromDP tagged) dp
-                       CompVP_PP pp -> maybeToList ((_1 %~ Just) . entityFromDP tagged <$> (pp^?complement._CompPP_DP))
+                       CompVP_DP dp -> (return . (_1 %~ Just) . entityFromDP x'tr tagged) dp
+                       CompVP_PP pp -> maybeToList ((_1 %~ Just) . entityFromDP x'tr tagged <$> (pp^?complement._CompPP_DP))
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
