@@ -5,6 +5,7 @@
 module SRL.Analyze.Match.MeaningGraph where
 
 import           Control.Lens
+import           Control.Monad                (join)
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
@@ -47,8 +48,8 @@ mkMGVertices tagged x'tr matched =
                      case x of
                        CompVP_Unresolved _ -> []
                        CompVP_CP _cp -> [] -- CP is not an entity.
-                       CompVP_DP dp -> (return . (_1 %~ Just) . entityFromDP x'tr tagged) dp
-                       CompVP_PP pp -> maybeToList ((_1 %~ Just) . entityFromDP x'tr tagged <$> (pp^?complement._CompPP_DP))
+                       CompVP_DP dp -> return (entityFromDP x'tr tagged dp)
+                       CompVP_PP pp -> maybeToList (entityFromDP x'tr tagged <$> (pp^?complement._CompPP_DP))
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
@@ -59,7 +60,7 @@ mkMGVertices tagged x'tr matched =
                   . sortBy (compare `on` (^._1))
                   $ entities0
 
-      mkEntityFun (rng,txt,DI mrngtxt' _) =
+      mkEntityFun (rng,txt,DI mrngtxt' _ _) =
         (\i -> MGEntity i rng txt []) :
           flip (maybe []) mrngtxt' (\(rng',txt') -> [ \i'  -> MGEntity i' (Just rng') txt' []
                                                     , \i'' -> MGPredicate i'' (Just rng') "Instance" PredNoun
@@ -102,7 +103,7 @@ mkRoleEdges (rngidxmap,depmap) matched = do
 
 
 mkApposEdges rngidxmap entities1_0 = do
-  (mrng,_,DI mrngtxt' _) <- entities1_0
+  (mrng,_,DI mrngtxt' _ _) <- entities1_0
   (rng',_) <- maybeToList mrngtxt'
   i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
   i_instance <- maybeToList (HM.lookup (0,mrng) rngidxmap)
@@ -118,7 +119,7 @@ mkPrepEdges rngidxmap ientities2 = do
 
 
 mkCorefEdges rngidxmap entities1_0 = do
-  (mrng,_,DI _ mrng') <- entities1_0
+  (mrng,_,DI _ mrng' _) <- entities1_0
   rng' <- maybeToList mrng'
   i_0 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
   i_1 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)

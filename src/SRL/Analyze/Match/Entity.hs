@@ -45,26 +45,38 @@ pronounResolution x'tr tagged dp = do
 
 data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
                  , _adi_coref :: Maybe Range
+                 , _adi_partitive :: Maybe (Range,Text)
                  }
 
 
 makeLenses ''DPInfo
 
 
-entityFromDP :: [X'Tree '[Lemma]] -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> (Range,Text,DPInfo)
+entityFromDP :: [X'Tree '[Lemma]] -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> (Maybe Range,Text,DPInfo)
 entityFromDP x'tr tagged dp =
   let rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX) -- for the time being  -- complement.headX
       headtxt = headTextDP tagged dp
-      {- txt = case dp^?complement._Just.complement._Just of
-                   Just (CompDP_PP pp) ->
+      mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being, specifier is used as attribute appositive
+                    let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
+                    return (rng_sub,txt_sub)
+      mcoref = pronounResolution x'tr tagged dp
+      mpart = case dp^?complement._Just.complement._Just of
+                Just (CompDP_PP pp) -> do dp' <- pp^?complement._CompPP_DP
+                                          let prep = pp^.headX.hp_prep
+                                          guard (prep == Prep_WORD "of")
+                                          let rng_part = dp'^.maximalProjection
+                                              txt_part = headTextDP tagged dp'
+                                          return (rng_part,txt_part)
+                _ -> Nothing
+  in (Just rng,headtxt,DI mrngtxt' mcoref mpart)
+
+      {- txt = case  of
+                   Just 
                      let prep = pp^.headX.hp_prep
                          rng_pp = pp^.maximalProjection
                      in headtxt {- if prep == Prep_WORD "of"
                         then headtxt <> " " <> T.intercalate " " (tokensByRange tagged rng_pp)
                         else headtxt -}
                    _ -> headtxt   -}
-      mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being, specifier is used as attribute appositive
-                    let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
-                    return (rng_sub,txt_sub)
-      mcoref = pronounResolution x'tr tagged dp
-  in (rng,headtxt,DI mrngtxt' mcoref)
+
+
