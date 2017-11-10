@@ -157,7 +157,7 @@ identifyPronoun tagged dp = fromMaybe dp $ do
   ((do z <- find (isPOSAs PRP . current) zs
        (i,Lemma lma) <- intLemma z
        ptyp <- identifyPronounPerson lma
-       (return . (headX.hd_range .~ Just (i,i)) . (headX.hd_class .~ Pronoun ptyp) . (complement .~ Nothing)) dp)
+       (return . (headX.hd_range .~ Just (i,i)) . (headX.hd_class .~ Pronoun ptyp False) . (complement .~ Nothing)) dp)
    <|>
    (foldr (<|>) Nothing $ flip map zs $ \z -> do (i,att) <- listToMaybe (toList (current z))
                                                  guard (posTag att == PRPDollar)
@@ -168,7 +168,7 @@ identifyPronoun tagged dp = fromMaybe dp $ do
                                                  ptyp <- identifyPronounPerson lma
                                                  ( return
                                                   .(headX.hd_range .~ Just (i,i))
-                                                  .(headX.hd_class .~ Pronoun ptyp)
+                                                  .(headX.hd_class .~ Pronoun ptyp True)
                                                   .(complement._Just.headX %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
                                                   .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp
     ))

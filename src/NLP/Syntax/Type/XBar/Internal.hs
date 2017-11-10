@@ -132,7 +132,7 @@ identifyPronounPerson txt =
 -- | noun class
 --
 data NomClass = RExp (Maybe NamedEntityClass)
-              | Pronoun PronounPerson
+              | Pronoun PronounPerson Bool  -- is genitive?
               deriving (Show,Eq)
 
 
