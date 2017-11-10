@@ -63,11 +63,13 @@ mainProcess pp = do
     liftIO $ print (zip ([0..] :: [Int]) terms)
 
     liftIO $ putStrLn "==============="
+
     let (start,target) = (8,(9,10))
         drelp = depRelPath dep itr (start,target)
     liftIO $ print (start,target)
     liftIO $ putStrLn (maybe "" formatDRP drelp)
-    let (start,target) = (4,(17,18))
-        drelp = depRelPath dep itr (start,target)
-    liftIO $ print (start,target)
-    liftIO $ putStrLn (maybe "" formatDRP drelp)
+
+    let (start2,target2) = (4,(17,18))
+        drelp2 = depRelPath dep itr (start2,target2)
+    liftIO $ print (start2,target2)
+    liftIO $ putStrLn (maybe "" formatDRP drelp2)

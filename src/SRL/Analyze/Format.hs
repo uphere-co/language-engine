@@ -201,7 +201,7 @@ formatVerbStructure tagged clausetr x'tr (VerbStructure vp senses mrmmtoppatts) 
 showMatchedFE :: TaggedLemma '[Lemma] -> (FNFrameElement, CompVP '[Lemma]) -> String
 --                                         FE   range prep text
 showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" fe (dp^.headX.to show) ("" :: Text) (headText tagged dp)
-showMatchedFE tagged (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("" :: Text) (gettext z)
+showMatchedFE _tagged (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("" :: Text) (gettext z)
   where z = cp^.maximalProjection
         gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 showMatchedFE tagged (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s(%4s) %s" fe (dp^.headX.to show) prep pclass (headText tagged dp)
@@ -213,7 +213,7 @@ showMatchedFE tagged (fe,CompVP_PP pp) = printf "%-15s: %-7s %3s(%4s) %s" fe (dp
         pclass = case pp^.headX._2 of
                    PC_Time -> "time"
                    PC_Other -> ""
-showMatchedFE tagged (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
+showMatchedFE _tagged (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" fe ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
   where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 
 

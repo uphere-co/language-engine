@@ -40,7 +40,6 @@ import           Lexicon.Data                  (LexDataConfig(..),cfg_framenet_f
                                                )
 import           NLP.Syntax.Format             (formatX'Tree)
 import           NLP.Type.CoreNLP              (Sentence)
---import           NLP.Type.NamedEntity          (NamedEntityClass(..))
 import           NLP.Type.SyntaxProperty       (Voice)
 import           OntoNotes.Corpus.Load         (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)

@@ -23,17 +23,17 @@ import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
 import           Data.Bitree                  (getNodes,getRoot1,_PN)
-import           Data.BitreeZipper            (child1,current,mkBitreeZipper,next,root)
+import           Data.BitreeZipper            (current,mkBitreeZipper,root)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,findPAWS)
-import           NLP.Syntax.Noun              (splitDP,mkPPFromZipper)
+import           NLP.Syntax.Noun              (mkPPFromZipper)
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemma0,isChunkAs,isPOSAs)
+import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemma0)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 --
@@ -123,13 +123,13 @@ matchPP :: TaggedLemma '[Lemma]
         -> (Maybe Text,Maybe PrepClass,Maybe Bool)
         -> Maybe (PP '[Lemma]) -- Maybe (Text,Zipper '[Lemma],PP '[Lemma])
 matchPP tagged paws (mprep,mpclass,mising) = do
-    Left (rng,S_PP prep' _ _) <- find ppcheck (paws^.pa_candidate_args)
+    Left (rng,S_PP _prep' _ _) <- find ppcheck (paws^.pa_candidate_args)
     let tr = paws^.pa_CP.maximalProjection.to root.to current
     z' <- (find (\z -> z^?to current._PN._1._1 == Just rng) . getNodes .mkBitreeZipper []) tr
     -- return (prep',z',splitPP tagged z')  -- <- should be changed.
     let pclass = case mpclass of
                    Nothing -> PC_Other
-                   Just pclass -> pclass
+                   Just pclass' -> pclass'
     mkPPFromZipper tagged pclass z'
   where
     ppcheck (Left (_,S_PP prep' pclass' ising')) = maybe True (== prep')   mprep   &&
