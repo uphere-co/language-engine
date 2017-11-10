@@ -36,10 +36,9 @@ data TaggedLemma t = TaggedLemma { _pennTree  :: BitreeICP t
                                  , _tagList   :: [TagPos TokIdx MarkType]
                                  }
 
-data XType = X_V | X_T | X_C | X_D | X_P
+data XType = X_V | X_T | X_C | X_D | X_N | X_P
 
 type family Property   (x :: XType) (tag :: [*]) :: *
-
 type family Maximal    (x :: XType) (tag :: [*]) :: *
 type family Specifier  (x :: XType) (tag :: [*]) :: *
 type family Complement (x :: XType) (tag :: [*]) :: *
@@ -125,29 +124,46 @@ data NomClass = RExp (Maybe NamedEntityClass)
               deriving (Show,Eq)
 
 
-data HeadDP = HeadDP { _hd_range :: Range
+data HeadDP = HeadDP { _hd_range :: Maybe Range
                      , _hd_class :: NomClass
                      }
 
 
+
 --
--- this definition is not truly X-bar-theoretic, but for the time being
+-- NP
+--
+type instance Property   'X_N t = Range
+type instance Maximal    'X_N t = Range
+type instance Specifier  'X_N t = ()
+type instance Adjunct    'X_N t = ()
+type instance Complement 'X_N t = Maybe (CompDP t)
+
+type NounP = XP 'X_N
+
+
+mkNP :: Range -> Maybe (CompDP t) -> NounP t
+mkNP rng mcomp = XP rng rng () () mcomp
+
+--
+-- DP -> D NP
 --
 type instance Property   'X_D t = HeadDP -- Range -- head
 type instance Maximal    'X_D t = Range
 type instance Specifier  'X_D t = Maybe Range  -- appositive for the time being
 type instance Adjunct    'X_D t = [AdjunctDP t]
-type instance Complement 'X_D t = Maybe (CompDP t)
+type instance Complement 'X_D t = Maybe (NounP t) -- Maybe (CompDP t)
 
 type DetP = XP 'X_D
+
 
 --
 -- | These functions, mkOrdDP and mkSplittedDP, should be rewritten in a
 --   better representation.
 --
 mkOrdDP :: Zipper t -> DetP t
-mkOrdDP z = XP (HeadDP (rf z) (RExp Nothing)) (rf z) Nothing [] Nothing
-  where rf = getRange . current
+mkOrdDP z = XP (HeadDP Nothing (RExp Nothing)) rng Nothing [] (Just (mkNP rng Nothing))
+  where rng = (getRange . current) z
 
 
 --
@@ -160,10 +176,10 @@ mkSplittedDP :: SplitType
              -> DetP t
 mkSplittedDP typ h m o
   = case typ of
-      CLMod -> XP (HeadDP h (RExp Nothing)) (rf o) Nothing   [] (Just (CompDP_Unresolved m))
-      BNMod -> XP (HeadDP h (RExp Nothing)) (rf o) (Just m)  [] Nothing
-      APMod -> XP (HeadDP h (RExp Nothing)) (rf o) (Just m)  [] Nothing -- apposition is regarded as an adjunct.
-  where rf = getRange . current
+      CLMod -> XP (HeadDP Nothing (RExp Nothing)) rng Nothing   [] (Just (mkNP h (Just (CompDP_Unresolved m))))
+      BNMod -> XP (HeadDP Nothing (RExp Nothing)) rng (Just m)  [] (Just (mkNP h Nothing)) -- apposition is regarded as a specifier.
+      APMod -> XP (HeadDP Nothing (RExp Nothing)) rng (Just m)  [] (Just (mkNP h Nothing)) -- apposition is regarded as a specifier.
+  where rng = (getRange . current) o
 
 --
 -- | preposition word, including null preposition (for temporal expressions, numeral..)

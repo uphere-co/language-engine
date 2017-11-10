@@ -2,7 +2,7 @@
 
 module NLP.Syntax.Format.Internal where
 
-import           Control.Lens                       ((^.),to)
+import           Control.Lens                       ((^.),(^?),_Just,to)
 import           Data.Foldable                      (toList)
 import           Data.Monoid                        ((<>))
 import           Data.Text                          (Text)
@@ -16,7 +16,7 @@ import           NLP.Syntax.Type.XBar
 
 
 rangeText :: Either (Zipper as) (DetP as) -> Text
-rangeText (Right x) = x^.headX.hd_range.to show.to T.pack
+rangeText (Right x) = x^.maximalProjection.to (T.pack . show) -- complement.headX.to show.to T.pack
 rangeText (Left x ) = (T.pack.show.getRange.current) x
 
 
@@ -45,7 +45,9 @@ formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
 
 formatDP :: DetP t -> Text
 formatDP dp = "DP"         <> rangeText (Right dp) <>
-              " comp: "    <> maybe "" formatCompDP  (dp^.complement) <>
+              " head: "    <> maybe "" (T.pack.show) (dp^?complement._Just.headX) <>
+              " spec: "    <> maybe "" (T.pack.show) (dp^.specifier) <>
+              " comp: "    <> maybe "" formatCompDP  (dp^?complement._Just.complement._Just) <>
               " adjunct: " <> (T.intercalate " " . map formatAdjunctDP) (dp^.adjunct)
 
 

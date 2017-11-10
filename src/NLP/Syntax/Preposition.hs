@@ -5,7 +5,7 @@
 
 module NLP.Syntax.Preposition where
 
-import           Control.Lens            ((^.),(^?),(.~),(&))
+import           Control.Lens            ((^.),(^?),(.~),(&),_Just)
 import           Control.Monad           (guard)
 import           Data.List               (find)
 import           Data.Maybe              (fromMaybe)
@@ -18,11 +18,10 @@ import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
-import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..)
+import           NLP.Syntax.Type.XBar    (Zipper,NounP,DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP,_CompPP_DP
                                          ,TaggedLemma(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
-                                         ,hd_range
                                          ,mkPP,hp_prep,hp_pclass)
 
 
@@ -77,9 +76,9 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   guard (isChunkAs PP (current z_tpp))
   let (b_tpp,_e_tpp) = getRange (current z_tpp)
       rng_dp' = (b_dp,b_tpp-1)
-      rng_head = let (b_h,e_h) = dp^.headX.hd_range
-                 in if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
-      dp' = dp & (headX.hd_range .~ rng_head) . (maximalProjection .~ rng_dp')
+  (b_h,e_h) <- dp^?complement._Just.headX      
+  let rng_head = if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
+      dp' = dp & (maximalProjection .~ rng_dp') . (complement._Just.headX .~ rng_head) . (complement._Just.maximalProjection .~ rng_dp')
   return (dp',[z_tpp])
 
 

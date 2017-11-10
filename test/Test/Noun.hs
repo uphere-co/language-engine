@@ -22,13 +22,14 @@ import           NLP.Syntax.Noun                 (splitDP)
 import           NLP.Syntax.Type                 (MarkType(..))
 import           NLP.Syntax.Type.XBar            (TaggedLemma,DetP,AdjunctDP(..)
                                                  ,adjunct,complement,maximalProjection,specifier
-                                                 ,headText,tokensByRange,mkOrdDP,compDPToRange)
+                                                 ,headText,headTextDP,tokensByRange,mkOrdDP,compDPToRange)
 import           NLP.Syntax.Util                 (mkBitreeICP,mkTaggedLemma)
 --
 import           Test.Common
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
+import Debug.Trace
 
 
 type TestNoun = (Text
@@ -146,11 +147,11 @@ checkBNM :: TestNoun -> Bool
 checkBNM x =
   let tagged = mkTaggedLemma (x^._3) (x^._4) (x^._5)
       dp = mkDPFromTest tagged x
-  in (headText tagged dp == x^._2._1)
+  in (headTextDP tagged dp == x^._2._1)
      &&
      ((dp^?specifier._Just.to (T.intercalate " " . tokensByRange tagged)) == (x^._2._2))
      &&
-     ((dp^?complement._Just.to (T.intercalate " " . tokensByRange tagged . compDPToRange)) == (x^._2._3))
+     ((dp^?complement._Just.complement._Just.to (T.intercalate " " . tokensByRange tagged . compDPToRange)) == (x^._2._3))
      &&
      ((dp^..adjunct.traverse.to (T.intercalate " " . tokensByRange tagged . adjunctDPToRange)) == (x^._2._4))
 

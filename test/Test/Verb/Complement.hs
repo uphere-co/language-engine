@@ -196,54 +196,6 @@ prepComplement
     , [TagPos (TokIdx 0, TokIdx 2, MarkTime)]
     )
 
-{-
-formatTP :: TestVerbComplement -> [String]
-formatTP (txt,i,_,lmatknlst,pt,taglst) =
-  let lmap1 = IM.fromList (map (_2 %~ (^._1)) lmatknlst)
-      lemmapt = mkBitreeICP lmap1 pt
-      tagged = TaggedLemma lemmapt lmatknlst taglst
-      vps = mkVPS lmatknlst pt
-      ipt = mkPennTreeIdx pt
-      -- clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id ipt)
-      x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
-      cltxts = formatClauseStructure clausetr
-  in case find (\vp -> vp^.vp_index == i) vps of
-       Nothing -> [ "nothing"]
-       Just vp -> [ "--------------------------------------------------------------"
-                  , T.unpack txt
-                  , T.unpack (prettyPrint 0 pt)
-                  , printf "\nTesting Lemma: %2d-%-15s\nModal: %-15s"
-                      (vp^.vp_index)
-                      (vp^.vp_lemma.to unLemma)
-                      (T.intercalate " " (vp^..vp_auxiliary.traverse._2._2.to unLemma))
-                  ] ++ case (^.pa_CP) <$> findPAWS tagged clausetr vp x'tr of
-                         Nothing -> ["not successful in constructing CP"]
-                         Just cp -> [ formatCP cp
-                                    , maybe "no subject?"  T.unpack (cp^?complement.specifier.trResolved._Just.to (either (getTokens . current) (headText tagged)))
-                                    ]
-                    ++ [T.unpack cltxts]
-                    ++ map (T.unpack . formatX'Tree) x'tr
-
-
-showTP :: TestVerbComplement -> IO ()
-showTP = mapM_ putStrLn . formatTP
-
-
-mainShow :: IO ()
-mainShow = do
-  showTP main_finite_1
-  showTP main_finite_2
-  showTP rrc_passive_1
-  showTP inf_control_1
-  showTP embedded_that_1
-  showTP restr_rel_1
-  showTP ditransitive_1
-  showTP ditransitive_2
-  showTP ditransitive_3
-  showTP ditransitive_4
-  showTP preposedTemporalAdjunct
-  showTP preposedCP
--}
 
 checkSubjCompAdjunct :: TestVerbComplement -> Bool
 checkSubjCompAdjunct c = fromMaybe False $ do
@@ -264,7 +216,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       b_subj = fromMaybe False $ do
                  subj <- cp^?complement.specifier.trResolved._Just
                  let sclass = subj^?_Right.headX.hd_class
-                     stxt = either (getTokens . current) (headText tagged) subj
+                     stxt = either (getTokens . current) (headTextDP tagged) subj
                  case subj_test^._2 of
                    Nothing -> return (stxt == subj_test^._1)
                    Just c -> return (stxt == subj_test^._1 && sclass == Just c)
