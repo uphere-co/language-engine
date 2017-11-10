@@ -21,8 +21,8 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemma0)
 import           NLP.Type.PennTreebankII
 --
-import           SRL.Analyze.Match
 import           SRL.Analyze.Match.Entity
+import           SRL.Analyze.Match.Frame
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,SentStructure,VerbStructure
                                               ,PredicateInfo(..)
