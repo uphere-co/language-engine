@@ -22,7 +22,6 @@ import           NLP.Syntax.Type.XBar    (Zipper,DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP,_CompPP_DP
                                          ,TaggedLemma(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
-                                         ,hd_range
                                          ,mkPP,hp_prep,hp_pclass)
 
 
@@ -77,9 +76,9 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   guard (isChunkAs PP (current z_tpp))
   let (b_tpp,_e_tpp) = getRange (current z_tpp)
       rng_dp' = (b_dp,b_tpp-1)
-      rng_head = let (b_h,e_h) = dp^.headX.hd_range
+      rng_head = let (b_h,e_h) = dp^.complement.headX
                  in if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
-      dp' = dp & (headX.hd_range .~ rng_head) . (maximalProjection .~ rng_dp')
+      dp' = dp & (maximalProjection .~ rng_dp') . (complement.headX .~ rng_head) . (complement.maximalProjection .~ rng_dp')
   return (dp',[z_tpp])
 
 

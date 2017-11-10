@@ -150,7 +150,7 @@ checkBNM x =
      &&
      ((dp^?specifier._Just.to (T.intercalate " " . tokensByRange tagged)) == (x^._2._2))
      &&
-     ((dp^?complement._Just.to (T.intercalate " " . tokensByRange tagged . compDPToRange)) == (x^._2._3))
+     ((dp^?complement.complement._Just.to (T.intercalate " " . tokensByRange tagged . compDPToRange)) == (x^._2._3))
      &&
      ((dp^..adjunct.traverse.to (T.intercalate " " . tokensByRange tagged . adjunctDPToRange)) == (x^._2._4))
 

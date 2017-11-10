@@ -29,7 +29,7 @@ tokensByRange tagged rng = map (^._2._2) . filter (^._1.to (\i -> i `isInside` r
 
 
 headText :: TaggedLemma t -> DetP t -> Text
-headText tagged x = x^.headX.hd_range.to (T.intercalate " " . tokensByRange tagged)
+headText tagged x = x^.complement.headX.to (T.intercalate " " . tokensByRange tagged)
 
 
 
@@ -65,5 +65,5 @@ compDPToRange (CompDP_PP pp) = pp^.maximalProjection
 
 
 compPPToRange :: CompPP t -> Range
-compPPToRange (CompPP_DP dp) = dp^.headX.hd_range
+compPPToRange (CompPP_DP dp) = dp^.complement.headX
 compPPToRange (CompPP_Gerund z) = getRange (current z)

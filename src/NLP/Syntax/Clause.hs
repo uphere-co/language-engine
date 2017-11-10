@@ -479,9 +479,9 @@ connectRaisedDP rng = do
   (w,cp) <- retrieveWCP rng
   guard (cp ^. complement.complement.headX.vp_voice == Passive)
   c1:c2:[] <- return (cp^.complement.complement.complement)
-  rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.headX.hd_range)
+  rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.complement.headX)
   cp' <- hoistMaybe (c2^?trResolved._Just._CompVP_CP)
-  rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.headX.hd_range)
+  rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.complement.headX)
   if rng1 == rng_dp
     then do
       let rf = (_2._CPCase.complement.specifier .~ emptyTraceChain)

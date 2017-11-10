@@ -16,7 +16,7 @@ import           NLP.Syntax.Type.XBar
 
 
 rangeText :: Either (Zipper as) (DetP as) -> Text
-rangeText (Right x) = x^.headX.hd_range.to show.to T.pack
+rangeText (Right x) = x^.complement.headX.to show.to T.pack
 rangeText (Left x ) = (T.pack.show.getRange.current) x
 
 
@@ -45,7 +45,7 @@ formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
 
 formatDP :: DetP t -> Text
 formatDP dp = "DP"         <> rangeText (Right dp) <>
-              " comp: "    <> maybe "" formatCompDP  (dp^.complement) <>
+              " comp: "    <> maybe "" formatCompDP  (dp^.complement.complement) <>
               " adjunct: " <> (T.intercalate " " . map formatAdjunctDP) (dp^.adjunct)
 
 
