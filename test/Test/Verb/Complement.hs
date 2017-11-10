@@ -88,7 +88,7 @@ inf_control_1
 embedded_that_1 :: TestVerbComplement
 embedded_that_1
   = ( "The cat thinks that he is out of the bag.", 5
-    , (("he",Just (Pronoun P_He)), [], [])
+    , (("he",Just (Pronoun P_He False)), [], [])
     , [(0,("the","The")),(1,("cat","cat")),(2,("think","thinks")),(3,("that","that")),(4,("he","he")),(5,("be","is")),(6,("out","out")),(7,("of","of")),(8,("the","the")),(9,("bag","bag")),(10,(".","."))]
     , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","The"),PL ("NN","cat")],PN "VP" [PL ("VBZ","thinks"),PN "SBAR" [PL ("IN","that"),PN "S" [PN "NP" [PL ("PRP","he")],PN "VP" [PL ("VBZ","is"),PN "ADJP" [PL ("IN","out"),PN "PP" [PL ("IN","of"),PN "NP" [PL ("DT","the"),PL ("NN","bag")]]]]]]],PL (".",".")]]
     , []
@@ -108,7 +108,7 @@ restr_rel_1
 ditransitive_1 :: TestVerbComplement
 ditransitive_1
   = ( "I gave the guy an apple.", 1
-    , (("I",Just (Pronoun P_I)), ["the guy","an apple"], [])
+    , (("I",Just (Pronoun P_I False)), ["the guy","an apple"], [])
     , [(0,("I","I")),(1,("give","gave")),(2,("the","the")),(3,("guy","guy")),(4,("a","an")),(5,("apple","apple")),(6,(".","."))]
     , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","gave"),PN "NP" [PL ("DT","the"),PL ("NN","guy")],PN "NP" [PL ("DT","an"),PL ("NN","apple")]],PL (".",".")]]
     , []
@@ -118,7 +118,7 @@ ditransitive_1
 ditransitive_2 :: TestVerbComplement
 ditransitive_2
   = ( "I gave the guy what I got from her.", 1
-    , (("I",Just (Pronoun P_I)), ["the guy", "what I got from her"], [])
+    , (("I",Just (Pronoun P_I False)), ["the guy", "what I got from her"], [])
     , [(0,("I","I")),(1,("give","gave")),(2,("the","the")),(3,("guy","guy")),(4,("what","what")),(5,("I","I")),(6,("get","got")),(7,("from","from")),(8,("she","her")),(9,(".","."))]
     , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","gave"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","guy")],PN "SBAR" [PN "WHNP" [PL ("WDT","what")],PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","got"),PN "PP" [PL ("IN","from"),PN "NP" [PL ("PRP","her")]]]]]]],PL (".",".")]]
     , []
@@ -128,7 +128,7 @@ ditransitive_2
 ditransitive_3 :: TestVerbComplement
 ditransitive_3
   = ( "I told you that we would not pass the exam.", 1
-    , (("I",Just (Pronoun P_I)), ["you", "that we would not pass the exam"], [])
+    , (("I",Just (Pronoun P_I False)), ["you", "that we would not pass the exam"], [])
     , [(0,("I","I")),(1,("tell","told")),(2,("you","you")),(3,("that","that")),(4,("we","we")),(5,("would","would")),(6,("not","not")),(7,("pass","pass")),(8,("the","the")),(9,("exam","exam")),(10,(".","."))]
     , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","told"),PN "NP" [PL ("PRP","you")],PN "SBAR" [PL ("IN","that"),PN "S" [PN "NP" [PL ("PRP","we")],PN "VP" [PL ("MD","would"),PL ("RB","not"),PN "VP" [PL ("VB","pass"),PN "NP" [PL ("DT","the"),PL ("NN","exam")]]]]]],PL (".",".")]]
     , []
@@ -138,7 +138,7 @@ ditransitive_3
 ditransitive_4 :: TestVerbComplement
 ditransitive_4
   = ( "I told the student he would not pass the exam.", 1
-    , (("I",Just (Pronoun P_I)), ["the student", "he would not pass the exam"], [] )
+    , (("I",Just (Pronoun P_I False)), ["the student", "he would not pass the exam"], [] )
     , [(0,("I","I")),(1,("tell","told")),(2,("the","the")),(3,("student","student")),(4,("he","he")),(5,("would","would")),(6,("not","not")),(7,("pass","pass")),(8,("the","the")),(9,("exam","exam")),(10,(".","."))]
     , PN "ROOT" [PN "S" [PN "NP" [PL ("PRP","I")],PN "VP" [PL ("VBD","told"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","student")],PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","he")],PN "VP" [PL ("MD","would"),PL ("RB","not"),PN "VP" [PL ("VB","pass"),PN "NP" [PL ("DT","the"),PL ("NN","exam")]]]]]]],PL (".",".")]]
     , []

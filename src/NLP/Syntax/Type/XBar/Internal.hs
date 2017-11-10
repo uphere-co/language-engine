@@ -98,29 +98,41 @@ data AdjunctDP t = AdjunctDP_Unresolved Range
                  | AdjunctDP_PP (PP t)
 
 
-data PronounType = P_I | P_You | P_He | P_She | P_It | P_They
+data PronounPerson = P_I | P_You | P_He | P_She | P_It | P_They
                  deriving (Show,Eq,Ord)
 
 
-identifyPronounType txt =
+-- data PronounCase = NomAcc | Genitive
+
+
+identifyPronounPerson txt =
   case txt of
     "I"    -> Just P_I
     "me"   -> Just P_I
+    "my"   -> Just P_I
+    "mine" -> Just P_I
     "you"  -> Just P_You
+    "your" -> Just P_You
+    "yours"-> Just P_You
     "he"   -> Just P_He
     "him"  -> Just P_He
+    "his"  -> Just P_He
     "she"  -> Just P_She
     "her"  -> Just P_She
+    "hers" -> Just P_She
     "it"   -> Just P_It
+    "its"  -> Just P_It
     "they" -> Just P_They
     "them" -> Just P_They
+    "their"-> Just P_They
+    "theirs" -> Just P_They
     _      -> Nothing
 
 --
 -- | noun class
 --
 data NomClass = RExp (Maybe NamedEntityClass)
-              | Pronoun PronounType
+              | Pronoun PronounPerson Bool  -- is genitive?
               deriving (Show,Eq)
 
 
