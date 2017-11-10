@@ -13,7 +13,7 @@ import           Control.Lens             ((^.),(^?),(.~),(%~),(&),to,_1,_2,_Jus
 import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
-import           Data.Foldable            (toList)
+import           Data.Foldable            (foldrM,toList)
 import           Data.List                (find)
 import           Data.Maybe               (fromMaybe)
 import qualified Data.Text           as T
@@ -36,7 +36,7 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,tokensByRange
                                           ,mkNP,mkOrdDP,mkSplittedDP,hd_range,hd_class
                                           ,mkPP,mkPPGerund,hp_prep
-                                          ,identifyPronounType
+                                          ,identifyPronounPerson
                                           ,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs,intLemma)
 --
@@ -144,6 +144,7 @@ checkProperNoun tagged (b,e) =
   in (not.null) toks && isUpper (T.head (head toks))   -- unsafe!
 
 
+
 --
 -- | check whether DP is pronoun and change NomClass accordingly
 --
@@ -151,11 +152,22 @@ identifyPronoun :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                    TaggedLemma t -> DetP t -> DetP t
 identifyPronoun tagged dp = fromMaybe dp $ do
   rng <- dp^?complement._Just.headX
-  z <- find (isPOSAs PRP . current) (extractZipperByRange rng (tagged^.pennTree))
-  (i,Lemma lma) <- intLemma z
-  ptyp <- identifyPronounType lma
-  (return . (headX.hd_range .~ Just (i,i)) . (headX.hd_class .~ Pronoun ptyp) . (complement .~ Nothing)) dp
-
+  let zs = extractZipperByRange rng (tagged^.pennTree)
+  ((do z <- find (isPOSAs PRP . current) zs
+       (i,Lemma lma) <- intLemma z
+       ptyp <- identifyPronounPerson lma
+       (return . (headX.hd_range .~ Just (i,i)) . (headX.hd_class .~ Pronoun ptyp) . (complement .~ Nothing)) dp)
+   <|>
+   (foldr (<|>) Nothing $ flip map zs $ \z -> do z1 <- child1 z
+                                                 guard (isPOSAs PRPDollar (current z1))
+                                                 (i,Lemma lma) <- intLemma z1
+                                                 ptyp <- identifyPronounPerson lma
+                                                 ( return
+                                                  .(headX.hd_range .~ Just (i,i))
+                                                  .(headX.hd_class .~ Pronoun ptyp)
+                                                  .(complement._Just.headX %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
+                                                  .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp
+    ))
 
 
 

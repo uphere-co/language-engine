@@ -44,12 +44,13 @@ formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
 
 
 formatDP :: DetP t -> Text
-formatDP dp = "DP"         <> rangeText (Right dp) <>
-              " head: "    <> maybe "" (T.pack.show) (dp^?complement._Just.headX) <>
+formatDP dp = "(DP"        <> rangeText (Right dp) <>
+              " D: "       <> maybe "" (T.pack.show) (dp^.headX.hd_range) <>
+              " NP: "      <> maybe "" (T.pack.show) (dp^?complement._Just.headX) <>
               " spec: "    <> maybe "" (T.pack.show) (dp^.specifier) <>
               " comp: "    <> maybe "" formatCompDP  (dp^?complement._Just.complement._Just) <>
-              " adjunct: " <> (T.intercalate " " . map formatAdjunctDP) (dp^.adjunct)
-
+              " adjunct: " <> (T.intercalate " " . map formatAdjunctDP) (dp^.adjunct) <>
+              ")"
 
 
 formatCompVP :: CompVP as -> Text
