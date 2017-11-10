@@ -45,7 +45,7 @@ pronounResolution x'tr tagged dp = do
 
 data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
                  , _adi_coref :: Maybe Range
-                 , _adi_partitive :: Maybe (Range,Text)
+                 , _adi_compof :: Maybe (Range,Text)
                  }
 
 
@@ -60,23 +60,14 @@ entityFromDP x'tr tagged dp =
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (rng_sub,txt_sub)
       mcoref = pronounResolution x'tr tagged dp
-      mpart = case dp^?complement._Just.complement._Just of
+      mcomp = case dp^?complement._Just.complement._Just of
                 Just (CompDP_PP pp) -> do dp' <- pp^?complement._CompPP_DP
                                           let prep = pp^.headX.hp_prep
                                           guard (prep == Prep_WORD "of")
-                                          let rng_part = dp'^.maximalProjection
-                                              txt_part = headTextDP tagged dp'
-                                          return (rng_part,txt_part)
+                                          let rng_comp = dp'^.maximalProjection
+                                              txt_comp = headTextDP tagged dp'
+                                          return (rng_comp,txt_comp)
                 _ -> Nothing
-  in (Just rng,headtxt,DI mrngtxt' mcoref mpart)
-
-      {- txt = case  of
-                   Just 
-                     let prep = pp^.headX.hp_prep
-                         rng_pp = pp^.maximalProjection
-                     in headtxt {- if prep == Prep_WORD "of"
-                        then headtxt <> " " <> T.intercalate " " (tokensByRange tagged rng_pp)
-                        else headtxt -}
-                   _ -> headtxt   -}
+  in (Just rng,headtxt,DI mrngtxt' mcoref mcomp)
 
 
