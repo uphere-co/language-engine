@@ -36,17 +36,10 @@ dependencyOfX'Tree (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ conca
 dependencyOfX'Tree (PL _)           = []
 
 
-meaningGraph :: SentStructure -> MeaningGraph
-meaningGraph sstr =
-  let (x'tr,lst_vstrcp) = mkTriples sstr
-      tagged = sstr^.ss_tagged
-      matched = mapMaybe matchFrame lst_vstrcp
-      depmap = dependencyOfX'Tree =<< x'tr
-      --
-      preds = flip map matched $ \(rng,vprop,frame,sense,_mselected,_) i
+mkMGVertices tagged x'tr matched =
+  let preds = flip map matched $ \(rng,vprop,frame,sense,_mselected,_) i
                                    -> MGPredicate i (Just rng) frame (PredVerb sense (simplifyVProp vprop))
       ipreds = zipWith ($) preds [1..]
-      --
 
       entities0 = do (_,_,_,_,mselected,_) <- matched
                      (_,felst) <- maybeToList mselected
@@ -84,12 +77,12 @@ meaningGraph sstr =
       ientities1 = zipWith ($) entities1 (enumFrom (n_ipreds+1))
       ientities2 = zipWith ($) entities2 (enumFrom (n_ipreds+n_entities1+1))
       vertices = ipreds ++ ientities1 ++ (map snd ientities2)
-      --
-      rangeid :: MGVertex -> (Int,Maybe Range)
-      rangeid mv = (if mv^?_MGPredicate._4._PredNoun == Just () then 1 else 0, mv^.mv_range)
-      --
-      rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
-      edges0 = do (rng,_,_,_,mselected,_) <- matched
+
+  in (vertices,entities1_0,ientities2)
+
+
+mkMGEdges (rngidxmap,depmap) matched (entities1_0,ientities2) =
+  let edges0 = do (rng,_,_,_,mselected,_) <- matched
                   i <- maybeToList (HM.lookup (0,Just rng) rngidxmap)   -- frame
                   (_,felst) <- maybeToList mselected
                   (fe,x) <- felst
@@ -122,7 +115,24 @@ meaningGraph sstr =
                   i_1 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
                   [MGEdge "ref" False Nothing i_0 i_1]
 
-  in MeaningGraph vertices (edges0 ++ edges1 ++ edges2 ++ edges3)
+  in edges0 ++ edges1 ++ edges2 ++ edges3
+
+
+meaningGraph :: SentStructure -> MeaningGraph
+meaningGraph sstr =
+  let (x'tr,lst_vstrcp) = mkTriples sstr
+      tagged = sstr^.ss_tagged
+      matched = mapMaybe matchFrame lst_vstrcp
+      depmap = dependencyOfX'Tree =<< x'tr
+      --
+      (vertices,entities1_0,ientities2) = mkMGVertices tagged x'tr matched
+      --
+      rangeid :: MGVertex -> (Int,Maybe Range)
+      rangeid mv = (if mv^?_MGPredicate._4._PredNoun == Just () then 1 else 0, mv^.mv_range)
+      --
+      rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
+      edges = mkMGEdges (rngidxmap,depmap) matched (entities1_0,ientities2)
+  in MeaningGraph vertices edges
 
 
 isEntity :: MGVertex -> Bool
