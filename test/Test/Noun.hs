@@ -29,6 +29,7 @@ import           Test.Common
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
+import Debug.Trace
 
 
 type TestNoun = (Text

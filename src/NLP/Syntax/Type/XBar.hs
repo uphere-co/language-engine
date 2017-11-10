@@ -8,7 +8,7 @@ module NLP.Syntax.Type.XBar
 
 import           Control.Lens                       ((^.),(^?),_1,_2,_Just,to)
 import           Data.Foldable                      (toList)
-import           Data.Maybe                         (fromMaybe,maybeToList)
+import           Data.Maybe                         (catMaybes,fromMaybe,maybeToList)
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
 --
@@ -28,17 +28,17 @@ getTokens = T.intercalate " " . map (tokenWord.snd) . toList
 tokensByRange :: TaggedLemma t -> Range -> [Text]
 tokensByRange tagged rng = map (^._2._2) . filter (^._1.to (\i -> i `isInside` rng)) $ tagged^.lemmaList
 
-determinerText :: HeadDP -> Text
+determinerText :: HeadDP -> Maybe Text
 determinerText hdp =
   case hdp^.hd_class of
-    (Pronoun ptyp) -> case ptyp of
-                        P_I    -> "I"
-                        P_You  -> "you"
-                        P_He   -> "he"
-                        P_She  -> "she"
-                        P_It   -> "it"
-                        P_They -> "they"
-    _              -> ""
+    (Pronoun ptyp) -> Just $ case ptyp of
+                               P_I    -> "I"
+                               P_You  -> "you"
+                               P_He   -> "he"
+                               P_She  -> "she"
+                               P_It   -> "it"
+                               P_They -> "they"
+    _              -> Nothing
 
 
 
@@ -57,7 +57,7 @@ compVPToEither (CompVP_PP y)         = case y^.complement of
 
 
 headTextDP :: TaggedLemma t -> DetP t -> Text
-headTextDP tagged dp = T.intercalate " " (determinerText (dp^.headX) : maybeToList (fmap (headText tagged) (dp^.complement)))
+headTextDP tagged dp = T.intercalate " " (maybeToList (determinerText (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
 
 
 compVPToHeadText :: TaggedLemma t -> CompVP t -> Text
