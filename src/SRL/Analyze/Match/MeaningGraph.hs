@@ -37,7 +37,7 @@ dependencyOfX'Tree (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ conca
 dependencyOfX'Tree (PL _)           = []
 
 
-mkEntityFun (rng,txt,di) = -- DI mrngtxt_appos _ mrngtxt_comp) =
+mkEntityFun (rng,txt,di) =
   let mkRel frm mrngtxt' = flip (maybe []) mrngtxt' $ \(rng',txt') -> [ \i'  -> MGEntity i' (Just rng') txt' []
                                                                       , \i'' -> MGPredicate i'' (Just rng') frm PredNoun ]
       appos = mkRel "Instance" (di^.adi_appos)
@@ -129,10 +129,9 @@ mkPrepEdges rngidxmap ientities2 = do
 
 mkCorefEdges rngidxmap entities1_0 = do
   (mrng,_,di) <- entities1_0
-  let mrng' = di^.adi_coref
-  rng' <- maybeToList mrng'
-  i_0 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
-  i_1 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
+  (rng0,rng1) <- maybeToList (di^.adi_coref)
+  i_0 <- maybeToList (HM.lookup (0,Just rng0 {- mrng -}) rngidxmap)
+  i_1 <- maybeToList (HM.lookup (0,Just rng1) rngidxmap)
   [MGEdge "ref" False Nothing i_0 i_1]
 
 

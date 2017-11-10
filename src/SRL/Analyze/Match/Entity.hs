@@ -2,6 +2,7 @@
 {-# LANGUAGE MultiWayIf        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TupleSections     #-}
 
 module SRL.Analyze.Match.Entity where
 
@@ -28,9 +29,10 @@ import Debug.Trace
 pronounResolution :: [X'Tree '[Lemma]]
                   -> TaggedLemma '[Lemma]
                   -> DetP '[Lemma]
-                  -> Maybe Range
+                  -> Maybe (Range,Range)
 pronounResolution x'tr tagged dp = do
   let rng_dp = dp^.maximalProjection
+  rng_pro <- dp^.headX.hd_range
   prnclass <- dp^?headX.hd_class._Pronoun._1
   w <- getFirst (foldMap (First . extractZipperById rng_dp) x'tr)
   w' <- parent w
@@ -39,12 +41,13 @@ pronounResolution x'tr tagged dp = do
   cp <- currentCPDPPP w'' ^? _CPCase
   dp' <- cp^?complement.specifier.trResolved._Just._Right
   nclass <- dp'^?headX.hd_class._RExp._Just
-  if | prnclass `elem` [P_He,P_She] && nclass == Person -> dp'^?complement._Just.headX
-     | prnclass `elem` [P_It]       && nclass == Org    -> dp'^?complement._Just.headX
+  if | prnclass `elem` [P_He,P_She] && nclass == Person -> (rng_pro,) <$> dp'^?complement._Just.headX
+     | prnclass `elem` [P_It]       && nclass == Org    -> (rng_pro,) <$> dp'^?complement._Just.headX
      | otherwise -> Nothing
 
+
 data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
-                 , _adi_coref :: Maybe Range
+                 , _adi_coref :: Maybe (Range,Range)
                  , _adi_compof :: Maybe (Range,Text)
                  , _adi_poss :: Maybe (Range,Text)
                  }
