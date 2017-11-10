@@ -381,7 +381,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
        -> [(FNFrameElement,CompVP '[Lemma])]
     go (fe,CompVP_PP pp) lst = let rng = pp^.maximalProjection
                                in map (f (fe,rng)) lst
-    go (fe,CompVP_DP dp) lst = map (f (fe,dp^.complement.headX)) lst
+    go (fe,CompVP_DP dp) lst = map (f (fe,fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX))) lst
     go (_ ,_           ) lst = lst
 
     f (fe,rng@(b,e)) (fe',CompVP_PP pp)
@@ -392,8 +392,8 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
              CompPP_DP dp    -> let rng'@(b',_) = dp^.maximalProjection
                                 in -- for the time being, use this ad hoc algorithm
                                    if fe /= fe' && rng `isInsideR` rng' && b /= b'
-                                   then let dp' = dp & (complement.headX .~  (b',b-1)) 
-                                                     . (complement.maximalProjection .~ (b,e))
+                                   then let dp' = dp & (complement._Just.headX .~  (b',b-1)) 
+                                                     . (complement._Just.maximalProjection .~ (b,e))
                                                      . (maximalProjection .~ (b,e))
                                                      . (adjunct .~ [])
                                         in (fe',CompVP_PP (mkPP prep' o' dp'))
@@ -403,8 +403,8 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
       = let rng'@(b',_) = dp^.maximalProjection
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
-          then let dp' = dp & (complement.headX .~ (b',b-1))
-                            . (complement.maximalProjection .~ (b,e))
+          then let dp' = dp & (complement._Just.headX .~ (b',b-1))
+                            . (complement._Just.maximalProjection .~ (b,e))
                             . (maximalProjection .~ (b,e))
                             . (adjunct .~ [])
                in (fe', CompVP_DP dp')
@@ -490,7 +490,6 @@ meaningGraph sstr =
 
       entities2 = do (_,_,_,_,_,lst) <- matched
                      (frm,prep,felst) <- lst
-                     -- (fe,rng) <- felst
                      return (\i -> ((i,frm,prep,felst),MGPredicate i Nothing frm (PredPrep prep)))
       n_ipreds = length ipreds
       n_entities1 = length entities1
@@ -515,7 +514,7 @@ meaningGraph sstr =
                                                                   C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
                                                                                  >>= \prep -> if prep == "that" then Nothing else return prep
                                                     in return (getRange (current z_cp),mprep)
-                                    CompVP_DP dp -> return (dp^.complement.headX,Nothing)
+                                    CompVP_DP dp -> return (fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX),Nothing)   -- for the time being
                                     CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX.hp_prep._Prep_WORD)
                   i' <- maybeToList (HM.lookup (0,Just rng') rngidxmap)  -- frame element
                   let b = isJust (find (== (rng',rng)) depmap)
