@@ -50,6 +50,7 @@ library
                        WikiEL.WikiEntityClass
                        WikiEL.WikiEntityTagger
                        WikiEL.WikiNamedEntityTagger
+                       WikiEL.WikiNewNET
                        WikiEL.WordNet
 
   other-extensions:    OverloadedStrings
