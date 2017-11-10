@@ -55,16 +55,16 @@ entityFromDP :: [X'Tree '[Lemma]] -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> (R
 entityFromDP x'tr tagged dp =
   let rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX) -- for the time being  -- complement.headX
       headtxt = headTextDP tagged dp
-      txt = case dp^?complement._Just.complement._Just of
+      {- txt = case dp^?complement._Just.complement._Just of
                    Just (CompDP_PP pp) ->
                      let prep = pp^.headX.hp_prep
                          rng_pp = pp^.maximalProjection
-                     in if prep == Prep_WORD "of"
+                     in headtxt {- if prep == Prep_WORD "of"
                         then headtxt <> " " <> T.intercalate " " (tokensByRange tagged rng_pp)
-                        else headtxt
-                   _ -> headtxt  
+                        else headtxt -}
+                   _ -> headtxt   -}
       mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being, specifier is used as attribute appositive
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (rng_sub,txt_sub)
       mcoref = pronounResolution x'tr tagged dp
-  in (rng,txt,DI mrngtxt' mcoref)
+  in (rng,headtxt,DI mrngtxt' mcoref)

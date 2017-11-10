@@ -24,6 +24,8 @@ library
                        SRL.Analyze.Format
                        SRL.Analyze.Match
                        SRL.Analyze.Match.Entity
+                       SRL.Analyze.Match.Frame
+                       SRL.Analyze.Match.MeaningGraph
                        SRL.Analyze.Parameter
                        SRL.Analyze.SentenceStructure
                        SRL.Analyze.Type

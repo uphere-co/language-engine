@@ -43,7 +43,7 @@ import qualified WikiEL                        as WEL
 import           WikiEL.Type                             (EMInfo,EntityMention,PreNE,UIDCite(..),_emuid)
 import           WikiEL.WikiNamedEntityTagger            (resolvedUID)
 --
-import           SRL.Analyze.Match                       (matchFrame)
+import           SRL.Analyze.Match.Frame                 (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,MGEdge(..),MGVertex(..),MeaningGraph
