@@ -31,7 +31,7 @@ pronounResolution :: [X'Tree '[Lemma]]
                   -> Maybe Range
 pronounResolution x'tr tagged dp = do
   let rng_dp = dp^.maximalProjection
-  prnclass <- dp^?headX.hd_class._Pronoun
+  prnclass <- dp^?headX.hd_class._Pronoun._1
   w <- getFirst (foldMap (First . extractZipperById rng_dp) x'tr)
   w' <- parent w
   guard (is _Just (currentCPDPPP w' ^? _CPCase))
@@ -46,6 +46,7 @@ pronounResolution x'tr tagged dp = do
 data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
                  , _adi_coref :: Maybe Range
                  , _adi_compof :: Maybe (Range,Text)
+                 , _adi_poss :: Maybe (Range,Text)
                  }
 
 
@@ -60,14 +61,17 @@ entityFromDP x'tr tagged dp =
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (rng_sub,txt_sub)
       mcoref = pronounResolution x'tr tagged dp
-      mcomp = case dp^?complement._Just.complement._Just of
-                Just (CompDP_PP pp) -> do dp' <- pp^?complement._CompPP_DP
-                                          let prep = pp^.headX.hp_prep
-                                          guard (prep == Prep_WORD "of")
-                                          let rng_comp = dp'^.maximalProjection
-                                              txt_comp = headTextDP tagged dp'
-                                          return (rng_comp,txt_comp)
-                _ -> Nothing
-  in (Just rng,headtxt,DI mrngtxt' mcoref mcomp)
+      mcomp = do CompDP_PP pp <- dp^?complement._Just.complement._Just
+                 dp' <- pp^?complement._CompPP_DP
+                 let prep = pp^.headX.hp_prep
+                 guard (prep == Prep_WORD "of")
+                 let rng_comp = dp'^.maximalProjection
+                     txt_comp = headTextDP tagged dp'
+                 return (rng_comp,txt_comp)
+      mposs = do (ptyp,True) <- dp^?headX.hd_class._Pronoun
+                 rng_poss <- dp^.headX.hd_range
+                 txt_poss <- determinerText tagged (dp^.headX)
+                 return (rng_poss,txt_poss)
+  in (Just rng,headtxt,DI mrngtxt' mcoref mcomp mposs)
 
 

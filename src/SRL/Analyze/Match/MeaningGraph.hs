@@ -40,7 +40,10 @@ dependencyOfX'Tree (PL _)           = []
 mkEntityFun (rng,txt,di) = -- DI mrngtxt_appos _ mrngtxt_comp) =
   let mkRel frm mrngtxt' = flip (maybe []) mrngtxt' $ \(rng',txt') -> [ \i'  -> MGEntity i' (Just rng') txt' []
                                                                       , \i'' -> MGPredicate i'' (Just rng') frm PredNoun ]
-  in (\i -> MGEntity i rng txt []) : (mkRel "Instance" (di^.adi_appos) ++ mkRel "Partitive" (di^.adi_compof))
+      appos = mkRel "Instance" (di^.adi_appos)
+      compof = mkRel "Partitive" (di^.adi_compof)
+      poss = mkRel "Possession" (di^.adi_poss)
+  in (\i -> MGEntity i rng txt []) : (appos ++ compof ++ poss )
 
 
 mkMGVertices tagged x'tr matched =
@@ -104,8 +107,10 @@ mkRoleEdges (rngidxmap,depmap) matched = do
 
 mkInnerDPEdges rngidxmap entities = do
     (mrng,_,di) <- entities
-    -- let appos = di^.adi_appos
-    (mkRelEdge "Instance" "Type" (mrng,di^.adi_appos) ++ mkRelEdge "Subset" "Group" (mrng,di^.adi_compof))
+    let appos = mkRelEdge "Instance" "Type" (mrng,di^.adi_appos)
+        compof = mkRelEdge "Subset" "Group" (mrng,di^.adi_compof)
+        poss = mkRelEdge "Possession" "Owner" (mrng,di^.adi_poss)                                         
+    (appos ++ compof ++ poss)
   where
     mkRelEdge role1 role2 (mrng,mrngtxt') = do
       (rng',_) <- maybeToList mrngtxt'
@@ -123,7 +128,8 @@ mkPrepEdges rngidxmap ientities2 = do
 
 
 mkCorefEdges rngidxmap entities1_0 = do
-  (mrng,_,DI _ mrng' _) <- entities1_0
+  (mrng,_,di) <- entities1_0
+  let mrng' = di^.adi_coref
   rng' <- maybeToList mrng'
   i_0 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
   i_1 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
