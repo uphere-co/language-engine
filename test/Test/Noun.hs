@@ -162,7 +162,7 @@ testcases :: [TestNoun]
 testcases = [ test_bare_noun_modifier_1
             , test_bare_noun_modifier_2
             , test_bare_noun_modifier_3
-            -- , test_bare_noun_modifier_4
+            , test_bare_noun_modifier_4
             , test_paren_modifier_1
             , test_prep_modifier_1
             , test_prep_modifier_2

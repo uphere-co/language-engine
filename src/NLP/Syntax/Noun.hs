@@ -15,15 +15,16 @@ import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
 import           Data.Foldable            (foldrM,toList)
 import           Data.List                (find)
-import           Data.Maybe               (fromMaybe)
+import           Data.Maybe               (fromMaybe,listToMaybe)
 import qualified Data.Text           as T
 --
+import           Data.Attribute           (ahead)
 import           Data.Bitree              (_PL)
 import           Data.BitreeZipper        (child1,childLast,current,next,extractZipperByRange)
 import           Data.BitreeZipper.Util   (firstSiblingBy)
 import           Data.Range               (Range)
 import           NLP.Type.PennTreebankII  (ChunkTag(..),POSTag(..),TernaryLogic(..),Lemma(..)
-                                          ,getRange,isNoun,posTag,tokenWord)
+                                          ,getRange,isNoun,posTag,tokenWord,getAnnot)
 import           NLP.Type.TagPos          (TagPos(..))
 --
 import           NLP.Syntax.Type          (MarkType(..))
@@ -158,9 +159,12 @@ identifyPronoun tagged dp = fromMaybe dp $ do
        ptyp <- identifyPronounPerson lma
        (return . (headX.hd_range .~ Just (i,i)) . (headX.hd_class .~ Pronoun ptyp) . (complement .~ Nothing)) dp)
    <|>
-   (foldr (<|>) Nothing $ flip map zs $ \z -> do z1 <- child1 z
-                                                 guard (isPOSAs PRPDollar (current z1))
-                                                 (i,Lemma lma) <- intLemma z1
+   (foldr (<|>) Nothing $ flip map zs $ \z -> do (i,att) <- listToMaybe (toList (current z))
+                                                 guard (posTag att == PRPDollar)
+                                                 let Lemma lma = ahead (getAnnot att)
+
+                                                 -- guard (isPOSAs PRPDollar (current z1))
+                                                 -- (i,Lemma lma) <- intLemma z1
                                                  ptyp <- identifyPronounPerson lma
                                                  ( return
                                                   .(headX.hd_range .~ Just (i,i))
