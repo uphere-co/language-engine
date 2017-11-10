@@ -34,7 +34,7 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,TaggedLemma, _MarkEntity, _RExp
                                           ,adjunct,complement,headX,maximalProjection
                                           ,tokensByRange
-                                          ,mkNP,mkOrdDP,mkSplittedDP,hd_class
+                                          ,mkNP,mkOrdDP,mkSplittedDP,hd_range,hd_class
                                           ,mkPP,mkPPGerund,hp_prep
                                           ,identifyPronounType
                                           ,pennTree,tagList)
@@ -152,9 +152,9 @@ identifyPronoun :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
 identifyPronoun tagged dp = fromMaybe dp $ do
   rng <- dp^?complement._Just.headX
   z <- find (isPOSAs PRP . current) (extractZipperByRange rng (tagged^.pennTree))
-  (_,Lemma lma) <- intLemma z
+  (i,Lemma lma) <- intLemma z
   ptyp <- identifyPronounType lma
-  (return . (headX.hd_class .~ Pronoun ptyp)) dp
+  (return . (headX.hd_range .~ Just (i,i)) . (headX.hd_class .~ Pronoun ptyp) . (complement .~ Nothing)) dp
 
 
 
