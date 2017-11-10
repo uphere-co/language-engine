@@ -124,7 +124,8 @@ data NomClass = RExp (Maybe NamedEntityClass)
               deriving (Show,Eq)
 
 
-data HeadDP = HeadDP { _hd_class :: NomClass
+data HeadDP = HeadDP { _hd_range :: Maybe Range
+                     , _hd_class :: NomClass
                      }
 
 
@@ -161,7 +162,7 @@ type DetP = XP 'X_D
 --   better representation.
 --
 mkOrdDP :: Zipper t -> DetP t
-mkOrdDP z = XP (HeadDP (RExp Nothing)) rng Nothing [] (Just (mkNP rng Nothing))
+mkOrdDP z = XP (HeadDP Nothing (RExp Nothing)) rng Nothing [] (Just (mkNP rng Nothing))
   where rng = (getRange . current) z
 
 
@@ -175,9 +176,9 @@ mkSplittedDP :: SplitType
              -> DetP t
 mkSplittedDP typ h m o
   = case typ of
-      CLMod -> XP (HeadDP (RExp Nothing)) rng Nothing   [] (Just (mkNP h (Just (CompDP_Unresolved m))))
-      BNMod -> XP (HeadDP (RExp Nothing)) rng (Just m)  [] (Just (mkNP h Nothing)) -- apposition is regarded as a specifier.
-      APMod -> XP (HeadDP (RExp Nothing)) rng (Just m)  [] (Just (mkNP h Nothing)) -- apposition is regarded as a specifier.
+      CLMod -> XP (HeadDP Nothing (RExp Nothing)) rng Nothing   [] (Just (mkNP h (Just (CompDP_Unresolved m))))
+      BNMod -> XP (HeadDP Nothing (RExp Nothing)) rng (Just m)  [] (Just (mkNP h Nothing)) -- apposition is regarded as a specifier.
+      APMod -> XP (HeadDP Nothing (RExp Nothing)) rng (Just m)  [] (Just (mkNP h Nothing)) -- apposition is regarded as a specifier.
   where rng = (getRange . current) o
 
 --

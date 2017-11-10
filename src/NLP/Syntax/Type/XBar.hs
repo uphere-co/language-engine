@@ -28,9 +28,10 @@ getTokens = T.intercalate " " . map (tokenWord.snd) . toList
 tokensByRange :: TaggedLemma t -> Range -> [Text]
 tokensByRange tagged rng = map (^._2._2) . filter (^._1.to (\i -> i `isInside` rng)) $ tagged^.lemmaList
 
-determinerText :: HeadDP -> Maybe Text
-determinerText hdp =
-  case hdp^.hd_class of
+determinerText :: TaggedLemma t -> HeadDP -> Maybe Text
+determinerText tagged hdp = fmap (T.intercalate " " . tokensByRange tagged) (hdp^.hd_range)
+
+{-   case hdp^.hd_class of
     (Pronoun ptyp) -> Just $ case ptyp of
                                P_I    -> "I"
                                P_You  -> "you"
@@ -39,7 +40,7 @@ determinerText hdp =
                                P_It   -> "it"
                                P_They -> "they"
     _              -> Nothing
-
+-}
 
 
 headText :: TaggedLemma t -> NounP t -> Text
@@ -57,7 +58,7 @@ compVPToEither (CompVP_PP y)         = case y^.complement of
 
 
 headTextDP :: TaggedLemma t -> DetP t -> Text
-headTextDP tagged dp = T.intercalate " " (maybeToList (determinerText (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
+headTextDP tagged dp = T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
 
 
 compVPToHeadText :: TaggedLemma t -> CompVP t -> Text

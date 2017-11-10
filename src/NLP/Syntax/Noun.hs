@@ -123,7 +123,7 @@ splitParentheticalModifier tagged z = do
    (guard (isChunkAs SBAR (current z_appos)) >> return (mkSplittedDP CLMod (rf dp1) (rf z_appos) z))  <|>
    (do guard (isChunkAs PP (current z_appos))
        pp <- mkPPFromZipper tagged PC_Other z_appos
-       return (XP (HeadDP (RExp Nothing)) (rf z) Nothing [AdjunctDP_PP pp] (Just (mkNP (rf dp1) Nothing)))))
+       return (XP (HeadDP Nothing (RExp Nothing)) (rf z) Nothing [AdjunctDP_PP pp] (Just (mkNP (rf dp1) Nothing)))))
 
 
 
