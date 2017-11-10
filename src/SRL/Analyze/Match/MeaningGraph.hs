@@ -5,6 +5,7 @@
 module SRL.Analyze.Match.MeaningGraph where
 
 import           Control.Lens
+import           Control.Monad                (join)
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
@@ -36,6 +37,12 @@ dependencyOfX'Tree (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ conca
 dependencyOfX'Tree (PL _)           = []
 
 
+mkEntityFun (rng,txt,DI mrngtxt_appos _ mrngtxt_part) =
+  let mkRel frm mrngtxt' = flip (maybe []) mrngtxt' $ \(rng',txt') -> [ \i'  -> MGEntity i' (Just rng') txt' []
+                                                                      , \i'' -> MGPredicate i'' (Just rng') frm PredNoun ]
+  in (\i -> MGEntity i rng txt []) : (mkRel "Instance" mrngtxt_appos ++ mkRel "Partitive" mrngtxt_part)
+
+
 mkMGVertices tagged x'tr matched =
   let preds = flip map matched $ \(rng,vprop,frame,sense,_mselected,_) i
                                    -> MGPredicate i (Just rng) frame (PredVerb sense (simplifyVProp vprop))
@@ -47,8 +54,8 @@ mkMGVertices tagged x'tr matched =
                      case x of
                        CompVP_Unresolved _ -> []
                        CompVP_CP _cp -> [] -- CP is not an entity.
-                       CompVP_DP dp -> (return . (_1 %~ Just) . entityFromDP x'tr tagged) dp
-                       CompVP_PP pp -> maybeToList ((_1 %~ Just) . entityFromDP x'tr tagged <$> (pp^?complement._CompPP_DP))
+                       CompVP_DP dp -> return (entityFromDP x'tr tagged dp)
+                       CompVP_PP pp -> maybeToList (entityFromDP x'tr tagged <$> (pp^?complement._CompPP_DP))
 
       filterFrame = filter (\(rng,_,_) -> not (any (\p -> p^.mv_range == rng) ipreds))
       --
@@ -59,12 +66,6 @@ mkMGVertices tagged x'tr matched =
                   . sortBy (compare `on` (^._1))
                   $ entities0
 
-      mkEntityFun (rng,txt,DI mrngtxt' _) =
-        (\i -> MGEntity i rng txt []) :
-          flip (maybe []) mrngtxt' (\(rng',txt') -> [ \i'  -> MGEntity i' (Just rng') txt' []
-                                                    , \i'' -> MGPredicate i'' (Just rng') "Instance" PredNoun
-                                                    ]
-                                   )
 
       entities1 = concatMap mkEntityFun entities1_0
 
@@ -101,13 +102,17 @@ mkRoleEdges (rngidxmap,depmap) matched = do
   return (MGEdge fe b mprep i i')
 
 
-mkApposEdges rngidxmap entities1_0 = do
-  (mrng,_,DI mrngtxt' _) <- entities1_0
-  (rng',_) <- maybeToList mrngtxt'
-  i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
-  i_instance <- maybeToList (HM.lookup (0,mrng) rngidxmap)
-  i_type     <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
-  [MGEdge "Instance" True Nothing i_frame i_instance, MGEdge "Type" False Nothing i_frame i_type]
+mkInnerDPEdges rngidxmap entities = do
+    (mrng,_,di) <- entities
+    -- let appos = di^.adi_appos
+    (mkRelEdge "Instance" "Type" (mrng,di^.adi_appos) ++ mkRelEdge "Subset" "Group" (mrng,di^.adi_partitive))
+  where
+    mkRelEdge role1 role2 (mrng,mrngtxt') = do
+      (rng',_) <- maybeToList mrngtxt'
+      i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
+      i_1 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
+      i_2 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
+      [MGEdge role1 True Nothing i_frame i_1, MGEdge role2 False Nothing i_frame i_2]
 
 
 mkPrepEdges rngidxmap ientities2 = do
@@ -118,7 +123,7 @@ mkPrepEdges rngidxmap ientities2 = do
 
 
 mkCorefEdges rngidxmap entities1_0 = do
-  (mrng,_,DI _ mrng') <- entities1_0
+  (mrng,_,DI _ mrng' _) <- entities1_0
   rng' <- maybeToList mrng'
   i_0 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
   i_1 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
@@ -127,7 +132,7 @@ mkCorefEdges rngidxmap entities1_0 = do
 
 mkMGEdges (rngidxmap,depmap) matched (entities1_0,ientities2) =
   let edges0 = mkRoleEdges (rngidxmap,depmap) matched
-      edges1 = mkApposEdges rngidxmap entities1_0
+      edges1 = mkInnerDPEdges rngidxmap entities1_0
       edges2 = mkPrepEdges rngidxmap ientities2
       edges3 = mkCorefEdges rngidxmap entities1_0
   in edges0 ++ edges1 ++ edges2 ++ edges3
