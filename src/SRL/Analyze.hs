@@ -59,7 +59,8 @@ import           SRL.Analyze.ARB               (mkARB,squashRelFrame)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP           (runParser)
 import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructure,showMatchedFrame)
-import           SRL.Analyze.Match             (mkTriples,meaningGraph,tagMG)
+import           SRL.Analyze.Match             (mkTriples)
+import           SRL.Analyze.Match.MeaningGraph (meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure (docStructure,mkWikiList)
 import           SRL.Analyze.Type
 import           SRL.Statistics (getGraphFromMG)
