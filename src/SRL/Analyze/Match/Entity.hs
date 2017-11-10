@@ -38,8 +38,8 @@ pronounResolution x'tr tagged dp = do
   cp <- currentCPDPPP w'' ^? _CPCase
   dp' <- cp^?complement.specifier.trResolved._Just._Right
   nclass <- dp'^?headX.hd_class._RExp._Just
-  if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (dp'^.headX.hd_range)
-     | prnclass `elem` [P_It] && nclass == Org -> return (dp'^.headX.hd_range)
+  if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (dp'^.complement.headX)
+     | prnclass `elem` [P_It] && nclass == Org -> return (dp'^.complement.headX)
      | otherwise -> Nothing
 
 data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
@@ -52,9 +52,9 @@ makeLenses ''DPInfo
 
 entityFromDP :: [X'Tree '[Lemma]] -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> (Range,Text,DPInfo)
 entityFromDP x'tr tagged dp =
-  let rng = dp^.headX.hd_range
+  let rng = dp^.complement.headX
       headtxt = headText tagged dp
-      txt = case dp^.complement of
+      txt = case dp^.complement.complement of
               Just (CompDP_PP pp) ->
                 let prep = pp^.headX.hp_prep
                     rng_pp = pp^.maximalProjection
