@@ -151,7 +151,7 @@ type instance Property   'X_D t = HeadDP -- Range -- head
 type instance Maximal    'X_D t = Range
 type instance Specifier  'X_D t = Maybe Range  -- appositive for the time being
 type instance Adjunct    'X_D t = [AdjunctDP t]
-type instance Complement 'X_D t = NounP t -- Maybe (CompDP t)
+type instance Complement 'X_D t = Maybe (NounP t) -- Maybe (CompDP t)
 
 type DetP = XP 'X_D
 
@@ -161,7 +161,7 @@ type DetP = XP 'X_D
 --   better representation.
 --
 mkOrdDP :: Zipper t -> DetP t
-mkOrdDP z = XP (HeadDP (RExp Nothing)) rng Nothing [] (mkNP rng Nothing)
+mkOrdDP z = XP (HeadDP (RExp Nothing)) rng Nothing [] (Just (mkNP rng Nothing))
   where rng = (getRange . current) z
 
 
@@ -175,11 +175,11 @@ mkSplittedDP :: SplitType
              -> DetP t
 mkSplittedDP typ h m o
   = case typ of
-      CLMod -> XP (HeadDP (RExp Nothing)) rng Nothing   [] (mkNP h (Just (CompDP_Unresolved m)))
-      BNMod -> XP (HeadDP (RExp Nothing)) rng (Just m)  [] (mkNP h Nothing) -- apposition is regarded as a specifier.
-      APMod -> XP (HeadDP (RExp Nothing)) rng (Just m)  [] (mkNP h Nothing) -- apposition is regarded as a specifier.
+      CLMod -> XP (HeadDP (RExp Nothing)) rng Nothing   [] (Just (mkNP h (Just (CompDP_Unresolved m))))
+      BNMod -> XP (HeadDP (RExp Nothing)) rng (Just m)  [] (Just (mkNP h Nothing)) -- apposition is regarded as a specifier.
+      APMod -> XP (HeadDP (RExp Nothing)) rng (Just m)  [] (Just (mkNP h Nothing)) -- apposition is regarded as a specifier.
   where rng = (getRange . current) o
-       --  rng = rf o
+
 --
 -- | preposition word, including null preposition (for temporal expressions, numeral..)
 --

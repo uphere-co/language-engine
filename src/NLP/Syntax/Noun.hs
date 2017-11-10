@@ -9,7 +9,7 @@
 module NLP.Syntax.Noun where
 
 import           Control.Applicative      ((<|>))
-import           Control.Lens             ((^.),(^?),(.~),(%~),(&),to,_1,_2,_Nothing)
+import           Control.Lens             ((^.),(^?),(.~),(%~),(&),to,_1,_2,_Just,_Nothing)
 import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
@@ -72,10 +72,10 @@ splitDP tagged dp0 =
               guard (isChunkAs PP (current z_pp))
               pp <- mkPPFromZipper tagged PC_Other z_pp
               let ppreplace = case pp^.headX.hp_prep of
-                                Prep_WORD "of" -> complement.complement .~ (Just (CompDP_PP pp))
+                                Prep_WORD "of" -> complement._Just.complement .~ (Just (CompDP_PP pp))
                                 _              -> adjunct %~ (++ [AdjunctDP_PP pp])
               let (b_pp,_) = pp^.maximalProjection
-              return (dp0 & (complement.headX %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
+              return (dp0 & (complement._Just.headX %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
 
   in identifyPronoun tagged . identifyNamedEntity tagged . bareNounModifier tagged . fromMaybe dp1 $ do
        let rng1 = dp1^.maximalProjection
@@ -123,7 +123,7 @@ splitParentheticalModifier tagged z = do
    (guard (isChunkAs SBAR (current z_appos)) >> return (mkSplittedDP CLMod (rf dp1) (rf z_appos) z))  <|>
    (do guard (isChunkAs PP (current z_appos))
        pp <- mkPPFromZipper tagged PC_Other z_appos
-       return (XP (HeadDP (RExp Nothing)) (rf z) Nothing [AdjunctDP_PP pp] (mkNP (rf dp1) Nothing))))
+       return (XP (HeadDP (RExp Nothing)) (rf z) Nothing [AdjunctDP_PP pp] (Just (mkNP (rf dp1) Nothing)))))
 
 
 
@@ -150,7 +150,7 @@ checkProperNoun tagged (b,e) =
 identifyPronoun :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                    TaggedLemma t -> DetP t -> DetP t
 identifyPronoun tagged dp = fromMaybe dp $ do
-  let rng = dp^.complement.headX
+  rng <- dp^?complement._Just.headX
   z <- find (isPOSAs PRP . current) (extractZipperByRange rng (tagged^.pennTree))
   (_,Lemma lma) <- intLemma z
   ptyp <- identifyPronounType lma
@@ -180,7 +180,7 @@ bareNounModifier tagged x = fromMaybe x $ do
 
 identifyNamedEntity :: TaggedLemma t -> DetP t -> DetP t
 identifyNamedEntity tagged dp = fromMaybe dp $ do
-  let rng = dp^.complement.headX
+  rng <- dp^?complement._Just.headX
   TagPos (_,_,MarkEntity nec)
     <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
   dp^?headX.hd_class._RExp
