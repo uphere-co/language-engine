@@ -9,6 +9,7 @@ import           Control.Lens
 import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard,mzero)
 import           Data.Foldable            (foldMap)
+import           Data.Maybe               (fromMaybe)
 import           Data.Monoid              ((<>),First(..))
 import           Data.List                (find)
 import           Data.Text                (Text)
@@ -38,8 +39,8 @@ pronounResolution x'tr tagged dp = do
   cp <- currentCPDPPP w'' ^? _CPCase
   dp' <- cp^?complement.specifier.trResolved._Just._Right
   nclass <- dp'^?headX.hd_class._RExp._Just
-  if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (dp'^.headX.hd_range)
-     | prnclass `elem` [P_It] && nclass == Org -> return (dp'^.headX.hd_range)
+  if | prnclass `elem` [P_He,P_She] && nclass == Person -> dp'^?complement._Just.headX
+     | prnclass `elem` [P_It]       && nclass == Org    -> dp'^?complement._Just.headX
      | otherwise -> Nothing
 
 data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
@@ -52,16 +53,16 @@ makeLenses ''DPInfo
 
 entityFromDP :: [X'Tree '[Lemma]] -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> (Range,Text,DPInfo)
 entityFromDP x'tr tagged dp =
-  let rng = dp^.headX.hd_range
-      headtxt = headText tagged dp
-      txt = case dp^.complement of
-              Just (CompDP_PP pp) ->
-                let prep = pp^.headX.hp_prep
-                    rng_pp = pp^.maximalProjection
-                in if prep == Prep_WORD "of"
-                   then headtxt <> " " <> T.intercalate " " (tokensByRange tagged rng_pp)
-                   else headtxt
-              _ -> headtxt
+  let rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX) -- for the time being  -- complement.headX
+      headtxt = headTextDP tagged dp
+      txt = case dp^?complement._Just.complement._Just of
+                   Just (CompDP_PP pp) ->
+                     let prep = pp^.headX.hp_prep
+                         rng_pp = pp^.maximalProjection
+                     in if prep == Prep_WORD "of"
+                        then headtxt <> " " <> T.intercalate " " (tokensByRange tagged rng_pp)
+                        else headtxt
+                   _ -> headtxt  
       mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being, specifier is used as attribute appositive
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (rng_sub,txt_sub)
