@@ -81,40 +81,55 @@ mkMGVertices tagged x'tr matched =
   in (vertices,entities1_0,ientities2)
 
 
-mkMGEdges (rngidxmap,depmap) matched (entities1_0,ientities2) =
-  let edges0 = do (rng,_,_,_,mselected,_) <- matched
-                  i <- maybeToList (HM.lookup (0,Just rng) rngidxmap)   -- frame
-                  (_,felst) <- maybeToList mselected
-                  (fe,x) <- felst
-                  (rng',mprep) <- case x of
-                                    CompVP_Unresolved _ -> []
-                                    CompVP_CP cp -> let z_cp = cp^.maximalProjection
-                                                        mprep = case cp^.headX of
-                                                                  C_PHI -> Nothing
-                                                                  C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
-                                                                                 >>= \prep -> if prep == "that" then Nothing else return prep
-                                                    in return (getRange (current z_cp),mprep)
-                                    CompVP_DP dp -> return (fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX),Nothing)   -- for the time being
-                                    CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX.hp_prep._Prep_WORD)
-                  i' <- maybeToList (HM.lookup (0,Just rng') rngidxmap)  -- frame element
-                  let b = isJust (find (== (rng',rng)) depmap)
-                  return (MGEdge fe b mprep i i')
-      edges1 = do (mrng,_,DI mrngtxt' _) <- entities1_0
-                  (rng',_) <- maybeToList mrngtxt'
-                  i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
-                  i_instance <- maybeToList (HM.lookup (0,mrng) rngidxmap)
-                  i_type     <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
-                  [MGEdge "Instance" True Nothing i_frame i_instance, MGEdge "Type" False Nothing i_frame i_type]
-      edges2 = do (i_frame,frm,prep,felst) <- map fst ientities2
-                  (fe,(b,rng)) <- felst
-                  i_elem <- maybeToList (HM.lookup (0,Just rng) rngidxmap)
-                  [MGEdge fe b Nothing i_frame i_elem]
-      edges3 = do (mrng,_,DI _ mrng') <- entities1_0
-                  rng' <- maybeToList mrng'
-                  i_0 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
-                  i_1 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
-                  [MGEdge "ref" False Nothing i_0 i_1]
+mkRoleEdges (rngidxmap,depmap) matched = do
+  (rng,_,_,_,mselected,_) <- matched
+  i <- maybeToList (HM.lookup (0,Just rng) rngidxmap)   -- frame
+  (_,felst) <- maybeToList mselected
+  (fe,x) <- felst
+  (rng',mprep) <- case x of
+                    CompVP_Unresolved _ -> []
+                    CompVP_CP cp -> let z_cp = cp^.maximalProjection
+                                        mprep = case cp^.headX of
+                                                  C_PHI -> Nothing
+                                                  C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
+                                                                 >>= \prep -> if prep == "that" then Nothing else return prep
+                                    in return (getRange (current z_cp),mprep)
+                    CompVP_DP dp -> return (fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX),Nothing)   -- for the time being
+                    CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX.hp_prep._Prep_WORD)
+  i' <- maybeToList (HM.lookup (0,Just rng') rngidxmap)  -- frame element
+  let b = isJust (find (== (rng',rng)) depmap)
+  return (MGEdge fe b mprep i i')
 
+
+mkApposEdges rngidxmap entities1_0 = do
+  (mrng,_,DI mrngtxt' _) <- entities1_0
+  (rng',_) <- maybeToList mrngtxt'
+  i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
+  i_instance <- maybeToList (HM.lookup (0,mrng) rngidxmap)
+  i_type     <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
+  [MGEdge "Instance" True Nothing i_frame i_instance, MGEdge "Type" False Nothing i_frame i_type]
+
+
+mkPrepEdges rngidxmap ientities2 = do
+  (i_frame,frm,prep,felst) <- map fst ientities2
+  (fe,(b,rng)) <- felst
+  i_elem <- maybeToList (HM.lookup (0,Just rng) rngidxmap)
+  [MGEdge fe b Nothing i_frame i_elem]
+
+
+mkCorefEdges rngidxmap entities1_0 = do
+  (mrng,_,DI _ mrng') <- entities1_0
+  rng' <- maybeToList mrng'
+  i_0 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
+  i_1 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
+  [MGEdge "ref" False Nothing i_0 i_1]
+
+
+mkMGEdges (rngidxmap,depmap) matched (entities1_0,ientities2) =
+  let edges0 = mkRoleEdges (rngidxmap,depmap) matched
+      edges1 = mkApposEdges rngidxmap entities1_0
+      edges2 = mkPrepEdges rngidxmap ientities2
+      edges3 = mkCorefEdges rngidxmap entities1_0
   in edges0 ++ edges1 ++ edges2 ++ edges3
 
 
