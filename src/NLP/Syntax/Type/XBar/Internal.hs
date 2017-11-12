@@ -128,11 +128,28 @@ identifyPronounPerson txt =
     "theirs" -> Just P_They
     _      -> Nothing
 
+
+data Definiteness = Definite | Indefinite
+                  deriving (Show,Eq)
+
+
+identifyDeterminer txt =
+  case txt of
+    "the" -> Just (Article Definite)
+    "a"   -> Just (Article Indefinite)
+    "an"  -> Just (Article Indefinite)
+    -- this
+    -- that
+    -- these
+    -- those
+    _     -> Nothing
+
 --
 -- | noun class
 --
-data DetClass = RExp
+data DetClass = NoDet
               | Pronoun PronounPerson Bool  -- is genitive?
+              | Article Definiteness
               deriving (Show,Eq)
 
 -- type NomClass = Maybe NamedEntityClass
@@ -180,7 +197,7 @@ type DetP = XP 'X_D
 --   better representation.
 --
 mkOrdDP :: Zipper t -> DetP t
-mkOrdDP z = XP (HeadDP Nothing RExp) rng Nothing [] (Just (mkNP (rng,Nothing) Nothing))
+mkOrdDP z = XP (HeadDP Nothing NoDet) rng Nothing [] (Just (mkNP (rng,Nothing) Nothing))
   where rng = (getRange . current) z
 
 
@@ -194,9 +211,9 @@ mkSplittedDP :: SplitType
              -> DetP t
 mkSplittedDP typ h m o
   = case typ of
-      CLMod -> XP (HeadDP Nothing RExp) rng Nothing   [] (Just (mkNP (h,Nothing) (Just (CompDP_Unresolved m))))
-      BNMod -> XP (HeadDP Nothing RExp) rng (Just m)  [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
-      APMod -> XP (HeadDP Nothing RExp) rng (Just m)  [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
+      CLMod -> XP (HeadDP Nothing NoDet) rng Nothing   [] (Just (mkNP (h,Nothing) (Just (CompDP_Unresolved m))))
+      BNMod -> XP (HeadDP Nothing NoDet) rng (Just m)  [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
+      APMod -> XP (HeadDP Nothing NoDet) rng (Just m)  [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
   where rng = (getRange . current) o
 
 --

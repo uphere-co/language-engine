@@ -94,7 +94,7 @@ test_paren_modifier_1 =
 test_prep_modifier_1 :: TestNoun
 test_prep_modifier_1 =
   ( "an initial public offering on the country's stock exchange"
-  , ("",Just "an initial public offering",Nothing,Nothing,["on the country 's stock exchange"])
+  , ("an",Just "initial public offering",Nothing,Nothing,["on the country 's stock exchange"])
   , [(0,("a","an")),(1,("initial","initial")),(2,("public","public")),(3,("offering","offering")),(4,("on","on")),(5,("the","the")),(6,("country","country")),(7,("'s","'s")),(8,("stock","stock")),(9,("exchange","exchange"))]
   , PN "NP" [PN "NP" [PL ("DT","an"),PL ("JJ","initial"),PL ("JJ","public"),PL ("NN","offering")],PN "PP" [PL ("IN","on"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","country"),PL ("POS","'s")],PL ("NN","stock"),PL ("NN","exchange")]]]
   , []
@@ -125,6 +125,15 @@ test_appos_or_1 =
   , ("",Just "$ 154.5 million",Just "54 cents a share",Nothing,[])
   , [(0,("$","$")),(1,("154.5","154.5")),(2,("million","million")),(3,(",",",")),(4,("or","or")),(5,("54","54")),(6,("cent","cents")),(7,("a","a")),(8,("share","share")),(9,(",",","))]
   , PN "NP" [PN "NP" [PN "QP" [PL ("$","$"),PL ("CD","154.5"),PL ("CD","million")]],PL (",",","),PL ("CC","or"),PN "NP" [PN "NP" [PL ("CD","54"),PL ("NNS","cents")],PN "NP" [PL ("DT","a"),PL ("NN","share")]],PL (",",",")]
+  , []
+  )
+
+test_article_1 :: TestNoun
+test_article_1 =
+  ( "the proposed $25 billion merger between fertiliser companies Agrium Inc and Potash Corp of Saskatchewan Inc"
+  , ("the",Just "proposed $ 25 billion merger", Nothing,Nothing,["between fertiliser companies Agrium Inc and Potash Corp of Saskatchewan Inc"])
+  , [(0,("the","the")),(1,("propose","proposed")),(2,("$","$")),(3,("25","25")),(4,("billion","billion")),(5,("merger","merger")),(6,("between","between")),(7,("fertiliser","fertiliser")),(8,("company","companies")),(9,("Agrium","Agrium")),(10,("Inc","Inc")),(11,("and","and")),(12,("Potash","Potash")),(13,("Corp","Corp")),(14,("of","of")),(15,("Saskatchewan","Saskatchewan")),(16,("Inc","Inc"))]
+  , PN "NP" [PN "NP" [PL ("DT","the"),PL ("VBN","proposed"),PN "ADJP" [PN "QP" [PL ("$","$"),PL ("CD","25"),PL ("CD","billion")]],PL ("NN","merger")],PN "PP" [PL ("IN","between"),PN "NP" [PN "NP" [PL ("NN","fertiliser"),PL ("NNS","companies"),PL ("NNP","Agrium"),PL ("NNP","Inc"),PL ("CC","and"),PL ("NNP","Potash"),PL ("NNP","Corp")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("NNP","Saskatchewan"),PL ("NNP","Inc")]]]]]
   , []
   )
 
@@ -168,6 +177,7 @@ testcases = [ test_bare_noun_modifier_1
             , test_prep_modifier_2
             , test_prep_modifier_3
             , test_appos_or_1
+            , test_article_1
             ]
 
 
