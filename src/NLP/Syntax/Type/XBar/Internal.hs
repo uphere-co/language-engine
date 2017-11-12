@@ -128,11 +128,15 @@ identifyPronounPerson txt =
     "theirs" -> Just P_They
     _      -> Nothing
 
+
+data Definiteness = Definite | Indefinite
+
 --
 -- | noun class
 --
 data DetClass = RExp
               | Pronoun PronounPerson Bool  -- is genitive?
+              | Article  --  Definiteness
               deriving (Show,Eq)
 
 -- type NomClass = Maybe NamedEntityClass

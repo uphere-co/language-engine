@@ -44,6 +44,7 @@ import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isL
 
 import Debug.Trace
 
+
 mkPPFromZipper :: TaggedLemma (Lemma ': as) -> PrepClass -> Zipper (Lemma ': as) -> Maybe (PP (Lemma ': as))
 mkPPFromZipper tagged pclass z = do
   guard (isChunkAs PP (current z))
@@ -162,16 +163,22 @@ identifyPronoun tagged dp = fromMaybe dp $ do
    (foldr (<|>) Nothing $ flip map zs $ \z -> do (i,att) <- listToMaybe (toList (current z))
                                                  guard (posTag att == PRPDollar)
                                                  let Lemma lma = ahead (getAnnot att)
-
-                                                 -- guard (isPOSAs PRPDollar (current z1))
-                                                 -- (i,Lemma lma) <- intLemma z1
                                                  ptyp <- identifyPronounPerson lma
                                                  ( return
                                                   .(headX.hd_range .~ Just (i,i))
                                                   .(headX.hd_class .~ Pronoun ptyp True)
                                                   .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
-                                                  .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp
-    ))
+                                                  .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp)
+   <|>
+   (foldr (<|>) Nothing $ flip map zs $ \z -> do (i,att) <- listToMaybe (toList (current z))
+                                                 guard (posTag att == DT)
+                                                 let Lemma lma = ahead (getAnnot att)
+                                                 -- ptyp <- identifyPronounPerson lma
+                                                 ( return
+                                                  .(headX.hd_range .~ Just (i,i))
+                                                  .(headX.hd_class .~ Article)
+                                                  .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
+                                                  .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp))
 
 
 

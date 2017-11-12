@@ -94,7 +94,7 @@ test_paren_modifier_1 =
 test_prep_modifier_1 :: TestNoun
 test_prep_modifier_1 =
   ( "an initial public offering on the country's stock exchange"
-  , ("",Just "an initial public offering",Nothing,Nothing,["on the country 's stock exchange"])
+  , ("an",Just "initial public offering",Nothing,Nothing,["on the country 's stock exchange"])
   , [(0,("a","an")),(1,("initial","initial")),(2,("public","public")),(3,("offering","offering")),(4,("on","on")),(5,("the","the")),(6,("country","country")),(7,("'s","'s")),(8,("stock","stock")),(9,("exchange","exchange"))]
   , PN "NP" [PN "NP" [PL ("DT","an"),PL ("JJ","initial"),PL ("JJ","public"),PL ("NN","offering")],PN "PP" [PL ("IN","on"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","country"),PL ("POS","'s")],PL ("NN","stock"),PL ("NN","exchange")]]]
   , []
