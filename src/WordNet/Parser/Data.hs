@@ -45,8 +45,10 @@ parseData isVerb = worker . T.words
           p_ptr (z1:z2:z3:z4:[]) = do
             off <- readDecimal z2
             pos <- readPOS (T.head z3)
-            let st = T.splitAt 2 z4
-            return (Pointer z1 (SynsetOffset off) pos st)
+            let (zsrc,ztgt) = T.splitAt 2 z4
+            src <- readHexadecimal zsrc
+            tgt <- readHexadecimal ztgt
+            return (Pointer z1 (SynsetOffset off) pos (src,tgt))
           p_ptr _ = Nothing
           rem2'@(rem20:rem2s) = concat rem2
       ptrs <- mapM p_ptr ptrstr

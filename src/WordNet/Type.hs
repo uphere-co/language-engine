@@ -40,7 +40,7 @@ data LexItem = LI { _lex_word :: Text, _lex_id :: LexID } deriving Show
 data Pointer = Pointer { _ptr_pointer_symbol :: Text
                        , _ptr_synset_offset :: SynsetOffset
                        , _ptr_pos :: POS
-                       , _ptr_sourcetarget :: (Text,Text) }
+                       , _ptr_sourcetarget :: (Int,Int) }
              deriving (Show)
 
 makeLenses ''Pointer                      

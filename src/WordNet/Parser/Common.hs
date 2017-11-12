@@ -4,9 +4,10 @@ module WordNet.Parser.Common where
 
 import           Data.Text           (Text)
 import qualified Data.Text      as T
-import           Data.Text.Read      (decimal)
+import           Data.Text.Read      (decimal,hexadecimal)
 --
 import           WordNet.Type.POS
+
 
 isComment :: Text -> Bool
 isComment t | T.length t > 2 = T.take 2 t == "  "
@@ -18,6 +19,9 @@ eitherToMaybe (Right x) = Just x
 
 readDecimal :: Text -> Maybe Int
 readDecimal = fmap fst . (eitherToMaybe . decimal)
+
+readHexadecimal :: Text -> Maybe Int
+readHexadecimal = fmap fst . (eitherToMaybe . hexadecimal)
 
 
 readPOS :: Char -> Maybe POS
