@@ -37,6 +37,7 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,tokensByRange
                                           ,mkNP,mkOrdDP,mkSplittedDP,hd_range,hd_class,hn_range
                                           ,mkPP,mkPPGerund,hp_prep
+                                          ,identifyDeterminer
                                           ,identifyPronounPerson
                                           ,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs,intLemma)
@@ -147,6 +148,7 @@ checkProperNoun tagged (b,e) =
 
 
 
+
 --
 -- | check whether DP is pronoun and change NomClass accordingly
 --
@@ -173,10 +175,11 @@ identifyPronoun tagged dp = fromMaybe dp $ do
    (foldr (<|>) Nothing $ flip map zs $ \z -> do (i,att) <- listToMaybe (toList (current z))
                                                  guard (posTag att == DT)
                                                  let Lemma lma = ahead (getAnnot att)
+                                                 art <- identifyDeterminer lma
                                                  -- ptyp <- identifyPronounPerson lma
                                                  ( return
                                                   .(headX.hd_range .~ Just (i,i))
-                                                  .(headX.hd_class .~ Article)
+                                                  .(headX.hd_class .~ art)
                                                   .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
                                                   .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp))
 

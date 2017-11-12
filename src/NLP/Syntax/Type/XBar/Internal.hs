@@ -130,13 +130,26 @@ identifyPronounPerson txt =
 
 
 data Definiteness = Definite | Indefinite
+                  deriving (Show,Eq)
+
+
+identifyDeterminer txt =
+  case txt of
+    "the" -> Just (Article Definite)
+    "a"   -> Just (Article Indefinite)
+    "an"  -> Just (Article Indefinite)
+    -- this
+    -- that
+    -- these
+    -- those
+    _     -> Nothing
 
 --
 -- | noun class
 --
 data DetClass = NoDet
               | Pronoun PronounPerson Bool  -- is genitive?
-              | Article  --  Definiteness
+              | Article Definiteness
               deriving (Show,Eq)
 
 -- type NomClass = Maybe NamedEntityClass
