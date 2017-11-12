@@ -128,6 +128,15 @@ test_appos_or_1 =
   , []
   )
 
+test_article_1 :: TestNoun
+test_article_1 =
+  ( "the proposed $25 billion merger between fertiliser companies Agrium Inc and Potash Corp of Saskatchewan Inc"
+  , ("the",Just "proposed $ 25 billion merger", Nothing,Nothing,["between fertiliser companies Agrium Inc and Potash Corp of Saskatchewan Inc"])
+  , [(0,("the","the")),(1,("propose","proposed")),(2,("$","$")),(3,("25","25")),(4,("billion","billion")),(5,("merger","merger")),(6,("between","between")),(7,("fertiliser","fertiliser")),(8,("company","companies")),(9,("Agrium","Agrium")),(10,("Inc","Inc")),(11,("and","and")),(12,("Potash","Potash")),(13,("Corp","Corp")),(14,("of","of")),(15,("Saskatchewan","Saskatchewan")),(16,("Inc","Inc"))]
+  , PN "NP" [PN "NP" [PL ("DT","the"),PL ("VBN","proposed"),PN "ADJP" [PN "QP" [PL ("$","$"),PL ("CD","25"),PL ("CD","billion")]],PL ("NN","merger")],PN "PP" [PL ("IN","between"),PN "NP" [PN "NP" [PL ("NN","fertiliser"),PL ("NNS","companies"),PL ("NNP","Agrium"),PL ("NNP","Inc"),PL ("CC","and"),PL ("NNP","Potash"),PL ("NNP","Corp")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("NNP","Saskatchewan"),PL ("NNP","Inc")]]]]]
+  , []
+  )
+
 
 mkDPFromTest :: TaggedLemma '[Lemma] -> TestNoun -> DetP '[Lemma]
 mkDPFromTest tagged x =
@@ -168,6 +177,7 @@ testcases = [ test_bare_noun_modifier_1
             , test_prep_modifier_2
             , test_prep_modifier_3
             , test_appos_or_1
+            , test_article_1
             ]
 
 
