@@ -28,23 +28,13 @@ getTokens = T.intercalate " " . map (tokenWord.snd) . toList
 tokensByRange :: TaggedLemma t -> Range -> [Text]
 tokensByRange tagged rng = map (^._2._2) . filter (^._1.to (\i -> i `isInside` rng)) $ tagged^.lemmaList
 
+
 determinerText :: TaggedLemma t -> HeadDP -> Maybe Text
 determinerText tagged hdp = fmap (T.intercalate " " . tokensByRange tagged) (hdp^.hd_range)
 
-{-   case hdp^.hd_class of
-    (Pronoun ptyp) -> Just $ case ptyp of
-                               P_I    -> "I"
-                               P_You  -> "you"
-                               P_He   -> "he"
-                               P_She  -> "she"
-                               P_It   -> "it"
-                               P_They -> "they"
-    _              -> Nothing
--}
-
 
 headText :: TaggedLemma t -> NounP t -> Text
-headText tagged x = x^.headX.to (T.intercalate " " . tokensByRange tagged)
+headText tagged x = x^.headX.hn_range.to (T.intercalate " " . tokensByRange tagged)
 
 
 
@@ -82,5 +72,5 @@ compDPToRange (CompDP_PP pp) = pp^.maximalProjection
 
 
 compPPToRange :: CompPP t -> Range
-compPPToRange (CompPP_DP dp) = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX)
+compPPToRange (CompPP_DP dp) = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
 compPPToRange (CompPP_Gerund z) = getRange (current z)

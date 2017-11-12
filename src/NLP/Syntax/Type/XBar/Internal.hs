@@ -131,21 +131,27 @@ identifyPronounPerson txt =
 --
 -- | noun class
 --
-data NomClass = RExp (Maybe NamedEntityClass)
+data DetClass = RExp
               | Pronoun PronounPerson Bool  -- is genitive?
               deriving (Show,Eq)
 
+-- type NomClass = Maybe NamedEntityClass
 
 data HeadDP = HeadDP { _hd_range :: Maybe Range
-                     , _hd_class :: NomClass
+                     , _hd_class :: DetClass
                      }
 
 
 
+data HeadNP = HeadNP { _hn_range :: Range
+                     , _hn_class :: Maybe NamedEntityClass -- NomClass
+                     }
+                     deriving (Show)
+
 --
 -- NP
 --
-type instance Property   'X_N t = Range
+type instance Property   'X_N t = HeadNP -- Range
 type instance Maximal    'X_N t = Range
 type instance Specifier  'X_N t = ()
 type instance Adjunct    'X_N t = ()
@@ -154,8 +160,8 @@ type instance Complement 'X_N t = Maybe (CompDP t)
 type NounP = XP 'X_N
 
 
-mkNP :: Range -> Maybe (CompDP t) -> NounP t
-mkNP rng mcomp = XP rng rng () () mcomp
+mkNP :: (Range,Maybe NamedEntityClass) -> Maybe (CompDP t) -> NounP t
+mkNP (rng,mclass) mcomp = XP (HeadNP rng mclass) rng () () mcomp
 
 --
 -- DP -> D NP
@@ -174,7 +180,7 @@ type DetP = XP 'X_D
 --   better representation.
 --
 mkOrdDP :: Zipper t -> DetP t
-mkOrdDP z = XP (HeadDP Nothing (RExp Nothing)) rng Nothing [] (Just (mkNP rng Nothing))
+mkOrdDP z = XP (HeadDP Nothing RExp) rng Nothing [] (Just (mkNP (rng,Nothing) Nothing))
   where rng = (getRange . current) z
 
 
@@ -188,9 +194,9 @@ mkSplittedDP :: SplitType
              -> DetP t
 mkSplittedDP typ h m o
   = case typ of
-      CLMod -> XP (HeadDP Nothing (RExp Nothing)) rng Nothing   [] (Just (mkNP h (Just (CompDP_Unresolved m))))
-      BNMod -> XP (HeadDP Nothing (RExp Nothing)) rng (Just m)  [] (Just (mkNP h Nothing)) -- apposition is regarded as a specifier.
-      APMod -> XP (HeadDP Nothing (RExp Nothing)) rng (Just m)  [] (Just (mkNP h Nothing)) -- apposition is regarded as a specifier.
+      CLMod -> XP (HeadDP Nothing RExp) rng Nothing   [] (Just (mkNP (h,Nothing) (Just (CompDP_Unresolved m))))
+      BNMod -> XP (HeadDP Nothing RExp) rng (Just m)  [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
+      APMod -> XP (HeadDP Nothing RExp) rng (Just m)  [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
   where rng = (getRange . current) o
 
 --
