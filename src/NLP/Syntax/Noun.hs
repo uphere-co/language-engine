@@ -32,7 +32,7 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
                                           ,PP, AdjunctDP(..), CompDP(..),HeadDP(..), HeadNP(..), DetClass(..)
                                           ,XP(..)
-                                          ,TaggedLemma, _MarkEntity,_RExp,hn_range,hn_class
+                                          ,TaggedLemma, _MarkEntity,_NoDet,hn_range,hn_class
                                           ,adjunct,complement,headX,maximalProjection
                                           ,tokensByRange
                                           ,mkNP,mkOrdDP,mkSplittedDP,hd_range,hd_class,hn_range
@@ -125,7 +125,7 @@ splitParentheticalModifier tagged z = do
    (guard (isChunkAs SBAR (current z_appos)) >> return (mkSplittedDP CLMod (rf dp1) (rf z_appos) z))  <|>
    (do guard (isChunkAs PP (current z_appos))
        pp <- mkPPFromZipper tagged PC_Other z_appos
-       return (XP (HeadDP Nothing RExp) (rf z) Nothing [AdjunctDP_PP pp] (Just (mkNP (rf dp1,Nothing) Nothing)))))
+       return (XP (HeadDP Nothing NoDet) (rf z) Nothing [AdjunctDP_PP pp] (Just (mkNP (rf dp1,Nothing) Nothing)))))
 
 
 
@@ -206,5 +206,5 @@ identifyNamedEntity tagged dp = fromMaybe dp $ do
   rng <- dp^?complement._Just.headX.hn_range
   TagPos (_,_,MarkEntity nec)
     <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
-  dp^?headX.hd_class._RExp
-  (return . (headX.hd_class .~ RExp ) . (complement._Just.headX.hn_class .~ (Just nec))) dp
+  dp^?headX.hd_class._NoDet
+  (return . (headX.hd_class .~ NoDet ) . (complement._Just.headX.hn_class .~ (Just nec))) dp
