@@ -126,7 +126,7 @@ splitParentheticalModifier tagged z = do
    (guard (isChunkAs SBAR (current z_appos)) >> return (mkSplittedDP CLMod (rf dp1) (rf z_appos) z))  <|>
    (do guard (isChunkAs PP (current z_appos))
        pp <- mkPPFromZipper tagged PC_Other z_appos
-       return (XP (HeadDP Nothing NoDet) (rf z) Nothing [AdjunctDP_PP pp] (Just (mkNP (rf dp1,Nothing) Nothing)))))
+       return (XP (HeadDP Nothing NoDet) (rf z) [] [AdjunctDP_PP pp] (Just (mkNP (rf dp1,Nothing) Nothing)))))
 
 
 
@@ -190,7 +190,7 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
       guard (isPOSAs POS (current z1last))
       let (b,e) = getRange (current z1)
       ( return
-       .(specifier .~ Just (SpDP_Gen (b,e-1)))
+       .(specifier %~ (SpDP_Gen (b,e-1) :) )
        .(headX.hd_range .~ Just (e,e))
        .(headX.hd_class .~ GenitiveClitic)
        .(complement._Just.headX.hn_range %~ (\(b',e') -> if b <= e then (e+1,e') else (b',e')))

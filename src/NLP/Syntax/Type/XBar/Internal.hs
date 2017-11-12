@@ -191,7 +191,7 @@ mkNP (rng,mclass) mcomp = XP (HeadNP rng mclass) rng () () mcomp
 --
 type instance Property   'X_D t = HeadDP -- Range -- head
 type instance Maximal    'X_D t = Range
-type instance Specifier  'X_D t = Maybe SpecDP -- Maybe Range  -- appositive for the time being
+type instance Specifier  'X_D t = [SpecDP] -- allow multiple spec for the time being
 type instance Adjunct    'X_D t = [AdjunctDP t]
 type instance Complement 'X_D t = Maybe (NounP t) -- Maybe (CompDP t)
 
@@ -203,7 +203,7 @@ type DetP = XP 'X_D
 --   better representation.
 --
 mkOrdDP :: Zipper t -> DetP t
-mkOrdDP z = XP (HeadDP Nothing NoDet) rng Nothing [] (Just (mkNP (rng,Nothing) Nothing))
+mkOrdDP z = XP (HeadDP Nothing NoDet) rng [] [] (Just (mkNP (rng,Nothing) Nothing))
   where rng = (getRange . current) z
 
 
@@ -217,9 +217,9 @@ mkSplittedDP :: SplitType
              -> DetP t
 mkSplittedDP typ h m o
   = case typ of
-      CLMod -> XP (HeadDP Nothing NoDet) rng Nothing   [] (Just (mkNP (h,Nothing) (Just (CompDP_Unresolved m))))
-      BNMod -> XP (HeadDP Nothing NoDet) rng (Just (SpDP_Appos m))  [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
-      APMod -> XP (HeadDP Nothing NoDet) rng (Just (SpDP_Gen m))  [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
+      CLMod -> XP (HeadDP Nothing NoDet) rng []             [] (Just (mkNP (h,Nothing) (Just (CompDP_Unresolved m))))
+      BNMod -> XP (HeadDP Nothing NoDet) rng [SpDP_Appos m] [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
+      APMod -> XP (HeadDP Nothing NoDet) rng [SpDP_Gen m  ] [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
   where rng = (getRange . current) o
 
 --
