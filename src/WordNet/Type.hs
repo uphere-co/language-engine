@@ -1,10 +1,12 @@
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 module WordNet.Type where
 
 import           Control.Lens
+import           Data.Hashable
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text              (Text)
@@ -33,14 +35,22 @@ data IndexItem
 
 makeLenses ''IndexItem
 
-data LexItem = LI { _lex_word :: Text, _lex_id :: LexID } deriving Show
+data LexItem = LI { _lex_word :: Text, _lex_id :: LexID } deriving (Show,Eq,Generic)
 
+instance Hashable LexItem
 
+makeLenses ''LexItem
+
+data SourceTarget = Semantic
+                  | LexicalSrcTgt Int Int
+                  deriving Show
+
+makePrisms ''SourceTarget
 
 data Pointer = Pointer { _ptr_pointer_symbol :: Text
                        , _ptr_synset_offset :: SynsetOffset
-                       , _ptr_pos :: Text
-                       , _ptr_sourcetarget :: (Text,Text) }
+                       , _ptr_pos :: POS
+                       , _ptr_sourcetarget :: SourceTarget }
              deriving (Show)
 
 makeLenses ''Pointer                      

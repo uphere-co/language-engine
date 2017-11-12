@@ -1,14 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TupleSections     #-}
 
 module WordNet.Query where
 
 import           Control.Lens
-import           Control.Monad              (join)
+import           Control.Monad              (guard,join)
 import           Data.HashMap.Strict        (HashMap)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet        as HS
 import qualified Data.IntMap         as IM
-import           Data.Maybe                 (catMaybes,maybeToList)
+import           Data.List                  (find)
+import           Data.Maybe                 (catMaybes,mapMaybe,maybeToList)
+import           Data.Monoid                ((<>))
 import           Data.Text                  (Text)
 import qualified Data.Text           as T
 import qualified Data.Text.IO        as TIO
@@ -91,15 +95,19 @@ parseFile p fp = do
   return $ map p lst
 
 
-lookupLemma :: WordNetDB -> POS -> Text -> [(SenseNumber,[LexItem],Text)]
+lookupLemma :: WordNetDB -> POS -> Text -> [(SenseNumber,[LexItem],[Pointer],Text)]
 lookupLemma w p t = do
   (snum,soff) <- join .  maybeToList $ (indexDB w p) ^? at t._Just.idx_synset_offset
-  (ls,desc) <- maybeToList (lookupSynset w p soff)
-  return (snum,ls,desc)
+  (ls,ptrs,desc) <- maybeToList (lookupSynset w p soff)
+  return (snum,ls,ptrs,desc)
    
 
-lookupSynset :: WordNetDB -> POS -> SynsetOffset -> Maybe ([LexItem],Text)
-lookupSynset w p (SynsetOffset n) = (dataDB w p) ^? at n._Just.to ((,)<$>view data_word_lex_id<*>view data_gloss)
+lookupSynset :: WordNetDB -> POS -> SynsetOffset -> Maybe ([LexItem],[Pointer],Text)
+lookupSynset w p (SynsetOffset n) = (dataDB w p) ^? at n
+                                                  . _Just
+                                                  . to ((,,) <$> (^.data_word_lex_id)
+                                                             <*> (^.data_ptr)
+                                                             <*> (^.data_gloss))
 
 
 loadDB :: FilePath -> IO WordNetDB
@@ -123,20 +131,42 @@ runSingleQuery input typ db = do
     Right (n,_)  -> querySynset n typ db
 
 
+displayLemmaResult :: WordNetDB -> Text -> (SenseNumber,[LexItem],[Pointer],Text) -> IO ()
+displayLemmaResult db lma (n,xs,ptrs,txt) = do
+  let headtxt = formatLemmaSN (lma,n) <> " | " <> txt
+  let pairs = do (i,lx) <- zip [1..] xs
+                 -- only derivationally related
+                 guard (lx^.lex_word == lma)
+                 let ptrs' = filter (\p -> p^.ptr_pointer_symbol == "+" && p^?ptr_sourcetarget._LexicalSrcTgt._1 == Just i) ptrs
+                     targetLI p = do
+                       (tgts,_,_) <- lookupSynset db (p^.ptr_pos) (p^.ptr_synset_offset)
+                       tgtidx <- p^?ptr_sourcetarget._LexicalSrcTgt._2
+                       tgts ^? ix (tgtidx-1)
+                 return (lx,(HS.toList . HS.fromList . mapMaybe (\p -> ((p^.ptr_pointer_symbol),) <$> targetLI p)) ptrs')
+  let pointertxt = T.intercalate " " (mapMaybe formatPairs pairs)
+  TIO.putStrLn (headtxt <> "\n - derivationally related:" <> pointertxt)
+  -- print xs
+  -- mapM_ print ptrs
+
+formatPairs (lx,ptrs) = case ptrs of
+                          [] -> Nothing
+                          _ -> Just (" ( " <> formatLI lx <> " --- " <> T.intercalate "," (map (\(r,lx') -> formatLI lx') ptrs) <> " ) ")
+
+
 queryLemma :: Text -> POS -> WordNetDB -> IO ()
 queryLemma input typ db = do
   case typ of
-    POS_N -> putStrLn "-- Noun --"      >> (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_N input)
-    POS_V -> putStrLn "-- Verb --"      >> (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_V input)
-    POS_A -> putStrLn "-- Adjective --" >> (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_A input)
-    POS_R -> putStrLn "-- Adverb --"    >> (mapM_ (TIO.putStrLn . formatLemmaSynset) $ lookupLemma db POS_R input)
+    POS_N -> putStrLn "-- Noun --"      >> (mapM_ (displayLemmaResult db input) $ lookupLemma db POS_N input)
+    POS_V -> putStrLn "-- Verb --"      >> (mapM_ (displayLemmaResult db input) $ lookupLemma db POS_V input)
+    POS_A -> putStrLn "-- Adjective --" >> (mapM_ (displayLemmaResult db input) $ lookupLemma db POS_A input)
+    POS_R -> putStrLn "-- Adverb --"    >> (mapM_ (displayLemmaResult db input) $ lookupLemma db POS_R input)
 
 
 querySynset :: SynsetOffset -> POS -> WordNetDB -> IO ()
 querySynset n typ db = do
   case typ of
-    POS_N -> putStrLn "-- Noun --"      >> (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_N n)
-    POS_V -> putStrLn "-- Verb --"      >> (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_V n)
-    POS_A -> putStrLn "-- Adjective --" >> (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_A n)
-    POS_R -> putStrLn "-- Adverb --"    >> (mapM_ (TIO.putStrLn . formatSynset) $ lookupSynset db POS_R n)
+    POS_N -> putStrLn "-- Noun --"      >> (mapM_ (\(xs,_,txt) -> (TIO.putStrLn . formatSynset) (xs,txt)) $ lookupSynset db POS_N n)
+    POS_V -> putStrLn "-- Verb --"      >> (mapM_ (\(xs,_,txt) -> (TIO.putStrLn . formatSynset) (xs,txt)) $ lookupSynset db POS_V n)
+    POS_A -> putStrLn "-- Adjective --" >> (mapM_ (\(xs,_,txt) -> (TIO.putStrLn . formatSynset) (xs,txt)) $ lookupSynset db POS_A n)
+    POS_R -> putStrLn "-- Adverb --"    >> (mapM_ (\(xs,_,txt) -> (TIO.putStrLn . formatSynset) (xs,txt)) $ lookupSynset db POS_R n)
 

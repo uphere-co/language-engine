@@ -1,15 +1,17 @@
 { pkgs ? import <nixpkgs> {}
+, uphere-nix-overlay ? <uphere-nix-overlay>
 , nlp-types ? <nlp-types>
 }:
 
 with pkgs;
 
-let config1 =
+let hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix") { inherit pkgs; };
+    config1 =
       self: super: {
         "nlp-types" = self.callPackage (import nlp-types) {};
       };
     newHaskellPackages = haskellPackages.override {
-                         overrides = config1;
+                         overrides = self: super: hsconfig self super // config1 self super;
                        };
     hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
               attoparsec

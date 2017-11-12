@@ -2,6 +2,7 @@
 
 module WordNet.Format where
 
+import           Control.Lens
 import           Data.Monoid
 import           Data.Text               (Text)
 import qualified Data.Text        as T
@@ -12,8 +13,8 @@ import           WordNet.Type
 import           WordNet.Type.Lexicographer
 
 
-formatLemmaSynset :: (SenseNumber,[LexItem],Text) -> Text
-formatLemmaSynset (SenseNumber n,xs,txt) = "sense: " <> T.pack (show n) <> " | " <> formatSynset (xs,txt)
+-- formatLemmaSynset :: (SenseNumber,[LexItem],Text) -> Text
+-- formatLemmaSynset (SenseNumber n,xs,txt) = "sense: " <> T.pack (show n) <> " | " <> formatSynset (xs,txt)
 
 
 formatSynset :: ([LexItem],Text) -> Text
@@ -21,4 +22,8 @@ formatSynset (xs,txt) = "lexicographer id: " <> T.intercalate "," (map formatLI 
                         " | " <> txt
 
 formatLI :: LexItem -> Text
-formatLI (LI w i) = T.L.toStrict $ format "{}%{}" (w,unLexID i)
+formatLI (LI w i) = T.L.toStrict $ format "{}%pos?:cat?:{}::" (w,unLexID i)
+
+
+formatLemmaSN :: (Text,SenseNumber) -> Text
+formatLemmaSN (lma,SenseNumber n) = lma <> "#" <> T.pack (show n)

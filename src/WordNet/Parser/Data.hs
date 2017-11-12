@@ -12,13 +12,6 @@ import           WordNet.Type.Lexicographer (LexID(..))
 import           WordNet.Type.POS
 
 
-readSSType :: Char -> Maybe SSType
-readSSType 'n' = Just Noun
-readSSType 'v' = Just Verb
-readSSType 'a' = Just Adjective
-readSSType 's' = Just AdjectiveSatellite
-readSSType 'r' = Just Adverb
-readSSType _   = Nothing
 
 parseLexItem :: [Text] -> Maybe LexItem
 parseLexItem (x:y:[]) = LI <$> pure x <*> pure (LexID (T.head y))
@@ -51,8 +44,12 @@ parseData isVerb = worker . T.words
       let (ptrstr,rem2) = splitAt pcnt (chunksOf 4 rem1)
           p_ptr (z1:z2:z3:z4:[]) = do
             off <- readDecimal z2
-            let st = T.splitAt 2 z4
-            return (Pointer z1 (SynsetOffset off) z3 st)
+            pos <- readPOS (T.head z3)
+            let (zsrc,ztgt) = T.splitAt 2 z4
+            src <- readHexadecimal zsrc
+            tgt <- readHexadecimal ztgt
+            let srctgt = if src == 0 && tgt == 0 then Semantic else LexicalSrcTgt src tgt
+            return (Pointer z1 (SynsetOffset off) pos srctgt)
           p_ptr _ = Nothing
           rem2'@(rem20:rem2s) = concat rem2
       ptrs <- mapM p_ptr ptrstr
