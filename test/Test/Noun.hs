@@ -145,9 +145,10 @@ test_possesive_clitic_1 =
   ( "Takeda Pharmaceutical 's experimental dengue vaccine"
   , ("'s",Just "experimental dengue vaccine",Just "Takeda Pharmaceutical",Nothing,[])
   , [(0,("Takeda","Takeda")),(1,("Pharmaceutical","Pharmaceutical")),(2,("'s","'s")),(3,("experimental","experimental")),(4,("dengue","dengue")),(5,("vaccine","vaccine"))]
-  , PN "NP" [PN "NP" [PL ("NNP","Takeda")],PN "NP" [PN "NP" [PN "NP" [PL ("NNP","Pharmaceutical"),PL ("POS","'s")],PL ("JJ","experimental"),PL ("NN","dengue")],PN "NP" [PL ("NN","vaccine")]]]
+  , PN "NP" [PN "NP" [PL ("NNP","Takeda"),PL ("NNP","Pharmaceutical"),PL ("POS","'s")],PL ("JJ","experimental"),PL ("NN","dengue"),PL ("NN","vaccine")]
   , [TagPos (TokIdx 0,TokIdx 2,MarkEntity Org)]
   )
+
 
 mkDPFromTest :: TaggedLemma '[Lemma] -> TestNoun -> DetP '[Lemma]
 mkDPFromTest tagged x =
@@ -189,7 +190,7 @@ testcases = [ test_bare_noun_modifier_1
             , test_prep_modifier_3
             , test_appos_or_1
             , test_article_1
-            , test_possesive_clitic_1            
+            , test_possesive_clitic_1
             ]
 
 

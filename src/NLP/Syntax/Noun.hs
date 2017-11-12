@@ -30,10 +30,10 @@ import           NLP.Type.TagPos          (TagPos(..))
 import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
-                                          ,PP, AdjunctDP(..), CompDP(..),HeadDP(..), HeadNP(..), DetClass(..)
-                                          ,XP(..)
-                                          ,TaggedLemma, _MarkEntity,_NoDet,hn_range,hn_class
-                                          ,adjunct,complement,headX,maximalProjection
+                                          ,PP, AdjunctDP(..), CompDP(..),HeadDP(..), SpecDP(..), HeadNP(..)
+                                          ,DetClass(..),XP(..),TaggedLemma
+                                          ,_MarkEntity,_NoDet,hn_range,hn_class
+                                          ,adjunct,complement,headX,maximalProjection,specifier
                                           ,tokensByRange
                                           ,mkNP,mkOrdDP,mkSplittedDP,hd_range,hd_class,hn_range
                                           ,mkPP,mkPPGerund,hp_prep
@@ -166,7 +166,10 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
       ptyp <- identifyPronounPerson lma
       (return . (headX.hd_range .~ Just (i,i)) . (headX.hd_class .~ Pronoun ptyp False) . (complement .~ Nothing)) dp
     --
-    multiword zs = foldr (<|>) Nothing $ flip map zs $ \z -> pronounGenOrArticle z
+    multiword zs = do
+      z <- find (isChunkAs NP . current) zs
+      (pronounGenOrArticle z <|>  cliticGen z)
+      -- foldr (<|>) Nothing $ flip map zs $ \z -> (pronounGenOrArticle z {- <|> cliticGen z -})
     --
     pronounGenOrArticle z = do
       (i,att) <- listToMaybe (toList (current z))
@@ -182,6 +185,19 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
        .(headX.hd_class .~ dtyp)
        .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
        .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp
+    --
+    cliticGen z = do
+      z1 <- child1 z
+      guard (isChunkAs NP (current z1))
+      z1last <- childLast z1
+      guard (isPOSAs POS (current z1last))
+      let (b,e) = getRange (current z1)
+      ( return
+       .(specifier .~ Just (SpDP_Gen (b,e-1)))
+       .(headX.hd_range .~ Just (e,e))
+       .(headX.hd_class .~ GenitiveClitic)
+       .(complement._Just.headX.hn_range %~ (\(b',e') -> if b <= e then (e+1,e') else (b',e')))
+       .(complement._Just.maximalProjection %~ (\(b',e') -> if b <= e then (e+1,e') else (b',e')))) dp
 
 
 
