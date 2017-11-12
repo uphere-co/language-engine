@@ -37,7 +37,7 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,tokensByRange
                                           ,mkNP,mkOrdDP,mkSplittedDP,hd_range,hd_class,hn_range
                                           ,mkPP,mkPPGerund,hp_prep
-                                          ,identifyDeterminer
+                                          ,identifyArticle
                                           ,identifyPronounPerson
                                           ,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs,intLemma)
@@ -80,7 +80,7 @@ splitDP tagged dp0 =
               let (b_pp,_) = pp^.maximalProjection
               return (dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
 
-  in identifyPronoun tagged . identifyNamedEntity tagged . bareNounModifier tagged . fromMaybe dp1 $ do
+  in identifyDeterminer tagged . identifyNamedEntity tagged . bareNounModifier tagged . fromMaybe dp1 $ do
        let rng1 = dp1^.maximalProjection
        z <- find (isChunkAs NP . current) (extractZipperByRange rng1 (tagged^.pennTree))
        dp <- child1 z
@@ -152,9 +152,9 @@ checkProperNoun tagged (b,e) =
 --
 -- | check whether DP is pronoun and change NomClass accordingly
 --
-identifyPronoun :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
-                   TaggedLemma t -> DetP t -> DetP t
-identifyPronoun tagged dp = fromMaybe dp $ do
+identifyDeterminer :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
+                      TaggedLemma t -> DetP t -> DetP t
+identifyDeterminer tagged dp = fromMaybe dp $ do
   rng <- dp^?complement._Just.headX.hn_range
   let zs = extractZipperByRange rng (tagged^.pennTree)
   ((do z <- find (isPOSAs PRP . current) zs
@@ -169,7 +169,7 @@ identifyPronoun tagged dp = fromMaybe dp $ do
                                                                  (\ptyp -> Pronoun ptyp True) <$> identifyPronounPerson lma)
                                                              <|>
                                                              (do guard (posTag att == DT)
-                                                                 identifyDeterminer lma))
+                                                                 identifyArticle lma))
 
                                                    -- identifyPronounPerson lma
                                                  ( return

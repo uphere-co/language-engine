@@ -133,7 +133,7 @@ data Definiteness = Definite | Indefinite
                   deriving (Show,Eq)
 
 
-identifyDeterminer txt =
+identifyArticle txt =
   case txt of
     "the" -> Just (Article Definite)
     "a"   -> Just (Article Indefinite)
@@ -150,6 +150,7 @@ identifyDeterminer txt =
 data DetClass = NoDet
               | Pronoun PronounPerson Bool  -- is genitive?
               | Article Definiteness
+              | GenitiveClitic
               deriving (Show,Eq)
 
 -- type NomClass = Maybe NamedEntityClass
