@@ -163,25 +163,37 @@ identifyPronoun tagged dp = fromMaybe dp $ do
        (return . (headX.hd_range .~ Just (i,i)) . (headX.hd_class .~ Pronoun ptyp False) . (complement .~ Nothing)) dp)
    <|>
    (foldr (<|>) Nothing $ flip map zs $ \z -> do (i,att) <- listToMaybe (toList (current z))
-                                                 guard (posTag att == PRPDollar)
-                                                 let Lemma lma = ahead (getAnnot att)
-                                                 ptyp <- identifyPronounPerson lma
+                                                 dtyp <- do let Lemma lma = ahead (getAnnot att)
+                                                            ((do guard (posTag att == PRPDollar)
+                                                                 let Lemma lma = ahead (getAnnot att)
+                                                                 (\ptyp -> Pronoun ptyp True) <$> identifyPronounPerson lma)
+                                                             <|>
+                                                             (do guard (posTag att == DT)
+                                                                 identifyDeterminer lma))
+
+                                                   -- identifyPronounPerson lma
                                                  ( return
                                                   .(headX.hd_range .~ Just (i,i))
-                                                  .(headX.hd_class .~ Pronoun ptyp True)
+                                                  .(headX.hd_class .~ dtyp)
                                                   .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
-                                                  .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp)
-   <|>
+                                                  .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp))
+
+
+
+--                                                             <|>
+--                                                             (do guard (posTag att == POS)
+--                                                                 return GenitiveClitic))
+--
+
+
+{-   <|>
    (foldr (<|>) Nothing $ flip map zs $ \z -> do (i,att) <- listToMaybe (toList (current z))
-                                                 guard (posTag att == DT)
-                                                 let Lemma lma = ahead (getAnnot att)
-                                                 art <- identifyDeterminer lma
                                                  -- ptyp <- identifyPronounPerson lma
                                                  ( return
                                                   .(headX.hd_range .~ Just (i,i))
                                                   .(headX.hd_class .~ art)
                                                   .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
-                                                  .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp))
+                                                  .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp)) -}
 
 
 
