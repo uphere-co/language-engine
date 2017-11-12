@@ -147,8 +147,6 @@ checkProperNoun tagged (b,e) =
   in (not.null) toks && isUpper (T.head (head toks))   -- unsafe!
 
 
-
-
 --
 -- | check whether DP is pronoun and change NomClass accordingly
 --
@@ -169,7 +167,6 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
     multiword zs = do
       z <- find (isChunkAs NP . current) zs
       (pronounGenOrArticle z <|>  cliticGen z)
-      -- foldr (<|>) Nothing $ flip map zs $ \z -> (pronounGenOrArticle z {- <|> cliticGen z -})
     --
     pronounGenOrArticle z = do
       (i,att) <- listToMaybe (toList (current z))
@@ -198,24 +195,6 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
        .(headX.hd_class .~ GenitiveClitic)
        .(complement._Just.headX.hn_range %~ (\(b',e') -> if b <= e then (e+1,e') else (b',e')))
        .(complement._Just.maximalProjection %~ (\(b',e') -> if b <= e then (e+1,e') else (b',e')))) dp
-
-
-
---                                                             <|>
---                                                             (do guard (posTag att == POS)
---                                                                 return GenitiveClitic))
---
-
-
-{-   <|>
-   (foldr (<|>) Nothing $ flip map zs $ \z -> do (i,att) <- listToMaybe (toList (current z))
-                                                 -- ptyp <- identifyPronounPerson lma
-                                                 ( return
-                                                  .(headX.hd_range .~ Just (i,i))
-                                                  .(headX.hd_class .~ art)
-                                                  .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
-                                                  .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp)) -}
-
 
 
 -- | Identify bare noun subexpression inside noun phrase as modifier.

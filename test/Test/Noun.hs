@@ -203,30 +203,3 @@ unitTests = testGroup "Bare Noun Modifier test" . flip map testcases $ \c ->
                                              "\n" <>
                                              formatDP (mkDPFromTest tagged c)
                               )
-
-
-
-
-{-
-
-test_internal_time ::  (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType])
-test_internal_time
-  = ( "Toyota Motor Corp on Monday"
-    , [(0,("Toyota","Toyota")),(1,("Motor","Motor")),(2,("Corp","Corp")),(3,("on","on")),(4,("Monday","Monday"))]
-    , PN "NP" [PN "NP" [PL ("NNP","Toyota"),PL ("NNP","Motor"),PL ("NNP","Corp")],PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Monday")]]]
-    , [TagPos (TokIdx 3, TokIdx 4, MarkTime)]
-    )
-
-testFunc t =
-  let lmas = t^._2
-      tr = t^._3
-      tagged = t^._4
-      lmap1 = IM.fromList (map (_2 %~ (^._1)) (t^._2))
-      lemmapt = mkBitreeICP lmap1 tr
-      z = getRoot1 $ mkBitreeZipper [] lemmapt
-      dp = mkOrdDP z
-      (dp',zs) = identifyInternalTimePrep tagged dp
-  in T.intercalate "\n" (map (getTokens.current) zs) <> "\n" <>
-     formatDP dp' <> "\n" <>
-     T.pack (show (dp'^.headX))
--}
