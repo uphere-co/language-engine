@@ -155,28 +155,33 @@ checkProperNoun tagged (b,e) =
 identifyDeterminer :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                       TaggedLemma t -> DetP t -> DetP t
 identifyDeterminer tagged dp = fromMaybe dp $ do
-  rng <- dp^?complement._Just.headX.hn_range
-  let zs = extractZipperByRange rng (tagged^.pennTree)
-  ((do z <- find (isPOSAs PRP . current) zs
-       (i,Lemma lma) <- intLemma z
-       ptyp <- identifyPronounPerson lma
-       (return . (headX.hd_range .~ Just (i,i)) . (headX.hd_class .~ Pronoun ptyp False) . (complement .~ Nothing)) dp)
-   <|>
-   (foldr (<|>) Nothing $ flip map zs $ \z -> do (i,att) <- listToMaybe (toList (current z))
-                                                 dtyp <- do let Lemma lma = ahead (getAnnot att)
-                                                            ((do guard (posTag att == PRPDollar)
-                                                                 let Lemma lma = ahead (getAnnot att)
-                                                                 (\ptyp -> Pronoun ptyp True) <$> identifyPronounPerson lma)
-                                                             <|>
-                                                             (do guard (posTag att == DT)
-                                                                 identifyArticle lma))
+    rng <- dp^?complement._Just.headX.hn_range
+    let zs = extractZipperByRange rng (tagged^.pennTree)
+    (singleword zs <|> multiword zs)
 
-                                                   -- identifyPronounPerson lma
-                                                 ( return
-                                                  .(headX.hd_range .~ Just (i,i))
-                                                  .(headX.hd_class .~ dtyp)
-                                                  .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
-                                                  .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp))
+  where
+    singleword zs = do
+      z <- find (isPOSAs PRP . current) zs
+      (i,Lemma lma) <- intLemma z
+      ptyp <- identifyPronounPerson lma
+      (return . (headX.hd_range .~ Just (i,i)) . (headX.hd_class .~ Pronoun ptyp False) . (complement .~ Nothing)) dp
+    --
+    multiword zs = foldr (<|>) Nothing $ flip map zs $ \z -> pronounGenOrArticle z
+    --
+    pronounGenOrArticle z = do
+      (i,att) <- listToMaybe (toList (current z))
+      dtyp <- do let Lemma lma = ahead (getAnnot att)
+                 ((do guard (posTag att == PRPDollar)
+                      let Lemma lma = ahead (getAnnot att)
+                      (\ptyp -> Pronoun ptyp True) <$> identifyPronounPerson lma)
+                  <|>
+                  (do guard (posTag att == DT)
+                      identifyArticle lma))
+      ( return
+       .(headX.hd_range .~ Just (i,i))
+       .(headX.hd_class .~ dtyp)
+       .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
+       .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp
 
 
 
