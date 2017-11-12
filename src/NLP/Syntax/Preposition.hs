@@ -22,7 +22,7 @@ import           NLP.Syntax.Type.XBar    (Zipper,NounP,DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP,_CompPP_DP
                                          ,TaggedLemma(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
-                                         ,mkPP,hp_prep,hp_pclass)
+                                         ,mkPP,hp_prep,hp_pclass,hn_range)
 
 
 hasEmptyPreposition :: TaggedLemma t -> Range -> Bool
@@ -76,9 +76,9 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   guard (isChunkAs PP (current z_tpp))
   let (b_tpp,_e_tpp) = getRange (current z_tpp)
       rng_dp' = (b_dp,b_tpp-1)
-  (b_h,e_h) <- dp^?complement._Just.headX      
+  (b_h,e_h) <- dp^?complement._Just.headX.hn_range
   let rng_head = if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
-      dp' = dp & (maximalProjection .~ rng_dp') . (complement._Just.headX .~ rng_head) . (complement._Just.maximalProjection .~ rng_dp')
+      dp' = dp & (maximalProjection .~ rng_dp') . (complement._Just.headX.hn_range .~ rng_head) . (complement._Just.maximalProjection .~ rng_dp')
   return (dp',[z_tpp])
 
 
