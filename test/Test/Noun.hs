@@ -22,7 +22,9 @@ import           NLP.Syntax.Noun                 (splitDP)
 import           NLP.Syntax.Type                 (MarkType(..))
 import           NLP.Syntax.Type.XBar            (TaggedLemma,DetP,AdjunctDP(..)
                                                  ,adjunct,complement,headX,maximalProjection,specifier
-                                                 ,hd_range,headText,headTextDP,tokensByRange,mkOrdDP,compDPToRange)
+                                                 ,hd_range,headText,headTextDP,tokensByRange,mkOrdDP,compDPToRange
+                                                 ,specDPText
+                                                 )
 import           NLP.Syntax.Util                 (mkBitreeICP,mkTaggedLemma)
 --
 import           Test.Common
@@ -160,7 +162,7 @@ checkBNM x =
      &&
      (fmap (headText tagged) (dp^.complement) == x^._2._2)
      &&
-     (dp^?specifier._Just.to (T.intercalate " " . tokensByRange tagged) == (x^._2._3))
+     (dp^?specifier._Just.to (specDPText tagged) == x^._2._3)
      &&
      (dp^?complement._Just.complement._Just.to (T.intercalate " " . tokensByRange tagged . compDPToRange) == (x^._2._4))
      &&

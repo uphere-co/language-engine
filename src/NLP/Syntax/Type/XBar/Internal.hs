@@ -160,6 +160,11 @@ data HeadDP = HeadDP { _hd_range :: Maybe Range
 
 
 
+data SpecDP = SpDP_Appos Range
+            | SpDP_Gen Range
+            deriving (Show)
+
+
 data HeadNP = HeadNP { _hn_range :: Range
                      , _hn_class :: Maybe NamedEntityClass -- NomClass
                      }
@@ -185,7 +190,7 @@ mkNP (rng,mclass) mcomp = XP (HeadNP rng mclass) rng () () mcomp
 --
 type instance Property   'X_D t = HeadDP -- Range -- head
 type instance Maximal    'X_D t = Range
-type instance Specifier  'X_D t = Maybe Range  -- appositive for the time being
+type instance Specifier  'X_D t = Maybe SpecDP -- Maybe Range  -- appositive for the time being
 type instance Adjunct    'X_D t = [AdjunctDP t]
 type instance Complement 'X_D t = Maybe (NounP t) -- Maybe (CompDP t)
 
@@ -212,8 +217,8 @@ mkSplittedDP :: SplitType
 mkSplittedDP typ h m o
   = case typ of
       CLMod -> XP (HeadDP Nothing NoDet) rng Nothing   [] (Just (mkNP (h,Nothing) (Just (CompDP_Unresolved m))))
-      BNMod -> XP (HeadDP Nothing NoDet) rng (Just m)  [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
-      APMod -> XP (HeadDP Nothing NoDet) rng (Just m)  [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
+      BNMod -> XP (HeadDP Nothing NoDet) rng (Just (SpDP_Appos m))  [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
+      APMod -> XP (HeadDP Nothing NoDet) rng (Just (SpDP_Gen m))  [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
   where rng = (getRange . current) o
 
 --

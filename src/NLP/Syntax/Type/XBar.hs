@@ -37,6 +37,11 @@ headText :: TaggedLemma t -> NounP t -> Text
 headText tagged x = x^.headX.hn_range.to (T.intercalate " " . tokensByRange tagged)
 
 
+specDPText :: TaggedLemma t -> SpecDP -> Text
+specDPText tagged x = case x of
+                        SpDP_Appos rng -> T.intercalate " " (tokensByRange tagged rng)
+                        SpDP_Gen rng -> T.intercalate " " (tokensByRange tagged rng)
+
 
 compVPToEither :: CompVP t -> Either (Zipper t) (DetP t)
 compVPToEither (CompVP_Unresolved x) = Left  x

@@ -23,6 +23,8 @@ makeLenses ''HeadDP
 
 makeLenses ''HeadNP
 
+makePrisms ''SpecDP
+
 makePrisms ''CompDP
 
 makePrisms ''AdjunctDP
