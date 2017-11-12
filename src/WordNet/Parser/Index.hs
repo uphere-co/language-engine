@@ -11,12 +11,6 @@ import           WordNet.Type.Lexicographer      (LexID(..))
 import           WordNet.Type.POS
 
 
-readPOS :: Char -> Maybe POS
-readPOS 'n' = Just POS_N
-readPOS 'v' = Just POS_V
-readPOS 'a' = Just POS_A
-readPOS 'r' = Just POS_R
-readPOS _   = Nothing
   
 
 parseIndex :: Text -> Maybe IndexItem
