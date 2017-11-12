@@ -92,6 +92,19 @@ test_paren_modifier_1 =
   , [TagPos (TokIdx 3, TokIdx 5, MarkEntity Org)]
   )
 
+
+-- |
+test_paren_modifier_2 :: TestNoun
+test_paren_modifier_2 =
+  ( "Germany's largest independent pizza chain, Hallo Pizza,"
+  , ("",Just "Hallo Pizza",["Germany 's largest independent pizza chain"],Nothing,[])
+
+  , [(0,("Germany","Germany")),(1,("'s","'s")),(2,("largest","largest")),(3,("independent","independent")),(4,("pizza","pizza")),(5,("chain","chain")),(6,(",",",")),(7,("Hallo","Hallo")),(8,("Pizza","Pizza")),(9,(",",","))]
+  , PN "NP" [PN "NP" [PN "NP" [PL ("NNP","Germany"),PL ("POS","'s")],PN "ADJP" [PL ("JJS","largest"),PL ("JJ","independent")],PL ("NN","pizza"),PL ("NN","chain")],PL (",",","),PN "NP" [PL ("NNP","Hallo"),PL ("NNP","Pizza")],PL (",",",")]
+  , [TagPos (TokIdx 7, TokIdx 9, MarkEntity Org)]
+  )
+
+
 -- |
 test_prep_modifier_1 :: TestNoun
 test_prep_modifier_1 =
@@ -185,6 +198,7 @@ testcases = [ test_bare_noun_modifier_1
             , test_bare_noun_modifier_3
             , test_bare_noun_modifier_4
             , test_paren_modifier_1
+            , test_paren_modifier_2
             , test_prep_modifier_1
             , test_prep_modifier_2
             , test_prep_modifier_3

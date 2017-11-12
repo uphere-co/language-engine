@@ -219,7 +219,7 @@ mkSplittedDP typ h m o
   = case typ of
       CLMod -> XP (HeadDP Nothing NoDet) rng []             [] (Just (mkNP (h,Nothing) (Just (CompDP_Unresolved m))))
       BNMod -> XP (HeadDP Nothing NoDet) rng [SpDP_Appos m] [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
-      APMod -> XP (HeadDP Nothing NoDet) rng [SpDP_Gen m  ] [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
+      APMod -> XP (HeadDP Nothing NoDet) rng [SpDP_Appos m] [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
   where rng = (getRange . current) o
 
 --
