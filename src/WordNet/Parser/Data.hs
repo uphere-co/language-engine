@@ -48,7 +48,8 @@ parseData isVerb = worker . T.words
             let (zsrc,ztgt) = T.splitAt 2 z4
             src <- readHexadecimal zsrc
             tgt <- readHexadecimal ztgt
-            return (Pointer z1 (SynsetOffset off) pos (src,tgt))
+            let srctgt = if src == 0 && tgt == 0 then Semantic else LexicalSrcTgt src tgt
+            return (Pointer z1 (SynsetOffset off) pos srctgt)
           p_ptr _ = Nothing
           rem2'@(rem20:rem2s) = concat rem2
       ptrs <- mapM p_ptr ptrstr

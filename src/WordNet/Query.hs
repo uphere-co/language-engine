@@ -5,9 +5,10 @@
 module WordNet.Query where
 
 import           Control.Lens
-import           Control.Monad              (join)
+import           Control.Monad              (guard,join)
 import           Data.HashMap.Strict        (HashMap)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet        as HS
 import qualified Data.IntMap         as IM
 import           Data.List                  (find)
 import           Data.Maybe                 (catMaybes,mapMaybe,maybeToList)
@@ -130,28 +131,26 @@ runSingleQuery input typ db = do
     Right (n,_)  -> querySynset n typ db
 
 
-
-formatPointer :: Pointer -> Text
-formatPointer p =
-  let sym = p^.ptr_pointer_symbol
-      -- (p^.ptr_synset_offset) (p^.ptr_pos)
-  in sym
-
 displayLemmaResult :: WordNetDB -> Text -> (SenseNumber,[LexItem],[Pointer],Text) -> IO ()
 displayLemmaResult db lma (n,xs,ptrs,txt) = do
   let headtxt = formatLemmaSN (lma,n) <> " | " <> txt
-  let pairs = do (i,lx) <- zip [0..] xs
-                 let ptrs' = filter (\p -> p^.ptr_sourcetarget._1 == i) ptrs
+  let pairs = do (i,lx) <- zip [1..] xs
+                 -- only derivationally related
+                 guard (lx^.lex_word == lma)
+                 let ptrs' = filter (\p -> p^.ptr_pointer_symbol == "+" && p^?ptr_sourcetarget._LexicalSrcTgt._1 == Just i) ptrs
                      targetLI p = do
                        (tgts,_,_) <- lookupSynset db (p^.ptr_pos) (p^.ptr_synset_offset)
-                       let tgtidx = p^.ptr_sourcetarget._2
-                       tgts ^? ix tgtidx
-                 return (lx,mapMaybe (\p -> ((p^.ptr_pointer_symbol),) <$> targetLI p) ptrs')
-  let pointertxt = T.intercalate " " (map formatPairs pairs)
-  TIO.putStrLn (headtxt <> "::: " <> pointertxt)
+                       tgtidx <- p^?ptr_sourcetarget._LexicalSrcTgt._2
+                       tgts ^? ix (tgtidx-1)
+                 return (lx,(HS.toList . HS.fromList . mapMaybe (\p -> ((p^.ptr_pointer_symbol),) <$> targetLI p)) ptrs')
+  let pointertxt = T.intercalate " " (mapMaybe formatPairs pairs)
+  TIO.putStrLn (headtxt <> "\n - derivationally related:" <> pointertxt)
+  -- print xs
+  -- mapM_ print ptrs
 
-
-formatPairs (lx,ptrs) = "(" <> formatLI lx <> "; " <> T.intercalate "," (map (\(r,lx') -> r <> formatLI lx') ptrs) <> ")"
+formatPairs (lx,ptrs) = case ptrs of
+                          [] -> Nothing
+                          _ -> Just (" ( " <> formatLI lx <> " --- " <> T.intercalate "," (map (\(r,lx') -> formatLI lx') ptrs) <> " ) ")
 
 
 queryLemma :: Text -> POS -> WordNetDB -> IO ()

@@ -22,7 +22,8 @@ formatSynset (xs,txt) = "lexicographer id: " <> T.intercalate "," (map formatLI 
                         " | " <> txt
 
 formatLI :: LexItem -> Text
-formatLI (LI w i) = T.L.toStrict $ format "{}%{}" (w,unLexID i)
+formatLI (LI w i) = T.L.toStrict $ format "{}%pos?:cat?:{}::" (w,unLexID i)
+
 
 formatLemmaSN :: (Text,SenseNumber) -> Text
-formatLemmaSN (lma,SenseNumber n) = lma <> "." <> T.pack (show n)
+formatLemmaSN (lma,SenseNumber n) = lma <> "#" <> T.pack (show n)
