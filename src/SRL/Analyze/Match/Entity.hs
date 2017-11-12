@@ -40,9 +40,9 @@ pronounResolution x'tr tagged dp = do
   w'' <- parent w'
   cp <- currentCPDPPP w'' ^? _CPCase
   dp' <- cp^?complement.specifier.trResolved._Just._Right
-  nclass <- dp'^?headX.hd_class._RExp._Just
-  if | prnclass `elem` [P_He,P_She] && nclass == Person -> (rng_pro,) <$> dp'^?complement._Just.headX
-     | prnclass `elem` [P_It]       && nclass == Org    -> (rng_pro,) <$> dp'^?complement._Just.headX
+  nclass <- dp'^?complement._Just.headX.hn_class._Just -- headX.hd_class._RExp._Just
+  if | prnclass `elem` [P_He,P_She] && nclass == Person -> (rng_pro,) <$> dp'^?complement._Just.headX.hn_range
+     | prnclass `elem` [P_It]       && nclass == Org    -> (rng_pro,) <$> dp'^?complement._Just.headX.hn_range
      | otherwise -> Nothing
 
 
@@ -58,9 +58,9 @@ makeLenses ''DPInfo
 
 entityFromDP :: [X'Tree '[Lemma]] -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> (Maybe Range,Text,DPInfo)
 entityFromDP x'tr tagged dp =
-  let rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX) -- for the time being  -- complement.headX
+  let rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range) -- for the time being  
       headtxt = headTextDP tagged dp
-      mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being, specifier is used as attribute appositive
+      mrngtxt' = do rng_sub <- dp^?specifier._Just._SpDP_Appos
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (rng_sub,txt_sub)
       mcoref = pronounResolution x'tr tagged dp

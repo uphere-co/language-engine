@@ -98,7 +98,7 @@ mkRoleEdges (rngidxmap,depmap) matched = do
                                                   C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
                                                                  >>= \prep -> if prep == "that" then Nothing else return prep
                                     in return (getRange (current z_cp),mprep)
-                    CompVP_DP dp -> return (fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX),Nothing)   -- for the time being
+                    CompVP_DP dp -> return (fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range),Nothing)   -- for the time being
                     CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX.hp_prep._Prep_WORD)
   i' <- maybeToList (HM.lookup (0,Just rng') rngidxmap)  -- frame element
   let b = isJust (find (== (rng',rng)) depmap)
@@ -130,7 +130,7 @@ mkPrepEdges rngidxmap ientities2 = do
 mkCorefEdges rngidxmap entities1_0 = do
   (mrng,_,di) <- entities1_0
   (rng0,rng1) <- maybeToList (di^.adi_coref)
-  i_0 <- maybeToList (HM.lookup (0,Just rng0 {- mrng -}) rngidxmap)
+  i_0 <- maybeToList (HM.lookup (0,Just rng0) rngidxmap)
   i_1 <- maybeToList (HM.lookup (0,Just rng1) rngidxmap)
   [MGEdge "ref" False Nothing i_0 i_1]
 
