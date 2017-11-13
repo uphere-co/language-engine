@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
@@ -24,10 +25,10 @@ import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
 import           Lexicon.Merge                             (constructTopPatterns)
 import           Lexicon.Query                             (cutHistogram)
-import           Lexicon.Type                              (POSVorN(..),GRel
+import           Lexicon.Type                              (POSVorN(..),FNFrame(..),GRel
                                                            ,RoleInstance,RolePattInstance
                                                            ,ArgPattern)
-import           NLP.Syntax.Clause                         (bindingAnalysis,bindingAnalysisRaising,clauseStructure,identifyCPHierarchy,resolveCP)
+import           NLP.Syntax.Clause                         (bindingAnalysis,bindingAnalysisRaising,identifyCPHierarchy,resolveCP)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (MarkType(..))
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
@@ -78,7 +79,7 @@ getSenses :: Text
           -> HashMap Text Inventory
           -> HashMap (Text,Text) Int
           -> FrameDB
-          -> HashMap Text [(Text,Text)]
+          -> HashMap Text [(Text,FNFrame)]
           -> [(ONSenseFrameNetInstance,Int)]
 getSenses lma sensemap sensestat framedb ontomap = do
   let lmav = lma <> "-v"
@@ -89,7 +90,7 @@ getSenses lma sensemap sensestat framedb ontomap = do
       txt_def = s^.sense_name
       tframe = fromMaybe (Left FrameNone) $ do
         lst <- HM.lookup lma ontomap
-        frtxt <- lookup (s^.sense_group <> "." <> s^.sense_n) lst
+        frtxt <- unFNFrame <$> lookup (s^.sense_group <> "." <> s^.sense_n) lst
         case frtxt of
           "copula"    -> return (Left FrameCopula)
           "idioms"    -> return (Left FrameIdiom)
@@ -141,16 +142,17 @@ tagToMark :: Either (EntityMention Text) (Char,Maybe Text) -> Maybe MarkType
 tagToMark (Right _) = Just MarkTime -- time is special
 tagToMark (Left x)  = case entityPreNE x of
                         Resolved (_,c) ->
-                          if c `elem` [orgClass,personClass,brandClass]
-                          then Just MarkEntity  -- only organization, person and brand, for the time being
-                          else Nothing
+                          if | c == orgClass    -> Just (MarkEntity N.Org)
+                             | c == personClass -> Just (MarkEntity N.Person)
+                             | c == brandClass  -> Just (MarkEntity N.Other)
+                             | otherwise        -> Nothing
                         UnresolvedUID c ->
                           if c `elem` [N.Org,N.Person]
-                          then Just MarkEntity
+                          then Just (MarkEntity c)
                           else Nothing
                         AmbiguousUID (_,c) ->
                           if c `elem` [N.Org,N.Person]
-                          then Just MarkEntity
+                          then Just (MarkEntity c)
                           else Nothing
                         _ -> Nothing
 
@@ -181,10 +183,9 @@ sentStructure apredata taglst (i,midx,lmas,mptr) =
         lemmamap = (mkLemmaMap' . map unLemma) lmas
         taggedMarkOnly = mkTaggedLemma lmatkns ptr taglstMarkOnly        
         vps = verbPropertyFromPennTree lemmamap ptr
-        clausetr = clauseStructure taggedMarkOnly vps (bimap (\(rng,c) -> (rng,PS.convert c)) id (mkPennTreeIdx ptr))
-        cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis taggedMarkOnly) . identifyCPHierarchy taggedMarkOnly) vps
+        x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis taggedMarkOnly) . identifyCPHierarchy taggedMarkOnly) vps
         verbStructures = map (verbStructure apredata) vps
-    in SentStructure i ptr vps clausetr cpstr taglst' taggedMarkOnly verbStructures
+    in SentStructure i ptr vps x'tr taglst' taggedMarkOnly verbStructures
 
 
 verbStructure :: AnalyzePredata -> VerbProperty (Zipper '[Lemma]) -> VerbStructure

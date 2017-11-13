@@ -7,7 +7,7 @@
 
 module SRL.Analyze.Type where
 
-import           Control.Lens                  ((^.),_2,makeLenses,makePrisms)
+import           Control.Lens                  -- ((^.),_2,makeLenses,makePrisms)
 import           Data.Aeson
 import           Data.Function                 (on)
 import           Data.HashMap.Strict           (HashMap)
@@ -17,7 +17,8 @@ import           GHC.Generics
 --
 import           Data.Range                    (Range)
 import           FrameNet.Query.Frame          (FrameDB)
-import           Lexicon.Type                  (ArgPattern,GRel,RoleInstance,RolePattInstance,SenseID)
+import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel
+                                               ,RoleInstance,RolePattInstance,SenseID)
 import           NLP.Syntax.Type               (ClauseTree,MarkType(..))
 import           NLP.Syntax.Type.Verb          (VerbProperty(..))
 import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,TaggedLemma)
@@ -65,7 +66,7 @@ chooseMostFreqFrame xs = [maximumBy (compare `on` (^._2)) xs]
 data AnalyzePredata = AnalyzePredata { _analyze_sensemap  :: HashMap Text Inventory
                                      , _analyze_sensestat :: HashMap (Text,Text) Int
                                      , _analyze_framedb   :: FrameDB
-                                     , _analyze_ontomap   :: HashMap Text [(Text,Text)]
+                                     , _analyze_ontomap   :: HashMap Text [(Text,FNFrame)]
                                      , _analyze_rolemap   :: [RoleInstance]
                                      , _analyze_subcats   :: [RolePattInstance Voice]
                                      }
@@ -84,8 +85,8 @@ makeLenses ''VerbStructure
 data SentStructure = SentStructure { _ss_i              :: Int
                                    , _ss_ptr            :: PennTree
                                    , _ss_vps            :: [VerbProperty (Zipper '[Lemma])]
-                                   , _ss_clausetr       :: ClauseTree
-                                   , _ss_cpstr          :: [X'Tree '[Lemma]]
+                                   -- , _ss_clausetr       :: ClauseTree
+                                   , _ss_x'tr          :: [X'Tree '[Lemma]]
                                    , _ss_tagged_full    :: [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text), MarkType)]
                                    , _ss_tagged         :: TaggedLemma '[Lemma]
                                    , _ss_verbStructures :: [VerbStructure]
@@ -119,27 +120,36 @@ instance FromJSON DocAnalysisInput where
   parseJSON = genericParseJSON defaultOptions
 
 
+data PredicateInfo = PredVerb { _pi_sense :: (SenseID,Bool)  -- ^ (ON sense ID, causation)
+                              , _pi_verb  :: VerbProperty Text
+                              }
+                   | PredPrep { _pi_prep :: Text }
+                   | PredNoun
+                   deriving (Generic, Show)
+
+makePrisms ''PredicateInfo
 
 
 data MGVertex = MGEntity    { _mv_id :: Int
-                            , _mv_range :: Range
+                            , _mv_range :: Maybe Range
                             , _mv_text :: Text
                             , _mv_resolved_entities :: [Text]   -- resolved named entity candidates
                             }
               | MGPredicate { _mv_id    :: Int
-                            , _mv_range :: Range
-                            , _mv_frame :: Text
-                            , _mv_sense :: (SenseID,Bool)  -- ^ (ON sense ID, causation)
-                            , _mv_verb  :: VerbProperty Text
+                            , _mv_range :: Maybe Range
+                            , _mv_frame :: FNFrame
+                            , _mv_pred_info :: PredicateInfo
                             }
-              | MGNominalPredicate { _mv_id    :: Int
-                                   , _mv_range :: Range
-                                   , _mv_frame :: Text
-                                   }
-
               deriving (Generic, Show)
 
-makeLenses ''MGVertex
+
+mv_id :: Simple Lens MGVertex Int
+mv_id = lens _mv_id (\f a -> f { _mv_id = a })
+
+mv_range :: Simple Lens MGVertex (Maybe Range)
+mv_range = lens _mv_range (\f a -> f { _mv_range = a })
+
+
 makePrisms ''MGVertex
 
 -- orphan
@@ -151,11 +161,15 @@ instance ToJSON (VerbProperty Text)
 -- orphan
 instance FromJSON (VerbProperty Text)
 
+instance FromJSON PredicateInfo
+
+instance ToJSON PredicateInfo
 
 instance ToJSON MGVertex
+
 instance FromJSON MGVertex
 
-data MGEdge = MGEdge { _me_relation :: Text
+data MGEdge = MGEdge { _me_relation :: FNFrameElement
                      , _me_ismodifier :: Bool
                      , _me_prep :: Maybe Text
                      , _me_start :: Int

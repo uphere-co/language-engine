@@ -6,7 +6,9 @@
 module SRL.Analyze.ARB where
 
 import           Control.Applicative       ((<|>))
-import           Control.Lens              ((^.),to)
+import           Control.Lens              -- ((^.),to)
+import Control.Lens.Extras
+import Data.List
 import           Control.Monad.Loops       (unfoldM)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -19,7 +21,7 @@ import           Data.Maybe                (catMaybes,fromMaybe
 import           Data.Text                 (Text)
 --
 import           Lexicon.Mapping.Causation (causeDualMap,cm_causativeFrame,cm_externalAgent)
-import           Lexicon.Type              (FNFrameElement,RoleInstance,SenseID)
+import           Lexicon.Type              (FNFrame(..),FNFrameElement(..),RoleInstance,SenseID)
 import           NLP.Syntax.Clause         (hoistMaybe) -- this should be moved somewhere
 import           NLP.Syntax.Type.Verb      (vp_lemma,vp_negation)
 import           NLP.Type.PennTreebankII   (Lemma(..))
@@ -31,11 +33,30 @@ import           SRL.Statistics
 
 type VertexARB = (Vertex, Vertex, [Vertex])
 
+squashRelFrame :: MeaningGraph -> MeaningGraph
+squashRelFrame mg0 = last (mg0 : unfoldr f mg0)
+  where f mg = do
+         let vs = mg^.mg_vertices
+             es = mg^.mg_edges
+         v <- find (is _Nothing . (^.mv_range)) vs
+         let i = v^.mv_id
+             vs' = filter ((/= i) . (^.mv_id)) vs
+
+
+         j0 <- (^.me_end) <$> find (\e -> (e^.me_start) == i && (e^.me_ismodifier)) es
+         j1 <- (^.me_end) <$> find (\e -> (e^.me_start) == i && not (e^.me_ismodifier)) es
+         (_,_,frm,info) <- v ^? _MGPredicate
+         prep <- info^?_PredPrep
+         let e' = MGEdge (FNFrameElement (unFNFrame frm)) False (Just prep) j0 j1
+             es' = filter ((/= i) . (^.me_start)) es ++ [e']
+             mg' = mg & (mg_vertices .~ vs') . (mg_edges .~ es')
+
+         return (mg',mg')
+
 
 isFrame :: MGVertex -> Bool
 isFrame (MGEntity {..})           = False
 isFrame (MGPredicate {..})        = True
-isFrame (MGNominalPredicate {..}) = True
 
 
 isEntity :: MGVertex -> Bool
@@ -48,7 +69,7 @@ subjectList = [ "Agent","Speaker","Owner","Cognizer","Actor","Author","Cognizer_
               ]
 
 
-isSubject :: [RoleInstance] -> Text -> Maybe (SenseID,Bool) -> FNFrameElement -> Bool
+isSubject :: [RoleInstance] -> FNFrame -> Maybe (SenseID,Bool) -> FNFrameElement -> Bool
 isSubject _       _     Nothing rel = any (==rel) subjectList
 isSubject rolemap frame (Just (sense,cause)) rel =
   fromMaybe False $ do
@@ -58,9 +79,9 @@ isSubject rolemap frame (Just (sense,cause)) rel =
         m <- find (\m -> m^.cm_causativeFrame == frame) causeDualMap
         return (m^.cm_externalAgent == rel)
       else
-        (((==rel) <$> lookup "arg0" roles)
+        (((==unFNFrameElement rel) <$> lookup "arg0" roles)
          <|>
-        ((==rel) <$> lookup "arg1" roles))
+        ((==unFNFrameElement rel) <$> lookup "arg1" roles))
 
 
 findRel :: [MGEdge] -> Int -> Int -> Maybe MGEdge
@@ -73,9 +94,11 @@ findLabel :: [MGVertex] -> Int -> Maybe Text
 findLabel mvs i = do
   v <- findVertex mvs i
   case v of
-    MGEntity {..}           -> Just (v ^. mv_text)
-    MGPredicate {..}        -> Just (v ^. mv_verb . vp_lemma . to unLemma)
-    MGNominalPredicate {..} -> Just (v ^. mv_frame)
+    MGEntity {..}           -> Just _mv_text
+    MGPredicate {..}        -> case _mv_pred_info of
+                                 PredVerb _ vrb -> Just (vrb ^. vp_lemma . to unLemma)
+                                 PredPrep p     -> Just p
+                                 PredNoun       -> Just (unFNFrame _mv_frame)
 
 
 findSubjectObjects :: ([RoleInstance],MeaningGraph,Graph)
@@ -86,19 +109,22 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
   v <- hoistMaybe $ findVertex (mg^.mg_vertices) frmid
   (frmtxt,msense,mneg) <- case v of
                             MGEntity           {..} -> hoistMaybe Nothing
-                            MGPredicate        {..} -> return (_mv_frame,Just _mv_sense,_mv_verb^.vp_negation)
-                            MGNominalPredicate {..} -> return (_mv_frame,Nothing,Nothing)
+                            MGPredicate        {..} ->
+                              case _mv_pred_info of
+                                PredVerb sns vrb -> return (unFNFrame _mv_frame,Just sns,vrb^.vp_negation)
+                                PredPrep _       -> return (unFNFrame _mv_frame,Nothing,Nothing)
+                                PredNoun         -> return (unFNFrame _mv_frame,Nothing,Nothing)
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) children
   (sidx,subject) <- hoistMaybe $ do
-                      e <- find (\e -> isSubject rolemap frmtxt msense (e^.me_relation)) rels
+                      e <- find (\e -> isSubject rolemap (FNFrame frmtxt) msense (e^.me_relation)) rels
                       let sidx = e^.me_end
-                      (sidx,) . (e^.me_relation,) <$> findLabel (mg^.mg_vertices) sidx
-  (objs :: [(Text,Either (PrepOr ARB) (PrepOr Text))]) <- lift $ do
+                      (sidx,) . (unFNFrameElement (e^.me_relation),) <$> findLabel (mg^.mg_vertices) sidx
+  (objs :: [(FrameElement,Either (PrepOr ARB) (PrepOr Text))]) <- lift $ do
     fmap catMaybes . flip mapM (filter (\e -> e ^.me_end /= sidx) rels) $ \o -> do
       let oidx = o^.me_end
           oprep = o^.me_prep
-          orole = o^.me_relation
+          orole = unFNFrameElement (o^.me_relation)
       runMaybeT $ do
         v' <- hoistMaybe (findVertex (mg^.mg_vertices) oidx)
         if isFrame v'
@@ -124,8 +150,9 @@ mkARB1 (rolemap,mg,graph) = do
 
 
 mkARB :: [RoleInstance] -> MeaningGraph -> [ARB]
-mkARB rolemap mg = catMaybes $ do
-  let mgraph = getGraphFromMG mg
+mkARB rolemap mg0 = catMaybes $ do
+  let mg = squashRelFrame mg0
+      mgraph = getGraphFromMG mg
   graph <- maybeToList mgraph
   let framelst = map (^.mv_id) $ filter isFrame $ mg^. mg_vertices
       vs = filter (`elem` framelst) $ topSort graph

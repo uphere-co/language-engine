@@ -85,3 +85,20 @@ Toyota said it would begin testing self-driving electric cars around 2020, which
 
 -- | Hyperloop is HEAD, Los-Angeles-based company is ATTRIB -> solved.
 Los-Angeles-based company, Hyperloop One said billionaire Richard Branson's Virgin Group has invested in the company to form a strategic partnership
+
+
+-- | both Time_vector and Event_description -> solved.
+Motorized revenue fell 4.4% to $226.2 million, while towable revenue increased to $228.7 million from $26.6 million, boosted by the addition of $193.4 million in revenue from the Grand Design acquisition.
+
+
+-- | two hypothetical event in Likelihood frame?
+Adults tend to lose this enzyme unless they continue taking cow's milk.
+
+-- | parenthetical nonrestricted relative clause. not well recognized.
+Toyota Motor Corp would begin testing self-driving cars, which needs technology advances, around 2020.
+
+-- | PP inside DP must be matched as an argument.
+UK-based boutique capital markets firm Demica said it appointed Maurice Benisty as chief commercial officer.
+
+-- | sell ... on ...  is regarded as suasion, but not. it's "bonds on international market", semantic selectional restriction is needed. 
+Brazilian steelmaker Companhia Siderúrgica Nacional SA plans to sell bonds on international markets in an effort to improve its debt profile, Benjamin Steinbruch, chief executive officer, said on Friday.
