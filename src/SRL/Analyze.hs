@@ -12,26 +12,22 @@ import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
-import           Data.Default                 (def)
-import           Data.Function                (on)
-import           Data.HashMap.Strict          (HashMap)
+import           Data.Default                  (def)
+import           Data.HashMap.Strict           (HashMap)
 import qualified Data.HashMap.Strict    as HM
-import qualified Data.IntMap            as IM
-import           Data.List                    (foldl',maximumBy,sortBy)
 import           Data.Maybe
-import           Data.Text                    (Text)
+import           Data.Text                     (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.IO           as T.IO
-import qualified Data.Vector            as V
 import qualified Language.Java          as J
-import           MWE.Util                     (mkTextFromToken)
-import           System.Console.Haskeline     (runInputT,defaultSettings,getInputLine)
-import           System.Environment           (getEnv)
-import           System.Process               (readProcess)
+import           MWE.Util                      (mkTextFromToken)
+import           System.Console.Haskeline      (runInputT,defaultSettings,getInputLine)
+import           System.Environment            (getEnv)
+import           System.Process                (readProcess)
 --
-import           CoreNLP.Simple               (prepare)
-import           CoreNLP.Simple.Type          (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
-import           FrameNet.Query.Frame         (FrameDB,loadFrameData)
+import           CoreNLP.Simple                (prepare)
+import           CoreNLP.Simple.Type           (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
+import           FrameNet.Query.Frame          (FrameDB,loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts)
 import           Lexicon.Type                 (FNFrame,RoleInstance,RolePattInstance)
@@ -48,12 +44,9 @@ import           NLP.Type.NamedEntity         (NamedEntityClass(..))
 import           NLP.Type.SyntaxProperty      (Voice)
 import           OntoNotes.Corpus.Load        (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
-import           Text.Format.Dot              (mkLabelText)
-import           WikiEL                       (extractFilteredEntityMentions)
-import           WikiEL.Run                   (runEL,classFilesG,reprFileG)
-import           WikiEL.Type                  (EntityMention,PreNE(..),UIDCite(..),beg,end)
-import qualified WikiEL.WikiEntityClass             as WEC
-import qualified WikiEL.WikiEntityTagger            as WET
+import           Text.Format.Dot               (mkLabelText)
+import           WikiEL.Type                   (EntityMention)
+import           WikiEL.WikiNewNET             (newNETagger)
 --
 import           SRL.Analyze.ARB               (mkARB,squashRelFrame)
 import qualified SRL.Analyze.Config as Analyze
@@ -145,44 +138,6 @@ printMeaningGraph rolemap dstr = do
     T.IO.putStrLn dotstr
     T.IO.writeFile ("test" ++ (show i) ++ ".dot") dotstr
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
-
-
-  -- entityResolve = WEL.disambiguateMentions .. seems to have a problem
-
-newNETagger :: IO ([Sentence] -> [EntityMention Text])
-newNETagger = do
-  reprs <- LD.loadEntityReprs reprFileG
-  let wikiTable = WET.buildEntityTable reprs
-      wikiMap = foldl' f IM.empty reprs
-        where f !acc (FF.EntityReprRow (WD.ItemID i) (WD.ItemRepr t)) = IM.insertWith (++) i [t] acc
-  uidNEtags <- WEC.loadFiles classFilesG -- uidTagFiles
-  let tagger = extractFilteredEntityMentions wikiTable uidNEtags
-      disambiguatorWorker x (ys,t) =
-        let lst = sortBy (flip compare `on` (length.snd)) .  mapMaybe (\y-> (y,) <$> IM.lookup (WD._itemID y) wikiMap) $ ys
-       in case lst of
-            [] -> x
-            (r:_) -> let (i1,i2,_) = _info x
-                         u = WEC.guessItemClass2 uidNEtags t
-                         resolved = r^._1
-                     in x { _info = (i1,i2,Resolved (resolved,u resolved)) }
-
-  let disambiguator x =
-        case ((^._3) . _info) x of
-          AmbiguousUID (ys,t) -> disambiguatorWorker x (ys,t)
-          UnresolvedUID t ->
-            if t == Org || t == Person
-            then
-              let name0 = EL.entityName (_info x)
-                  name = (T.replace "," "" . T.replace "." "") name0   -- try once more
-                  tags' = WET.wikiAnnotator wikiTable (T.words name)
-                  tags'' = filter (\(r,_)->(r^.end)-(r^.beg)>1) tags'
-              in case tags'' of
-                   [] -> x
-                   _  -> let rids = (V.toList . snd . maximumBy (flip compare `on` (\(r,_) -> (r^.end) - (r^.beg)))) tags''
-                         in disambiguatorWorker x (rids,t)
-            else x
-          _ -> x
-  return (runEL tagger (map disambiguator))
 
 loadConfig :: Bool
            -> LexDataConfig
