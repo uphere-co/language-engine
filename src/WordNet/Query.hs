@@ -27,14 +27,14 @@ import           WordNet.Type
 import           WordNet.Type.POS
 
 
-data WordNetDB = WNDB { _indexNounDB :: HM.HashMap Text IndexItem -- [(SenseNumber,SynsetOffset)]
-                      , _indexVerbDB :: HM.HashMap Text IndexItem -- [(SenseNumber,SynsetOffset)]
-                      , _indexAdjDB  :: HM.HashMap Text IndexItem  -- [(SenseNumber,SynsetOffset)]
-                      , _indexAdvDB  :: HM.HashMap Text IndexItem -- [(SenseNumber,SynsetOffset)]
-                      , _dataNounDB  :: IM.IntMap DataItem -- ([LexItem],Text)
-                      , _dataVerbDB  :: IM.IntMap DataItem -- ([LexItem],Text)
-                      , _dataAdjDB   :: IM.IntMap DataItem -- ([LexItem],Text)
-                      , _dataAdvDB   :: IM.IntMap DataItem -- ([LexItem],Text)
+data WordNetDB = WNDB { _indexNounDB :: HM.HashMap Text IndexItem
+                      , _indexVerbDB :: HM.HashMap Text IndexItem
+                      , _indexAdjDB  :: HM.HashMap Text IndexItem
+                      , _indexAdvDB  :: HM.HashMap Text IndexItem
+                      , _dataNounDB  :: IM.IntMap DataItem
+                      , _dataVerbDB  :: IM.IntMap DataItem
+                      , _dataAdjDB   :: IM.IntMap DataItem
+                      , _dataAdvDB   :: IM.IntMap DataItem
                       -- , _senseIdxDB  :: HM.HashMap (Text,Int) Int
                       }
 
@@ -95,19 +95,20 @@ parseFile p fp = do
   return $ map p lst
 
 
-lookupLemma :: WordNetDB -> POS -> Text -> [(SenseNumber,[LexItem],[Pointer],Text)]
+lookupLemma :: WordNetDB -> POS -> Text -> [(SenseNumber,Int,[LexItem],[Pointer],Text)]
 lookupLemma w p t = do
   (snum,soff) <- join .  maybeToList $ (indexDB w p) ^? at t._Just.idx_synset_offset
-  (ls,ptrs,desc) <- maybeToList (lookupSynset w p soff)
-  return (snum,ls,ptrs,desc)
+  (lexfileid,ls,ptrs,desc) <- maybeToList (lookupSynset w p soff)
+  return (snum,lexfileid,ls,ptrs,desc)
 
 
-lookupSynset :: WordNetDB -> POS -> SynsetOffset -> Maybe ([LexItem],[Pointer],Text)
+lookupSynset :: WordNetDB -> POS -> SynsetOffset -> Maybe (Int,[LexItem],[Pointer],Text)
 lookupSynset w p (SynsetOffset n) = (dataDB w p) ^? at n
                                                   . _Just
-                                                  . to ((,,) <$> (^.data_word_lex_id)
-                                                             <*> (^.data_ptr)
-                                                             <*> (^.data_gloss))
+                                                  . to ((,,,) <$> (^.data_lex_filenum)
+                                                              <*> (^.data_word_lex_id)
+                                                              <*> (^.data_ptr)
+                                                              <*> (^.data_gloss))
 
 
 loadDB :: FilePath -> IO WordNetDB
@@ -131,8 +132,8 @@ runSingleQuery input typ db = do
     Right (n,_)  -> querySynset n typ db
 
 
-displayLemmaResult :: WordNetDB -> (POS,Text) -> (SenseNumber,[LexItem],[Pointer],Text) -> IO ()
-displayLemmaResult db (pos0,lma) (n,xs,ptrs,txt) = do
+displayLemmaResult :: WordNetDB -> (POS,Text) -> (SenseNumber,Int,[LexItem],[Pointer],Text) -> IO ()
+displayLemmaResult db (pos0,lma) (n,lfid0,xs,ptrs,txt) = do
   let headtxt = formatLemmaSN (lma,n) <> " | " <> txt
   let pairs = do (i,lx) <- zip [1..] xs
                  -- only derivationally related
@@ -140,12 +141,12 @@ displayLemmaResult db (pos0,lma) (n,xs,ptrs,txt) = do
                  let ptrs' = filter (\p -> p^.ptr_pointer_symbol == "+" && p^?ptr_sourcetarget._LexicalSrcTgt._1 == Just i) ptrs
                      targetLI p = do
                        let pos_p = p^.ptr_pos
-                       (tgts,_,_) <- lookupSynset db pos_p (p^.ptr_synset_offset)
+                       (lfid,tgts,_,_) <- lookupSynset db pos_p (p^.ptr_synset_offset)
                        tgtidx <- p^?ptr_sourcetarget._LexicalSrcTgt._2
                        tgt <- tgts ^? ix (tgtidx-1)
-                       return (pos_p,tgt)
+                       return ((pos_p,lfid),tgt)
                  return (lx,(HS.toList . HS.fromList . mapMaybe (\p -> ((p^.ptr_pointer_symbol),) <$> targetLI p)) ptrs')
-  let pointertxt = T.intercalate " " (mapMaybe (formatPairs pos0) pairs)
+  let pointertxt = T.intercalate " " (mapMaybe (formatPairs (pos0,lfid0)) pairs)
   TIO.putStrLn (headtxt <> "\n - derivationally related:" <> pointertxt)
   -- print xs
   -- mapM_ print ptrs
@@ -168,7 +169,7 @@ queryLemma input typ db = do
 
 querySynset :: SynsetOffset -> POS -> WordNetDB -> IO ()
 querySynset n typ db = do
-  let print_result = mapM_ (\(xs,_,txt) -> (TIO.putStrLn . formatSynset typ) (xs,txt)) $ lookupSynset db typ n
+  let print_result = mapM_ (\(lfid,xs,_,txt) -> (TIO.putStrLn . formatSynset (typ,lfid)) (xs,txt)) $ lookupSynset db typ n
   case typ of
     POS_N -> putStrLn "-- Noun --"
     POS_V -> putStrLn "-- Verb --"

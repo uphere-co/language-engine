@@ -17,12 +17,12 @@ import           WordNet.Type.POS
 -- formatLemmaSynset (SenseNumber n,xs,txt) = "sense: " <> T.pack (show n) <> " | " <> formatSynset (xs,txt)
 
 
-formatSynset :: POS -> ([LexItem],Text) -> Text
-formatSynset p (xs,txt) = "lexicographer id: " <> T.intercalate "," (map (formatLI p) xs) <>
-                          " | " <> txt
+formatSynset :: (POS,Int) -> ([LexItem],Text) -> Text
+formatSynset (p,lfid) (xs,txt) = "lexicographer id: " <> T.intercalate "," (map (formatLI (p,lfid)) xs) <>
+                                 " | " <> txt
 
-formatLI :: POS -> LexItem -> Text
-formatLI p (LI w i) = T.L.toStrict $ format "{}%{}:cat?:{}::" (w,fromEnum (posToSSType p),unLexID i)
+formatLI :: (POS,Int) -> LexItem -> Text
+formatLI (p,lfid) (LI w i) = T.L.toStrict $ format "{}%{}:{}:{}::" (w,fromEnum (posToSSType p),lfid,unLexID i)
 
 
 formatLemmaSN :: (Text,SenseNumber) -> Text
