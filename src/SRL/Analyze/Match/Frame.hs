@@ -381,7 +381,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
        -> [(FNFrameElement,CompVP '[Lemma])]
     go (fe,CompVP_PP pp) lst = let rng = pp^.maximalProjection
                                in map (f (fe,rng)) lst
-    go (fe,CompVP_DP dp) lst = map (f (fe,fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX))) lst
+    go (fe,CompVP_DP dp) lst = map (f (fe,fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range))) lst
     go (_ ,_           ) lst = lst
 
     f (fe,rng@(b,e)) (fe',CompVP_PP pp)
@@ -392,7 +392,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
              CompPP_DP dp    -> let rng'@(b',_) = dp^.maximalProjection
                                 in -- for the time being, use this ad hoc algorithm
                                    if fe /= fe' && rng `isInsideR` rng' && b /= b'
-                                   then let dp' = dp & (complement._Just.headX .~  (b',b-1)) 
+                                   then let dp' = dp & (complement._Just.headX.hn_range .~  (b',b-1)) 
                                                      . (complement._Just.maximalProjection .~ (b,e))
                                                      . (maximalProjection .~ (b,e))
                                                      . (adjunct .~ [])
@@ -403,7 +403,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
       = let rng'@(b',_) = dp^.maximalProjection
         in -- for the time being, use this ad hoc algorithm
           if fe /= fe' && rng `isInsideR` rng' && b /= b'
-          then let dp' = dp & (complement._Just.headX .~ (b',b-1))
+          then let dp' = dp & (complement._Just.headX.hn_range .~ (b',b-1))
                             . (complement._Just.maximalProjection .~ (b,e))
                             . (maximalProjection .~ (b,e))
                             . (adjunct .~ [])

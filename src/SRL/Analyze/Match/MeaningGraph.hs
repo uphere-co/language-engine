@@ -38,11 +38,15 @@ dependencyOfX'Tree (PL _)           = []
 
 
 mkEntityFun (rng,txt,di) =
-  let mkRel frm mrngtxt' = flip (maybe []) mrngtxt' $ \(rng',txt') -> [ \i'  -> MGEntity i' (Just rng') txt' []
-                                                                      , \i'' -> MGPredicate i'' (Just rng') frm PredNoun ]
-      appos = mkRel "Instance" (di^.adi_appos)
-      compof = mkRel "Partitive" (di^.adi_compof)
-      poss = mkRel "Possession" (di^.adi_poss)
+  let mkRel frm (rng',txt') = [ \i'  -> MGEntity i' (Just rng') txt' []
+                              , \i'' -> MGPredicate i'' (Just rng') frm PredNoun ]
+
+      --  mrngtxt' = flip (maybe []) mrngtxt'
+
+      --   $ \ ->
+      appos = maybe [] (mkRel "Instance") (di^.adi_appos)
+      compof = maybe [] (mkRel "Partitive") (di^.adi_compof)
+      poss = concatMap (mkRel "Possession") (di^.adi_poss)
   in (\i -> MGEntity i rng txt []) : (appos ++ compof ++ poss )
 
 
@@ -98,7 +102,7 @@ mkRoleEdges (rngidxmap,depmap) matched = do
                                                   C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
                                                                  >>= \prep -> if prep == "that" then Nothing else return prep
                                     in return (getRange (current z_cp),mprep)
-                    CompVP_DP dp -> return (fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX),Nothing)   -- for the time being
+                    CompVP_DP dp -> return (fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range),Nothing)   -- for the time being
                     CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX.hp_prep._Prep_WORD)
   i' <- maybeToList (HM.lookup (0,Just rng') rngidxmap)  -- frame element
   let b = isJust (find (== (rng',rng)) depmap)
@@ -107,13 +111,13 @@ mkRoleEdges (rngidxmap,depmap) matched = do
 
 mkInnerDPEdges rngidxmap entities = do
     (mrng,_,di) <- entities
-    let appos = mkRelEdge "Instance" "Type" (mrng,di^.adi_appos)
-        compof = mkRelEdge "Subset" "Group" (mrng,di^.adi_compof)
-        poss = mkRelEdge "Possession" "Owner" (mrng,di^.adi_poss)                                         
+    let appos = maybe [] (mkRelEdge "Instance" "Type" mrng) (di^.adi_appos)
+        compof = maybe [] (mkRelEdge "Subset" "Group" mrng) (di^.adi_compof)
+        poss = concatMap (mkRelEdge "Possession" "Owner" mrng) (di^.adi_poss)
     (appos ++ compof ++ poss)
   where
-    mkRelEdge role1 role2 (mrng,mrngtxt') = do
-      (rng',_) <- maybeToList mrngtxt'
+    mkRelEdge role1 role2 mrng (rng',txt') = do
+      -- (rng',_) <- maybeToList mrngtxt'
       i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
       i_1 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
       i_2 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
@@ -130,7 +134,7 @@ mkPrepEdges rngidxmap ientities2 = do
 mkCorefEdges rngidxmap entities1_0 = do
   (mrng,_,di) <- entities1_0
   (rng0,rng1) <- maybeToList (di^.adi_coref)
-  i_0 <- maybeToList (HM.lookup (0,Just rng0 {- mrng -}) rngidxmap)
+  i_0 <- maybeToList (HM.lookup (0,Just rng0) rngidxmap)
   i_1 <- maybeToList (HM.lookup (0,Just rng1) rngidxmap)
   [MGEdge "ref" False Nothing i_0 i_1]
 

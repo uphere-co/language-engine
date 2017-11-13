@@ -102,3 +102,10 @@ UK-based boutique capital markets firm Demica said it appointed Maurice Benisty 
 
 -- | sell ... on ...  is regarded as suasion, but not. it's "bonds on international market", semantic selectional restriction is needed. 
 Brazilian steelmaker Companhia Siderúrgica Nacional SA plans to sell bonds on international markets in an effort to improve its debt profile, Benjamin Steinbruch, chief executive officer, said on Friday.
+
+
+-- | about 1.3 million vehicles
+Ford Motor Co said on Wednesday it would recall about 1.3 million vehicles in North America to add a water shield to side door latches.
+
+--
+The Commodity Futures Trading Commission said on Thursday it had ordered Morgan Stanley to pay a $350,000 penalty for failing to comply with rules that require large traders to include large amounts of futures and options data in reports to the agency.

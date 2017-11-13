@@ -10,7 +10,7 @@ import           Control.Lens
 import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard,mzero)
 import           Data.Foldable            (foldMap)
-import           Data.Maybe               (fromMaybe)
+import           Data.Maybe               (fromMaybe,listToMaybe,maybeToList)
 import           Data.Monoid              ((<>),First(..))
 import           Data.List                (find)
 import           Data.Text                (Text)
@@ -40,16 +40,16 @@ pronounResolution x'tr tagged dp = do
   w'' <- parent w'
   cp <- currentCPDPPP w'' ^? _CPCase
   dp' <- cp^?complement.specifier.trResolved._Just._Right
-  nclass <- dp'^?headX.hd_class._RExp._Just
-  if | prnclass `elem` [P_He,P_She] && nclass == Person -> (rng_pro,) <$> dp'^?complement._Just.headX
-     | prnclass `elem` [P_It]       && nclass == Org    -> (rng_pro,) <$> dp'^?complement._Just.headX
+  nclass <- dp'^?complement._Just.headX.hn_class._Just
+  if | prnclass `elem` [P_He,P_She] && nclass == Person -> (rng_pro,) <$> dp'^?complement._Just.headX.hn_range
+     | prnclass `elem` [P_It]       && nclass == Org    -> (rng_pro,) <$> dp'^?complement._Just.headX.hn_range
      | otherwise -> Nothing
 
 
 data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
                  , _adi_coref :: Maybe (Range,Range)
                  , _adi_compof :: Maybe (Range,Text)
-                 , _adi_poss :: Maybe (Range,Text)
+                 , _adi_poss :: [(Range,Text)]
                  }
 
 
@@ -58,9 +58,9 @@ makeLenses ''DPInfo
 
 entityFromDP :: [X'Tree '[Lemma]] -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> (Maybe Range,Text,DPInfo)
 entityFromDP x'tr tagged dp =
-  let rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX) -- for the time being  -- complement.headX
+  let rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range) -- for the time being  
       headtxt = headTextDP tagged dp
-      mrngtxt' = do rng_sub <- dp^.specifier  -- for the time being, specifier is used as attribute appositive
+      mrngtxt' = do rng_sub <- listToMaybe (dp^..specifier.traverse._SpDP_Appos)
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (rng_sub,txt_sub)
       mcoref = pronounResolution x'tr tagged dp
@@ -71,10 +71,15 @@ entityFromDP x'tr tagged dp =
                  let rng_comp = dp'^.maximalProjection
                      txt_comp = headTextDP tagged dp'
                  return (rng_comp,txt_comp)
-      mposs = do (ptyp,True) <- dp^?headX.hd_class._Pronoun
-                 rng_poss <- dp^.headX.hd_range
-                 txt_poss <- determinerText tagged (dp^.headX)
-                 return (rng_poss,txt_poss)
-  in (Just rng,headtxt,DI mrngtxt' mcoref mcomp mposs)
+      mposs1 = do (ptyp,True) <- dp^?headX.hd_class._Pronoun
+                  rng_poss <- dp^.headX.hd_range
+                  txt_poss <- determinerText tagged (dp^.headX)
+                  return (rng_poss,txt_poss)
+      mposs2 = do -- dp^?headX.hd_class._GenitiveClitic
+                  rng_poss <- listToMaybe (dp^..specifier.traverse._SpDP_Gen)
+                  let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
+                  return (rng_poss,txt_poss)
+      poss = maybeToList mposs1 ++ maybeToList mposs2 
+  in (Just rng,headtxt,DI mrngtxt' mcoref mcomp poss)
 
 
