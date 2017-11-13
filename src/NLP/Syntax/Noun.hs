@@ -30,14 +30,14 @@ import           NLP.Type.TagPos          (TagPos(..))
 import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
-                                          ,PP, AdjunctDP(..), CompDP(..),HeadDP(..), HeadNP(..), DetClass(..)
-                                          ,XP(..)
-                                          ,TaggedLemma, _MarkEntity,_NoDet,hn_range,hn_class
-                                          ,adjunct,complement,headX,maximalProjection
+                                          ,PP, AdjunctDP(..), CompDP(..),HeadDP(..), SpecDP(..), HeadNP(..)
+                                          ,DetClass(..),XP(..),TaggedLemma
+                                          ,_MarkEntity,_NoDet,hn_range,hn_class
+                                          ,adjunct,complement,headX,maximalProjection,specifier
                                           ,tokensByRange
                                           ,mkNP,mkOrdDP,mkSplittedDP,hd_range,hd_class,hn_range
                                           ,mkPP,mkPPGerund,hp_prep
-                                          ,identifyDeterminer
+                                          ,identifyArticle
                                           ,identifyPronounPerson
                                           ,pennTree,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs,intLemma)
@@ -80,7 +80,7 @@ splitDP tagged dp0 =
               let (b_pp,_) = pp^.maximalProjection
               return (dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
 
-  in identifyPronoun tagged . identifyNamedEntity tagged . bareNounModifier tagged . fromMaybe dp1 $ do
+  in identifyDeterminer tagged . identifyNamedEntity tagged . bareNounModifier tagged . fromMaybe dp1 $ do
        let rng1 = dp1^.maximalProjection
        z <- find (isChunkAs NP . current) (extractZipperByRange rng1 (tagged^.pennTree))
        dp <- child1 z
@@ -126,7 +126,7 @@ splitParentheticalModifier tagged z = do
    (guard (isChunkAs SBAR (current z_appos)) >> return (mkSplittedDP CLMod (rf dp1) (rf z_appos) z))  <|>
    (do guard (isChunkAs PP (current z_appos))
        pp <- mkPPFromZipper tagged PC_Other z_appos
-       return (XP (HeadDP Nothing NoDet) (rf z) Nothing [AdjunctDP_PP pp] (Just (mkNP (rf dp1,Nothing) Nothing)))))
+       return (XP (HeadDP Nothing NoDet) (rf z) [] [AdjunctDP_PP pp] (Just (mkNP (rf dp1,Nothing) Nothing)))))
 
 
 
@@ -147,42 +147,54 @@ checkProperNoun tagged (b,e) =
   in (not.null) toks && isUpper (T.head (head toks))   -- unsafe!
 
 
-
-
 --
 -- | check whether DP is pronoun and change NomClass accordingly
 --
-identifyPronoun :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
-                   TaggedLemma t -> DetP t -> DetP t
-identifyPronoun tagged dp = fromMaybe dp $ do
-  rng <- dp^?complement._Just.headX.hn_range
-  let zs = extractZipperByRange rng (tagged^.pennTree)
-  ((do z <- find (isPOSAs PRP . current) zs
-       (i,Lemma lma) <- intLemma z
-       ptyp <- identifyPronounPerson lma
-       (return . (headX.hd_range .~ Just (i,i)) . (headX.hd_class .~ Pronoun ptyp False) . (complement .~ Nothing)) dp)
-   <|>
-   (foldr (<|>) Nothing $ flip map zs $ \z -> do (i,att) <- listToMaybe (toList (current z))
-                                                 guard (posTag att == PRPDollar)
-                                                 let Lemma lma = ahead (getAnnot att)
-                                                 ptyp <- identifyPronounPerson lma
-                                                 ( return
-                                                  .(headX.hd_range .~ Just (i,i))
-                                                  .(headX.hd_class .~ Pronoun ptyp True)
-                                                  .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
-                                                  .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp)
-   <|>
-   (foldr (<|>) Nothing $ flip map zs $ \z -> do (i,att) <- listToMaybe (toList (current z))
-                                                 guard (posTag att == DT)
-                                                 let Lemma lma = ahead (getAnnot att)
-                                                 art <- identifyDeterminer lma
-                                                 -- ptyp <- identifyPronounPerson lma
-                                                 ( return
-                                                  .(headX.hd_range .~ Just (i,i))
-                                                  .(headX.hd_class .~ art)
-                                                  .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
-                                                  .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp))
+identifyDeterminer :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
+                      TaggedLemma t -> DetP t -> DetP t
+identifyDeterminer tagged dp = fromMaybe dp $ do
+    rng <- dp^?complement._Just.headX.hn_range
+    let zs = extractZipperByRange rng (tagged^.pennTree)
+    (singleword zs <|> multiword zs)
 
+  where
+    singleword zs = do
+      z <- find (isPOSAs PRP . current) zs
+      (i,Lemma lma) <- intLemma z
+      ptyp <- identifyPronounPerson lma
+      (return . (headX.hd_range .~ Just (i,i)) . (headX.hd_class .~ Pronoun ptyp False) . (complement .~ Nothing)) dp
+    --
+    multiword zs = do
+      z <- find (isChunkAs NP . current) zs
+      (pronounGenOrArticle z <|>  cliticGen z)
+    --
+    pronounGenOrArticle z = do
+      (i,att) <- listToMaybe (toList (current z))
+      dtyp <- do let Lemma lma = ahead (getAnnot att)
+                 ((do guard (posTag att == PRPDollar)
+                      let Lemma lma = ahead (getAnnot att)
+                      (\ptyp -> Pronoun ptyp True) <$> identifyPronounPerson lma)
+                  <|>
+                  (do guard (posTag att == DT)
+                      identifyArticle lma))
+      ( return
+       .(headX.hd_range .~ Just (i,i))
+       .(headX.hd_class .~ dtyp)
+       .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
+       .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp
+    --
+    cliticGen z = do
+      z1 <- child1 z
+      guard (isChunkAs NP (current z1))
+      z1last <- childLast z1
+      guard (isPOSAs POS (current z1last))
+      let (b,e) = getRange (current z1)
+      ( return
+       .(specifier %~ (SpDP_Gen (b,e-1) :) )
+       .(headX.hd_range .~ Just (e,e))
+       .(headX.hd_class .~ GenitiveClitic)
+       .(complement._Just.headX.hn_range %~ (\(b',e') -> if b <= e then (e+1,e') else (b',e')))
+       .(complement._Just.maximalProjection %~ (\(b',e') -> if b <= e then (e+1,e') else (b',e')))) dp
 
 
 -- | Identify bare noun subexpression inside noun phrase as modifier.
@@ -205,9 +217,9 @@ bareNounModifier tagged x = fromMaybe x $ do
 
 
 identifyNamedEntity :: TaggedLemma t -> DetP t -> DetP t
-identifyNamedEntity tagged dp = fromMaybe dp $ do
-  rng <- dp^?complement._Just.headX.hn_range
-  TagPos (_,_,MarkEntity nec)
-    <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
-  dp^?headX.hd_class._NoDet
-  (return . (headX.hd_class .~ NoDet ) . (complement._Just.headX.hn_class .~ (Just nec))) dp
+identifyNamedEntity tagged dp = fromMaybe dp $ 
+  ((do rng <- dp^?complement._Just.headX.hn_range
+       TagPos (_,_,MarkEntity nec)
+         <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
+       -- dp^?headX.hd_class._NoDet
+       (return . (complement._Just.headX.hn_class .~ (Just nec))) dp))
