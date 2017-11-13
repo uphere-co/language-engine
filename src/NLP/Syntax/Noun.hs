@@ -217,9 +217,9 @@ bareNounModifier tagged x = fromMaybe x $ do
 
 
 identifyNamedEntity :: TaggedLemma t -> DetP t -> DetP t
-identifyNamedEntity tagged dp = fromMaybe dp $ do
-  rng <- dp^?complement._Just.headX.hn_range
-  TagPos (_,_,MarkEntity nec)
-    <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
-  dp^?headX.hd_class._NoDet
-  (return . (headX.hd_class .~ NoDet ) . (complement._Just.headX.hn_class .~ (Just nec))) dp
+identifyNamedEntity tagged dp = fromMaybe dp $ 
+  ((do rng <- dp^?complement._Just.headX.hn_range
+       TagPos (_,_,MarkEntity nec)
+         <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
+       -- dp^?headX.hd_class._NoDet
+       (return . (complement._Just.headX.hn_class .~ (Just nec))) dp))
