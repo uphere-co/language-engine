@@ -26,7 +26,7 @@ newtype CharIdx = ChIdx { unChIdx :: Int } deriving (Num,Eq,Ord,Show,Generic)
 
 type BeginEnd i = (i,i)
 
-newtype TagPos i a = TagPos (i,i,a) deriving (Show,Generic)
+newtype TagPos i a = TagPos (i,i,a) deriving (Eq,Show,Generic)
 
 instance Functor (TagPos i) where
   fmap f (TagPos (i,j,x)) = TagPos (i,j,f x)
