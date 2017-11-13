@@ -53,7 +53,10 @@ compVPToEither (CompVP_PP y)         = case y^.complement of
 
 
 headTextDP :: TaggedLemma t -> DetP t -> Text
-headTextDP tagged dp = T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
+headTextDP tagged dp =
+  case dp^.headX.hd_class of
+    GenitiveClitic -> fromMaybe "" (fmap (headText tagged) (dp^.complement))
+    _ -> T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
 
 
 compVPToHeadText :: TaggedLemma t -> CompVP t -> Text
