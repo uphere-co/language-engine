@@ -79,7 +79,7 @@ instance ToJSON PreNE where
 instance FromJSON PreNE where
   parseJSON = genericParseJSON defaultOptions
 
-newtype EntityMentionUID = EntityMentionUID { _emuid :: Int} deriving (Generic)
+newtype EntityMentionUID = EntityMentionUID { _emuid :: Int} deriving (Eq,Generic)
 
 makeLenses ''EntityMentionUID
 
