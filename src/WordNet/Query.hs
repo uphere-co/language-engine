@@ -132,21 +132,28 @@ runSingleQuery input typ db = do
     Right (n,_)  -> querySynset n typ db
 
 
+getDerivations :: WordNetDB -> Text -> ([LexItem],[Pointer]) -> [(LexItem,[(Text,((POS,Int),LexItem))])]
+getDerivations db lma (xs,ptrs) = do
+  (i,lx) <- zip [1..] xs
+  guard (lx^.lex_word == lma)
+  -- only derivationally related
+  let ptrs' = filter (\p -> p^.ptr_pointer_symbol == "+" && p^?ptr_sourcetarget._LexicalSrcTgt._1 == Just i) ptrs
+      targetLI p = do
+        let pos_p = p^.ptr_pos
+        (lfid,tgts,_,_) <- lookupSynset db pos_p (p^.ptr_synset_offset)
+        tgtidx <- p^?ptr_sourcetarget._LexicalSrcTgt._2
+        tgt <- tgts ^? ix (tgtidx-1)
+        return ((pos_p,lfid),tgt)
+  return (lx,(HS.toList . HS.fromList . mapMaybe (\p -> ((p^.ptr_pointer_symbol),) <$> targetLI p)) ptrs')
+
+
+
+
 displayLemmaResult :: WordNetDB -> (POS,Text) -> (SenseNumber,Int,[LexItem],[Pointer],Text) -> IO ()
 displayLemmaResult db (pos0,lma) (n,lfid0,xs,ptrs,txt) = do
-  let headtxt = formatLemmaSN (lma,n) <> " | " <> txt
-  let pairs = do (i,lx) <- zip [1..] xs
-                 -- only derivationally related
-                 guard (lx^.lex_word == lma)
-                 let ptrs' = filter (\p -> p^.ptr_pointer_symbol == "+" && p^?ptr_sourcetarget._LexicalSrcTgt._1 == Just i) ptrs
-                     targetLI p = do
-                       let pos_p = p^.ptr_pos
-                       (lfid,tgts,_,_) <- lookupSynset db pos_p (p^.ptr_synset_offset)
-                       tgtidx <- p^?ptr_sourcetarget._LexicalSrcTgt._2
-                       tgt <- tgts ^? ix (tgtidx-1)
-                       return ((pos_p,lfid),tgt)
-                 return (lx,(HS.toList . HS.fromList . mapMaybe (\p -> ((p^.ptr_pointer_symbol),) <$> targetLI p)) ptrs')
-  let pointertxt = T.intercalate " " (mapMaybe (formatPairs (pos0,lfid0)) pairs)
+  let pairs = getDerivations db lma (xs,ptrs)
+      pointertxt = T.intercalate " " (mapMaybe (formatPairs (pos0,lfid0)) pairs)
+      headtxt = formatLemmaSN (lma,n) <> " | " <> txt
   TIO.putStrLn (headtxt <> "\n - derivationally related:" <> pointertxt)
   -- print xs
   -- mapM_ print ptrs
