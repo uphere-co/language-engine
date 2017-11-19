@@ -69,7 +69,14 @@ entityTextDP tagged dp =
 
 entityFromDP :: [X'Tree '[Lemma]] -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> (Maybe Range,Text,DPInfo)
 entityFromDP x'tr tagged dp =
-  let rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
+  let test = do rnghead@(b,e) <- dp^?complement._Just.headX.hn_range
+                guard (b==e)
+                return $ tagged^..lemmaList.folded.filtered (^._1.to (\i -> i `isInside` rng))._2._1
+                -- (return . map (^._2._1) . filter ) ()
+
+                
+
+      rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
       headtxt = entityTextDP tagged dp
                   
       mrngtxt' = do rng_sub <- listToMaybe (dp^..specifier.traverse._SpDP_Appos)
@@ -92,6 +99,6 @@ entityFromDP x'tr tagged dp =
                   let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
                   return (rng_poss,txt_poss)
       poss = maybeToList mposs1 ++ maybeToList mposs2 
-  in (Just rng,headtxt,DI mrngtxt' mcoref mcomp poss)
+  in trace (show test) (Just rng,headtxt,DI mrngtxt' mcoref mcomp poss)
 
 
