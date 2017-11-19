@@ -92,6 +92,7 @@ library
                        HCoreNLP,
                        HCoreNLP-Proto,
                        HFrameNet,
+                       HWordNet,
                        OntoNotes,
                        PropBank,
                        syntactic-analysis,
