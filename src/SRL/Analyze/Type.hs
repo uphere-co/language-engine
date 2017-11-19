@@ -70,7 +70,7 @@ data AnalyzePredata = AnalyzePredata { _analyze_sensemap  :: HashMap Text Invent
                                      , _analyze_ontomap   :: HashMap Text [(Text,FNFrame)]
                                      , _analyze_rolemap   :: [RoleInstance]
                                      , _analyze_subcats   :: [RolePattInstance Voice]
-                                     , _analyse_wordnet   :: WordNetDB
+                                     , _analyze_wordnet   :: WordNetDB
                                      }
 
 makeLenses ''AnalyzePredata

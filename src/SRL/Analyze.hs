@@ -94,15 +94,15 @@ queryProcess config pp apredata netagger =
 
                   mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
                   --
-                  printMeaningGraph (apredata^.analyze_rolemap) dstr
+                  printMeaningGraph (apredata^.analyze_wordnet) (apredata^.analyze_rolemap) dstr
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
 
 
 
-printMeaningGraph :: [RoleInstance] -> DocStructure -> IO ()
-printMeaningGraph rolemap dstr = do
+printMeaningGraph :: WordNetDB -> [RoleInstance] -> DocStructure -> IO ()
+printMeaningGraph wndb rolemap dstr = do
   putStrLn "-------------"
   putStrLn "meaning graph"
   putStrLn "-------------"
@@ -112,7 +112,7 @@ printMeaningGraph rolemap dstr = do
   -- print (sstrs1 ^.. traverse . ss_ptr)
   -- print (sstrs1 ^.. traverse . ss_clausetr)
 
-  let mgs = map (\sstr -> (sstr,meaningGraph sstr)) sstrs1
+  let mgs = map (\sstr -> (sstr,meaningGraph wndb sstr)) sstrs1
   forM_ (zip mtokss (zip ([1..] :: [Int]) mgs)) $ \(mtks,(i,(sstr,mg'))) -> do
     let title = mkTextFromToken mtks
         wikilst = mkWikiList sstr -- sstrs1

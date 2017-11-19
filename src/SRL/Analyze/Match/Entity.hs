@@ -22,6 +22,7 @@ import           NLP.Syntax.Clause        (currentCPDPPP)
 import           NLP.Syntax.Type.XBar
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
+import           WordNet.Query            (WordNetDB)
 --
 import Debug.Trace
 
@@ -67,11 +68,15 @@ entityTextDP tagged dp =
                  Just pp -> " " <> (T.intercalate " " . tokensByRange tagged) (pp^.maximalProjection)
 
 
-entityFromDP :: [X'Tree '[Lemma]] -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> (Maybe Range,Text,DPInfo)
-entityFromDP x'tr tagged dp =
+entityFromDP :: WordNetDB
+             -> [X'Tree '[Lemma]]
+             -> TaggedLemma '[Lemma] -> DetP '[Lemma]
+             -> (Maybe Range,Text,DPInfo)
+entityFromDP wndb x'tr tagged dp =
   let test = do rnghead@(b,e) <- dp^?complement._Just.headX.hn_range
                 guard (b==e)
-                return $ tagged^..lemmaList.folded.filtered (^._1.to (\i -> i `isInside` rng))._2._1
+                x <- unLemma <$> listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i `isInside` rng))._2._1)
+                return x
                 -- (return . map (^._2._1) . filter ) ()
 
                 
