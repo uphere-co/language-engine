@@ -32,13 +32,21 @@ import           WordNet.Query                 (WordNetDB)
 import           OntoNotes.Type.SenseInventory (Inventory)
 --
 
+
+data FrameMatchResult = FMR { _fmr_frame :: FNFrame
+                            , _fmr_roles :: Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])
+                            , _fmr_subframes :: [(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
+                            }
+
+makeLenses ''FrameMatchResult
+{- 
 type FrameMatchResult = (Range,VerbProperty (Zipper '[Lemma])
                         ,FNFrame
                         ,(SenseID,Bool)
                         ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])
                         ,[(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
                         )
-
+-}
 
 data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
                  , _adi_coref :: Maybe (Range,Range)

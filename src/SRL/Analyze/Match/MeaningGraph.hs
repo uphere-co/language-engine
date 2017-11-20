@@ -6,7 +6,7 @@
 module SRL.Analyze.Match.MeaningGraph where
 
 import           Control.Lens
-
+import           Data.Bifoldable              (biList)
 import           Data.Function                (on)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
@@ -31,10 +31,13 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,SentStructure
                                               ,PredicateInfo(..)
                                               ,DPInfo(..)
-                                              ,FrameMatchResult
+                                              ,FrameMatchResult(..)
                                               ,adi_appos,adi_compof,adi_coref,adi_poss
                                               ,_PredAppos,_MGPredicate,ss_tagged
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
+
+import Debug.Trace
+
 
 dependencyOfX'Tree :: X'Tree p -> [(Range,Range)]
 dependencyOfX'Tree (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap dependencyOfX'Tree xs
@@ -53,16 +56,16 @@ mkEntityFun (mrng,txt,di) =
 
 mkMGVertices :: WordNetDB
              -> ([X'Tree '[Lemma]],TaggedLemma '[Lemma])
-             -> [FrameMatchResult]
+             -> [(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,(SenseID,Bool))]
              -> ([MGVertex]
                 ,[(Maybe Range,Text,DPInfo)]
                 ,[((Int,FNFrame,Text,[(FNFrameElement,(Bool,Range))]),MGVertex)])
 mkMGVertices wndb (x'tr,tagged) matched =
-  let preds = flip map matched $ \(rng,vprop,frame,sense,_mselected,_) i
+  let preds = flip map matched $ \(rng,vprop,FMR frame _ _,sense) i
                                    -> MGPredicate i (Just rng) frame (PredVerb sense (simplifyVProp vprop))
       ipreds = zipWith ($) preds [1..]
 
-      entities0 = do (_,_,_,_,mselected,_) <- matched
+      entities0 = do (_,_,FMR _ mselected _,_) <- matched
                      (_,felst) <- maybeToList mselected
                      (_fe,x) <- felst
                      case x of
@@ -83,7 +86,7 @@ mkMGVertices wndb (x'tr,tagged) matched =
 
       entities1 = concatMap mkEntityFun entities1_0
 
-      entities2 = do (_,_,_,_,_,lst) <- matched
+      entities2 = do (_,_,FMR _ _ lst,_) <- matched
                      (frm,prep,felst) <- lst
                      return (\i -> ((i,frm,prep,felst),MGPredicate i Nothing frm (PredPrep prep)))
       n_ipreds = length ipreds
@@ -96,9 +99,11 @@ mkMGVertices wndb (x'tr,tagged) matched =
   in (vertices,entities1_0,ientities2)
 
 
-mkRoleEdges :: (HashMap (Int,Maybe Range) Int,[(Range,Range)]) -> [FrameMatchResult] -> [MGEdge]
+mkRoleEdges :: (HashMap (Int,Maybe Range) Int,[(Range,Range)])
+            -> [(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,(SenseID,Bool))]
+            -> [MGEdge]
 mkRoleEdges (rngidxmap,depmap) matched = do
-  (rng,_,_,_,mselected,_) <- matched
+  (rng,_,FMR _ mselected _,_) <- matched
   i <- maybeToList (HM.lookup (0,Just rng) rngidxmap)   -- frame
   (_,felst) <- maybeToList mselected
   (fe,x) <- felst
@@ -157,7 +162,7 @@ mkCorefEdges rngidxmap entities = do
 
 
 mkMGEdges :: (HashMap (Int,Maybe Range) Int,[(Range,Range)])
-          -> [FrameMatchResult]
+          -> [(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,(SenseID,Bool))]
           -> ([(Maybe Range,Text,DPInfo)]
              ,[((Int,FNFrame,Text,[(FNFrameElement,(Bool,Range))]),MGVertex)])
           -> [MGEdge]
@@ -176,6 +181,9 @@ meaningGraph wndb sstr =
       matched = mapMaybe matchFrame lst_vstrcp
       depmap = dependencyOfX'Tree =<< x'tr
       --
+      dps = x'tr^..traverse.to biList.traverse._2._DPCase
+      nframes = mapMaybe (matchNomFrame wndb tagged) dps
+      -- 
       (vertices,entities1_0,ientities2) = mkMGVertices wndb (x'tr,tagged) matched
       --
       rangeid :: MGVertex -> (Int,Maybe Range)
@@ -183,7 +191,7 @@ meaningGraph wndb sstr =
       --
       rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
       edges = mkMGEdges (rngidxmap,depmap) matched (entities1_0,ientities2)
-  in MeaningGraph vertices edges
+  in trace (show nframes) (MeaningGraph vertices edges)
 
 
 isEntity :: MGVertex -> Bool

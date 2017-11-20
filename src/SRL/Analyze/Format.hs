@@ -46,7 +46,7 @@ import           SRL.Analyze.Match.Frame                 (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,MGEdge(..),MGVertex(..),MeaningGraph
-                                                         ,PredicateInfo(..)
+                                                         ,PredicateInfo(..),FrameMatchResult(..)
                                                          ,_MGPredicate,_MGEntity
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
@@ -228,7 +228,7 @@ showMatchedFrame :: TaggedLemma '[Lemma]
                  -> IO ()
 showMatchedFrame tagged (vstr,cp) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame (vstr,cp)) $ \(rng,_,frame,_,mselected,_) -> do
+  flip traverse_ (matchFrame (vstr,cp)) $ \(rng,_,FMR frame mselected _,_) -> do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> unFNFrame frame)

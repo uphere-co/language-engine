@@ -62,28 +62,13 @@ entityTextDP tagged dp =
                  Just pp -> " " <> (T.intercalate " " . tokensByRange tagged) (pp^.maximalProjection)
 
 
-extractNominalizedVerb :: WordNetDB -> Lemma -> [Text]
-extractNominalizedVerb wndb (Lemma lma) =
-  let verbs = (map head . group . sort) $ do
-        (_,_,xs,ptrs,_) <- lookupLemma wndb POS_N lma
-        (_,lst) <- getDerivations wndb lma (xs,ptrs)
-        (_,((pos,_),li_v)) <- lst
-        guard (pos == POS_V)
-        return (li_v^.lex_word)
-  in verbs
-
 
 entityFromDP :: WordNetDB
              -> [X'Tree '[Lemma]]
              -> TaggedLemma '[Lemma] -> DetP '[Lemma]
              -> (Maybe Range,Text,DPInfo)
 entityFromDP wndb x'tr tagged dp =
-  let test = do (b,e) <- dp^?complement._Just.headX.hn_range
-                guard (b==e)
-                lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i `isInside` rng))._2._1)
-                let rs = extractNominalizedVerb wndb lma
-                return rs
-      rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
+  let rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
       headtxt = entityTextDP tagged dp
 
       mrngtxt' = do rng_sub <- listToMaybe (dp^..specifier.traverse._SpDP_Appos)
@@ -105,4 +90,4 @@ entityFromDP wndb x'tr tagged dp =
                   let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
                   return (rng_poss,txt_poss)
       poss = maybeToList mposs1 ++ maybeToList mposs2
-  in trace (show test) (Just rng,headtxt,DI mrngtxt' mcoref mcomp poss)
+  in (Just rng,headtxt,DI mrngtxt' mcoref mcomp poss)

@@ -15,13 +15,13 @@ import           Control.Lens
 import           Control.Lens.Extras          (is)
 import           Control.Monad                (guard)
 import           Data.Function                (on)
-import           Data.List                    (find,groupBy,sortBy)
+import           Data.List                    (find,group,groupBy,sort,sortBy)
 import           Data.Maybe                   (catMaybes,fromMaybe,isNothing,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                  (First(..))
 import           Data.Text                    (Text)
 --
 import           Data.BitreeZipper            (current,extractZipperById)
-import           Data.Range                   (Range,isInsideR)
+import           Data.Range                   (Range,isInside,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
@@ -31,9 +31,12 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
+import           WordNet.Query                (WordNetDB,lookupLemma,getDerivations)
+import           WordNet.Type                 (lex_word)
+import           WordNet.Type.POS             (POS(..))
 --
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
-import           SRL.Analyze.Type             (SentStructure,VerbStructure
+import           SRL.Analyze.Type             (SentStructure,VerbStructure,FrameMatchResult(..)
                                               ,ss_x'tr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp)
 --
@@ -403,12 +406,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
 
 
 matchFrame :: (VerbStructure,CP '[Lemma])
-           -> Maybe (Range,VerbProperty (Zipper '[Lemma])
-                    ,FNFrame
-                    ,(SenseID,Bool)
-                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])
-                    ,[(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
-                    )
+           -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,(SenseID,Bool))
 matchFrame (vstr,cp) = do
   let verbp = cp^.complement.complement
       mDP = cp^.complement.specifier.trResolved
@@ -427,7 +425,26 @@ matchFrame (vstr,cp) = do
                   ,(hasComplementizer ["if"]    , "if"    , ("Conditional_occurrence","Consequence","Profiled_possibility"))
                   ,(hasComplementizer ["unless"], "unless", ("Negative_conditional","Anti_consequence","Profiled_possibility"))
                   ]
-  return (rng,vprop,frame,sense,mselected,subfrms)
+  return (rng,vprop,FMR frame mselected subfrms,sense)
 
 
 
+
+extractNominalizedVerb :: WordNetDB -> Lemma -> [Text]
+extractNominalizedVerb wndb (Lemma lma) =
+  let verbs = (map head . group . sort) $ do
+        (_,_,xs,ptrs,_) <- lookupLemma wndb POS_N lma
+        (_,lst) <- getDerivations wndb lma (xs,ptrs)
+        (_,((pos,_),li_v)) <- lst
+        guard (pos == POS_V)
+        return (li_v^.lex_word)
+  in verbs
+
+
+matchNomFrame :: WordNetDB -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> Maybe Text
+matchNomFrame wndb tagged dp = 
+  let test = do (b,e) <- dp^?complement._Just.headX.hn_range
+                guard (b==e)
+                lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
+                listToMaybe (extractNominalizedVerb wndb lma)
+  in test
