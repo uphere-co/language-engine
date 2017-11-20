@@ -275,7 +275,7 @@ formatMGVerb (MGPredicate i _ f (PredPrep p))
              "<td>"              <> "prep" <> "</td>" <>
              "</tr>" <>
              "</table>" )
-formatMGVerb (MGPredicate i _ f PredNoun)
+formatMGVerb (MGPredicate i _ f PredAppos)
   = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
              "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
              "<tr>" <>

@@ -142,7 +142,7 @@ data PredicateInfo = PredVerb { _pi_sense :: (SenseID,Bool)  -- ^ (ON sense ID, 
                               , _pi_verb  :: VerbProperty Text
                               }
                    | PredPrep { _pi_prep :: Text }
-                   | PredNoun
+                   | PredAppos
                    deriving (Generic, Show)
 
 makePrisms ''PredicateInfo

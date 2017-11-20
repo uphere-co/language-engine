@@ -33,7 +33,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,DPInfo(..)
                                               ,FrameMatchResult
                                               ,adi_appos,adi_compof,adi_coref,adi_poss
-                                              ,_PredNoun,_MGPredicate
+                                              ,_PredAppos,_MGPredicate
                                               ,ss_x'tr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
@@ -45,11 +45,7 @@ dependencyOfX'Tree (PL _)           = []
 
 mkEntityFun (rng,txt,di) =
   let mkRel frm (rng',txt') = [ \i'  -> MGEntity i' (Just rng') txt' []
-                              , \i'' -> MGPredicate i'' (Just rng') frm PredNoun ]
-
-      --  mrngtxt' = flip (maybe []) mrngtxt'
-
-      --   $ \ ->
+                              , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
       compof = maybe [] (mkRel "Partitive") (di^.adi_compof)
       poss = concatMap (mkRel "Possession") (di^.adi_poss)
@@ -184,7 +180,7 @@ meaningGraph wndb sstr =
       (vertices,entities1_0,ientities2) = mkMGVertices wndb (x'tr,tagged) matched
       --
       rangeid :: MGVertex -> (Int,Maybe Range)
-      rangeid mv = (if mv^?_MGPredicate._4._PredNoun == Just () then 1 else 0, mv^.mv_range)
+      rangeid mv = (if mv^?_MGPredicate._4._PredAppos == Just () then 1 else 0, mv^.mv_range)
       --
       rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
       edges = mkMGEdges (rngidxmap,depmap) matched (entities1_0,ientities2)

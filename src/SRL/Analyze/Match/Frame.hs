@@ -42,7 +42,7 @@ import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,SentStructure,VerbStructure
                                               ,PredicateInfo(..)
-                                              ,_PredNoun,_MGPredicate
+                                              ,_PredAppos,_MGPredicate
                                               ,ss_x'tr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
