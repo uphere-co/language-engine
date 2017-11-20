@@ -142,7 +142,7 @@ data PredicateInfo = PredVerb { _pi_sense :: (SenseID,Bool)  -- ^ (ON sense ID, 
                               , _pi_verb  :: VerbProperty Text
                               }
                    | PredPrep { _pi_prep :: Text }
---                    | PredNomimalized { pi_noun :: Lemma
+--                   | PredNomimalized { pi_noun :: Lemma
 --                                     , pi_nominalized :: Lemma }
                    | PredAppos
                    deriving (Generic, Show)

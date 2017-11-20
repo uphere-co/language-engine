@@ -9,6 +9,7 @@
 module SRL.Analyze.Format where
 
 import           Control.Lens                            ((^..),(^.),(^?),_1,_2,_3,_Just,_Right,to)
+import           Control.Lens.Extras                     (is)
 import           Data.Foldable
 import           Data.List                               (intercalate,intersperse)
 import           Data.Maybe                              (fromMaybe,mapMaybe)
@@ -46,6 +47,7 @@ import           SRL.Analyze.Type                        (ExceptionalFrame(..),O
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,MGEdge(..),MGVertex(..),MeaningGraph
                                                          ,PredicateInfo(..)
+                                                         ,_MGPredicate,_MGEntity
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
                                                          ,onfn_senseID,onfn_definition,onfn_frame
@@ -251,46 +253,43 @@ formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}]
     format fmt ps = T.L.toStrict (T.F.format fmt ps)
 
 
-formatMGVerb :: MGVertex -> Maybe (Int,Text)
-formatMGVerb (MGEntity    _ _ _ _) = Nothing
-formatMGVerb (MGPredicate i _ f (PredVerb _ v))
-  = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-             "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
-             "<tr>" <>
-             "<td width=\"20\">" <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> "</td>" <>
-             "<td width=\"20\">" <> fromMaybe "" (v^?vp_negation._Just._1)           <> "</td>" <>
-             "<td>" <> v^.vp_lemma.to unLemma                           <> "</td>" <>
-             "<td>" <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect) <> "</td>" <>
-             "</tr>" <>
-             "</table>" )
-formatMGVerb (MGPredicate i _ f (PredPrep p))
-  = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-             "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
-             "<tr>" <>
-             "<td width=\"20\">" <>          " </td>" <>
-             "<td width=\"20\">" <>          " </td>" <>
-             "<td>"              <> p      <> "</td>" <>
-             "<td>"              <> "prep" <> "</td>" <>
-             "</tr>" <>
-             "</table>" )
-formatMGVerb (MGPredicate i _ f PredAppos)
-  = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-             "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
-             "<tr>" <>
-             "<td width=\"20\">" <> " </td>" <>
-             "<td width=\"20\">" <> " </td>" <>
-             "<td> </td>" <>
-             "<td> Nom.Mod </td>" <>
-             "</tr>" <>
-             "</table>" )
+formatMGVertex :: MGVertex -> (Int,Text)
+formatMGVertex (MGPredicate i _ f (PredVerb _ v))
+  = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+        "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
+        "<tr>" <>
+        "<td width=\"20\">" <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> "</td>" <>
+        "<td width=\"20\">" <> fromMaybe "" (v^?vp_negation._Just._1)           <> "</td>" <>
+        "<td>" <> v^.vp_lemma.to unLemma                           <> "</td>" <>
+        "<td>" <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect) <> "</td>" <>
+        "</tr>" <>
+        "</table>" )
+formatMGVertex (MGPredicate i _ f (PredPrep p))
+  = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+        "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
+        "<tr>" <>
+        "<td width=\"20\">" <>          " </td>" <>
+        "<td width=\"20\">" <>          " </td>" <>
+        "<td>"              <> p      <> "</td>" <>
+        "<td>"              <> "prep" <> "</td>" <>
+        "</tr>" <>
+        "</table>" )
+formatMGVertex (MGPredicate i _ f PredAppos)
+  = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+        "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
+        "<tr>" <>
+        "<td width=\"20\">" <> " </td>" <>
+        "<td width=\"20\">" <> " </td>" <>
+        "<td> </td>" <>
+        "<td> Nom.Mod </td>" <>
+        "</tr>" <>
+        "</table>" )
+formatMGVertex (MGEntity i _ t ns)
+  = (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+       "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
+       T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>
+       "</table>")
 
-
-formatMGEntity :: MGVertex -> Maybe (Int,Text)
-formatMGEntity (MGEntity i _ t ns)   = Just (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-                                               "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
-                                               T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>
-                                               "</table>")
-formatMGEntity (MGPredicate _ _ _ _) = Nothing
 
 
 
@@ -299,8 +298,8 @@ dotMeaningGraph title mg = format "digraph G {\n  {}\n  {}\n  {}\n}" (vtxt,etxt,
   where
     format fmt ps = T.L.toStrict (T.F.format fmt ps)
     vtxt = let vertices = mg^.mg_vertices
-               verbs = mapMaybe formatMGVerb vertices
-               entities = mapMaybe formatMGEntity vertices
+               verbs = (map formatMGVertex . filter (is _MGPredicate)) vertices
+               entities = (map formatMGVertex . filter (is _MGEntity)) vertices
 
            in (T.intercalate "\n  " . map (\(i,t) -> format "i{} [shape=plaintext, margin=0, style=filled, fillcolor=grey label=<{}>];" (i,t))) verbs <>  "\n  " <>
               (T.intercalate "\n  " . map (\(i,t) -> format "i{} [shape=plaintext, margin=0, label=<{}>];" (i,t))) entities
