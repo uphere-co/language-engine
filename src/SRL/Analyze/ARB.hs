@@ -87,8 +87,10 @@ isSubject rolemap frame (Just (sense,cause)) rel =
 findRel :: [MGEdge] -> Int -> Int -> Maybe MGEdge
 findRel mes i j = find (\me -> (me ^. me_start) == i && (me ^. me_end) == j) mes
 
+
 findVertex :: [MGVertex] -> Int -> Maybe MGVertex
 findVertex mvs i = find (\mv -> (mv ^. mv_id) == i) mvs
+
 
 findLabel :: [MGVertex] -> Int -> Maybe Text
 findLabel mvs i = do
@@ -98,6 +100,7 @@ findLabel mvs i = do
     MGPredicate {..}        -> case _mv_pred_info of
                                  PredVerb _ vrb -> Just (vrb ^. vp_lemma . to unLemma)
                                  PredPrep p     -> Just p
+                                 PredNominalized n _ -> Just (unLemma n)
                                  PredAppos      -> Just (unFNFrame _mv_frame)
 
 
@@ -113,6 +116,7 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
                               case _mv_pred_info of
                                 PredVerb sns vrb -> return (unFNFrame _mv_frame,Just sns,vrb^.vp_negation)
                                 PredPrep _       -> return (unFNFrame _mv_frame,Nothing,Nothing)
+                                PredNominalized _ _ -> return (unFNFrame _mv_frame,Nothing,Nothing)
                                 PredAppos        -> return (unFNFrame _mv_frame,Nothing,Nothing)
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) chldrn

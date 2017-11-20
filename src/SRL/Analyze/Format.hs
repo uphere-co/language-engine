@@ -274,6 +274,16 @@ formatMGVertex (MGPredicate i _ f (PredPrep p))
         "<td>"              <> "prep" <> "</td>" <>
         "</tr>" <>
         "</table>" )
+formatMGVertex (MGPredicate i _ f (PredNominalized _ _))
+  = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+        "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
+        "<tr>" <>
+        "<td width=\"20\">" <> " </td>" <>
+        "<td width=\"20\">" <> " </td>" <>
+        "<td> </td>" <>
+        "<td> Nom.Deverb </td>" <>
+        "</tr>" <>
+        "</table>" )
 formatMGVertex (MGPredicate i _ f PredAppos)
   = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
         "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
@@ -281,7 +291,7 @@ formatMGVertex (MGPredicate i _ f PredAppos)
         "<td width=\"20\">" <> " </td>" <>
         "<td width=\"20\">" <> " </td>" <>
         "<td> </td>" <>
-        "<td> Nom.Mod </td>" <>
+        "<td> Nom.Appos </td>" <>
         "</tr>" <>
         "</table>" )
 formatMGVertex (MGEntity i _ t ns)
@@ -307,5 +317,3 @@ dotMeaningGraph title mg = format "digraph G {\n  {}\n  {}\n  {}\n}" (vtxt,etxt,
     etxt = let edges = mg^.mg_edges in (T.intercalate "\n  " . map formatMGEdge) edges
     --
     ttxt = "labelloc=\"t\"; \n " <> "label=\"" <> title <> "\"; \n "
-
-
