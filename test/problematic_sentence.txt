@@ -109,3 +109,10 @@ Ford Motor Co said on Wednesday it would recall about 1.3 million vehicles in No
 
 --
 The Commodity Futures Trading Commission said on Thursday it had ordered Morgan Stanley to pay a $350,000 penalty for failing to comply with rules that require large traders to include large amounts of futures and options data in reports to the agency.
+
+
+-- | one of the last major outstanding .... parsed completely wrong
+Volkswagen AG confirmed Tuesday it has agreed to pay $69 million to settle New Jersey state diesel emissions claims, one of the last major outstanding diesel legal issues the German automaker faces in the United States.
+
+--
+U.S. refiners are set to blow past quarterly earnings expectations after margins surged to a two-year peak on the back of a crippling hurricane season that squeezed already tight gasoline and diesel supplies.

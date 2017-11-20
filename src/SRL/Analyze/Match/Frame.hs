@@ -50,7 +50,6 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 import Debug.Trace
 
 
-
 mkTriples :: SentStructure -> ([X'Tree '[Lemma]],[(VerbStructure, CP '[Lemma])])
 mkTriples sstr =
   let x'tr = sstr^.ss_x'tr
