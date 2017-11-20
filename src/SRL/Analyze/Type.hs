@@ -19,7 +19,7 @@ import           Data.Range                    (Range)
 import           FrameNet.Query.Frame          (FrameDB)
 import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel
                                                ,RoleInstance,RolePattInstance,SenseID)
-import           NLP.Syntax.Type               (ClauseTree,MarkType(..))
+import           NLP.Syntax.Type               (MarkType(..))
 import           NLP.Syntax.Type.Verb          (VerbProperty(..))
 import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,TaggedLemma,CompVP)
 import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
@@ -142,6 +142,8 @@ data PredicateInfo = PredVerb { _pi_sense :: (SenseID,Bool)  -- ^ (ON sense ID, 
                               , _pi_verb  :: VerbProperty Text
                               }
                    | PredPrep { _pi_prep :: Text }
+--                    | PredNomimalized { pi_noun :: Lemma
+--                                     , pi_nominalized :: Lemma }
                    | PredAppos
                    deriving (Generic, Show)
 

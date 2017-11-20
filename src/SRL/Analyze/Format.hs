@@ -21,7 +21,6 @@ import qualified Data.Text.IO                    as T.IO
 
 import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat,render)
 import           Text.Printf                             (printf)
-
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens')
 import           Data.BitreeZipper
@@ -31,10 +30,9 @@ import           Lexicon.Type                            (ArgPattern(..),RoleIns
                                                          ,FNFrame(..),FNFrameElement(..))
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
-import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),TaggedLemma,X'Tree,CP
-                                                         ,headText,headTextDP,headX,complement,maximalProjection
+import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),TaggedLemma,CP
+                                                         ,headTextDP,headX,complement,maximalProjection
                                                          ,hp_prep,hp_pclass)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
@@ -181,7 +179,7 @@ formatDocStructure showdetail (DocStructure mtokenss sentitems mergedtags sstrs)
 
 
 formatSentStructure :: Bool -> SentStructure -> [Text]
-formatSentStructure showdetail (SentStructure i ptr _ x'tr _ tagged vstrs) =
+formatSentStructure _showdetail (SentStructure i ptr _ _ _ _ vstrs) =
    let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                   , formatIndexTokensFromTree 0 ptr
                   ]
@@ -189,12 +187,12 @@ formatSentStructure showdetail (SentStructure i ptr _ x'tr _ tagged vstrs) =
        --             , formatClauseStructure clausetr
        --             , "================================================================================================="
        --             ]
-       subline2 = map (formatVerbStructure tagged x'tr) vstrs
+       subline2 = map formatVerbStructure vstrs
    in subline1 ++ {- (if showdetail then subline1_1 else []) ++ -} concat subline2
 
 
-formatVerbStructure :: TaggedLemma '[Lemma] -> [X'Tree '[Lemma]] -> VerbStructure -> [Text]
-formatVerbStructure tagged x'tr (VerbStructure vp senses mrmmtoppatts) =
+formatVerbStructure :: VerbStructure -> [Text]
+formatVerbStructure (VerbStructure vp senses mrmmtoppatts) =
   [--  formatVPwithPAWS tagged clausetr x'tr vp
     T.pack (printf "Verb: %-20s" (vp^.vp_lemma.to unLemma))
   , T.pack (formatSenses False senses mrmmtoppatts)

@@ -105,7 +105,7 @@ findSubjectObjects :: ([RoleInstance],MeaningGraph,Graph)
                    -> Vertex
                    -> MaybeT (State [Vertex]) ARB
 findSubjectObjects (rolemap,mg,grph) frmid = do
-  let children = grph ! frmid
+  let chldrn = grph ! frmid
   v <- hoistMaybe $ findVertex (mg^.mg_vertices) frmid
   (frmtxt,msense,mneg) <- case v of
                             MGEntity           {..} -> hoistMaybe Nothing
@@ -115,7 +115,7 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
                                 PredPrep _       -> return (unFNFrame _mv_frame,Nothing,Nothing)
                                 PredAppos        -> return (unFNFrame _mv_frame,Nothing,Nothing)
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
-  let rels = mapMaybe (findRel (mg^.mg_edges) frmid) children
+  let rels = mapMaybe (findRel (mg^.mg_edges) frmid) chldrn
   (sidx,subject) <- hoistMaybe $ do
                       e <- find (\e -> isSubject rolemap (FNFrame frmtxt) msense (e^.me_relation)) rels
                       let sidx = e^.me_end

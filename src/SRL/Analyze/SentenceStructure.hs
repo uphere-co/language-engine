@@ -7,7 +7,7 @@
 module SRL.Analyze.SentenceStructure where
 
 import           Control.Lens                              ((^.),(^..),_1,_2,_3,to)
-import           Data.Bifunctor                            (bimap,first)
+import           Data.Bifunctor                            (first)
 import           Data.Either                               (lefts)
 import           Data.Foldable                             (toList)
 import           Data.Function                             (on)
@@ -37,8 +37,7 @@ import           NLP.Syntax.Util                           (mkTaggedLemma)
 import qualified NLP.Type.NamedEntity              as N
 import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,sentenceToken,sentenceLemma,sent_tokenRange)
 
-import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree,mkPennTreeIdx)
-import qualified NLP.Type.PennTreebankII.Separated as PS
+import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree)
 import           NLP.Type.SyntaxProperty                   (Voice)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
 import           OntoNotes.Type.SenseInventory

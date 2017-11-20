@@ -7,13 +7,12 @@
 
 module SRL.Analyze where
 
-import           Control.Lens                 ((^.),(^..),(.~),(&),_Just,_1,_3)
+import           Control.Lens                 ((^.),(^..),(.~),(&),_Just)
 import           Control.Monad                (forM_,void,when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Loops          (whileJust_)
 import qualified Data.ByteString.Char8  as B
 import           Data.Default                  (def)
-import           Data.HashMap.Strict           (HashMap)
 import qualified Data.HashMap.Strict    as HM
 import           Data.Maybe
 import           Data.Text                     (Text)
@@ -27,10 +26,10 @@ import           System.Process                (readProcess)
 --
 import           CoreNLP.Simple                (prepare)
 import           CoreNLP.Simple.Type           (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
-import           FrameNet.Query.Frame          (FrameDB,loadFrameData)
+import           FrameNet.Query.Frame          (loadFrameData)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts)
-import           Lexicon.Type                 (FNFrame,RoleInstance,RolePattInstance)
+import           Lexicon.Type                 (RoleInstance)
 import           Lexicon.Data                 (LexDataConfig(..),cfg_framenet_framedir
                                               ,cfg_rolemap_file
                                               ,cfg_sense_inventory_file
@@ -41,16 +40,14 @@ import           Lexicon.Data                 (LexDataConfig(..),cfg_framenet_fr
                                               )
 import           NLP.Syntax.Format            (formatX'Tree)
 import           NLP.Type.CoreNLP             (Sentence)
-import           NLP.Type.NamedEntity         (NamedEntityClass(..))
-import           NLP.Type.SyntaxProperty      (Voice)
 import           OntoNotes.Corpus.Load        (senseInstStatistics)
-import           OntoNotes.Type.SenseInventory (Inventory,inventory_lemma)
+import           OntoNotes.Type.SenseInventory (inventory_lemma)
 import           Text.Format.Dot               (mkLabelText)
 import           WikiEL.Type                   (EntityMention)
 import           WikiEL.WikiNewNET             (newNETagger)
 import           WordNet.Query                 (WordNetDB,loadDB)
 --
-import           SRL.Analyze.ARB               (mkARB,squashRelFrame)
+import           SRL.Analyze.ARB               (mkARB)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP           (runParser)
 import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructure,showMatchedFrame)
@@ -60,13 +57,8 @@ import           SRL.Analyze.SentenceStructure (docStructure,mkWikiList)
 import           SRL.Analyze.Type
 import           SRL.Statistics (getGraphFromMG)
 --
-import qualified WikiEL.EntityLinking   as EL
-import qualified WikiEL.ETL.LoadData    as LD
-import qualified WikiEL.Type.FileFormat as FF
-import qualified WikiEL.Type.Wikidata   as WD
--- import qualified WikiEL.WikiEntityClass       as WEC
 
-
+--
 -- | main query loop
 --
 queryProcess :: Analyze.Config

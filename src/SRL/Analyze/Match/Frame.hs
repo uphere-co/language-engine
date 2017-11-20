@@ -11,43 +11,33 @@
 module SRL.Analyze.Match.Frame where
 
 import           Control.Applicative
-import           Control.Error.Safe           (rightMay,headErr)
 import           Control.Lens
 import           Control.Lens.Extras          (is)
 import           Control.Monad                (guard)
 import           Data.Function                (on)
-import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
-import           Data.Maybe                   (catMaybes,fromMaybe,isJust,isNothing,listToMaybe,mapMaybe,maybeToList)
-import           Data.Monoid                  (First(..),(<>))
-import qualified Data.Text              as T
+import           Data.Maybe                   (catMaybes,fromMaybe,isNothing,listToMaybe,mapMaybe,maybeToList)
+import           Data.Monoid                  (First(..))
 import           Data.Text                    (Text)
 --
-import           Data.Bitree                  (getRoot1)
 import           Data.BitreeZipper            (current,extractZipperById)
-import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
+import           Data.Range                   (Range,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,constructCP,currentCPDPPP)
-import           NLP.Syntax.Format.Internal   (formatCompVP,formatPP)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemma0)
+import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 --
-import           SRL.Analyze.Match.Entity
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
-import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
-                                              ,SentStructure,VerbStructure
-                                              ,PredicateInfo(..)
-                                              ,_PredAppos,_MGPredicate
+import           SRL.Analyze.Type             (SentStructure,VerbStructure
                                               ,ss_x'tr,ss_tagged,ss_verbStructures
-                                              ,vs_roleTopPatts,vs_vp
-                                              ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
+                                              ,vs_roleTopPatts,vs_vp)
 --
-import Debug.Trace
+-- import Debug.Trace
 
 
 mkTriples :: SentStructure -> ([X'Tree '[Lemma]],[(VerbStructure, CP '[Lemma])])

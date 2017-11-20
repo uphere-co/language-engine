@@ -6,36 +6,34 @@
 module SRL.Analyze.Match.MeaningGraph where
 
 import           Control.Lens
-import           Control.Monad                (join)
+
 import           Data.Function                (on)
 import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
-import           Data.Maybe                   (catMaybes,fromMaybe,isJust,isNothing,listToMaybe,mapMaybe,maybeToList)
+import           Data.Maybe                   (fromMaybe,isJust,mapMaybe,maybeToList)
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
 import           Data.Bitree                  (getRoot1)
-import           Data.BitreeZipper            (current,extractZipperById)
+import           Data.BitreeZipper            (current)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemma0)
+import           NLP.Syntax.Util              (GetIntLemma(..),intLemma0)
 import           NLP.Type.PennTreebankII
 import           WordNet.Query                (WordNetDB)
 --
 import           SRL.Analyze.Match.Entity
 import           SRL.Analyze.Match.Frame
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
-                                              ,SentStructure,VerbStructure
+                                              ,SentStructure
                                               ,PredicateInfo(..)
                                               ,DPInfo(..)
                                               ,FrameMatchResult
                                               ,adi_appos,adi_compof,adi_coref,adi_poss
-                                              ,_PredAppos,_MGPredicate
-                                              ,ss_x'tr,ss_tagged,ss_verbStructures
-                                              ,vs_roleTopPatts,vs_vp
+                                              ,_PredAppos,_MGPredicate,ss_tagged
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
 
 dependencyOfX'Tree :: X'Tree p -> [(Range,Range)]
@@ -43,13 +41,14 @@ dependencyOfX'Tree (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ conca
 dependencyOfX'Tree (PL _)           = []
 
 
-mkEntityFun (rng,txt,di) =
+mkEntityFun :: (Maybe Range,Text,DPInfo) -> [(Int -> MGVertex)]
+mkEntityFun (mrng,txt,di) =
   let mkRel frm (rng',txt') = [ \i'  -> MGEntity i' (Just rng') txt' []
                               , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
       compof = maybe [] (mkRel "Partitive") (di^.adi_compof)
       poss = concatMap (mkRel "Possession") (di^.adi_poss)
-  in (\i -> MGEntity i rng txt []) : (appos ++ compof ++ poss )
+  in (\i -> MGEntity i mrng txt []) : (appos ++ compof ++ poss )
 
 
 mkMGVertices :: WordNetDB
@@ -89,7 +88,7 @@ mkMGVertices wndb (x'tr,tagged) matched =
                      return (\i -> ((i,frm,prep,felst),MGPredicate i Nothing frm (PredPrep prep)))
       n_ipreds = length ipreds
       n_entities1 = length entities1
-      n_entities2 = length entities2
+      -- n_entities2 = length entities2
       ientities1 = zipWith ($) entities1 (enumFrom (n_ipreds+1))
       ientities2 = zipWith ($) entities2 (enumFrom (n_ipreds+n_entities1+1))
       vertices = ipreds ++ ientities1 ++ (map snd ientities2)
@@ -127,7 +126,7 @@ mkInnerDPEdges rngidxmap entities = do
         poss = concatMap (mkRelEdge "Possession" "Owner" mrng) (di^.adi_poss)
     (appos ++ compof ++ poss)
   where
-    mkRelEdge role1 role2 mrng (rng',txt') = do
+    mkRelEdge role1 role2 mrng (rng',_txt') = do
       -- (rng',_) <- maybeToList mrngtxt'
       i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
       i_1 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
@@ -139,7 +138,7 @@ mkPrepEdges :: HashMap (Int,Maybe Range) Int
             -> [((Int,FNFrame,Text,[(FNFrameElement,(Bool,Range))]),MGVertex)]
             -> [MGEdge]
 mkPrepEdges rngidxmap ientities2 = do
-  (i_frame,frm,prep,felst) <- map fst ientities2
+  (i_frame,_frm,_prep,felst) <- map fst ientities2
   (fe,(b,rng)) <- felst
   i_elem <- maybeToList (HM.lookup (0,Just rng) rngidxmap)
   [MGEdge fe b Nothing i_frame i_elem]
@@ -149,7 +148,7 @@ mkCorefEdges :: HashMap (Int,Maybe Range) Int
              -> [(Maybe Range,Text,DPInfo)]
              -> [MGEdge]
 mkCorefEdges rngidxmap entities = do
-  (mrng,_,di) <- entities
+  (_mrng,_,di) <- entities
   (rng0,rng1) <- maybeToList (di^.adi_coref)
   i_0 <- maybeToList (HM.lookup (0,Just rng0) rngidxmap)
   i_1 <- maybeToList (HM.lookup (0,Just rng1) rngidxmap)
