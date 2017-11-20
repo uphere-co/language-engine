@@ -21,7 +21,7 @@ import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElemen
                                                ,RoleInstance,RolePattInstance,SenseID)
 import           NLP.Syntax.Type               (ClauseTree,MarkType(..))
 import           NLP.Syntax.Type.Verb          (VerbProperty(..))
-import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,TaggedLemma)
+import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,TaggedLemma,CompVP)
 import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
 import           NLP.Type.PennTreebankII       (Lemma,PennTree)
 import           NLP.Type.SyntaxProperty       (Voice)
@@ -31,6 +31,23 @@ import           WordNet.Query                 (WordNetDB)
 --
 import           OntoNotes.Type.SenseInventory (Inventory)
 --
+
+type FrameMatchResult = (Range,VerbProperty (Zipper '[Lemma])
+                        ,FNFrame
+                        ,(SenseID,Bool)
+                        ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])
+                        ,[(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
+                        )
+
+
+data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
+                 , _adi_coref :: Maybe (Range,Range)
+                 , _adi_compof :: Maybe (Range,Text)
+                 , _adi_poss :: [(Range,Text)]
+                 }
+
+
+makeLenses ''DPInfo
 
 
 data ExceptionalFrame = FrameCopula  | FrameIdiom | FrameLightVerb | FrameNone

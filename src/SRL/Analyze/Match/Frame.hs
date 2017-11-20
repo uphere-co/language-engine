@@ -49,15 +49,6 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 --
 import Debug.Trace
 
-type FrameMatchResult = (Range,VerbProperty (Zipper '[Lemma])
-                        ,FNFrame
-                        ,(SenseID,Bool)
-                        ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])
-                        ,[(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
-                        )
-
-
-
 
 mkTriples :: SentStructure -> ([X'Tree '[Lemma]],[(VerbStructure, CP '[Lemma])])
 mkTriples sstr =

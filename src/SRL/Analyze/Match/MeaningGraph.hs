@@ -30,6 +30,9 @@ import           SRL.Analyze.Match.Frame
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,SentStructure,VerbStructure
                                               ,PredicateInfo(..)
+                                              ,DPInfo(..)
+                                              ,FrameMatchResult
+                                              ,adi_appos,adi_compof,adi_coref,adi_poss
                                               ,_PredNoun,_MGPredicate
                                               ,ss_x'tr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp

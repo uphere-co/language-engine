@@ -27,7 +27,7 @@ import           WordNet.Query            (WordNetDB,getDerivations,lookupLemma)
 import           WordNet.Type             (lex_word)
 import           WordNet.Type.POS         (POS(..))
 --
-import Debug.Trace
+import           SRL.Analyze.Type         (DPInfo(..))
 
 
 pronounResolution :: [X'Tree '[Lemma]]
@@ -48,16 +48,6 @@ pronounResolution x'tr tagged dp = do
   if | prnclass `elem` [P_He,P_She] && nclass == Person -> (rng_pro,) <$> dp'^?complement._Just.headX.hn_range
      | prnclass `elem` [P_It]       && nclass == Org    -> (rng_pro,) <$> dp'^?complement._Just.headX.hn_range
      | otherwise -> Nothing
-
-
-data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
-                 , _adi_coref :: Maybe (Range,Range)
-                 , _adi_compof :: Maybe (Range,Text)
-                 , _adi_poss :: [(Range,Text)]
-                 }
-
-
-makeLenses ''DPInfo
 
 
 entityTextDP :: TaggedLemma t -> DetP t -> Text
@@ -119,4 +109,4 @@ entityFromDP wndb x'tr tagged dp =
                   let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
                   return (rng_poss,txt_poss)
       poss = maybeToList mposs1 ++ maybeToList mposs2
-  in trace (show test) (Just rng,headtxt,DI mrngtxt' mcoref mcomp poss)
+  in (Just rng,headtxt,DI mrngtxt' mcoref mcomp poss)
