@@ -45,8 +45,8 @@ pronounResolution x'tr dp = do
   cp <- currentCPDPPP w'' ^? _CPCase
   dp' <- cp^?complement.specifier.trResolved._Just._Right
   nclass <- dp'^?complement._Just.headX.hn_class._Just
-  if | prnclass `elem` [P_He,P_She] && nclass == Person -> (rng_pro,) <$> dp'^?complement._Just.headX.hn_range
-     | prnclass `elem` [P_It]       && nclass == Org    -> (rng_pro,) <$> dp'^?complement._Just.headX.hn_range
+  if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,dp'^.maximalProjection) -- dp'^?complement._Just.headX.hn_range
+     | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp'^.maximalProjection) -- dp'^?complement._Just.headX.hn_range
      | otherwise -> Nothing
 
 
