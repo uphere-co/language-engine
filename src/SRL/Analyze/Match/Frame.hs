@@ -444,17 +444,18 @@ extractNominalizedVerb wndb (Lemma lma) =
   in verbs
 
 
-matchNomFrame :: -- WordNetDB
-              -- -> [(ArgPattern () GRel,Int)]
-                 AnalyzePredata
+matchNomFrame :: AnalyzePredata
               -> TaggedLemma '[Lemma]
               -> DetP '[Lemma]
-              -> Maybe [(ONSenseFrameNetInstance,Int)] -- Text -- (FNFrame,Text)
+              -> Maybe FNFrame --  RoleInstance
+              -- -> Maybe ((RoleInstance,Int), [(ArgPattern () GRel, Int)]) --   [(ONSenseFrameNetInstance,Int)] -- Text -- (FNFrame,Text)
 matchNomFrame apredata tagged dp = do
   let wndb = apredata^.analyze_wordnet
   (b,e) <- dp^?complement._Just.headX.hn_range
   guard (b==e)
   lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
   verb <- listToMaybe (extractNominalizedVerb wndb lma)
-  let (senses,_) = getVerbSenses apredata lma
-  return senses
+  let (_senses,rmtoppatts) = getVerbSenses apredata lma
+  (((sid,rolemap),_),_) <- listToMaybe rmtoppatts
+  frm <- lookup "frame" rolemap
+  return (FNFrame frm)
