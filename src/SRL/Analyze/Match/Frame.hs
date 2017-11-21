@@ -453,18 +453,22 @@ subjObj argpatt =
   in (find (\(_,p) -> p == GR_NP (Just GASBJ)) m, find (\(_,p) -> p == GR_NP (Just GA1)) m)
 
 
-{- 
+
 matchNomFrame :: AnalyzePredata
               -> TaggedLemma '[Lemma]
               -> DetP '[Lemma]
-              -> Maybe (FNFrame,[(ArgPattern () GRel, Int)]) -}
+              -> Maybe (Lemma,Lemma,(FNFrame,Range),FNFrameElement,(FNFrameElement,DetP '[Lemma]))
                        --  RoleInstance
               -- -> Maybe ((RoleInstance,Int), [(ArgPattern () GRel, Int)]) --   [(ONSenseFrameNetInstance,Int)] -- Text -- (FNFrame,Text)
 matchNomFrame apredata tagged dp = do
-  let wndb = apredata^.analyze_wordnet
+  let rng_dp = dp^.maximalProjection
+      wndb = apredata^.analyze_wordnet
   (b,e) <- dp^?complement._Just.headX.hn_range
   guard (b==e)
   lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
+  pp <- dp^?complement._Just.complement._Just._CompDP_PP
+  guard (pp^.headX.hp_prep == Prep_WORD "of")
+  dp_obj <- pp^?complement._CompPP_DP
   
   verb <- listToMaybe (extractNominalizedVerb wndb lma)
    
@@ -473,7 +477,8 @@ matchNomFrame apredata tagged dp = do
   frm <- lookup "frame" rolemap
   patt <- listToMaybe patts
   let (ms,mo) = subjObj (patt^._1)
-  -- (s,_) <- ms
+  (args,_) <- ms
   (argo,_) <- mo
-  obj <- lookup argo rolemap
-  return (lma,verb,FNFrame frm,obj)  --  senses,rmtoppatts
+  subj <- FNFrameElement <$> lookup args rolemap
+  obj  <- FNFrameElement <$> lookup argo rolemap
+  return (lma,verb,(FNFrame frm,rng_dp),subj,(obj,dp_obj))  --  senses,rmtoppatts

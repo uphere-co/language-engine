@@ -32,7 +32,6 @@ import Debug.Trace
 
 
 pronounResolution :: [X'Tree '[Lemma]]
-                  -- -> TaggedLemma '[Lemma]
                   -> DetP '[Lemma]
                   -> Maybe (Range,Range)
 pronounResolution x'tr dp = do
@@ -63,11 +62,10 @@ entityTextDP tagged dp =
 
 
 
-entityFromDP :: WordNetDB
-             -> [X'Tree '[Lemma]]
+entityFromDP :: [X'Tree '[Lemma]]
              -> TaggedLemma '[Lemma] -> DetP '[Lemma]
              -> (Maybe Range,Text,DPInfo)
-entityFromDP wndb x'tr tagged dp =
+entityFromDP x'tr tagged dp =
   let rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
       headtxt = entityTextDP tagged dp
 

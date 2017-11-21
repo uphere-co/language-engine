@@ -274,13 +274,13 @@ formatMGVertex (MGPredicate i _ f (PredPrep p))
         "<td>"              <> "prep" <> "</td>" <>
         "</tr>" <>
         "</table>" )
-formatMGVertex (MGPredicate i _ f (PredNominalized _ _))
+formatMGVertex (MGPredicate i _ f (PredNominalized n _))
   = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
         "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
         "<tr>" <>
         "<td width=\"20\">" <> " </td>" <>
         "<td width=\"20\">" <> " </td>" <>
-        "<td> </td>" <>
+        "<td>"              <> unLemma n <> " </td>" <>
         "<td> Nom.Deverb </td>" <>
         "</tr>" <>
         "</table>" )
