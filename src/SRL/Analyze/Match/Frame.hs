@@ -468,8 +468,7 @@ matchNomFrame apredata tagged dp = do
   pp <- dp^?complement._Just.complement._Just._CompDP_PP
   guard (pp^.headX.hp_prep == Prep_WORD "of")
   rng_obj <- pp^?complement._CompPP_DP.maximalProjection
-  let txt_obj = let (b',e') = rng_obj
-                in T.intercalate " " (tokensByRange tagged (b'+1,e'))
+  let txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
   let mrngtxt_subj :: Maybe (Range,Text)
       mrngtxt_subj = do
         rng <- case dp^.headX.hd_class of
