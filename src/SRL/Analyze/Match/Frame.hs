@@ -433,29 +433,47 @@ matchFrame (vstr,cp) = do
 
 
 
-extractNominalizedVerb :: WordNetDB -> Lemma -> [Text]
+extractNominalizedVerb :: WordNetDB -> Lemma -> [Lemma]
 extractNominalizedVerb wndb (Lemma lma) =
   let verbs = (map head . group . sort) $ do
         (_,_,xs,ptrs,_) <- lookupLemma wndb POS_N lma
         (_,lst) <- getDerivations wndb lma (xs,ptrs)
         (_,((pos,_),li_v)) <- lst
         guard (pos == POS_V)
-        return (li_v^.lex_word)
+        return (Lemma (li_v^.lex_word))
   in verbs
 
 
+subjObj argpatt =
+  let m = catMaybes [ ("arg0",) <$> argpatt^.patt_arg0
+                    , ("arg1",) <$> argpatt^.patt_arg1
+                    , ("arg2",) <$> argpatt^.patt_arg2
+                    , ("arg3",) <$> argpatt^.patt_arg3
+                    , ("arg4",) <$> argpatt^.patt_arg4 ]
+  in (find (\(_,p) -> p == GR_NP (Just GASBJ)) m, find (\(_,p) -> p == GR_NP (Just GA1)) m)
+
+
+{- 
 matchNomFrame :: AnalyzePredata
               -> TaggedLemma '[Lemma]
               -> DetP '[Lemma]
-              -> Maybe FNFrame --  RoleInstance
+              -> Maybe (FNFrame,[(ArgPattern () GRel, Int)]) -}
+                       --  RoleInstance
               -- -> Maybe ((RoleInstance,Int), [(ArgPattern () GRel, Int)]) --   [(ONSenseFrameNetInstance,Int)] -- Text -- (FNFrame,Text)
 matchNomFrame apredata tagged dp = do
   let wndb = apredata^.analyze_wordnet
   (b,e) <- dp^?complement._Just.headX.hn_range
   guard (b==e)
   lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
+  
   verb <- listToMaybe (extractNominalizedVerb wndb lma)
-  let (_senses,rmtoppatts) = getVerbSenses apredata lma
-  (((sid,rolemap),_),_) <- listToMaybe rmtoppatts
+   
+  let (senses,rmtoppatts) = getVerbSenses apredata verb
+  (((sid,rolemap),_),patts) <- listToMaybe rmtoppatts
   frm <- lookup "frame" rolemap
-  return (FNFrame frm)
+  patt <- listToMaybe patts
+  let (ms,mo) = subjObj (patt^._1)
+  -- (s,_) <- ms
+  (argo,_) <- mo
+  obj <- lookup argo rolemap
+  return (lma,verb,FNFrame frm,obj)  --  senses,rmtoppatts
