@@ -20,6 +20,7 @@ import           Data.Bitree                  (getRoot1)
 import           Data.BitreeZipper            (current)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Type
+import           NLP.Syntax.Format.Internal   (formatCompVP)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util              (GetIntLemma(..),intLemma0)
@@ -97,7 +98,7 @@ mkMGVertices (x'tr,tagged) (matched,nmatched) =
                   $ (entities0 ++ entities1_n)
 
 
-      entities1 = trace ("\n\n\nipreds=\n" ++ show ipreds ++ "\n\nentities0=\n" ++ show entities0 ++ "\n") $ concatMap mkEntityFun entities1_0
+      entities1 = concatMap mkEntityFun entities1_0
 
       entities2 = do (_,_,FMR _ _ lst,_) <- matched
                      (frm,prep,felst) <- lst
@@ -121,7 +122,7 @@ mkRoleEdges :: (HashMap (Int,Maybe Range) Int,[(Range,Range)])
 mkRoleEdges (rngidxmap,depmap) matched = do
   (rng,_,FMR _ mselected _,_) <- matched
   i <- maybeToList (HM.lookup (0,Just rng) rngidxmap)   -- frame
-  (_,felst) <- maybeToList mselected
+  (_,felst) <- trace ("\n\n\nmkRoleEdges: " ++ show (fmap (_2.traverse._2  %~ formatCompVP) mselected)) $ maybeToList mselected
   (fe,x) <- felst
   (rng',mprep) <- case x of
                     CompVP_Unresolved _ -> []
@@ -131,7 +132,8 @@ mkRoleEdges (rngidxmap,depmap) matched = do
                                                   C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
                                                                  >>= \prep -> if prep == "that" then Nothing else return prep
                                     in return (getRange (current z_cp),mprep)
-                    CompVP_DP dp -> return (fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range),Nothing)   -- for the time being
+                    CompVP_DP dp -> return ((dp^.maximalProjection),Nothing)
+                      -- return (fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range),Nothing)   -- for the time being
                     CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX.hp_prep._Prep_WORD)
   i' <- maybeToList (HM.lookup (0,Just rng') rngidxmap)  -- frame element
   let b = isJust (find (== (rng',rng)) depmap)
