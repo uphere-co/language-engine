@@ -80,5 +80,5 @@ compDPToRange (CompDP_PP pp) = pp^.maximalProjection
 
 
 compPPToRange :: CompPP t -> Range
-compPPToRange (CompPP_DP dp) = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
+compPPToRange (CompPP_DP dp) = dp^.maximalProjection -- fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
 compPPToRange (CompPP_Gerund z) = getRange (current z)
