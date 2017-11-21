@@ -28,10 +28,11 @@ import           WordNet.Query                (WordNetDB)
 import           SRL.Analyze.Match.Entity
 import           SRL.Analyze.Match.Frame
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
-                                              ,SentStructure
+                                              ,SentStructure,AnalyzePredata
                                               ,PredicateInfo(..)
                                               ,DPInfo(..)
                                               ,FrameMatchResult(..)
+                                              ,analyze_wordnet
                                               ,adi_appos,adi_compof,adi_coref,adi_poss
                                               ,_PredAppos,_MGPredicate,ss_tagged
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
@@ -174,15 +175,16 @@ mkMGEdges (rngidxmap,depmap) matched (entities1_0,ientities2) =
   in edges0 ++ edges1 ++ edges2 ++ edges3
 
 
-meaningGraph :: WordNetDB -> SentStructure -> MeaningGraph
-meaningGraph wndb sstr =
-  let (x'tr,lst_vstrcp) = mkTriples sstr
+meaningGraph :: AnalyzePredata -> SentStructure -> MeaningGraph
+meaningGraph apredata sstr =
+  let wndb = apredata^.analyze_wordnet
+      (x'tr,lst_vstrcp) = mkTriples sstr
       tagged = sstr^.ss_tagged
       matched = mapMaybe matchFrame lst_vstrcp
       depmap = dependencyOfX'Tree =<< x'tr
       --
       dps = x'tr^..traverse.to biList.traverse._2._DPCase
-      nframes = mapMaybe (matchNomFrame wndb tagged) dps
+      nframes = mapMaybe (matchNomFrame apredata tagged) dps
       -- 
       (vertices,entities1_0,ientities2) = mkMGVertices wndb (x'tr,tagged) matched
       --

@@ -27,6 +27,7 @@ library
                        SRL.Analyze.Match.Frame
                        SRL.Analyze.Match.MeaningGraph
                        SRL.Analyze.Parameter
+                       SRL.Analyze.Sense
                        SRL.Analyze.SentenceStructure
                        SRL.Analyze.Type
                        SRL.Analyze.Util

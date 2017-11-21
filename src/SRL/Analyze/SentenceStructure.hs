@@ -36,7 +36,6 @@ import           NLP.Syntax.Type.XBar                      (Zipper)
 import           NLP.Syntax.Util                           (mkTaggedLemma)
 import qualified NLP.Type.NamedEntity              as N
 import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,sentenceToken,sentenceLemma,sent_tokenRange)
-
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree)
 import           NLP.Type.SyntaxProperty                   (Voice)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
@@ -46,6 +45,7 @@ import           WikiEL.Type                               (EntityMention,IRange
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
 --
 import           SRL.Analyze.Parameter                     (thresholdPattStat)
+import           SRL.Analyze.Sense                         (getVerbSenses)
 import           SRL.Analyze.Type
 
 
@@ -74,50 +74,9 @@ mkWikiList sstr =
   in wikilst
 
 
-getSenses :: Text
-          -> HashMap Text Inventory
-          -> HashMap (Text,Text) Int
-          -> FrameDB
-          -> HashMap Text [(Text,FNFrame)]
-          -> [(ONSenseFrameNetInstance,Int)]
-getSenses lma sensemap sensestat framedb ontomap = do
-  let lmav = lma <> "-v"
-  si <- maybeToList (HM.lookup lmav sensemap)
-  s <- si^.inventory_senses
-  let sid = (lma,Verb, s^.sense_group <> "." <> s^.sense_n)
-  let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
-      txt_def = s^.sense_name
-      tframe = fromMaybe (Left FrameNone) $ do
-        lst <- HM.lookup lma ontomap
-        frtxt <- unFNFrame <$> lookup (s^.sense_group <> "." <> s^.sense_n) lst
-        case frtxt of
-          "copula"    -> return (Left FrameCopula)
-          "idioms"    -> return (Left FrameIdiom)
-          "lightverb" -> return (Left FrameLightVerb)
-          _ -> do
-            frame <- HM.lookup frtxt (framedb^.frameDB)
-            let fes = frame^..frame_FE.traverse
-                corefes = map (^.fe_name)
-                        . filter (\fe -> fe^.fe_coreType == Core || fe^.fe_coreType == CoreUnexpressed)
-                        $ fes
-                perifes = map (^.fe_name)
-                        . filter (\fe -> fe^.fe_coreType == Peripheral)
-                        $ fes
-            return (Right (TF frtxt corefes perifes))
-  return ((ONFNInstance sid txt_def tframe),num)
 
 
 
-getTopPatternsFromONFNInst :: [RoleInstance]
-                           -> [RolePattInstance Voice]
-                           -> (ONSenseFrameNetInstance,Int)
-                           -> [((RoleInstance,Int), [(ArgPattern () GRel,Int)])]
-getTopPatternsFromONFNInst rolemap subcats (inst,n) = do
-  let sid = inst^.onfn_senseID
-  rm <- filter (\rm -> rm^._1 == sid) rolemap
-  let subcats' = maybeToList (find ((== sid) . (^._1)) subcats)
-      toppatts_cut = cutHistogram thresholdPattStat . constructTopPatterns . (^._2) =<< subcats'
-  return ((rm,n),toppatts_cut)
 
 
 -- | Finding the structure of the sentence and formatting it.
@@ -189,15 +148,7 @@ sentStructure apredata taglst (i,midx,lmas,mptr) =
 
 verbStructure :: AnalyzePredata -> VerbProperty (Zipper '[Lemma]) -> VerbStructure
 verbStructure apredata vp =
-  let lma = vp^.vp_lemma.to unLemma
-      sensemap = apredata^.analyze_sensemap
-      sensestat = apredata^.analyze_sensestat
-      framedb = apredata^.analyze_framedb
-      ontomap = apredata^.analyze_ontomap
-      rolemap = apredata^.analyze_rolemap
-      subcats = apredata^.analyze_subcats
-
-      senses = getSenses lma sensemap sensestat framedb ontomap
-      rmtoppatts = do inst <- sortBy (flip compare `on` (^._2)) senses
-                      getTopPatternsFromONFNInst rolemap subcats inst
+  let (senses,rmtoppatts) = getVerbSenses apredata (vp^.vp_lemma)
   in VerbStructure vp senses rmtoppatts
+
+

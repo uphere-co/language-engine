@@ -7,7 +7,7 @@
 
 module SRL.Analyze.Type where
 
-import           Control.Lens                  -- ((^.),_2,makeLenses,makePrisms)
+import           Control.Lens
 import           Data.Aeson
 import           Data.Function                 (on)
 import           Data.HashMap.Strict           (HashMap)
@@ -39,14 +39,7 @@ data FrameMatchResult = FMR { _fmr_frame :: FNFrame
                             }
 
 makeLenses ''FrameMatchResult
-{- 
-type FrameMatchResult = (Range,VerbProperty (Zipper '[Lemma])
-                        ,FNFrame
-                        ,(SenseID,Bool)
-                        ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])
-                        ,[(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
-                        )
--}
+
 
 data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
                  , _adi_coref :: Maybe (Range,Range)

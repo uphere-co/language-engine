@@ -36,7 +36,10 @@ import           WordNet.Type                 (lex_word)
 import           WordNet.Type.POS             (POS(..))
 --
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
-import           SRL.Analyze.Type             (SentStructure,VerbStructure,FrameMatchResult(..)
+import           SRL.Analyze.Sense            (getVerbSenses)
+import           SRL.Analyze.Type             (SentStructure,VerbStructure,FrameMatchResult(..),AnalyzePredata(..)
+                                              ,ONSenseFrameNetInstance
+                                              ,analyze_wordnet
                                               ,ss_x'tr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp)
 --
@@ -441,10 +444,17 @@ extractNominalizedVerb wndb (Lemma lma) =
   in verbs
 
 
-matchNomFrame :: WordNetDB -> TaggedLemma '[Lemma] -> DetP '[Lemma] -> Maybe Text
-matchNomFrame wndb tagged dp = 
-  let test = do (b,e) <- dp^?complement._Just.headX.hn_range
-                guard (b==e)
-                lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
-                listToMaybe (extractNominalizedVerb wndb lma)
-  in test
+matchNomFrame :: -- WordNetDB
+              -- -> [(ArgPattern () GRel,Int)]
+                 AnalyzePredata
+              -> TaggedLemma '[Lemma]
+              -> DetP '[Lemma]
+              -> Maybe [(ONSenseFrameNetInstance,Int)] -- Text -- (FNFrame,Text)
+matchNomFrame apredata tagged dp = do
+  let wndb = apredata^.analyze_wordnet
+  (b,e) <- dp^?complement._Just.headX.hn_range
+  guard (b==e)
+  lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
+  verb <- listToMaybe (extractNominalizedVerb wndb lma)
+  let (senses,_) = getVerbSenses apredata lma
+  return senses
