@@ -17,7 +17,7 @@ import           Control.Monad                (guard)
 import           Data.Function                (on)
 import           Data.List                    (find,group,groupBy,sort,sortBy)
 import           Data.Maybe                   (catMaybes,fromMaybe,isNothing,listToMaybe,mapMaybe,maybeToList)
-import           Data.Monoid                  (First(..))
+import           Data.Monoid                  (First(..),(<>))
 import           Data.Text                    (Text)
 import qualified Data.Text               as T
 --
@@ -388,7 +388,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
              CompPP_DP dp    -> let rng'@(b',_) = dp^.maximalProjection
                                 in -- for the time being, use this ad hoc algorithm
                                    if fe /= fe' && rng `isInsideR` rng' && b /= b'
-                                   then let dp' = dp & (complement._Just.headX.hn_range .~  (b',b-1)) 
+                                   then let dp' = dp & (complement._Just.headX.hn_range .~  (b',b-1))
                                                      . (complement._Just.maximalProjection .~ (b,e))
                                                      . (maximalProjection .~ (b,e))
                                                      . (adjunct .~ [])
@@ -433,6 +433,12 @@ matchFrame (vstr,cp) = do
 
 
 
+renormalizeVerb :: Text -> Text
+renormalizeVerb vlma =
+  let n = T.length vlma
+      (ini,rest) = T.splitAt (n-3) vlma
+  in if rest == "ise" && n > 5 then ini<>"ize" else vlma
+
 
 extractNominalizedVerb :: WordNetDB -> Lemma -> [Lemma]
 extractNominalizedVerb wndb (Lemma lma) =
@@ -441,7 +447,8 @@ extractNominalizedVerb wndb (Lemma lma) =
         (_,lst) <- getDerivations wndb lma (xs,ptrs)
         (_,((pos,_),li_v)) <- lst
         guard (pos == POS_V)
-        return (Lemma (li_v^.lex_word))
+        let vlma = renormalizeVerb (li_v^.lex_word)
+        return (Lemma vlma)
   in verbs
 
 
@@ -481,9 +488,9 @@ matchNomFrame apredata tagged dp = do
                  _ -> Nothing
         let txt = T.intercalate " " (tokensByRange tagged rng)
         return (rng,txt)
-        
+
   verb <- listToMaybe (extractNominalizedVerb wndb lma)
-   
+
   let (senses,rmtoppatts) = getVerbSenses apredata verb
   (((sid,rolemap),_),patts) <- listToMaybe rmtoppatts
   frm <- lookup "frame" rolemap
