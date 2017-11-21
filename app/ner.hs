@@ -4,5 +4,5 @@ import NER
 
 main :: IO ()
 main = do
-  aliasFinder
-  -- parseCompany
+  nt <- loadNameTable 
+  parseCompany nt
