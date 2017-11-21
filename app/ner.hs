@@ -5,4 +5,4 @@ import NER
 main :: IO ()
 main = do
   aliasFinder
-  parseCompany
+  -- parseCompany

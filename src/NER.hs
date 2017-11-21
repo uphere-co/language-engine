@@ -32,5 +32,5 @@ parseCompany = do
 
 aliasFinder = do
   reprs <- LD.loadEntityReprs reprFileG
-  let namelist = (map (WD._repr . FF._repr) reprs)
-  print $ filter (\x -> T.isInfixOf "Apple" x) namelist
+  let namelist = map (\x -> ((WD._itemID . FF._uid) x,(WD._repr . FF._repr) x)) reprs
+  print $ filter (\(i,x) -> i == 312) namelist
