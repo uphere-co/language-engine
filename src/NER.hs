@@ -23,7 +23,7 @@ loadNameTable = do
 
 parseCompany nt = do
   let fp = "/home/modori/temp/companylist.csv"
-  txt' <- T.IO.readFile fp -- BL.readFile fp
+  txt' <- T.IO.readFile fp
   let tlines = T.lines txt'
       txt = T.intercalate "\n" $ map (T.reverse . (T.drop 2) . T.reverse) tlines
       bstr = BL8.pack $ T.unpack txt 
@@ -31,11 +31,9 @@ parseCompany nt = do
   case ecompany of
     Left err -> error err
     Right  v -> do
-      let -- w x = (T.tail . T.init) x 
-          ctable = V.toList v -- map (\(a,b,c,d,e,f,g,h) -> (w a,w b,w c,w d,w e,w f,w g,w h)) $ V.toList v
+      let ctable = V.toList v
       flip mapM_ ctable $ \(_,name,_,_,_,_,_,_) -> do
         print $ (name, aliasFinder nt name)
--- mkCompanyTable1 :: (Text,Text,Text,Text,Text,Text,Text,Text)
 
 uidFinder nt txt = fmap fst $ find (\(_,x) -> x == txt) nt
 
