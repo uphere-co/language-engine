@@ -46,7 +46,7 @@ data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
                  , _adi_compof :: Maybe (Range,Text)
                  , _adi_poss :: [(Range,Text)]
                  }
-
+            deriving Show
 
 makeLenses ''DPInfo
 

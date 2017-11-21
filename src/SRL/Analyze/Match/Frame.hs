@@ -19,6 +19,7 @@ import           Data.List                    (find,group,groupBy,sort,sortBy)
 import           Data.Maybe                   (catMaybes,fromMaybe,isNothing,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                  (First(..))
 import           Data.Text                    (Text)
+import qualified Data.Text               as T
 --
 import           Data.BitreeZipper            (current,extractZipperById)
 import           Data.Range                   (Range,isInside,isInsideR)
@@ -457,7 +458,7 @@ subjObj argpatt =
 matchNomFrame :: AnalyzePredata
               -> TaggedLemma '[Lemma]
               -> DetP '[Lemma]
-              -> Maybe (Lemma,Lemma,(FNFrame,Range),FNFrameElement,(FNFrameElement,DetP '[Lemma]))
+              -> Maybe (Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe (Range,Text)),(FNFrameElement,(Range,Text)))
                        --  RoleInstance
               -- -> Maybe ((RoleInstance,Int), [(ArgPattern () GRel, Int)]) --   [(ONSenseFrameNetInstance,Int)] -- Text -- (FNFrame,Text)
 matchNomFrame apredata tagged dp = do
@@ -468,8 +469,23 @@ matchNomFrame apredata tagged dp = do
   lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
   pp <- dp^?complement._Just.complement._Just._CompDP_PP
   guard (pp^.headX.hp_prep == Prep_WORD "of")
-  dp_obj <- pp^?complement._CompPP_DP
-  
+  -- dp_obj <- pp^?complement._CompPP_DP
+  rng_obj <- pp^?complement._CompPP_DP.maximalProjection
+  let txt_obj = let (b',e') = rng_obj
+                in T.intercalate " " (tokensByRange tagged (b'+1,e'))
+  let mrngtxt_subj :: Maybe (Range,Text)
+      mrngtxt_subj = do
+        rng <- case dp^.headX.hd_class of
+                 Pronoun pperson True -> dp^.headX.hd_range
+                 GenitiveClitic -> let specs :: [SpecDP]
+                                       specs = dp^.specifier
+                                       rngs :: [Range]
+                                       rngs = mapMaybe (^?_SpDP_Gen) specs
+                                   in listToMaybe rngs
+                 _ -> Nothing
+        let txt = T.intercalate " " (tokensByRange tagged rng)
+        return (rng,txt)
+        
   verb <- listToMaybe (extractNominalizedVerb wndb lma)
    
   let (senses,rmtoppatts) = getVerbSenses apredata verb
@@ -481,4 +497,4 @@ matchNomFrame apredata tagged dp = do
   (argo,_) <- mo
   subj <- FNFrameElement <$> lookup args rolemap
   obj  <- FNFrameElement <$> lookup argo rolemap
-  return (lma,verb,(FNFrame frm,rng_dp),subj,(obj,dp_obj))  --  senses,rmtoppatts
+  return (lma,verb,(FNFrame frm,rng_dp),(subj,mrngtxt_subj),(obj,(rng_obj,txt_obj)))  --  senses,rmtoppatts
