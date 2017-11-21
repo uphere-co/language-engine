@@ -26,7 +26,7 @@ import           WordNet.Query            (WordNetDB,getDerivations,lookupLemma)
 import           WordNet.Type             (lex_word)
 import           WordNet.Type.POS         (POS(..))
 --
-import           SRL.Analyze.Type         (DPInfo(..))
+import           SRL.Analyze.Type         (DPInfo(..),EntityInfo(..))
 --
 import Debug.Trace
 
@@ -45,8 +45,8 @@ pronounResolution x'tr dp = do
   cp <- currentCPDPPP w'' ^? _CPCase
   dp' <- cp^?complement.specifier.trResolved._Just._Right
   nclass <- dp'^?complement._Just.headX.hn_class._Just
-  if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,dp'^.maximalProjection) -- dp'^?complement._Just.headX.hn_range
-     | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp'^.maximalProjection) -- dp'^?complement._Just.headX.hn_range
+  if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,dp'^.maximalProjection)
+     | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp'^.maximalProjection)
      | otherwise -> Nothing
 
 
@@ -66,12 +66,12 @@ entityFromDP :: [X'Tree '[Lemma]]
              -> TaggedLemma '[Lemma] -> DetP '[Lemma]
              -> (Maybe Range,Text,DPInfo)
 entityFromDP x'tr tagged dp =
-  let rng = dp^.maximalProjection -- fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
+  let rng = dp^.maximalProjection
       headtxt = entityTextDP tagged dp
 
       mrngtxt' = do rng_sub <- listToMaybe (dp^..specifier.traverse._SpDP_Appos)
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
-                    return (rng_sub,txt_sub)
+                    return (EI rng_sub txt_sub)
       mcoref = pronounResolution x'tr dp
       mcomp = do CompDP_PP pp <- dp^?complement._Just.complement._Just
                  dp' <- pp^?complement._CompPP_DP
@@ -79,13 +79,13 @@ entityFromDP x'tr tagged dp =
                  guard (prep == Prep_WORD "of")
                  let rng_comp = dp'^.maximalProjection
                      txt_comp = headTextDP tagged dp'
-                 return (rng_comp,txt_comp)
+                 return (EI rng_comp txt_comp)
       mposs1 = do (_ptyp,True) <- dp^?headX.hd_class._Pronoun
                   rng_poss <- dp^.headX.hd_range
                   txt_poss <- determinerText tagged (dp^.headX)
-                  return (rng_poss,txt_poss)
+                  return (EI rng_poss txt_poss)
       mposs2 = do rng_poss <- listToMaybe (dp^..specifier.traverse._SpDP_Gen)
                   let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
-                  return (rng_poss,txt_poss)
+                  return (EI rng_poss txt_poss)
       poss = maybeToList mposs1 ++ maybeToList mposs2
   in (Just rng,headtxt,DI mrngtxt' mcoref mcomp poss)

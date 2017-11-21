@@ -32,10 +32,11 @@ import           SRL.Analyze.Match.Frame
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,SentStructure,AnalyzePredata
                                               ,PredicateInfo(..)
-                                              ,DPInfo(..)
+                                              ,DPInfo(..), EntityInfo(..)
                                               ,FrameMatchResult(..)
                                               ,analyze_wordnet
                                               ,adi_appos,adi_compof,adi_coref,adi_poss
+                                              ,ei_fullRange
                                               ,_PredAppos,_MGPredicate,ss_tagged
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
 
@@ -49,8 +50,8 @@ dependencyOfX'Tree (PL _)           = []
 
 mkEntityFun :: (Maybe Range,Text,DPInfo) -> [(Int -> MGVertex)]
 mkEntityFun (mrng,txt,di) =
-  let mkRel frm (rng',txt') = [ \i'  -> MGEntity i' (Just rng') txt' []
-                              , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
+  let mkRel frm (EI rng' txt') = [ \i'  -> MGEntity i' (Just rng') txt' []
+                                 , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
       compof = maybe [] (mkRel "Partitive") (di^.adi_compof)
       poss = concatMap (mkRel "Possession") (di^.adi_poss)
@@ -168,7 +169,8 @@ mkInnerDPEdges rngidxmap entities = do
         poss = concatMap (mkRelEdge "Possession" "Owner" mrng) (di^.adi_poss)
     (appos ++ compof ++ poss)
   where
-    mkRelEdge role1 role2 mrng (rng',_txt') = do
+    mkRelEdge role1 role2 mrng ei = do
+      let rng' = ei^.ei_fullRange
       -- (rng',_) <- maybeToList mrngtxt'
       i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
       i_1 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
