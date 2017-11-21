@@ -459,8 +459,6 @@ matchNomFrame :: AnalyzePredata
               -> TaggedLemma '[Lemma]
               -> DetP '[Lemma]
               -> Maybe (Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe (Range,Text)),(FNFrameElement,(Range,Text)))
-                       --  RoleInstance
-              -- -> Maybe ((RoleInstance,Int), [(ArgPattern () GRel, Int)]) --   [(ONSenseFrameNetInstance,Int)] -- Text -- (FNFrame,Text)
 matchNomFrame apredata tagged dp = do
   let rng_dp = dp^.maximalProjection
       wndb = apredata^.analyze_wordnet
@@ -469,7 +467,6 @@ matchNomFrame apredata tagged dp = do
   lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
   pp <- dp^?complement._Just.complement._Just._CompDP_PP
   guard (pp^.headX.hp_prep == Prep_WORD "of")
-  -- dp_obj <- pp^?complement._CompPP_DP
   rng_obj <- pp^?complement._CompPP_DP.maximalProjection
   let txt_obj = let (b',e') = rng_obj
                 in T.intercalate " " (tokensByRange tagged (b'+1,e'))
@@ -497,4 +494,4 @@ matchNomFrame apredata tagged dp = do
   (argo,_) <- mo
   subj <- FNFrameElement <$> lookup args rolemap
   obj  <- FNFrameElement <$> lookup argo rolemap
-  return (lma,verb,(FNFrame frm,rng_dp),(subj,mrngtxt_subj),(obj,(rng_obj,txt_obj)))  --  senses,rmtoppatts
+  return (lma,verb,(FNFrame frm,rng_dp),(subj,mrngtxt_subj),(obj,(rng_obj,txt_obj)))
