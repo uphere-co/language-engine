@@ -30,7 +30,7 @@ import           Lexicon.Format                          (formatArgPattStat,form
 import           Lexicon.Type                            (ArgPattern(..),RoleInstance,GRel(..)
                                                          ,FNFrame(..),FNFrameElement(..))
 import           NLP.Syntax.Format
-import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
+import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree,prettyPrint)
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
 import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),TaggedLemma,CP
                                                          ,headTextDP,headX,complement,maximalProjection
@@ -184,6 +184,7 @@ formatSentStructure :: Bool -> SentStructure -> [Text]
 formatSentStructure _showdetail (SentStructure i ptr _ _ _ _ vstrs) =
    let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                   , formatIndexTokensFromTree 0 ptr
+                  , prettyPrint 0 ptr
                   ]
        --subline1_1 = [ "--------------------------------------------------------------------------------------------------"
        --             , formatClauseStructure clausetr
