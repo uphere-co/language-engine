@@ -59,10 +59,10 @@ headTextDP tagged dp =
     _ -> T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
 
 
-headRangeDP :: TaggedLemma t -> DetP t -> Maybe Range
-headRangeDP tagged dp =
+headRangeDP :: DetP t -> Maybe Range
+headRangeDP dp =
   case dp^.headX.hd_class of
-    GenitiveClitic -> dp^?complement._Just.headX.hn_range  -- fromMaybe "" (fmap (headText tagged) (dp^.complement))
+    GenitiveClitic -> dp^?complement._Just.headX.hn_range
     _ -> let mrng_det = dp^.headX.hd_range
              mrng_np = dp^?complement._Just.headX.hn_range
          in case (mrng_det,mrng_np) of
