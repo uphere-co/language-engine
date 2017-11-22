@@ -59,6 +59,19 @@ headTextDP tagged dp =
     _ -> T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
 
 
+headRangeDP :: DetP t -> Maybe Range
+headRangeDP dp =
+  case dp^.headX.hd_class of
+    GenitiveClitic -> dp^?complement._Just.headX.hn_range
+    _ -> let mrng_det = dp^.headX.hd_range
+             mrng_np = dp^?complement._Just.headX.hn_range
+         in case (mrng_det,mrng_np) of
+              (Just (b_det,_), Just (_,e_np)) -> Just (b_det,e_np)
+              (Just rng_det  , Nothing      ) -> Just rng_det
+              (Nothing       , Just rng_np  ) -> Just rng_np
+              (Nothing       , Nothing      ) -> Nothing
+
+
 compVPToHeadText :: TaggedLemma t -> CompVP t -> Text
 compVPToHeadText _tagged (CompVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
 compVPToHeadText _tagged (CompVP_CP cp)        = cp^.maximalProjection.to (T.intercalate " " . map (tokenWord.snd) . toList . current)
@@ -80,5 +93,5 @@ compDPToRange (CompDP_PP pp) = pp^.maximalProjection
 
 
 compPPToRange :: CompPP t -> Range
-compPPToRange (CompPP_DP dp) = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
+compPPToRange (CompPP_DP dp) = dp^.maximalProjection -- fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
 compPPToRange (CompPP_Gerund z) = getRange (current z)
