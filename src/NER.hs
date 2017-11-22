@@ -28,12 +28,19 @@ loadNameHM = do
   let nameTable = map (\x -> ((WD._itemID . FF._uid) x, (WD._repr . FF._repr) x)) reprs
   return $ foldl' (\acc (i,n) -> HM.insert n i acc) HM.empty nameTable
 
+loadNameHM2 :: IO (HM.HashMap Int [Text])
+loadNameHM2 = do
+  reprs <- LD.loadEntityReprs reprFileG
+  let nameTable = map (\x -> ((WD._itemID . FF._uid) x, (WD._repr . FF._repr) x)) reprs
+  return $ foldl' (\acc (i,n) -> HM.insertWith (\xs1 -> (\xs2 -> xs1 ++ xs2)) i [n] acc) HM.empty nameTable
+
 -- loadUIDInfo :: IO (HM.HashMap Int Text)
 -- loadUIDInfo = do
   
   
 parseCompany nt = do
   nhm <- loadNameHM
+  nhm2 <- loadNameHM2
   let fp = "/home/modori/temp/companylist.csv"
   txt' <- T.IO.readFile fp
   let tlines = T.lines txt'
@@ -45,14 +52,13 @@ parseCompany nt = do
     Right  v -> do
       let ctable = V.toList v
       flip mapM_ ctable $ \c -> do
-        print $ HM.lookup (_name c) nhm 
+        print $ (_name c, aliasFinder nhm nhm2 (_name c))
       {- flip mapM_ ctable $ \(_,name,_,_,_,_,_,_) -> do
         print $ (name, aliasFinder nt name)
       -}
-uidFinder nt txt = fmap fst $ find (\(_,x) -> x == txt) nt
 
-aliasFinder nt txt =
-  let muid = uidFinder nt txt
+aliasFinder nhm nhm2 txt =
+  let muid = HM.lookup txt nhm
   in case muid of
-    Nothing  -> []
-    Just uid -> filter (\(i,_) -> i == uid) nt
+    Nothing  -> Nothing
+    Just uid -> HM.lookup uid nhm2 -- filter (\(i,_) -> i == uid) nhm
