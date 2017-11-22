@@ -40,7 +40,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,vm_headRangeToFullRange
                                               ,analyze_wordnet
                                               ,adi_appos,adi_compof,adi_coref,adi_poss
-                                              ,ei_fullRange
+                                              ,ei_fullRange,ei_headRange
                                               ,_PredAppos,_MGPredicate,ss_tagged
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
 
@@ -69,7 +69,9 @@ mkMGVertices :: ([X'Tree '[Lemma]],TaggedLemma '[Lemma],[(Range,Range)])
 
              -> ([MGVertex]
                 ,[(EntityInfo,DPInfo)]
-                ,[((Int,FNFrame,Text,[(FNFrameElement,(Bool,Range))]),MGVertex)])
+                ,[((Int,FNFrame,Text,[(FNFrameElement,(Bool,Range))]),MGVertex)]
+                ,[(Range,Range)]
+                )
 mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
   let preds = flip map matched $ \(rng,vprop,FMR frm _ _,sense) i
                                    -> MGPredicate i (Just rng) frm (PredVerb sense (simplifyVProp vprop))
@@ -122,8 +124,9 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
       iett_verbnom = zipWith ($) ettfunc_verbnom (enumFrom (n_ipreds+1))
       iett_prep = zipWith ($) ettfunc_prep (enumFrom (n_ipreds+n_ettverbnom+1))
       vertices = ipreds ++ iett_verbnom ++ (map snd iett_prep)
-
-  in (vertices,ett_verbnom,iett_prep)
+      headfull = do (ei,_) <- ett_verbnom
+                    return (ei^.ei_headRange,ei^.ei_fullRange)
+  in (vertices,ett_verbnom,iett_prep,headfull)
 
 
 mkRoleEdges :: VertexMap
@@ -132,9 +135,10 @@ mkRoleEdges :: VertexMap
 mkRoleEdges vmap  matched = do
   let rngidxmap = vmap^.vm_rangeToIndex
       depmap = vmap^.vm_rangeDependency
+      headfull = vmap^.vm_headRangeToFullRange
   (rng,_,FMR _ mselected _,_) <- matched
   i <- maybeToList (HM.lookup (0,Just rng) rngidxmap)   -- frame
-  (_,felst) <- trace ("\n\n\nmkRoleEdges: " ++ show (fmap (_2.traverse._2  %~ formatCompVP) mselected)) $ maybeToList mselected
+  (_,felst) <- maybeToList mselected
   (fe,x) <- felst
   (rng',mprep) <- case x of
                     CompVP_Unresolved _ -> []
@@ -146,7 +150,8 @@ mkRoleEdges vmap  matched = do
                                     in return (getRange (current z_cp),mprep)
                     CompVP_DP dp -> return ((dp^.maximalProjection),Nothing)
                     CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX.hp_prep._Prep_WORD)
-  i' <- maybeToList (HM.lookup (0,Just rng') rngidxmap)  -- frame element
+  let rng'full = fromMaybe rng' (lookup rng' headfull)
+  i' <- maybeToList (HM.lookup (0,Just rng'full) rngidxmap)  -- frame element
   let b = is _Just (find (== (rng',rng)) depmap)
   return (MGEdge fe b mprep i i')
 
@@ -243,15 +248,15 @@ meaningGraph apredata sstr =
       dps = x'tr^..traverse.to biList.traverse._2._DPCase
       nmatched = mapMaybe (matchNomFrame apredata tagged) dps
       --
-      (vertices,entities1_0,ientities2) = mkMGVertices (x'tr,tagged,depmap) (matched,nmatched)
+      (vertices,entities1_0,ientities2,headfull) = mkMGVertices (x'tr,tagged,depmap) (matched,nmatched)
       --
       rangeid :: MGVertex -> (Int,Maybe Range)
       rangeid mv = (if mv^?_MGPredicate._4._PredAppos == Just () then 1 else 0, mv^.mv_range)
       --
       rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
-      vmap = VertexMap rngidxmap depmap []
+      vmap = VertexMap rngidxmap depmap headfull
       edges = mkMGEdges vmap (matched,nmatched) (entities1_0,ientities2)
-  in MeaningGraph vertices edges
+  in trace ("\n\n\nheadfull = " ++ show headfull ++ "\n\n") $ MeaningGraph vertices edges
 
 
 isEntity :: MGVertex -> Bool
