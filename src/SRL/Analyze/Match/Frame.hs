@@ -432,7 +432,14 @@ matchFrame (vstr,cp) = do
   return (rng,vprop,FMR frame mselected subfrms,sense)
 
 
-
+--
+-- | Normalization of verb. Necessary for American-British English normalization.
+--   This was critical when finding the original form of the verb from deverbalized noun.
+--   For example, `criticism` is recognized as a derived noun form from the verb `criticise`
+--   from WordNet, but in PropBank, we have only `criticize` in American English -- from Wall Street Journal.
+--   Until we have a generic morphology mapping between American and British English, we should designate each
+--   case by explicit rules.
+--
 renormalizeVerb :: Text -> Text
 renormalizeVerb vlma =
   let n = T.length vlma
@@ -451,7 +458,11 @@ extractNominalizedVerb wndb (Lemma lma) =
         return (Lemma vlma)
   in verbs
 
-
+--
+-- | This is a simple utility function to extract subject and object only from a given verb subcategorization pattern.
+--   We use this for the following function `matchNomFrame` which identifies nominal frame by matching SpecDP to the
+--   subject and CompDP to the object of the corresponding verb to a given deverbalized noun.
+--
 subjObj argpatt =
   let m = catMaybes [ ("arg0",) <$> argpatt^.patt_arg0
                     , ("arg1",) <$> argpatt^.patt_arg1
@@ -473,6 +484,7 @@ matchNomFrame apredata tagged dp = do
   guard (b==e)
   lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
   pp <- dp^?complement._Just.complement._Just._CompDP_PP
+  -- For the time being, I identify nominal frame only for a noun phrase with of. Later, I will generalize it further.
   guard (pp^.headX.hp_prep == Prep_WORD "of")
   rng_obj <- pp^?complement._CompPP_DP.maximalProjection
   let txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
