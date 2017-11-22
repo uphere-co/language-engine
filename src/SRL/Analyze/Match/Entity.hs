@@ -64,28 +64,30 @@ entityTextDP tagged dp =
 
 entityFromDP :: [X'Tree '[Lemma]]
              -> TaggedLemma '[Lemma] -> DetP '[Lemma]
-             -> (Maybe Range,Text,DPInfo)
+             -> (EntityInfo,DPInfo)
 entityFromDP x'tr tagged dp =
   let rng = dp^.maximalProjection
+      rnghead = fromMaybe rng (headRangeDP dp)
       headtxt = entityTextDP tagged dp
 
       mrngtxt' = do rng_sub <- listToMaybe (dp^..specifier.traverse._SpDP_Appos)
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
-                    return (EI rng_sub txt_sub)
+                    return (EI rng_sub rng_sub txt_sub)                 -- for the time being
       mcoref = pronounResolution x'tr dp
       mcomp = do CompDP_PP pp <- dp^?complement._Just.complement._Just
                  dp' <- pp^?complement._CompPP_DP
                  let prep = pp^.headX.hp_prep
                  guard (prep == Prep_WORD "of")
                  let rng_comp = dp'^.maximalProjection
+                     rng_head_comp = fromMaybe rng_comp (headRangeDP dp')
                      txt_comp = headTextDP tagged dp'
-                 return (EI rng_comp txt_comp)
+                 return (EI rng_comp rng_head_comp txt_comp)
       mposs1 = do (_ptyp,True) <- dp^?headX.hd_class._Pronoun
                   rng_poss <- dp^.headX.hd_range
                   txt_poss <- determinerText tagged (dp^.headX)
-                  return (EI rng_poss txt_poss)
+                  return (EI rng_poss rng_poss txt_poss)
       mposs2 = do rng_poss <- listToMaybe (dp^..specifier.traverse._SpDP_Gen)
                   let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
-                  return (EI rng_poss txt_poss)
+                  return (EI rng_poss rng_poss txt_poss)
       poss = maybeToList mposs1 ++ maybeToList mposs2
-  in (Just rng,headtxt,DI mrngtxt' mcoref mcomp poss)
+  in (EI rng rnghead headtxt, DI mrngtxt' mcoref mcomp poss)
