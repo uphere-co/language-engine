@@ -11,43 +11,40 @@
 module SRL.Analyze.Match.Frame where
 
 import           Control.Applicative
-import           Control.Error.Safe           (rightMay,headErr)
 import           Control.Lens
 import           Control.Lens.Extras          (is)
 import           Control.Monad                (guard)
 import           Data.Function                (on)
-import qualified Data.HashMap.Strict    as HM
-import           Data.List                    (find,groupBy,sortBy)
-import           Data.Maybe                   (catMaybes,fromMaybe,isJust,isNothing,listToMaybe,mapMaybe,maybeToList)
+import           Data.List                    (find,group,groupBy,sort,sortBy)
+import           Data.Maybe                   (catMaybes,fromMaybe,isNothing,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                  (First(..),(<>))
-import qualified Data.Text              as T
 import           Data.Text                    (Text)
+import qualified Data.Text               as T
 --
-import           Data.Bitree                  (getRoot1)
 import           Data.BitreeZipper            (current,extractZipperById)
-import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
+import           Data.Range                   (Range,isInside,isInsideR)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (cpRange,constructCP,currentCPDPPP)
-import           NLP.Syntax.Format.Internal   (formatCompVP,formatPP)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs,intLemma0)
+import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
+import           WordNet.Query                (WordNetDB,lookupLemma,getDerivations)
+import           WordNet.Type                 (lex_word)
+import           WordNet.Type.POS             (POS(..))
 --
-import           SRL.Analyze.Match.Entity
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
-import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
-                                              ,SentStructure,VerbStructure
-                                              ,PredicateInfo(..)
-                                              ,_PredNoun,_MGPredicate
+import           SRL.Analyze.Sense            (getVerbSenses)
+import           SRL.Analyze.Type             (SentStructure,VerbStructure,FrameMatchResult(..),AnalyzePredata(..)
+                                              ,ONSenseFrameNetInstance
+                                              ,analyze_wordnet
                                               ,ss_x'tr,ss_tagged,ss_verbStructures
-                                              ,vs_roleTopPatts,vs_vp
-                                              ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
+                                              ,vs_roleTopPatts,vs_vp)
 --
-import Debug.Trace
+-- import Debug.Trace
 
 
 mkTriples :: SentStructure -> ([X'Tree '[Lemma]],[(VerbStructure, CP '[Lemma])])
@@ -391,7 +388,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
              CompPP_DP dp    -> let rng'@(b',_) = dp^.maximalProjection
                                 in -- for the time being, use this ad hoc algorithm
                                    if fe /= fe' && rng `isInsideR` rng' && b /= b'
-                                   then let dp' = dp & (complement._Just.headX.hn_range .~  (b',b-1)) 
+                                   then let dp' = dp & (complement._Just.headX.hn_range .~  (b',b-1))
                                                      . (complement._Just.maximalProjection .~ (b,e))
                                                      . (maximalProjection .~ (b,e))
                                                      . (adjunct .~ [])
@@ -413,12 +410,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
 
 
 matchFrame :: (VerbStructure,CP '[Lemma])
-           -> Maybe (Range,VerbProperty (Zipper '[Lemma])
-                    ,FNFrame
-                    ,(SenseID,Bool)
-                    ,Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])
-                    ,[(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
-                    )
+           -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,(SenseID,Bool))
 matchFrame (vstr,cp) = do
   let verbp = cp^.complement.complement
       mDP = cp^.complement.specifier.trResolved
@@ -437,7 +429,87 @@ matchFrame (vstr,cp) = do
                   ,(hasComplementizer ["if"]    , "if"    , ("Conditional_occurrence","Consequence","Profiled_possibility"))
                   ,(hasComplementizer ["unless"], "unless", ("Negative_conditional","Anti_consequence","Profiled_possibility"))
                   ]
-  return (rng,vprop,frame,sense,mselected,subfrms)
+  return (rng,vprop,FMR frame mselected subfrms,sense)
+
+
+--
+-- | Normalization of verb. Necessary for American-British English normalization.
+--   This was critical when finding the original form of the verb from deverbalized noun.
+--   For example, `criticism` is recognized as a derived noun form from the verb `criticise`
+--   from WordNet, but in PropBank, we have only `criticize` in American English -- from Wall Street Journal.
+--   Until we have a generic morphology mapping between American and British English, we should designate each
+--   case by explicit rules.
+--
+renormalizeVerb :: Text -> Text
+renormalizeVerb vlma =
+  let n = T.length vlma
+      (ini,rest) = T.splitAt (n-3) vlma
+  in if rest == "ise" && n > 5 then ini<>"ize" else vlma
+
+
+extractNominalizedVerb :: WordNetDB -> Lemma -> [Lemma]
+extractNominalizedVerb wndb (Lemma lma) =
+  let verbs = (map head . group . sort) $ do
+        (_,_,xs,ptrs,_) <- lookupLemma wndb POS_N lma
+        (_,lst) <- getDerivations wndb lma (xs,ptrs)
+        (_,((pos,_),li_v)) <- lst
+        guard (pos == POS_V)
+        let vlma = renormalizeVerb (li_v^.lex_word)
+        return (Lemma vlma)
+  in verbs
+
+--
+-- | This is a simple utility function to extract subject and object only from a given verb subcategorization pattern.
+--   We use this for the following function `matchNomFrame` which identifies nominal frame by matching SpecDP to the
+--   subject and CompDP to the object of the corresponding verb to a given deverbalized noun.
+--
+subjObj argpatt =
+  let m = catMaybes [ ("arg0",) <$> argpatt^.patt_arg0
+                    , ("arg1",) <$> argpatt^.patt_arg1
+                    , ("arg2",) <$> argpatt^.patt_arg2
+                    , ("arg3",) <$> argpatt^.patt_arg3
+                    , ("arg4",) <$> argpatt^.patt_arg4 ]
+  in (find (\(_,p) -> p == GR_NP (Just GASBJ)) m, find (\(_,p) -> p == GR_NP (Just GA1)) m)
 
 
 
+matchNomFrame :: AnalyzePredata
+              -> TaggedLemma '[Lemma]
+              -> DetP '[Lemma]
+              -> Maybe (Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe (Range,Text)),(FNFrameElement,(Range,Text)))
+matchNomFrame apredata tagged dp = do
+  let rng_dp = dp^.maximalProjection
+      wndb = apredata^.analyze_wordnet
+  (b,e) <- dp^?complement._Just.headX.hn_range
+  guard (b==e)
+  lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
+  pp <- dp^?complement._Just.complement._Just._CompDP_PP
+  -- For the time being, I identify nominal frame only for a noun phrase with of. Later, I will generalize it further.
+  guard (pp^.headX.hp_prep == Prep_WORD "of")
+  rng_obj <- pp^?complement._CompPP_DP.maximalProjection
+  let txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
+  let mrngtxt_subj :: Maybe (Range,Text)
+      mrngtxt_subj = do
+        rng <- case dp^.headX.hd_class of
+                 Pronoun pperson True -> dp^.headX.hd_range
+                 GenitiveClitic -> let specs :: [SpecDP]
+                                       specs = dp^.specifier
+                                       rngs :: [Range]
+                                       rngs = mapMaybe (^?_SpDP_Gen) specs
+                                   in listToMaybe rngs
+                 _ -> Nothing
+        let txt = T.intercalate " " (tokensByRange tagged rng)
+        return (rng,txt)
+
+  verb <- listToMaybe (extractNominalizedVerb wndb lma)
+
+  let (senses,rmtoppatts) = getVerbSenses apredata verb
+  (((sid,rolemap),_),patts) <- listToMaybe rmtoppatts
+  frm <- lookup "frame" rolemap
+  patt <- listToMaybe patts
+  let (ms,mo) = subjObj (patt^._1)
+  (args,_) <- ms
+  (argo,_) <- mo
+  subj <- FNFrameElement <$> lookup args rolemap
+  obj  <- FNFrameElement <$> lookup argo rolemap
+  return (lma,verb,(FNFrame frm,rng_dp),(subj,mrngtxt_subj),(obj,(rng_obj,txt_obj)))

@@ -8,12 +8,11 @@ module SRL.Analyze.Match.Entity where
 
 import           Control.Lens
 import           Control.Lens.Extras      (is)
-import           Control.Monad            (guard,mzero)
+import           Control.Monad            (guard)
 import           Data.Foldable            (foldMap)
 import           Data.List                (group,sort)
 import           Data.Maybe               (fromMaybe,listToMaybe,maybeToList)
 import           Data.Monoid              ((<>),First(..))
-import           Data.List                (find)
 import           Data.Text                (Text)
 import qualified Data.Text           as T
 --
@@ -28,13 +27,14 @@ import           WordNet.Type             (lex_word)
 import           WordNet.Type.POS         (POS(..))
 --
 import           SRL.Analyze.Type         (DPInfo(..))
+--
+import Debug.Trace
 
 
 pronounResolution :: [X'Tree '[Lemma]]
-                  -> TaggedLemma '[Lemma]
                   -> DetP '[Lemma]
                   -> Maybe (Range,Range)
-pronounResolution x'tr tagged dp = do
+pronounResolution x'tr dp = do
   let rng_dp = dp^.maximalProjection
   rng_pro <- dp^.headX.hd_range
   prnclass <- dp^?headX.hd_class._Pronoun._1
@@ -62,37 +62,17 @@ entityTextDP tagged dp =
 
 
 
-extractNominalizedVerb wndb (Lemma lma) =
-  let verbs = (map head . group . sort) $ do
-        (_,_,xs,ptrs,_) <- lookupLemma wndb POS_N lma
-        (_,lst) <- getDerivations wndb lma (xs,ptrs)
-        (_,((pos,_),li_v)) <- lst
-        guard (pos == POS_V)
-        return (li_v^.lex_word)
-  in verbs
-
-
-entityFromDP :: WordNetDB
-             -> [X'Tree '[Lemma]]
+entityFromDP :: [X'Tree '[Lemma]]
              -> TaggedLemma '[Lemma] -> DetP '[Lemma]
              -> (Maybe Range,Text,DPInfo)
-entityFromDP wndb x'tr tagged dp =
-  let test = do rnghead@(b,e) <- dp^?complement._Just.headX.hn_range
-                guard (b==e)
-                lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i `isInside` rng))._2._1)
-                let rs = extractNominalizedVerb wndb lma
-                return rs
-                -- (return . map (^._2._1) . filter ) ()
-
-
-
-      rng = fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
+entityFromDP x'tr tagged dp =
+  let rng = dp^.maximalProjection -- fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
       headtxt = entityTextDP tagged dp
 
       mrngtxt' = do rng_sub <- listToMaybe (dp^..specifier.traverse._SpDP_Appos)
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (rng_sub,txt_sub)
-      mcoref = pronounResolution x'tr tagged dp
+      mcoref = pronounResolution x'tr dp
       mcomp = do CompDP_PP pp <- dp^?complement._Just.complement._Just
                  dp' <- pp^?complement._CompPP_DP
                  let prep = pp^.headX.hp_prep
@@ -100,12 +80,11 @@ entityFromDP wndb x'tr tagged dp =
                  let rng_comp = dp'^.maximalProjection
                      txt_comp = headTextDP tagged dp'
                  return (rng_comp,txt_comp)
-      mposs1 = do (ptyp,True) <- dp^?headX.hd_class._Pronoun
+      mposs1 = do (_ptyp,True) <- dp^?headX.hd_class._Pronoun
                   rng_poss <- dp^.headX.hd_range
                   txt_poss <- determinerText tagged (dp^.headX)
                   return (rng_poss,txt_poss)
-      mposs2 = do -- dp^?headX.hd_class._GenitiveClitic
-                  rng_poss <- listToMaybe (dp^..specifier.traverse._SpDP_Gen)
+      mposs2 = do rng_poss <- listToMaybe (dp^..specifier.traverse._SpDP_Gen)
                   let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
                   return (rng_poss,txt_poss)
       poss = maybeToList mposs1 ++ maybeToList mposs2

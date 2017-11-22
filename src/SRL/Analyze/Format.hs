@@ -9,6 +9,7 @@
 module SRL.Analyze.Format where
 
 import           Control.Lens                            ((^..),(^.),(^?),_1,_2,_3,_Just,_Right,to)
+import           Control.Lens.Extras                     (is)
 import           Data.Foldable
 import           Data.List                               (intercalate,intersperse)
 import           Data.Maybe                              (fromMaybe,mapMaybe)
@@ -21,7 +22,6 @@ import qualified Data.Text.IO                    as T.IO
 
 import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat,render)
 import           Text.Printf                             (printf)
-
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens')
 import           Data.BitreeZipper
@@ -31,10 +31,9 @@ import           Lexicon.Type                            (ArgPattern(..),RoleIns
                                                          ,FNFrame(..),FNFrameElement(..))
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree)
-import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),TaggedLemma,X'Tree,CP
-                                                         ,headText,headTextDP,headX,complement,maximalProjection
+import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),TaggedLemma,CP
+                                                         ,headTextDP,headX,complement,maximalProjection
                                                          ,hp_prep,hp_pclass)
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
@@ -47,7 +46,8 @@ import           SRL.Analyze.Match.Frame                 (matchFrame)
 import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
                                                          ,DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,MGEdge(..),MGVertex(..),MeaningGraph
-                                                         ,PredicateInfo(..)
+                                                         ,PredicateInfo(..),FrameMatchResult(..)
+                                                         ,_MGPredicate,_MGEntity
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
                                                          ,onfn_senseID,onfn_definition,onfn_frame
@@ -181,7 +181,7 @@ formatDocStructure showdetail (DocStructure mtokenss sentitems mergedtags sstrs)
 
 
 formatSentStructure :: Bool -> SentStructure -> [Text]
-formatSentStructure showdetail (SentStructure i ptr _ x'tr _ tagged vstrs) =
+formatSentStructure _showdetail (SentStructure i ptr _ _ _ _ vstrs) =
    let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                   , formatIndexTokensFromTree 0 ptr
                   ]
@@ -189,12 +189,12 @@ formatSentStructure showdetail (SentStructure i ptr _ x'tr _ tagged vstrs) =
        --             , formatClauseStructure clausetr
        --             , "================================================================================================="
        --             ]
-       subline2 = map (formatVerbStructure tagged x'tr) vstrs
+       subline2 = map formatVerbStructure vstrs
    in subline1 ++ {- (if showdetail then subline1_1 else []) ++ -} concat subline2
 
 
-formatVerbStructure :: TaggedLemma '[Lemma] -> [X'Tree '[Lemma]] -> VerbStructure -> [Text]
-formatVerbStructure tagged x'tr (VerbStructure vp senses mrmmtoppatts) =
+formatVerbStructure :: VerbStructure -> [Text]
+formatVerbStructure (VerbStructure vp senses mrmmtoppatts) =
   [--  formatVPwithPAWS tagged clausetr x'tr vp
     T.pack (printf "Verb: %-20s" (vp^.vp_lemma.to unLemma))
   , T.pack (formatSenses False senses mrmmtoppatts)
@@ -228,7 +228,7 @@ showMatchedFrame :: TaggedLemma '[Lemma]
                  -> IO ()
 showMatchedFrame tagged (vstr,cp) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame (vstr,cp)) $ \(rng,_,frame,_,mselected,_) -> do
+  flip traverse_ (matchFrame (vstr,cp)) $ \(rng,_,FMR frame mselected _,_) -> do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> unFNFrame frame)
@@ -253,46 +253,53 @@ formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}]
     format fmt ps = T.L.toStrict (T.F.format fmt ps)
 
 
-formatMGVerb :: MGVertex -> Maybe (Int,Text)
-formatMGVerb (MGEntity    _ _ _ _) = Nothing
-formatMGVerb (MGPredicate i _ f (PredVerb _ v))
-  = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-             "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
-             "<tr>" <>
-             "<td width=\"20\">" <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> "</td>" <>
-             "<td width=\"20\">" <> fromMaybe "" (v^?vp_negation._Just._1)           <> "</td>" <>
-             "<td>" <> v^.vp_lemma.to unLemma                           <> "</td>" <>
-             "<td>" <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect) <> "</td>" <>
-             "</tr>" <>
-             "</table>" )
-formatMGVerb (MGPredicate i _ f (PredPrep p))
-  = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-             "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
-             "<tr>" <>
-             "<td width=\"20\">" <>          " </td>" <>
-             "<td width=\"20\">" <>          " </td>" <>
-             "<td>"              <> p      <> "</td>" <>
-             "<td>"              <> "prep" <> "</td>" <>
-             "</tr>" <>
-             "</table>" )
-formatMGVerb (MGPredicate i _ f PredNoun)
-  = Just (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-             "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
-             "<tr>" <>
-             "<td width=\"20\">" <> " </td>" <>
-             "<td width=\"20\">" <> " </td>" <>
-             "<td> </td>" <>
-             "<td> Nom.Mod </td>" <>
-             "</tr>" <>
-             "</table>" )
+formatMGVertex :: MGVertex -> (Int,Text)
+formatMGVertex (MGPredicate i _ f (PredVerb _ v))
+  = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+        "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
+        "<tr>" <>
+        "<td width=\"20\">" <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> "</td>" <>
+        "<td width=\"20\">" <> fromMaybe "" (v^?vp_negation._Just._1)           <> "</td>" <>
+        "<td>" <> v^.vp_lemma.to unLemma                           <> "</td>" <>
+        "<td>" <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect) <> "</td>" <>
+        "</tr>" <>
+        "</table>" )
+formatMGVertex (MGPredicate i _ f (PredPrep p))
+  = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+        "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
+        "<tr>" <>
+        "<td width=\"20\">" <>          " </td>" <>
+        "<td width=\"20\">" <>          " </td>" <>
+        "<td>"              <> p      <> "</td>" <>
+        "<td>"              <> "prep" <> "</td>" <>
+        "</tr>" <>
+        "</table>" )
+formatMGVertex (MGPredicate i _ f (PredNominalized n _))
+  = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+        "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
+        "<tr>" <>
+        "<td width=\"20\">" <> " </td>" <>
+        "<td width=\"20\">" <> " </td>" <>
+        "<td>"              <> unLemma n <> " </td>" <>
+        "<td> Nom.Deverb </td>" <>
+        "</tr>" <>
+        "</table>" )
+formatMGVertex (MGPredicate i _ f PredAppos)
+  = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+        "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
+        "<tr>" <>
+        "<td width=\"20\">" <> " </td>" <>
+        "<td width=\"20\">" <> " </td>" <>
+        "<td> </td>" <>
+        "<td> Nom.Appos </td>" <>
+        "</tr>" <>
+        "</table>" )
+formatMGVertex (MGEntity i _ t ns)
+  = (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
+       "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
+       T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>
+       "</table>")
 
-
-formatMGEntity :: MGVertex -> Maybe (Int,Text)
-formatMGEntity (MGEntity i _ t ns)   = Just (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
-                                               "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
-                                               T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>
-                                               "</table>")
-formatMGEntity (MGPredicate _ _ _ _) = Nothing
 
 
 
@@ -301,8 +308,8 @@ dotMeaningGraph title mg = format "digraph G {\n  {}\n  {}\n  {}\n}" (vtxt,etxt,
   where
     format fmt ps = T.L.toStrict (T.F.format fmt ps)
     vtxt = let vertices = mg^.mg_vertices
-               verbs = mapMaybe formatMGVerb vertices
-               entities = mapMaybe formatMGEntity vertices
+               verbs = (map formatMGVertex . filter (is _MGPredicate)) vertices
+               entities = (map formatMGVertex . filter (is _MGEntity)) vertices
 
            in (T.intercalate "\n  " . map (\(i,t) -> format "i{} [shape=plaintext, margin=0, style=filled, fillcolor=grey label=<{}>];" (i,t))) verbs <>  "\n  " <>
               (T.intercalate "\n  " . map (\(i,t) -> format "i{} [shape=plaintext, margin=0, label=<{}>];" (i,t))) entities
@@ -310,5 +317,3 @@ dotMeaningGraph title mg = format "digraph G {\n  {}\n  {}\n  {}\n}" (vtxt,etxt,
     etxt = let edges = mg^.mg_edges in (T.intercalate "\n  " . map formatMGEdge) edges
     --
     ttxt = "labelloc=\"t\"; \n " <> "label=\"" <> title <> "\"; \n "
-
-

@@ -6,9 +6,9 @@
 module SRL.Analyze.ARB where
 
 import           Control.Applicative       ((<|>))
-import           Control.Lens              -- ((^.),to)
-import Control.Lens.Extras
-import Data.List
+import           Control.Lens
+import           Control.Lens.Extras
+import           Data.List
 import           Control.Monad.Loops       (unfoldM)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -87,8 +87,10 @@ isSubject rolemap frame (Just (sense,cause)) rel =
 findRel :: [MGEdge] -> Int -> Int -> Maybe MGEdge
 findRel mes i j = find (\me -> (me ^. me_start) == i && (me ^. me_end) == j) mes
 
+
 findVertex :: [MGVertex] -> Int -> Maybe MGVertex
 findVertex mvs i = find (\mv -> (mv ^. mv_id) == i) mvs
+
 
 findLabel :: [MGVertex] -> Int -> Maybe Text
 findLabel mvs i = do
@@ -98,14 +100,15 @@ findLabel mvs i = do
     MGPredicate {..}        -> case _mv_pred_info of
                                  PredVerb _ vrb -> Just (vrb ^. vp_lemma . to unLemma)
                                  PredPrep p     -> Just p
-                                 PredNoun       -> Just (unFNFrame _mv_frame)
+                                 PredNominalized n _ -> Just (unLemma n)
+                                 PredAppos      -> Just (unFNFrame _mv_frame)
 
 
 findSubjectObjects :: ([RoleInstance],MeaningGraph,Graph)
                    -> Vertex
                    -> MaybeT (State [Vertex]) ARB
 findSubjectObjects (rolemap,mg,grph) frmid = do
-  let children = grph ! frmid
+  let chldrn = grph ! frmid
   v <- hoistMaybe $ findVertex (mg^.mg_vertices) frmid
   (frmtxt,msense,mneg) <- case v of
                             MGEntity           {..} -> hoistMaybe Nothing
@@ -113,9 +116,10 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
                               case _mv_pred_info of
                                 PredVerb sns vrb -> return (unFNFrame _mv_frame,Just sns,vrb^.vp_negation)
                                 PredPrep _       -> return (unFNFrame _mv_frame,Nothing,Nothing)
-                                PredNoun         -> return (unFNFrame _mv_frame,Nothing,Nothing)
+                                PredNominalized _ _ -> return (unFNFrame _mv_frame,Nothing,Nothing)
+                                PredAppos        -> return (unFNFrame _mv_frame,Nothing,Nothing)
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
-  let rels = mapMaybe (findRel (mg^.mg_edges) frmid) children
+  let rels = mapMaybe (findRel (mg^.mg_edges) frmid) chldrn
   (sidx,subject) <- hoistMaybe $ do
                       e <- find (\e -> isSubject rolemap (FNFrame frmtxt) msense (e^.me_relation)) rels
                       let sidx = e^.me_end
