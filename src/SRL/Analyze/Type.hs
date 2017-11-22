@@ -33,6 +33,14 @@ import           OntoNotes.Type.SenseInventory (Inventory)
 --
 
 
+data EntityInfo = EI { _ei_fullRange :: Range
+                     , _ei_headRange :: Range
+                     , _ei_text      :: Text
+                     }
+                deriving Show
+
+makeLenses ''EntityInfo
+
 data FrameMatchResult = FMR { _fmr_frame :: FNFrame
                             , _fmr_roles :: Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])
                             , _fmr_subframes :: [(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
@@ -41,10 +49,10 @@ data FrameMatchResult = FMR { _fmr_frame :: FNFrame
 makeLenses ''FrameMatchResult
 
 
-data DPInfo = DI { _adi_appos :: Maybe (Range,Text)
+data DPInfo = DI { _adi_appos :: Maybe EntityInfo
                  , _adi_coref :: Maybe (Range,Range)
-                 , _adi_compof :: Maybe (Range,Text)
-                 , _adi_poss :: [(Range,Text)]
+                 , _adi_compof :: Maybe EntityInfo
+                 , _adi_poss :: [EntityInfo]
                  }
             deriving Show
 
@@ -153,6 +161,7 @@ makePrisms ''PredicateInfo
 
 data MGVertex = MGEntity    { _mv_id :: Int
                             , _mv_range :: Maybe Range
+                            , _mv_head_range :: Maybe Range
                             , _mv_text :: Text
                             , _mv_resolved_entities :: [Text]   -- resolved named entity candidates
                             }

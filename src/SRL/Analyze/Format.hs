@@ -294,7 +294,7 @@ formatMGVertex (MGPredicate i _ f PredAppos)
         "<td> Nom.Appos </td>" <>
         "</tr>" <>
         "</table>" )
-formatMGVertex (MGEntity i _ t ns)
+formatMGVertex (MGEntity i _ _ t ns)
   = (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
        "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
        T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>

@@ -39,7 +39,7 @@ import           WordNet.Type.POS             (POS(..))
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Sense            (getVerbSenses)
 import           SRL.Analyze.Type             (SentStructure,VerbStructure,FrameMatchResult(..),AnalyzePredata(..)
-                                              ,ONSenseFrameNetInstance
+                                              ,ONSenseFrameNetInstance,EntityInfo(..)
                                               ,analyze_wordnet
                                               ,ss_x'tr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp)
@@ -476,7 +476,7 @@ subjObj argpatt =
 matchNomFrame :: AnalyzePredata
               -> TaggedLemma '[Lemma]
               -> DetP '[Lemma]
-              -> Maybe (Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe (Range,Text)),(FNFrameElement,(Range,Text)))
+              -> Maybe (Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe EntityInfo),(FNFrameElement,EntityInfo))
 matchNomFrame apredata tagged dp = do
   let rng_dp = dp^.maximalProjection
       wndb = apredata^.analyze_wordnet
@@ -488,8 +488,8 @@ matchNomFrame apredata tagged dp = do
   guard (pp^.headX.hp_prep == Prep_WORD "of")
   rng_obj <- pp^?complement._CompPP_DP.maximalProjection
   let txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
-  let mrngtxt_subj :: Maybe (Range,Text)
-      mrngtxt_subj = do
+  let mei_subj :: Maybe EntityInfo
+      mei_subj = do
         rng <- case dp^.headX.hd_class of
                  Pronoun pperson True -> dp^.headX.hd_range
                  GenitiveClitic -> let specs :: [SpecDP]
@@ -499,7 +499,7 @@ matchNomFrame apredata tagged dp = do
                                    in listToMaybe rngs
                  _ -> Nothing
         let txt = T.intercalate " " (tokensByRange tagged rng)
-        return (rng,txt)
+        return (EI rng rng txt)
 
   verb <- listToMaybe (extractNominalizedVerb wndb lma)
 
@@ -512,4 +512,4 @@ matchNomFrame apredata tagged dp = do
   (argo,_) <- mo
   subj <- FNFrameElement <$> lookup args rolemap
   obj  <- FNFrameElement <$> lookup argo rolemap
-  return (lma,verb,(FNFrame frm,rng_dp),(subj,mrngtxt_subj),(obj,(rng_obj,txt_obj)))
+  return (lma,verb,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj txt_obj)))
