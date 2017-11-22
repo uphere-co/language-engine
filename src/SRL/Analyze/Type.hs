@@ -147,6 +147,19 @@ instance FromJSON DocAnalysisInput where
   parseJSON = genericParseJSON defaultOptions
 
 
+
+
+
+
+data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Maybe Range) Int
+                           , _vm_rangeDependency :: [(Range,Range)]
+                           , _vm_headRangeToFullRange :: [(Range,Range)]
+                           }
+               deriving Show
+
+makeLenses ''VertexMap
+
+
 data PredicateInfo = PredVerb { _pi_sense :: (SenseID,Bool)  -- ^ (ON sense ID, causation)
                               , _pi_verb  :: VerbProperty Text
                               }
