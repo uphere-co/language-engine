@@ -196,6 +196,16 @@ prepComplement
     , [TagPos (TokIdx 0, TokIdx 2, MarkTime)]
     )
 
+rrc_passive_2 :: TestVerbComplement
+rrc_passive_2
+  = ( "SF Motors Inc has bought an EV and battery tech firm headed by former Tesla Inc executive Martin Eberhard for $33 million."
+    , 4
+    , (("SF Motors Inc",Just NoDet), ["an EV and battery tech firm", "$ 33 million"], [])
+    , [(0,("SF","SF")),(1,("Motors","Motors")),(2,("Inc","Inc")),(3,("have","has")),(4,("buy","bought")),(5,("a","an")),(6,("ev","EV")),(7,("and","and")),(8,("battery","battery")),(9,("tech","tech")),(10,("firm","firm")),(11,("head","headed")),(12,("by","by")),(13,("former","former")),(14,("Tesla","Tesla")),(15,("Inc","Inc")),(16,("executive","executive")),(17,("Martin","Martin")),(18,("Eberhard","Eberhard")),(19,("for","for")),(20,("$","$")),(21,("33","33")),(22,("million","million")),(23,(".","."))]
+    , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","SF"),PL ("NNPS","Motors"),PL ("NNP","Inc")],PN "VP" [PL ("VBZ","has"),PN "VP" [PL ("VBN","bought"),PN "NP" [PN "NP" [PL ("DT","an"),PL ("NN","EV"),PL ("CC","and"),PL ("NN","battery"),PL ("NN","tech"),PL ("NN","firm")],PN "VP" [PL ("VBN","headed"),PN "PP" [PL ("IN","by"),PN "NP" [PL ("JJ","former"),PL ("NNP","Tesla"),PL ("NNP","Inc"),PL ("NN","executive"),PL ("NNP","Martin"),PL ("NNP","Eberhard")]]]],PN "PP" [PL ("IN","for"),PN "NP" [PN "QP" [PL ("$","$"),PL ("CD","33"),PL ("CD","million")]]]]],PL (".",".")]]
+    , [TagPos (TokIdx 0, TokIdx 3, MarkEntity Org), TagPos (TokIdx 17,TokIdx 19, MarkEntity Person) ]
+    )
+
 
 checkSubjCompAdjunct :: TestVerbComplement -> Bool
 checkSubjCompAdjunct c = fromMaybe False $ do
@@ -205,8 +215,6 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
 
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-  -- paws <- findPAWS tagged clausetr vp x'tr
-  -- let cp = paws^.pa_CP
       -- test subjects
   cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                              -- anyway need to be rewritten.
@@ -220,18 +228,15 @@ checkSubjCompAdjunct c = fromMaybe False $ do
                  case subj_test^._2 of
                    Nothing -> return (stxt == subj_test^._1)
                    Just c -> return (stxt == subj_test^._1 && sclass == Just c)
-      -- b_subj = subj == Just subj_test
       -- test complements
-      -- lst_comps :: [Maybe Text]
       lst_comps = cp^..complement.complement.complement.traverse.trResolved.to (fmap (compVPToHeadText tagged))
-      -- lst_comps_test :: [Text]
       lst_comps_test = c^._3._2
       b_comps = getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst_comps lst_comps_test)) && (length lst_comps == length lst_comps_test)
       -- test adjuncts
       lst_adjs = cp^..complement.complement.adjunct.traverse.to (getTokens.current)
       lst_adjs_test = c^._3._3
       b_adjuncts = lst_adjs == lst_adjs_test
-  return (b_subj && b_comps && b_adjuncts)
+  trace ("\n\ncheckSubjCompAdjunct::" ++ show lst_comps) $ return (b_subj && b_comps && b_adjuncts)
 
 
 testcases :: [TestVerbComplement] -- [(Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)]
@@ -249,6 +254,7 @@ testcases = [ -- main_finite_1
             , complexNP
             , complexNP_2
             , prepComplement
+            , rrc_passive_2
             ]
 
 unitTests :: TestTree
