@@ -104,6 +104,16 @@ test_paren_modifier_2 =
   , [TagPos (TokIdx 7, TokIdx 9, MarkEntity Org)]
   )
 
+-- |
+test_paren_modifier_3 :: TestNoun
+test_paren_modifier_3 =
+  ( "SF Motors Inc, a California-based electric vehicle unit of China's Chongqing Sokon Industry Group Co Ltd,"
+  , ("",Just "SF Motors Inc",["a California-based electric vehicle unit of China 's Chongqing Sokon Industry Group Co Ltd"],Nothing,[])
+  , [(0,("SF","SF")),(1,("Motors","Motors")),(2,("Inc","Inc")),(3,(",",",")),(4,("a","a")),(5,("california-based","California-based")),(6,("electric","electric")),(7,("vehicle","vehicle")),(8,("unit","unit")),(9,("of","of")),(10,("China","China")),(11,("'s","'s")),(12,("Chongqing","Chongqing")),(13,("Sokon","Sokon")),(14,("Industry","Industry")),(15,("Group","Group")),(16,("Co","Co")),(17,("Ltd","Ltd")),(18,(",",","))]
+  , PN "NP" [PN "NP" [PL ("NNP","SF"),PL ("NNPS","Motors"),PL ("NNP","Inc")],PL (",",","),PN "NP" [PN "NP" [PL ("DT","a"),PL ("JJ","California-based"),PL ("JJ","electric"),PL ("NN","vehicle"),PL ("NN","unit")],PN "PP" [PL ("IN","of"),PN "NP" [PN "NP" [PL ("NNP","China"),PL ("POS","'s")],PL ("NNP","Chongqing"),PL ("NNP","Sokon"),PL ("NNP","Industry"),PL ("NNP","Group"),PL ("NNP","Co"),PL ("NNP","Ltd")]]],PL (",",",")]
+  , [TagPos (TokIdx 0,TokIdx 3,MarkEntity Org)]
+  )
+
 
 -- |
 test_prep_modifier_1 :: TestNoun
@@ -199,6 +209,7 @@ testcases = [ test_bare_noun_modifier_1
             , test_bare_noun_modifier_4
             , test_paren_modifier_1
             , test_paren_modifier_2
+            , test_paren_modifier_3
             , test_prep_modifier_1
             , test_prep_modifier_2
             , test_prep_modifier_3
