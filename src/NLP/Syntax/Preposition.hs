@@ -18,7 +18,7 @@ import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
-import           NLP.Syntax.Type.XBar    (Zipper,NounP,DetP,CompVP(..)
+import           NLP.Syntax.Type.XBar    (Zipper,NounP,DetP,CompVP(..),AdjunctVP(..)
                                          ,Prep(..),PrepClass(..),PP,_CompPP_DP
                                          ,TaggedLemma(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
@@ -65,7 +65,7 @@ checkTimePrep tagged pp = fromMaybe (CompVP_PP pp) $ do
 
 identifyInternalTimePrep :: TaggedLemma t
                          -> DetP t
-                         -> (DetP t,[Zipper t])
+                         -> (DetP t,[AdjunctVP t])
 identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   let rng_dp@(b_dp,_e_dp) = dp^.maximalProjection
   TagPos (b0,e0,_)
@@ -79,7 +79,7 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   (b_h,e_h) <- dp^?complement._Just.headX.hn_range
   let rng_head = if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
       dp' = dp & (maximalProjection .~ rng_dp') . (complement._Just.headX.hn_range .~ rng_head) . (complement._Just.maximalProjection .~ rng_dp')
-  return (dp',[z_tpp])
+  return (dp',[AdjunctVP_Unresolved z_tpp])
 
 
 --

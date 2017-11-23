@@ -68,7 +68,7 @@ findPAWS tagged tr vp x'tr = do
                                            -- anyway need to be rewritten.
   let rng = cpRange cp
   cp' <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
-  predicateArgWS tagged cp' <$> findVerb (vp^.vp_index) tr <*> pure (cp' ^. complement.complement.adjunct)
+  predicateArgWS tagged cp' <$> findVerb (vp^.vp_index) tr <*> pure (cp' ^.. complement.complement.adjunct.traverse._AdjunctVP_Unresolved)
 
 
 ---------

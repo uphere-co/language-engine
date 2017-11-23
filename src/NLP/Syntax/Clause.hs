@@ -96,15 +96,15 @@ complementsOfVerb :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                      TaggedLemma t
                   -> VerbProperty (Zipper t)
                   -> Zipper t
-                  -> ([TraceChain (CompVP t)],Maybe (TraceChain (CompVP t)), [Zipper t])
+                  -> ([TraceChain (CompVP t)],Maybe (TraceChain (CompVP t)), [AdjunctVP t])
 complementsOfVerb tagged vprop z_vp =
-  let (cs,mspec,zs) = let (xs,mtop) = complementCandidates vprop z_vp
-                          xs' = map xform xs ++ maybeToList (mtop >>= \top -> return (TraceChain (Left (singletonLZ Moved)) (Just (CompVP_Unresolved top)), []))
-                          mspec = mtop >>= \top -> return (TraceChain (Right [Moved]) (Just (CompVP_Unresolved top)))
-                      in (map fst xs',mspec,concatMap snd xs')
+  let (cs,mspec,adjs) = let (xs,mtop) = complementCandidates vprop z_vp
+                            xs' = map xform xs ++ maybeToList (mtop >>= \top -> return (TraceChain (Left (singletonLZ Moved)) (Just (CompVP_Unresolved top)), []))
+                            mspec = mtop >>= \top -> return (TraceChain (Right [Moved]) (Just (CompVP_Unresolved top)))
+                        in (map fst xs',mspec,concatMap snd xs')
   in case vprop^.vp_voice of
-       Active -> (cs,mspec,zs)
-       Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,mspec,zs)
+       Active -> (cs,mspec,adjs)
+       Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,mspec,adjs)
   where
     xform_dp z = let dp = splitDP tagged (mkOrdDP z)
                      (dp',zs) = identifyInternalTimePrep tagged dp
