@@ -18,7 +18,7 @@ import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
-import           NLP.Syntax.Type.XBar    (Zipper,NounP,DetP,CompVP(..)
+import           NLP.Syntax.Type.XBar    (Zipper,NounP,DetP,CompVP(..),AdjunctVP(..)
                                          ,Prep(..),PrepClass(..),PP,_CompPP_DP
                                          ,TaggedLemma(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
@@ -62,24 +62,6 @@ checkTimePrep tagged pp = fromMaybe (CompVP_PP pp) $ do
   (return . CompVP_PP . (headX.hp_prep .~ pp^.headX.hp_prep) . (headX.hp_pclass .~ PC_Time)) pp
 
 
-
-identifyInternalTimePrep :: TaggedLemma t
-                         -> DetP t
-                         -> (DetP t,[Zipper t])
-identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
-  let rng_dp@(b_dp,_e_dp) = dp^.maximalProjection
-  TagPos (b0,e0,_)
-    <- find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) (tagged^.tagList)
-  let rng_time = beginEndToRange (b0,e0)
-  z_tdp <- find (isChunkAs NP . current) (extractZipperByRange rng_time (tagged^.pennTree))
-  z_tpp <- parent z_tdp
-  guard (isChunkAs PP (current z_tpp))
-  let (b_tpp,_e_tpp) = getRange (current z_tpp)
-      rng_dp' = (b_dp,b_tpp-1)
-  (b_h,e_h) <- dp^?complement._Just.headX.hn_range
-  let rng_head = if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
-      dp' = dp & (maximalProjection .~ rng_dp') . (complement._Just.headX.hn_range .~ rng_head) . (complement._Just.maximalProjection .~ rng_dp')
-  return (dp',[z_tpp])
 
 
 --

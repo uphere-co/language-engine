@@ -80,6 +80,13 @@ formatAdjunctCP (AdjunctCP_Unresolved z) = "unresolved" <> (showRange . getRange
 formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cpRange cp)
 
 
+adjunctVPText tagged (AdjunctVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
+adjunctVPText tagged (AdjunctVP_PP pp) = T.intercalate " " (tokensByRange tagged (pp^.maximalProjection))
+
+
+formatAdjunctVP (AdjunctVP_Unresolved z) = showRange (getRange (current z))
+formatAdjunctVP (AdjunctVP_PP pp) = formatPP pp
+
 formatCP :: forall as. CP (Lemma ': as) -> String
 formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                      \Complementizer       : %-6s  %s\n\
@@ -101,10 +108,12 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                 (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 ((show . gettoken) (cp^.complement.complement.maximalProjection))
                 ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain formatCompVP ))))
-                ((T.intercalate " | " (cp^..complement.complement.adjunct.traverse.to (T.intercalate " " . gettoken))))
+                ((T.intercalate " | " (cp^..complement.complement.adjunct.traverse.to formatAdjunctVP)))
 
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
+        --
+        formatAdjunctVP (AdjunctVP_Unresolved z) = T.intercalate " " (gettoken z)
         --
         formatposchunk (Left c) = show c
         formatposchunk (Right p) = "(" ++ show p ++ ")"
