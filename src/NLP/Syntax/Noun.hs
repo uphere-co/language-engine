@@ -36,6 +36,7 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,adjunct,complement,headX,maximalProjection,specifier
                                           ,tokensByRange
                                           ,mkNP,mkOrdDP,mkSplittedDP,hd_range,hd_class,hn_range
+                                          ,headRangeDP
                                           ,mkPP,mkPPGerund,hp_prep
                                           ,identifyArticle
                                           ,identifyPronounPerson
@@ -204,7 +205,7 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
 --
 bareNounModifier :: TaggedLemma t -> DetP t -> DetP t
 bareNounModifier tagged dp = fromMaybe dp $ do
-  let rng@(b0,_e0) = dp^.maximalProjection
+  rng@(b0,_e0) <- headRangeDP dp  -- dp^.maximalProjection
   z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTree))
   -- check entity for the last words
   let f (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun tagged (yb,ye)
