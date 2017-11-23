@@ -21,9 +21,10 @@ import qualified Data.Text           as T
 --
 import           Data.Attribute           (ahead)
 import           Data.Bitree              (_PL)
-import           Data.BitreeZipper        (child1,childLast,current,next,extractZipperByRange)
+import           Data.BitreeZipper        (child1,childLast,current,next,parent
+                                          ,extractZipperByRange)
 import           Data.BitreeZipper.Util   (firstSiblingBy)
-import           Data.Range               (Range)
+import           Data.Range               (isInsideR,Range)
 import           NLP.Type.PennTreebankII  (ChunkTag(..),POSTag(..),TernaryLogic(..),Lemma(..)
                                           ,getRange,isNoun,posTag,tokenWord,getAnnot)
 import           NLP.Type.TagPos          (TagPos(..))
@@ -32,7 +33,8 @@ import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
                                           ,PP, AdjunctDP(..), CompDP(..),HeadDP(..), SpecDP(..), HeadNP(..)
-                                          ,DetClass(..),XP(..),TaggedLemma
+                                          ,DetClass(..),XP(..),TaggedLemma, AdjunctVP(..)
+                                          ,PrepClass(..)
                                           ,_MarkEntity,_NoDet,hn_range,hn_class
                                           ,adjunct,complement,headX,maximalProjection,specifier
                                           ,tokensByRange
@@ -255,3 +257,24 @@ identifyNamedEntity tagged dp =
     TagPos (_,_,MarkEntity nec)
       <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
     (return . (complement._Just.headX.hn_class .~ (Just nec))) dp
+
+
+identifyInternalTimePrep :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
+                            TaggedLemma t
+                         -> DetP t
+                         -> (DetP t,[AdjunctVP t])
+identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
+  let rng_dp@(b_dp,_e_dp) = dp^.maximalProjection
+  TagPos (b0,e0,_)
+    <- find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) (tagged^.tagList)
+  let rng_time = beginEndToRange (b0,e0)
+  z_tdp <- find (isChunkAs NP . current) (extractZipperByRange rng_time (tagged^.pennTree))
+  z_tpp <- parent z_tdp
+  guard (isChunkAs PP (current z_tpp))
+  let (b_tpp,_e_tpp) = getRange (current z_tpp)
+      rng_dp' = (b_dp,b_tpp-1)
+  (b_h,e_h) <- dp^?complement._Just.headX.hn_range
+  let rng_head = if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
+      dp' = dp & (maximalProjection .~ rng_dp') . (complement._Just.headX.hn_range .~ rng_head) . (complement._Just.maximalProjection .~ rng_dp')
+  tpp <- mkPPFromZipper tagged PC_Time z_tpp
+  return (dp',[AdjunctVP_PP tpp])

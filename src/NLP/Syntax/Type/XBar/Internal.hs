@@ -269,7 +269,8 @@ data CompVP t = CompVP_Unresolved (Zipper t)
 
 
 data AdjunctVP t = AdjunctVP_Unresolved (Zipper t)
-                 --  | AdjunctVP_PP
+                 | AdjunctVP_PP (PP t)
+
 
 type instance Property   'X_V t = VerbProperty (Zipper t)
 type instance Maximal    'X_V t = Zipper t
@@ -281,6 +282,7 @@ type VerbP = XP 'X_V
 
 mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [AdjunctVP t] -> [TraceChain (CompVP t)] -> VerbP t
 mkVerbP vp vprop adjs comps = XP vprop vp () adjs comps
+
 
 type instance Property   'X_T t = ()
 type instance Maximal    'X_T t = Zipper t

@@ -36,9 +36,8 @@ import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Voice(..))
 --
-import           NLP.Syntax.Noun                        (splitDP,mkPPFromZipper)
-import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTimePrep,isMatchedTime
-                                                        ,identifyInternalTimePrep)
+import           NLP.Syntax.Noun                        (splitDP,mkPPFromZipper,identifyInternalTimePrep)
+import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTimePrep,isMatchedTime)
 import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),PredArgWorkspace(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
