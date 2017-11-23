@@ -3,10 +3,12 @@
 
 module NER where
 
+import           Control.Monad              (forM)
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Csv             as C
 import qualified Data.HashMap.Strict  as HM
 import           Data.List                  (find,foldl')
+import           Data.Maybe                 (catMaybes)
 import           Data.Text                  (Text)
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as T.IO
@@ -22,43 +24,38 @@ loadNameTable = do
   reprs <- LD.loadEntityReprs reprFileG
   return $ map (\x -> ((WD._itemID . FF._uid) x,(WD._repr . FF._repr) x)) reprs
 
-loadNameHM :: IO (HM.HashMap Text Int)
-loadNameHM = do
-  reprs <- LD.loadEntityReprs reprFileG
-  let nameTable = map (\x -> ((WD._itemID . FF._uid) x, (WD._repr . FF._repr) x)) reprs
-  return $ foldl' (\acc (i,n) -> HM.insert n i acc) HM.empty nameTable
+mkNameUIDHM :: [(Int,Text)] -> HM.HashMap Text Int
+mkNameUIDHM nameTable = foldl' (\acc (i,n) -> HM.insert n i acc) HM.empty nameTable
 
-loadNameHM2 :: IO (HM.HashMap Int [Text])
-loadNameHM2 = do
-  reprs <- LD.loadEntityReprs reprFileG
-  let nameTable = map (\x -> ((WD._itemID . FF._uid) x, (WD._repr . FF._repr) x)) reprs
-  return $ foldl' (\acc (i,n) -> HM.insertWith (\xs1 -> (\xs2 -> xs1 ++ xs2)) i [n] acc) HM.empty nameTable
+mkUIDAliasHM :: [(Int,Text)] -> HM.HashMap Int [Text]
+mkUIDAliasHM nameTable = foldl' (\acc (i,n) -> HM.insertWith (\xs1 -> (\xs2 -> xs1 ++ xs2)) i [n] acc) HM.empty nameTable
 
--- loadUIDInfo :: IO (HM.HashMap Int Text)
--- loadUIDInfo = do
-  
-  
-parseCompany nt = do
-  nhm <- loadNameHM
-  nhm2 <- loadNameHM2
-  let fp = "/home/modori/temp/companylist.csv"
-  txt' <- T.IO.readFile fp
-  let tlines = T.lines txt'
-      txt = T.intercalate "\n" $ map (T.reverse . (T.drop 2) . T.reverse) tlines
-      bstr = BL8.pack $ T.unpack txt 
-  let (ecompany :: Either String (V.Vector Company)) = C.decode C.HasHeader bstr
-  case ecompany of
-    Left err -> error err
-    Right  v -> do
-      let ctable = V.toList v
-      flip mapM_ ctable $ \c -> do
-        print $ (_name c, aliasFinder nhm nhm2 (_name c))
-      {- flip mapM_ ctable $ \(_,name,_,_,_,_,_,_) -> do
-        print $ (name, aliasFinder nt name)
-      -}
+getCompanyList nameTable = do
+  let nuid = mkNameUIDHM nameTable
+      uida = mkUIDAliasHM nameTable
 
-aliasFinder nhm nhm2 txt =
-  let muid = HM.lookup txt nhm
+  let fps = ["/home/modori/temp/AMEX.csv","/home/modori/temp/NASDAQ.csv","/home/modori/temp/NYSE.csv"]
+  clists <- forM fps $ \fp -> do
+    txt' <- T.IO.readFile fp
+    let tlines = T.lines txt'
+        txt = T.intercalate "\n" $ map (T.reverse . (T.drop 2) . T.reverse) tlines
+        bstr = BL8.pack $ T.unpack txt 
+    let (ecompany :: Either String (V.Vector Company)) = C.decode C.HasHeader bstr
+    case ecompany of
+      Left err -> error err
+      Right  v -> return $ V.toList v
+
+  let clist = concat clists
+
+  aList' <- flip mapM clist $ \c -> do
+    return $ aliasFinder nuid uida (_name c)
+  let aList = concat $ catMaybes aList'
+  return aList
+
+parseCompany nameTable = getCompanyList nameTable >>= print
+
+aliasFinder nuid uida txt =
+  let muid = HM.lookup txt nuid
   in case muid of
-    Nothing  -> Nothing
-    Just uid -> HM.lookup uid nhm2 -- filter (\(i,_) -> i == uid) nhm
+    Nothing  -> Just [txt]
+    Just uid -> HM.lookup uid uida
