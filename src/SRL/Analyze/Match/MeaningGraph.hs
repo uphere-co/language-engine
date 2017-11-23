@@ -256,7 +256,7 @@ meaningGraph apredata sstr =
       rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
       vmap = VertexMap rngidxmap depmap headfull
       edges = mkMGEdges vmap (matched,nmatched) (entities1_0,ientities2)
-  in trace ("\n\n\nheadfull = " ++ show headfull ++ "\n\n") $ MeaningGraph vertices edges
+  in MeaningGraph vertices edges
 
 
 isEntity :: MGVertex -> Bool

@@ -118,13 +118,13 @@ printMeaningGraph apredata rolemap dstr = do
     -- putStrLn "====================="
 
 
-    putStrLn "-----------------"
-    putStrLn "meaning graph ARB"
-    putStrLn "-----------------"
+    -- putStrLn "-----------------"
+    -- putStrLn "meaning graph ARB"
+    -- putStrLn "-----------------"
 
-    print mg
-    print (getGraphFromMG mg)
-    mapM_ print (mkARB rolemap mg)
+    -- print mg
+    -- print (getGraphFromMG mg)
+    -- mapM_ print (mkARB rolemap mg)
 
     putStrLn "-----------------"
     putStrLn "meaning graph dot"
