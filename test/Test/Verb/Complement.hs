@@ -224,22 +224,16 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       vps = mkVPS (c^._4) (c^._5)
       -- clausetr = clauseStructure tagged vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
-  trace "\nCSCA1" (return ())
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-  trace "\nCSCA2" (return ())
       -- test subjects
   cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
-  trace "\nCSCA3" (return ())
-                                             -- anyway need to be rewritten.
+                                            -- anyway need to be rewritten.
   cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cpRange cp0))) x'tr)
-  trace "\nCSCA4" (return ())
   let subj_test = c^._3._1
       b_subj = fromMaybe False $ do
-                 trace ("\n\nBSUBJ_1: ") (return ())
                  subj <- cp^?complement.specifier.trResolved._Just
                  let sclass = subj^?_Right.headX.hd_class
                      stxt = either (getTokens . current) (headTextDP tagged) subj
-                 trace ("\n\nB_SUBJ: " ++ show stxt) $ return ()
                  case subj_test^._2 of
                    Nothing -> return (stxt == subj_test^._1)
                    Just c -> return (stxt == subj_test^._1 && sclass == Just c)
@@ -251,7 +245,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       lst_adjs = cp^..complement.complement.adjunct.traverse.to (getTokens.current)
       lst_adjs_test = c^._3._3
       b_adjuncts = lst_adjs == lst_adjs_test
-  trace ("\nb_subj = " ++ show b_subj ++ "\ncomps=" ++ show lst_comps ++ "\nads =" ++ show lst_adjs) $ return (b_subj && b_comps && b_adjuncts)
+  return (b_subj && b_comps && b_adjuncts)
 
 
 testcases :: [TestVerbComplement] -- [(Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)]
