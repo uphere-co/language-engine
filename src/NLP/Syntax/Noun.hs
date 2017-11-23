@@ -36,6 +36,7 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,adjunct,complement,headX,maximalProjection,specifier
                                           ,tokensByRange
                                           ,mkNP,mkOrdDP,mkSplittedDP,hd_range,hd_class,hn_range
+                                          ,headRangeDP
                                           ,mkPP,mkPPGerund,hp_prep
                                           ,identifyArticle
                                           ,identifyPronounPerson
@@ -197,13 +198,14 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
        .(complement._Just.maximalProjection %~ (\(b',e') -> if b <= e then (e+1,e') else (b',e')))) dp
 
 
+--
 -- | Identify bare noun subexpression inside noun phrase as modifier.
 --   I did not implement the already-splitted case. We need multiple-adjunct
 --   structure.
 --
 bareNounModifier :: TaggedLemma t -> DetP t -> DetP t
-bareNounModifier tagged x = fromMaybe x $ do
-  let rng@(b0,_e0) = x^.maximalProjection
+bareNounModifier tagged dp = fromMaybe dp $ do
+  rng@(b0,_e0) <- headRangeDP dp  -- dp^.maximalProjection
   z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTree))
   -- check entity for the last words
   let f (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun tagged (yb,ye)
@@ -216,10 +218,13 @@ bareNounModifier tagged x = fromMaybe x $ do
   return (mkSplittedDP BNMod (b1,e1) (b0,idx_last_modifier_word) z)
 
 
+--
+-- | Set hn_class as identified
+--
 identifyNamedEntity :: TaggedLemma t -> DetP t -> DetP t
-identifyNamedEntity tagged dp = fromMaybe dp $ 
-  ((do rng <- dp^?complement._Just.headX.hn_range
-       TagPos (_,_,MarkEntity nec)
-         <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
-       -- dp^?headX.hd_class._NoDet
-       (return . (complement._Just.headX.hn_class .~ (Just nec))) dp))
+identifyNamedEntity tagged dp =
+  fromMaybe dp $ do
+    rng <- dp^?complement._Just.headX.hn_range
+    TagPos (_,_,MarkEntity nec)
+      <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
+    (return . (complement._Just.headX.hn_class .~ (Just nec))) dp
