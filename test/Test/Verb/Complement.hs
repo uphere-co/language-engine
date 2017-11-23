@@ -206,6 +206,17 @@ rrc_passive_2
     , [TagPos (TokIdx 0, TokIdx 3, MarkEntity Org), TagPos (TokIdx 17,TokIdx 19, MarkEntity Person) ]
     )
 
+rrc_passive_3 :: TestVerbComplement
+rrc_passive_3
+  = ( "SF Motors Inc, a California-based electric vehicle unit of China's Chongqing Sokon Industry Group Co Ltd, on Thursday said it has bought an EV and battery tech firm headed by former Tesla Inc executive Martin Eberhard for $33 million."
+    , 21
+    , (("SF Motors Inc",Just NoDet), ["it has bought an EV and battery tech firm headed by former Tesla Inc executive Martin Eberhard for $ 33 million"], [])
+    , [(0,("SF","SF")),(1,("Motors","Motors")),(2,("Inc","Inc")),(3,(",",",")),(4,("a","a")),(5,("california-based","California-based")),(6,("electric","electric")),(7,("vehicle","vehicle")),(8,("unit","unit")),(9,("of","of")),(10,("China","China")),(11,("'s","'s")),(12,("Chongqing","Chongqing")),(13,("Sokon","Sokon")),(14,("Industry","Industry")),(15,("Group","Group")),(16,("Co","Co")),(17,("Ltd","Ltd")),(18,(",",",")),(19,("on","on")),(20,("Thursday","Thursday")),(21,("say","said")),(22,("it","it")),(23,("have","has")),(24,("buy","bought")),(25,("a","an")),(26,("ev","EV")),(27,("and","and")),(28,("battery","battery")),(29,("tech","tech")),(30,("firm","firm")),(31,("head","headed")),(32,("by","by")),(33,("former","former")),(34,("Tesla","Tesla")),(35,("Inc","Inc")),(36,("executive","executive")),(37,("Martin","Martin")),(38,("Eberhard","Eberhard")),(39,("for","for")),(40,("$","$")),(41,("33","33")),(42,("million","million")),(43,(".","."))]
+    , PN "ROOT" [PN "S" [PN "NP" [PN "NP" [PN "NP" [PL ("NNP","SF"),PL ("NNPS","Motors"),PL ("NNP","Inc")],PL (",",","),PN "NP" [PN "NP" [PL ("DT","a"),PL ("JJ","California-based"),PL ("JJ","electric"),PL ("NN","vehicle"),PL ("NN","unit")],PN "PP" [PL ("IN","of"),PN "NP" [PN "NP" [PL ("NNP","China"),PL ("POS","'s")],PL ("NNP","Chongqing"),PL ("NNP","Sokon"),PL ("NNP","Industry"),PL ("NNP","Group"),PL ("NNP","Co"),PL ("NNP","Ltd")]]],PL (",",",")],PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Thursday")]]],PN "VP" [PL ("VBD","said"),PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","it")],PN "VP" [PL ("VBZ","has"),PN "VP" [PL ("VBN","bought"),PN "NP" [PN "NP" [PL ("DT","an"),PL ("NN","EV"),PL ("CC","and"),PL ("NN","battery"),PL ("NN","tech"),PL ("NN","firm")],PN "VP" [PL ("VBN","headed"),PN "PP" [PL ("IN","by"),PN "NP" [PL ("JJ","former"),PL ("NNP","Tesla"),PL ("NNP","Inc"),PL ("NN","executive"),PL ("NNP","Martin"),PL ("NNP","Eberhard")]]]],PN "PP" [PL ("IN","for"),PN "NP" [PN "QP" [PL ("$","$"),PL ("CD","33"),PL ("CD","million")]]]]]]]],PL (".",".")]]
+    , [TagPos (TokIdx 0, TokIdx 3, MarkEntity Org), TagPos (TokIdx 17,TokIdx 19, MarkEntity Person) ]
+    )
+
+
 
 checkSubjCompAdjunct :: TestVerbComplement -> Bool
 checkSubjCompAdjunct c = fromMaybe False $ do
@@ -213,18 +224,22 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       vps = mkVPS (c^._4) (c^._5)
       -- clausetr = clauseStructure tagged vps (bimap (\(rng,x) -> (rng,N.convert x)) id (mkPennTreeIdx (c^._5)))
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
-
+  trace "\nCSCA1" (return ())
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
+  trace "\nCSCA2" (return ())
       -- test subjects
   cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
+  trace "\nCSCA3" (return ())
                                              -- anyway need to be rewritten.
   cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cpRange cp0))) x'tr)
-
+  trace "\nCSCA4" (return ())
   let subj_test = c^._3._1
       b_subj = fromMaybe False $ do
+                 trace ("\n\nBSUBJ_1: ") (return ())
                  subj <- cp^?complement.specifier.trResolved._Just
                  let sclass = subj^?_Right.headX.hd_class
                      stxt = either (getTokens . current) (headTextDP tagged) subj
+                 trace ("\n\nB_SUBJ: " ++ show stxt) $ return ()
                  case subj_test^._2 of
                    Nothing -> return (stxt == subj_test^._1)
                    Just c -> return (stxt == subj_test^._1 && sclass == Just c)
@@ -236,13 +251,13 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       lst_adjs = cp^..complement.complement.adjunct.traverse.to (getTokens.current)
       lst_adjs_test = c^._3._3
       b_adjuncts = lst_adjs == lst_adjs_test
-  trace ("\n\ncheckSubjCompAdjunct::" ++ show lst_comps) $ return (b_subj && b_comps && b_adjuncts)
+  trace ("\nb_subj = " ++ show b_subj ++ "\ncomps=" ++ show lst_comps ++ "\nads =" ++ show lst_adjs) $ return (b_subj && b_comps && b_adjuncts)
 
 
 testcases :: [TestVerbComplement] -- [(Text,Int,(Text,[Text]),[(Int,(Lemma,Text))],PennTree)]
-testcases = [ -- main_finite_1
+testcases = [ {- -- main_finite_1
               -- , main_finite_2
-              -- , rrc_passive_1
+
               embedded_that_1
             , restr_rel_1
             , ditransitive_1
@@ -254,7 +269,9 @@ testcases = [ -- main_finite_1
             , complexNP
             , complexNP_2
             , prepComplement
+              -- , rrc_passive_1
             , rrc_passive_2
+            , -} rrc_passive_3
             ]
 
 unitTests :: TestTree

@@ -97,63 +97,79 @@ splitDP tagged dp0 =
 splitParentheticalModifier :: TaggedLemma (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))
 splitParentheticalModifier tagged z = do
     guard (isChunkAs NP (current z))         -- dominating phrase must be NP
+    trace ("\nRange:" ++ (show (getRange (current z))) ++ "\nSPM: 1") (return ())
     z1 <- child1 z
-    (b1,e1) <- rangeOfNPs z1
-    {-
-    let (b1,_) = getRange (current dp1)
-    -- guard (isChunkAs NP (current dp1))
-    let f z' = do guard (isChunkAs NP (current z'))
-                  let (_,e1) = getRange (current z')
-                  z'' <- next z'
-                  return (Last (Just e1),z'')
-    -}
-    -- e1 <- getLast (mconcat (unfoldr f dp1))
-    comma1 <- next z1
+    trace "\n\nSPM: 2" $ return ()
+    ((b1,e1),z1') <- rangeOfNPs z1
+    trace ("\n\nSPM: 3 " ++ show (b1,e1))  (return ())
+    comma1 <- next z1'
+    trace ("\n\nSPM: 4 ")  (return ())
     guard (isPOSAs M_COMMA (current comma1)) -- followed by comma
+    trace ("\n\nSPM: 5 ")  (return ())
     z2 <- next comma1                        -- followed by a phrase
+    trace ("\n\nSPM: 6 ")  (return ())
     -- followed by comma and end, or just end.
     ((ba,ea),z_appos) <-
-      ((do (b2,e2) <- rangeOfNPs z2
-           comma2 <- next z2
+      ((do ((b2,e2),z2') <- (rangeOfNPs z2
+                             <|> (guard (isChunkAs VP (current z2)) >> return (getRange (current z2), z2))
+                             <|> (guard (isChunkAs SBAR (current z2)) >> return (getRange (current z2), z2))
+                             <|> (guard (isChunkAs PP (current z2)) >> return (getRange (current z2), z2))
+                            )
+           trace ("\n\nSPM: 7_1 ")  (return ())
+
+           comma2 <- next z2'
            guard (isPOSAs M_COMMA (current comma2))
            guard (is _Nothing (next comma2))
            return ((b2,e2),z2))
        <|>
        (do let showf = show . map (tokenWord.snd) . toList . current
            guard (isLemmaAs (Lemma "or") (current z2))
+           trace ("\n\nSPM: 7_2 ")  (return ())
+
            z3 <- next z2
-           (b3,e3) <- rangeOfNPs z3
-           comma2 <- next z3
+           ((b3,e3),z3') <- (rangeOfNPs z3
+                             <|> (guard (isChunkAs VP (current z3)) >> return (getRange (current z3), z3))
+                             <|> (guard (isChunkAs SBAR (current z3)) >> return (getRange (current z3), z3))
+                             <|> (guard (isChunkAs PP (current z3)) >> return (getRange (current z3), z3))
+                            )
+           comma2 <- next z3'
            guard (isPOSAs M_COMMA (current comma2))
            guard (is _Nothing (next comma2))
            return ((b3,e3),z3))
        <|>
-       (do (b2,e2) <- rangeOfNPs z2
-           guard (is _Nothing (next z2))
+       (do ((b2,e2),z2') <- (rangeOfNPs z2
+                             <|> (guard (isChunkAs VP (current z2)) >> return (getRange (current z2), z2))
+                             <|> (guard (isChunkAs SBAR (current z2)) >> return (getRange (current z2), z2))
+                             <|> (guard (isChunkAs PP (current z2)) >> return (getRange (current z2), z2))
+                            )
+           trace ("\n\nSPM: 7_3 ")  (return ())
+
+           guard (is _Nothing (next z2'))
            return ((b2,e2),z2))
       )
 
     let rf = getRange . current
-    return (identApposHead tagged (b1,e1) (ba,ea) z)
+    -- return (identApposHead tagged (b1,e1) (ba,ea) z)
     -- phrase inside parenthetical commas must be NP or clause
-    {-
+
     ((guard (isChunkAs NP (current z_appos))   >> return (identApposHead tagged (b1,e1) (ba,ea) z)) <|>
      (guard (isChunkAs VP (current z_appos))   >> return (mkSplittedDP CLMod    (b1,e1) (ba,ea) z)) <|>
      (guard (isChunkAs SBAR (current z_appos)) >> return (mkSplittedDP CLMod    (b1,e1) (ba,ea) z)) <|>
      (do guard (isChunkAs PP (current z_appos))
          pp <- mkPPFromZipper tagged PC_Other z_appos
-         return (XP (HeadDP Nothing NoDet) (rf z) [] [AdjunctDP_PP pp] (Just (mkNP ((b1,e1),Nothing) Nothing))))) -}
+         return (XP (HeadDP Nothing NoDet) (rf z) [] [AdjunctDP_PP pp] (Just (mkNP ((b1,e1),Nothing) Nothing)))))
   where
     step z = do
       guard (isChunkAs NP (current z))
       let (_,e) = getRange (current z)
       z' <- next z
-      return (Last (Just e),z')
+      return ((e,z),z')
 
     rangeOfNPs z = do
-      let (b,_) = getRange (current z)
-      e <- getLast (mconcat (unfoldr step z))
-      return (b,e)
+      guard (isChunkAs NP (current z))
+      let (b,e0) = getRange (current z)
+          (e,z') = last ((e0,z):unfoldr step z)
+      return ((b,e),z')
 
 
 identApposHead :: TaggedLemma t -> Range -> Range -> Zipper t -> DetP t
