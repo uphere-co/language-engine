@@ -4,10 +4,11 @@
 
 module NER.Type where
 
-import Control.Lens.TH (makeLenses)
+import Control.Lens.TH  (makeLenses)
 import Data.Aeson
+import Data.Aeson.Types (fieldLabelModifier)
 import Data.Csv
-import Data.Text       (Text)
+import Data.Text        (Text)
 import GHC.Generics
 
 data CSVListedCompany = CSVListedCompany
@@ -39,5 +40,8 @@ data CompanyInfo = CompanyInfo
 
 makeLenses ''CompanyInfo
 
-instance ToJSON CompanyInfo
-instance FromJSON CompanyInfo
+instance ToJSON CompanyInfo where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 }
+  
+instance FromJSON CompanyInfo where
+  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 }
