@@ -3,7 +3,9 @@
 
 module NER where
 
+import           Control.Lens               ((^.))
 import           Control.Monad              (forM)
+import qualified Data.Aeson           as A
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Csv             as C
 import qualified Data.HashMap.Strict  as HM
@@ -40,7 +42,7 @@ getCompanyList nameTable = do
     let tlines = T.lines txt'
         txt = T.intercalate "\n" $ map (T.reverse . (T.drop 2) . T.reverse) tlines
         bstr = BL8.pack $ T.unpack txt 
-    let (ecompany :: Either String (V.Vector Company)) = C.decode C.HasHeader bstr
+    let (ecompany :: Either String (V.Vector CSVListedCompany)) = C.decode C.HasHeader bstr
     case ecompany of
       Left err -> error err
       Right  v -> return $ V.toList v
@@ -48,9 +50,15 @@ getCompanyList nameTable = do
   let clist = concat clists
 
   aList' <- flip mapM clist $ \c -> do
-    return $ aliasFinder nuid uida (_name c)
+    return $ aliasFinder nuid uida (c ^. csvName)
   let aList = concat $ catMaybes aList'
   return aList
+
+
+saveCompanyInfo = do
+  nt <- loadNameTable
+  clist <- getCompanyList nt
+  print clist
 
 parseCompany nameTable = getCompanyList nameTable >>= print
 
