@@ -6,9 +6,10 @@
 
 module SRL.Analyze.Match.Entity where
 
+import           Control.Applicative      ((<|>))
 import           Control.Lens
 import           Control.Lens.Extras      (is)
-import           Control.Monad            (guard)
+import           Control.Monad            (guard,mzero)
 import           Data.Foldable            (foldMap)
 import           Data.List                (group,sort)
 import           Data.Maybe               (fromMaybe,listToMaybe,maybeToList)
@@ -37,17 +38,28 @@ pronounResolution :: [X'Tree '[Lemma]]
 pronounResolution x'tr dp = do
   let rng_dp = dp^.maximalProjection
   rng_pro <- dp^.headX.hd_range
-  prnclass <- dp^?headX.hd_class._Pronoun._1
+  (prnclass,isgenitive) <- dp^?headX.hd_class._Pronoun
   w <- getFirst (foldMap (First . extractZipperById rng_dp) x'tr)
   w' <- parent w
-  guard (is _Just (currentCPDPPP w' ^? _CPCase))
-  w'' <- parent w'
-  cp <- currentCPDPPP w'' ^? _CPCase
-  dp' <- cp^?complement.specifier.trResolved._Just._Right
-  nclass <- dp'^?complement._Just.headX.hn_class._Just
-  if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,dp'^.maximalProjection)
-     | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp'^.maximalProjection)
-     | otherwise -> Nothing
+  cp' <- currentCPDPPP w' ^? _CPCase
+  ((if isgenitive
+      then do
+        dp' <- cp'^?complement.specifier.trResolved._Just._Right
+        nclass <- dp'^?complement._Just.headX.hn_class._Just
+        if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,dp'^.maximalProjection)
+           | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp'^.maximalProjection)
+           | otherwise -> mzero
+      else mzero)
+   <|>
+   (do w'' <- parent w'
+       cp'' <- currentCPDPPP w'' ^? _CPCase
+       dp'' <- cp''^?complement.specifier.trResolved._Just._Right
+       nclass <- dp''^?complement._Just.headX.hn_class._Just
+       if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,dp''^.maximalProjection)
+          | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp''^.maximalProjection)
+          | otherwise -> mzero
+   )
+    )
 
 
 entityTextDP :: TaggedLemma t -> DetP t -> Text
