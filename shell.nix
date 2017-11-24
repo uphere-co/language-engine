@@ -21,6 +21,7 @@ let
                          };
     hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
               aeson
+              aeson-pretty
               cassava
               haskeline
               text

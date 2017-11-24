@@ -65,6 +65,7 @@ library
                        StandaloneDeriving
   build-depends:       base
                      , aeson
+                     , aeson-pretty
                      , attoparsec
                      , binary
                      , bytestring

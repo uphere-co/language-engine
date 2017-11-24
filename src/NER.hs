@@ -6,6 +6,7 @@ module NER where
 import           Control.Lens               ((^.))
 import           Control.Monad              (forM)
 import qualified Data.Aeson           as A
+import qualified Data.Aeson.Encode.Pretty   as A
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Csv             as C
 import qualified Data.HashMap.Strict  as HM
@@ -32,6 +33,7 @@ mkNameUIDHM nameTable = foldl' (\acc (i,n) -> HM.insert n i acc) HM.empty nameTa
 mkUIDAliasHM :: [(Int,Text)] -> HM.HashMap Int [Text]
 mkUIDAliasHM nameTable = foldl' (\acc (i,n) -> HM.insertWith (\xs1 -> (\xs2 -> xs1 ++ xs2)) i [n] acc) HM.empty nameTable
 
+getCompanyList :: [(Int,Text)] -> IO [CompanyInfo]
 getCompanyList nameTable = do
   let nuid = mkNameUIDHM nameTable
       uida = mkUIDAliasHM nameTable
@@ -51,14 +53,13 @@ getCompanyList nameTable = do
     let cinfo = CompanyInfo (c ^. csvTicker) (c ^. csvName) (fromMaybe [c ^. csvName] $ aliasFinder nuid uida (c ^. csvName)) (c ^. csvSector) (c ^. csvIndustry)
     return cinfo
 
-
   return aList
-
 
 saveCompanyInfo = do
   nt <- loadNameTable
   clist <- getCompanyList nt
-  print clist
+  flip mapM_ clist $ \c -> do
+    putStrLn (BL8.unpack $ A.encodePretty c)
 
 parseCompany nameTable = getCompanyList nameTable >>= print
 

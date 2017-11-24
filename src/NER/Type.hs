@@ -5,6 +5,7 @@
 module NER.Type where
 
 import Control.Lens.TH (makeLenses)
+import Data.Aeson
 import Data.Csv
 import Data.Text       (Text)
 import GHC.Generics
@@ -37,3 +38,6 @@ data CompanyInfo = CompanyInfo
   } deriving (Generic, Show)
 
 makeLenses ''CompanyInfo
+
+instance ToJSON CompanyInfo
+instance FromJSON CompanyInfo
