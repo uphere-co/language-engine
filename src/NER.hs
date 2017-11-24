@@ -10,7 +10,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Csv             as C
 import qualified Data.HashMap.Strict  as HM
 import           Data.List                  (find,foldl')
-import           Data.Maybe                 (catMaybes)
+import           Data.Maybe                 (catMaybes,fromMaybe)
 import           Data.Text                  (Text)
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as T.IO
@@ -37,7 +37,7 @@ getCompanyList nameTable = do
       uida = mkUIDAliasHM nameTable
 
   let fps = ["/home/modori/temp/AMEX.csv","/home/modori/temp/NASDAQ.csv","/home/modori/temp/NYSE.csv"]
-  clists <- forM fps $ \fp -> do
+  clist <- fmap concat $ forM fps $ \fp -> do
     txt' <- T.IO.readFile fp
     let tlines = T.lines txt'
         txt = T.intercalate "\n" $ map (T.reverse . (T.drop 2) . T.reverse) tlines
@@ -47,11 +47,11 @@ getCompanyList nameTable = do
       Left err -> error err
       Right  v -> return $ V.toList v
 
-  let clist = concat clists
+  aList <- flip mapM clist $ \c -> do
+    let cinfo = CompanyInfo (c ^. csvTicker) (c ^. csvName) (fromMaybe [c ^. csvName] $ aliasFinder nuid uida (c ^. csvName)) (c ^. csvSector) (c ^. csvIndustry)
+    return cinfo
 
-  aList' <- flip mapM clist $ \c -> do
-    return $ aliasFinder nuid uida (c ^. csvName)
-  let aList = concat $ catMaybes aList'
+
   return aList
 
 
@@ -65,5 +65,5 @@ parseCompany nameTable = getCompanyList nameTable >>= print
 aliasFinder nuid uida txt =
   let muid = HM.lookup txt nuid
   in case muid of
-    Nothing  -> Just [txt]
+    Nothing  -> Nothing
     Just uid -> HM.lookup uid uida

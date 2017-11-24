@@ -29,13 +29,11 @@ instance FromRecord CSVListedCompany where
   parseRecord v = CSVListedCompany <$> v .! 0 <*> v .! 1 <*> v .! 2 <*> v .! 3 <*> v .! 4 <*> v .! 5 <*> v .! 6 <*> v .! 7
 
 data CompanyInfo = CompanyInfo
-  { _ticker :: Ticker
+  { _ticker :: Text
   , _name :: Text
   , _alias :: [Text] -- This contains official name.
   , _sector :: Text
   , _industry :: Text
   } deriving (Generic, Show)
-
-data Ticker = Private | Public Text deriving Show
 
 makeLenses ''CompanyInfo
