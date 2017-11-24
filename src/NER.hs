@@ -3,10 +3,12 @@
 
 module NER where
 
-import           Control.Lens               ((^.))
+import           Control.Lens               ((^.),_2)
 import           Control.Monad              (forM)
 import qualified Data.Aeson           as A
 import qualified Data.Aeson.Encode.Pretty   as A
+import qualified Data.ByteString.Char8      as B8
+import qualified Data.ByteString.Lazy       as BL
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Csv             as C
 import qualified Data.HashMap.Strict  as HM
@@ -53,13 +55,30 @@ getCompanyList nameTable = do
     let cinfo = CompanyInfo (c ^. csvTicker) (c ^. csvName) (fromMaybe [c ^. csvName] $ aliasFinder nuid uida (c ^. csvName)) (c ^. csvSector) (c ^. csvIndustry)
     return cinfo
 
-  return aList
+  bstr <- BL.readFile "/data/groups/uphere/wikidata/public_companies.csv"
+  let ecompany = C.decode C.HasHeader bstr
+
+  -- (wikipage_name,name,wikipage_market,market)
+  (clist2 :: [(Text,Text,Text,Text)]) <- case ecompany of
+    Left err -> error err
+    Right v -> do
+      return (V.toList v)
+
+  aList2 <- flip mapM clist2 $ \c -> do
+    let cinfo = CompanyInfo "" (c ^. _2) (fromMaybe [c ^. _2] $ aliasFinder nuid uida (c ^. _2)) "" ""
+    return cinfo
+
+  return (aList ++ aList2)
 
 saveCompanyInfo = do
   nt <- loadNameTable
   clist <- getCompanyList nt
-  flip mapM_ clist $ \c -> do
+  let bstr = A.encodePretty clist
+
+  BL8.writeFile "company.json" bstr
+{-  flip mapM_ clist $ \c -> do
     putStrLn (BL8.unpack $ A.encodePretty c)
+-}
 
 parseCompany nameTable = getCompanyList nameTable >>= print
 
