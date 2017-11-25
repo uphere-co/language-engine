@@ -139,7 +139,7 @@ sentStructure apredata taglst (i,midx,lmas,mptr) =
         taglstMarkOnly = map (fmap snd) taglst'
         lmatkns = (zip [0..] . zip lmas . map (^._2) . toList) ptr
         lemmamap = (mkLemmaMap' . map unLemma) lmas
-        taggedMarkOnly = mkTaggedLemma lmatkns ptr taglstMarkOnly        
+        taggedMarkOnly = mkTaggedLemma lmatkns ptr taglstMarkOnly
         vps = verbPropertyFromPennTree lemmamap ptr
         x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis taggedMarkOnly) . identifyCPHierarchy taggedMarkOnly) vps
         verbStructures = map (verbStructure apredata) vps
@@ -150,5 +150,3 @@ verbStructure :: AnalyzePredata -> VerbProperty (Zipper '[Lemma]) -> VerbStructu
 verbStructure apredata vp =
   let (senses,rmtoppatts) = getVerbSenses apredata (vp^.vp_lemma)
   in VerbStructure vp senses rmtoppatts
-
-

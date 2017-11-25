@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module SRL.Analyze.CoreNLP where
 
@@ -16,6 +17,9 @@ import           CoreNLP.Simple                               (annotate,serializ
 import           CoreNLP.Simple.Convert                       (convertPsent,convertSentence,convertToken
                                                               ,decodeToPennTree,sentToDep)
 import           CoreNLP.Simple.Util                          (getDoc,getProtoDoc,getTKTokens)
+import           HUKB.PPR                                     (ppr)
+import           HUKB.Type                                    (Context(..),ContextWord(..))
+import           WordNet.Type.POS                             (POS(..))
 import           NLP.Type.CoreNLP                             (Sentence)
 --
 import           SRL.Analyze.Type                             (DocAnalysisInput(..))
@@ -41,6 +45,21 @@ runParser pp txt = do
   ann <- annotate pp doc
   pdoc <- getProtoDoc ann
   lbstr_sutime <- BL.fromStrict <$> serializeTimex ann
+
+
+  -- testing HUKB
+  let cwords = zipWith f [1..] [ ("Britain",POS_N), ("cut",POS_V), ("stamp",POS_N), ("duty",POS_N), ("property",POS_N), ("tax",POS_N)
+                               , ("buyer",POS_N), ("bid",POS_N), ("help",POS_V), ("people",POS_N), ("struggle",POS_V), ("get",POS_V)
+                               , ("property",POS_N), ("ladder",POS_N), ("finance",POS_N), ("minister",POS_N), ("Philip",POS_N)
+                               , ("Hammond",POS_N), ("say",POS_V), ("Wednesday",POS_N) ]
+        where f i (w,p) = CtxtWord w p i 1
+  let ctxt = Context "1" cwords
+  result <- ppr ctxt
+  print result
+  --- end testing
+
+
+
   let psents = toListOf (D.sentence . traverse) pdoc
       sentitems = map (addText txt) (getSentenceOffsets psents)
       parsetrees = map (\x -> pure . decodeToPennTree =<< (x^.S.parseTree) ) psents
