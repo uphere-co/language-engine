@@ -93,6 +93,7 @@ library
                        HCoreNLP,
                        HCoreNLP-Proto,
                        HFrameNet,
+                       HUKB-driver,
                        HWordNet,
                        OntoNotes,
                        PropBank,

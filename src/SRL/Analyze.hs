@@ -27,6 +27,7 @@ import           System.Process                (readProcess)
 import           CoreNLP.Simple                (prepare)
 import           CoreNLP.Simple.Type           (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
 import           FrameNet.Query.Frame          (loadFrameData)
+import           HUKB.PPR                      (createUKBDB)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts)
 import           Lexicon.Type                 (RoleInstance)
@@ -36,6 +37,8 @@ import           Lexicon.Data                 (LexDataConfig(..),cfg_framenet_fr
                                               ,cfg_verb_subcat_file
                                               ,cfg_wsj_directory
                                               ,cfg_wordnet_dict
+                                              ,cfg_ukb_dictfile
+                                              ,cfg_ukb_binfile
                                               ,loadSenseInventory
                                               )
 import           NLP.Syntax.Format            (formatX'Tree)
@@ -139,6 +142,7 @@ loadConfig :: Bool
            -> IO (AnalyzePredata,[Sentence]->[EntityMention Text])
 loadConfig bypass_ner cfg = do
   apredata <- loadAnalyzePredata cfg
+  createUKBDB (cfg^.cfg_ukb_binfile,cfg^.cfg_ukb_dictfile)
   netagger <- if bypass_ner
                 then return (const [])
                 else newNETagger
