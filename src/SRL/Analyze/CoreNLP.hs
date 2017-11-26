@@ -10,6 +10,7 @@ import qualified Data.ByteString.Lazy.Char8            as BL
 import           Data.Foldable                                (toList,traverse_)
 import           Data.Maybe                                   (mapMaybe)
 import           Data.Text                                    (Text)
+import qualified Data.Text                             as T
 import qualified Language.Java                         as J
 import           Text.ProtocolBuffers.WireMessage             (messageGet)
 --
@@ -22,6 +23,7 @@ import           CoreNLP.Simple.Convert                       (convertPsent,conv
 import           CoreNLP.Simple.Util                          (getDoc,getProtoDoc,getTKTokens)
 import           HUKB.PPR                                     (ppr)
 import           HUKB.Type                                    (Context(..),ContextWord(..))
+import           WordNet.Query                                (lookupSynset)
 import           WordNet.Type.POS                             (POS(..))
 import           NLP.Type.CoreNLP                             (Sentence,sentenceLemma)
 --
@@ -47,24 +49,6 @@ emptyDocAnalysisInput = DocAnalysisInput
   }
 
 
-posTagToPOS p = (guard (isVerb p)        >> return POS_V) <|>
-                (guard (isNoun p == Yes) >> return POS_N) <|>
-                Nothing
-
-
-runUKB sents parsetrees = do
-  let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
-  flip mapM_ (zip lmass parsetrees) $ \(lmas,mpt) ->
-    flip traverse_ mpt $ \pt -> do
-      let lmap = (mkLemmaMap . map unLemma) lmas
-          lemmapt = mkBitreeICP lmap pt
-          mkContextWord (i,x) = CtxtWord (unLemma (ahead (getAnnot x))) <$> posTagToPOS (posTag x) <*> pure i <*> pure 1
-          ctxt = Context "0" (mapMaybe mkContextWord (toList lemmapt))
-      print ctxt
-      result <- ppr ctxt
-      putStrLn ("\n\nTHIS RESULT: \n" ++ show result)
-  
-
 
 runParser :: J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
           -> Text
@@ -83,9 +67,6 @@ runParser pp txt = do
       edeps = mapM sentToDep psents
       tktokss = map (getTKTokens) psents
       tokss = map (mapMaybe convertToken) tktokss
-
-
-  
 
   mtmx <- case fmap fst (messageGet lbstr_sutime) :: Either String T.ListTimex of
     Left _ -> return Nothing
