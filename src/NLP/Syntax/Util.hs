@@ -19,6 +19,7 @@ import           Data.ListZipper
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                   (TokIdx,BeginEnd)
 import           NLP.Type.TagPos
+import           WordNet.Type.Lexicographer        (LexicographerFile)
 --
 import           NLP.Syntax.Type.XBar
 
@@ -96,22 +97,12 @@ beginEndToRange :: BeginEnd TokIdx -> Range
 beginEndToRange (TokIdx b,TokIdx e) = (b,e-1)
 
 
-{- 
-findZipperForRangeICP :: Range -> BitreeICP a -> Maybe (Zipper a)
-findZipperForRangeICP rng tr = getFirst (bifoldMap check check (mkBitreeZipper [] tr))
-  where check z = First $ do
-                    rng' <-  z ^? to current . to getRange
-                    guard (rng' == rng)
-                    return z
--}
-
-
-
 mergeLeftELZ :: Either (ListZipper a) [a] -> Either (ListZipper a) [a] -> Either (ListZipper a) [a]
 mergeLeftELZ (Right xs) (Right ys) = Right (xs++ys)
 mergeLeftELZ (Left z1)  (Right ys) = Left ((lz_nexts %~ (++ ys)) z1)
 mergeLeftELZ (Right xs) (Left z2)  = Left ((lz_prevs %~ (++ (reverse xs))) z2)
 mergeLeftELZ (Left z1)  (Left z2)  = Left (mergeLeftLZ z1 z2)
+
 
 mergeRightELZ :: Either (ListZipper a) [a] -> Either (ListZipper a) [a] -> Either (ListZipper a) [a]
 mergeRightELZ (Right xs) (Right ys) = Right (xs++ys)
@@ -120,8 +111,8 @@ mergeRightELZ (Right xs) (Left z2)  = Left ((lz_prevs %~ (++ (reverse xs))) z2)
 mergeRightELZ (Left z1)  (Left z2)  = Left (mergeRightLZ z1 z2)
 
 
-mkTaggedLemma :: [(Int,(Lemma,Text))] -> PennTree -> [TagPos TokIdx MarkType] -> TaggedLemma '[Lemma]
-mkTaggedLemma lma pt taglst =
+mkTaggedLemma :: [(Int,(Lemma,Text))] -> PennTree -> [TagPos TokIdx MarkType] -> [(Int,LexicographerFile)] -> TaggedLemma '[Lemma]
+mkTaggedLemma lma pt taglst synsets =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) lma)
       lemmapt = mkBitreeICP lmap1 pt
-  in TaggedLemma lemmapt lma taglst
+  in TaggedLemma lemmapt lma synsets taglst
