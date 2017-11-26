@@ -14,7 +14,7 @@ import           Data.Foldable                               (toList)
 import           Data.Maybe
 --
 import           CoreNLP.Proto.CoreNLPProtos.Sentence as S
-import           CoreNLP.Simple.Convert                      (mkLemmaMap,lemmatize)
+import           CoreNLP.Simple.Convert                      (mkLemmaMapFromPSent,lemmatize)
 import           Data.Attribute                              (ahead)
 import           Data.Bitree
 import           Data.BitreeZipper
@@ -85,7 +85,7 @@ isPassive z
 voice :: (PennTree,S.Sentence) -> [(Int,(Lemma,Voice))]
 voice (pt,sent) = 
   let ipt = mkAnnotatable (mkPennTreeIdx pt)
-      lemmamap = mkLemmaMap sent
+      lemmamap = mkLemmaMapFromPSent sent
       lemmapt = lemmatize lemmamap ipt
       testf z = case getRoot (current z) of
                   Right (n,ALeaf (VBN,_) annot)
