@@ -11,7 +11,7 @@ import           Data.IntMap                       (IntMap)
 import qualified Data.IntMap                 as IM
 import           Data.Text                         (Text)
 --
-import           CoreNLP.Simple.Convert            (lemmatize)
+-- import           CoreNLP.Simple.Convert            (lemmatize)
 import           Data.Attribute
 import           Data.Bitree
 import           Data.BitreeZipper
