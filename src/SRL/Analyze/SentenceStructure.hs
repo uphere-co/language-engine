@@ -19,7 +19,7 @@ import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
 --
-import           CoreNLP.Simple.Convert                    (mkLemmaMap')
+import           CoreNLP.Simple.Convert                    (mkLemmaMap)
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
 import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
@@ -74,11 +74,7 @@ mkWikiList sstr =
   in wikilst
 
 
-
-
-
-
-
+--
 -- | Finding the structure of the sentence and formatting it.
 --
 docStructure :: AnalyzePredata
@@ -138,7 +134,7 @@ sentStructure apredata taglst (i,midx,lmas,mptr) =
     let taglst' = adjustTokenIndexForSentence midx taglst
         taglstMarkOnly = map (fmap snd) taglst'
         lmatkns = (zip [0..] . zip lmas . map (^._2) . toList) ptr
-        lemmamap = (mkLemmaMap' . map unLemma) lmas
+        lemmamap = (mkLemmaMap . map unLemma) lmas
         taggedMarkOnly = mkTaggedLemma lmatkns ptr taglstMarkOnly
         vps = verbPropertyFromPennTree lemmamap ptr
         x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis taggedMarkOnly) . identifyCPHierarchy taggedMarkOnly) vps
