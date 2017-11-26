@@ -2,6 +2,7 @@
 , uphere-nix-overlay ? <uphere-nix-overlay>
 , HCoreNLP           ? <HCoreNLP>
 , HFrameNet          ? <HFrameNet>
+, HUKB               ? <HUKB>
 , HWordNet           ? <HWordNet>
 , graph-algorithms   ? <graph-algorithms>
 , lexicon            ? <lexicon>
@@ -18,7 +19,7 @@
 }:
 
 
-let newpkgs = import pkgs.path { 
+let newpkgs = import pkgs.path {
                 overlays = [ (self: super: {
                                libsvm = import (uphere-nix-overlay + "/nix/cpp-modules/libsvm/default.nix") { inherit (self) stdenv fetchurl; };
                              })
@@ -45,6 +46,7 @@ let
     inherit stdenv;
     haskellPackages = haskellPackages1;
   };
+  ukb = import (uphere-nix-overlay + "/nix/cpp-modules/ukb.nix") { inherit stdenv fetchgit fetchurl boost; };
 
   hsconfig2 =
     self: super: {
@@ -65,9 +67,15 @@ let
       "fastText"       = self.callPackage fastTextNix { inherit fasttext; };
       "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
       "textview"       = self.callPackage (import textview) {};
-    };  
+    };
+  hsconfig3 = import (HUKB + "/HUKB-driver/config.nix") { pkgs = newpkgs; inherit uphere-nix-overlay ukb; };
+  hsconfig4 =
+    self: super: {
+      "HUKB-driver" = self.callPackage (import (HUKB + "/HUKB-driver")) {};
+    };
+
   newHaskellPackages = haskellPackages.override {
-    overrides = self: super: hsconfig self super // hsconfig2 self super;
+    overrides = self: super: hsconfig self super // hsconfig2 self super // hsconfig3 self super // hsconfig4 self super;
   };
 
 
@@ -105,8 +113,9 @@ let
             p.PropBank
             p.HCoreNLP
             p.HCoreNLP-Proto
+            p.HUKB-driver
             p.syntactic-analysis
-            p.textview            
+            p.textview
             p.wiki-ner
             fastText
           ]);
@@ -121,4 +130,3 @@ stdenv.mkDerivation {
     export CLASSPATH="${corenlp_models}:${corenlp}/stanford-corenlp-3.7.0.jar:${corenlp}/protobuf.jar:${corenlp}/joda-time.jar:${corenlp}/jollyday.jar:${hsenv}/share/x86_64-linux-ghc-8.0.2/HCoreNLP-0.1.0.0/HCoreNLPProto.jar";
   '';
 }
-

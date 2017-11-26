@@ -7,55 +7,59 @@
 
 module SRL.Analyze where
 
-import           Control.Lens                 ((^.),(^..),(.~),(&),_Just)
-import           Control.Monad                (forM_,void,when)
-import           Control.Monad.IO.Class       (liftIO)
-import           Control.Monad.Loops          (whileJust_)
+import           Control.Lens                   ((^.),(^..),(.~),(&),_Just)
+import           Control.Monad                  (forM_,void,when)
+import           Control.Monad.IO.Class         (liftIO)
+import           Control.Monad.Loops            (whileJust_)
 import qualified Data.ByteString.Char8  as B
-import           Data.Default                  (def)
+import           Data.Default                   (def)
 import qualified Data.HashMap.Strict    as HM
 import           Data.Maybe
-import           Data.Text                     (Text)
+import           Data.Text                      (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.IO           as T.IO
 import qualified Language.Java          as J
-import           MWE.Util                      (mkTextFromToken)
-import           System.Console.Haskeline      (runInputT,defaultSettings,getInputLine)
-import           System.Environment            (getEnv)
-import           System.Process                (readProcess)
+import           MWE.Util                       (mkTextFromToken)
+import           System.Console.Haskeline       (runInputT,defaultSettings,getInputLine)
+import           System.Environment             (getEnv)
+import           System.Process                 (readProcess)
 --
-import           CoreNLP.Simple                (prepare)
-import           CoreNLP.Simple.Type           (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
-import           FrameNet.Query.Frame          (loadFrameData)
+import           CoreNLP.Simple                 (prepare)
+import           CoreNLP.Simple.Type            (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
+import           FrameNet.Query.Frame           (loadFrameData)
+import           HUKB.PPR                       (createUKBDB)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
-import           Lexicon.Query                (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts)
-import           Lexicon.Type                 (RoleInstance)
-import           Lexicon.Data                 (LexDataConfig(..),cfg_framenet_framedir
-                                              ,cfg_rolemap_file
-                                              ,cfg_sense_inventory_file
-                                              ,cfg_verb_subcat_file
-                                              ,cfg_wsj_directory
-                                              ,cfg_wordnet_dict
-                                              ,loadSenseInventory
-                                              )
-import           NLP.Syntax.Format            (formatX'Tree)
-import           NLP.Type.CoreNLP             (Sentence)
-import           OntoNotes.Corpus.Load        (senseInstStatistics)
-import           OntoNotes.Type.SenseInventory (inventory_lemma)
-import           Text.Format.Dot               (mkLabelText)
-import           WikiEL.Type                   (EntityMention)
-import           WikiEL.WikiNewNET             (newNETagger)
-import           WordNet.Query                 (WordNetDB,loadDB)
+import           Lexicon.Query                  (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts)
+import           Lexicon.Type                   (RoleInstance)
+import           Lexicon.Data                   (LexDataConfig(..),cfg_framenet_framedir
+                                                ,cfg_rolemap_file
+                                                ,cfg_sense_inventory_file
+                                                ,cfg_verb_subcat_file
+                                                ,cfg_wsj_directory
+                                                ,cfg_wordnet_dict
+                                                ,cfg_ukb_dictfile
+                                                ,cfg_ukb_binfile
+                                                ,loadSenseInventory
+                                                )
+import           NLP.Syntax.Format              (formatX'Tree)
+import           NLP.Type.CoreNLP               (Sentence)
+import           OntoNotes.Corpus.Load          (senseInstStatistics)
+import           OntoNotes.Type.SenseInventory  (inventory_lemma)
+import           Text.Format.Dot                (mkLabelText)
+import           WikiEL.Type                    (EntityMention)
+import           WikiEL.WikiNewNET              (newNETagger)
+import           WordNet.Query                  (WordNetDB,loadDB)
 --
-import           SRL.Analyze.ARB               (mkARB)
+import           SRL.Analyze.ARB                (mkARB)
 import qualified SRL.Analyze.Config as Analyze
-import           SRL.Analyze.CoreNLP           (runParser)
-import           SRL.Analyze.Format            (dotMeaningGraph,formatDocStructure,showMatchedFrame)
+import           SRL.Analyze.CoreNLP            (runParser)
+import           SRL.Analyze.Format             (dotMeaningGraph,formatDocStructure,showMatchedFrame)
 import           SRL.Analyze.Match.Frame        (mkTriples)
 import           SRL.Analyze.Match.MeaningGraph (meaningGraph,tagMG)
-import           SRL.Analyze.SentenceStructure (docStructure,mkWikiList)
+import           SRL.Analyze.SentenceStructure  (docStructure,mkWikiList)
 import           SRL.Analyze.Type
-import           SRL.Statistics (getGraphFromMG)
+import           SRL.Analyze.UKB                (runUKB)
+import           SRL.Statistics                 (getGraphFromMG)
 --
 
 --
@@ -73,12 +77,16 @@ queryProcess config pp apredata netagger =
     case command of
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
-                  dstr <- docStructure apredata netagger <$> runParser pp txt
+                  dainput <- runParser pp txt
+                  runUKB (apredata^.analyze_wordnet) (dainput^.dainput_sents,dainput^.dainput_mptrs)
+                  let dstr = docStructure apredata netagger dainput
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
                   mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
 
-      ":v " -> do dstr <- docStructure apredata netagger <$> runParser pp rest
+      ":v " -> do dainput <- runParser pp rest
+                  runUKB (apredata^.analyze_wordnet) (dainput^.dainput_sents,dainput^.dainput_mptrs)
+                  let dstr = docStructure apredata netagger dainput
                   mapM_ (T.IO.putStrLn . formatX'Tree) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'tr . traverse)
                   when (config^.Analyze.showDetail) $ do
                     -- print (dstr^.ds_mergedtags)
@@ -139,6 +147,7 @@ loadConfig :: Bool
            -> IO (AnalyzePredata,[Sentence]->[EntityMention Text])
 loadConfig bypass_ner cfg = do
   apredata <- loadAnalyzePredata cfg
+  createUKBDB (cfg^.cfg_ukb_binfile,cfg^.cfg_ukb_dictfile)
   netagger <- if bypass_ner
                 then return (const [])
                 else newNETagger
@@ -158,7 +167,7 @@ loadAnalyzePredata cfg = do
   return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats wndb)
 
 
-{- 
+{-
 getAnalysis :: DocAnalysisInput
             -> (HashMap Text Inventory
                ,HashMap (Text,Text) Int

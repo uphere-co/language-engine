@@ -30,6 +30,7 @@ library
                        SRL.Analyze.Sense
                        SRL.Analyze.SentenceStructure
                        SRL.Analyze.Type
+                       SRL.Analyze.UKB
                        SRL.Analyze.Util
                        SRL.Statistics
 
@@ -93,6 +94,7 @@ library
                        HCoreNLP,
                        HCoreNLP-Proto,
                        HFrameNet,
+                       HUKB-driver,
                        HWordNet,
                        OntoNotes,
                        PropBank,
