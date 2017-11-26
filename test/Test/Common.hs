@@ -14,6 +14,7 @@ import           NLP.Printer.PennTreebankII      (prettyPrint)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos
+import           WordNet.Type.Lexicographer      (LexicographerFile)
 --
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
@@ -33,9 +34,9 @@ mkVPS lmatknlst pt =
 
 
 
-formatDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType]) -> [Text]
-formatDetail (_txt,lma,pt,taglst) =
-  let tagged = mkTaggedLemma lma pt taglst
+formatDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType],[(Int,LexicographerFile)]) -> [Text]
+formatDetail (_txt,lma,pt,taglst,synsets) =
+  let tagged = mkTaggedLemma lma pt taglst synsets
       vps  = mkVPS lma pt
       -- clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
