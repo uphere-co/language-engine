@@ -1,6 +1,6 @@
 { mkDerivation, attoparsec, base, bifunctors, bindings-svm, boxes
 , bytestring, containers, data-default, discrimination, either, errors
-, fastText, filepath, foreign-store, html-entities, HCoreNLP, HCoreNLP-Proto, HFrameNet, jni
+, fastText, filepath, foreign-store, html-entities, HCoreNLP, HCoreNLP-Proto, HFrameNet, HUKB-driver, jni
 , jvm, lens, lexicon-builder, multi-word-tagger, nlp-shared-types, nlp-types
 , optparse-applicative, OntoNotes, PropBank, split
 , stdenv
@@ -27,7 +27,7 @@ mkDerivation {
     filepath foreign-store HCoreNLP HCoreNLP-Proto jni jvm lens
     lexicon-builder nlp-types optparse-applicative PropBank syntactic-analysis
     text time transformers
-    vector
+    vector HUKB-driver
   ];
   testHaskellDepends = [
     base containers HCoreNLP lens nlp-types tasty tasty-hunit text
