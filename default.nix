@@ -1,5 +1,5 @@
 { mkDerivation, base, bifunctors, containers, HCoreNLP
-, HCoreNLP-Proto, lens, monad-loops, lexicon, nlp-types
+, HCoreNLP-Proto, HWordNet, lens, monad-loops, lexicon, nlp-types
 , PropBank, stdenv
 , text, textview
 , tasty, tasty-hunit
@@ -9,7 +9,7 @@ mkDerivation {
   version = "0.1.0.0";
   src = ./.;
   libraryHaskellDepends = [
-    base bifunctors containers HCoreNLP HCoreNLP-Proto lens monad-loops
+    base bifunctors containers HCoreNLP HCoreNLP-Proto HWordNet lens monad-loops
     lexicon
     nlp-types PropBank text textview
   ];

@@ -31,7 +31,6 @@ library
                        NLP.Syntax.Type.XBar
                        NLP.Syntax.Util
                        NLP.Syntax.Verb
-                       NLP.Syntax.Verb.Old
   other-modules:       NLP.Syntax.Type.XBar.Internal
                        NLP.Syntax.Type.XBar.TH
   other-extensions:
@@ -45,8 +44,9 @@ library
                        transformers,
                        unordered-containers,
                        --
-                       HCoreNLP,
-                       HCoreNLP-Proto,
+                       -- HCoreNLP,
+                       -- HCoreNLP-Proto,
+                       HWordNet,
                        lexicon,
                        nlp-types,
                        PropBank,

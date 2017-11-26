@@ -33,6 +33,7 @@ data MarkType = MarkTime | MarkEntity NamedEntityClass
 
 data TaggedLemma t = TaggedLemma { _pennTree  :: BitreeICP t
                                  , _lemmaList :: [(Int,(Lemma,Text))]
+                                 -- , _synsetList :: 
                                  , _tagList   :: [TagPos TokIdx MarkType]
                                  }
 
