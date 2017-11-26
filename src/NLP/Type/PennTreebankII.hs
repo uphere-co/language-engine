@@ -1,10 +1,11 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE ExplicitNamespaces         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ExplicitNamespaces #-}
-{-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE MultiWayIf                 #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeOperators              #-}
 
 module NLP.Type.PennTreebankII
 ( POSTag(..)
@@ -28,7 +29,7 @@ module NLP.Type.PennTreebankII
 , chunkTag, posTag, tokenWord, getTag, getRange
 , termRange, termRangeTree, contain, containR
 , mkIndexedTree, getADTPennTree, mkPennTreeIdx
-, mkAnnotatable
+, mkAnnotatable, lemmatize
 ) where
 
 import           Control.Monad.Trans.State      (evalState,get,put)
@@ -37,7 +38,9 @@ import           Data.Bifunctor
 import           Data.Binary                    (Binary)
 import           Data.Either                    (either)
 import           Data.Foldable                  (toList)
-import           Data.Maybe                     (catMaybes,isNothing,listToMaybe)
+import           Data.IntMap                    (IntMap)
+import qualified Data.IntMap               as IM
+import           Data.Maybe                     (catMaybes,isNothing,listToMaybe,fromMaybe)
 import           Data.String                    (IsString)
 import           Data.Text                      (Text)
 import qualified Data.Text                 as T
@@ -56,7 +59,7 @@ data POSTag = CC          -- ^ conjunction, coordinating
             | CD          -- ^ cardinal number
             | DT          -- ^ determiner
             | EX          -- ^ existential there
-            | FW          -- ^ foreign word 
+            | FW          -- ^ foreign word
             | IN          -- ^ conjunction, subordinating or preposition
             | JJ          -- ^ adjective
             | JJR         -- ^ adjective, comparative
@@ -119,7 +122,7 @@ isNone :: POSTag -> Bool
 isNone D_NONE = True
 isNone _      = False
 
-isVerb :: POSTag -> Bool                     
+isVerb :: POSTag -> Bool
 isVerb VB  = True
 isVerb VBZ = True
 isVerb VBP = True
@@ -146,7 +149,7 @@ isNoun _    = No
 isWHword :: POSTag -> Bool
 isWHword WDT      = True
 isWHword WP       = True
-isWHword WPDollar = True  
+isWHword WPDollar = True
 isWHword WRB      = True
 isWHword _        = False
 
@@ -165,7 +168,7 @@ data ChunkTag = ROOT
               | VP        -- ^ verb phrase
               | ADVP      -- ^ adverb phrase
               | ADJP      -- ^ adjective phrase
-              | PRT       -- ^ particle 
+              | PRT       -- ^ particle
               | INTJ      -- ^ interjection
               | PNP       -- ^ prepositional noun phrase
               | CONJP     -- ^ conjunction phrase
@@ -189,7 +192,7 @@ data ChunkTag = ROOT
               | SQ        -- ^ inverted yes/no question
               -- from OntoNotes
               | NML       -- ^ mark nominal modifier
-               
+
               deriving (Generic, Show,Eq,Ord,Enum,Bounded)
 
 instance FromJSON ChunkTag where
@@ -229,10 +232,10 @@ data Trace = Tr_PRO   -- ^ overt subject, subject control and small clauses
 newtype LinkID = LinkID Int deriving (Show,Eq,Ord)
 
 
-data IOBPrefix = I_       -- ^ inside the chunk 
+data IOBPrefix = I_       -- ^ inside the chunk
                | B_       -- ^ inside the chunk, preceding word is part of a different chunk
                | O_       -- ^ not part of a chunk
-               deriving (Generic, Show,Eq,Ord,Enum) 
+               deriving (Generic, Show,Eq,Ord,Enum)
 
 instance FromJSON IOBPrefix where
   parseJSON = genericParseJSON defaultOptions
@@ -245,10 +248,10 @@ data RelationTag = R_SBJ  -- ^ sentence subject
                  | R_OBJ  -- ^ sentence object
                  | R_PRD  -- ^ predicate
                  | R_TMP  -- ^ temporal
-                 | R_CLR  -- ^ closely related 
+                 | R_CLR  -- ^ closely related
                  | R_LOC  -- ^ location
                  | R_DIR  -- ^ direction
-                 | R_EXT  -- ^ extent 
+                 | R_EXT  -- ^ extent
                  | R_PRP  -- ^ purpose
                  deriving (Generic, Show,Eq,Ord,Enum)
 
@@ -271,7 +274,7 @@ instance FromJSON AnchorTag where
 instance ToJSON AnchorTag where
   toJSON = genericToJSON defaultOptions
 
- 
+
 identifyPOS :: Text -> POSTag
 identifyPOS t
   | t == "-LRB-"  = D_LRB
@@ -288,36 +291,36 @@ identifyPOS t
           | p == "JJ"   -> JJ
           | p == "JJR"  -> JJR
           | p == "JJS"  -> JJS
-          | p == "LS"   -> LS 
+          | p == "LS"   -> LS
           | p == "MD"   -> MD
-          | p == "NN"   -> NN 
-          | p == "NNS"  -> NNS 
+          | p == "NN"   -> NN
+          | p == "NNS"  -> NNS
           | p == "NNP"  -> NNP
           | p == "NNPS" -> NNPS
           | p == "PDT"  -> PDT
           | p == "POS"  -> POS
           | p == "PRP"  -> PRP
-          | p == "PRP$" -> PRPDollar 
+          | p == "PRP$" -> PRPDollar
           | p == "RB"   -> RB
           | p == "RBR"  -> RBR
           | p == "RBS"  -> RBS
           | p == "RP"   -> RP
           | p == "SYM"  -> SYM
-          | p == "TO"   -> TO     
-          | p == "UH"   -> UH     
-          | p == "VB"   -> VB     
-          | p == "VBZ"  -> VBZ    
-          | p == "VBP"  -> VBP     
-          | p == "VBD"  -> VBD    
-          | p == "VBN"  -> VBN    
-          | p == "VBG"  -> VBG    
-          | p == "WDT"  -> WDT    
-          | p == "WP"   -> WP     
+          | p == "TO"   -> TO
+          | p == "UH"   -> UH
+          | p == "VB"   -> VB
+          | p == "VBZ"  -> VBZ
+          | p == "VBP"  -> VBP
+          | p == "VBD"  -> VBD
+          | p == "VBN"  -> VBN
+          | p == "VBG"  -> VBG
+          | p == "WDT"  -> WDT
+          | p == "WP"   -> WP
           | p == "WP$"  -> WPDollar
-          | p == "WRB"  -> WRB 
+          | p == "WRB"  -> WRB
           | p == "."    -> M_PERIOD
-          | p == ","    -> M_COMMA 
-          | p == ":"    -> M_COLON 
+          | p == ","    -> M_COMMA
+          | p == ":"    -> M_COLON
           | p == "''"   -> M_DQUOTE
           | p == "``"   -> M_DBACKQUOTE
           | p == "$"    -> M_DOLLAR
@@ -342,20 +345,20 @@ identifyChunk t =
           | p == "PRT"  -> PRT
           | p == "INTJ" -> INTJ
           | p == "PNP"  -> PNP
-          | p == "CONJP"-> CONJP  
-          | p == "FRAG" -> FRAG 
-          | p == "LST"  -> LST 
+          | p == "CONJP"-> CONJP
+          | p == "FRAG" -> FRAG
+          | p == "LST"  -> LST
           | p == "NAC"  -> NAC
-          | p == "NX"   -> NX  
-          | p == "PRN"  -> PRN 
-          | p == "QP"   -> QP  
-          | p == "RRC"  -> RRC 
-          | p == "UCP"  -> UCP 
+          | p == "NX"   -> NX
+          | p == "PRN"  -> PRN
+          | p == "QP"   -> QP
+          | p == "RRC"  -> RRC
+          | p == "UCP"  -> UCP
           | p == "WHADJP" -> WHADJP
           | p == "WHADVP" -> WHADVP
           | p == "WHNP" -> WHNP
           | p == "WHPP" -> WHPP
-          | p == "X"    -> X    
+          | p == "X"    -> X
           | p == "S"    -> S
           | p == "SBAR" -> SBAR
           | p == "SBARQ" -> SBARQ
@@ -367,7 +370,7 @@ identifyChunk t =
 
 
 linkIDChunk :: Text -> [LinkID]
-linkIDChunk t = 
+linkIDChunk t =
   let ps = reverse (T.splitOn "-" t)
       f = either (const Nothing) (Just . LinkID . fst) . decimal
   in catMaybes . fst . break isNothing . map f $ ps
@@ -393,10 +396,10 @@ identifyTrace t =
   in (tr,mn)
 
 
--- | chunk = chunktag, token = token in node. 
+-- | chunk = chunktag, token = token in node.
 --   typically token will be (pos = postag, a = content)
 type PennTreeGen chunk token = Bitree chunk token
-    
+
 type PennTree = Bitree Text (Text,Text)
 
 
@@ -423,7 +426,7 @@ instance Annotation ANode where
 
 instance Annotation ALeaf where
   getAnnot (ALeaf _ a) = a
-  
+
 
 chunkTag :: ANode a -> ChunkTag
 chunkTag (ANode c _) = c
@@ -451,11 +454,11 @@ mkIndexedTree tr = evalState (traverse tagidx tr) 0
   where tagidx x = get >>= \n -> put (n+1) >> return (n,x)
 
 termRange :: PennTreeGen c (Int,t) -> Range
-termRange tr = let is = (map fst . toList) tr 
+termRange tr = let is = (map fst . toList) tr
                in (minimum is,maximum is)
 
 termRangeTree :: PennTreeGen c (Int,t) -> PennTreeIdxG c t
-termRangeTree tr@(PN c xs) = let is = (map fst . toList) tr 
+termRangeTree tr@(PN c xs) = let is = (map fst . toList) tr
                                  rng = (minimum is,maximum is)
                              in PN (rng,c) (map termRangeTree xs)
 termRangeTree (PL (n,t)) = PL (n,t)
@@ -481,15 +484,16 @@ getADTPennTree :: PennTree -> PennTreeGen ChunkTag (POSTag, Text)
 getADTPennTree = bimap identifyChunk (first identifyPOS)
 
 
-{- 
-pruneOutNone :: Monoid m => PennTreeGen ChunkTag POSTag m -> PennTreeGen ChunkTag POSTag m
-pruneOutNone (PN t xs) = let xs' = (filter (not . isNone) . map pruneOutNone) xs
-                         in if null xs' then PL D_NONE mempty else PN t xs' 
-pruneOutNone x = x 
--}
-
 mkPennTreeIdx :: PennTree -> PennTreeIdx
-mkPennTreeIdx = termRangeTree . mkIndexedTree . getADTPennTree 
+mkPennTreeIdx = termRangeTree . mkIndexedTree . getADTPennTree
+
 
 mkAnnotatable :: PennTreeIdx -> PennTreeIdxA
 mkAnnotatable = bimap (\(i,x) -> (i,ANode x anil)) (\(j,y)-> (j,ALeaf y anil))
+
+
+
+lemmatize :: IntMap Lemma
+          -> PennTreeIdxG n (ALAtt bs)
+          -> PennTreeIdxG n (ALAtt (Lemma ': bs))
+lemmatize m = bimap id (\(i,ALeaf postxt annot) -> (i, ALeaf postxt (fromMaybe (error "error in lemmatize") (IM.lookup i m) `acons` annot)))
