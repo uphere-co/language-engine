@@ -87,7 +87,6 @@ queryProcess config pp apredata netagger =
       ":v " -> do dainput <- runParser pp rest
                   -- runUKB (apredata^.analyze_wordnet) (dainput^.dainput_sents,dainput^.dainput_mptrs)
                   dstr <- docStructure apredata netagger dainput
-                  mapM_ (T.IO.putStrLn . formatX'Tree) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'tr . traverse)
                   when (config^.Analyze.showDetail) $ do
                     -- print (dstr^.ds_mergedtags)
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)

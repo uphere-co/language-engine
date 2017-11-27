@@ -22,13 +22,15 @@ import           NLP.Type.SyntaxProperty       (Voice)
 import           OntoNotes.Type.SenseInventory (Inventory(..),sense_group,sense_n,sense_name,inventory_senses)
 --
 import           SRL.Analyze.Parameter         (thresholdPattStat)
-import           SRL.Analyze.Type              (ONSenseFrameNetInstance,AnalyzePredata(..),ExceptionalFrame(..)
-                                               ,ONSenseFrameNetInstance(..),TextifiedFrame(..)
+import           SRL.Analyze.Type              (AnalyzePredata(..)
                                                ,analyze_framedb
                                                ,analyze_ontomap,analyze_rolemap,analyze_sensemap
                                                ,analyze_sensestat,analyze_subcats
+                                               )
+import           SRL.Analyze.Type.Match        (ONSenseFrameNetInstance(..),ExceptionalFrame(..),TextifiedFrame(..)
                                                ,onfn_senseID
                                                )
+
 
 getSenses :: Lemma
           -> HashMap Text Inventory

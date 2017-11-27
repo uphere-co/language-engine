@@ -27,7 +27,7 @@ import           WordNet.Query            (WordNetDB,getDerivations,lookupLemma)
 import           WordNet.Type             (lex_word)
 import           WordNet.Type.POS         (POS(..))
 --
-import           SRL.Analyze.Type         (DPInfo(..),EntityInfo(..))
+import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..))
 --
 import Debug.Trace
 
@@ -94,6 +94,14 @@ entityFromDP x'tr tagged dp =
                      rng_head_comp = fromMaybe rng_comp (headRangeDP dp')
                      txt_comp = headTextDP tagged dp'
                  return (EI rng_comp rng_head_comp (Just "of") txt_comp)
+      adjs  = do AdjunctDP_PP pp <- dp^.adjunct
+                 dp' <- pp^..complement._CompPP_DP
+                 let mprep = pp^?headX.hp_prep._Prep_WORD
+                 -- guard (prep == Prep_WORD "of")
+                 let rng_adj = dp'^.maximalProjection
+                     rng_head_adj = fromMaybe rng_adj (headRangeDP dp')
+                     txt_adj = headTextDP tagged dp'
+                 return (EI rng_adj rng_head_adj mprep txt_adj)
       mposs1 = do (_ptyp,True) <- dp^?headX.hd_class._Pronoun
                   rng_poss <- dp^.headX.hd_range
                   txt_poss <- determinerText tagged (dp^.headX)
@@ -102,4 +110,4 @@ entityFromDP x'tr tagged dp =
                   let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
                   return (EI rng_poss rng_poss Nothing txt_poss)
       poss = maybeToList mposs1 ++ maybeToList mposs2
-  in (EI rng rnghead Nothing headtxt, DI mrngtxt' mcoref mcomp poss)
+  in (EI rng rnghead Nothing headtxt, DI mrngtxt' mcoref mcomp poss adjs)
