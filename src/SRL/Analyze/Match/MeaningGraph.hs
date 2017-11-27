@@ -33,17 +33,20 @@ import           SRL.Analyze.Match.Frame
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,SentStructure,AnalyzePredata
                                               ,PredicateInfo(..)
-                                              ,DPInfo(..), EntityInfo(..)
-                                              ,FrameMatchResult(..), VertexMap(..)
+                                              ,VertexMap(..)
                                               ,vm_rangeToIndex
                                               ,vm_rangeDependency
                                               ,vm_headRangeToFullRange
                                               ,analyze_wordnet
-                                              ,adi_appos,adi_compof,adi_coref,adi_poss
-                                              ,ei_fullRange,ei_headRange,ei_prep
                                               ,_PredAppos,_MGPredicate,ss_tagged
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
 
+import           SRL.Analyze.Type.Match       (DPInfo(..), EntityInfo(..),FrameMatchResult(..)
+                                              ,adi_appos,adi_compof,adi_coref,adi_poss,adi_adjs
+                                              ,ei_fullRange,ei_headRange,ei_prep                                              
+                                              )
+
+                                               
 import Debug.Trace
 
 
@@ -59,7 +62,8 @@ mkEntityFun (EI rng rnghead mprep txt,di) =
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
       compof = maybe [] (mkRel "Partitive") (di^.adi_compof)
       poss = concatMap (mkRel "Possession") (di^.adi_poss)
-  in (\i -> MGEntity i (Just rng) (Just rnghead) txt []) : (appos ++ compof ++ poss )
+      adjs = concatMap (mkRel "**ADJUNCT**") (di^.adi_adjs)
+  in (\i -> MGEntity i (Just rng) (Just rnghead) txt []) : (appos ++ compof ++ poss ++ adjs)
 
 
 mkMGVertices :: ([X'Tree '[Lemma]],TaggedLemma '[Lemma],[(Range,Range)])
@@ -100,9 +104,9 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
       ett_nominal :: [(EntityInfo,DPInfo)]
       ett_nominal = do (lma,verb,(frm,rng_dp),(subj,mei_subj),(obj,ei_obj)) <- nmatched
                        let lstsubj = case mei_subj of
-                                       Just ei_subj -> [(ei_subj,DI Nothing Nothing Nothing [])]
+                                       Just ei_subj -> [(ei_subj,DI Nothing Nothing Nothing [] [])]
                                        _ -> []
-                       (ei_obj,DI Nothing Nothing Nothing []) : lstsubj
+                       (ei_obj,DI Nothing Nothing Nothing [] []) : lstsubj
 
 
       ett_verbnom = filterFrame
@@ -184,7 +188,8 @@ mkInnerDPEdges vmap entities = do
     let appos = maybe [] (mkRelEdge "Instance" "Type" mrng) (di^.adi_appos)
         compof = maybe [] (mkRelEdge "Subset" "Group" mrng) (di^.adi_compof)
         poss = concatMap (mkRelEdge "Possession" "Owner" mrng) (di^.adi_poss)
-    (appos ++ compof ++ poss)
+        adjs = concatMap (mkRelEdge "**MODIFIED**" "**MODIFIER**" mrng) (di^.adi_adjs)        
+    (appos ++ compof ++ poss ++ adjs)
   where
     rngidxmap = vmap^.vm_rangeToIndex
     mkRelEdge role1 role2 mrng ei = do

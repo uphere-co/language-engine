@@ -43,17 +43,20 @@ import           WikiEL.Type                             (EMInfo,EntityMention,P
 import           WikiEL.WikiNamedEntityTagger            (resolvedUID)
 --
 import           SRL.Analyze.Match.Frame                 (matchFrame)
-import           SRL.Analyze.Type                        (ExceptionalFrame(..),ONSenseFrameNetInstance(..)
-                                                         ,DocStructure(..),SentStructure(..),VerbStructure(..)
+import           SRL.Analyze.Type                        (DocStructure(..),SentStructure(..),VerbStructure(..)
                                                          ,MGEdge(..),MGVertex(..),MeaningGraph
-                                                         ,PredicateInfo(..),FrameMatchResult(..)
+                                                         ,PredicateInfo(..)
                                                          ,_MGPredicate,_MGEntity
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
-                                                         ,onfn_senseID,onfn_definition,onfn_frame
-                                                         ,tf_frameID,tf_feCore,tf_fePeri
-                                                         ,vs_vp
+                                                         ,vs_vp,ss_x'tr
                                                          )
+import           SRL.Analyze.Type.Match                  (ExceptionalFrame(..),ONSenseFrameNetInstance(..),FrameMatchResult(..)
+                                                         ,onfn_senseID,onfn_definition,onfn_frame
+                                                         ,tf_frameID,tf_feCore,tf_fePeri                                                         
+                                                         )
+
+
 import           SRL.Analyze.Util                        (addTag,convertTagPosFromTokenToChar,underlineText)
 
 
@@ -181,17 +184,16 @@ formatDocStructure showdetail (DocStructure mtokenss sentitems mergedtags sstrs)
 
 
 formatSentStructure :: Bool -> SentStructure -> [Text]
-formatSentStructure _showdetail (SentStructure i ptr _ _ _ _ vstrs) =
+formatSentStructure _showdetail ss@(SentStructure i ptr _ _ _ _ vstrs) =
    let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                   , formatIndexTokensFromTree 0 ptr
-                  , prettyPrint 0 ptr
-                  ]
-       --subline1_1 = [ "--------------------------------------------------------------------------------------------------"
-       --             , formatClauseStructure clausetr
-       --             , "================================================================================================="
-       --             ]
+                  , prettyPrint 0 ptr ] 
+
+       subline1_1 = [ "--------------------------------------------------------------------------------------------------" ] ++
+                    map formatX'Tree (ss^.ss_x'tr) ++
+                    [ "=================================================================================================" ]
        subline2 = map formatVerbStructure vstrs
-   in subline1 ++ {- (if showdetail then subline1_1 else []) ++ -} concat subline2
+   in subline1 ++ subline1_1 ++ concat subline2
 
 
 formatVerbStructure :: VerbStructure -> [Text]

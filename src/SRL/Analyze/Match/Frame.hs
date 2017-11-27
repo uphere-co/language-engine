@@ -38,11 +38,14 @@ import           WordNet.Type.POS             (POS(..))
 --
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Sense            (getVerbSenses)
-import           SRL.Analyze.Type             (SentStructure,VerbStructure,FrameMatchResult(..),AnalyzePredata(..)
-                                              ,ONSenseFrameNetInstance,EntityInfo(..)
+import           SRL.Analyze.Type             (SentStructure,VerbStructure,AnalyzePredata(..)
                                               ,analyze_wordnet
                                               ,ss_x'tr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp)
+import           SRL.Analyze.Type.Match       (ONSenseFrameNetInstance,EntityInfo(..),FrameMatchResult(..))
+
+
+
 --
 -- import Debug.Trace
 
