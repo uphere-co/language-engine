@@ -24,12 +24,12 @@ import           WordNet.Query                                (WordNetDB,lookupS
 import           WordNet.Type                                 (LexItem(..),Pointer(..),SynsetOffset(..))
 import           WordNet.Type.POS                             (POS(..))
 import           NLP.Type.CoreNLP                             (Sentence,sentenceLemma)
+import           NLP.Type.PennTreebankII                      (Lemma(..),PennTree,TernaryLogic(..),tokenWord,posTag,getAnnot,isNoun,isVerb)
 --
 
 import qualified Data.Text.IO as TIO
 import Data.Attribute (ahead)
 import NLP.Syntax.Util (mkBitreeICP)
-import           NLP.Type.PennTreebankII                      (Lemma(..),tokenWord,posTag,getAnnot,isNoun,isVerb,TernaryLogic(..))
 import           NLP.Printer.PennTreebankII                   (prettyPrint)
 -- import NLP.Syntax.
 
@@ -63,17 +63,21 @@ formatUKBResult r = intercalate "\n" $ map formatUKBResultWord (r^.ukbresult_wor
   where
     formatUKBResultWord u = printf "%-3d: %-20s: %s" (u^.ukbrw_id) (u^.ukbrw_word) (maybe "" (T.pack . show) (u^.ukbrw_syn)) :: String
 
+runUKB :: WordNetDB -> ([Sentence],[Maybe PennTree]) -> IO [[(Int,LexicographerFile)]]
 runUKB wndb (sents,parsetrees) = do
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
-  flip mapM_ (zip lmass parsetrees) $ \(lmas,mpt) ->
-    flip traverse_ mpt $ \pt -> do
-      let lmap = (mkLemmaMap . map unLemma) lmas
-          lemmapt = mkBitreeICP lmap pt
-          mkContextWord (i,x) = CtxtWord (unLemma (ahead (getAnnot x))) <$> posTagToPOS (posTag x) <*> pure i <*> pure 1
-          ctxt = Context "0" (mapMaybe mkContextWord (toList lemmapt))
-      -- print ctxt
-      r <- ppr ctxt
-      let r' = (ukbresult_words %~ map (ukbLookupSynset wndb)) r
-      putStrLn ("\n\nTHIS RESULT: \n" ++ formatUKBResult r')
+  flip mapM (zip lmass parsetrees) $ \(lmas,mpt) ->
+    case mpt of
+      Nothing -> return []
+      Just pt -> do
+        let lmap = (mkLemmaMap . map unLemma) lmas
+            lemmapt = mkBitreeICP lmap pt
+            mkContextWord (i,x) = CtxtWord (unLemma (ahead (getAnnot x))) <$> posTagToPOS (posTag x) <*> pure i <*> pure 1
+            ctxt = Context "0" (mapMaybe mkContextWord (toList lemmapt))
+        -- print ctxt
+        r <- ppr ctxt
+        let r' = (ukbresult_words %~ map (ukbLookupSynset wndb)) r
+        return $ mapMaybe (\u -> (u^.ukbrw_id,) <$> u^.ukbrw_syn) (r'^.ukbresult_words)
+        -- putStrLn ("\n\nTHIS RESULT: \n" ++ formatUKBResult r')
 
 
