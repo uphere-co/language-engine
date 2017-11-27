@@ -67,11 +67,11 @@ entityTextDP tagged dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> fromMaybe "" (fmap (headText tagged) (dp^.complement))
     _ -> T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
-         <> let mpp = dp^?complement._Just.complement._Just._CompDP_PP
+         {- <> let mpp = dp^?complement._Just.complement._Just._CompDP_PP
             in case mpp of
                  Nothing -> ""
                  Just pp -> " " <> (T.intercalate " " . tokensByRange tagged) (pp^.maximalProjection)
-
+         -}
 
 
 entityFromDP :: [X'Tree '[Lemma]]
@@ -84,7 +84,7 @@ entityFromDP x'tr tagged dp =
 
       mrngtxt' = do rng_sub <- listToMaybe (dp^..specifier.traverse._SpDP_Appos)
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
-                    return (EI rng_sub rng_sub txt_sub)                 -- for the time being
+                    return (EI rng_sub rng_sub Nothing txt_sub)                 -- for the time being
       mcoref = pronounResolution x'tr dp
       mcomp = do CompDP_PP pp <- dp^?complement._Just.complement._Just
                  dp' <- pp^?complement._CompPP_DP
@@ -93,13 +93,13 @@ entityFromDP x'tr tagged dp =
                  let rng_comp = dp'^.maximalProjection
                      rng_head_comp = fromMaybe rng_comp (headRangeDP dp')
                      txt_comp = headTextDP tagged dp'
-                 return (EI rng_comp rng_head_comp txt_comp)
+                 return (EI rng_comp rng_head_comp (Just "of") txt_comp)
       mposs1 = do (_ptyp,True) <- dp^?headX.hd_class._Pronoun
                   rng_poss <- dp^.headX.hd_range
                   txt_poss <- determinerText tagged (dp^.headX)
-                  return (EI rng_poss rng_poss txt_poss)
+                  return (EI rng_poss rng_poss Nothing txt_poss)
       mposs2 = do rng_poss <- listToMaybe (dp^..specifier.traverse._SpDP_Gen)
                   let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
-                  return (EI rng_poss rng_poss txt_poss)
+                  return (EI rng_poss rng_poss Nothing txt_poss)
       poss = maybeToList mposs1 ++ maybeToList mposs2
-  in (EI rng rnghead headtxt, DI mrngtxt' mcoref mcomp poss)
+  in (EI rng rnghead Nothing headtxt, DI mrngtxt' mcoref mcomp poss)

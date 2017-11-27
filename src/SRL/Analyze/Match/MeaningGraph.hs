@@ -40,7 +40,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,vm_headRangeToFullRange
                                               ,analyze_wordnet
                                               ,adi_appos,adi_compof,adi_coref,adi_poss
-                                              ,ei_fullRange,ei_headRange
+                                              ,ei_fullRange,ei_headRange,ei_prep
                                               ,_PredAppos,_MGPredicate,ss_tagged
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
 
@@ -53,9 +53,9 @@ dependencyOfX'Tree (PL _)           = []
 
 
 mkEntityFun :: (EntityInfo,DPInfo) -> [(Int -> MGVertex)]
-mkEntityFun (EI rng rnghead txt,di) =
-  let mkRel frm (EI rng' rng'' txt') = [ \i'  -> MGEntity i' (Just rng') (Just rng'') txt' []
-                                        , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
+mkEntityFun (EI rng rnghead mprep txt,di) =
+  let mkRel frm (EI rng' rng'' _ txt') = [ \i'  -> MGEntity i' (Just rng') (Just rng'') txt' []
+                                         , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
       compof = maybe [] (mkRel "Partitive") (di^.adi_compof)
       poss = concatMap (mkRel "Possession") (di^.adi_poss)
@@ -189,10 +189,11 @@ mkInnerDPEdges vmap entities = do
     rngidxmap = vmap^.vm_rangeToIndex
     mkRelEdge role1 role2 mrng ei = do
       let rng' = ei^.ei_fullRange
+          mprep = ei^.ei_prep
       i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
       i_1 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
       i_2 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
-      [MGEdge role1 True Nothing i_frame i_1, MGEdge role2 False Nothing i_frame i_2]
+      [MGEdge role1 True Nothing i_frame i_1, MGEdge role2 False mprep i_frame i_2]
 
 
 mkPrepEdges :: VertexMap
