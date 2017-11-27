@@ -43,16 +43,26 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 
 import           SRL.Analyze.Type.Match       (DPInfo(..), EntityInfo(..),FrameMatchResult(..)
                                               ,adi_appos,adi_compof,adi_coref,adi_poss,adi_adjs
-                                              ,ei_fullRange,ei_headRange,ei_prep                                              
+                                              ,ei_fullRange,ei_headRange,ei_prep
                                               )
 
-                                               
+
 import Debug.Trace
 
 
 dependencyOfX'Tree :: X'Tree p -> [(Range,Range)]
 dependencyOfX'Tree (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap dependencyOfX'Tree xs
 dependencyOfX'Tree (PL _)           = []
+
+ppAdjunctFrame p = lookup p [ ("in", ("Locative_relation","Figure","Ground"))
+                            , ("at", ("Locative_relation","Figure","Ground"))
+                            , ("on", ("Locative_relation","Figure","Ground"))
+                            , ("about", ("Topic","Text","Topic"))
+                            , ("above", ("Directional_locative_relation","Figure","Ground"))
+                            , ("as", ("Performers_and_roles","Performer","Role"))
+                            , ("for", ("Purpose","Means","Goal"))
+                            , ("with",("Accompaniment","Participant","Co-participant"))
+                            ]
 
 
 mkEntityFun :: (EntityInfo,DPInfo) -> [(Int -> MGVertex)]
@@ -62,7 +72,7 @@ mkEntityFun (EI rng rnghead mprep txt,di) =
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
       compof = maybe [] (mkRel "Partitive") (di^.adi_compof)
       poss = concatMap (mkRel "Possession") (di^.adi_poss)
-      adjs = concatMap (mkRel "**ADJUNCT**") (di^.adi_adjs)
+      adjs = concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppAdjunctFrame p) >>= \f -> mkRel (f^._1) e) (di^.adi_adjs)
   in (\i -> MGEntity i (Just rng) (Just rnghead) txt []) : (appos ++ compof ++ poss ++ adjs)
 
 
@@ -188,7 +198,7 @@ mkInnerDPEdges vmap entities = do
     let appos = maybe [] (mkRelEdge "Instance" "Type" mrng) (di^.adi_appos)
         compof = maybe [] (mkRelEdge "Subset" "Group" mrng) (di^.adi_compof)
         poss = concatMap (mkRelEdge "Possession" "Owner" mrng) (di^.adi_poss)
-        adjs = concatMap (mkRelEdge "**MODIFIED**" "**MODIFIER**" mrng) (di^.adi_adjs)        
+        adjs = concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppAdjunctFrame p) >>= \f -> mkRelEdge (f^._2) (f^._3) mrng e) (di^.adi_adjs)
     (appos ++ compof ++ poss ++ adjs)
   where
     rngidxmap = vmap^.vm_rangeToIndex
