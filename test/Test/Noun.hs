@@ -160,7 +160,7 @@ test_prep_modifier_3 =
 
 test_prep_modifier_4 :: TestNoun
 test_prep_modifier_4 =
-  ( "General Motors Co's vehicle sales in China rose 6.6 percent in September from a year earlier to 366,305 vehicles, following a 12 percent increase in August and a 6.3 percent increase in July, the Detroit automaker said on Wednesday."
+  ( "General Motors Co's vehicle sales in China"
   , ("'s",Just "vehicle sales",["General Motors Co"],Nothing,["in China"])
   , [(0,("General","General")),(1,("Motors","Motors")),(2,("Co","Co")),(3,("'s","'s")),(4,("vehicle","vehicle")),(5,("sale","sales")),(6,("in","in")),(7,("China","China"))]
   , PN "NP" [PN "NP" [PN "NP" [PL ("NNP","General"),PL ("NNPS","Motors"),PL ("NNP","Co"),PL ("POS","'s")],PL ("NN","vehicle"),PL ("NNS","sales")],PN "PP" [PL ("IN","in"),PN "NP" [PL ("NNP","China")]]]

@@ -110,7 +110,7 @@ complementsOfVerb tagged vprop z_vp =
                  in (TraceChain (Right []) (Just (checkEmptyPrep tagged dp')), zs)
     xform_pp z = (TraceChain (Right []) (checkTimePrep tagged <$> mkPPFromZipper tagged PC_Other z), [])
       -- checkTimePrep tagged
-                    
+
     xform_cp z = (TraceChain (Right []) (Just (CompVP_Unresolved z)), [])
     xform z = case rootTag (current z) of
                 Left NP    -> xform_dp z
@@ -142,14 +142,20 @@ allAdjunctCPOfVerb vprop =
 identifySubject :: TaggedLemma (Lemma ': as)
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)   -- ^ Verb maximal projection
-                -> TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as)))
+                -> (TraceChain (Either (Zipper (Lemma ': as)) (DetP (Lemma ': as))), [AdjunctVP (Lemma ': as)])
 identifySubject tagged tag vp = maybe nul smp r
   where
     r = case tag of
           N.SINV -> firstSiblingBy next (isChunkAs NP) vp          -- this should be refined.
           _      -> firstSiblingBy prev (isChunkAs NP) vp          -- this should be refined.
-    nul = TraceChain (Left (singletonLZ NULL)) Nothing
-    smp z = TraceChain (Right [])(Just (Right (splitDP tagged (mkOrdDP z)))) -- for the time being, CP subject is not supported
+    nul = (TraceChain (Left (singletonLZ NULL)) Nothing,[])
+    smp z = let dp = splitDP tagged (mkOrdDP z)
+                (dp',adjs) = identifyInternalTimePrep tagged dp
+            in (TraceChain (Right []) (Just (Right dp')),adjs)
+
+
+
+    -- for the time being, CP subject is not supported
 
 
 --
@@ -169,21 +175,27 @@ constructCP tagged vprop = do
         let (comps,mtop,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
+            (subj0,sadjs) = identifySubject tagged s z_vp
+            subj = ((trResolved . _Just . _Right) %~ splitDP tagged) subj0
+            subj_dps = subj^..trResolved._Just
+            {-
             subj0 = identifySubject tagged s z_vp
+
             (subj,subj_dps,sadjs) = fromMaybe (subj0,[],[]) $ do
+
               dp_subj <- subj0 ^? trResolved . _Just . _Right
               let (dp_subj',sadjs') = identifyInternalTimePrep tagged dp_subj
-                  dp_subj'' = splitDP tagged dp_subj' 
+                  dp_subj'' = splitDP tagged dp_subj'
                   subj' = ((trResolved . _Just . _Right) .~ dp_subj'') subj0
               subj_dp <- subj' ^? trResolved . _Just
-              return (subj',[subj_dp],sadjs')
+              return (subj',[subj_dp],sadjs') -}
             verbp = mkVerbP z_vp vprop (cadjs++sadjs) comps
             dps = subj_dps ++ comps_dps
         case cptag' of
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
                                     Just top -> (C_PHI,Just (SpecCP_Topic top))
-                                    Nothing -> 
+                                    Nothing ->
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
@@ -521,6 +533,3 @@ rewriteTree action xtr = execState (go rng0) xtr
                    ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
                     <|>
                     (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
-
-
-
