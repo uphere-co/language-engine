@@ -13,7 +13,7 @@ import           Data.Foldable                             (toList)
 import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
-import           Data.List                                 (find,sortBy,zip4)
+import           Data.List                                 (find,sortBy,zip5)
 import           Data.Maybe                                (fromMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
@@ -43,10 +43,12 @@ import           OntoNotes.Type.SenseInventory
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
 import           WikiEL.Type                               (EntityMention,IRange(..),PreNE(..),UIDCite(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
+import           WordNet.Type.Lexicographer                (LexicographerFile)
 --
 import           SRL.Analyze.Parameter                     (thresholdPattStat)
 import           SRL.Analyze.Sense                         (getVerbSenses)
 import           SRL.Analyze.Type
+import           SRL.Analyze.UKB                           (runUKB)
 
 
 adjustWikiRange :: (Int,Int) -> (Int,Int)
@@ -80,16 +82,17 @@ mkWikiList sstr =
 docStructure :: AnalyzePredata
              -> ([Sentence] -> [EntityMention Text])
              -> DocAnalysisInput
-             -> DocStructure
-docStructure apredata netagger docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) =
+             -> IO DocStructure
+docStructure apredata netagger docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = netagger (docinput^.dainput_sents)
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
-      sentStructures = map (sentStructure apredata mergedtags) (zip4 ([1..] :: [Int]) sentidxs lmass mptrs)
-  in DocStructure mtokenss sentitems mergedtags sentStructures
+  synsetss <- runUKB (apredata^.analyze_wordnet)(sents,mptrs)
+  let sentStructures = map (sentStructure apredata mergedtags) (zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss)
+  return (DocStructure mtokenss sentitems mergedtags sentStructures)
 
 
 tagToMark :: Either (EntityMention Text) (Char,Maybe Text) -> Maybe MarkType
@@ -127,15 +130,15 @@ adjustTokenIndexForSentence midx tagged
 
 sentStructure :: AnalyzePredata
               -> [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text))]
-              -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree)
+              -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree,[(Int,LexicographerFile)])
               -> Maybe SentStructure
-sentStructure apredata taglst (i,midx,lmas,mptr) =
-  flip fmap mptr $ \ptr ->
+sentStructure apredata taglst (i,midx,lmas,mptr,synsets) =
+  flip fmap mptr $ \ptr -> 
     let taglst' = adjustTokenIndexForSentence midx taglst
         taglstMarkOnly = map (fmap snd) taglst'
         lmatkns = (zip [0..] . zip lmas . map (^._2) . toList) ptr
         lemmamap = (mkLemmaMap . map unLemma) lmas
-        taggedMarkOnly = mkTaggedLemma lmatkns ptr taglstMarkOnly
+        taggedMarkOnly = mkTaggedLemma lmatkns ptr taglstMarkOnly synsets
         vps = verbPropertyFromPennTree lemmamap ptr
         x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis taggedMarkOnly) . identifyCPHierarchy taggedMarkOnly) vps
         verbStructures = map (verbStructure apredata) vps
