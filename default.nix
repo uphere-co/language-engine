@@ -1,4 +1,4 @@
-{ mkDerivation, attoparsec, base, cassava, containers, graph-algorithms, nlp-types, primitive
+{ mkDerivation, base, aeson-pretty, attoparsec, cassava, containers, graph-algorithms, nlp-types, primitive
 , stdenv, tasty, tasty-hunit, text, vector, vector-algorithms
 , xxhash
 , foreign-store, raw-strings-qq, mwc-random    
@@ -12,7 +12,7 @@ mkDerivation {
   ./.;
   
   libraryHaskellDepends = [
-    attoparsec base cassava containers graph-algorithms nlp-types primitive tasty-hunit text
+    aeson-pretty attoparsec base cassava containers graph-algorithms nlp-types primitive tasty-hunit text
     vector vector-algorithms xxhash
   ];
   executableHaskellDepends = [
