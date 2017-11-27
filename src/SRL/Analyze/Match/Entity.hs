@@ -31,6 +31,33 @@ import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..))
 --
 import Debug.Trace
 
+--
+-- | this is very experimental now, only "the company" is checked.
+--
+definiteCorefResolution :: [X'Tree '[Lemma]]
+                        -> TaggedLemma '[Lemma]
+                        -> DetP '[Lemma]
+                        -> Maybe (Range,Range)
+definiteCorefResolution x'tr tagged dp = do
+  let rng_dp = dp^.maximalProjection
+  -- rng_pro <- dp^.headX.hd_range
+  guard (dp^?headX.hd_class._Article == Just Definite)
+  np <- dp^.complement
+  let (b,e) = np^.maximalProjection
+  guard (b == e)  -- a single word
+  let ntxt = headText tagged np
+  guard (ntxt == "company")  -- for the time being
+  w <- getFirst (foldMap (First . extractZipperById rng_dp) x'tr)
+  w' <- parent w
+  cp' <- currentCPDPPP w' ^? _CPCase
+  w'' <- parent w'
+  cp'' <- currentCPDPPP w'' ^? _CPCase
+  dp'' <- cp''^?complement.specifier.trResolved._Just._Right
+  nclass <- dp''^?complement._Just.headX.hn_class._Just
+  if nclass == Org
+    then return (rng_dp,dp''^.maximalProjection)
+    else mzero
+
 
 pronounResolution :: [X'Tree '[Lemma]]
                   -> DetP '[Lemma]
@@ -42,6 +69,7 @@ pronounResolution x'tr dp = do
   w <- getFirst (foldMap (First . extractZipperById rng_dp) x'tr)
   w' <- parent w
   cp' <- currentCPDPPP w' ^? _CPCase
+
   ((if isgenitive
       then do
         dp' <- cp'^?complement.specifier.trResolved._Just._Right
@@ -57,9 +85,7 @@ pronounResolution x'tr dp = do
        nclass <- dp''^?complement._Just.headX.hn_class._Just
        if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,dp''^.maximalProjection)
           | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp''^.maximalProjection)
-          | otherwise -> mzero
-   )
-    )
+          | otherwise -> mzero))
 
 
 entityTextDP :: TaggedLemma t -> DetP t -> Text
@@ -85,7 +111,7 @@ entityFromDP x'tr tagged dp =
       mrngtxt' = do rng_sub <- listToMaybe (dp^..specifier.traverse._SpDP_Appos)
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (EI rng_sub rng_sub Nothing txt_sub)                 -- for the time being
-      mcoref = pronounResolution x'tr dp
+      mcoref = pronounResolution x'tr dp <|> definiteCorefResolution x'tr tagged dp
       mcomp = do CompDP_PP pp <- dp^?complement._Just.complement._Just
                  dp' <- pp^?complement._CompPP_DP
                  let prep = pp^.headX.hp_prep
