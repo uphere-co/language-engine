@@ -144,3 +144,9 @@ Tesla Inc has completed construction of the world's largest lithium ion battery 
 
 -- | make something conditional   (conditional is adjective, not noun)
 Bayer said it expected antitrust authorities to make the planned acquisition of Monsanto conditional on more asset sales after agreeing to sell seed and herbicide businesses for 5.9 billion euro ($7 billion) to BASF.
+
+-- | Venture capitalist / Peter Thiel
+Venture capitalist Peter Thiel may be looking to buy online news site Gawker.com, BuzzFeed said on Wednesday.
+ 
+-- | what he called "missteps"
+Walt Disney Co animation executive John Lasseter told company staff on Tuesday he was taking a six-month leave of absence following what he called "missteps" including unwanted hugs that made employees uncomfortable, according to a memo seen by Reuters.

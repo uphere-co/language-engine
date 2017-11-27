@@ -35,6 +35,7 @@ import           OntoNotes.Type.SenseInventory (Inventory)
 
 data EntityInfo = EI { _ei_fullRange :: Range
                      , _ei_headRange :: Range
+                     , _ei_prep      :: Maybe Text
                      , _ei_text      :: Text
                      }
                 deriving Show
