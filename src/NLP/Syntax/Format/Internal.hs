@@ -32,7 +32,7 @@ formatCompDP (CompDP_PP pp) = formatPP pp
 
 formatAdjunctDP :: AdjunctDP t -> Text
 formatAdjunctDP (AdjunctDP_Unresolved rng) = T.pack (show rng)
-formatAdjunctDP (AdjunctDP_PP pp) = formatPP pp
+formatAdjunctDP (AdjunctDP_PP pp) = "(" <> formatPP pp <> ")"
 
 
 formatPP :: PP t -> Text
@@ -45,12 +45,12 @@ formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
 
 formatDP :: DetP t -> Text
 formatDP dp = "(DP"        <> rangeText (Right dp) <>
-              " D: "       <> maybe "" (T.pack.show) (dp^.headX.hd_range) <>
-              " NP: "      <> maybe "" (T.pack.show) (dp^?complement._Just.headX) <>
+              "[D: "       <> maybe "" (T.pack.show) (dp^.headX.hd_range) <>
+              " NP: "      <> maybe "" (T.pack.show) (dp^?complement._Just.headX.hn_range) <>
               " spec: "    <> T.intercalate " " (map (T.pack.show) (dp^.specifier)) <>
               " comp: "    <> maybe "" formatCompDP  (dp^?complement._Just.complement._Just) <>
-              " adjunct: " <> (T.intercalate " " . map formatAdjunctDP) (dp^.adjunct) <>
-              ")"
+              " adjunct: " <> (T.intercalate "," . map formatAdjunctDP) (dp^.adjunct) <>
+              "])"
 
 
 formatCompVP :: CompVP as -> Text

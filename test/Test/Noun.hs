@@ -158,6 +158,18 @@ test_prep_modifier_3 =
   , []
   )
 
+test_prep_modifier_4 :: TestNoun
+test_prep_modifier_4 =
+  ( "General Motors Co's vehicle sales in China"
+  , ("'s",Just "vehicle sales",["General Motors Co"],Nothing,["in China"])
+  , [(0,("General","General")),(1,("Motors","Motors")),(2,("Co","Co")),(3,("'s","'s")),(4,("vehicle","vehicle")),(5,("sale","sales")),(6,("in","in")),(7,("China","China"))]
+  , PN "NP" [PN "NP" [PN "NP" [PL ("NNP","General"),PL ("NNPS","Motors"),PL ("NNP","Co"),PL ("POS","'s")],PL ("NN","vehicle"),PL ("NNS","sales")],PN "PP" [PL ("IN","in"),PN "NP" [PL ("NNP","China")]]]
+  , [TagPos (TokIdx 0,TokIdx 3,MarkEntity Org)]
+  , []
+  )
+
+
+
 test_appos_or_1 :: TestNoun
 test_appos_or_1 =
   ("$154.5 million, or 54 cents a share,"
@@ -208,15 +220,13 @@ checkBNM :: TestNoun -> Bool
 checkBNM x =
   let tagged = mkTaggedLemma (x^._3) (x^._4) (x^._5) (x^._6)
       dp = mkDPFromTest tagged x
-  in (dp^.headX.hd_range.to (maybe "" (T.intercalate " " . tokensByRange tagged)) == x^._2._1)
-     &&
-     (fmap (headText tagged) (dp^.complement) == x^._2._2)
-     &&
-     (dp^..specifier.traverse.to (specDPText tagged) == x^._2._3)
-     &&
-     (dp^?complement._Just.complement._Just.to (T.intercalate " " . tokensByRange tagged . compDPToRange) == (x^._2._4))
-     &&
-     (dp^..adjunct.traverse.to (T.intercalate " " . tokensByRange tagged . adjunctDPToRange) == (x^._2._5))
+      result = (dp^.headX.hd_range.to (maybe "" (T.intercalate " " . tokensByRange tagged))
+               ,fmap (headText tagged) (dp^.complement)
+               ,dp^..specifier.traverse.to (specDPText tagged)
+               ,dp^?complement._Just.complement._Just.to (T.intercalate " " . tokensByRange tagged . compDPToRange)
+               ,dp^..adjunct.traverse.to (T.intercalate " " . tokensByRange tagged . adjunctDPToRange)
+               )
+  in result == x^._2
 
 
 testcases :: [TestNoun]
@@ -230,6 +240,7 @@ testcases = [ test_bare_noun_modifier_1
             , test_prep_modifier_1
             , test_prep_modifier_2
             , test_prep_modifier_3
+            , test_prep_modifier_4
             , test_appos_or_1
             , test_article_1
             , test_possesive_clitic_1

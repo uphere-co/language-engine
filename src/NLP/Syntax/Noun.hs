@@ -9,7 +9,7 @@
 module NLP.Syntax.Noun where
 
 import           Control.Applicative      ((<|>))
-import           Control.Lens             ((^.),(^?),(.~),(%~),(&),to,_1,_2,_Just,_Nothing)
+import           Control.Lens             ((^.),(^..),(^?),(.~),(%~),(&),to,_1,_2,_Just,_Nothing,folded,filtered)
 import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
@@ -35,7 +35,8 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,PP, AdjunctDP(..), CompDP(..),HeadDP(..), SpecDP(..), HeadNP(..)
                                           ,DetClass(..),XP(..),TaggedLemma, AdjunctVP(..)
                                           ,PrepClass(..)
-                                          ,_MarkEntity,_NoDet,hn_range,hn_class
+                                          ,_MarkEntity,_NoDet,_AdjunctDP_PP
+                                          ,hn_range,hn_class
                                           ,adjunct,complement,headX,maximalProjection,specifier
                                           ,tokensByRange
                                           ,mkNP,mkOrdDP,mkSplittedDP,hd_range,hd_class,hn_range
@@ -69,6 +70,10 @@ mkPPFromZipper tagged pclass z = do
 
 
 
+removePP :: Range -> [AdjunctDP t] -> [AdjunctDP t]
+removePP rng xs = xs^..folded.filtered (\x->x^?_AdjunctDP_PP.maximalProjection /= Just rng)
+
+
 splitDP :: TaggedLemma (Lemma ': as) -> DetP (Lemma ': as) -> DetP (Lemma ': as)
 splitDP tagged dp0 =
   let dp1 = fromMaybe dp0 $ do
@@ -80,7 +85,7 @@ splitDP tagged dp0 =
               pp <- mkPPFromZipper tagged PC_Other z_pp
               let ppreplace = case pp^.headX.hp_prep of
                                 Prep_WORD "of" -> complement._Just.complement .~ (Just (CompDP_PP pp))
-                                _              -> adjunct %~ (++ [AdjunctDP_PP pp])
+                                _              -> adjunct %~ (++ [AdjunctDP_PP pp]) . removePP (pp^.maximalProjection)
               let (b_pp,_) = pp^.maximalProjection
               return (dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
 
@@ -275,6 +280,10 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
       rng_dp' = (b_dp,b_tpp-1)
   (b_h,e_h) <- dp^?complement._Just.headX.hn_range
   let rng_head = if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
-      dp' = dp & (maximalProjection .~ rng_dp') . (complement._Just.headX.hn_range .~ rng_head) . (complement._Just.maximalProjection .~ rng_dp')
   tpp <- mkPPFromZipper tagged PC_Time z_tpp
+  let dp' = dp & (maximalProjection .~ rng_dp')
+               . (complement._Just.headX.hn_range .~ rng_head)
+               . (complement._Just.maximalProjection .~ rng_dp')
+               . (adjunct %~ removePP (tpp^.maximalProjection))
+  
   return (dp',[AdjunctVP_PP tpp])
