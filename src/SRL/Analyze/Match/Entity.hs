@@ -30,7 +30,7 @@ import           WordNet.Type.POS         (POS(..))
 import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..))
 --
 import Debug.Trace
-
+import           NLP.Syntax.Format (formatCP,formatCompVP,formatTraceChain,rangeText)
 --
 -- | this is very experimental now, only "the company" is checked.
 --
@@ -40,7 +40,6 @@ definiteCorefResolution :: [X'Tree '[Lemma]]
                         -> Maybe (Range,Range)
 definiteCorefResolution x'tr tagged dp = do
   let rng_dp = dp^.maximalProjection
-  -- rng_pro <- dp^.headX.hd_range
   guard (dp^?headX.hd_class._Article == Just Definite)
   np <- dp^.complement
   let (b,e) = np^.maximalProjection
@@ -50,13 +49,21 @@ definiteCorefResolution x'tr tagged dp = do
   w <- getFirst (foldMap (First . extractZipperById rng_dp) x'tr)
   w' <- parent w
   cp' <- currentCPDPPP w' ^? _CPCase
-  w'' <- parent w'
-  cp'' <- currentCPDPPP w'' ^? _CPCase
-  dp'' <- cp''^?complement.specifier.trResolved._Just._Right
-  nclass <- dp''^?complement._Just.headX.hn_class._Just
-  if nclass == Org
-    then return (rng_dp,dp''^.maximalProjection)
-    else mzero
+  ((do w'' <- parent w'
+       cp'' <- currentCPDPPP w'' ^? _CPCase
+       dp'' <- cp''^?complement.specifier.trResolved._Just._Right
+       nclass <- dp''^?complement._Just.headX.hn_class._Just
+       if nclass == Org
+         then return (rng_dp,dp''^.maximalProjection)
+         else mzero)
+   <|>
+   (do cp'' <- cp'^?specifier._Just._SpecCP_Topic.trResolved._Just._CompVP_CP
+       dp'' <- cp''^?complement.specifier.trResolved._Just._Right
+       nclass <- dp''^?complement._Just.headX.hn_class._Just
+       if nclass == Org
+         then return (rng_dp,dp''^.maximalProjection)
+         else mzero))
+
 
 
 definiteGenitiveCorefResolution :: [X'Tree '[Lemma]]
