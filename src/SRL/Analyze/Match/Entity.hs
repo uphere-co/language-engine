@@ -59,6 +59,27 @@ definiteCorefResolution x'tr tagged dp = do
     else mzero
 
 
+definiteGenitiveCorefResolution :: [X'Tree '[Lemma]]
+                                -> TaggedLemma '[Lemma]
+                                -> DetP '[Lemma]
+                                -> Maybe (Range,Range)
+definiteGenitiveCorefResolution x'tr tagged dp = do
+  guard (dp^?headX.hd_class._GenitiveClitic == Just ())
+  rng_specdp <- listToMaybe (dp^..specifier.traverse._SpDP_Gen)
+  let stxt = T.intercalate " " (tokensByRange tagged rng_specdp)
+  guard (stxt == "the company") -- for the time being
+  w <- getFirst (foldMap (First . extractZipperById rng_specdp) x'tr)
+  w' <- parent w
+  cp' <- currentCPDPPP w' ^? _CPCase
+  w'' <- parent w'
+  cp'' <- currentCPDPPP w'' ^? _CPCase
+  dp' <- cp'^?complement.specifier.trResolved._Just._Right
+  nclass <- dp'^?complement._Just.headX.hn_class._Just
+  if nclass == Org
+    then return (rng_specdp,dp'^.maximalProjection)
+    else mzero
+
+
 pronounResolution :: [X'Tree '[Lemma]]
                   -> DetP '[Lemma]
                   -> Maybe (Range,Range)
@@ -111,7 +132,7 @@ entityFromDP x'tr tagged dp =
       mrngtxt' = do rng_sub <- listToMaybe (dp^..specifier.traverse._SpDP_Appos)
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (EI rng_sub rng_sub Nothing txt_sub)                 -- for the time being
-      mcoref = pronounResolution x'tr dp <|> definiteCorefResolution x'tr tagged dp
+      mcoref = pronounResolution x'tr dp <|> definiteCorefResolution x'tr tagged dp <|> definiteGenitiveCorefResolution x'tr tagged dp
       mcomp = do CompDP_PP pp <- dp^?complement._Just.complement._Just
                  dp' <- pp^?complement._CompPP_DP
                  let prep = pp^.headX.hp_prep
