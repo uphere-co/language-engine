@@ -23,6 +23,7 @@ import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
 import           Data.Tree                                 (Forest)
+import qualified Data.Vector                       as V
 --
 import           CoreNLP.Simple.Convert                    (mkLemmaMap)
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
@@ -40,14 +41,14 @@ import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemm
 import           NLP.Syntax.Type.XBar                      (Zipper)
 import           NLP.Syntax.Util                           (mkTaggedLemma)
 import qualified NLP.Type.NamedEntity              as N
-import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,sentenceToken,sentenceLemma,sent_tokenRange,token_text,token_tok_idx_range)
+import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,Token,sentenceToken,sentenceLemma,sent_tokenRange,token_text,token_tok_idx_range)
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree)
 import           NLP.Type.SyntaxProperty                   (Voice)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
 import           OntoNotes.Type.SenseInventory
 import           Text.Search.ParserCustom                  (pTreeAdvGBy)
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
-import           WikiEL.Type                               (EntityMention,IRange(..),PreNE(..),UIDCite(..))
+import           WikiEL.Type                               (EntityMention,EntityMentionUID(..),IRange(..),PreNE(..),UIDCite(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
 import           WordNet.Type.Lexicographer                (LexicographerFile)
 --
@@ -56,6 +57,9 @@ import           SRL.Analyze.Sense                         (getVerbSenses)
 import           SRL.Analyze.Type
 import           SRL.Analyze.UKB                           (runUKB)
 
+
+bruteTKsToEMs :: [Token] -> EntityMention Text
+bruteTKsToEMs tks = Self (EntityMentionUID 9999) (IRange 0 0, V.fromList (tks ^.. traverse . token_text), UnresolvedUID N.Other) 
 
 adjustWikiRange :: (Int,Int) -> (Int,Int)
 adjustWikiRange (a,b) = (a,b-1)
