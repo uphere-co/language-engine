@@ -178,20 +178,19 @@ constructCP tagged vprop = do
             (subj0,sadjs) = identifySubject tagged s z_vp
             subj = ((trResolved . _Just . _Right) %~ splitDP tagged) subj0
             subj_dps = subj^..trResolved._Just
-            {-
-            subj0 = identifySubject tagged s z_vp
-
-            (subj,subj_dps,sadjs) = fromMaybe (subj0,[],[]) $ do
-
-              dp_subj <- subj0 ^? trResolved . _Just . _Right
-              let (dp_subj',sadjs') = identifyInternalTimePrep tagged dp_subj
-                  dp_subj'' = splitDP tagged dp_subj'
-                  subj' = ((trResolved . _Just . _Right) .~ dp_subj'') subj0
-              subj_dp <- subj' ^? trResolved . _Just
-              return (subj',[subj_dp],sadjs') -}
             verbp = mkVerbP z_vp vprop (cadjs++sadjs) comps
             dps = subj_dps ++ comps_dps
         case cptag' of
+          N.RT   ->
+            let (cphead,cpspec) = case mtop of
+                                    Just top -> (C_PHI,Just (SpecCP_Topic top))
+                                    Nothing ->
+                                      case prev z_tp of
+                                        Nothing -> (C_PHI,Nothing)
+                                        Just z -> if (isChunkAs WHNP (current z))
+                                                  then (C_PHI,Just (SpecCP_WH z))
+                                                  else (C_WORD z,Nothing)
+            in return (mkCP cphead z_cp' cpspec adjs (mkTP z_tp subj verbp),dps)
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
                                     Just top -> (C_PHI,Just (SpecCP_Topic top))
@@ -202,10 +201,18 @@ constructCP tagged vprop = do
                                                   then (C_PHI,Just (SpecCP_WH z))
                                                   else (C_WORD z,Nothing)
             in return (mkCP cphead z_cp' cpspec adjs (mkTP z_tp subj verbp),dps)
+          N.CL N.S ->
+            let (cphead,cpspec) = case mtop of
+                                    Just top -> (C_PHI,Just (SpecCP_Topic top))
+                                    Nothing ->
+                                      case prev z_tp of
+                                        Nothing -> (C_PHI,Nothing)
+                                        Just z -> if (isChunkAs WHNP (current z))
+                                                  then (C_PHI,Just (SpecCP_WH z))
+                                                  else (C_WORD z,Nothing)
+            in return (mkCP cphead z_cp' cpspec adjs (mkTP z_tp subj verbp),dps)            
           N.CL _ ->
             return (mkCP C_PHI z_tp Nothing adjs (mkTP z_tp subj verbp),dps)
-          N.RT   ->
-            return (mkCP C_PHI z_cp' Nothing adjs (mkTP z_tp subj verbp),dps)
           _      -> -- somewhat problematic case?
             return (mkCP C_PHI z_tp Nothing adjs (mkTP z_tp subj verbp),dps)
       _ -> -- reduced relative clause

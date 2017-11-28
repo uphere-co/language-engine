@@ -87,6 +87,7 @@ adjunctVPText tagged (AdjunctVP_PP pp) = T.intercalate " " (tokensByRange tagged
 formatAdjunctVP (AdjunctVP_Unresolved z) = showRange (getRange (current z))
 formatAdjunctVP (AdjunctVP_PP pp) = formatPP pp
 
+
 formatCP :: forall as. CP (Lemma ': as) -> String
 formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                      \Complementizer       : %-6s  %s\n\
@@ -113,7 +114,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
         --
-        formatAdjunctVP (AdjunctVP_Unresolved z) = T.intercalate " " (gettoken z)
+        -- formatAdjunctVP (AdjunctVP_Unresolved z) = T.intercalate " " (gettoken z)
         --
         formatposchunk (Left c) = show c
         formatposchunk (Right p) = "(" ++ show p ++ ")"
