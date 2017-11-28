@@ -91,30 +91,35 @@ pronounResolution :: [X'Tree '[Lemma]]
                   -> DetP '[Lemma]
                   -> Maybe (Range,Range)
 pronounResolution x'tr dp = do
-  let rng_dp = dp^.maximalProjection
-  rng_pro <- dp^.headX.hd_range
-  (prnclass,isgenitive) <- dp^?headX.hd_class._Pronoun
-  w <- getFirst (foldMap (First . extractZipperById rng_dp) x'tr)
-  w' <- parent w
-  cp' <- currentCPDPPP w' ^? _CPCase
+    let rng_dp = dp^.maximalProjection
+    rng_pro <- dp^.headX.hd_range
+    (prnclass,isgenitive) <- dp^?headX.hd_class._Pronoun
+    w <- getFirst (foldMap (First . extractZipperById rng_dp) x'tr)
+    w' <- parent w
+    cp' <- currentCPDPPP w' ^? _CPCase
 
-  ((if isgenitive
-      then do
-        dp' <- cp'^?complement.specifier.trResolved._Just._Right
-        nclass <- dp'^?complement._Just.headX.hn_class._Just
-        if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,dp'^.maximalProjection)
-           | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp'^.maximalProjection)
-           | otherwise -> mzero
-      else mzero)
-   <|>
-   (do w'' <- parent w'
-       cp'' <- currentCPDPPP w'' ^? _CPCase
-       dp'' <- cp''^?complement.specifier.trResolved._Just._Right
-       nclass <- dp''^?complement._Just.headX.hn_class._Just
-       if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,dp''^.maximalProjection)
-          | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp''^.maximalProjection)
-          | otherwise -> mzero))
-
+    ((if isgenitive
+        then do
+          dp' <- cp'^?complement.specifier.trResolved._Just._Right
+          nclass <- dp'^?complement._Just.headX.hn_class._Just
+          match (rng_pro,prnclass) (nclass,dp')
+        else mzero)
+     <|>
+     (do w'' <- parent w'
+         cp'' <- currentCPDPPP w'' ^? _CPCase
+         dp'' <- cp''^?complement.specifier.trResolved._Just._Right
+         nclass <- dp''^?complement._Just.headX.hn_class._Just
+         match (rng_pro,prnclass) (nclass,dp''))
+     <|>
+     (do cp'' <- cp'^?specifier._Just._SpecCP_Topic.trResolved._Just._CompVP_CP
+         dp'' <- cp''^?complement.specifier.trResolved._Just._Right
+         nclass <- dp''^?complement._Just.headX.hn_class._Just
+         match (rng_pro,prnclass) (nclass,dp'')))
+  where
+    match (rng_pro,prnclass) (nclass,dp') =
+      if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,dp'^.maximalProjection)
+         | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp'^.maximalProjection)
+         | otherwise -> mzero
 
 entityTextDP :: TaggedLemma t -> DetP t -> Text
 entityTextDP tagged dp =
