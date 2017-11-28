@@ -434,7 +434,27 @@ resolveCP xtr = rewriteTree action xtr
                     (replace z <|> return z)
     --
     replace :: X'Zipper (Lemma ': as) -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as))
-    replace = replaceCompVP >=> replaceAdjunctCP
+    replace = replaceSpecCP >=> replaceCompVP >=> replaceAdjunctCP
+    --
+    -- I need to deduplicate the following code.
+    replaceSpecCP z = do
+      cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
+      let mx = cp^?specifier._Just._SpecCP_Topic
+      mx' <- flip traverse mx $ \x ->
+               ((do
+                    tr <- lift get
+                    rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved.to current.to getRange)
+                    y <- hoistMaybe (extractZipperById rng tr)
+                    y' <- replace y
+                    cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
+                    (return . (trResolved .~ Just (CompVP_CP cp'))) x
+                )
+                <|>
+                (return x))
+      let rf = _2._CPCase.specifier .~ fmap SpecCP_Topic mx'
+          z' = replaceFocusItem rf rf z
+      lift (put (toBitree z'))
+      return z'
     --
     replaceCompVP z = do
       cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
