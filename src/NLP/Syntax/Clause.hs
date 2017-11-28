@@ -44,6 +44,10 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
 --
 import Debug.Trace
+import qualified Data.Text as T
+import Text.Format.Tree
+import NLP.Syntax.Format.Internal
+
 
 hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
 hoistMaybe = MaybeT . return
@@ -139,6 +143,7 @@ allAdjunctCPOfVerb vprop =
 
 
 
+    -- for the time being, CP subject is not supported
 identifySubject :: TaggedLemma (Lemma ': as)
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)   -- ^ Verb maximal projection
@@ -152,10 +157,6 @@ identifySubject tagged tag vp = maybe nul smp r
     smp z = let dp = splitDP tagged (mkOrdDP z)
                 (dp',adjs) = identifyInternalTimePrep tagged dp
             in (TraceChain (Right []) (Just (Right dp')),adjs)
-
-
-
-    -- for the time being, CP subject is not supported
 
 
 --
@@ -178,20 +179,19 @@ constructCP tagged vprop = do
             (subj0,sadjs) = identifySubject tagged s z_vp
             subj = ((trResolved . _Just . _Right) %~ splitDP tagged) subj0
             subj_dps = subj^..trResolved._Just
-            {-
-            subj0 = identifySubject tagged s z_vp
-
-            (subj,subj_dps,sadjs) = fromMaybe (subj0,[],[]) $ do
-
-              dp_subj <- subj0 ^? trResolved . _Just . _Right
-              let (dp_subj',sadjs') = identifyInternalTimePrep tagged dp_subj
-                  dp_subj'' = splitDP tagged dp_subj'
-                  subj' = ((trResolved . _Just . _Right) .~ dp_subj'') subj0
-              subj_dp <- subj' ^? trResolved . _Just
-              return (subj',[subj_dp],sadjs') -}
             verbp = mkVerbP z_vp vprop (cadjs++sadjs) comps
             dps = subj_dps ++ comps_dps
         case cptag' of
+          N.RT   ->
+            let (cphead,cpspec) = case mtop of
+                                    Just top -> (C_PHI,Just (SpecCP_Topic top))
+                                    Nothing ->
+                                      case prev z_tp of
+                                        Nothing -> (C_PHI,Nothing)
+                                        Just z -> if (isChunkAs WHNP (current z))
+                                                  then (C_PHI,Just (SpecCP_WH z))
+                                                  else (C_WORD z,Nothing)
+            in return (mkCP cphead z_cp' cpspec adjs (mkTP z_tp subj verbp),dps)
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
                                     Just top -> (C_PHI,Just (SpecCP_Topic top))
@@ -204,8 +204,6 @@ constructCP tagged vprop = do
             in return (mkCP cphead z_cp' cpspec adjs (mkTP z_tp subj verbp),dps)
           N.CL _ ->
             return (mkCP C_PHI z_tp Nothing adjs (mkTP z_tp subj verbp),dps)
-          N.RT   ->
-            return (mkCP C_PHI z_cp' Nothing adjs (mkTP z_tp subj verbp),dps)
           _      -> -- somewhat problematic case?
             return (mkCP C_PHI z_tp Nothing adjs (mkTP z_tp subj verbp),dps)
       _ -> -- reduced relative clause
@@ -436,7 +434,27 @@ resolveCP xtr = rewriteTree action xtr
                     (replace z <|> return z)
     --
     replace :: X'Zipper (Lemma ': as) -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as))
-    replace = replaceCompVP >=> replaceAdjunctCP
+    replace = replaceSpecCP >=> replaceCompVP >=> replaceAdjunctCP
+    --
+    -- I need to deduplicate the following code.
+    replaceSpecCP z = do
+      cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
+      let mx = cp^?specifier._Just._SpecCP_Topic
+      mx' <- flip traverse mx $ \x ->
+               ((do
+                    tr <- lift get
+                    rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved.to current.to getRange)
+                    y <- hoistMaybe (extractZipperById rng tr)
+                    y' <- replace y
+                    cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
+                    (return . (trResolved .~ Just (CompVP_CP cp'))) x
+                )
+                <|>
+                (return x))
+      let rf = _2._CPCase.specifier .~ fmap SpecCP_Topic mx'
+          z' = replaceFocusItem rf rf z
+      lift (put (toBitree z'))
+      return z'
     --
     replaceCompVP z = do
       cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)

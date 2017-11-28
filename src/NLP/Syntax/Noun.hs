@@ -151,19 +151,21 @@ splitParentheticalModifier tagged z = do
      (do guard (isChunkAs PP (current z_appos))
          pp <- mkPPFromZipper tagged PC_Other z_appos
          return (XP (HeadDP Nothing NoDet) (rf z) [] [AdjunctDP_PP pp] (Just (mkNP ((b1,e1),Nothing) Nothing)))))
+
+
+rangeOfNPs z = do
+    guard (isChunkAs NP (current z))
+    let (b,e0) = getRange (current z)
+        (e,z') = last ((e0,z):unfoldr step z)
+    return ((b,e),z')
   where
     step z = do
       guard (isChunkAs NP (current z))
       let (_,e) = getRange (current z)
       z' <- next z
       return ((e,z),z')
-
-    rangeOfNPs z = do
-      guard (isChunkAs NP (current z))
-      let (b,e0) = getRange (current z)
-          (e,z') = last ((e0,z):unfoldr step z)
-      return ((b,e),z')
-
+    
+    
 
 identApposHead :: TaggedLemma t -> Range -> Range -> Zipper t -> DetP t
 identApposHead tagged rng1 rng2 z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $
@@ -220,7 +222,8 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
     --
     cliticGen z = do
       z1 <- child1 z
-      guard (isChunkAs NP (current z1))
+      guard (isChunkAs NP (current z1))    -- for the time being. need to support multiple words for possessor.
+      -- (b,e) <- rangeOfNPs z1
       z1last <- childLast z1
       guard (isPOSAs POS (current z1last))
       let (b,e) = getRange (current z1)

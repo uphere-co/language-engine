@@ -35,8 +35,6 @@ import           NLP.Syntax.Util                        (rootTag)
 import           NLP.Syntax.Verb
 
 
-formatBitree :: (a -> Text) ->  Bitree a a -> Text
-formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
 
 
 formatTense :: Tense -> Text
@@ -69,8 +67,6 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
 
 
 
-showRange :: Range -> Text
-showRange rng = T.pack (printf "%-7s" (show rng))
 
 
 
@@ -86,6 +82,7 @@ adjunctVPText tagged (AdjunctVP_PP pp) = T.intercalate " " (tokensByRange tagged
 
 formatAdjunctVP (AdjunctVP_Unresolved z) = showRange (getRange (current z))
 formatAdjunctVP (AdjunctVP_PP pp) = formatPP pp
+
 
 formatCP :: forall as. CP (Lemma ': as) -> String
 formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
@@ -113,7 +110,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
         --
-        formatAdjunctVP (AdjunctVP_Unresolved z) = T.intercalate " " (gettoken z)
+        -- formatAdjunctVP (AdjunctVP_Unresolved z) = T.intercalate " " (gettoken z)
         --
         formatposchunk (Left c) = show c
         formatposchunk (Right p) = "(" ++ show p ++ ")"
@@ -132,12 +129,5 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
         (spec1,spec2) = formatSpecCP (cp^.specifier)
 
 
-
-formatX'Tree :: X'Tree as -> Text
-formatX'Tree tr = formatBitree fmt tr
-  where
-        fmt (rng,CPCase _) = "CP" <> showRange rng
-        fmt (_  ,DPCase x) = formatDP x
-        fmt (_  ,PPCase x) = formatPP x
 
 
