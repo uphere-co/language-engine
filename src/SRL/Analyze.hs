@@ -41,11 +41,14 @@ import           Lexicon.Data                   (LexDataConfig(..),cfg_framenet_
                                                 ,cfg_ukb_binfile
                                                 ,loadSenseInventory
                                                 )
+import           NER.Load                       (loadCompanies)
+import           NER.Type                       (alias)
 import           NLP.Syntax.Format              (formatX'Tree)
 import           NLP.Type.CoreNLP               (Sentence)
 import           OntoNotes.Corpus.Load          (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory  (inventory_lemma)
 import           Text.Format.Dot                (mkLabelText)
+import           Text.Search.Generic.SearchTree (addTreeItem)
 import           WikiEL.Type                    (EntityMention)
 import           WikiEL.WikiNewNET              (newNETagger)
 import           WordNet.Query                  (WordNetDB,loadDB)
@@ -79,14 +82,20 @@ queryProcess config pp apredata netagger =
                   txt <- T.IO.readFile fp
                   dainput <- runParser pp txt
                   -- runUKB (apredata^.analyze_wordnet) (dainput^.dainput_sents,dainput^.dainput_mptrs)
-                  dstr <- docStructure apredata netagger dainput
+                  companies <- loadCompanies
+                  let clist = concat $ map (^. alias) companies
+                      forest = foldr addTreeItem [] (map T.words clist)
+                  dstr <- docStructure apredata netagger forest dainput
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
                   mapM_ (uncurry showMatchedFrame) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
 
       ":v " -> do dainput <- runParser pp rest
                   -- runUKB (apredata^.analyze_wordnet) (dainput^.dainput_sents,dainput^.dainput_mptrs)
-                  dstr <- docStructure apredata netagger dainput
+                  companies <- loadCompanies
+                  let clist = concat $ map (^. alias) companies
+                      forest = foldr addTreeItem [] (map T.words clist)
+                  dstr <- docStructure apredata netagger forest dainput
                   mapM_ (T.IO.putStrLn . formatX'Tree) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'tr . traverse)
                   when (config^.Analyze.showDetail) $ do
                     -- print (dstr^.ds_mergedtags)
