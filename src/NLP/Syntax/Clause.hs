@@ -182,7 +182,8 @@ constructCP tagged vprop = do
             dps = subj_dps ++ comps_dps
         case cptag' of
           N.RT   ->
-            let (cphead,cpspec) = case mtop of
+            return (mkCP C_PHI z_cp' Nothing adjs (mkTP z_tp subj verbp),dps) -- for the time being, ignore topicalization
+            {- let (cphead,cpspec) = case mtop of
                                     Just top -> (C_PHI,Just (SpecCP_Topic top))
                                     Nothing ->
                                       case prev z_tp of
@@ -190,7 +191,7 @@ constructCP tagged vprop = do
                                         Just z -> if (isChunkAs WHNP (current z))
                                                   then (C_PHI,Just (SpecCP_WH z))
                                                   else (C_WORD z,Nothing)
-            in return (mkCP cphead z_cp' cpspec adjs (mkTP z_tp subj verbp),dps)
+            in return (mkCP cphead z_cp' cpspec adjs (mkTP z_tp subj verbp),dps) -}
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
                                     Just top -> (C_PHI,Just (SpecCP_Topic top))
