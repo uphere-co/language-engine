@@ -44,6 +44,10 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
 --
 import Debug.Trace
+import qualified Data.Text as T
+import Text.Format.Tree
+import NLP.Syntax.Format.Internal
+
 
 hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
 hoistMaybe = MaybeT . return
@@ -139,6 +143,7 @@ allAdjunctCPOfVerb vprop =
 
 
 
+    -- for the time being, CP subject is not supported
 identifySubject :: TaggedLemma (Lemma ': as)
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)   -- ^ Verb maximal projection
@@ -152,10 +157,6 @@ identifySubject tagged tag vp = maybe nul smp r
     smp z = let dp = splitDP tagged (mkOrdDP z)
                 (dp',adjs) = identifyInternalTimePrep tagged dp
             in (TraceChain (Right []) (Just (Right dp')),adjs)
-
-
-
-    -- for the time being, CP subject is not supported
 
 
 --
@@ -182,8 +183,7 @@ constructCP tagged vprop = do
             dps = subj_dps ++ comps_dps
         case cptag' of
           N.RT   ->
-            return (mkCP C_PHI z_cp' Nothing adjs (mkTP z_tp subj verbp),dps) -- for the time being, ignore topicalization
-            {- let (cphead,cpspec) = case mtop of
+            let (cphead,cpspec) = case mtop of
                                     Just top -> (C_PHI,Just (SpecCP_Topic top))
                                     Nothing ->
                                       case prev z_tp of
@@ -191,7 +191,7 @@ constructCP tagged vprop = do
                                         Just z -> if (isChunkAs WHNP (current z))
                                                   then (C_PHI,Just (SpecCP_WH z))
                                                   else (C_WORD z,Nothing)
-            in return (mkCP cphead z_cp' cpspec adjs (mkTP z_tp subj verbp),dps) -}
+            in return (mkCP cphead z_cp' cpspec adjs (mkTP z_tp subj verbp),dps)
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
                                     Just top -> (C_PHI,Just (SpecCP_Topic top))
@@ -202,16 +202,6 @@ constructCP tagged vprop = do
                                                   then (C_PHI,Just (SpecCP_WH z))
                                                   else (C_WORD z,Nothing)
             in return (mkCP cphead z_cp' cpspec adjs (mkTP z_tp subj verbp),dps)
-          N.CL N.S ->
-            let (cphead,cpspec) = case mtop of
-                                    Just top -> (C_PHI,Just (SpecCP_Topic top))
-                                    Nothing ->
-                                      case prev z_tp of
-                                        Nothing -> (C_PHI,Nothing)
-                                        Just z -> if (isChunkAs WHNP (current z))
-                                                  then (C_PHI,Just (SpecCP_WH z))
-                                                  else (C_WORD z,Nothing)
-            in return (mkCP cphead z_cp' cpspec adjs (mkTP z_tp subj verbp),dps)            
           N.CL _ ->
             return (mkCP C_PHI z_tp Nothing adjs (mkTP z_tp subj verbp),dps)
           _      -> -- somewhat problematic case?

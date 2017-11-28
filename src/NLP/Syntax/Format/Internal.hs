@@ -3,17 +3,29 @@
 module NLP.Syntax.Format.Internal where
 
 import           Control.Lens                       ((^.),(^?),_Just,to)
+import           Data.Bifunctor                     (bimap)
 import           Data.Foldable                      (toList)
 import           Data.Monoid                        ((<>))
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
+import           Text.Printf                        (printf)
 --
+import           Data.Bitree
 import           Data.BitreeZipper                  (current)
 import           Data.ListZipper                    (ListZipper(LZ))
+import           Data.Range                         (Range)
 import           NLP.Type.PennTreebankII            (getRange,tokenWord)
+import           Text.Format.Tree
 --
 import           NLP.Syntax.Type.XBar
 
+
+showRange :: Range -> Text
+showRange rng = T.pack (printf "%-7s" (show rng))
+
+
+formatBitree :: (a -> Text) ->  Bitree a a -> Text
+formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
 
 rangeText :: Either (Zipper as) (DetP as) -> Text
 rangeText (Right x) = x^.maximalProjection.to (T.pack . show) -- complement.headX.to show.to T.pack
@@ -78,4 +90,12 @@ formatTraceChain f (TraceChain xs0 x) =
     fmtLst = T.concat . map ((<> " -> ") . fmt)
     --
     fmtResolved = maybe "NOT_RESOLVED" f
+
+
+formatX'Tree :: X'Tree as -> Text
+formatX'Tree tr = formatBitree fmt tr
+  where
+        fmt (rng,CPCase _) = "CP" <> showRange rng
+        fmt (_  ,DPCase x) = formatDP x
+        fmt (_  ,PPCase x) = formatPP x
 
