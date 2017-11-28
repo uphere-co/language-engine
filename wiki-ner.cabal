@@ -35,6 +35,7 @@ library
                        WikiEL.ETL.Util
 
                        NER
+                       NER.Load
                        NER.Type
 
                        WikiEL.Investopedia
