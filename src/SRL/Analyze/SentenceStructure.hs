@@ -6,7 +6,11 @@
 
 module SRL.Analyze.SentenceStructure where
 
+import           Control.Applicative                       (many)
 import           Control.Lens                              ((^.),(^..),_1,_2,_3,to)
+import           Control.Monad                             (forM)
+import           Control.Monad.State.Lazy                  (runState)
+import           Control.Monad.Trans.Either                (EitherT(..))
 import           Data.Bifunctor                            (first)
 import           Data.Either                               (lefts)
 import           Data.Foldable                             (toList)
@@ -14,10 +18,11 @@ import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
 import           Data.List                                 (find,sortBy,zip5)
-import           Data.Maybe                                (fromMaybe,mapMaybe,maybeToList)
+import           Data.Maybe                                (catMaybes,fromMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
+import           Data.Tree                                 (Forest)
 --
 import           CoreNLP.Simple.Convert                    (mkLemmaMap)
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
@@ -35,11 +40,12 @@ import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemm
 import           NLP.Syntax.Type.XBar                      (Zipper)
 import           NLP.Syntax.Util                           (mkTaggedLemma)
 import qualified NLP.Type.NamedEntity              as N
-import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,sentenceToken,sentenceLemma,sent_tokenRange)
+import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,sentenceToken,sentenceLemma,sent_tokenRange,token_text)
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree)
 import           NLP.Type.SyntaxProperty                   (Voice)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
 import           OntoNotes.Type.SenseInventory
+import           Text.Search.ParserCustom                  (pTreeAdvG)
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
 import           WikiEL.Type                               (EntityMention,IRange(..),PreNE(..),UIDCite(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
@@ -81,16 +87,20 @@ mkWikiList sstr =
 --
 docStructure :: AnalyzePredata
              -> ([Sentence] -> [EntityMention Text])
+             -> Forest (Maybe Text)
              -> DocAnalysisInput
              -> IO DocStructure
-docStructure apredata netagger docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
+docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
+      mwordss = sents ^.. traverse . sentenceToken . to (map (fmap (^. token_text))) 
       linked_mentions_resolved = netagger (docinput^.dainput_sents)
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
       mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
   synsetss <- runUKB (apredata^.analyze_wordnet)(sents,mptrs)
+  ss <- forM (map catMaybes mwordss) $ \words -> do
+    return $ runState (runEitherT (many $ pTreeAdvG forest)) words
   let sentStructures = map (sentStructure apredata mergedtags) (zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss)
   return (DocStructure mtokenss sentitems mergedtags sentStructures)
 
