@@ -59,7 +59,7 @@ import           SRL.Analyze.UKB                           (runUKB)
 
 
 bruteTKsToEMs :: [Token] -> EntityMention Text
-bruteTKsToEMs tks = Self (EntityMentionUID 9999) (IRange 0 0, V.fromList (tks ^.. traverse . token_text), UnresolvedUID N.Other) 
+bruteTKsToEMs tks = Self (EntityMentionUID 10001) (IRange 0 0, V.fromList (tks ^.. traverse . token_text), UnresolvedUID N.Other) 
 
 adjustWikiRange :: (Int,Int) -> (Int,Int)
 adjustWikiRange (a,b) = (a,b-1)
@@ -100,13 +100,16 @@ docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs 
       linked_mentions_resolved = netagger (docinput^.dainput_sents)
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
-      mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
   synsetss <- runUKB (apredata^.analyze_wordnet)(sents,mptrs)
   ess <- fmap (map fst) $ forM (map catMaybes mtokenss) $ \tokens -> do
     return $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens
   let ss = rights ess
-      ne = map (\xs -> (head xs ^. token_tok_idx_range ^. _1,last xs ^. token_tok_idx_range ^. _2, map (^. token_text) xs)) $ concat ss
+      ne = concat ss
   print ne
+--  let tne = map linkedMentionToTagPos $ map bruteTKsToEMs ne
+--      mtmxs2 = fmap ((++) tne) mtmxs 
+  let mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
+
   let sentStructures = map (sentStructure apredata mergedtags) (zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss)
   return (DocStructure mtokenss sentitems mergedtags sentStructures)
 
