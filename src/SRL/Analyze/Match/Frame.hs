@@ -13,7 +13,7 @@ module SRL.Analyze.Match.Frame where
 import           Control.Applicative
 import           Control.Lens
 import           Control.Lens.Extras          (is)
-import           Control.Monad                (guard)
+import           Control.Monad                (guard,join)
 import           Data.Function                (on)
 import           Data.List                    (find,group,groupBy,sort,sortBy)
 import           Data.Maybe                   (catMaybes,fromMaybe,isNothing,listToMaybe,mapMaybe,maybeToList)
@@ -57,7 +57,7 @@ ppRelFrame p = lookup p [ ("about"     , ("Topic"                        , "Text
                         , ("amid"      , ("Interior_profile_relation"    , "Figure"   , "Ground"))
                         , ("amidst"    , ("Contrary_circumstances"       , "Event"    , "Adversity"))
                         , ("among"     , ("Be_subset_of"                 , "Part"     , "Total"))
-                        , ("around"    , ("Distributed_position"         , "Theme"    , "Around"))
+                        , ("around"    , ("Distributed_position"         , "Theme"    , "Location"))
                         , ("as"        , ("Performers_and_roles"         , "Performer", "Role"))
                         , ("astride"   , ("Locative_relation"            , "Figure"   , "Ground"))
                         , ("at"        , ("Locative_relation"            , "Figure"   , "Ground"))
@@ -126,6 +126,90 @@ ppRelFrame p = lookup p [ ("about"     , ("Topic"                        , "Text
                         ]
 
 
+
+ppExtraRoles :: Text -> [FNFrameElement]
+ppExtraRoles p = join (maybeToList (lookup p ppExtraRoleMap))
+
+
+ppExtraRoleMap = [ ("about"     , ["Topic"])
+                 , ("above"     , ["Location"])
+                 , ("across"    , ["Path"])
+                 , ("after"     , ["Time"])
+                 , ("against"   , ["Issue"])
+                 , ("along"     , ["Path"])
+                 -- alongside
+                 , ("amid"      , ["Duration"])
+                 , ("amidst"    , ["Duration"])
+                 , ("among"     , ["Total","Possibilities"])
+                 , ("around"    , ["Area","Location"])
+                 , ("as"        , ["Role"])
+                 , ("astride"   , ["Location"])
+                 , ("at"        , ["Location","Time"])
+                 , ("atop"      , ["Location"])
+                 -- ontop
+                 -- bar
+                 , ("before"    , ["Time"])
+                 , ("behind"    , ["Location"])
+                 , ("below"     , ["Location"])
+                 , ("beneath"   , ["Location"])
+                 , ("beside"    , ["Location"])
+                 , ("besides"   , ["Location"])
+                 , ("between"   , ["Area","Location"])
+                 , ("beyond"    , ["Standard_item","Domain"])
+                 -- but
+                 , ("by"        , ["Means","Location"])
+                 -- circa
+                 -- come
+                 , ("despite"   , ["Event_description"])
+                 , ("down"      , ["Direction"])
+                 , ("during"    , ["Duration"])
+                 -- except
+                 , ("for"       , ["Purpose","Duration","Goal"])
+                 , ("from"      , ["Origin","Support"])
+                 , ("in"        , ["Location","Time"])
+                 , ("inside"    , ["Area","Location","Ground"])
+                 , ("into"      , ["Goal","Effect"])
+                 -- less
+                 , ("like"      , ["Manner"])
+                 -- minus
+                 , ("near"      , ["Location"])
+                 -- notwithstanding
+                 , ("of"        , ["Phenomenon"])
+                 , ("off"       , ["Location"])
+                 , ("on"        , ["Location","Time"])
+                 -- onto
+                 -- opposite
+                 , ("out"       , ["Direction"])
+                 , ("outside"   , ["Area","Ground"])
+                 , ("over"      , ["Duration","Location","Area","Ground"])
+                 , ("past"      , ["Path","Area","Ground","Ground"])
+                 -- per
+                 -- save
+                 -- short
+                 , ("since"     , ["Time"])
+                 -- than
+                 , ("through"   , ["Path","Duration","Ground"])
+                 , ("througout" , ["Path","Duration","Ground"])
+                 , ("to"        , ["Goal","Effect","Direction"])
+                 , ("toward"    , ["Goal","Direction"])
+                 , ("towards"   , ["Goal","Direction"])
+                 , ("under"     , ["Location","Ground","Area"])
+                 , ("underneath", ["Location"])
+                 , ("unlike"    , ["Manner"])
+                 , ("until"     , ["Time"])
+                 , ("till"      , ["Time"])
+                 , ("up"        , ["Direction"])
+                 , ("upon"      , ["Location"])
+                 -- upside
+                 -- versus
+                 -- via
+                 , ("with"      , ["Co-participant"])
+                 , ("within"    , ["Location","Ground","Area"])
+                 , ("without"   , ["Co-participant"])
+                 -- worth
+                 ]
+
+
 mkTriples :: SentStructure -> ([X'Tree '[Lemma]],[(VerbStructure, CP '[Lemma])])
 mkTriples sstr =
   let x'tr = sstr^.ss_x'tr
@@ -139,7 +223,6 @@ mkTriples sstr =
                            (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
                  ]
      )
-
 
 pbArgForGArg :: GArg -> ArgPattern p GRel -> Maybe (Text,GRel)
 pbArgForGArg garg patt = check patt_arg0 "arg0" <|>
@@ -335,11 +418,25 @@ matchExtraRolesForPPTime :: CP '[Lemma]
                          -> [(FNFrameElement, CompVP '[Lemma])]
                          -> Maybe (FNFrameElement,CompVP '[Lemma])
 matchExtraRolesForPPTime cp felst = do
-  guard (isNothing (find (\x -> x^._1 == "Time") felst))
+  find (\x -> x^._1 == "Time" || x^._1 == "Duration") felst
   pp <- matchPP cp (Nothing,Just PC_Time,Just False)
   let comp = CompVP_PP pp
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
   return ("Time",comp)
+  {- ((do prep <- pp^?headX.hp_prep._Prep_WORD
+       find (\x -> (x^._1 == prep) && ("Duration" `elem` x^._2)) ppExtraRoleMap
+       return ("Duration",comp)
+    )
+   <|> return ("Time",comp)) -}
+
+
+
+matchExtraRolesForGenericPP :: CP '[Lemma]
+                            -> [(FNFrameElement, CompVP '[Lemma])]
+                            -> Maybe (FNFrameElement,CompVP '[Lemma])
+matchExtraRolesForGenericPP _ _ = Nothing
+
+
 
 
 matchExtraRolesForPPing :: Text
@@ -407,15 +504,17 @@ matchExtraRoles :: CP '[Lemma]
                 -> [(FNFrameElement, CompVP '[Lemma])]
 matchExtraRoles cp felst =
   let mmeans = matchExtraRolesForPPing "by" "Means" cp felst
-      felst' = felst ++ maybeToList mmeans
-      mcomp  = matchExtraRolesForCPInCompVP toInfinitive "Purpose" cp felst' <|>
-               matchExtraRolesForPPing "after"  "Time_vector" cp felst' <|>
-               matchExtraRolesForPPing "before" "Time_vector" cp felst'
-      felst'' = felst' ++ maybeToList mcomp
-      madj   = matchExtraRolesForCPInAdjunctCP (hasComplementizer ["as"]) "Explanation" cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP toInfinitive               "Purpose"     cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP (not.hasComplementizer ["after","before","as","while","if","though","although","unless"]) "Event_description" cp felst'' --for the time being
-  in felst'' ++ maybeToList madj
+      felst1 = felst ++ maybeToList mmeans
+      mcomp  = matchExtraRolesForCPInCompVP toInfinitive "Purpose" cp felst1 <|>
+               matchExtraRolesForPPing "after"  "Time_vector" cp felst1 <|>
+               matchExtraRolesForPPing "before" "Time_vector" cp felst1
+      felst2 = felst1 ++ maybeToList mcomp
+      madj   = matchExtraRolesForCPInAdjunctCP (hasComplementizer ["as"]) "Explanation" cp felst2 <|>
+               matchExtraRolesForCPInAdjunctCP toInfinitive               "Purpose"     cp felst2 <|>
+               matchExtraRolesForCPInAdjunctCP (not.hasComplementizer ["after","before","as","while","if","though","although","unless"]) "Event_description" cp felst2 --for the time being
+      felst3 = felst2 ++ maybeToList madj
+      madjpp = matchExtraRolesForGenericPP cp felst3
+  in felst3 ++ maybeToList madjpp
 
 
 matchSubFrame :: (CP '[Lemma] -> Bool)
@@ -505,12 +604,12 @@ matchFrame (vstr,cp) =
        <|>
        (do pp_obj <- c^?_CompVP_PP
            prep_obj <- pp_obj^?headX.hp_prep._Prep_WORD
-           (frm,rsbj,robj) <- ppRelFrame prep_obj  
+           (frm,rsbj,robj) <- ppRelFrame prep_obj
            let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_PP Nothing)) Nothing Nothing Nothing
                role_subj = (rsbj,CompVP_DP dp_subj)
                role_obj  = (robj,CompVP_PP pp_obj)
            return (rng,vprop,FMR frm (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing)))
-       
+
 
     else do
       ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
