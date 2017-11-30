@@ -7,7 +7,7 @@
 module SRL.Analyze.SentenceStructure where
 
 import           Control.Applicative                       (many)
-import           Control.Lens                              ((^.),(^..),_1,_2,_3,to)
+import           Control.Lens                              ((&),(^.),(^..),(^?),_1,_2,_3,to,_head,_last)
 import           Control.Monad                             (forM)
 import           Control.Monad.State.Lazy                  (runState)
 import           Control.Monad.Trans.Either                (EitherT(..))
@@ -18,7 +18,7 @@ import           Data.Function                             (on)
 import           Data.HashMap.Strict                       (HashMap)
 import qualified Data.HashMap.Strict               as HM
 import           Data.List                                 (find,sortBy,zip5)
-import           Data.Maybe                                (catMaybes,fromMaybe,mapMaybe,maybeToList)
+import           Data.Maybe                                (catMaybes,fromJust,fromMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
@@ -58,8 +58,14 @@ import           SRL.Analyze.Type
 import           SRL.Analyze.UKB                           (runUKB)
 
 
-bruteTKsToEMs :: [Token] -> EntityMention Text
-bruteTKsToEMs tks = Self (EntityMentionUID 10001) (IRange 0 0, V.fromList (tks ^.. traverse . token_text), UnresolvedUID N.Other) 
+tokenToTagPos  :: [Token] -> (TagPos TokIdx (Maybe Text))
+tokenToTagPos tks =
+  let mft = (tks ^.. traverse) ^? _head
+      mlt = (tks ^.. traverse) ^? _last
+      b = (fromJust mft) ^. token_tok_idx_range ^. _1
+      e = (fromJust mlt) ^. token_tok_idx_range ^. _2
+      mtxt = Just (T.intercalate " " $ tks ^.. traverse . token_text)
+  in TagPos (TokIdx b, TokIdx e, mtxt)
 
 adjustWikiRange :: (Int,Int) -> (Int,Int)
 adjustWikiRange (a,b) = (a,b-1)
@@ -105,10 +111,9 @@ docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs 
     return $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens
   let ss = rights ess
       ne = concat ss
-  print ne
---  let tne = map linkedMentionToTagPos $ map bruteTKsToEMs ne
---      mtmxs2 = fmap ((++) tne) mtmxs 
-  let mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
+  let tne = map tokenToTagPos ne
+      mtmxs2 = fmap ((++) tne) mtmxs 
+  let mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs2
 
   let sentStructures = map (sentStructure apredata mergedtags) (zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss)
   return (DocStructure mtokenss sentitems mergedtags sentStructures)
