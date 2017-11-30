@@ -177,11 +177,11 @@ matchSO :: [(PBArg,Text)]
         -> (ArgPattern p GRel, Int)
         -> ((ArgPattern p GRel, Int), [(FNFrameElement, CompVP '[Lemma])])
 matchSO rolemap (mDP,verbp,cp) (patt,num) =
-  let (rpatt,rmatched0) = case verbp^.headX.vp_voice of
-                            Active  -> ((patt,num), maybeToList (matchSubject rolemap mDP patt) ++ matchObjects rolemap verbp patt)
-                            Passive -> ((patt,num),maybeToList (matchAgentForPassive rolemap cp patt) ++ matchObjects rolemap verbp patt)
+  let rmatched0 = case verbp^.headX.vp_voice of
+                    Active  -> maybeToList (matchSubject rolemap mDP patt) ++ matchObjects rolemap verbp patt
+                    Passive -> maybeToList (matchAgentForPassive rolemap cp patt) ++ matchObjects rolemap verbp patt
       rmatched1 = rmatched0 ++ maybeToList (matchExtraRolesForPPTime cp rmatched0)
-  in (rpatt,rmatched1 ++ matchPrepArgs rolemap cp patt rmatched1)
+  in ((patt,num),rmatched1 ++ matchPrepArgs rolemap cp patt rmatched1)
 
 
 extendRoleMapForDual :: (FNFrame,SenseID,[(PBArg,Text)])
@@ -419,10 +419,13 @@ matchFrame :: (VerbStructure,CP '[Lemma])
 matchFrame (vstr,cp) =
     if verbp^.headX.vp_lemma == "be"
     then do
-      -- dp <- mDP^?_Just._Right
-      -- GR_NP <- (rng,vprop,FMR "Instance" Nothing [],)
-
-      Nothing
+      dp_subj <- mDP^?_Just._Right
+      c <- listToMaybe (verbp^..complement.traverse.trResolved._Just)
+      dp_obj <- c^?_CompVP_DP
+      let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_NP (Just GA1))) Nothing Nothing Nothing
+          role_subj = (FNFrameElement "Instance",CompVP_DP dp_subj)
+          role_obj  = (FNFrameElement "Type",CompVP_DP dp_obj)
+      return (rng,vprop,FMR "Instance" (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing)
     else do
       ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
       let mselected1 = (_Just . _2 %~ matchExtraRoles cp) mselected0
