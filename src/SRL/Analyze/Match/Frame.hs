@@ -38,11 +38,14 @@ import           WordNet.Type.POS             (POS(..))
 --
 import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Sense            (getVerbSenses)
-import           SRL.Analyze.Type             (SentStructure,VerbStructure,FrameMatchResult(..),AnalyzePredata(..)
-                                              ,ONSenseFrameNetInstance,EntityInfo(..)
+import           SRL.Analyze.Type             (SentStructure,VerbStructure,AnalyzePredata(..)
                                               ,analyze_wordnet
                                               ,ss_x'tr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp)
+import           SRL.Analyze.Type.Match       (ONSenseFrameNetInstance,EntityInfo(..),FrameMatchResult(..))
+
+
+
 --
 -- import Debug.Trace
 
@@ -501,7 +504,7 @@ matchNomFrame apredata tagged dp = do
                                    in listToMaybe rngs
                  _ -> Nothing
         let txt = T.intercalate " " (tokensByRange tagged rng)
-        return (EI rng rng txt)
+        return (EI rng rng Nothing txt)
 
   verb <- listToMaybe (extractNominalizedVerb wndb lma)
 
@@ -514,4 +517,4 @@ matchNomFrame apredata tagged dp = do
   (argo,_) <- mo
   subj <- FNFrameElement <$> lookup args rolemap
   obj  <- FNFrameElement <$> lookup argo rolemap
-  return (lma,verb,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj txt_obj)))
+  return (lma,verb,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj (Just "of") txt_obj)))

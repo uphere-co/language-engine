@@ -33,16 +33,19 @@ import           SRL.Analyze.Match.Frame
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,SentStructure,AnalyzePredata
                                               ,PredicateInfo(..)
-                                              ,DPInfo(..), EntityInfo(..)
-                                              ,FrameMatchResult(..), VertexMap(..)
+                                              ,VertexMap(..)
                                               ,vm_rangeToIndex
                                               ,vm_rangeDependency
                                               ,vm_headRangeToFullRange
                                               ,analyze_wordnet
-                                              ,adi_appos,adi_compof,adi_coref,adi_poss
-                                              ,ei_fullRange,ei_headRange
                                               ,_PredAppos,_MGPredicate,ss_tagged
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
+
+import           SRL.Analyze.Type.Match       (DPInfo(..), EntityInfo(..),FrameMatchResult(..)
+                                              ,adi_appos,adi_compof,adi_coref,adi_poss,adi_adjs
+                                              ,ei_fullRange,ei_headRange,ei_prep
+                                              )
+
 
 import Debug.Trace
 
@@ -51,15 +54,94 @@ dependencyOfX'Tree :: X'Tree p -> [(Range,Range)]
 dependencyOfX'Tree (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap dependencyOfX'Tree xs
 dependencyOfX'Tree (PL _)           = []
 
+ppAdjunctFrame p = lookup p [ ("about"     , ("Topic"                        , "Text"     , "Topic"))
+                            , ("above"     , ("Directional_locative_relation", "Figure"   , "Ground"))
+                            , ("across"    , ("Distributed_position"         , "Theme"    , "Location"))
+                            , ("after"     , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                            , ("against"   , ("Taking_sides"                 , "Cognizer" , "Issue"))
+                            , ("along"     , ("Locative_relation"            , "Figure"   , "Ground"))
+                            -- alongside
+                            , ("amid"      , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                            , ("amidst"    , ("Contrary_circumstances"       , "Event"    , "Adversity"))
+                            , ("among"     , ("Be_subset_of"                 , "Part"     , "Total"))
+                            , ("around"    , ("Distributed_position"         , "Theme"    , "Around"))
+                            , ("as"        , ("Performers_and_roles"         , "Performer", "Role"))
+                            , ("astride"   , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("at"        , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("atop"      , ("Spatial_contact"              , "Figure"   , "Ground"))
+                            -- ontop
+                            -- bar
+                            , ("before"    , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                            , ("behind"    , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                            , ("below"     , ("Directional_locative_relation", "Figure"   , "Ground"))
+                            , ("beneath"   , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                            , ("beside"    , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                            , ("besides"   , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                            , ("between"   , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                            , ("beyond"    , ("Locative_relation"            , "Figure"   , "Ground"))
+                            -- but
+                            , ("by"        , ("Means"                        , "Purpose"  , "Means" ))
+                            -- circa
+                            -- come
+                            , ("despite"   , ("Concessive"                   , "Main_assertion", "Conceded_state_of_affairs"))
+                            , ("down"      , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("during"    , ("Temporal_collocation"         , "Trajector_event", "Landmark_event"))
+                            -- except
+                            , ("for"       , ("Purpose"                      , "Means"    , "Goal"))
+                            , ("from"      , ("Origin"                       , "Entity"   , "Origin"))
+                            , ("in"        , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("inside"    , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                            , ("into"      , ("Goal"                         , "Trajector", "Landmark"))
+                            -- less
+                            , ("like"      , ("Similarity"                   , "Entity_1" , "Entity_2"))
+                            -- minus
+                            , ("near"      , ("Locative_relation"            , "Figure"   , "Ground"))
+                            -- notwithstanding
+                            , ("of"        , ("Partitive"                    , "Subset"   , "Group"))
+                            , ("off"       , ("Spatial_contact"              , "Figure"   , "Ground"))
+                            , ("on"        , ("Locative_relation"            , "Figure"   , "Ground"))
+                            -- onto
+                            -- opposite
+                            , ("out"       , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("outside"   , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                            , ("over"      , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("past"      , ("Locative_relation"            , "Figure"   , "Ground"))
+                            -- per
+                            -- save
+                            -- short
+                            , ("since"     , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                            -- than
+                            , ("through"   , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                            , ("througout" , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("to"        , ("Goal"                         , "Trajector", "Landmark"))
+                            , ("toward"    , ("Goal"                         , "Trajector", "Landmark"))
+                            , ("towards"   , ("Goal"                         , "Trajector", "Landmark"))
+                            , ("under"     , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                            , ("underneath", ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                            , ("unlike"    , ("Similarity"                   , "Entity_1" , "Entity_2"))
+                            , ("until"     , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                            , ("till"      , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                            , ("up"        , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("upon"      , ("Spatial_contact"              , "Figure"   , "Ground"))
+                            -- upside
+                            -- versus
+                            -- via
+                            , ("with"      , ("Accompaniment"                , "Participant","Co-participant"))
+                            , ("within"    , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                            , ("without"   , ("Negation"                     , "Factual_situation", "Negated_proposition"))
+                            -- worth
+                            ]
+
 
 mkEntityFun :: (EntityInfo,DPInfo) -> [(Int -> MGVertex)]
-mkEntityFun (EI rng rnghead txt,di) =
-  let mkRel frm (EI rng' rng'' txt') = [ \i'  -> MGEntity i' (Just rng') (Just rng'') txt' []
-                                        , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
+mkEntityFun (EI rng rnghead mprep txt,di) =
+  let mkRel frm (EI rng' rng'' _ txt') = [ \i'  -> MGEntity i' (Just rng') (Just rng'') txt' []
+                                         , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
       compof = maybe [] (mkRel "Partitive") (di^.adi_compof)
       poss = concatMap (mkRel "Possession") (di^.adi_poss)
-  in (\i -> MGEntity i (Just rng) (Just rnghead) txt []) : (appos ++ compof ++ poss )
+      adjs = concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppAdjunctFrame p) >>= \f -> mkRel (f^._1) e) (di^.adi_adjs)
+  in (\i -> MGEntity i (Just rng) (Just rnghead) txt []) : (appos ++ compof ++ poss ++ adjs)
 
 
 mkMGVertices :: ([X'Tree '[Lemma]],TaggedLemma '[Lemma],[(Range,Range)])
@@ -100,9 +182,9 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
       ett_nominal :: [(EntityInfo,DPInfo)]
       ett_nominal = do (lma,verb,(frm,rng_dp),(subj,mei_subj),(obj,ei_obj)) <- nmatched
                        let lstsubj = case mei_subj of
-                                       Just ei_subj -> [(ei_subj,DI Nothing Nothing Nothing [])]
+                                       Just ei_subj -> [(ei_subj,DI Nothing Nothing Nothing [] [])]
                                        _ -> []
-                       (ei_obj,DI Nothing Nothing Nothing []) : lstsubj
+                       (ei_obj,DI Nothing Nothing Nothing [] []) : lstsubj
 
 
       ett_verbnom = filterFrame
@@ -184,15 +266,17 @@ mkInnerDPEdges vmap entities = do
     let appos = maybe [] (mkRelEdge "Instance" "Type" mrng) (di^.adi_appos)
         compof = maybe [] (mkRelEdge "Subset" "Group" mrng) (di^.adi_compof)
         poss = concatMap (mkRelEdge "Possession" "Owner" mrng) (di^.adi_poss)
-    (appos ++ compof ++ poss)
+        adjs = concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppAdjunctFrame p) >>= \f -> mkRelEdge (f^._2) (f^._3) mrng e) (di^.adi_adjs)
+    (appos ++ compof ++ poss ++ adjs)
   where
     rngidxmap = vmap^.vm_rangeToIndex
     mkRelEdge role1 role2 mrng ei = do
       let rng' = ei^.ei_fullRange
+          mprep = ei^.ei_prep
       i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
       i_1 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
       i_2 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
-      [MGEdge role1 True Nothing i_frame i_1, MGEdge role2 False Nothing i_frame i_2]
+      [MGEdge role1 True Nothing i_frame i_1, MGEdge role2 False mprep i_frame i_2]
 
 
 mkPrepEdges :: VertexMap
