@@ -97,6 +97,7 @@ let
             yayaml
 
             lens
+            mtl
             taggy-lens
 
             fficxx
