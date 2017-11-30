@@ -58,15 +58,18 @@ import           SRL.Analyze.Type
 import           SRL.Analyze.UKB                           (runUKB)
 
 
-tokenToTagPos  :: [Token] -> (TagPos TokIdx (Maybe Text))
-tokenToTagPos tks =
-  let mft = (tks ^.. traverse) ^? _head
+tokenToTagPos  :: [Token] -> (EntityMention Text)
+tokenToTagPos tks = Self (EntityMentionUID 10001) (IRange 0 0, V.fromList (tks ^.. traverse . token_text), UnresolvedUID N.Other)
+
+
+  {-  let mft = (tks ^.. traverse) ^? _head
       mlt = (tks ^.. traverse) ^? _last
       b = (fromJust mft) ^. token_tok_idx_range ^. _1
       e = (fromJust mlt) ^. token_tok_idx_range ^. _2
       mtxt = Just (T.intercalate " " $ tks ^.. traverse . token_text)
   in TagPos (TokIdx b, TokIdx e, mtxt)
-
+-}
+  
 adjustWikiRange :: (Int,Int) -> (Int,Int)
 adjustWikiRange (a,b) = (a,b-1)
 
@@ -104,16 +107,17 @@ docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs 
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = netagger (docinput^.dainput_sents)
-      lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
+
+  entitiesByNER <- fmap (map fst) $ forM (map catMaybes mtokenss) $ \tokens -> do
+    return $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens
+  let ne = concat $ rights entitiesByNER
+  let tne = map tokenToTagPos ne
+
+  let lnk_mntns_tagpos = map linkedMentionToTagPos (linked_mentions_resolved ++ tne)
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
   synsetss <- runUKB (apredata^.analyze_wordnet)(sents,mptrs)
-  ess <- fmap (map fst) $ forM (map catMaybes mtokenss) $ \tokens -> do
-    return $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens
-  let ss = rights ess
-      ne = concat ss
-  let tne = map tokenToTagPos ne
-      mtmxs2 = fmap ((++) tne) mtmxs 
-  let mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs2
+
+  let mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
 
   let sentStructures = map (sentStructure apredata mergedtags) (zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss)
   return (DocStructure mtokenss sentitems mergedtags sentStructures)
