@@ -58,17 +58,15 @@ import           SRL.Analyze.Type
 import           SRL.Analyze.UKB                           (runUKB)
 
 
-tokenToTagPos  :: [Token] -> (EntityMention Text)
-tokenToTagPos tks = Self (EntityMentionUID 10001) (IRange 0 0, V.fromList (tks ^.. traverse . token_text), UnresolvedUID N.Other)
-
-
-  {-  let mft = (tks ^.. traverse) ^? _head
+tokenToTagPos  :: (Int,[Token]) -> (EntityMention Text)
+tokenToTagPos (i,tks) =
+  let mft = (tks ^.. traverse) ^? _head
       mlt = (tks ^.. traverse) ^? _last
       b = (fromJust mft) ^. token_tok_idx_range ^. _1
       e = (fromJust mlt) ^. token_tok_idx_range ^. _2
-      mtxt = Just (T.intercalate " " $ tks ^.. traverse . token_text)
-  in TagPos (TokIdx b, TokIdx e, mtxt)
--}
+      txts = tks ^.. traverse . token_text
+  in Self (EntityMentionUID i) (IRange b e, V.fromList txts, UnresolvedUID N.Other)
+
   
 adjustWikiRange :: (Int,Int) -> (Int,Int)
 adjustWikiRange (a,b) = (a,b-1)
@@ -111,7 +109,7 @@ docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs 
   entitiesByNER <- fmap (map fst) $ forM (map catMaybes mtokenss) $ \tokens -> do
     return $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens
   let ne = concat $ rights entitiesByNER
-  let tne = map tokenToTagPos ne
+  let tne = map tokenToTagPos (zip [10001..] ne)
 
   let lnk_mntns_tagpos = map linkedMentionToTagPos (linked_mentions_resolved ++ tne)
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
