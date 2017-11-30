@@ -415,26 +415,35 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
 
 
 matchFrame :: (VerbStructure,CP '[Lemma])
-           -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,(SenseID,Bool))
-matchFrame (vstr,cp) = do
-  let verbp = cp^.complement.complement
-      mDP = cp^.complement.specifier.trResolved
-      vprop = vstr^.vs_vp
-      rng = cpRange cp
-      frmsels = matchFrameRolesAll verbp cp mDP (vstr^.vs_roleTopPatts)
-      total=  sum (frmsels^..traverse._2)
-  ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
-  let mselected1 = (_Just . _2 %~ matchExtraRoles cp) mselected0
-      mselected  = (_Just . _2 %~ resolveAmbiguityInDP) mselected1
-      subfrms = mapMaybe (\(chk,prep,frm) -> matchSubFrame chk prep frm cp)
-                  [(hasComplementizer ["after"] , "after" , ("Time_vector","Event","Landmark_event"))
-                  ,(hasComplementizer ["before"], "before", ("Time_vector","Event","Landmark_event"))
-                  ,(hasComplementizer ["while"] , "while" , ("Concessive","Main_assertion","Conceded_state_of_affairs"))
-                  ,(hasComplementizer ["though","although"], "though", ("Concessive","Main_assertion","Conceded_state_of_affairs"))
-                  ,(hasComplementizer ["if"]    , "if"    , ("Conditional_occurrence","Consequence","Profiled_possibility"))
-                  ,(hasComplementizer ["unless"], "unless", ("Negative_conditional","Anti_consequence","Profiled_possibility"))
-                  ]
-  return (rng,vprop,FMR frame mselected subfrms,sense)
+           -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,Maybe (SenseID,Bool))
+matchFrame (vstr,cp) =
+    if verbp^.headX.vp_lemma == "be"
+    then do
+      -- dp <- mDP^?_Just._Right
+      -- GR_NP <- (rng,vprop,FMR "Instance" Nothing [],)
+
+      Nothing
+    else do
+      ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
+      let mselected1 = (_Just . _2 %~ matchExtraRoles cp) mselected0
+          mselected  = (_Just . _2 %~ resolveAmbiguityInDP) mselected1
+          subfrms = mapMaybe (\(chk,prep,frm) -> matchSubFrame chk prep frm cp)
+                      [(hasComplementizer ["after"] , "after" , ("Time_vector","Event","Landmark_event"))
+                      ,(hasComplementizer ["before"], "before", ("Time_vector","Event","Landmark_event"))
+                      ,(hasComplementizer ["while"] , "while" , ("Concessive","Main_assertion","Conceded_state_of_affairs"))
+                      ,(hasComplementizer ["though","although"], "though", ("Concessive","Main_assertion","Conceded_state_of_affairs"))
+                      ,(hasComplementizer ["if"]    , "if"    , ("Conditional_occurrence","Consequence","Profiled_possibility"))
+                      ,(hasComplementizer ["unless"], "unless", ("Negative_conditional","Anti_consequence","Profiled_possibility"))
+                      ]
+      return (rng,vprop,FMR frame mselected subfrms,Just sense)
+  where
+    verbp = cp^.complement.complement
+    mDP = cp^.complement.specifier.trResolved
+    vprop = vstr^.vs_vp
+    rng = cpRange cp
+    frmsels = matchFrameRolesAll verbp cp mDP (vstr^.vs_roleTopPatts)
+    total=  sum (frmsels^..traverse._2)
+
 
 
 --

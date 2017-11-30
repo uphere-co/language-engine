@@ -145,7 +145,7 @@ mkEntityFun (EI rng rnghead mprep txt,di) =
 
 
 mkMGVertices :: ([X'Tree '[Lemma]],TaggedLemma '[Lemma],[(Range,Range)])
-             -> ([(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,(SenseID,Bool))]
+             -> ([(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,Maybe (SenseID,Bool))]
                 ,[(Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe EntityInfo),(FNFrameElement,EntityInfo))]
                 )
 
@@ -212,7 +212,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
 
 
 mkRoleEdges :: VertexMap
-            -> [(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,(SenseID,Bool))]
+            -> [(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,Maybe (SenseID,Bool))]
             -> [MGEdge]
 mkRoleEdges vmap  matched = do
   let rngidxmap = vmap^.vm_rangeToIndex
@@ -305,7 +305,7 @@ mkCorefEdges vmap entities = do
 
 
 mkMGEdges :: VertexMap
-          -> ([(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,(SenseID,Bool))]
+          -> ([(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,Maybe (SenseID,Bool))]
              ,[(Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe EntityInfo),(FNFrameElement,EntityInfo))]
              )
           -> ([(EntityInfo,DPInfo)]
