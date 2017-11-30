@@ -43,11 +43,87 @@ import           SRL.Analyze.Type             (SentStructure,VerbStructure,Analy
                                               ,ss_x'tr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp)
 import           SRL.Analyze.Type.Match       (ONSenseFrameNetInstance,EntityInfo(..),FrameMatchResult(..))
-
-
-
 --
 -- import Debug.Trace
+
+ppAdjunctFrame :: Text -> Maybe (FNFrame,FNFrameElement,FNFrameElement)
+ppAdjunctFrame p = lookup p [ ("about"     , ("Topic"                        , "Text"     , "Topic"))
+                            , ("above"     , ("Directional_locative_relation", "Figure"   , "Ground"))
+                            , ("across"    , ("Distributed_position"         , "Theme"    , "Location"))
+                            , ("after"     , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                            , ("against"   , ("Taking_sides"                 , "Cognizer" , "Issue"))
+                            , ("along"     , ("Locative_relation"            , "Figure"   , "Ground"))
+                            -- alongside
+                            , ("amid"      , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                            , ("amidst"    , ("Contrary_circumstances"       , "Event"    , "Adversity"))
+                            , ("among"     , ("Be_subset_of"                 , "Part"     , "Total"))
+                            , ("around"    , ("Distributed_position"         , "Theme"    , "Around"))
+                            , ("as"        , ("Performers_and_roles"         , "Performer", "Role"))
+                            , ("astride"   , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("at"        , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("atop"      , ("Spatial_contact"              , "Figure"   , "Ground"))
+                            -- ontop
+                            -- bar
+                            , ("before"    , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                            , ("behind"    , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                            , ("below"     , ("Directional_locative_relation", "Figure"   , "Ground"))
+                            , ("beneath"   , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                            , ("beside"    , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                            , ("besides"   , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                            , ("between"   , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                            , ("beyond"    , ("Locative_relation"            , "Figure"   , "Ground"))
+                            -- but
+                            , ("by"        , ("Means"                        , "Purpose"  , "Means" ))
+                            -- circa
+                            -- come
+                            , ("despite"   , ("Concessive"                   , "Main_assertion", "Conceded_state_of_affairs"))
+                            , ("down"      , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("during"    , ("Temporal_collocation"         , "Trajector_event", "Landmark_event"))
+                            -- except
+                            , ("for"       , ("Purpose"                      , "Means"    , "Goal"))
+                            , ("from"      , ("Origin"                       , "Entity"   , "Origin"))
+                            , ("in"        , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("inside"    , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                            , ("into"      , ("Goal"                         , "Trajector", "Landmark"))
+                            -- less
+                            , ("like"      , ("Similarity"                   , "Entity_1" , "Entity_2"))
+                            -- minus
+                            , ("near"      , ("Locative_relation"            , "Figure"   , "Ground"))
+                            -- notwithstanding
+                            , ("of"        , ("Partitive"                    , "Subset"   , "Group"))
+                            , ("off"       , ("Spatial_contact"              , "Figure"   , "Ground"))
+                            , ("on"        , ("Locative_relation"            , "Figure"   , "Ground"))
+                            -- onto
+                            -- opposite
+                            , ("out"       , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("outside"   , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                            , ("over"      , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("past"      , ("Locative_relation"            , "Figure"   , "Ground"))
+                            -- per
+                            -- save
+                            -- short
+                            , ("since"     , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                            -- than
+                            , ("through"   , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                            , ("througout" , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("to"        , ("Goal"                         , "Trajector", "Landmark"))
+                            , ("toward"    , ("Goal"                         , "Trajector", "Landmark"))
+                            , ("towards"   , ("Goal"                         , "Trajector", "Landmark"))
+                            , ("under"     , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                            , ("underneath", ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                            , ("unlike"    , ("Similarity"                   , "Entity_1" , "Entity_2"))
+                            , ("until"     , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                            , ("till"      , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                            , ("up"        , ("Locative_relation"            , "Figure"   , "Ground"))
+                            , ("upon"      , ("Spatial_contact"              , "Figure"   , "Ground"))
+                            -- upside
+                            -- versus
+                            -- via
+                            , ("with"      , ("Accompaniment"                , "Participant","Co-participant"))
+                            , ("within"    , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                            , ("without"   , ("Negation"                     , "Factual_situation", "Negated_proposition"))
+                            -- worth
+                            ]
 
 
 mkTriples :: SentStructure -> ([X'Tree '[Lemma]],[(VerbStructure, CP '[Lemma])])
@@ -177,11 +253,11 @@ matchSO :: [(PBArg,Text)]
         -> (ArgPattern p GRel, Int)
         -> ((ArgPattern p GRel, Int), [(FNFrameElement, CompVP '[Lemma])])
 matchSO rolemap (mDP,verbp,cp) (patt,num) =
-  let (rpatt,rmatched0) = case verbp^.headX.vp_voice of
-                            Active  -> ((patt,num), maybeToList (matchSubject rolemap mDP patt) ++ matchObjects rolemap verbp patt)
-                            Passive -> ((patt,num),maybeToList (matchAgentForPassive rolemap cp patt) ++ matchObjects rolemap verbp patt)
+  let rmatched0 = case verbp^.headX.vp_voice of
+                    Active  -> maybeToList (matchSubject rolemap mDP patt) ++ matchObjects rolemap verbp patt
+                    Passive -> maybeToList (matchAgentForPassive rolemap cp patt) ++ matchObjects rolemap verbp patt
       rmatched1 = rmatched0 ++ maybeToList (matchExtraRolesForPPTime cp rmatched0)
-  in (rpatt,rmatched1 ++ matchPrepArgs rolemap cp patt rmatched1)
+  in ((patt,num),rmatched1 ++ matchPrepArgs rolemap cp patt rmatched1)
 
 
 extendRoleMapForDual :: (FNFrame,SenseID,[(PBArg,Text)])
@@ -415,26 +491,48 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
 
 
 matchFrame :: (VerbStructure,CP '[Lemma])
-           -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,(SenseID,Bool))
-matchFrame (vstr,cp) = do
-  let verbp = cp^.complement.complement
-      mDP = cp^.complement.specifier.trResolved
-      vprop = vstr^.vs_vp
-      rng = cpRange cp
-      frmsels = matchFrameRolesAll verbp cp mDP (vstr^.vs_roleTopPatts)
-      total=  sum (frmsels^..traverse._2)
-  ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
-  let mselected1 = (_Just . _2 %~ matchExtraRoles cp) mselected0
-      mselected  = (_Just . _2 %~ resolveAmbiguityInDP) mselected1
-      subfrms = mapMaybe (\(chk,prep,frm) -> matchSubFrame chk prep frm cp)
-                  [(hasComplementizer ["after"] , "after" , ("Time_vector","Event","Landmark_event"))
-                  ,(hasComplementizer ["before"], "before", ("Time_vector","Event","Landmark_event"))
-                  ,(hasComplementizer ["while"] , "while" , ("Concessive","Main_assertion","Conceded_state_of_affairs"))
-                  ,(hasComplementizer ["though","although"], "though", ("Concessive","Main_assertion","Conceded_state_of_affairs"))
-                  ,(hasComplementizer ["if"]    , "if"    , ("Conditional_occurrence","Consequence","Profiled_possibility"))
-                  ,(hasComplementizer ["unless"], "unless", ("Negative_conditional","Anti_consequence","Profiled_possibility"))
-                  ]
-  return (rng,vprop,FMR frame mselected subfrms,sense)
+           -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,Maybe (SenseID,Bool))
+matchFrame (vstr,cp) =
+    if verbp^.headX.vp_lemma == "be"
+    then do
+      dp_subj <- mDP^?_Just._Right
+      c <- listToMaybe (verbp^..complement.traverse.trResolved._Just)
+      ((do dp_obj <- c^?_CompVP_DP
+           let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_NP (Just GA1))) Nothing Nothing Nothing
+               role_subj = (FNFrameElement "Instance",CompVP_DP dp_subj)
+               role_obj  = (FNFrameElement "Type",CompVP_DP dp_obj)
+           return (rng,vprop,FMR "Instance" (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing))
+       <|>
+       (do pp_obj <- c^?_CompVP_PP
+           prep_obj <- pp_obj^?headX.hp_prep._Prep_WORD
+           (frm,rsbj,robj) <- ppAdjunctFrame prep_obj  
+           let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_PP Nothing)) Nothing Nothing Nothing
+               role_subj = (rsbj,CompVP_DP dp_subj)
+               role_obj  = (robj,CompVP_PP pp_obj)
+           return (rng,vprop,FMR frm (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing)))
+       
+
+    else do
+      ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
+      let mselected1 = (_Just . _2 %~ matchExtraRoles cp) mselected0
+          mselected  = (_Just . _2 %~ resolveAmbiguityInDP) mselected1
+          subfrms = mapMaybe (\(chk,prep,frm) -> matchSubFrame chk prep frm cp)
+                      [(hasComplementizer ["after"] , "after" , ("Time_vector","Event","Landmark_event"))
+                      ,(hasComplementizer ["before"], "before", ("Time_vector","Event","Landmark_event"))
+                      ,(hasComplementizer ["while"] , "while" , ("Concessive","Main_assertion","Conceded_state_of_affairs"))
+                      ,(hasComplementizer ["though","although"], "though", ("Concessive","Main_assertion","Conceded_state_of_affairs"))
+                      ,(hasComplementizer ["if"]    , "if"    , ("Conditional_occurrence","Consequence","Profiled_possibility"))
+                      ,(hasComplementizer ["unless"], "unless", ("Negative_conditional","Anti_consequence","Profiled_possibility"))
+                      ]
+      return (rng,vprop,FMR frame mselected subfrms,Just sense)
+  where
+    verbp = cp^.complement.complement
+    mDP = cp^.complement.specifier.trResolved
+    vprop = vstr^.vs_vp
+    rng = cpRange cp
+    frmsels = matchFrameRolesAll verbp cp mDP (vstr^.vs_roleTopPatts)
+    total=  sum (frmsels^..traverse._2)
+
 
 
 --
