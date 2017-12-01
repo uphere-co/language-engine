@@ -9,9 +9,7 @@ module SRL.Analyze.Type where
 
 import           Control.Lens
 import           Data.Aeson
-import           Data.Function                 (on)
 import           Data.HashMap.Strict           (HashMap)
-import           Data.List                     (maximumBy)
 import           Data.Text                     (Text)
 import           GHC.Generics
 --
@@ -21,7 +19,7 @@ import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElemen
                                                ,RoleInstance,RolePattInstance,SenseID)
 import           NLP.Syntax.Type               (MarkType(..))
 import           NLP.Syntax.Type.Verb          (VerbProperty(..))
-import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,TaggedLemma,CompVP)
+import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,TaggedLemma)
 import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
 import           NLP.Type.PennTreebankII       (Lemma,PennTree)
 import           NLP.Type.SyntaxProperty       (Voice)

@@ -8,12 +8,10 @@ module SRL.Analyze.Match.Entity where
 
 import           Control.Applicative      ((<|>))
 import           Control.Lens
-import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard,mzero)
 import           Data.Foldable            (foldMap)
-import           Data.List                (group,sort)
 import           Data.Maybe               (fromMaybe,listToMaybe,maybeToList)
-import           Data.Monoid              ((<>),First(..))
+import           Data.Monoid              (First(..))
 import           Data.Text                (Text)
 import qualified Data.Text           as T
 --
@@ -23,14 +21,13 @@ import           NLP.Syntax.Clause        (currentCPDPPP)
 import           NLP.Syntax.Type.XBar
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
-import           WordNet.Query            (WordNetDB,getDerivations,lookupLemma)
-import           WordNet.Type             (lex_word)
-import           WordNet.Type.POS         (POS(..))
 --
 import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..))
 --
-import Debug.Trace
-import           NLP.Syntax.Format (formatCP,formatCompVP,formatTraceChain,rangeText)
+-- import Debug.Trace
+
+
+
 --
 -- | this is very experimental now, only "the company" is checked.
 --
@@ -78,8 +75,8 @@ definiteGenitiveCorefResolution x'tr tagged dp = do
   w <- getFirst (foldMap (First . extractZipperById rng_specdp) x'tr)
   w' <- parent w
   cp' <- currentCPDPPP w' ^? _CPCase
-  w'' <- parent w'
-  cp'' <- currentCPDPPP w'' ^? _CPCase
+  -- w'' <- parent w'                        -- this need to be revived.
+  -- cp'' <- currentCPDPPP w'' ^? _CPCase
   dp' <- cp'^?complement.specifier.trResolved._Just._Right
   nclass <- dp'^?complement._Just.headX.hn_class._Just
   if nclass == Org

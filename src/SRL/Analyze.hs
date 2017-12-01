@@ -7,7 +7,7 @@
 
 module SRL.Analyze where
 
-import           Control.Lens                   ((^.),(^..),(.~),(&),_Just)
+import           Control.Lens                   ((^.),(.~),(&))
 import           Control.Monad                  (forM_,void,when)
 import           Control.Monad.IO.Class         (liftIO)
 import           Control.Monad.Loops            (whileJust_)
@@ -41,16 +41,14 @@ import           Lexicon.Data                   (LexDataConfig(..),cfg_framenet_
                                                 ,cfg_ukb_binfile
                                                 ,loadSenseInventory
                                                 )
-import           NLP.Syntax.Format              (formatX'Tree)
 import           NLP.Type.CoreNLP               (Sentence)
 import           OntoNotes.Corpus.Load          (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory  (inventory_lemma)
 import           Text.Format.Dot                (mkLabelText)
 import           WikiEL.Type                    (EntityMention)
 import           WikiEL.WikiNewNET              (newNETagger)
-import           WordNet.Query                  (WordNetDB,loadDB)
+import           WordNet.Query                  (loadDB)
 --
-import           SRL.Analyze.ARB                (mkARB)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP            (runParser)
 import           SRL.Analyze.Format             (dotMeaningGraph,formatDocStructure,showMatchedFrame)
@@ -58,8 +56,6 @@ import           SRL.Analyze.Match.Frame        (mkTriples)
 import           SRL.Analyze.Match.MeaningGraph (meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure  (docStructure,mkWikiList)
 import           SRL.Analyze.Type
-import           SRL.Analyze.UKB                (runUKB)
-import           SRL.Statistics                 (getGraphFromMG)
 --
 
 --
@@ -102,7 +98,7 @@ queryProcess config pp apredata netagger =
 
 
 printMeaningGraph :: AnalyzePredata -> [RoleInstance] -> DocStructure -> IO ()
-printMeaningGraph apredata rolemap dstr = do
+printMeaningGraph apredata _rolemap dstr = do
   putStrLn "-------------"
   putStrLn "meaning graph"
   putStrLn "-------------"

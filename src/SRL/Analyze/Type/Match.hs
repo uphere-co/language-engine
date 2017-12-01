@@ -11,8 +11,8 @@ import           Data.Text                     (Text)
 import           Data.Range                    (Range)
 import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel
                                                ,SenseID)
-import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,TaggedLemma,CompVP)
-import           NLP.Type.PennTreebankII       (Lemma,PennTree)
+import           NLP.Syntax.Type.XBar          (CompVP)
+import           NLP.Type.PennTreebankII       (Lemma)
 
 
 data EntityInfo = EI { _ei_fullRange :: Range
