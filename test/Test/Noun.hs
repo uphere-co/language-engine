@@ -201,6 +201,16 @@ test_possesive_clitic_1 =
   , []
   )
 
+test_infinitive_modifier_1 :: TestNoun
+test_infinitive_modifier_1 =
+  ( "its plan to seek approval of an environmental impact study"
+  , ("its",Just "plan",[],Just "to seek approval of an environmental impact study",[])
+  , [(0,("its","its")),(1,("plan","plan")),(2,("to","to")),(3,("seek","seek")),(4,("approval","approval")),(5,("of","of")),(6,("a","an")),(7,("environmental","environmental")),(8,("impact","impact")),(9,("study","study"))]
+  , PN "NP" [PL ("PRP$","its"),PL ("NN","plan"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","seek"),PN "NP" [PN "NP" [PL ("NN","approval")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("DT","an"),PL ("JJ","environmental"),PL ("NN","impact"),PL ("NN","study")]]]]]]]
+  , []
+  , []
+  )
+
 
 mkDPFromTest :: TaggedLemma '[Lemma] -> TestNoun -> DetP '[Lemma]
 mkDPFromTest tagged x =
@@ -244,6 +254,7 @@ testcases = [ test_bare_noun_modifier_1
             , test_appos_or_1
             , test_article_1
             , test_possesive_clitic_1
+            , test_infinitive_modifier_1
             ]
 
 
