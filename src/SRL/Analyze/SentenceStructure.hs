@@ -26,6 +26,7 @@ import           Data.Tree                                 (Forest)
 import qualified Data.Vector                       as V
 --
 import           CoreNLP.Simple.Convert                    (mkLemmaMap)
+import           Data.Range                                (elemIsInsideR)
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
 import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
@@ -47,6 +48,7 @@ import           NLP.Type.SyntaxProperty                   (Voice)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
 import           OntoNotes.Type.SenseInventory
 import           Text.Search.ParserCustom                  (pTreeAdvGBy)
+import           WikiEL.Convert                            (getRangeFromEntityMention)
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
 import           WikiEL.Type                               (EntityMention,EntityMentionUID(..),IRange(..),TextMatchedEntityType(..),PreNE(..),UIDCite(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
@@ -109,7 +111,9 @@ docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs 
   let ne = concat $ rights entitiesByNER
   let tne = map tokenToTagPos (zip [10001..] ne)
 
-  let lnk_mntns_tagpos = map linkedMentionToTagPos (linked_mentions_resolved ++ tne)
+  let tnerange = map getRangeFromEntityMention tne
+      lnk_mntns = tne ++ (filter (\mntn -> not $ elemIsInsideR (getRangeFromEntityMention mntn) tnerange) linked_mentions_resolved)
+      lnk_mntns_tagpos = map linkedMentionToTagPos lnk_mntns
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
   synsetss <- runUKB (apredata^.analyze_wordnet)(sents,mptrs)
 
