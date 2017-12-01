@@ -73,6 +73,7 @@ library
                      , cassava
                      , containers
                      , filepath
+                     , hashable
                      , lens
                      , primitive
                      , text

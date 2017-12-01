@@ -8,34 +8,53 @@ import           Control.Monad              (forM)
 import qualified Data.ByteString.Lazy       as BL
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Csv             as C
+import           Data.Hashable              (Hashable)
 import qualified Data.HashMap.Strict  as HM
-import           Data.List                  (find,foldl')
-import           Data.Maybe                 (catMaybes,fromMaybe)
+import           Data.List                  (foldl')
+import           Data.Maybe                 (fromMaybe)
 import           Data.Text                  (Text)
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as T.IO
 import qualified Data.Vector          as V
-
+--
 import           NER.Type
 import qualified WikiEL.ETL.LoadData     as LD
 import           WikiEL.Run                    (reprFileG)
 import qualified WikiEL.Type.FileFormat  as FF
 import qualified WikiEL.Type.Wikidata    as WD
 
+
+
+
 mkNameUIDHM :: [(Int,Text)] -> HM.HashMap Text Int
 mkNameUIDHM nameTable = foldl' (\acc (i,n) -> HM.insert n i acc) HM.empty nameTable
+
 
 mkUIDAliasHM :: [(Int,Text)] -> HM.HashMap Int [Text]
 mkUIDAliasHM nameTable = foldl' (\acc (i,n) -> HM.insertWith (\xs1 -> (\xs2 -> xs1 ++ xs2)) i [n] acc) HM.empty nameTable
 
+
+-- | returns (Wiki UID, Text)
+loadNameTable :: IO [(Int,Text)]
 loadNameTable = do
   reprs <- LD.loadEntityReprs reprFileG
   return $ map (\x -> ((WD._itemID . FF._uid) x,(WD._repr . FF._repr) x)) reprs
 
+
+loadCompanies :: IO [CompanyInfo]
 loadCompanies = do
   nt <- loadNameTable
   companies <- getCompanyList nt
   return companies
+
+
+aliasFinder :: (Hashable t, Hashable k, Eq t, Eq k) => HM.HashMap t k -> HM.HashMap k a -> t -> Maybe a
+aliasFinder nuid uida txt =
+  let muid = HM.lookup txt nuid
+  in case muid of
+    Nothing  -> Nothing
+    Just uid -> HM.lookup uid uida
+
 
 getCompanyList :: [(Int,Text)] -> IO [CompanyInfo]
 getCompanyList nameTable = do
@@ -71,14 +90,3 @@ getCompanyList nameTable = do
     return cinfo
 
   return (aList ++ aList2)
-
-
-
-aliasFinder nuid uida txt =
-  let muid = HM.lookup txt nuid
-  in case muid of
-    Nothing  -> Nothing
-    Just uid -> HM.lookup uid uida
-
-
-
