@@ -234,12 +234,6 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
       rng_np <- dp^?complement._Just.headX.hn_range
       let ps = (filter (\x -> (x^._1) `isInside` rng_np) . toList . current) z
       (i,_) <- find (\(_,y) -> posTag y == POS) ps
-      {- z1 <- child1 z
-      guard (isChunkAs NP (current z1))    -- for the time being. need to support multiple words for possessor.
-      -- (b,e) <- rangeOfNPs z1
-      z1last <- childLast z1
-      guard (isPOSAs POS (current z1last)) -}
-      -- let (b,e) = getRange (current z1)
       ( return
        .(specifier %~ (SpDP_Gen (rng_np^._1,i-1) :) )
        .(headX.hd_range .~ Just (i,i))
