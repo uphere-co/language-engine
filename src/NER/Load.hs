@@ -46,7 +46,7 @@ loadNameTable = do
 loadCompanies :: IO [CompanyInfo]
 loadCompanies = do
   nt <- loadNameTable
-  companies <- getCompanyList "/home/modori/repo/src/wiki-ner/company.json"
+  companies <- getCompanyList "/data/groups/uphere/data/NER/company/company.json"
   return companies
 
 
