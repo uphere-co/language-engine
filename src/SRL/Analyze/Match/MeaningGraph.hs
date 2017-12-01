@@ -37,6 +37,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,vm_rangeToIndex
                                               ,vm_rangeDependency
                                               ,vm_headRangeToFullRange
+                                              ,analyze_framedb
                                               ,analyze_wordnet
                                               ,_PredAppos,_MGPredicate,ss_tagged
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
@@ -63,7 +64,7 @@ mkEntityFun (EI rng rnghead mprep txt,di) =
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
       compof = maybe [] (mkRel "Partitive") (di^.adi_compof)
       poss = concatMap (mkRel "Possession") (di^.adi_poss)
-      adjs = concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppAdjunctFrame p) >>= \f -> mkRel (f^._1) e) (di^.adi_adjs)
+      adjs = concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppRelFrame p) >>= \f -> mkRel (f^._1) e) (di^.adi_adjs)
   in (\i -> MGEntity i (Just rng) (Just rnghead) txt []) : (appos ++ compof ++ poss ++ adjs)
 
 
@@ -189,7 +190,7 @@ mkInnerDPEdges vmap entities = do
     let appos = maybe [] (mkRelEdge "Instance" "Type" mrng) (di^.adi_appos)
         compof = maybe [] (mkRelEdge "Subset" "Group" mrng) (di^.adi_compof)
         poss = concatMap (mkRelEdge "Possession" "Owner" mrng) (di^.adi_poss)
-        adjs = concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppAdjunctFrame p) >>= \f -> mkRelEdge (f^._2) (f^._3) mrng e) (di^.adi_adjs)
+        adjs = concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppRelFrame p) >>= \f -> mkRelEdge (f^._2) (f^._3) mrng e) (di^.adi_adjs)
     (appos ++ compof ++ poss ++ adjs)
   where
     rngidxmap = vmap^.vm_rangeToIndex
@@ -249,7 +250,7 @@ meaningGraph apredata sstr =
   let wndb = apredata^.analyze_wordnet
       (x'tr,lst_vstrcp) = mkTriples sstr
       tagged = sstr^.ss_tagged
-      matched = mapMaybe matchFrame lst_vstrcp
+      matched = mapMaybe (matchFrame (apredata^.analyze_framedb)) lst_vstrcp
       depmap = dependencyOfX'Tree =<< x'tr
       --
       dps = x'tr^..traverse.to biList.traverse._2._DPCase

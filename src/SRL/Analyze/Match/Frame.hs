@@ -13,9 +13,10 @@ module SRL.Analyze.Match.Frame where
 import           Control.Applicative
 import           Control.Lens
 import           Control.Lens.Extras          (is)
-import           Control.Monad                (guard)
+import           Control.Monad                (guard,join)
 import           Data.Function                (on)
 import           Data.List                    (find,group,groupBy,sort,sortBy)
+import qualified Data.HashMap.Strict     as HM
 import           Data.Maybe                   (catMaybes,fromMaybe,isNothing,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                  (First(..),(<>))
 import           Data.Text                    (Text)
@@ -23,6 +24,8 @@ import qualified Data.Text               as T
 --
 import           Data.BitreeZipper            (current,extractZipperById)
 import           Data.Range                   (Range,isInside,isInsideR)
+import           FrameNet.Query.Frame         (FrameDB,frameDB)
+import           FrameNet.Type.Frame          (frame_FE,fe_name)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
@@ -44,86 +47,170 @@ import           SRL.Analyze.Type             (SentStructure,VerbStructure,Analy
                                               ,vs_roleTopPatts,vs_vp)
 import           SRL.Analyze.Type.Match       (ONSenseFrameNetInstance,EntityInfo(..),FrameMatchResult(..))
 --
--- import Debug.Trace
+import Debug.Trace
 
-ppAdjunctFrame :: Text -> Maybe (FNFrame,FNFrameElement,FNFrameElement)
-ppAdjunctFrame p = lookup p [ ("about"     , ("Topic"                        , "Text"     , "Topic"))
-                            , ("above"     , ("Directional_locative_relation", "Figure"   , "Ground"))
-                            , ("across"    , ("Distributed_position"         , "Theme"    , "Location"))
-                            , ("after"     , ("Time_vector"                  , "Event"    , "Landmark_event"))
-                            , ("against"   , ("Taking_sides"                 , "Cognizer" , "Issue"))
-                            , ("along"     , ("Locative_relation"            , "Figure"   , "Ground"))
-                            -- alongside
-                            , ("amid"      , ("Interior_profile_relation"    , "Figure"   , "Ground"))
-                            , ("amidst"    , ("Contrary_circumstances"       , "Event"    , "Adversity"))
-                            , ("among"     , ("Be_subset_of"                 , "Part"     , "Total"))
-                            , ("around"    , ("Distributed_position"         , "Theme"    , "Around"))
-                            , ("as"        , ("Performers_and_roles"         , "Performer", "Role"))
-                            , ("astride"   , ("Locative_relation"            , "Figure"   , "Ground"))
-                            , ("at"        , ("Locative_relation"            , "Figure"   , "Ground"))
-                            , ("atop"      , ("Spatial_contact"              , "Figure"   , "Ground"))
-                            -- ontop
-                            -- bar
-                            , ("before"    , ("Time_vector"                  , "Event"    , "Landmark_event"))
-                            , ("behind"    , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
-                            , ("below"     , ("Directional_locative_relation", "Figure"   , "Ground"))
-                            , ("beneath"   , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
-                            , ("beside"    , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
-                            , ("besides"   , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
-                            , ("between"   , ("Interior_profile_relation"    , "Figure"   , "Ground"))
-                            , ("beyond"    , ("Locative_relation"            , "Figure"   , "Ground"))
-                            -- but
-                            , ("by"        , ("Means"                        , "Purpose"  , "Means" ))
-                            -- circa
-                            -- come
-                            , ("despite"   , ("Concessive"                   , "Main_assertion", "Conceded_state_of_affairs"))
-                            , ("down"      , ("Locative_relation"            , "Figure"   , "Ground"))
-                            , ("during"    , ("Temporal_collocation"         , "Trajector_event", "Landmark_event"))
-                            -- except
-                            , ("for"       , ("Purpose"                      , "Means"    , "Goal"))
-                            , ("from"      , ("Origin"                       , "Entity"   , "Origin"))
-                            , ("in"        , ("Locative_relation"            , "Figure"   , "Ground"))
-                            , ("inside"    , ("Interior_profile_relation"    , "Figure"   , "Ground"))
-                            , ("into"      , ("Goal"                         , "Trajector", "Landmark"))
-                            -- less
-                            , ("like"      , ("Similarity"                   , "Entity_1" , "Entity_2"))
-                            -- minus
-                            , ("near"      , ("Locative_relation"            , "Figure"   , "Ground"))
-                            -- notwithstanding
-                            , ("of"        , ("Partitive"                    , "Subset"   , "Group"))
-                            , ("off"       , ("Spatial_contact"              , "Figure"   , "Ground"))
-                            , ("on"        , ("Locative_relation"            , "Figure"   , "Ground"))
-                            -- onto
-                            -- opposite
-                            , ("out"       , ("Locative_relation"            , "Figure"   , "Ground"))
-                            , ("outside"   , ("Interior_profile_relation"    , "Figure"   , "Ground"))
-                            , ("over"      , ("Locative_relation"            , "Figure"   , "Ground"))
-                            , ("past"      , ("Locative_relation"            , "Figure"   , "Ground"))
-                            -- per
-                            -- save
-                            -- short
-                            , ("since"     , ("Time_vector"                  , "Event"    , "Landmark_event"))
-                            -- than
-                            , ("through"   , ("Time_vector"                  , "Event"    , "Landmark_event"))
-                            , ("througout" , ("Locative_relation"            , "Figure"   , "Ground"))
-                            , ("to"        , ("Goal"                         , "Trajector", "Landmark"))
-                            , ("toward"    , ("Goal"                         , "Trajector", "Landmark"))
-                            , ("towards"   , ("Goal"                         , "Trajector", "Landmark"))
-                            , ("under"     , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
-                            , ("underneath", ("Non-gradable_proximity"       , "Figure"   , "Ground"))
-                            , ("unlike"    , ("Similarity"                   , "Entity_1" , "Entity_2"))
-                            , ("until"     , ("Time_vector"                  , "Event"    , "Landmark_event"))
-                            , ("till"      , ("Time_vector"                  , "Event"    , "Landmark_event"))
-                            , ("up"        , ("Locative_relation"            , "Figure"   , "Ground"))
-                            , ("upon"      , ("Spatial_contact"              , "Figure"   , "Ground"))
-                            -- upside
-                            -- versus
-                            -- via
-                            , ("with"      , ("Accompaniment"                , "Participant","Co-participant"))
-                            , ("within"    , ("Interior_profile_relation"    , "Figure"   , "Ground"))
-                            , ("without"   , ("Negation"                     , "Factual_situation", "Negated_proposition"))
-                            -- worth
-                            ]
+ppRelFrame :: Text -> Maybe (FNFrame,FNFrameElement,FNFrameElement)
+ppRelFrame p = lookup p [ ("about"     , ("Topic"                        , "Text"     , "Topic"))
+                        , ("above"     , ("Directional_locative_relation", "Figure"   , "Ground"))
+                        , ("across"    , ("Distributed_position"         , "Theme"    , "Location"))
+                        , ("after"     , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                        , ("against"   , ("Taking_sides"                 , "Cognizer" , "Issue"))
+                        , ("along"     , ("Locative_relation"            , "Figure"   , "Ground"))
+                        -- alongside
+                        , ("amid"      , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                        , ("amidst"    , ("Contrary_circumstances"       , "Event"    , "Adversity"))
+                        , ("among"     , ("Be_subset_of"                 , "Part"     , "Total"))
+                        , ("around"    , ("Distributed_position"         , "Theme"    , "Location"))
+                        , ("as"        , ("Performers_and_roles"         , "Performer", "Role"))
+                        , ("astride"   , ("Locative_relation"            , "Figure"   , "Ground"))
+                        , ("at"        , ("Locative_relation"            , "Figure"   , "Ground"))
+                        , ("atop"      , ("Spatial_contact"              , "Figure"   , "Ground"))
+                        -- ontop
+                        -- bar
+                        , ("before"    , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                        , ("behind"    , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                        , ("below"     , ("Directional_locative_relation", "Figure"   , "Ground"))
+                        , ("beneath"   , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                        , ("beside"    , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                        , ("besides"   , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                        , ("between"   , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                        , ("beyond"    , ("Locative_relation"            , "Figure"   , "Ground"))
+                        -- but
+                        , ("by"        , ("Means"                        , "Purpose"  , "Means" ))
+                        -- circa
+                        -- come
+                        , ("despite"   , ("Concessive"                   , "Main_assertion", "Conceded_state_of_affairs"))
+                        , ("down"      , ("Locative_relation"            , "Figure"   , "Ground"))
+                        , ("during"    , ("Temporal_collocation"         , "Trajector_event", "Landmark_event"))
+                        -- except
+                        , ("for"       , ("Purpose"                      , "Means"    , "Goal"))
+                        , ("from"      , ("Origin"                       , "Entity"   , "Origin"))
+                        , ("in"        , ("Locative_relation"            , "Figure"   , "Ground"))
+                        , ("inside"    , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                        , ("into"      , ("Goal"                         , "Trajector", "Landmark"))
+                        -- less
+                        , ("like"      , ("Similarity"                   , "Entity_1" , "Entity_2"))
+                        -- minus
+                        , ("near"      , ("Locative_relation"            , "Figure"   , "Ground"))
+                        -- notwithstanding
+                        , ("of"        , ("Partitive"                    , "Subset"   , "Group"))
+                        , ("off"       , ("Spatial_contact"              , "Figure"   , "Ground"))
+                        , ("on"        , ("Locative_relation"            , "Figure"   , "Ground"))
+                        -- onto
+                        -- opposite
+                        , ("out"       , ("Locative_relation"            , "Figure"   , "Ground"))
+                        , ("outside"   , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                        , ("over"      , ("Locative_relation"            , "Figure"   , "Ground"))
+                        , ("past"      , ("Locative_relation"            , "Figure"   , "Ground"))
+                        -- per
+                        -- save
+                        -- short
+                        , ("since"     , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                        -- than
+                        , ("through"   , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                        , ("througout" , ("Locative_relation"            , "Figure"   , "Ground"))
+                        , ("to"        , ("Goal"                         , "Trajector", "Landmark"))
+                        , ("toward"    , ("Goal"                         , "Trajector", "Landmark"))
+                        , ("towards"   , ("Goal"                         , "Trajector", "Landmark"))
+                        , ("under"     , ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                        , ("underneath", ("Non-gradable_proximity"       , "Figure"   , "Ground"))
+                        , ("unlike"    , ("Similarity"                   , "Entity_1" , "Entity_2"))
+                        , ("until"     , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                        , ("till"      , ("Time_vector"                  , "Event"    , "Landmark_event"))
+                        , ("up"        , ("Locative_relation"            , "Figure"   , "Ground"))
+                        , ("upon"      , ("Spatial_contact"              , "Figure"   , "Ground"))
+                        -- upside
+                        -- versus
+                        -- via
+                        , ("with"      , ("Accompaniment"                , "Participant","Co-participant"))
+                        , ("within"    , ("Interior_profile_relation"    , "Figure"   , "Ground"))
+                        , ("without"   , ("Negation"                     , "Factual_situation", "Negated_proposition"))
+                        -- worth
+                        ]
+
+
+
+ppExtraRoles :: Text -> [FNFrameElement]
+ppExtraRoles p = join (maybeToList (lookup p ppExtraRoleMap))
+
+
+ppExtraRoleMap = [ ("about"     , ["Topic"])
+                 , ("above"     , ["Location"])
+                 , ("across"    , ["Path"])
+                 , ("after"     , ["Time"])
+                 , ("against"   , ["Issue"])
+                 , ("along"     , ["Path"])
+                 -- alongside
+                 , ("amid"      , ["Duration"])
+                 , ("amidst"    , ["Duration"])
+                 , ("among"     , ["Total","Possibilities"])
+                 , ("around"    , ["Area","Location"])
+                 , ("as"        , ["Role"])
+                 , ("astride"   , ["Location"])
+                 , ("at"        , ["Location","Time"])
+                 , ("atop"      , ["Location"])
+                 -- ontop
+                 -- bar
+                 , ("before"    , ["Time"])
+                 , ("behind"    , ["Location"])
+                 , ("below"     , ["Location"])
+                 , ("beneath"   , ["Location"])
+                 , ("beside"    , ["Location"])
+                 , ("besides"   , ["Location"])
+                 , ("between"   , ["Area","Location"])
+                 , ("beyond"    , ["Standard_item","Domain"])
+                 -- but
+                 , ("by"        , ["Means","Location"])
+                 -- circa
+                 -- come
+                 , ("despite"   , ["Event_description"])
+                 , ("down"      , ["Direction"])
+                 , ("during"    , ["Duration"])
+                 -- except
+                 , ("for"       , ["Purpose","Duration","Goal"])
+                 , ("from"      , ["Origin","Support"])
+                 , ("in"        , ["Location","Time"])
+                 , ("inside"    , ["Area","Location","Ground"])
+                 , ("into"      , ["Goal","Effect"])
+                 -- less
+                 , ("like"      , ["Manner"])
+                 -- minus
+                 , ("near"      , ["Location"])
+                 -- notwithstanding
+                 , ("of"        , ["Phenomenon"])
+                 , ("off"       , ["Location"])
+                 , ("on"        , ["Location","Time"])
+                 -- onto
+                 -- opposite
+                 , ("out"       , ["Direction"])
+                 , ("outside"   , ["Area","Ground"])
+                 , ("over"      , ["Duration","Location","Area","Ground"])
+                 , ("past"      , ["Path","Area","Ground","Ground"])
+                 -- per
+                 -- save
+                 -- short
+                 , ("since"     , ["Time"])
+                 -- than
+                 , ("through"   , ["Path","Duration","Ground"])
+                 , ("througout" , ["Path","Duration","Ground"])
+                 , ("to"        , ["Goal","Effect","Direction"])
+                 , ("toward"    , ["Goal","Direction"])
+                 , ("towards"   , ["Goal","Direction"])
+                 , ("under"     , ["Location","Ground","Area"])
+                 , ("underneath", ["Location"])
+                 , ("unlike"    , ["Manner"])
+                 , ("until"     , ["Time"])
+                 , ("till"      , ["Time"])
+                 , ("up"        , ["Direction"])
+                 , ("upon"      , ["Location"])
+                 -- upside
+                 -- versus
+                 -- via
+                 , ("with"      , ["Co-participant"])
+                 , ("within"    , ["Location","Ground","Area"])
+                 , ("without"   , ["Co-participant"])
+                 -- worth
+                 ]
 
 
 mkTriples :: SentStructure -> ([X'Tree '[Lemma]],[(VerbStructure, CP '[Lemma])])
@@ -139,7 +226,6 @@ mkTriples sstr =
                            (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
                  ]
      )
-
 
 pbArgForGArg :: GArg -> ArgPattern p GRel -> Maybe (Text,GRel)
 pbArgForGArg garg patt = check patt_arg0 "arg0" <|>
@@ -335,11 +421,31 @@ matchExtraRolesForPPTime :: CP '[Lemma]
                          -> [(FNFrameElement, CompVP '[Lemma])]
                          -> Maybe (FNFrameElement,CompVP '[Lemma])
 matchExtraRolesForPPTime cp felst = do
-  guard (isNothing (find (\x -> x^._1 == "Time") felst))
+  guard (is _Nothing (find (\x -> x^._1 == "Time" || x^._1 == "Duration") felst))
   pp <- matchPP cp (Nothing,Just PC_Time,Just False)
   let comp = CompVP_PP pp
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
-  return ("Time",comp)
+  ((do prep <- pp^?headX.hp_prep._Prep_WORD
+       find (\x -> (x^._1 == prep) && ("Duration" `elem` x^._2)) ppExtraRoleMap
+       return ("Duration",comp)
+    )
+   <|> return ("Time",comp))
+
+
+
+matchExtraRolesForGenericPP :: [Text]
+                            -> CP '[Lemma]
+                            -> [(FNFrameElement, CompVP '[Lemma])]
+                            -> Maybe (FNFrameElement,CompVP '[Lemma])
+matchExtraRolesForGenericPP fes cp felst = do
+  let fes0 = map (^._1) felst
+  pp <- matchPP cp (Nothing,Just PC_Other,Just False)
+  prep <- pp^?headX.hp_prep._Prep_WORD
+  let roles = ppExtraRoles prep
+  role <- find (\r -> r /= "Time" && r /= "Duration" && unFNFrameElement r `elem` fes && not (r `elem` fes0)) roles
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
+  let comp = CompVP_PP pp
+  return (role,comp)
 
 
 matchExtraRolesForPPing :: Text
@@ -402,20 +508,26 @@ toInfinitive x =
 
 -- | this function should be generalized.
 --
-matchExtraRoles :: CP '[Lemma]
+matchExtraRoles :: FrameDB
+                -> FNFrame
+                -> CP '[Lemma]
                 -> [(FNFrameElement, CompVP '[Lemma])]
                 -> [(FNFrameElement, CompVP '[Lemma])]
-matchExtraRoles cp felst =
+matchExtraRoles frmdb frame cp felst =
   let mmeans = matchExtraRolesForPPing "by" "Means" cp felst
-      felst' = felst ++ maybeToList mmeans
-      mcomp  = matchExtraRolesForCPInCompVP toInfinitive "Purpose" cp felst' <|>
-               matchExtraRolesForPPing "after"  "Time_vector" cp felst' <|>
-               matchExtraRolesForPPing "before" "Time_vector" cp felst'
-      felst'' = felst' ++ maybeToList mcomp
-      madj   = matchExtraRolesForCPInAdjunctCP (hasComplementizer ["as"]) "Explanation" cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP toInfinitive               "Purpose"     cp felst'' <|>
-               matchExtraRolesForCPInAdjunctCP (not.hasComplementizer ["after","before","as","while","if","though","although","unless"]) "Event_description" cp felst'' --for the time being
-  in felst'' ++ maybeToList madj
+      felst1 = felst ++ maybeToList mmeans
+      mcomp  = matchExtraRolesForCPInCompVP toInfinitive "Purpose" cp felst1 <|>
+               matchExtraRolesForPPing "after"  "Time_vector" cp felst1 <|>
+               matchExtraRolesForPPing "before" "Time_vector" cp felst1
+      felst2 = felst1 ++ maybeToList mcomp
+      madj   = matchExtraRolesForCPInAdjunctCP (hasComplementizer ["as"]) "Explanation" cp felst2 <|>
+               matchExtraRolesForCPInAdjunctCP toInfinitive               "Purpose"     cp felst2 <|>
+               matchExtraRolesForCPInAdjunctCP (not.hasComplementizer ["after","before","as","while","if","though","although","unless"]) "Event_description" cp felst2 --for the time being
+      felst3 = felst2 ++ maybeToList madj
+      fes = do frm <- maybeToList (HM.lookup (unFNFrame frame) (frmdb^.frameDB))
+               frm^..frame_FE.traverse.fe_name
+      madjpp = matchExtraRolesForGenericPP fes cp felst3
+  in felst3 ++ maybeToList madjpp
 
 
 matchSubFrame :: (CP '[Lemma] -> Bool)
@@ -490,9 +602,10 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
 
 
 
-matchFrame :: (VerbStructure,CP '[Lemma])
+matchFrame :: FrameDB
+           -> (VerbStructure,CP '[Lemma])
            -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,Maybe (SenseID,Bool))
-matchFrame (vstr,cp) =
+matchFrame frmdb (vstr,cp) =
     if verbp^.headX.vp_lemma == "be"
     then do
       dp_subj <- mDP^?_Just._Right
@@ -505,16 +618,16 @@ matchFrame (vstr,cp) =
        <|>
        (do pp_obj <- c^?_CompVP_PP
            prep_obj <- pp_obj^?headX.hp_prep._Prep_WORD
-           (frm,rsbj,robj) <- ppAdjunctFrame prep_obj  
+           (frm,rsbj,robj) <- ppRelFrame prep_obj
            let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_PP Nothing)) Nothing Nothing Nothing
                role_subj = (rsbj,CompVP_DP dp_subj)
                role_obj  = (robj,CompVP_PP pp_obj)
            return (rng,vprop,FMR frm (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing)))
-       
+
 
     else do
       ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
-      let mselected1 = (_Just . _2 %~ matchExtraRoles cp) mselected0
+      let mselected1 = (_Just . _2 %~ matchExtraRoles frmdb frame cp) mselected0
           mselected  = (_Just . _2 %~ resolveAmbiguityInDP) mselected1
           subfrms = mapMaybe (\(chk,prep,frm) -> matchSubFrame chk prep frm cp)
                       [(hasComplementizer ["after"] , "after" , ("Time_vector","Event","Landmark_event"))

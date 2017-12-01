@@ -25,6 +25,7 @@ import           Text.Printf                             (printf)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens')
 import           Data.BitreeZipper
+import           FrameNet.Query.Frame                    (FrameDB)
 import qualified HTMLEntities.Text             as HTMLT
 import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
 import           Lexicon.Type                            (ArgPattern(..),RoleInstance,GRel(..)
@@ -226,12 +227,13 @@ showMatchedFE _      (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" (unF
 
 
 
-showMatchedFrame :: TaggedLemma '[Lemma]
+showMatchedFrame :: FrameDB
+                 -> TaggedLemma '[Lemma]
                  -> (VerbStructure, CP '[Lemma])
                  -> IO ()
-showMatchedFrame tagged (vstr,cp) = do
+showMatchedFrame framedb tagged (vstr,cp) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame (vstr,cp)) $ \(rng,_,FMR frame mselected _,_) -> do
+  flip traverse_ (matchFrame framedb (vstr,cp)) $ \(rng,_,FMR frame mselected _,_) -> do
     putStrLn ("predicate: " <> show rng)
     T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
     T.IO.putStrLn ("Frame: " <> unFNFrame frame)
