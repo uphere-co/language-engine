@@ -16,6 +16,7 @@ import           Control.Lens.Extras          (is)
 import           Control.Monad                (guard,join)
 import           Data.Function                (on)
 import           Data.List                    (find,group,groupBy,sort,sortBy)
+import qualified Data.HashMap.Strict     as HM
 import           Data.Maybe                   (catMaybes,fromMaybe,isNothing,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                  (First(..),(<>))
 import           Data.Text                    (Text)
@@ -23,6 +24,8 @@ import qualified Data.Text               as T
 --
 import           Data.BitreeZipper            (current,extractZipperById)
 import           Data.Range                   (Range,isInside,isInsideR)
+import           FrameNet.Query.Frame         (FrameDB,frameDB)
+import           FrameNet.Type.Frame          (frame_FE,fe_name)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
@@ -44,7 +47,7 @@ import           SRL.Analyze.Type             (SentStructure,VerbStructure,Analy
                                               ,vs_roleTopPatts,vs_vp)
 import           SRL.Analyze.Type.Match       (ONSenseFrameNetInstance,EntityInfo(..),FrameMatchResult(..))
 --
--- import Debug.Trace
+import Debug.Trace
 
 ppRelFrame :: Text -> Maybe (FNFrame,FNFrameElement,FNFrameElement)
 ppRelFrame p = lookup p [ ("about"     , ("Topic"                        , "Text"     , "Topic"))
@@ -418,25 +421,31 @@ matchExtraRolesForPPTime :: CP '[Lemma]
                          -> [(FNFrameElement, CompVP '[Lemma])]
                          -> Maybe (FNFrameElement,CompVP '[Lemma])
 matchExtraRolesForPPTime cp felst = do
-  find (\x -> x^._1 == "Time" || x^._1 == "Duration") felst
+  guard (is _Nothing (find (\x -> x^._1 == "Time" || x^._1 == "Duration") felst))
   pp <- matchPP cp (Nothing,Just PC_Time,Just False)
   let comp = CompVP_PP pp
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
-  return ("Time",comp)
-  {- ((do prep <- pp^?headX.hp_prep._Prep_WORD
+  ((do prep <- pp^?headX.hp_prep._Prep_WORD
        find (\x -> (x^._1 == prep) && ("Duration" `elem` x^._2)) ppExtraRoleMap
        return ("Duration",comp)
     )
-   <|> return ("Time",comp)) -}
+   <|> return ("Time",comp))
 
 
 
-matchExtraRolesForGenericPP :: CP '[Lemma]
+matchExtraRolesForGenericPP :: [Text]
+                            -> CP '[Lemma]
                             -> [(FNFrameElement, CompVP '[Lemma])]
                             -> Maybe (FNFrameElement,CompVP '[Lemma])
-matchExtraRolesForGenericPP _ _ = Nothing
-
-
+matchExtraRolesForGenericPP fes cp felst = do
+  let fes0 = map (^._1) felst
+  pp <- matchPP cp (Nothing,Just PC_Other,Just False)
+  prep <- pp^?headX.hp_prep._Prep_WORD
+  let roles = ppExtraRoles prep
+  role <- find (\r -> unFNFrameElement r `elem` fes && not (r `elem` fes0)) roles
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
+  let comp = CompVP_PP pp
+  return (role,comp)
 
 
 matchExtraRolesForPPing :: Text
@@ -499,10 +508,12 @@ toInfinitive x =
 
 -- | this function should be generalized.
 --
-matchExtraRoles :: CP '[Lemma]
+matchExtraRoles :: FrameDB
+                -> FNFrame
+                -> CP '[Lemma]
                 -> [(FNFrameElement, CompVP '[Lemma])]
                 -> [(FNFrameElement, CompVP '[Lemma])]
-matchExtraRoles cp felst =
+matchExtraRoles frmdb frame cp felst =
   let mmeans = matchExtraRolesForPPing "by" "Means" cp felst
       felst1 = felst ++ maybeToList mmeans
       mcomp  = matchExtraRolesForCPInCompVP toInfinitive "Purpose" cp felst1 <|>
@@ -513,7 +524,9 @@ matchExtraRoles cp felst =
                matchExtraRolesForCPInAdjunctCP toInfinitive               "Purpose"     cp felst2 <|>
                matchExtraRolesForCPInAdjunctCP (not.hasComplementizer ["after","before","as","while","if","though","although","unless"]) "Event_description" cp felst2 --for the time being
       felst3 = felst2 ++ maybeToList madj
-      madjpp = matchExtraRolesForGenericPP cp felst3
+      fes = do frm <- maybeToList (HM.lookup (unFNFrame frame) (frmdb^.frameDB))
+               frm^..frame_FE.traverse.fe_name
+      madjpp = matchExtraRolesForGenericPP fes cp felst3
   in felst3 ++ maybeToList madjpp
 
 
@@ -589,9 +602,10 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
 
 
 
-matchFrame :: (VerbStructure,CP '[Lemma])
+matchFrame :: FrameDB
+           -> (VerbStructure,CP '[Lemma])
            -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,Maybe (SenseID,Bool))
-matchFrame (vstr,cp) =
+matchFrame frmdb (vstr,cp) =
     if verbp^.headX.vp_lemma == "be"
     then do
       dp_subj <- mDP^?_Just._Right
@@ -613,7 +627,7 @@ matchFrame (vstr,cp) =
 
     else do
       ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
-      let mselected1 = (_Just . _2 %~ matchExtraRoles cp) mselected0
+      let mselected1 = (_Just . _2 %~ matchExtraRoles frmdb frame cp) mselected0
           mselected  = (_Just . _2 %~ resolveAmbiguityInDP) mselected1
           subfrms = mapMaybe (\(chk,prep,frm) -> matchSubFrame chk prep frm cp)
                       [(hasComplementizer ["after"] , "after" , ("Time_vector","Event","Landmark_event"))

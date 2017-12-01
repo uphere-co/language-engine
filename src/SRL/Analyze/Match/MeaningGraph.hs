@@ -37,6 +37,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,vm_rangeToIndex
                                               ,vm_rangeDependency
                                               ,vm_headRangeToFullRange
+                                              ,analyze_framedb
                                               ,analyze_wordnet
                                               ,_PredAppos,_MGPredicate,ss_tagged
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
@@ -249,7 +250,7 @@ meaningGraph apredata sstr =
   let wndb = apredata^.analyze_wordnet
       (x'tr,lst_vstrcp) = mkTriples sstr
       tagged = sstr^.ss_tagged
-      matched = mapMaybe matchFrame lst_vstrcp
+      matched = mapMaybe (matchFrame (apredata^.analyze_framedb)) lst_vstrcp
       depmap = dependencyOfX'Tree =<< x'tr
       --
       dps = x'tr^..traverse.to biList.traverse._2._DPCase
