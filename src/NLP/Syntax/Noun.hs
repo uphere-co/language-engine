@@ -24,7 +24,7 @@ import           Data.Bitree              (_PL)
 import           Data.BitreeZipper        (child1,childLast,current,next,parent
                                           ,extractZipperByRange)
 import           Data.BitreeZipper.Util   (firstSiblingBy)
-import           Data.Range               (isInsideR,Range)
+import           Data.Range               (isInside,isInsideR,Range)
 import           NLP.Type.PennTreebankII  (ChunkTag(..),POSTag(..),TernaryLogic(..),Lemma(..)
                                           ,getRange,isNoun,posTag,tokenWord,getAnnot)
 import           NLP.Type.TagPos          (TagPos(..))
@@ -91,14 +91,23 @@ splitDP tagged dp0 =
 
   in identifyDeterminer tagged . identifyNamedEntity tagged . bareNounModifier tagged . fromMaybe dp1 $ do
        let rng1 = dp1^.maximalProjection
+           rf = getRange . current
+
        z <- find (isChunkAs NP . current) (extractZipperByRange rng1 (tagged^.pennTree))
-       dp <- child1 z
-       guard (isChunkAs NP (current dp))
-       sbar <- next dp
-       let rf = getRange . current
-       ((guard (isChunkAs SBAR (current sbar)) >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
-        (guard (isChunkAs VP (current sbar))   >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
-        (splitParentheticalModifier tagged z))
+       ((do dp <- child1 z
+            guard (isChunkAs NP (current dp))
+            sbar <- next dp
+            ((guard (isChunkAs SBAR (current sbar)) >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
+             (guard (isChunkAs S (current sbar)) >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
+             (guard (isChunkAs VP (current sbar))   >> return (mkSplittedDP CLMod (rf dp) (rf sbar) z)) <|>
+             (splitParentheticalModifier tagged z)))
+        <|>
+        (do sbar <- childLast z
+            guard (isChunkAs S (current sbar))
+            let (b,e) = rng1
+                (b1,e1) = rf sbar
+            return (mkSplittedDP CLMod (b,b1-1) (b1,e1) z)))
+
 
 
 splitParentheticalModifier :: TaggedLemma (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))
@@ -113,6 +122,7 @@ splitParentheticalModifier tagged z = do
     ((ba,ea),z_appos) <-
       ((do ((b2,e2),z2') <- (rangeOfNPs z2
                              <|> (guard (isChunkAs VP (current z2)) >> return (getRange (current z2), z2))
+                             <|> (guard (isChunkAs S (current z2)) >> return (getRange (current z2), z2))
                              <|> (guard (isChunkAs SBAR (current z2)) >> return (getRange (current z2), z2))
                              <|> (guard (isChunkAs PP (current z2)) >> return (getRange (current z2), z2))
                             )
@@ -164,8 +174,8 @@ rangeOfNPs z = do
       let (_,e) = getRange (current z)
       z' <- next z
       return ((e,z),z')
-    
-    
+
+
 
 identApposHead :: TaggedLemma t -> Range -> Range -> Zipper t -> DetP t
 identApposHead tagged rng1 rng2 z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $
@@ -190,7 +200,7 @@ checkProperNoun tagged (b,e) =
 identifyDeterminer :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                       TaggedLemma t -> DetP t -> DetP t
 identifyDeterminer tagged dp = fromMaybe dp $ do
-    rng <- dp^?complement._Just.headX.hn_range
+    let rng = dp^.maximalProjection -- complement._Just.headX.hn_range
     let zs = extractZipperByRange rng (tagged^.pennTree)
     (singleword zs <|> multiword zs)
 
@@ -221,18 +231,15 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
        .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp
     --
     cliticGen z = do
-      z1 <- child1 z
-      guard (isChunkAs NP (current z1))    -- for the time being. need to support multiple words for possessor.
-      -- (b,e) <- rangeOfNPs z1
-      z1last <- childLast z1
-      guard (isPOSAs POS (current z1last))
-      let (b,e) = getRange (current z1)
+      rng_np <- dp^?complement._Just.headX.hn_range
+      let ps = (filter (\x -> (x^._1) `isInside` rng_np) . toList . current) z
+      (i,_) <- find (\(_,y) -> posTag y == POS) ps
       ( return
-       .(specifier %~ (SpDP_Gen (b,e-1) :) )
-       .(headX.hd_range .~ Just (e,e))
+       .(specifier %~ (SpDP_Gen (rng_np^._1,i-1) :) )
+       .(headX.hd_range .~ Just (i,i))
        .(headX.hd_class .~ GenitiveClitic)
-       .(complement._Just.headX.hn_range %~ (\(b',e') -> if b <= e then (e+1,e') else (b',e')))
-       .(complement._Just.maximalProjection %~ (\(b',e') -> if b <= e then (e+1,e') else (b',e')))) dp
+       .(complement._Just.headX.hn_range %~ (\(b',e') -> (i+1,e')))
+       .(complement._Just.maximalProjection %~ (\(b',e') -> (i+1,e')))) dp
 
 
 --
@@ -288,5 +295,5 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
                . (complement._Just.headX.hn_range .~ rng_head)
                . (complement._Just.maximalProjection .~ rng_dp')
                . (adjunct %~ removePP (tpp^.maximalProjection))
-  
+
   return (dp',[AdjunctVP_PP tpp])
