@@ -178,7 +178,7 @@ mkNomRoleEdges vmap nmatched = do
                     [MGEdge subj False Nothing i i'']
                   Nothing -> []
 
-  (MGEdge obj False {- (Just "of") -} (ei_obj^.ei_prep) i i') : lstsubj
+  (MGEdge obj False (ei_obj^.ei_prep) i i') : lstsubj
 
 
 mkInnerDPEdges :: VertexMap
