@@ -9,6 +9,7 @@
 
 module NLP.Syntax.Type.XBar.Internal where
 
+import           Control.Lens                ((^.),to)
 import           Data.Text                   (Text)
 --
 import           Data.Bitree
@@ -185,8 +186,21 @@ type instance Complement 'X_N t = Maybe (CompDP t)
 type NounP = XP 'X_N
 
 
+compDPToRange :: CompDP t -> Range
+compDPToRange (CompDP_Unresolved rng) = rng
+compDPToRange (CompDP_CP cp) = getRange (current (_maximalProjection cp))
+compDPToRange (CompDP_PP pp) = _maximalProjection pp
+
+
 mkNP :: (Range,Maybe NamedEntityClass) -> Maybe (CompDP t) -> NounP t
-mkNP (rng,mclass) mcomp = XP (HeadNP rng mclass) rng () () mcomp
+mkNP (rng,mclass) mcomp =
+  case mcomp of
+    Nothing -> XP (HeadNP rng mclass) rng () () Nothing
+    Just comp -> let (b,e) = rng
+                     (b1,e1) = compDPToRange comp
+                     rng' = (b,b1-1)
+                 in XP (HeadNP rng' mclass) rng () () (Just comp)
+
 
 --
 -- DP -> D NP
