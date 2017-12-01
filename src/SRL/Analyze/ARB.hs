@@ -114,7 +114,7 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
                             MGEntity           {..} -> hoistMaybe Nothing
                             MGPredicate        {..} ->
                               case _mv_pred_info of
-                                PredVerb sns vrb -> return (unFNFrame _mv_frame,Just sns,vrb^.vp_negation)
+                                PredVerb sns vrb -> return (unFNFrame _mv_frame,sns,vrb^.vp_negation)
                                 PredPrep _       -> return (unFNFrame _mv_frame,Nothing,Nothing)
                                 PredNominalized _ _ -> return (unFNFrame _mv_frame,Nothing,Nothing)
                                 PredAppos        -> return (unFNFrame _mv_frame,Nothing,Nothing)

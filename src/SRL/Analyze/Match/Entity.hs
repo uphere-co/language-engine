@@ -126,11 +126,6 @@ entityTextDP tagged dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> fromMaybe "" (fmap (headText tagged) (dp^.complement))
     _ -> T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
-         {- <> let mpp = dp^?complement._Just.complement._Just._CompDP_PP
-            in case mpp of
-                 Nothing -> ""
-                 Just pp -> " " <> (T.intercalate " " . tokensByRange tagged) (pp^.maximalProjection)
-         -}
 
 
 entityFromDP :: [X'Tree '[Lemma]]
@@ -156,7 +151,6 @@ entityFromDP x'tr tagged dp =
       adjs  = do AdjunctDP_PP pp <- dp^.adjunct
                  dp' <- pp^..complement._CompPP_DP
                  let mprep = pp^?headX.hp_prep._Prep_WORD
-                 -- guard (prep == Prep_WORD "of")
                  let rng_adj = dp'^.maximalProjection
                      rng_head_adj = fromMaybe rng_adj (headRangeDP dp')
                      txt_adj = headTextDP tagged dp'

@@ -106,7 +106,7 @@ data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Maybe Range) Int
 makeLenses ''VertexMap
 
 
-data PredicateInfo = PredVerb { _pi_sense :: (SenseID,Bool)  -- ^ (ON sense ID, causation)
+data PredicateInfo = PredVerb { _pi_sense :: Maybe (SenseID,Bool)  -- ^ (ON sense ID, causation)
                               , _pi_verb  :: VerbProperty Text
                               }
                    | PredPrep { _pi_prep :: Text }
