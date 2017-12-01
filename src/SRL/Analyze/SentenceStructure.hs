@@ -26,7 +26,7 @@ import           Data.Tree                                 (Forest)
 import qualified Data.Vector                       as V
 --
 import           CoreNLP.Simple.Convert                    (mkLemmaMap)
-import           Data.Range                                (elemIsInsideR)
+import           Data.Range                                (elemIsInsideR,elemIsStrictlyInsideR)
 import           FrameNet.Query.Frame                      (FrameDB,frameDB)
 import           FrameNet.Type.Common                      (CoreType(..))
 import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
@@ -112,8 +112,10 @@ docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs 
   let tne = map tokenToTagPos (zip [10001..] ne)
 
   let tnerange = map getRangeFromEntityMention tne
-      lnk_mntns = tne ++ (filter (\mntn -> not $ elemIsInsideR (getRangeFromEntityMention mntn) tnerange) linked_mentions_resolved)
-      lnk_mntns_tagpos = map linkedMentionToTagPos lnk_mntns
+      wnerange = map getRangeFromEntityMention linked_mentions_resolved
+      lnk_mntns1 = filter (\mntn -> not $ elemIsInsideR (getRangeFromEntityMention mntn) wnerange) tne
+      lnk_mntns2 = filter (\mntn -> not $ elemIsStrictlyInsideR (getRangeFromEntityMention mntn) tnerange) linked_mentions_resolved
+      lnk_mntns_tagpos = map linkedMentionToTagPos (lnk_mntns1 ++ lnk_mntns2)
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
   synsetss <- runUKB (apredata^.analyze_wordnet)(sents,mptrs)
 
