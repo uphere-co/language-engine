@@ -5,7 +5,6 @@
 module NLP.Syntax.Format.Old where
 
 import           Control.Lens
-import           Data.Bifunctor
 import           Data.IntMap                  (IntMap)
 import           Data.List                    (intercalate)
 import           Data.Monoid                  ((<>))
@@ -23,7 +22,6 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Clause.Old
 import           NLP.Syntax.Format
-import           NLP.Syntax.Format.Internal
 import           NLP.Syntax.Verb
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb

@@ -5,16 +5,12 @@
 module NLP.Syntax.Clause.Old where
 
 import           Control.Lens
-import           Data.Bifunctor
 import           Data.Bifoldable
 import           Data.Either
-import           Data.IntMap                  (IntMap)
 import           Data.List                    (find)
 import           Data.Maybe                   (fromMaybe,mapMaybe)
-import           Data.Monoid                  (First(..),(<>))
+import           Data.Monoid                  (First(..))
 import           Data.Text                    (Text)
-import qualified Data.Text               as T
-import qualified Data.Text.IO            as T.IO
 --
 import           Data.Bitree
 import           Data.BitreeZipper

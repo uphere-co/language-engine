@@ -16,7 +16,6 @@ import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.ListZipper
 import           NLP.Type.PennTreebankII
-import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos
 import           WordNet.Type.Lexicographer        (LexicographerFile)
 --
