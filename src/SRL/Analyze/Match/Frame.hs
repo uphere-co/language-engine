@@ -724,8 +724,11 @@ matchNomFrame apredata x'tr tagged dp = do
                    _ -> Nothing
           let txt = T.intercalate " " (tokensByRange tagged rng)
           return (EI rng rng Nothing txt)
-    verb <- listToMaybe (extractNominalizedVerb wndb lma)
-    let (senses,rmtoppatts) = getVerbSenses apredata verb
+    (verb,senses,rmtoppatts) <- getFirst . mconcat $ do
+      verb <- extractNominalizedVerb wndb lma
+      let (senses,rmtoppatts) = getVerbSenses apredata verb
+      guard ((not.null) senses && (not.null) rmtoppatts)
+      (return . First . Just) (verb,senses,rmtoppatts)
     (((sid,rolemap),_),patts) <- listToMaybe rmtoppatts
     frm <- lookup "frame" rolemap
     patt <- listToMaybe patts
