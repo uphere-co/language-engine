@@ -149,14 +149,17 @@ printMeaningGraph apredata rolemap dstr = do
 
 loadConfig :: Bool
            -> LexDataConfig
-           -> IO (AnalyzePredata,[Sentence]->[EntityMention Text])
+           -> IO (AnalyzePredata,[Sentence]->[EntityMention Text],Forest (Maybe Text))
 loadConfig bypass_ner cfg = do
   apredata <- loadAnalyzePredata cfg
   createUKBDB (cfg^.cfg_ukb_binfile,cfg^.cfg_ukb_dictfile)
   netagger <- if bypass_ner
                 then return (const [])
                 else newNETagger
-  return (apredata,netagger)
+  companies <- loadCompanies
+  let clist = concat $ map (^. alias) companies
+      forest = foldr addTreeItem [] (map T.words clist) -- Temporary. Tokenization should be done by CoreNLP.
+  return (apredata,netagger,forest)
 
 
 loadAnalyzePredata :: LexDataConfig -> IO AnalyzePredata
@@ -202,10 +205,7 @@ loadJVM = prepare (def & (tokenizer .~ True)
 --
 runAnalysis :: LexDataConfig -> Analyze.Config -> IO ()
 runAnalysis cfg acfg = do
-  (apredata,netagger) <- loadConfig (acfg^.Analyze.bypassNER) cfg
-  companies <- loadCompanies
-  let clist = concat $ map (^. alias) companies
-      forest = foldr addTreeItem [] (map T.words clist)
+  (apredata,netagger,forest) <- loadConfig (acfg^.Analyze.bypassNER) cfg
 
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
