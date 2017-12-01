@@ -178,7 +178,7 @@ mkNomRoleEdges vmap nmatched = do
                     [MGEdge subj False Nothing i i'']
                   Nothing -> []
 
-  (MGEdge obj False (Just "of") i i') : lstsubj
+  (MGEdge obj False {- (Just "of") -} (ei_obj^.ei_prep) i i') : lstsubj
 
 
 mkInnerDPEdges :: VertexMap
@@ -254,7 +254,7 @@ meaningGraph apredata sstr =
       depmap = dependencyOfX'Tree =<< x'tr
       --
       dps = x'tr^..traverse.to biList.traverse._2._DPCase
-      nmatched = mapMaybe (matchNomFrame apredata tagged) dps
+      nmatched = mapMaybe (matchNomFrame apredata x'tr tagged) dps
       --
       (vertices,entities1_0,ientities2,headfull) = mkMGVertices (x'tr,tagged,depmap) (matched,nmatched)
       --
