@@ -10,31 +10,22 @@ module NLP.Syntax.Format
 
 import           Control.Lens
 import           Data.Foldable                 (toList)
-import           Data.IntMap                   (IntMap)
-import           Data.List                     (intercalate)
 import           Data.Maybe
 import           Data.Monoid                   ((<>))
 import           Data.Text                     (Text)
 import qualified Data.Text               as T
-import qualified Data.Text.IO            as T.IO
 import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
-import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
-import           Text.Format.Tree
 --
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format.Internal
-import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (rootTag)
-import           NLP.Syntax.Verb
-
-
 
 
 formatTense :: Tense -> Text
@@ -76,10 +67,12 @@ formatAdjunctCP (AdjunctCP_Unresolved z) = "unresolved" <> (showRange . getRange
 formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cpRange cp)
 
 
-adjunctVPText tagged (AdjunctVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
-adjunctVPText tagged (AdjunctVP_PP pp) = T.intercalate " " (tokensByRange tagged (pp^.maximalProjection))
+adjunctVPText :: TaggedLemma t -> AdjunctVP t -> Text
+adjunctVPText _tagged (AdjunctVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
+adjunctVPText tagged  (AdjunctVP_PP pp) = T.intercalate " " (tokensByRange tagged (pp^.maximalProjection))
 
 
+formatAdjunctVP :: AdjunctVP t -> Text
 formatAdjunctVP (AdjunctVP_Unresolved z) = showRange (getRange (current z))
 formatAdjunctVP (AdjunctVP_PP pp) = formatPP pp
 

@@ -5,24 +5,24 @@
 
 module NLP.Syntax.Preposition where
 
-import           Control.Lens            ((^.),(^?),(.~),(&),_Just)
+import           Control.Lens            ((^.),(^?),(.~))
 import           Control.Monad           (guard)
 import           Data.List               (find)
 import           Data.Maybe              (fromMaybe)
 import           Data.Text               (Text)
 --
 import           Data.BitreeZipper       (current,parent,extractZipperByRange)
-import           Data.Range              (isInsideR,Range)
-import           NLP.Type.PennTreebankII (ChunkTag(..),getRange)
+import           Data.Range              (Range)
+import           NLP.Type.PennTreebankII (ChunkTag(..))
 import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
-import           NLP.Syntax.Type.XBar    (Zipper,NounP,DetP,CompVP(..),AdjunctVP(..)
+import           NLP.Syntax.Type.XBar    (DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP,_CompPP_DP
                                          ,TaggedLemma(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
-                                         ,mkPP,hp_prep,hp_pclass,hn_range)
+                                         ,mkPP,hp_prep,hp_pclass)
 
 
 hasEmptyPreposition :: TaggedLemma t -> Range -> Bool

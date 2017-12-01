@@ -3,7 +3,6 @@
 
 module Test.Common where
 
-import           Control.Lens
 import           Data.Foldable                   (toList)
 import qualified Data.IntMap             as IM
 import           Data.Monoid                     ((<>))
@@ -12,7 +11,6 @@ import qualified Data.Text               as T
 --
 import           NLP.Printer.PennTreebankII      (prettyPrint)
 import           NLP.Type.PennTreebankII
-import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos
 import           WordNet.Type.Lexicographer      (LexicographerFile)
 --

@@ -13,10 +13,9 @@ import           Control.Lens             ((^.),(^..),(^?),(.~),(%~),(&),to,_1,_
 import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
-import           Data.Foldable            (foldrM,toList)
+import           Data.Foldable            (toList)
 import           Data.List                (find,unfoldr)
 import           Data.Maybe               (fromMaybe,listToMaybe)
-import           Data.Monoid              (Last(..))
 import qualified Data.Text           as T
 --
 import           Data.Attribute           (ahead)
@@ -32,10 +31,10 @@ import           NLP.Type.TagPos          (TagPos(..))
 import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
-                                          ,PP, AdjunctDP(..), CompDP(..),HeadDP(..), SpecDP(..), HeadNP(..)
+                                          ,PP, AdjunctDP(..), CompDP(..),HeadDP(..),SpecDP(..)
                                           ,DetClass(..),XP(..),TaggedLemma, AdjunctVP(..)
                                           ,PrepClass(..)
-                                          ,_MarkEntity,_NoDet,_AdjunctDP_PP
+                                          ,_MarkEntity,_AdjunctDP_PP
                                           ,hn_range,hn_class
                                           ,adjunct,complement,headX,maximalProjection,specifier
                                           ,tokensByRange
@@ -48,7 +47,7 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs,intLemma)
 --
 
-import Debug.Trace
+-- import Debug.Trace
 
 
 mkPPFromZipper :: TaggedLemma (Lemma ': as) -> PrepClass -> Zipper (Lemma ': as) -> Maybe (PP (Lemma ': as))
@@ -104,7 +103,7 @@ splitDP tagged dp0 =
         <|>
         (do sbar <- childLast z
             guard (isChunkAs S (current sbar))
-            let (b,e) = rng1
+            let (b,_e) = rng1
                 (b1,e1) = rf sbar
             return (mkSplittedDP CLMod (b,b1-1) (b1,e1) z)))
 
@@ -131,8 +130,7 @@ splitParentheticalModifier tagged z = do
            guard (is _Nothing (next comma2))
            return ((b2,e2),z2))
        <|>
-       (do let showf = show . map (tokenWord.snd) . toList . current
-           guard (isLemmaAs (Lemma "or") (current z2))
+       (do guard (isLemmaAs (Lemma "or") (current z2))
            z3 <- next z2
            ((b3,e3),z3') <- (rangeOfNPs z3
                              <|> (guard (isChunkAs VP (current z3)) >> return (getRange (current z3), z3))
@@ -163,10 +161,11 @@ splitParentheticalModifier tagged z = do
          return (XP (HeadDP Nothing NoDet) (rf z) [] [AdjunctDP_PP pp] (Just (mkNP ((b1,e1),Nothing) Nothing)))))
 
 
-rangeOfNPs z = do
-    guard (isChunkAs NP (current z))
-    let (b,e0) = getRange (current z)
-        (e,z') = last ((e0,z):unfoldr step z)
+rangeOfNPs :: Zipper t -> Maybe (Range,Zipper t)
+rangeOfNPs z0 = do
+    guard (isChunkAs NP (current z0))
+    let (b,e0) = getRange (current z0)
+        (e,z') = last ((e0,z0):unfoldr step z0)
     return ((b,e),z')
   where
     step z = do
@@ -219,8 +218,8 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
       (i,att) <- listToMaybe (toList (current z))
       dtyp <- do let Lemma lma = ahead (getAnnot att)
                  ((do guard (posTag att == PRPDollar)
-                      let Lemma lma = ahead (getAnnot att)
-                      (\ptyp -> Pronoun ptyp True) <$> identifyPronounPerson lma)
+                      let Lemma lma' = ahead (getAnnot att)
+                      (\ptyp -> Pronoun ptyp True) <$> identifyPronounPerson lma')
                   <|>
                   (do guard (posTag att == DT)
                       identifyArticle lma))
@@ -238,8 +237,8 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
        .(specifier %~ (SpDP_Gen (rng_np^._1,i-1) :) )
        .(headX.hd_range .~ Just (i,i))
        .(headX.hd_class .~ GenitiveClitic)
-       .(complement._Just.headX.hn_range %~ (\(b',e') -> (i+1,e')))
-       .(complement._Just.maximalProjection %~ (\(b',e') -> (i+1,e')))) dp
+       .(complement._Just.headX.hn_range %~ (\(_b',e') -> (i+1,e')))
+       .(complement._Just.maximalProjection %~ (\(_b',e') -> (i+1,e')))) dp
 
 
 --

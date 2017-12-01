@@ -18,13 +18,11 @@ import           Control.Monad                          ((<=<),(>=>),guard,void)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
-import           Data.Bifoldable
 import           Data.Bitraversable                     (bitraverse)
-import           Data.Either                            (partitionEithers,rights)
+import           Data.Either                            (rights)
 import qualified Data.HashMap.Strict               as HM
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
-import           Data.Monoid                            (First(..),Last(..))
-import           Data.Text                              (Text)
+import           Data.Monoid                            (Last(..))
 --
 import           Data.Bitree
 import           Data.BitreeZipper
@@ -37,16 +35,13 @@ import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Voice(..))
 --
 import           NLP.Syntax.Noun                        (splitDP,mkPPFromZipper,identifyInternalTimePrep)
-import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTimePrep,isMatchedTime)
-import           NLP.Syntax.Type                        (ClauseTree,ClauseTreeZipper,SBARType(..),STag(..),PredArgWorkspace(..))
+import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTimePrep)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
 --
 import Debug.Trace
-import qualified Data.Text as T
-import Text.Format.Tree
-import NLP.Syntax.Format.Internal
+
 
 
 hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
@@ -103,8 +98,8 @@ complementsOfVerb :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
 complementsOfVerb tagged vprop z_vp =
   let (cs,mspec,adjs) = let (xs,mtop) = complementCandidates vprop z_vp
                             xs' = map xform xs ++ maybeToList (mtop >>= \top -> return (TraceChain (Left (singletonLZ Moved)) (Just (CompVP_Unresolved top)), []))
-                            mspec = mtop >>= \top -> return (TraceChain (Right [Moved]) (Just (CompVP_Unresolved top)))
-                        in (map fst xs',mspec,concatMap snd xs')
+                            mspec' = mtop >>= \top -> return (TraceChain (Right [Moved]) (Just (CompVP_Unresolved top)))
+                        in (map fst xs',mspec',concatMap snd xs')
   in case vprop^.vp_voice of
        Active -> (cs,mspec,adjs)
        Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,mspec,adjs)

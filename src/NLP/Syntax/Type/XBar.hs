@@ -8,7 +8,7 @@ module NLP.Syntax.Type.XBar
 
 import           Control.Lens                       ((^.),(^?),_1,_2,_Just,to)
 import           Data.Foldable                      (toList)
-import           Data.Maybe                         (catMaybes,fromMaybe,maybeToList)
+import           Data.Maybe                         (fromMaybe,maybeToList)
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
 --

@@ -9,7 +9,6 @@
 
 module NLP.Syntax.Type.XBar.Internal where
 
-import           Control.Lens                ((^.),to)
 import           Data.Text                   (Text)
 --
 import           Data.Bitree
@@ -107,7 +106,7 @@ data PronounPerson = P_I | P_You | P_He | P_She | P_It | P_They
 
 -- data PronounCase = NomAcc | Genitive
 
-
+identifyPronounPerson :: Text -> Maybe PronounPerson
 identifyPronounPerson txt =
   case txt of
     "I"    -> Just P_I
@@ -136,6 +135,7 @@ data Definiteness = Definite | Indefinite
                   deriving (Show,Eq)
 
 
+identifyArticle :: Text -> Maybe DetClass
 identifyArticle txt =
   case txt of
     "the" -> Just (Article Definite)
@@ -196,8 +196,8 @@ mkNP :: (Range,Maybe NamedEntityClass) -> Maybe (CompDP t) -> NounP t
 mkNP (rng,mclass) mcomp =
   case mcomp of
     Nothing -> XP (HeadNP rng mclass) rng () () Nothing
-    Just comp -> let (b,e) = rng
-                     (b1,e1) = compDPToRange comp
+    Just comp -> let (b,_e) = rng
+                     (b1,_e1) = compDPToRange comp
                      rng' = (b,b1-1)
                  in XP (HeadNP rng' mclass) rng () () (Just comp)
 

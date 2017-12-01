@@ -23,7 +23,7 @@ import           NLP.Syntax.Noun                 (splitDP)
 import           NLP.Syntax.Type                 (MarkType(..))
 import           NLP.Syntax.Type.XBar            (TaggedLemma,DetP,AdjunctDP(..)
                                                  ,adjunct,complement,headX,maximalProjection,specifier
-                                                 ,hd_range,headText,headTextDP,tokensByRange,mkOrdDP,compDPToRange
+                                                 ,hd_range,headText,tokensByRange,mkOrdDP,compDPToRange
                                                  ,specDPText
                                                  )
 import           NLP.Syntax.Util                 (mkBitreeICP,mkTaggedLemma)
@@ -32,7 +32,7 @@ import           Test.Common
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
-import Debug.Trace
+-- import Debug.Trace
 
 
 type TestNoun = (Text

@@ -8,34 +8,30 @@
 module Test.Verb.Complement where
 
 import           Control.Lens               hiding (levels)
-import qualified Data.IntMap                as IM
 import           Data.List                         (find)
 import           Data.Maybe                        (fromMaybe)
 import           Data.Monoid                       (First(..),All(All,getAll),mconcat)
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
-import           Text.Printf
 --
 import           Data.Bitree
 import           Data.BitreeZipper                 (current,extractZipperById)
-import           NLP.Printer.PennTreebankII
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
-import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.TagPos
 import           WordNet.Type.Lexicographer        (LexicographerFile)
 --
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
-import           NLP.Syntax.Type                   (MarkType(..),pa_CP)
+import           NLP.Syntax.Type                   (MarkType(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                   (mkBitreeICP,mkTaggedLemma)
+import           NLP.Syntax.Util                   (mkTaggedLemma)
 --
 import           Test.Common
 import           Test.Tasty.HUnit
 import           Test.Tasty
-
+--
 import Debug.Trace
 
 
@@ -258,7 +254,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
                      stxt = either (getTokens . current) (headTextDP tagged) subj
                  case subj_test^._2 of
                    Nothing -> return (stxt == subj_test^._1)
-                   Just c -> return (stxt == subj_test^._1 && sclass == Just c)
+                   Just p -> return (stxt == subj_test^._1 && sclass == Just p)
       -- test complements
       lst_comps = cp^..complement.complement.complement.traverse.trResolved.to (fmap (compVPToHeadText tagged))
       lst_comps_test = c^._3._2
