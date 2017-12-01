@@ -442,7 +442,7 @@ matchExtraRolesForGenericPP fes cp felst = do
   pp <- matchPP cp (Nothing,Just PC_Other,Just False)
   prep <- pp^?headX.hp_prep._Prep_WORD
   let roles = ppExtraRoles prep
-  role <- find (\r -> unFNFrameElement r `elem` fes && not (r `elem` fes0)) roles
+  role <- find (\r -> r /= "Time" && r /= "Duration" && unFNFrameElement r `elem` fes && not (r `elem` fes0)) roles
   guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
   let comp = CompVP_PP pp
   return (role,comp)
