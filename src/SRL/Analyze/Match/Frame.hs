@@ -694,38 +694,42 @@ matchNomFrame :: AnalyzePredata
               -> DetP '[Lemma]
               -> Maybe (Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe EntityInfo),(FNFrameElement,EntityInfo))
 matchNomFrame apredata tagged dp = do
-  let rng_dp = dp^.maximalProjection
-      wndb = apredata^.analyze_wordnet
-  (b,e) <- dp^?complement._Just.headX.hn_range
-  guard (b==e)
-  lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
-  pp <- dp^?complement._Just.complement._Just._CompDP_PP
-  -- For the time being, I identify nominal frame only for a noun phrase with of. Later, I will generalize it further.
-  guard (pp^.headX.hp_prep == Prep_WORD "of")
-  rng_obj <- pp^?complement._CompPP_DP.maximalProjection
-  let txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
-  let mei_subj :: Maybe EntityInfo
-      mei_subj = do
-        rng <- case dp^.headX.hd_class of
-                 Pronoun pperson True -> dp^.headX.hd_range
-                 GenitiveClitic -> let specs :: [SpecDP]
-                                       specs = dp^.specifier
-                                       rngs :: [Range]
-                                       rngs = mapMaybe (^?_SpDP_Gen) specs
-                                   in listToMaybe rngs
-                 _ -> Nothing
-        let txt = T.intercalate " " (tokensByRange tagged rng)
-        return (EI rng rng Nothing txt)
+    (b,e) <- dp^?complement._Just.headX.hn_range
+    -- for the time being, treat only single word nominal as frame
+    guard (b==e)
+    -- For the time being, I identify nominal frame only for a noun phrase with of, or with to-infinitive.
+    let rng_dp = dp^.maximalProjection
+        wndb = apredata^.analyze_wordnet
+    lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
+    let mei_subj :: Maybe EntityInfo
+        mei_subj = do
+          rng <- case dp^.headX.hd_class of
+                   Pronoun pperson True -> dp^.headX.hd_range
+                   GenitiveClitic -> let specs :: [SpecDP]
+                                         specs = dp^.specifier
+                                         rngs :: [Range]
+                                         rngs = mapMaybe (^?_SpDP_Gen) specs
+                                     in listToMaybe rngs
+                   _ -> Nothing
+          let txt = T.intercalate " " (tokensByRange tagged rng)
+          return (EI rng rng Nothing txt)
+    verb <- listToMaybe (extractNominalizedVerb wndb lma)
+    let (senses,rmtoppatts) = getVerbSenses apredata verb
+    (((sid,rolemap),_),patts) <- listToMaybe rmtoppatts
+    frm <- lookup "frame" rolemap
+    patt <- listToMaybe patts
+    let (ms,mo) = subjObj (patt^._1)
+    (args,_) <- ms
+    (argo,_) <- mo
+    subj <- FNFrameElement <$> lookup args rolemap
+    obj  <- FNFrameElement <$> lookup argo rolemap
 
-  verb <- listToMaybe (extractNominalizedVerb wndb lma)
-
-  let (senses,rmtoppatts) = getVerbSenses apredata verb
-  (((sid,rolemap),_),patts) <- listToMaybe rmtoppatts
-  frm <- lookup "frame" rolemap
-  patt <- listToMaybe patts
-  let (ms,mo) = subjObj (patt^._1)
-  (args,_) <- ms
-  (argo,_) <- mo
-  subj <- FNFrameElement <$> lookup args rolemap
-  obj  <- FNFrameElement <$> lookup argo rolemap
-  return (lma,verb,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj (Just "of") txt_obj)))
+    objmatched <- ppcase obj -- (ppcase <|> tocase)
+    return (lma,verb,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,objmatched))
+  where
+    ppcase obj = do
+      pp <- dp^?complement._Just.complement._Just._CompDP_PP
+      guard (pp^.headX.hp_prep == Prep_WORD "of")
+      rng_obj <- pp^?complement._CompPP_DP.maximalProjection
+      let txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
+      return (EI rng_obj rng_obj (Just "of") txt_obj)

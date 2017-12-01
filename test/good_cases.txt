@@ -1,7 +1,8 @@
 Regression
 -- this is due to new SR parser
 * F14342: General Motors Co and its suppliers will invest a total of $500 million in Argentina operations through 2019 to prepare to produce a new Chevrolet model in 2020, the company said in a statement on Thursday.
-
+-- around is identified twice?
+* F14056: Toyota Motor Corp on Monday said it would begin testing self-driving cars around 2020.
 
 
 Good
@@ -20,6 +21,5 @@ Good
 * F14197: A Brazilian business leader urged a World Trade Organization forum on Wednesday to use a technology initiative to help smaller firms gain better access to global commerce and trade.
 * F14105: After he wrote the book, the police planned to investigate him.
 * F14103: Brazilian steelmaker Compania Siderugica Nacional SA plans to sell bonds on international markets in an effort to improve its debt profile, Benjamin Steinbruch, chief executive officer, said on Friday.
-* F14056: Toyota Motor Corp on Monday said it would begin testing self-driving cars.
 * F14051: I don't know who write the book.
 * F14052: I don't know what he wrote.
