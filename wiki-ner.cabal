@@ -35,6 +35,7 @@ library
                        WikiEL.ETL.Util
 
                        NER
+                       NER.Load
                        NER.Type
 
                        WikiEL.Investopedia
@@ -72,6 +73,7 @@ library
                      , cassava
                      , containers
                      , filepath
+                     , hashable
                      , lens
                      , primitive
                      , text

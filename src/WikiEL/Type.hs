@@ -65,10 +65,16 @@ instance ToJSON ItemClass where
 instance FromJSON ItemClass where
   parseJSON = genericParseJSON defaultOptions
 
+data TextMatchedEntityType = PublicCompany | PrivateCompany deriving (Show,Eq,Generic)
+
+instance ToJSON TextMatchedEntityType
+instance FromJSON TextMatchedEntityType
+
 data PreNE = UnresolvedUID NamedEntityClass           -- Tagged by CoreNLP NER, but no matched Wikidata UID                
            | AmbiguousUID ([ItemID],NamedEntityClass) -- Tagged by CoreNLP NER, and matched Wikidata UIDs of the NamedEntityClass
            | Resolved (ItemID, ItemClass)             -- A wikidata UID of a CoreNLP NER Class type.                                
            | UnresolvedClass [ItemID]                 -- Not tagged by CoreNLP NER, but matched Wikidata UID(s)                     
+           | OnlyTextMatched TextMatchedEntityType
            deriving(Show, Eq, Generic)
 
 makePrisms ''PreNE
