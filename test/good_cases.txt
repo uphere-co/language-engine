@@ -1,11 +1,14 @@
 Regression
 -- this is due to new SR parser
 * F14342: General Motors Co and its suppliers will invest a total of $500 million in Argentina operations through 2019 to prepare to produce a new Chevrolet model in 2020, the company said in a statement on Thursday.
--- around is identified twice?
-* F14056: Toyota Motor Corp on Monday said it would begin testing self-driving cars around 2020.
+
+
+
 
 
 Good
+* F15222: Chilean copper mine Collahuasi, a joint venture of Anglo American and Glencore, is postponing its plan to seek approval of an environmental impact study for an expansion until next year, the company told Reuters on Tuesday.
+
 * F14998: General Motors Co's vehicle sales in China rose 6.6 percent in September from a year earlier to 366,305 vehicles, following a 12 percent increase in August and a 6.3 percent increase in July, the Detroit automaker said on Wednesday.
 * F14997: Dow Chemical said in a statement on Tuesday it would invest $210 million to improve a petrochemical complex in Argentina's Buenos Aires province over the next two years.
 * F14996: Sansiri Pcl said on Wednesday it would invest $80 million in overseas markets, including a 35 percent stake purchase in a U.S.-based hotel chain, as the Thai real estate developer seeks to expand beyond its core business.
@@ -21,5 +24,6 @@ Good
 * F14197: A Brazilian business leader urged a World Trade Organization forum on Wednesday to use a technology initiative to help smaller firms gain better access to global commerce and trade.
 * F14105: After he wrote the book, the police planned to investigate him.
 * F14103: Brazilian steelmaker Compania Siderugica Nacional SA plans to sell bonds on international markets in an effort to improve its debt profile, Benjamin Steinbruch, chief executive officer, said on Friday.
+* F14056: Toyota Motor Corp on Monday said it would begin testing self-driving cars.
 * F14051: I don't know who write the book.
 * F14052: I don't know what he wrote.
