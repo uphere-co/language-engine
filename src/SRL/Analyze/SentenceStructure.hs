@@ -48,7 +48,7 @@ import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..
 import           OntoNotes.Type.SenseInventory
 import           Text.Search.ParserCustom                  (pTreeAdvGBy)
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
-import           WikiEL.Type                               (EntityMention,EntityMentionUID(..),IRange(..),PreNE(..),UIDCite(..))
+import           WikiEL.Type                               (EntityMention,EntityMentionUID(..),IRange(..),TextMatchedEntityType(..),PreNE(..),UIDCite(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
 import           WordNet.Type.Lexicographer                (LexicographerFile)
 --
@@ -65,12 +65,10 @@ tokenToTagPos (i,tks) =
       b = (fromJust mft) ^. token_tok_idx_range ^. _1
       e = (fromJust mlt) ^. token_tok_idx_range ^. _2
       txts = tks ^.. traverse . token_text
-  in Self (EntityMentionUID i) (IRange b e, V.fromList txts, UnresolvedUID N.Other)
+  in Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched PublicCompany)
 
-  
 adjustWikiRange :: (Int,Int) -> (Int,Int)
 adjustWikiRange (a,b) = (a,b-1)
-
 
 linkedMentionToTagPos :: (EntityMention Text)
                       -> (TagPos TokIdx (EntityMention Text))
