@@ -1,7 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-#LANGUAGE TemplateHaskell #-}
 
 module Type where
 
+import Control.Lens
 import Data.Aeson
 import Data.Text     (Text)
 import GHC.Generics
@@ -18,6 +20,8 @@ data Test = Test { _test_id :: Text
                  , _test_ner :: [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text))]
                  }
           deriving (Show,Generic)
+
+makeLenses ''Test
 
 instance FromJSON Test
 

@@ -90,15 +90,15 @@ queryProcess config pp apredata netagger =
 
                   mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
                   --
-                  printMeaningGraph apredata (apredata^.analyze_rolemap) dstr
+                  printMeaningGraph apredata dstr
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
 
 
 
-printMeaningGraph :: AnalyzePredata -> [RoleInstance] -> DocStructure -> IO ()
-printMeaningGraph apredata _rolemap dstr = do
+printMeaningGraph :: AnalyzePredata -> DocStructure -> IO ()
+printMeaningGraph apredata dstr = do
   putStrLn "-------------"
   putStrLn "meaning graph"
   putStrLn "-------------"
