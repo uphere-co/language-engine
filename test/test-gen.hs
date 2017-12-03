@@ -1,10 +1,13 @@
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
 import           Control.Lens                          ((^.),(^?),(.~),(^..),(&),ix,to,_2,_Just)
+import           Data.Aeson                            (encode)
+import           Data.Aeson.Encode.Pretty              (encodePretty)
 import qualified Data.ByteString.Char8            as B
-import qualified Data.ByteString.Lazy.Char8       as B.L
+import qualified Data.ByteString.Lazy.Char8       as BL
 import           Data.Default                          (def)
 import qualified Data.IntMap                      as IM
 import           Data.Maybe                            (fromJust, mapMaybe)
@@ -14,6 +17,7 @@ import           Data.Time.Calendar                    (fromGregorian)
 import           Language.Java                    as J
 import           System.Environment                    (getEnv)
 import           Text.ProtocolBuffers.WireMessage      (messageGet)
+import           Text.Printf                           (printf)
 --
 import qualified CoreNLP.Proto.CoreNLPProtos.Document  as D
 import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
@@ -21,16 +25,18 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Token     as TK
 import qualified CoreNLP.Proto.CoreNLPProtos.Timex           as Tmx
 import qualified CoreNLP.Proto.HCoreNLPProto.ListTimex       as Tmx
 import qualified CoreNLP.Proto.HCoreNLPProto.TimexWithOffset as Tmx
-import           CoreNLP.Simple          (annotate,prepare,protobufDoc,serializeTimex)
-import           CoreNLP.Simple.Convert  (convertSentence,cutf8,decodeToPennTree,mkLemmaMapFromPSent,sentToDep,sentToNER)
-import           CoreNLP.Simple.Type     (Document(Document),constituency,depparse,lemma,ner,postagger,sutime,tokenizer
-                                         ,words2sentences)
-import           CoreNLP.Simple.Util     (getTKTokens)
--- import 	       	 NLP.Type.CoreNLP ()
-import           NLP.Type.PennTreebankII (Lemma(..))
-import           NLP.Type.TagPos         (TagPos(..), TokIdx)
+import           CoreNLP.Simple                (annotate,prepare,protobufDoc,serializeTimex)
+import           CoreNLP.Simple.Convert        (convertSentence,cutf8,decodeToPennTree,mkLemmaMapFromPSent,sentToDep,sentToNER)
+import           CoreNLP.Simple.Type           (Document(Document),constituency,depparse,lemma,ner,postagger,sutime,tokenizer
+                                               ,words2sentences)
+import           CoreNLP.Simple.Util           (getTKTokens)
+import           Lexicon.Data                  (loadLexDataConfig)
+import           NLP.Type.PennTreebankII       (Lemma(..))
+import           NLP.Type.TagPos               (TagPos(..), TokIdx)
 --
-import SRL.Analyze.CoreNLP (runParser)
+import           SRL.Analyze                   (loadJVM,loadConfig)
+import           SRL.Analyze.CoreNLP           (runParser)
+import           SRL.Analyze.SentenceStructure (nerDocument)
 
 
 testsets :: [(Text,Text)]
@@ -66,6 +72,10 @@ main = do
   putStrLn "generate test text"
   let txt = (testsets^.ix 0._2)
   clspath <- getEnv "CLASSPATH"
+  cfg <- loadLexDataConfig "../../lexicon-builder/config.json.mark"  >>= \case Left err -> error err
+                                                                               Right x -> return x
+  (apredata,netagger) <- loadConfig False cfg
+  
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
     pp <- loadJVM
     {- let pcfg = def & ( tokenizer .~ True )
@@ -77,8 +87,13 @@ main = do
                    . ( constituency .~ True)
                    . ( ner .~ True) 
     pp <- prepare pcfg -}
-    r <- runParser pp txt
-    print r
+    dainput <- runParser pp txt
+    let ner = nerDocument apredata netagger dainput
+
+    -- putStrLn (printf "mydata = (%s,%s)" (show dainput) (show ner)
+    -- print dainput
+    BL.putStrLn (encodePretty (dainput,ner))
+    
 
 
 {- 

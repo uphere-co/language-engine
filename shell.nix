@@ -80,6 +80,7 @@ let
 
 
   hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
+            aeson-pretty
             attoparsec
             bifunctors
             bindings-svm
