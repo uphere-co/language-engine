@@ -1,16 +1,20 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Main where
 
-import           Control.Lens                ((^.),(^..),to)
+import           Control.Applicative         ((<$>),(<*>))
+import           Control.Lens                ((^.),(^..),to,makeLenses)
 import           Control.Monad               (void)
 import           Data.Aeson
 import qualified Data.ByteString.Lazy as BL
 import           Data.List                   (zip4,zip5)
 import           Data.Maybe                  (catMaybes,mapMaybe)
+import           Data.Monoid                 ((<>))
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as TIO
+import           Options.Applicative
 import           System.FilePath             ((<.>))
 import           System.Process              (readProcess)
 --
@@ -28,6 +32,24 @@ import           SRL.Analyze.Type
 import           SRL.Analyze.UKB             (runUKB)
 --
 import Type
+
+
+data TestConfig = TestConfig { _tconfig_lexconfig :: FilePath
+                             , _tconfig_testset :: FilePath
+                             }
+                deriving Show
+
+makeLenses ''TestConfig
+
+pOptions :: Parser TestConfig
+pOptions = TestConfig
+           <$> strOption (long "config" <> short 'c' <> help "config file")
+           <*> strOption (long "file" <> short 'f' <> help "test text json file")
+
+
+
+progOption :: ParserInfo TestConfig
+progOption = info pOptions (fullDesc <> progDesc "test generation")
 
 
 createDotPng fn imglst = do
@@ -62,12 +84,13 @@ process apredata t = do
 
 
 main = do
-  cfg <- loadLexDataConfig "../../lexicon-builder/config.json.mark"  >>= \case Left err -> error err
-                                                                               Right x -> return x
+  tcfg <- execParser progOption
+  cfg <- loadLexDataConfig (tcfg^.tconfig_lexconfig) >>= \case Left err -> error err
+                                                               Right x -> return x
   (apredata,_netagger) <- loadConfig True cfg
   
   putStrLn "create performance testing set"
-  bstr <- BL.readFile "testset.json"
+  bstr <- BL.readFile (tcfg^.tconfig_testset)
   case eitherDecode' bstr :: Either String [Test] of
     Left err -> putStrLn err
     Right lst -> mapM_ (process apredata) lst
