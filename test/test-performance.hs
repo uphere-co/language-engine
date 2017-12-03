@@ -15,6 +15,7 @@ import           Data.Monoid                 ((<>))
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as TIO
 import           Options.Applicative
+import           System.Directory            (getCurrentDirectory,setCurrentDirectory)
 import           System.FilePath             ((<.>))
 import           System.Process              (readProcess)
 --
@@ -36,6 +37,7 @@ import Type
 
 data TestConfig = TestConfig { _tconfig_lexconfig :: FilePath
                              , _tconfig_testset :: FilePath
+                             , _tconfig_outputdir     :: FilePath
                              }
                 deriving Show
 
@@ -45,6 +47,7 @@ pOptions :: Parser TestConfig
 pOptions = TestConfig
            <$> strOption (long "config" <> short 'c' <> help "config file")
            <*> strOption (long "file" <> short 'f' <> help "test text json file")
+           <*> strOption (long "outdir" <> short 'o' <> help "output directory") 
 
 
 
@@ -93,4 +96,8 @@ main = do
   bstr <- BL.readFile (tcfg^.tconfig_testset)
   case eitherDecode' bstr :: Either String [Test] of
     Left err -> putStrLn err
-    Right lst -> mapM_ (process apredata) lst
+    Right lst -> do
+      cwd <- getCurrentDirectory
+      setCurrentDirectory (tcfg^.tconfig_outputdir)
+      mapM_ (process apredata) lst
+      setCurrentDirectory cwd
