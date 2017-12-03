@@ -16,6 +16,7 @@ import qualified Data.Text                        as T
 import           Data.Time.Calendar                    (fromGregorian)
 import           Language.Java                    as J
 import           System.Environment                    (getEnv)
+import           System.IO                             (withFile,IOMode(..))
 import           Text.ProtocolBuffers.WireMessage      (messageGet)
 import           Text.Printf                           (printf)
 --
@@ -37,7 +38,8 @@ import           NLP.Type.TagPos               (TagPos(..), TokIdx)
 import           SRL.Analyze                   (loadJVM,loadConfig)
 import           SRL.Analyze.CoreNLP           (runParser)
 import           SRL.Analyze.SentenceStructure (nerDocument)
-
+--
+import Type
 
 testsets :: [(Text,Text)]
 testsets =
@@ -75,55 +77,11 @@ main = do
   cfg <- loadLexDataConfig "../../lexicon-builder/config.json.mark"  >>= \case Left err -> error err
                                                                                Right x -> return x
   (apredata,netagger) <- loadConfig False cfg
-  
-  J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
-    pp <- loadJVM
-    {- let pcfg = def & ( tokenizer .~ True )
-                   . ( words2sentences .~ True )
-                   . ( postagger .~ True )
-                   . ( lemma .~ True )
-                   . ( sutime .~ True )
-                   . ( depparse .~ True)
-                   . ( constituency .~ True)
-                   . ( ner .~ True) 
-    pp <- prepare pcfg -}
-    dainput <- runParser pp txt
-    let ner = nerDocument apredata netagger dainput
-
-    -- putStrLn (printf "mydata = (%s,%s)" (show dainput) (show ner)
-    -- print dainput
-    BL.putStrLn (encodePretty (dainput,ner))
-    
-
-
-{- 
-    let doc = Document txt (fromGregorian 2017 4 17)
-    ann <- annotate pp doc
-    rdoc <- protobufDoc ann
-    
-    case rdoc of
-      Left e -> print e
-      Right d -> do
-        let sents = d ^.. D.sentence . traverse
-            Just newsents = mapM (convertSentence d) sents
-            cpt = mapMaybe S._parseTree sents
-            pt = map decodeToPennTree cpt
-
-            lmap= flip map sents $ \sent -> 
-                    let lemmamap = IM.toList (mkLemmaMapFromPSent sent)
-                        tkns = map (^.TK.word.to (cutf8.fromJust)) . getTKTokens $ sent
-                    in map (\(o,(i,l)) -> (i,(unLemma l,o))) $ zip tkns lemmamap  
-
-
-        mapM_ print lmap
-        let deps = map sentToDep sents
-        mapM_ print deps
-        mapM_ print pt  -- PennTree print
-        mapM_ (print . sentToNER) sents
-        lbstr_sutime <- B.L.fromStrict <$> serializeTimex ann
-        case fmap fst (messageGet lbstr_sutime) :: Either String Tmx.ListTimex of
-          Left _ -> return ()
-          Right tmxs -> do
-            print (listTimexToTagPos tmxs)
-          
--}
+  withFile "testset.json" WriteMode $ \h ->
+    J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
+      pp <- loadJVM
+      lst <- flip mapM testsets $ \(tid,txt) -> do
+               dainput <- runParser pp txt
+               let ner = nerDocument apredata netagger dainput
+               return (Test tid txt dainput ner)
+      BL.hPutStrLn h (encode lst)
