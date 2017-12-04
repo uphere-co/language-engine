@@ -144,12 +144,11 @@ mkRoleEdges vmap  matched = do
   (fe,x) <- felst
   (rng',mprep) <- case x of
                     CompVP_Unresolved _ -> []
-                    CompVP_CP cp -> let z_cp = cp^.maximalProjection
+                    CompVP_CP cp -> let rng_cp = cp^.maximalProjection
                                         mprep = case cp^.headX of
                                                   C_PHI -> Nothing
-                                                  C_WORD z -> (z^?to current.to intLemma0._Just._2.to unLemma)
-                                                                 >>= \prep -> if prep == "that" then Nothing else return prep
-                                    in return (getRange (current z_cp),mprep)
+                                                  C_WORD prep -> if prep == Lemma "that" then Nothing else return (unLemma prep)
+                                    in return (rng_cp,mprep)
                     CompVP_DP dp -> return ((dp^.maximalProjection),Nothing)
                     CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX.hp_prep._Prep_WORD)
   let rng'full = fromMaybe rng' (lookup rng' headfull)

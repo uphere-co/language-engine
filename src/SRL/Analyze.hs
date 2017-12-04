@@ -30,7 +30,6 @@ import           FrameNet.Query.Frame           (loadFrameData)
 import           HUKB.PPR                       (createUKBDB)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                  (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts)
-import           Lexicon.Type                   (RoleInstance)
 import           Lexicon.Data                   (LexDataConfig(..),cfg_framenet_framedir
                                                 ,cfg_rolemap_file
                                                 ,cfg_sense_inventory_file
