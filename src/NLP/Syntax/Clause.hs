@@ -126,7 +126,7 @@ allAdjunctCPOfVerb vprop =
     let mcomma = firstSiblingBy next (isPOSAs M_COMMA) =<< headVP vprop  -- ad hoc separation using comma
     in case mcomma of
          Nothing -> []
-         Just comma -> map AdjunctCP_Unresolved (siblingsBy next checkS comma)
+         Just comma -> map (AdjunctCP_Unresolved . getRange . current) (siblingsBy next checkS comma)
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkS z = case tag z of
@@ -476,7 +476,7 @@ resolveCP xtr = rewriteTree action xtr
       let xs = cp^.adjunct
       xs' <- flip traverse xs $ \x ->
                ((do tr <- lift get
-                    rng <- hoistMaybe (x^?_AdjunctCP_Unresolved.to current.to getRange)
+                    rng <- hoistMaybe (x^?_AdjunctCP_Unresolved)
                     y <- hoistMaybe (extractZipperById rng tr)
                     y' <- replace y
                     cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)

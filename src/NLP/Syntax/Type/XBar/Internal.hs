@@ -306,7 +306,7 @@ data SpecTP t = SpecTP_Unresolved Range
 
 type instance Property   'X_T t = ()
 type instance Maximal    'X_T t = Zipper t
-type instance Specifier  'X_T t = TraceChain (SpecTP t) --  (Either Range (DetP t))
+type instance Specifier  'X_T t = TraceChain (SpecTP t)
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
@@ -327,19 +327,19 @@ data SpecCP t = SpecCP_WHPHI           -- ^ empty Wh-word
 
 
 
-data AdjunctCP t = AdjunctCP_Unresolved (Zipper t)
+data AdjunctCP t = AdjunctCP_Unresolved Range -- (Zipper t)
                  | AdjunctCP_CP         (CP t)
 
 
 type instance Property   'X_C t = Complementizer t
-type instance Maximal    'X_C t = Range -- Zipper t
+type instance Maximal    'X_C t = Range
 type instance Specifier  'X_C t = Maybe (SpecCP t)
 type instance Adjunct    'X_C t = [AdjunctCP t]
 type instance Complement 'X_C t = TP t
 
 type CP = XP 'X_C
 
-mkCP :: Complementizer t -> Range {- Zipper t -} -> Maybe (SpecCP t) -> [AdjunctCP t] -> TP t -> CP t
+mkCP :: Complementizer t -> Range -> Maybe (SpecCP t) -> [AdjunctCP t] -> TP t -> CP t
 mkCP mc rng spec adjs tp = XP mc rng spec adjs tp
 
 
