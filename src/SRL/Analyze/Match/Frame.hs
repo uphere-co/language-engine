@@ -23,7 +23,7 @@ import           Data.Text                    (Text)
 import qualified Data.Text               as T
 --
 import           Data.BitreeZipper            (current,extractZipperById)
-import           Data.Range                   (Range,isInside,isInsideR)
+import           Data.Range                   (Range,isInsideR)
 import           FrameNet.Query.Frame         (FrameDB,frameDB)
 import           FrameNet.Type.Frame          (frame_FE,fe_name)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
@@ -45,10 +45,11 @@ import           SRL.Analyze.Type             (SentStructure,VerbStructure,Analy
                                               ,analyze_wordnet
                                               ,ss_x'tr,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp)
-import           SRL.Analyze.Type.Match       (ONSenseFrameNetInstance,EntityInfo(..),FrameMatchResult(..))
+import           SRL.Analyze.Type.Match       (EntityInfo(..),FrameMatchResult(..))
 --
-import Debug.Trace
-import NLP.Syntax.Format.Internal
+-- import Debug.Trace
+-- import NLP.Syntax.Format.Internal
+
 
 ppRelFrame :: Text -> Maybe (FNFrame,FNFrameElement,FNFrameElement)
 ppRelFrame p = lookup p [ ("about"     , ("Topic"                        , "Text"     , "Topic"))
@@ -135,6 +136,7 @@ ppExtraRoles :: Text -> [FNFrameElement]
 ppExtraRoles p = join (maybeToList (lookup p ppExtraRoleMap))
 
 
+ppExtraRoleMap :: [(Text,[FNFrameElement])]
 ppExtraRoleMap = [ ("about"     , ["Topic"])
                  , ("above"     , ["Location"])
                  , ("across"    , ["Path"])
@@ -680,6 +682,7 @@ extractNominalizedVerb wndb (Lemma lma) =
 --   We use this for the following function `matchNomFrame` which identifies nominal frame by matching SpecDP to the
 --   subject and CompDP to the object of the corresponding verb to a given deverbalized noun.
 --
+subjObjNP :: ArgPattern () GRel -> (Maybe (Text,GRel), Maybe (Text,GRel))
 subjObjNP argpatt =
   let m = catMaybes [ ("arg0",) <$> argpatt^.patt_arg0
                     , ("arg1",) <$> argpatt^.patt_arg1
@@ -689,6 +692,7 @@ subjObjNP argpatt =
   in (find (\(_,p) -> p == GR_NP (Just GASBJ)) m, find (\(_,p) -> p == GR_NP (Just GA1)) m)
 
 
+subjObjSBAR :: ArgPattern () GRel -> (Maybe (Text,GRel), Maybe (Text,GRel))
 subjObjSBAR argpatt =
   let m = catMaybes [ ("arg0",) <$> argpatt^.patt_arg0
                     , ("arg1",) <$> argpatt^.patt_arg1
@@ -715,7 +719,7 @@ matchNomFrame apredata x'tr tagged dp = do
     let mei_subj :: Maybe EntityInfo
         mei_subj = do
           rng <- case dp^.headX.hd_class of
-                   Pronoun pperson True -> dp^.headX.hd_range
+                   Pronoun _pperson True -> dp^.headX.hd_range
                    GenitiveClitic -> let specs :: [SpecDP]
                                          specs = dp^.specifier
                                          rngs :: [Range]
@@ -724,18 +728,18 @@ matchNomFrame apredata x'tr tagged dp = do
                    _ -> Nothing
           let txt = T.intercalate " " (tokensByRange tagged rng)
           return (EI rng rng Nothing txt)
-    (verb,senses,rmtoppatts) <- getFirst . mconcat $ do
+    (verb,_senses,rmtoppatts) <- getFirst . mconcat $ do
       verb <- extractNominalizedVerb wndb lma
       let (senses,rmtoppatts) = getVerbSenses apredata verb
       guard ((not.null) senses && (not.null) rmtoppatts)
       (return . First . Just) (verb,senses,rmtoppatts)
-    (((sid,rolemap),_),patts) <- listToMaybe rmtoppatts
+    (((_sid,rolemap),_),patts) <- listToMaybe rmtoppatts
     frm <- lookup "frame" rolemap
     patt <- listToMaybe patts
-    (ppcase (b,e) patt rolemap lma frm verb rng_dp mei_subj <|>
-     cpcase (b,e) patt rolemap lma frm verb rng_dp mei_subj)
+    (ppcase patt rolemap lma frm verb rng_dp mei_subj <|>
+     cpcase patt rolemap lma frm verb rng_dp mei_subj)
   where
-    ppcase (b,e) patt rolemap lma frm verb rng_dp mei_subj = do
+    ppcase patt rolemap lma frm verb rng_dp mei_subj = do
       let (ms,mo) = subjObjNP (patt^._1)
       (args,_) <- ms
       (argo,_) <- mo
@@ -746,7 +750,7 @@ matchNomFrame apredata x'tr tagged dp = do
       rng_obj <- pp^?complement._CompPP_DP.maximalProjection
       let txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
       return (lma,verb,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj (Just "of") txt_obj)))
-    cpcase (b,e) patt rolemap lma frm verb rng_dp mei_subj = do
+    cpcase patt rolemap lma frm verb rng_dp mei_subj = do
       let (ms,mo) = subjObjSBAR (patt^._1)
       (args,_) <- ms
       (argo,_) <- mo

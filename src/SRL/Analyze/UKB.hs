@@ -5,9 +5,9 @@ module SRL.Analyze.UKB where
 
 import           Control.Applicative                          ((<|>))
 import           Control.Error.Safe
-import           Control.Lens                                 ((^.),(^..),(.~),(%~),to,toListOf)
+import           Control.Lens                                 ((^.),(^..),(.~),(%~),to)
 import           Control.Monad                                (guard)
-import           Data.Foldable                                (toList,traverse_)
+import           Data.Foldable                                (toList)
 import           Data.Maybe                                   (mapMaybe)
 import           Data.List                                    (intercalate)
 import           Data.Text                                    (Text)
@@ -21,22 +21,23 @@ import           HUKB.Type                                    (UKBResultWord(..)
                                                               ,ukbresult_words,ukbrw_id,ukbrw_syn,ukbrw_word)
 import           WordNet.Type.Lexicographer                   (LexicographerFile(..))
 import           WordNet.Query                                (WordNetDB,lookupSynset)
-import           WordNet.Type                                 (LexItem(..),Pointer(..),SynsetOffset(..))
+import           WordNet.Type                                 (SynsetOffset(..))
 import           WordNet.Type.POS                             (POS(..))
 import           NLP.Type.CoreNLP                             (Sentence,sentenceLemma)
-import           NLP.Type.PennTreebankII                      (Lemma(..),PennTree,TernaryLogic(..),tokenWord,posTag,getAnnot,isNoun,isVerb)
+import           NLP.Type.PennTreebankII                      (Lemma(..),PennTree,POSTag,TernaryLogic(..),posTag,getAnnot,isNoun,isVerb)
 --
 
-import qualified Data.Text.IO as TIO
+
 import Data.Attribute (ahead)
 import NLP.Syntax.Util (mkBitreeICP)
-import           NLP.Printer.PennTreebankII                   (prettyPrint)
--- import NLP.Syntax.
 
+
+posTagToPOS :: POSTag -> Maybe POS
 posTagToPOS p = (guard (isVerb p)        >> return POS_V) <|>
                 (guard (isNoun p == Yes) >> return POS_N) <|>
                 Nothing
 
+letterToPOS :: Char -> Maybe POS
 letterToPOS 'n' = Just POS_N
 letterToPOS 'v' = Just POS_V
 letterToPOS 'a' = Just POS_A
@@ -58,10 +59,11 @@ ukbLookupSynset db u = let s = do (s0,pos) <- parsesyn (u^.ukbrw_syn)
                         else Nothing
                      
     
-
+formatUKBResult :: UKBResult (Maybe Text) -> String
 formatUKBResult r = intercalate "\n" $ map formatUKBResultWord (r^.ukbresult_words)
   where
     formatUKBResultWord u = printf "%-3d: %-20s: %s" (u^.ukbrw_id) (u^.ukbrw_word) (maybe "" (T.pack . show) (u^.ukbrw_syn)) :: String
+
 
 runUKB :: WordNetDB -> ([Sentence],[Maybe PennTree]) -> IO [[(Int,LexicographerFile)]]
 runUKB wndb (sents,parsetrees) = do

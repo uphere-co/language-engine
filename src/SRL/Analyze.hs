@@ -20,7 +20,6 @@ import qualified Data.Text              as T
 import qualified Data.Text.IO           as T.IO
 import           Data.Tree                      (Forest)
 import qualified Language.Java          as J
-import           MWE.Util                       (mkTextFromToken)
 import           System.Console.Haskeline       (runInputT,defaultSettings,getInputLine)
 import           System.Environment             (getEnv)
 import           System.Process                 (readProcess)
@@ -42,6 +41,7 @@ import           Lexicon.Data                   (LexDataConfig(..),cfg_framenet_
                                                 ,cfg_ukb_binfile
                                                 ,loadSenseInventory
                                                 )
+import           MWE.Util                       (mkTextFromToken)
 import           NER.Load                       (loadCompanies)
 import           NER.Type                       (alias)
 import           NLP.Syntax.Format              (formatX'Tree)
@@ -52,9 +52,8 @@ import           Text.Format.Dot                (mkLabelText)
 import           Text.Search.Generic.SearchTree (addTreeItem)
 import           WikiEL.Type                    (EntityMention)
 import           WikiEL.WikiNewNET              (newNETagger)
-import           WordNet.Query                  (WordNetDB,loadDB)
+import           WordNet.Query                  (loadDB)
 --
-import           SRL.Analyze.ARB                (mkARB)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP            (runParser)
 import           SRL.Analyze.Format             (dotMeaningGraph,formatDocStructure,showMatchedFrame)
@@ -62,8 +61,6 @@ import           SRL.Analyze.Match.Frame        (mkTriples)
 import           SRL.Analyze.Match.MeaningGraph (meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure  (docStructure,mkWikiList)
 import           SRL.Analyze.Type
-import           SRL.Analyze.UKB                (runUKB)
-import           SRL.Statistics                 (getGraphFromMG)
 --
 
 --
@@ -108,7 +105,7 @@ queryProcess config pp apredata netagger forest =
 
 
 printMeaningGraph :: AnalyzePredata -> [RoleInstance] -> DocStructure -> IO ()
-printMeaningGraph apredata rolemap dstr = do
+printMeaningGraph apredata _rolemap dstr = do
   putStrLn "-------------"
   putStrLn "meaning graph"
   putStrLn "-------------"

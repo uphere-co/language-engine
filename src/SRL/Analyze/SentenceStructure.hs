@@ -14,11 +14,8 @@ import           Control.Monad.Trans.Either                (EitherT(..))
 import           Data.Bifunctor                            (first)
 import           Data.Either                               (lefts,rights)
 import           Data.Foldable                             (toList)
-import           Data.Function                             (on)
-import           Data.HashMap.Strict                       (HashMap)
-import qualified Data.HashMap.Strict               as HM
-import           Data.List                                 (find,sortBy,zip5)
-import           Data.Maybe                                (catMaybes,fromJust,fromMaybe,mapMaybe,maybeToList)
+import           Data.List                                 (zip5)
+import           Data.Maybe                                (catMaybes,fromMaybe,fromJust,mapMaybe)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
@@ -27,14 +24,6 @@ import qualified Data.Vector                       as V
 --
 import           CoreNLP.Simple.Convert                    (mkLemmaMap)
 import           Data.Range                                (elemIsInsideR,elemIsStrictlyInsideR)
-import           FrameNet.Query.Frame                      (FrameDB,frameDB)
-import           FrameNet.Type.Common                      (CoreType(..))
-import           FrameNet.Type.Frame                       (fe_coreType,fe_name,frame_FE)
-import           Lexicon.Merge                             (constructTopPatterns)
-import           Lexicon.Query                             (cutHistogram)
-import           Lexicon.Type                              (POSVorN(..),FNFrame(..),GRel
-                                                           ,RoleInstance,RolePattInstance
-                                                           ,ArgPattern)
 import           NLP.Syntax.Clause                         (bindingAnalysis,bindingAnalysisRaising,identifyCPHierarchy,resolveCP)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (MarkType(..))
@@ -44,9 +33,7 @@ import           NLP.Syntax.Util                           (mkTaggedLemma)
 import qualified NLP.Type.NamedEntity              as N
 import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,Token,sentenceToken,sentenceLemma,sent_tokenRange,token_text,token_tok_idx_range)
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree)
-import           NLP.Type.SyntaxProperty                   (Voice)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
-import           OntoNotes.Type.SenseInventory
 import           Text.Search.ParserCustom                  (pTreeAdvGBy)
 import           WikiEL.Convert                            (getRangeFromEntityMention)
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
@@ -54,7 +41,7 @@ import           WikiEL.Type                               (EntityMention,Entity
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
 import           WordNet.Type.Lexicographer                (LexicographerFile)
 --
-import           SRL.Analyze.Parameter                     (thresholdPattStat)
+
 import           SRL.Analyze.Sense                         (getVerbSenses)
 import           SRL.Analyze.Type
 import           SRL.Analyze.UKB                           (runUKB)

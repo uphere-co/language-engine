@@ -3,14 +3,10 @@
 
 module SRL.Analyze.CoreNLP where
 
-import           Control.Applicative                          ((<|>))
-import           Control.Lens                                 ((^.),(^..),to,toListOf)
-import           Control.Monad                                (guard)
+import           Control.Lens                                 ((^.),(^..),toListOf)
 import qualified Data.ByteString.Lazy.Char8            as BL
-import           Data.Foldable                                (toList,traverse_)
 import           Data.Maybe                                   (mapMaybe)
 import           Data.Text                                    (Text)
-import qualified Data.Text                             as T
 import qualified Language.Java                         as J
 import           Text.ProtocolBuffers.WireMessage             (messageGet)
 --
@@ -19,23 +15,13 @@ import qualified CoreNLP.Proto.CoreNLPProtos.Sentence  as S
 import qualified CoreNLP.Proto.HCoreNLPProto.ListTimex as T
 import           CoreNLP.Simple                               (annotate,serializeTimex)
 import           CoreNLP.Simple.Convert                       (convertPsent,convertSentence,convertToken
-                                                              ,decodeToPennTree,sentToDep,mkLemmaMap)
+                                                              ,decodeToPennTree,sentToDep)
 import           CoreNLP.Simple.Util                          (getDoc,getProtoDoc,getTKTokens)
-import           HUKB.PPR                                     (ppr)
-import           HUKB.Type                                    (Context(..),ContextWord(..))
-import           WordNet.Query                                (lookupSynset)
-import           WordNet.Type.POS                             (POS(..))
-import           NLP.Type.CoreNLP                             (Sentence,sentenceLemma)
+import           NLP.Type.CoreNLP                             (Sentence)
 --
 import           SRL.Analyze.Type                             (DocAnalysisInput(..))
 import           SRL.Analyze.Util                             (addText,listTimexToTagPos,getSentenceOffsets)
 
-import qualified Data.Text.IO as TIO
-import Data.Attribute (ahead)
-import NLP.Syntax.Util (mkBitreeICP)
-import           NLP.Type.PennTreebankII                      (Lemma(..),tokenWord,posTag,getAnnot,isNoun,isVerb,TernaryLogic(..))
-import           NLP.Printer.PennTreebankII                   (prettyPrint)
--- import NLP.Syntax.
 
 emptyDocAnalysisInput :: DocAnalysisInput
 emptyDocAnalysisInput = DocAnalysisInput

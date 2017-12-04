@@ -1,3 +1,12 @@
+
+SOLVED
+
+-- | its plan to seek : SOLVED
+Chilean copper mine Collahuasi, a joint venture of Anglo American and Glencore, is postponing its plan to seek approval of an environmental impact study for an expansion until next year, the company told Reuters on Tuesday.
+
+
+UNSOLVED
+
 Russia ordered the U.S. to cut its diplomatic staff in Russia by 755 people.
 
 U.K. Prime Minister Theresa May said she was reducing the country's terrorism-threat level from critical to severe, less than a week after a suicide bomber killed 22 people in a terror attack in Manchester.
@@ -168,5 +177,10 @@ Apple Inc  said on Tuesday it has removed several apps including Skype, Microsof
 -- | be + PP
 Bank of Sharjah and Invest Bank are in merger talks that could create an institution with about 50.6 billion dirhams ($13.8 billion) of assets, sources familiar with the matter told Reuters.
 
--- | its plan to seek
-Chilean copper mine Collahuasi, a joint venture of Anglo American and Glencore, is postponing its plan to seek approval of an environmental impact study for an expansion until next year, the company told Reuters on Tuesday.
+
+
+-- | gerund problem. it has NP - S structure with NRC. 
+* Toyota to test self-driving, talking cars by about 2020","description":"Toyota Motor Corp on Monday said it would begin testing self-driving electric cars around 2020, which will use artificial intelligence (AI) to engage with drivers, as the company competes with tech firms to develop new vehicles.
+
+-- | C$ 4.5 billion acquisition = acquire for C$ 4.5 billion
+Canada's Metro Inc said on Wednesday it would sell a major portion of its stake in Alimentation Couche Tard Inc to fund its C$4.5 billion acquisition of pharmacy chain Jean Coutu Group.

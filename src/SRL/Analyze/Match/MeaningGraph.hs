@@ -10,10 +10,9 @@ import           Control.Lens
 import           Control.Lens.Extras          (is)
 import           Data.Bifoldable              (biList)
 import           Data.Function                (on)
-import           Data.HashMap.Strict          (HashMap)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy)
-import           Data.Maybe                   (fromMaybe,isJust,mapMaybe,maybeToList)
+import           Data.Maybe                   (fromMaybe,mapMaybe,maybeToList)
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
@@ -21,12 +20,10 @@ import           Data.Bitree                  (getRoot1)
 import           Data.BitreeZipper            (current)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Type
-import           NLP.Syntax.Format.Internal   (formatCompVP)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util              (GetIntLemma(..),intLemma0)
 import           NLP.Type.PennTreebankII
-import           WordNet.Query                (WordNetDB)
 --
 import           SRL.Analyze.Match.Entity
 import           SRL.Analyze.Match.Frame
@@ -38,7 +35,6 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
                                               ,vm_rangeDependency
                                               ,vm_headRangeToFullRange
                                               ,analyze_framedb
-                                              ,analyze_wordnet
                                               ,_PredAppos,_MGPredicate,ss_tagged
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
 
@@ -48,7 +44,7 @@ import           SRL.Analyze.Type.Match       (DPInfo(..), EntityInfo(..),FrameM
                                               )
 
 
-import Debug.Trace
+-- import Debug.Trace
 
 
 dependencyOfX'Tree :: X'Tree p -> [(Range,Range)]
@@ -58,7 +54,7 @@ dependencyOfX'Tree (PL _)           = []
 
 
 mkEntityFun :: (EntityInfo,DPInfo) -> [(Int -> MGVertex)]
-mkEntityFun (EI rng rnghead mprep txt,di) =
+mkEntityFun (EI rng rnghead _mprep txt,di) =
   let mkRel frm (EI rng' rng'' _ txt') = [ \i'  -> MGEntity i' (Just rng') (Just rng'') txt' []
                                          , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
@@ -93,18 +89,18 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
                        CompVP_Unresolved _ -> []
                        CompVP_CP _cp -> [] -- CP is not an entity.
                        CompVP_DP dp -> do
-                         let x@(ei,_) = entityFromDP x'tr tagged dp
+                         let y@(ei,_) = entityFromDP x'tr tagged dp
                              rng' = ei^.ei_fullRange
                          if is _Just (find (== (rng',rng)) depmap)
                            then []
-                           else return x
+                           else return y
                        CompVP_PP pp -> maybeToList (entityFromDP x'tr tagged <$> (pp^?complement._CompPP_DP))
 
       filterFrame = filter (\(ei,_) -> not (any (\p -> p^.mv_range == Just (ei^.ei_fullRange)) ipreds))
       --
 
       ett_nominal :: [(EntityInfo,DPInfo)]
-      ett_nominal = do (lma,verb,(frm,rng_dp),(subj,mei_subj),(obj,ei_obj)) <- nmatched
+      ett_nominal = do (_lma,_verb,(_frm,_rng_dp),(_subj,mei_subj),(_obj,ei_obj)) <- nmatched
                        let lstsubj = case mei_subj of
                                        Just ei_subj -> [(ei_subj,DI Nothing Nothing Nothing [] [])]
                                        _ -> []
@@ -126,7 +122,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
 
       n_ipreds = length ipreds
       n_ettverbnom = length ettfunc_verbnom
-      n_ettprep = length ettfunc_prep
+      -- n_ettprep = length ettfunc_prep
       iett_verbnom = zipWith ($) ettfunc_verbnom (enumFrom (n_ipreds+1))
       iett_prep = zipWith ($) ettfunc_prep (enumFrom (n_ipreds+n_ettverbnom+1))
       vertices = ipreds ++ iett_verbnom ++ (map snd iett_prep)
@@ -167,7 +163,7 @@ mkNomRoleEdges :: VertexMap
                -> [MGEdge]
 mkNomRoleEdges vmap nmatched = do
   let rngidxmap = vmap^.vm_rangeToIndex
-  (lma,verb,(frm,rng_dp),(subj,mei_subj),(obj,ei_obj)) <- nmatched
+  (_lma,_verb,(_frm,rng_dp),(subj,mei_subj),(obj,ei_obj)) <- nmatched
   i <- maybeToList (HM.lookup (0,Just rng_dp) rngidxmap)   -- frame
   let rng_obj = ei_obj ^.ei_fullRange
   i' <- maybeToList (HM.lookup (0,Just rng_obj) rngidxmap)  -- frame element
@@ -247,7 +243,7 @@ mkMGEdges vmap (matched,nmatched) (entities1_0,ientities2) =
 
 meaningGraph :: AnalyzePredata -> SentStructure -> MeaningGraph
 meaningGraph apredata sstr =
-  let wndb = apredata^.analyze_wordnet
+  let -- wndb = apredata^.analyze_wordnet
       (x'tr,lst_vstrcp) = mkTriples sstr
       tagged = sstr^.ss_tagged
       matched = mapMaybe (matchFrame (apredata^.analyze_framedb)) lst_vstrcp
