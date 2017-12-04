@@ -48,14 +48,14 @@ definiteCorefResolution x'tr tagged dp = do
   cp' <- currentCPDPPP w' ^? _CPCase
   ((do w'' <- parent w'
        cp'' <- currentCPDPPP w'' ^? _CPCase
-       dp'' <- cp''^?complement.specifier.trResolved._Just._Right
+       dp'' <- cp''^?complement.specifier.trResolved._Just._SpecTP_DP
        nclass <- dp''^?complement._Just.headX.hn_class._Just
        if nclass == Org
          then return (rng_dp,dp''^.maximalProjection)
          else mzero)
    <|>
    (do cp'' <- cp'^?specifier._Just._SpecCP_Topic.trResolved._Just._CompVP_CP
-       dp'' <- cp''^?complement.specifier.trResolved._Just._Right
+       dp'' <- cp''^?complement.specifier.trResolved._Just._SpecTP_DP
        nclass <- dp''^?complement._Just.headX.hn_class._Just
        if nclass == Org
          then return (rng_dp,dp''^.maximalProjection)
@@ -77,7 +77,7 @@ definiteGenitiveCorefResolution x'tr tagged dp = do
   cp' <- currentCPDPPP w' ^? _CPCase
   -- w'' <- parent w'                        -- this need to be revived.
   -- cp'' <- currentCPDPPP w'' ^? _CPCase
-  dp' <- cp'^?complement.specifier.trResolved._Just._Right
+  dp' <- cp'^?complement.specifier.trResolved._Just._SpecTP_DP
   nclass <- dp'^?complement._Just.headX.hn_class._Just
   if nclass == Org
     then return (rng_specdp,dp'^.maximalProjection)
@@ -97,19 +97,19 @@ pronounResolution x'tr dp = do
 
     ((if isgenitive
         then do
-          dp' <- cp'^?complement.specifier.trResolved._Just._Right
+          dp' <- cp'^?complement.specifier.trResolved._Just._SpecTP_DP
           nclass <- dp'^?complement._Just.headX.hn_class._Just
           match (rng_pro,prnclass) (nclass,dp')
         else mzero)
      <|>
      (do w'' <- parent w'
          cp'' <- currentCPDPPP w'' ^? _CPCase
-         dp'' <- cp''^?complement.specifier.trResolved._Just._Right
+         dp'' <- cp''^?complement.specifier.trResolved._Just._SpecTP_DP
          nclass <- dp''^?complement._Just.headX.hn_class._Just
          match (rng_pro,prnclass) (nclass,dp''))
      <|>
      (do cp'' <- cp'^?specifier._Just._SpecCP_Topic.trResolved._Just._CompVP_CP
-         dp'' <- cp''^?complement.specifier.trResolved._Just._Right
+         dp'' <- cp''^?complement.specifier.trResolved._Just._SpecTP_DP
          nclass <- dp''^?complement._Just.headX.hn_class._Just
          match (rng_pro,prnclass) (nclass,dp'')))
   where

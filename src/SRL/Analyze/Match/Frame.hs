@@ -255,11 +255,11 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
 
 
 matchSubject :: [(PBArg,Text)]
-             -> Maybe (Either Range (DetP '[Lemma]))
+             -> Maybe (SpecTP '[Lemma])
              -> ArgPattern p GRel
              -> Maybe (FNFrameElement, CompVP '[Lemma])
 matchSubject rolemap mDP patt = do
-  dp <- mDP^?_Just._Right            -- for the time being
+  dp <- mDP^?_Just._SpecTP_DP            -- for the time being
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
   (,CompVP_DP dp) . FNFrameElement <$> lookup p rolemap
 
@@ -338,7 +338,7 @@ matchAgentForPassive rolemap cp patt = do
 
 
 matchSO :: [(PBArg,Text)]
-        -> ( Maybe (Either Range (DetP '[Lemma])), VerbP '[Lemma], CP '[Lemma])
+        -> (Maybe (SpecTP '[Lemma]), VerbP '[Lemma], CP '[Lemma])
         -> (ArgPattern p GRel, Int)
         -> ((ArgPattern p GRel, Int), [(FNFrameElement, CompVP '[Lemma])])
 matchSO rolemap (mDP,verbp,cp) (patt,num) =
@@ -369,7 +369,7 @@ matchRoles :: [(PBArg,Text)]
            -> VerbP '[Lemma]
            -> CP '[Lemma]
            -> [(ArgPattern () GRel, Int)]
-           -> Maybe (Either Range (DetP '[Lemma]))
+           -> Maybe (SpecTP '[Lemma])
            -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, CompVP '[Lemma])])
 matchRoles rolemap verbp cp toppattstats mDP =
     (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy (flip compare `on` numMatchedRoles)) matched
@@ -383,7 +383,7 @@ matchRoles rolemap verbp cp toppattstats mDP =
 matchFrameRolesForCauseDual :: VerbP '[Lemma]
                             -> CP '[Lemma]
                             -> [(ArgPattern () GRel,Int)]
-                            -> Maybe (Either Range (DetP '[Lemma]))
+                            -> Maybe (SpecTP '[Lemma])
                             -> LittleV
                             -> (FNFrame, SenseID, [(PBArg, Text)])
                             -> (FNFrame, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])]))
@@ -407,7 +407,7 @@ matchFrameRolesForCauseDual verbp cp toppatts mDP causetype (frame1,sense1,rolem
 
 matchFrameRolesAll :: VerbP '[Lemma]
                    -> CP '[Lemma]
-                   -> Maybe (Either Range (DetP '[Lemma]))
+                   -> Maybe (SpecTP '[Lemma])
                    -> [((RoleInstance,Int),[(ArgPattern () GRel,Int)])]
                    -> [((FNFrame,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])),Int)]
 matchFrameRolesAll verbp cp mDP rmtoppatts = do
@@ -611,7 +611,7 @@ matchFrame :: FrameDB
 matchFrame frmdb (vstr,cp) =
     if verbp^.headX.vp_lemma == "be"
     then do
-      dp_subj <- mDP^?_Just._Right
+      dp_subj <- mDP^?_Just._SpecTP_DP   -- for the time being, ignore CP subject
       c <- listToMaybe (verbp^..complement.traverse.trResolved._Just)
       ((do dp_obj <- c^?_CompVP_DP
            let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_NP (Just GA1))) Nothing Nothing Nothing
