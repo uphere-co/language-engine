@@ -89,6 +89,7 @@ mkWikiList sstr =
           UnresolvedUID x    -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> ")" )
           AmbiguousUID (_,x) -> Just (entityName (_info e) <> "(" <> T.pack (show x)<> ")" )
           Resolved (i,c)     -> Just (entityName (_info e) <> "(" <> T.pack (show c) <> "," <> T.pack (show i) <> ")")
+          OnlyTextMatched x  -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> ")" )
           UnresolvedClass _  -> Nothing
   in wikilst
 
