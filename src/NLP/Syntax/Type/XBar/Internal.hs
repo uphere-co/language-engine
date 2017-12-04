@@ -317,7 +317,7 @@ mkTP tp mdp vp = XP () tp mdp () vp
 
 
 data Complementizer = C_PHI              -- ^ empty complementizer
-                    | C_WORD Text        -- ^ complementizer word
+                    | C_WORD Lemma       -- ^ complementizer lemma
                     -- deriving (Show,Eq,Ord)
 
 

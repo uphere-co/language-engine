@@ -18,6 +18,7 @@ import           Control.Monad                          ((<=<),(>=>),guard,void)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
+import           Data.Attribute                         (ahead)
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Foldable                          (toList)
 import qualified Data.HashMap.Strict               as HM
@@ -193,7 +194,7 @@ constructCP tagged vprop = do
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
                                                   then (C_PHI,Just (SpecCP_WH (getRange (current z))))
-                                                  else let cmpmntzr = case (listToMaybe . map (tokenWord . snd) . toList . current) z of
+                                                  else let cmpmntzr = case (listToMaybe . map (ahead . getAnnot . snd) . toList . current) z of
                                                                         Nothing -> C_PHI
                                                                         Just c -> C_WORD c
                                                        in (cmpmntzr, Nothing)
@@ -206,7 +207,7 @@ constructCP tagged vprop = do
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
                                                   then (C_PHI,Just (SpecCP_WH (getRange (current z))))
-                                                  else let cmpmntzr = case (listToMaybe . map (tokenWord . snd) . toList . current) z of
+                                                  else let cmpmntzr = case (listToMaybe . map (ahead . getAnnot . snd) . toList . current) z of
                                                                         Nothing -> C_PHI
                                                                         Just c -> C_WORD c
                                                        in (cmpmntzr,Nothing)

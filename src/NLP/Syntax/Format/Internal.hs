@@ -14,7 +14,7 @@ import           Data.Bitree
 import           Data.BitreeZipper                  (current)
 import           Data.ListZipper                    (ListZipper(LZ))
 import           Data.Range                         (Range)
-import           NLP.Type.PennTreebankII            (getRange,tokenWord)
+import           NLP.Type.PennTreebankII            (getRange,tokenWord,Lemma(..))
 import           Text.Format.Tree
 --
 import           NLP.Syntax.Type.XBar
@@ -33,7 +33,7 @@ formatSpecTP (SpecTP_Unresolved x) = (T.pack . show) x
 
 
 formatComplementizer C_PHI      = ""
-formatComplementizer (C_WORD w) = "-" <> w
+formatComplementizer (C_WORD w) = "-" <> unLemma w
 
 
 formatCompDP :: CompDP t -> Text

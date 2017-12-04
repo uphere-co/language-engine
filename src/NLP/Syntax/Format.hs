@@ -102,7 +102,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s\n\
         --
         fmtComplementizer :: Complementizer -> (String,String)
         fmtComplementizer C_PHI = ("phi","")
-        fmtComplementizer (C_WORD w) = ("",T.unpack w)
+        fmtComplementizer (C_WORD w) = ("",T.unpack (unLemma w))
         --
         formatSpecCP :: Maybe (SpecCP (Lemma ': as)) -> (String,String)
         formatSpecCP Nothing              = ("","")
