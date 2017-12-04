@@ -47,14 +47,14 @@ import           SRL.Analyze.Type
 import           SRL.Analyze.UKB                           (runUKB)
 
 
-tokenToTagPos  :: (Int,[Token]) -> (EntityMention Text)
-tokenToTagPos (i,tks) =
-  let mft = (tks ^.. traverse) ^? _head
-      mlt = (tks ^.. traverse) ^? _last
-      b = (fromJust mft) ^. token_tok_idx_range ^. _1
-      e = (fromJust mlt) ^. token_tok_idx_range ^. _2
+tokenToTagPos  :: (Int,[Token]) -> Maybe (EntityMention Text)
+tokenToTagPos (i,tks) = do
+  ft <- tks ^? _head
+  lt <- tks ^? _last
+  let b = ft ^. token_tok_idx_range . _1
+      e = lt ^. token_tok_idx_range . _2
       txts = tks ^.. traverse . token_text
-  in Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched PublicCompany)
+  return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched PublicCompany))
 
 adjustWikiRange :: (Int,Int) -> (Int,Int)
 adjustWikiRange (a,b) = (a,b-1)
@@ -113,7 +113,7 @@ docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs 
 
   let entitiesByNER = map (\tokens -> fst $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens) (map catMaybes mtokenss)
   let ne = concat $ rights entitiesByNER
-  let tne = map tokenToTagPos (zip [10001..] ne)
+  let tne = mapMaybe tokenToTagPos (zip [10001..] ne)
 
   let tnerange = map getRangeFromEntityMention tne
       wnerange = map getRangeFromEntityMention linked_mentions_resolved
