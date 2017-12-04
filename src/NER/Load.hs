@@ -5,6 +5,8 @@ module NER.Load where
 
 import           Control.Lens               ((^.),_2)
 import           Control.Monad              (forM)
+import qualified Data.Aeson                 as A
+import qualified Data.ByteString.Char8      as B8
 import qualified Data.ByteString.Lazy       as BL
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Csv             as C
@@ -44,7 +46,7 @@ loadNameTable = do
 loadCompanies :: IO [CompanyInfo]
 loadCompanies = do
   nt <- loadNameTable
-  companies <- getCompanyList nt
+  companies <- getCompanyList "/data/groups/uphere/data/NER/company/company.json"
   return companies
 
 
@@ -56,8 +58,17 @@ aliasFinder nuid uida txt =
     Just uid -> HM.lookup uid uida
 
 
-getCompanyList :: [(Int,Text)] -> IO [CompanyInfo]
-getCompanyList nameTable = do
+getCompanyList :: FilePath -> IO [CompanyInfo]
+getCompanyList fp = do
+  lbstr <- BL8.readFile fp
+  let mresult = A.decode lbstr
+  case mresult of
+    Nothing     -> error "Company list is not valid."
+    Just result -> return result
+
+
+getCompanyList' :: [(Int,Text)] -> IO [CompanyInfo]
+getCompanyList' nameTable = do
   let nuid = mkNameUIDHM nameTable
       uida = mkUIDAliasHM nameTable
 
