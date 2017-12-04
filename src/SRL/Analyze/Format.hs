@@ -220,8 +220,7 @@ showMatchedFE tagged (fe,CompVP_PP pp) =
                  PC_Other -> ""
   in case pp^.complement of
        CompPP_DP dp    -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) (maybe "" show (dp^?complement._Just.headX)) prep pclass (headTextDP tagged dp)
-       CompPP_Gerund z -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) ((show.getRange.current) z) prep pclass (gettext z)
-  where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
+       CompPP_Gerund rng -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) (show rng) prep pclass (T.intercalate " " (tokensByRange tagged rng))
 showMatchedFE tagged (fe,CompVP_Unresolved rng) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (show rng) ("UNKNOWN" :: Text) (T.intercalate " " (tokensByRange tagged rng))
 
 

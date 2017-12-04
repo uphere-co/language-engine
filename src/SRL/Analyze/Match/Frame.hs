@@ -267,7 +267,7 @@ matchSubject rolemap mDP patt = do
 isPhiOrThat :: (GetIntLemma t) => CP t -> Bool
 isPhiOrThat cp = case cp^.headX of
                    C_PHI -> True
-                   C_WORD z -> isLemmaAs "that" (current z)
+                   C_WORD word -> word == "that"
 
 
 
@@ -497,8 +497,7 @@ matchExtraRolesForCPInAdjunctCP check role cp0 felst = do
 
 
 hasComplementizer :: [Lemma] -> CP '[Lemma] -> Bool
-hasComplementizer lst x =
-  x^?headX._C_WORD.to (\z -> any (\c -> isLemmaAs c (current z)) lst) == Just True
+hasComplementizer lst x = x^?headX._C_WORD.to (\z -> any (== z) lst) == Just True
 
 
 toInfinitive :: CP '[Lemma] -> Bool
