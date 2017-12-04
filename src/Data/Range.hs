@@ -22,12 +22,20 @@ x `isInside` (x1,y1) = x1 <= x && x <= y1
 isInsideR :: Range -> Range -> Bool
 (x0,y0) `isInsideR` (x1,y1) = x1 <= x0 && y0 <= y1
 
+isStrictlyInsideR :: Range -> Range -> Bool
+(x0,y0) `isStrictlyInsideR` (x1,y1) = (x1 < x0 && y0 <= y1) || (x1 <= x0 && y0 < y1)
+
 elemIsInsideR :: Foldable t => Range -> t Range -> Bool
 elemIsInsideR x ys = any (\y -> x `isInsideR` y) ys
+
+elemIsStrictlyInsideR :: Foldable t => Range -> t Range -> Bool
+elemIsStrictlyInsideR x ys = any (\y -> x `isStrictlyInsideR` y) ys
 
 elemRevIsInsideR :: Foldable t => Range -> t Range -> Bool
 elemRevIsInsideR x ys = any (\y -> y `isInsideR` x) ys
 
+elemRevIsStrictlyInsideR :: Foldable t => Range -> t Range -> Bool
+elemRevIsStrictlyInsideR x ys = any (\y -> y `isStrictlyInsideR` x) ys
 
 -- | Bubble sort of ranges. Since a list of range is a partially ordered set,
 --   we mark non-included ranges as Left.
