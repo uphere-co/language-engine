@@ -107,8 +107,7 @@ docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs 
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = netagger (docinput^.dainput_sents)
 
-  entitiesByNER <- fmap (map fst) $ forM (map catMaybes mtokenss) $ \tokens -> do
-    return $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens
+  let entitiesByNER = map (\tokens -> fst $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens) (map catMaybes mtokenss)
   let ne = concat $ rights entitiesByNER
   let tne = map tokenToTagPos (zip [10001..] ne)
 
