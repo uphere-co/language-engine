@@ -188,7 +188,7 @@ type NounP = XP 'X_N
 
 compDPToRange :: CompDP t -> Range
 compDPToRange (CompDP_Unresolved rng) = rng
-compDPToRange (CompDP_CP cp) = getRange (current (_maximalProjection cp))
+compDPToRange (CompDP_CP cp) = _maximalProjection cp -- getRange (current (_maximalProjection cp))
 compDPToRange (CompDP_PP pp) = _maximalProjection pp
 
 
@@ -263,7 +263,7 @@ data CompPP t = CompPP_DP (DetP t)
               | CompPP_Gerund (Zipper t)
 
 --
-type instance Property   'X_P t = HeadPP -- (Prep,PrepClass)
+type instance Property   'X_P t = HeadPP
 type instance Maximal    'X_P t = Range
 type instance Specifier  'X_P t = ()
 type instance Adjunct    'X_P t = ()
@@ -291,7 +291,7 @@ data AdjunctVP t = AdjunctVP_Unresolved (Zipper t)
 type instance Property   'X_V t = VerbProperty (Zipper t)
 type instance Maximal    'X_V t = Zipper t
 type instance Specifier  'X_V t = ()
-type instance Adjunct    'X_V t = [AdjunctVP t] -- [Zipper t] 
+type instance Adjunct    'X_V t = [AdjunctVP t]
 type instance Complement 'X_V t = [TraceChain (CompVP t)]
 
 type VerbP = XP 'X_V
@@ -302,13 +302,13 @@ mkVerbP vp vprop adjs comps = XP vprop vp () adjs comps
 
 type instance Property   'X_T t = ()
 type instance Maximal    'X_T t = Zipper t
-type instance Specifier  'X_T t = TraceChain (Either (Zipper t) (DetP t))
+type instance Specifier  'X_T t = TraceChain (Either Range (DetP t))
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Zipper t -> TraceChain (Either (Zipper t) (DetP t)) -> VerbP t -> TP t
+mkTP :: Zipper t -> TraceChain (Either Range (DetP t)) -> VerbP t -> TP t
 mkTP tp mdp vp = XP () tp mdp () vp
 
 
@@ -328,15 +328,15 @@ data AdjunctCP t = AdjunctCP_Unresolved (Zipper t)
 
 
 type instance Property   'X_C t = Complementizer t
-type instance Maximal    'X_C t = Zipper t
+type instance Maximal    'X_C t = Range -- Zipper t
 type instance Specifier  'X_C t = Maybe (SpecCP t)
 type instance Adjunct    'X_C t = [AdjunctCP t]
 type instance Complement 'X_C t = TP t
 
 type CP = XP 'X_C
 
-mkCP :: Complementizer t -> Zipper t -> Maybe (SpecCP t) -> [AdjunctCP t] -> TP t -> CP t
-mkCP mc cp spec adjs tp = XP mc cp spec adjs tp
+mkCP :: Complementizer t -> Range {- Zipper t -} -> Maybe (SpecCP t) -> [AdjunctCP t] -> TP t -> CP t
+mkCP mc rng spec adjs tp = XP mc rng spec adjs tp
 
 
 data CPDPPP t = CPCase (CP t)

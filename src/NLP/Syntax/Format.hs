@@ -64,7 +64,7 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
 
 formatAdjunctCP :: AdjunctCP t -> Text
 formatAdjunctCP (AdjunctCP_Unresolved z) = "unresolved" <> (showRange . getRange . current) z
-formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cpRange cp)
+formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cp^.maximalProjection)
 
 
 adjunctVPText :: TaggedLemma t -> AdjunctVP t -> Text
@@ -78,7 +78,7 @@ formatAdjunctVP (AdjunctVP_PP pp) = formatPP pp
 
 
 formatCP :: forall as. CP (Lemma ': as) -> String
-formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
+formatCP cp = printf "Complementizer Phrase: %-6s\n\
                      \Complementizer       : %-6s  %s\n\
                      \Specifier            : %-6s  %s\n\
                      \Adjunct              :         %s\n\
@@ -87,8 +87,8 @@ formatCP cp = printf "Complementizer Phrase: %-6s  %s\n\
                      \Verb Phrase          : %-6s  %s\n\
                      \Verb Complements     :       %s\n\
                      \Verb Adjunts         :       %s\n"
-                (maybe "null" show (getchunk (cp^.maximalProjection)))
-                (show (gettoken (cp^.maximalProjection)))
+                -- (maybe "null" show (getchunk (cp^.maximalProjection)))
+                (show (cp^.maximalProjection))
                 head1 head2
                 spec1 spec2
                 (T.intercalate " | " (cp^..adjunct.traverse.to formatAdjunctCP))

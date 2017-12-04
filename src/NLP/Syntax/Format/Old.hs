@@ -54,7 +54,7 @@ formatVPwithPAWS :: TaggedLemma (Lemma ': as)
                  -> Text
 formatVPwithPAWS tagged clausetr cpstr vp =
   let mpaws = findPAWS tagged clausetr vp cpstr
-      mrng = cpRange . (^.pa_CP) <$> mpaws
+      mrng = mpaws^?_Just.pa_CP.maximalProjection
       fmt = either (const "") (tokenWord.snd) . getRoot . current
   in case (,) <$> mpaws <*> mrng of
        Nothing -> "fail in identifying PAWS"

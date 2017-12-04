@@ -246,12 +246,12 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       -- test subjects
   cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                             -- anyway need to be rewritten.
-  cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cpRange cp0))) x'tr)
+  cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'tr)
   let subj_test = c^._3._1
       b_subj = fromMaybe False $ do
                  subj <- cp^?complement.specifier.trResolved._Just
                  let sclass = subj^?_Right.headX.hd_class
-                     stxt = either (getTokens . current) (headTextDP tagged) subj
+                     stxt = either (T.intercalate " " . tokensByRange tagged) (headTextDP tagged) subj
                  case subj_test^._2 of
                    Nothing -> return (stxt == subj_test^._1)
                    Just p -> return (stxt == subj_test^._1 && sclass == Just p)

@@ -43,13 +43,13 @@ specDPText tagged x = case x of
                         SpDP_Gen rng -> T.intercalate " " (tokensByRange tagged rng)
 
 
-compVPToEither :: CompVP t -> Either (Zipper t) (DetP t)
-compVPToEither (CompVP_Unresolved x) = Left  x
+compVPToEither :: CompVP t -> Either Range (DetP t)
+compVPToEither (CompVP_Unresolved x) = Left (getRange (current x))
 compVPToEither (CompVP_CP cp)        = Left (cp^.maximalProjection)
 compVPToEither (CompVP_DP y)         = Right y
 compVPToEither (CompVP_PP y)         = case y^.complement of
                                          CompPP_DP dp -> Right dp
-                                         CompPP_Gerund z -> Left z
+                                         CompPP_Gerund z -> Left (getRange (current z))
 
 
 headTextDP :: TaggedLemma t -> DetP t -> Text
@@ -74,7 +74,7 @@ headRangeDP dp =
 
 compVPToHeadText :: TaggedLemma t -> CompVP t -> Text
 compVPToHeadText _tagged (CompVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
-compVPToHeadText _tagged (CompVP_CP cp)        = cp^.maximalProjection.to (T.intercalate " " . map (tokenWord.snd) . toList . current)
+compVPToHeadText tagged (CompVP_CP cp)         = T.intercalate " " (tokensByRange tagged (cp^.maximalProjection))
 compVPToHeadText tagged  (CompVP_DP dp)        = headTextDP tagged dp
 compVPToHeadText tagged  (CompVP_PP pp)        = case pp^.complement of
                                                    CompPP_DP dp -> headTextDP tagged dp
@@ -83,7 +83,7 @@ compVPToHeadText tagged  (CompVP_PP pp)        = case pp^.complement of
 
 
 compVPToRange :: CompVP t -> Range
-compVPToRange = either (getRange.current) (\dp->dp^.maximalProjection) . compVPToEither
+compVPToRange = either id (\dp->dp^.maximalProjection) . compVPToEither
 
 
 
