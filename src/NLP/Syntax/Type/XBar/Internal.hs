@@ -278,13 +278,13 @@ mkPP (prep,pclass) rng dp = XP (HeadPP prep pclass) rng () () (CompPP_DP dp)
 mkPPGerund :: (Prep,PrepClass) -> Range -> Zipper t -> PP t
 mkPPGerund (prep,pclass) rng z = XP (HeadPP prep pclass) rng () () (CompPP_Gerund z)
 
-data CompVP t = CompVP_Unresolved Range -- (Zipper t)
+data CompVP t = CompVP_Unresolved Range
               | CompVP_CP (CP t)
               | CompVP_DP (DetP t)
               | CompVP_PP (PP t)
 
 
-data AdjunctVP t = AdjunctVP_Unresolved Range -- (Zipper t)
+data AdjunctVP t = AdjunctVP_Unresolved Range
                  | AdjunctVP_PP (PP t)
 
 
@@ -305,14 +305,14 @@ data SpecTP t = SpecTP_Unresolved Range
 
 
 type instance Property   'X_T t = ()
-type instance Maximal    'X_T t = Zipper t
+type instance Maximal    'X_T t = Range -- Zipper t
 type instance Specifier  'X_T t = TraceChain (SpecTP t)
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Zipper t -> TraceChain (SpecTP t) -> VerbP t -> TP t
+mkTP :: Range -> TraceChain (SpecTP t) -> VerbP t -> TP t
 mkTP tp mdp vp = XP () tp mdp () vp
 
 

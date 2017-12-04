@@ -193,7 +193,7 @@ constructCP tagged vprop = do
                                         Just z -> if (isChunkAs WHNP (current z))
                                                   then (C_PHI,Just (SpecCP_WH z))
                                                   else (C_WORD z,Nothing)
-            in return (mkCP cphead rng_cp' cpspec adjs (mkTP z_tp subj verbp),dps)
+            in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),dps)
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
                                     Just top -> (C_PHI,Just (SpecCP_Topic top))
@@ -203,18 +203,18 @@ constructCP tagged vprop = do
                                         Just z -> if (isChunkAs WHNP (current z))
                                                   then (C_PHI,Just (SpecCP_WH z))
                                                   else (C_WORD z,Nothing)
-            in return (mkCP cphead rng_cp' cpspec adjs (mkTP z_tp subj verbp),dps)
+            in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),dps)
           N.CL _ ->
-            return (mkCP C_PHI rng_tp Nothing adjs (mkTP z_tp subj verbp),dps)
+            return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),dps)
           _      -> -- somewhat problematic case?
-            return (mkCP C_PHI rng_tp Nothing adjs (mkTP z_tp subj verbp),dps)
+            return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),dps)
       _ -> -- reduced relative clause
         let (comps,_,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToSpecTP)
             verbp = mkVerbP z_vp vprop cadjs comps
             nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
-        in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP z_vp nullsubj verbp),comps_dps)
+        in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP rng_vp nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
