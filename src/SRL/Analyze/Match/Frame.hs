@@ -29,7 +29,7 @@ import           FrameNet.Type.Frame          (frame_FE,fe_name)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
-import           NLP.Syntax.Clause            (cpRange,constructCP,currentCPDPPP)
+import           NLP.Syntax.Clause            (constructCP,currentCPDPPP)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs)
@@ -225,8 +225,8 @@ mkTriples sstr =
                  , cp <- maybeToList $ do
                            let tagged = sstr^.ss_tagged
                            cp0 <- (^._1) <$> constructCP tagged vp
-                           let rng = cpRange cp0
-                           (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
+                           let rng_cp0 = cp0^.maximalProjection
+                           (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng_cp0)) x'tr)
                  ]
      )
 
@@ -255,7 +255,7 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
 
 
 matchSubject :: [(PBArg,Text)]
-             -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
+             -> Maybe (Either Range (DetP '[Lemma]))
              -> ArgPattern p GRel
              -> Maybe (FNFrameElement, CompVP '[Lemma])
 matchSubject rolemap mDP patt = do
@@ -338,7 +338,7 @@ matchAgentForPassive rolemap cp patt = do
 
 
 matchSO :: [(PBArg,Text)]
-        -> ( Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma])), VerbP '[Lemma], CP '[Lemma])
+        -> ( Maybe (Either Range (DetP '[Lemma])), VerbP '[Lemma], CP '[Lemma])
         -> (ArgPattern p GRel, Int)
         -> ((ArgPattern p GRel, Int), [(FNFrameElement, CompVP '[Lemma])])
 matchSO rolemap (mDP,verbp,cp) (patt,num) =
@@ -369,7 +369,7 @@ matchRoles :: [(PBArg,Text)]
            -> VerbP '[Lemma]
            -> CP '[Lemma]
            -> [(ArgPattern () GRel, Int)]
-           -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
+           -> Maybe (Either Range (DetP '[Lemma]))
            -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, CompVP '[Lemma])])
 matchRoles rolemap verbp cp toppattstats mDP =
     (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy (flip compare `on` numMatchedRoles)) matched
@@ -383,7 +383,7 @@ matchRoles rolemap verbp cp toppattstats mDP =
 matchFrameRolesForCauseDual :: VerbP '[Lemma]
                             -> CP '[Lemma]
                             -> [(ArgPattern () GRel,Int)]
-                            -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
+                            -> Maybe (Either Range (DetP '[Lemma]))
                             -> LittleV
                             -> (FNFrame, SenseID, [(PBArg, Text)])
                             -> (FNFrame, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])]))
@@ -407,7 +407,7 @@ matchFrameRolesForCauseDual verbp cp toppatts mDP causetype (frame1,sense1,rolem
 
 matchFrameRolesAll :: VerbP '[Lemma]
                    -> CP '[Lemma]
-                   -> Maybe (Either (Zipper '[Lemma]) (DetP '[Lemma]))
+                   -> Maybe (Either Range (DetP '[Lemma]))
                    -> [((RoleInstance,Int),[(ArgPattern () GRel,Int)])]
                    -> [((FNFrame,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])),Int)]
 matchFrameRolesAll verbp cp mDP rmtoppatts = do
@@ -473,9 +473,9 @@ matchExtraRolesForCPInCompVP check role cp0 felst = do
   guard (is _Nothing (find (\x -> x^._1 == role) felst))
   let candidates = cp0 ^..complement.complement.complement.traverse.trResolved._Just._CompVP_CP
   cp <- find check candidates
-  let rng = cp^.maximalProjection.to current.to getRange
-  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just rng) felst))
-  guard (is _Nothing (find (\x -> x^?_2._CompVP_CP.to cpRange == Just rng) felst))
+  let rng_cp = cp^.maximalProjection
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just rng_cp) felst))
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_CP.maximalProjection == Just rng_cp) felst))
   let comp = CompVP_CP cp
   return (role,comp)
 
@@ -489,9 +489,9 @@ matchExtraRolesForCPInAdjunctCP check role cp0 felst = do
   guard (is _Nothing (find (\x -> x^._1 == role) felst))
   let candidates = cp0^..adjunct.traverse._AdjunctCP_CP
   cp <- find check candidates
-  let rng = cp^.maximalProjection.to current.to getRange
-  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just rng) felst))
-  guard (is _Nothing (find (\x -> x^?_2._CompVP_CP.to cpRange == Just rng) felst))
+  let rng_cp = cp^.maximalProjection
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just rng_cp) felst))
+  guard (is _Nothing (find (\x -> x^?_2._CompVP_CP.maximalProjection == Just rng_cp) felst))
   let comp = CompVP_CP cp
   return (role,comp)
 
@@ -539,10 +539,10 @@ matchSubFrame :: (CP '[Lemma] -> Bool)
               -> CP '[Lemma]
               -> Maybe (FNFrame,Text,[(FNFrameElement,(Bool,Range))])
 matchSubFrame check prep (frm,fe0,fe1) cp0 = do
-  let rng0 = cp0^.maximalProjection.to current.to getRange
+  let rng0 = cp0^.maximalProjection
   let candidates = cp0 ^..complement.complement.complement.traverse.trResolved._Just._CompVP_CP ++ cp0^..adjunct.traverse._AdjunctCP_CP
   cp1 <- find check candidates
-  let rng1 = cp1^.maximalProjection.to current.to getRange
+  let rng1 = cp1^.maximalProjection
   return (frm,prep,[(fe0,(True,rng0)),(fe1,(False,rng1))])
 
 
@@ -617,7 +617,7 @@ matchFrame frmdb (vstr,cp) =
            let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_NP (Just GA1))) Nothing Nothing Nothing
                role_subj = (FNFrameElement "Instance",CompVP_DP dp_subj)
                role_obj  = (FNFrameElement "Type",CompVP_DP dp_obj)
-           return (rng,vprop,FMR "Instance" (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing))
+           return (rng_cp,vprop,FMR "Instance" (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing))
        <|>
        (do pp_obj <- c^?_CompVP_PP
            prep_obj <- pp_obj^?headX.hp_prep._Prep_WORD
@@ -625,7 +625,7 @@ matchFrame frmdb (vstr,cp) =
            let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_PP Nothing)) Nothing Nothing Nothing
                role_subj = (rsbj,CompVP_DP dp_subj)
                role_obj  = (robj,CompVP_PP pp_obj)
-           return (rng,vprop,FMR frm (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing)))
+           return (rng_cp,vprop,FMR frm (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing)))
 
 
     else do
@@ -640,12 +640,12 @@ matchFrame frmdb (vstr,cp) =
                       ,(hasComplementizer ["if"]    , "if"    , ("Conditional_occurrence","Consequence","Profiled_possibility"))
                       ,(hasComplementizer ["unless"], "unless", ("Negative_conditional","Anti_consequence","Profiled_possibility"))
                       ]
-      return (rng,vprop,FMR frame mselected subfrms,Just sense)
+      return (rng_cp,vprop,FMR frame mselected subfrms,Just sense)
   where
     verbp = cp^.complement.complement
     mDP = cp^.complement.specifier.trResolved
     vprop = vstr^.vs_vp
-    rng = cpRange cp
+    rng_cp = cp^.maximalProjection
     frmsels = matchFrameRolesAll verbp cp mDP (vstr^.vs_roleTopPatts)
     total=  sum (frmsels^..traverse._2)
 
@@ -762,7 +762,7 @@ matchNomFrame apredata x'tr tagged dp = do
                    CompDP_CP cp_obj -> Just cp_obj
                    _ -> Nothing
       let vp = cp_obj^.complement.complement
-          rng_obj = cpRange cp_obj
+          rng_obj = cp_obj^.maximalProjection
           txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
 
       aux <- listToMaybe (vp^..headX.vp_auxiliary.traverse._2._2.to unLemma)
