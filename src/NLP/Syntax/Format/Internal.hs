@@ -32,12 +32,13 @@ formatSpecTP (SpecTP_DP x) = x^.maximalProjection.to (T.pack . show)
 formatSpecTP (SpecTP_Unresolved x) = (T.pack . show) x
 
 
+formatComplementizer C_PHI      = ""
+formatComplementizer (C_WORD w) = "-" <> w
+
+
 formatCompDP :: CompDP t -> Text
 formatCompDP (CompDP_Unresolved rng) = T.pack (show rng)
-formatCompDP (CompDP_CP cp) = case cp^.headX of
-                                C_PHI -> "CP" <> cp^.maximalProjection.to show.to T.pack
-                                C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'
-                                                   <> cp^.maximalProjection.to show.to T.pack
+formatCompDP (CompDP_CP cp) = "CP" <> cp^.headX.to formatComplementizer <> cp^.maximalProjection.to show.to T.pack
 formatCompDP (CompDP_PP pp) = formatPP pp
 
 
@@ -67,10 +68,7 @@ formatDP dp = "(DP"        <> dp^.maximalProjection.to show.to T.pack <>
 
 formatCompVP :: CompVP as -> Text
 formatCompVP (CompVP_Unresolved r)  = "unresolved" <> T.pack (show r)
-formatCompVP (CompVP_CP cp) = case cp^.headX of
-                                C_PHI -> "CP" <> cp^.maximalProjection.to show.to T.pack
-                                C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'
-                                                   <> cp^.maximalProjection.to show.to T.pack
+formatCompVP (CompVP_CP cp) = "CP" <> cp^.headX.to formatComplementizer <> cp^.maximalProjection.to show.to T.pack
 formatCompVP (CompVP_DP dp) = formatDP dp
 formatCompVP (CompVP_PP pp) = formatPP pp
 
@@ -98,4 +96,3 @@ formatX'Tree tr = formatBitree fmt tr
         fmt (rng,CPCase _) = "CP" <> showRange rng
         fmt (_  ,DPCase x) = formatDP x
         fmt (_  ,PPCase x) = formatPP x
-

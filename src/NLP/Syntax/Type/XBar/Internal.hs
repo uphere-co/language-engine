@@ -260,7 +260,7 @@ data HeadPP = HeadPP { _hp_prep :: Prep
 
 
 data CompPP t = CompPP_DP (DetP t)
-              | CompPP_Gerund Range -- (Zipper t)
+              | CompPP_Gerund Range
 
 --
 type instance Property   'X_P t = HeadPP
@@ -316,9 +316,9 @@ mkTP :: Range -> TraceChain (SpecTP t) -> VerbP t -> TP t
 mkTP tp mdp vp = XP () tp mdp () vp
 
 
-data Complementizer t = C_PHI              -- ^ empty complementizer
-                      | C_WORD (Zipper t)  -- ^ complementizer word
-                      -- deriving (Show,Eq,Ord)
+data Complementizer = C_PHI              -- ^ empty complementizer
+                    | C_WORD Text        -- ^ complementizer word
+                    -- deriving (Show,Eq,Ord)
 
 
 data SpecCP t = SpecCP_WHPHI           -- ^ empty Wh-word
@@ -331,7 +331,7 @@ data AdjunctCP t = AdjunctCP_Unresolved Range -- (Zipper t)
                  | AdjunctCP_CP         (CP t)
 
 
-type instance Property   'X_C t = Complementizer t
+type instance Property   'X_C t = Complementizer
 type instance Maximal    'X_C t = Range
 type instance Specifier  'X_C t = Maybe (SpecCP t)
 type instance Adjunct    'X_C t = [AdjunctCP t]
@@ -339,7 +339,7 @@ type instance Complement 'X_C t = TP t
 
 type CP = XP 'X_C
 
-mkCP :: Complementizer t -> Range -> Maybe (SpecCP t) -> [AdjunctCP t] -> TP t -> CP t
+mkCP :: Complementizer -> Range -> Maybe (SpecCP t) -> [AdjunctCP t] -> TP t -> CP t
 mkCP mc rng spec adjs tp = XP mc rng spec adjs tp
 
 

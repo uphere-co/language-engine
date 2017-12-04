@@ -19,6 +19,7 @@ import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
 import           Data.Bitraversable                     (bitraverse)
+import           Data.Foldable                          (toList)
 import qualified Data.HashMap.Strict               as HM
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (Last(..))
@@ -192,7 +193,10 @@ constructCP tagged vprop = do
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
                                                   then (C_PHI,Just (SpecCP_WH z))
-                                                  else (C_WORD z,Nothing)
+                                                  else let cmpmntzr = case (listToMaybe . map (tokenWord . snd) . toList . current) z of
+                                                                        Nothing -> C_PHI
+                                                                        Just c -> C_WORD c
+                                                       in (cmpmntzr, Nothing)
             in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),dps)
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
@@ -202,7 +206,10 @@ constructCP tagged vprop = do
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
                                                   then (C_PHI,Just (SpecCP_WH z))
-                                                  else (C_WORD z,Nothing)
+                                                  else let cmpmntzr = case (listToMaybe . map (tokenWord . snd) . toList . current) z of
+                                                                        Nothing -> C_PHI
+                                                                        Just c -> C_WORD c
+                                                       in (cmpmntzr,Nothing)
             in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),dps)
           N.CL _ ->
             return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),dps)
@@ -216,11 +223,6 @@ constructCP tagged vprop = do
             nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
         in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP rng_vp nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
-
-
-
--- cpRange :: CP xs -> Range
--- cpRange cp = cp^.maximalProjection.to (getRange . current)
 
 
 hierarchyBits :: TaggedLemma (Lemma ': as)

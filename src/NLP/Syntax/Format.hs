@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators       #-}
 
-module NLP.Syntax.Format 
+module NLP.Syntax.Format
 ( module NLP.Syntax.Format
 , module NLP.Syntax.Format.Internal
 ) where
@@ -97,14 +97,12 @@ formatCP cp = printf "Complementizer Phrase: %-6s\n\
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
         gettoken = map (tokenWord.snd) . toList . current
         --
-        -- formatAdjunctVP (AdjunctVP_Unresolved z) = T.intercalate " " (gettoken z)
-        --
         formatposchunk (Left c) = show c
         formatposchunk (Right p) = "(" ++ show p ++ ")"
         --
-        formatComplementizer :: Complementizer (Lemma ': as) -> (String,String)
-        formatComplementizer C_PHI = ("phi","")
-        formatComplementizer (C_WORD z) = (formatposchunk (rootTag (current z)), show (gettoken z))
+        fmtComplementizer :: Complementizer -> (String,String)
+        fmtComplementizer C_PHI = ("phi","")
+        fmtComplementizer (C_WORD w) = ("",T.unpack w)
         --
         formatSpecCP :: Maybe (SpecCP (Lemma ': as)) -> (String,String)
         formatSpecCP Nothing              = ("","")
@@ -112,9 +110,5 @@ formatCP cp = printf "Complementizer Phrase: %-6s\n\
         formatSpecCP (Just (SpecCP_WH z)) = (formatposchunk (rootTag (current z)), show (gettoken z))
         formatSpecCP (Just (SpecCP_Topic _)) = ("Topic","Topic")
         --
-        (head1,head2) = formatComplementizer (cp^.headX)
+        (head1,head2) = fmtComplementizer (cp^.headX)
         (spec1,spec2) = formatSpecCP (cp^.specifier)
-
-
-
-
