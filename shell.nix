@@ -80,9 +80,11 @@ let
 
 
   hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
+            aeson-pretty
             attoparsec
             bifunctors
             bindings-svm
+            blaze-html
             cabal-install
             either
             errors

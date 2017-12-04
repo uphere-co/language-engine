@@ -81,6 +81,20 @@ mkWikiList sstr =
   in wikilst
 
 
+
+nerDocument :: AnalyzePredata
+          -> ([Sentence] -> [EntityMention Text])
+          -> DocAnalysisInput
+          -> [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text))] -- IO DocStructure
+nerDocument apredata netagger docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) =
+  let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
+      mtokenss = sents ^.. traverse . sentenceToken
+      linked_mentions_resolved = netagger (docinput^.dainput_sents)
+      lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
+      mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
+  in maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
+
+
 --
 -- | Finding the structure of the sentence and formatting it.
 --
@@ -91,6 +105,9 @@ docStructure :: AnalyzePredata
              -> IO DocStructure
 docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
+      -- need to revive
+      -- mtokenss = sents ^.. traverse . sentenceToken  
+      -- mergedtags = nerDocument apredata netagger docinput
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = netagger (docinput^.dainput_sents)
 
@@ -105,9 +122,7 @@ docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs 
       lnk_mntns_tagpos = map linkedMentionToTagPos (lnk_mntns1 ++ lnk_mntns2)
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
   synsetss <- runUKB (apredata^.analyze_wordnet)(sents,mptrs)
-
   let mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
-
   let sentStructures = map (sentStructure apredata mergedtags) (zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss)
   return (DocStructure mtokenss sentitems mergedtags sentStructures)
 

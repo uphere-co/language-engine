@@ -1,6 +1,21 @@
 Semantic Role Labeler
 =====================
 
+For generating a performance test
+```
+$ cabal sandbox init
+$ cabal install
+$ mkdir output
+$ cabal exec -- runhasekll test/test-gen.hs
+$ cabal exec -- runhaskell test/test-performance.hs -c ../lexicon-builder/config.json.mark -f testset.json -d output --old D1111 --new D2222
+```
+
+
+
+old README
+-----------
+
+
 This package is an implementaion of Semantic Role Labeler (SRL).
 The SRL approach mainly follows Gildea and Palmer [1] (see Gildea and Jurafskyfor a complete
 description [2]).
