@@ -84,6 +84,7 @@ let
             attoparsec
             bifunctors
             bindings-svm
+            blaze-html
             cabal-install
             either
             errors

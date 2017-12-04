@@ -12,12 +12,18 @@ import qualified Data.ByteString.Lazy as BL
 import           Data.List                   (zip4,zip5)
 import           Data.Maybe                  (catMaybes,mapMaybe)
 import           Data.Monoid                 ((<>))
+import           Data.Text                   (Text)
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as TIO
+import qualified Data.Text.Lazy.IO    as TLIO
 import           Options.Applicative
 import           System.Directory            (getCurrentDirectory,setCurrentDirectory)
 import           System.FilePath             ((<.>))
 import           System.Process              (readProcess)
+import           Text.Blaze.Html.Renderer.Text (renderHtml)
+import           Text.Blaze.Html5              ((!))
+import qualified Text.Blaze.Html5            as H
+import qualified Text.Blaze.Html5.Attributes as A
 --
 import           Lexicon.Data                (loadLexDataConfig)
 import           MWE.Util                    (mkTextFromToken)
@@ -55,13 +61,15 @@ progOption :: ParserInfo TestConfig
 progOption = info pOptions (fullDesc <> progDesc "test generation")
 
 
+createDotPng :: FilePath -> [(Int,Text,MeaningGraph)] -> IO (FilePath,[(Int,Text,MeaningGraph)])
 createDotPng fn imglst = do
-  flip mapM_ imglst $ \(i,title,mg) -> do
+  flip mapM imglst $ \(i,title,mg) -> do
     let fullfilename = fn ++ "_" ++ show i
     let dotstr = dotMeaningGraph (mkLabelText title) mg
     TIO.putStrLn dotstr
     TIO.writeFile (fullfilename <.> "dot") dotstr
     void (readProcess "dot" ["-Tpng", fullfilename <.> "dot","-o" ++ fullfilename <.> "png"] "")
+  return (fn,imglst)
 
 
 process apredata t = do
@@ -84,6 +92,24 @@ process apredata t = do
 
 
 
+mainHtml fileimgs =
+  H.docTypeHtml $ do
+    H.head $ do
+      H.title "Test"
+    H.body $ do
+      H.ul $ do
+        mapM_ onefigure fileimgs
+
+
+onefigure (fn,imglst) =
+  H.li $ do
+    (H.div (H.toHtml (T.pack fn)))
+    H.img ! A.src (H.stringValue (fn ++ "_1.png"))
+
+createIndex :: [(FilePath,[(Int,Text,MeaningGraph)])] -> IO ()
+createIndex fileimgs = TLIO.writeFile "index.html" (renderHtml (mainHtml fileimgs))
+
+
 
 
 main = do
@@ -99,5 +125,6 @@ main = do
     Right lst -> do
       cwd <- getCurrentDirectory
       setCurrentDirectory (tcfg^.tconfig_outputdir)
-      mapM_ (process apredata) lst
+      fileimgs <- mapM (process apredata) lst
+      createIndex fileimgs
       setCurrentDirectory cwd
