@@ -210,7 +210,6 @@ showMatchedFE :: TaggedLemma '[Lemma] -> (FNFrameElement, CompVP '[Lemma]) -> St
 showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (maybe "" show (dp^?complement._Just.headX)) ("" :: Text) (headTextDP tagged dp)
 showMatchedFE tagged (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (show rng_cp) ("" :: Text) ((T.intercalate " " . tokensByRange tagged) rng_cp)
   where rng_cp = cp^.maximalProjection
-        -- gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
 showMatchedFE tagged (fe,CompVP_PP pp) =
   let prep = case pp^.headX.hp_prep of
                Prep_NULL -> ""
@@ -223,8 +222,8 @@ showMatchedFE tagged (fe,CompVP_PP pp) =
        CompPP_DP dp    -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) (maybe "" show (dp^?complement._Just.headX)) prep pclass (headTextDP tagged dp)
        CompPP_Gerund z -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) ((show.getRange.current) z) prep pclass (gettext z)
   where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
-showMatchedFE _      (fe,CompVP_Unresolved z) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ((show.getRange.current) z) ("UNKNOWN" :: Text) (gettext z)
-  where gettext = T.intercalate " " . map (tokenWord.snd) . toList . current
+showMatchedFE tagged (fe,CompVP_Unresolved rng) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (show rng) ("UNKNOWN" :: Text) (T.intercalate " " (tokensByRange tagged rng))
+
 
 
 
