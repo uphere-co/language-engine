@@ -192,7 +192,7 @@ constructCP tagged vprop = do
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
-                                                  then (C_PHI,Just (SpecCP_WH z))
+                                                  then (C_PHI,Just (SpecCP_WH (getRange (current z))))
                                                   else let cmpmntzr = case (listToMaybe . map (tokenWord . snd) . toList . current) z of
                                                                         Nothing -> C_PHI
                                                                         Just c -> C_WORD c
@@ -205,7 +205,7 @@ constructCP tagged vprop = do
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
-                                                  then (C_PHI,Just (SpecCP_WH z))
+                                                  then (C_PHI,Just (SpecCP_WH (getRange (current z))))
                                                   else let cmpmntzr = case (listToMaybe . map (tokenWord . snd) . toList . current) z of
                                                                         Nothing -> C_PHI
                                                                         Just c -> C_WORD c
@@ -336,7 +336,9 @@ whMovement tagged (w,cp) = do
                  return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (SpecTP_DP dp'))))
              <|>
              (do -- free relative clause
-                 dp' <- splitDP tagged . mkOrdDP <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+                 rng_wh <- hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+                 z_wh <- hoistMaybe (listToMaybe (extractZipperByRange rng_wh (tagged^.pennTree)))
+                 let dp' = splitDP tagged (mkOrdDP z_wh)
                  w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng_cp (reverse ps) w dp')
                  lift (put (toBitree w_dom'))
                  (w',_) <- retrieveWCP rng_cp
@@ -357,7 +359,9 @@ whMovement tagged (w,cp) = do
              rewriteX'TreeForModifier rf0 w z')
          <|>
          (do -- free relative clause
-             z' <- splitDP tagged . mkOrdDP <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+             rng_wh <- hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+             z_wh <- hoistMaybe (listToMaybe (extractZipperByRange rng_wh (tagged^.pennTree)))
+             let z' = splitDP tagged (mkOrdDP z_wh)
              w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng_cp ps w z')
              lift (put (toBitree w_dom'))
              (w',_) <- retrieveWCP rng_cp

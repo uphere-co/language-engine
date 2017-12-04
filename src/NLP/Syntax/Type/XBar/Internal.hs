@@ -322,12 +322,12 @@ data Complementizer = C_PHI              -- ^ empty complementizer
 
 
 data SpecCP t = SpecCP_WHPHI           -- ^ empty Wh-word
-              | SpecCP_WH (Zipper t)   -- ^ Wh-word
+              | SpecCP_WH Range        -- ^ Wh-phrase, this should be DP or PP. Later, we will change it to DP or PP.
               | SpecCP_Topic (TraceChain (CompVP t)) -- ^ topicalization (AdjunctCP for the time being)
 
 
 
-data AdjunctCP t = AdjunctCP_Unresolved Range -- (Zipper t)
+data AdjunctCP t = AdjunctCP_Unresolved Range
                  | AdjunctCP_CP         (CP t)
 
 

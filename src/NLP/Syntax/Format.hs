@@ -107,7 +107,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s\n\
         formatSpecCP :: Maybe (SpecCP (Lemma ': as)) -> (String,String)
         formatSpecCP Nothing              = ("","")
         formatSpecCP (Just SpecCP_WHPHI)  = ("phi_WH","")
-        formatSpecCP (Just (SpecCP_WH z)) = (formatposchunk (rootTag (current z)), show (gettoken z))
+        formatSpecCP (Just (SpecCP_WH rng)) = ("WH",show rng) -- (formatposchunk (rootTag (current z)), show (gettoken z))
         formatSpecCP (Just (SpecCP_Topic _)) = ("Topic","Topic")
         --
         (head1,head2) = fmtComplementizer (cp^.headX)
