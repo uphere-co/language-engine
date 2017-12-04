@@ -104,9 +104,10 @@ mainHtml fileimgs =
 
 onefigure (fn,imglst) =
   H.li $ do
-    (H.div (H.toHtml (T.pack fn)))
-    (H.div (H.toHtml (imglst^.ix 0._2)))
+    (H.div (H.h1 (H.toHtml (T.pack fn))))
+    (H.div (H.h3 (H.toHtml (imglst^.ix 0._2))))
     H.img ! A.src (H.stringValue (fn ++ "_1.png"))
+    H.hr
 
 createIndex :: [(FilePath,[(Int,Text,MeaningGraph)])] -> IO ()
 createIndex fileimgs = TLIO.writeFile "index.html" (renderHtml (mainHtml fileimgs))
