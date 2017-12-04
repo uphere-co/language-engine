@@ -76,6 +76,7 @@ library
                        jvm,
                        lens,
                        monad-loops,
+                       mtl,
                        process,
                        protocol-buffers,
                        split,
