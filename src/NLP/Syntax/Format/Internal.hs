@@ -27,17 +27,17 @@ showRange rng = T.pack (printf "%-7s" (show rng))
 formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
 
-rangeText :: Either Range (DetP as) -> Text
-rangeText (Right x) = x^.maximalProjection.to (T.pack . show) -- complement.headX.to show.to T.pack
-rangeText (Left x) = (T.pack . show) x -- (T.pack.show.getRange.current) x
+formatSpecTP :: SpecTP as -> Text
+formatSpecTP (SpecTP_DP x) = x^.maximalProjection.to (T.pack . show)
+formatSpecTP (SpecTP_Unresolved x) = (T.pack . show) x
 
 
 formatCompDP :: CompDP t -> Text
 formatCompDP (CompDP_Unresolved rng) = T.pack (show rng)
 formatCompDP (CompDP_CP cp) = case cp^.headX of
-                                C_PHI -> "CP" <> rangeText (Left (cp^.maximalProjection))
+                                C_PHI -> "CP" <> cp^.maximalProjection.to show.to T.pack
                                 C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'
-                                                   <> rangeText (Left (cp^.maximalProjection))
+                                                   <> cp^.maximalProjection.to show.to T.pack
 formatCompDP (CompDP_PP pp) = formatPP pp
 
 
@@ -56,7 +56,7 @@ formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
 
 
 formatDP :: DetP t -> Text
-formatDP dp = "(DP"        <> rangeText (Right dp) <>
+formatDP dp = "(DP"        <> dp^.maximalProjection.to show.to T.pack <>
               "[D: "       <> maybe "" (T.pack.show) (dp^.headX.hd_range) <>
               " NP: "      <> maybe "" (T.pack.show) (dp^?complement._Just.headX.hn_range) <>
               " spec: "    <> T.intercalate " " (map (T.pack.show) (dp^.specifier)) <>
@@ -68,9 +68,9 @@ formatDP dp = "(DP"        <> rangeText (Right dp) <>
 formatCompVP :: CompVP as -> Text
 formatCompVP (CompVP_Unresolved z)  = "unresolved" <> T.pack (show (getRange (current z)))
 formatCompVP (CompVP_CP cp) = case cp^.headX of
-                                C_PHI -> "CP" <> rangeText (Left (cp^.maximalProjection))
+                                C_PHI -> "CP" <> cp^.maximalProjection.to show.to T.pack
                                 C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'
-                                                   <> rangeText (Left (cp^.maximalProjection))
+                                                   <> cp^.maximalProjection.to show.to T.pack
 formatCompVP (CompVP_DP dp) = formatDP dp
 formatCompVP (CompVP_PP pp) = formatPP pp
 

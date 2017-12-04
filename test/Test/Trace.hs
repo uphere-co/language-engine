@@ -244,7 +244,7 @@ checkTrace c =
     cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'tr)
     
     case c^._3._1 of
-      Subj   -> let dp = fmap (either (const "") (headTextDP tagged)) (cp ^.complement.specifier)  -- for the time being. ignore CP subject
+      Subj   -> let dp = fmap (\case SpecTP_DP dp -> headTextDP tagged dp; _ -> "") (cp ^.complement.specifier)  -- for the time being. ignore CP subject
                 in return (dp == c ^._3._2)
       Comp n -> do let comps = cp ^.complement.complement.complement
                    comp <- comps ^? ix (n-1)

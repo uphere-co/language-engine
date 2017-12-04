@@ -300,15 +300,19 @@ mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [AdjunctVP t] -> [TraceChain (
 mkVerbP vp vprop adjs comps = XP vprop vp () adjs comps
 
 
+data SpecTP t = SpecTP_Unresolved Range
+              | SpecTP_DP (DetP t)
+
+
 type instance Property   'X_T t = ()
 type instance Maximal    'X_T t = Zipper t
-type instance Specifier  'X_T t = TraceChain (Either Range (DetP t))
+type instance Specifier  'X_T t = TraceChain (SpecTP t) --  (Either Range (DetP t))
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Zipper t -> TraceChain (Either Range (DetP t)) -> VerbP t -> TP t
+mkTP :: Zipper t -> TraceChain (SpecTP t) -> VerbP t -> TP t
 mkTP tp mdp vp = XP () tp mdp () vp
 
 

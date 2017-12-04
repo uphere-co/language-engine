@@ -94,7 +94,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s\n\
                 (T.intercalate " | " (cp^..adjunct.traverse.to formatAdjunctCP))
                 (maybe "null" show (getchunk (cp^.complement.maximalProjection)))
                 (show (gettoken (cp^.complement.maximalProjection)))
-                (formatTraceChain rangeText (cp^.complement.specifier))
+                (formatTraceChain formatSpecTP (cp^.complement.specifier))
                 (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 ((show . gettoken) (cp^.complement.complement.maximalProjection))
                 ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain formatCompVP ))))

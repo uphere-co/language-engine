@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module NLP.Syntax.Type.XBar
@@ -43,13 +44,13 @@ specDPText tagged x = case x of
                         SpDP_Gen rng -> T.intercalate " " (tokensByRange tagged rng)
 
 
-compVPToEither :: CompVP t -> Either Range (DetP t)
-compVPToEither (CompVP_Unresolved x) = Left (getRange (current x))
-compVPToEither (CompVP_CP cp)        = Left (cp^.maximalProjection)
-compVPToEither (CompVP_DP y)         = Right y
-compVPToEither (CompVP_PP y)         = case y^.complement of
-                                         CompPP_DP dp -> Right dp
-                                         CompPP_Gerund z -> Left (getRange (current z))
+compVPToSpecTP :: CompVP t -> SpecTP t -- Either Range (DetP t)
+compVPToSpecTP (CompVP_Unresolved x) = SpecTP_Unresolved (getRange (current x))
+compVPToSpecTP (CompVP_CP cp)        = SpecTP_Unresolved (cp^.maximalProjection)
+compVPToSpecTP (CompVP_DP y)         = SpecTP_DP y
+compVPToSpecTP (CompVP_PP y)         = case y^.complement of
+                                         CompPP_DP dp -> SpecTP_DP dp
+                                         CompPP_Gerund z -> SpecTP_Unresolved (getRange (current z))
 
 
 headTextDP :: TaggedLemma t -> DetP t -> Text
@@ -83,11 +84,11 @@ compVPToHeadText tagged  (CompVP_PP pp)        = case pp^.complement of
 
 
 compVPToRange :: CompVP t -> Range
-compVPToRange = either id (\dp->dp^.maximalProjection) . compVPToEither
+compVPToRange = (\case SpecTP_Unresolved rng -> rng; SpecTP_DP dp -> dp^.maximalProjection) . compVPToSpecTP
 
 
 
 
 compPPToRange :: CompPP t -> Range
-compPPToRange (CompPP_DP dp) = dp^.maximalProjection -- fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range)
+compPPToRange (CompPP_DP dp) = dp^.maximalProjection
 compPPToRange (CompPP_Gerund z) = getRange (current z)

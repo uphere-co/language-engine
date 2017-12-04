@@ -1,9 +1,10 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TupleSections       #-}
 
 module Test.Verb.Complement where
 
@@ -250,8 +251,8 @@ checkSubjCompAdjunct c = fromMaybe False $ do
   let subj_test = c^._3._1
       b_subj = fromMaybe False $ do
                  subj <- cp^?complement.specifier.trResolved._Just
-                 let sclass = subj^?_Right.headX.hd_class
-                     stxt = either (T.intercalate " " . tokensByRange tagged) (headTextDP tagged) subj
+                 let sclass = subj^?_SpecTP_DP.headX.hd_class
+                     stxt = (\case SpecTP_Unresolved x -> (T.intercalate " " . tokensByRange tagged) x; SpecTP_DP dp -> headTextDP tagged dp) subj
                  case subj_test^._2 of
                    Nothing -> return (stxt == subj_test^._1)
                    Just p -> return (stxt == subj_test^._1 && sclass == Just p)
