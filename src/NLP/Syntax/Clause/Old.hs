@@ -8,7 +8,7 @@ import           Control.Lens
 import           Data.Bifoldable
 import           Data.Either
 import           Data.List                    (find)
-import           Data.Maybe                   (fromMaybe,mapMaybe)
+import           Data.Maybe                   (fromMaybe,listToMaybe,mapMaybe)
 import           Data.Monoid                  (First(..))
 import           Data.Text                    (Text)
 --
@@ -64,7 +64,9 @@ findPAWS tagged tr vp x'tr = do
                                            -- anyway need to be rewritten.
   let rng_cp = cp^.maximalProjection
   cp' <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng_cp)) x'tr)
-  predicateArgWS tagged cp' <$> findVerb (vp^.vp_index) tr <*> pure (cp' ^.. complement.complement.adjunct.traverse._AdjunctVP_Unresolved)
+  let zs_adj = mapMaybe (\rng_adj -> listToMaybe (extractZipperByRange rng_adj (tagged^.pennTree)))
+                        (cp' ^.. complement.complement.adjunct.traverse._AdjunctVP_Unresolved)  -- can be dangerous
+  predicateArgWS tagged cp' <$> findVerb (vp^.vp_index) tr <*> pure zs_adj
 
 
 ---------

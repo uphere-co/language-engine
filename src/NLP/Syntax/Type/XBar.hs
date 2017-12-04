@@ -44,13 +44,13 @@ specDPText tagged x = case x of
                         SpDP_Gen rng -> T.intercalate " " (tokensByRange tagged rng)
 
 
-compVPToSpecTP :: CompVP t -> SpecTP t -- Either Range (DetP t)
-compVPToSpecTP (CompVP_Unresolved x) = SpecTP_Unresolved (getRange (current x))
+compVPToSpecTP :: CompVP t -> SpecTP t
+compVPToSpecTP (CompVP_Unresolved x) = SpecTP_Unresolved x
 compVPToSpecTP (CompVP_CP cp)        = SpecTP_Unresolved (cp^.maximalProjection)
 compVPToSpecTP (CompVP_DP y)         = SpecTP_DP y
 compVPToSpecTP (CompVP_PP y)         = case y^.complement of
                                          CompPP_DP dp -> SpecTP_DP dp
-                                         CompPP_Gerund z -> SpecTP_Unresolved (getRange (current z))
+                                         CompPP_Gerund rng -> SpecTP_Unresolved rng
 
 
 headTextDP :: TaggedLemma t -> DetP t -> Text
@@ -74,12 +74,12 @@ headRangeDP dp =
 
 
 compVPToHeadText :: TaggedLemma t -> CompVP t -> Text
-compVPToHeadText _tagged (CompVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
-compVPToHeadText tagged (CompVP_CP cp)         = T.intercalate " " (tokensByRange tagged (cp^.maximalProjection))
-compVPToHeadText tagged  (CompVP_DP dp)        = headTextDP tagged dp
-compVPToHeadText tagged  (CompVP_PP pp)        = case pp^.complement of
-                                                   CompPP_DP dp -> headTextDP tagged dp
-                                                   CompPP_Gerund z -> (T.intercalate " " . map (tokenWord.snd) . toList . current) z
+compVPToHeadText tagged (CompVP_Unresolved rng) = T.intercalate " " (tokensByRange tagged rng)
+compVPToHeadText tagged (CompVP_CP cp)          = T.intercalate " " (tokensByRange tagged (cp^.maximalProjection))
+compVPToHeadText tagged (CompVP_DP dp)          = headTextDP tagged dp
+compVPToHeadText tagged (CompVP_PP pp)          = case pp^.complement of
+                                                    CompPP_DP dp      -> headTextDP tagged dp
+                                                    CompPP_Gerund rng -> T.intercalate " " (tokensByRange tagged rng)
 
 
 
@@ -91,4 +91,4 @@ compVPToRange = (\case SpecTP_Unresolved rng -> rng; SpecTP_DP dp -> dp^.maximal
 
 compPPToRange :: CompPP t -> Range
 compPPToRange (CompPP_DP dp) = dp^.maximalProjection
-compPPToRange (CompPP_Gerund z) = getRange (current z)
+compPPToRange (CompPP_Gerund rng) = rng

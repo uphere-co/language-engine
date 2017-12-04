@@ -18,8 +18,9 @@ import           Control.Monad                          ((<=<),(>=>),guard,void)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
+import           Data.Attribute                         (ahead)
 import           Data.Bitraversable                     (bitraverse)
-import           Data.Either                            (rights)
+import           Data.Foldable                          (toList)
 import qualified Data.HashMap.Strict               as HM
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (Last(..))
@@ -97,8 +98,13 @@ complementsOfVerb :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                   -> ([TraceChain (CompVP t)],Maybe (TraceChain (CompVP t)), [AdjunctVP t])
 complementsOfVerb tagged vprop z_vp =
   let (cs,mspec,adjs) = let (xs,mtop) = complementCandidates vprop z_vp
-                            xs' = map xform xs ++ maybeToList (mtop >>= \top -> return (TraceChain (Left (singletonLZ Moved)) (Just (CompVP_Unresolved top)), []))
-                            mspec' = mtop >>= \top -> return (TraceChain (Right [Moved]) (Just (CompVP_Unresolved top)))
+                            xs' = map xform xs ++
+                                  maybeToList (mtop >>= \top -> do
+                                                 let rng_top = getRange (current top)
+                                                 return (TraceChain (Left (singletonLZ Moved)) (Just (CompVP_Unresolved rng_top)), []))
+                            mspec' = mtop >>= \top -> do
+                                                 let rng_top = getRange (current top)
+                                                 return (TraceChain (Right [Moved]) (Just (CompVP_Unresolved rng_top)))
                         in (map fst xs',mspec',concatMap snd xs')
   in case vprop^.vp_voice of
        Active -> (cs,mspec,adjs)
@@ -110,7 +116,7 @@ complementsOfVerb tagged vprop z_vp =
     xform_pp z = (TraceChain (Right []) (checkTimePrep tagged <$> mkPPFromZipper tagged PC_Other z), [])
       -- checkTimePrep tagged
 
-    xform_cp z = (TraceChain (Right []) (Just (CompVP_Unresolved z)), [])
+    xform_cp z = (TraceChain (Right []) (Just (CompVP_Unresolved (getRange (current z)))), [])
     xform z = case rootTag (current z) of
                 Left NP    -> xform_dp z
                 Left PP    -> xform_pp z
@@ -126,7 +132,7 @@ allAdjunctCPOfVerb vprop =
     let mcomma = firstSiblingBy next (isPOSAs M_COMMA) =<< headVP vprop  -- ad hoc separation using comma
     in case mcomma of
          Nothing -> []
-         Just comma -> map AdjunctCP_Unresolved (siblingsBy next checkS comma)
+         Just comma -> map (AdjunctCP_Unresolved . getRange . current) (siblingsBy next checkS comma)
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkS z = case tag z of
@@ -177,7 +183,7 @@ constructCP tagged vprop = do
             (subj0,sadjs) = identifySubject tagged s z_vp
             subj = ((trResolved . _Just . _SpecTP_DP) %~ splitDP tagged) subj0
             subj_dps = subj^..trResolved._Just
-            verbp = mkVerbP z_vp vprop (cadjs++sadjs) comps
+            verbp = mkVerbP rng_vp (simplifyVProp vprop) (cadjs++sadjs) comps
             dps = subj_dps ++ comps_dps
         case cptag' of
           N.RT   ->
@@ -187,9 +193,12 @@ constructCP tagged vprop = do
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
-                                                  then (C_PHI,Just (SpecCP_WH z))
-                                                  else (C_WORD z,Nothing)
-            in return (mkCP cphead rng_cp' cpspec adjs (mkTP z_tp subj verbp),dps)
+                                                  then (C_PHI,Just (SpecCP_WH (getRange (current z))))
+                                                  else let cmpmntzr = case (listToMaybe . map (ahead . getAnnot . snd) . toList . current) z of
+                                                                        Nothing -> C_PHI
+                                                                        Just c -> C_WORD c
+                                                       in (cmpmntzr, Nothing)
+            in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),dps)
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
                                     Just top -> (C_PHI,Just (SpecCP_Topic top))
@@ -197,26 +206,24 @@ constructCP tagged vprop = do
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
-                                                  then (C_PHI,Just (SpecCP_WH z))
-                                                  else (C_WORD z,Nothing)
-            in return (mkCP cphead rng_cp' cpspec adjs (mkTP z_tp subj verbp),dps)
+                                                  then (C_PHI,Just (SpecCP_WH (getRange (current z))))
+                                                  else let cmpmntzr = case (listToMaybe . map (ahead . getAnnot . snd) . toList . current) z of
+                                                                        Nothing -> C_PHI
+                                                                        Just c -> C_WORD c
+                                                       in (cmpmntzr,Nothing)
+            in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),dps)
           N.CL _ ->
-            return (mkCP C_PHI rng_tp Nothing adjs (mkTP z_tp subj verbp),dps)
+            return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),dps)
           _      -> -- somewhat problematic case?
-            return (mkCP C_PHI rng_tp Nothing adjs (mkTP z_tp subj verbp),dps)
+            return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),dps)
       _ -> -- reduced relative clause
         let (comps,_,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToSpecTP)
-            verbp = mkVerbP z_vp vprop cadjs comps
+            verbp = mkVerbP rng_vp (simplifyVProp vprop) cadjs comps
             nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
-        in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP z_vp nullsubj verbp),comps_dps)
+        in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP rng_vp nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
-
-
-
--- cpRange :: CP xs -> Range
--- cpRange cp = cp^.maximalProjection.to (getRange . current)
 
 
 hierarchyBits :: TaggedLemma (Lemma ': as)
@@ -297,8 +304,8 @@ rewriteX'TreeForFreeWH rng ps w z' = do
   let vp_dom = cp_dom^.complement.complement
       comps = vp_dom^.complement
       comps' = flip map comps $ \comp -> fromMaybe comp $ do
-                 z_comp <- comp^?trResolved._Just._CompVP_Unresolved
-                 guard (getRange (current z_comp) == rng)
+                 rng_comp <- comp^?trResolved._Just._CompVP_Unresolved
+                 guard (rng_comp == rng)
                  return (TraceChain (Right (ps++[Moved,WHPRO])) (Just (CompVP_DP z')))
       rf = _2._CPCase.complement.complement.complement .~ comps'
   return (replaceFocusItem rf rf w_dom)
@@ -330,7 +337,9 @@ whMovement tagged (w,cp) = do
                  return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (SpecTP_DP dp'))))
              <|>
              (do -- free relative clause
-                 dp' <- splitDP tagged . mkOrdDP <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+                 rng_wh <- hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+                 z_wh <- hoistMaybe (listToMaybe (extractZipperByRange rng_wh (tagged^.pennTree)))
+                 let dp' = splitDP tagged (mkOrdDP z_wh)
                  w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng_cp (reverse ps) w dp')
                  lift (put (toBitree w_dom'))
                  (w',_) <- retrieveWCP rng_cp
@@ -351,7 +360,9 @@ whMovement tagged (w,cp) = do
              rewriteX'TreeForModifier rf0 w z')
          <|>
          (do -- free relative clause
-             z' <- splitDP tagged . mkOrdDP <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+             rng_wh <- hoistMaybe (cp^?specifier._Just._SpecCP_WH)
+             z_wh <- hoistMaybe (listToMaybe (extractZipperByRange rng_wh (tagged^.pennTree)))
+             let z' = splitDP tagged (mkOrdDP z_wh)
              w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng_cp ps w z')
              lift (put (toBitree w_dom'))
              (w',_) <- retrieveWCP rng_cp
@@ -440,7 +451,7 @@ resolveCP xtr = rewriteTree action xtr
       mx' <- flip traverse mx $ \x ->
                ((do
                     tr <- lift get
-                    rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved.to current.to getRange)
+                    rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved)
                     y <- hoistMaybe (extractZipperById rng tr)
                     y' <- replace y
                     cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
@@ -458,7 +469,7 @@ resolveCP xtr = rewriteTree action xtr
       let xs = cp^.complement.complement.complement
       xs' <- flip traverse xs $ \x ->
                ((do tr <- lift get
-                    rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved.to current.to getRange)
+                    rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved)
                     y <- hoistMaybe (extractZipperById rng tr)
                     y' <- replace y
                     cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
@@ -476,7 +487,7 @@ resolveCP xtr = rewriteTree action xtr
       let xs = cp^.adjunct
       xs' <- flip traverse xs $ \x ->
                ((do tr <- lift get
-                    rng <- hoistMaybe (x^?_AdjunctCP_Unresolved.to current.to getRange)
+                    rng <- hoistMaybe (x^?_AdjunctCP_Unresolved)
                     y <- hoistMaybe (extractZipperById rng tr)
                     y' <- replace y
                     cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)

@@ -260,7 +260,7 @@ data HeadPP = HeadPP { _hp_prep :: Prep
 
 
 data CompPP t = CompPP_DP (DetP t)
-              | CompPP_Gerund (Zipper t)
+              | CompPP_Gerund Range
 
 --
 type instance Property   'X_P t = HeadPP
@@ -276,27 +276,27 @@ mkPP (prep,pclass) rng dp = XP (HeadPP prep pclass) rng () () (CompPP_DP dp)
 
 
 mkPPGerund :: (Prep,PrepClass) -> Range -> Zipper t -> PP t
-mkPPGerund (prep,pclass) rng z = XP (HeadPP prep pclass) rng () () (CompPP_Gerund z)
+mkPPGerund (prep,pclass) rng z = XP (HeadPP prep pclass) rng () () (CompPP_Gerund (getRange (current z)))
 
-data CompVP t = CompVP_Unresolved (Zipper t)
+data CompVP t = CompVP_Unresolved Range
               | CompVP_CP (CP t)
               | CompVP_DP (DetP t)
               | CompVP_PP (PP t)
 
 
-data AdjunctVP t = AdjunctVP_Unresolved (Zipper t)
+data AdjunctVP t = AdjunctVP_Unresolved Range
                  | AdjunctVP_PP (PP t)
 
 
-type instance Property   'X_V t = VerbProperty (Zipper t)
-type instance Maximal    'X_V t = Zipper t
+type instance Property   'X_V t = VerbProperty Text -- (Zipper t)
+type instance Maximal    'X_V t = Range
 type instance Specifier  'X_V t = ()
 type instance Adjunct    'X_V t = [AdjunctVP t]
 type instance Complement 'X_V t = [TraceChain (CompVP t)]
 
 type VerbP = XP 'X_V
 
-mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [AdjunctVP t] -> [TraceChain (CompVP t)] -> VerbP t
+mkVerbP :: Range -> VerbProperty Text -> [AdjunctVP t] -> [TraceChain (CompVP t)] -> VerbP t
 mkVerbP vp vprop adjs comps = XP vprop vp () adjs comps
 
 
@@ -305,41 +305,41 @@ data SpecTP t = SpecTP_Unresolved Range
 
 
 type instance Property   'X_T t = ()
-type instance Maximal    'X_T t = Zipper t
-type instance Specifier  'X_T t = TraceChain (SpecTP t) --  (Either Range (DetP t))
+type instance Maximal    'X_T t = Range
+type instance Specifier  'X_T t = TraceChain (SpecTP t)
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
 
 type TP = XP 'X_T
 
-mkTP :: Zipper t -> TraceChain (SpecTP t) -> VerbP t -> TP t
+mkTP :: Range -> TraceChain (SpecTP t) -> VerbP t -> TP t
 mkTP tp mdp vp = XP () tp mdp () vp
 
 
-data Complementizer t = C_PHI              -- ^ empty complementizer
-                      | C_WORD (Zipper t)  -- ^ complementizer word
-                      -- deriving (Show,Eq,Ord)
+data Complementizer = C_PHI              -- ^ empty complementizer
+                    | C_WORD Lemma       -- ^ complementizer lemma
+                    -- deriving (Show,Eq,Ord)
 
 
 data SpecCP t = SpecCP_WHPHI           -- ^ empty Wh-word
-              | SpecCP_WH (Zipper t)   -- ^ Wh-word
+              | SpecCP_WH Range        -- ^ Wh-phrase, this should be DP or PP. Later, we will change it to DP or PP.
               | SpecCP_Topic (TraceChain (CompVP t)) -- ^ topicalization (AdjunctCP for the time being)
 
 
 
-data AdjunctCP t = AdjunctCP_Unresolved (Zipper t)
+data AdjunctCP t = AdjunctCP_Unresolved Range
                  | AdjunctCP_CP         (CP t)
 
 
-type instance Property   'X_C t = Complementizer t
-type instance Maximal    'X_C t = Range -- Zipper t
+type instance Property   'X_C t = Complementizer
+type instance Maximal    'X_C t = Range
 type instance Specifier  'X_C t = Maybe (SpecCP t)
 type instance Adjunct    'X_C t = [AdjunctCP t]
 type instance Complement 'X_C t = TP t
 
 type CP = XP 'X_C
 
-mkCP :: Complementizer t -> Range {- Zipper t -} -> Maybe (SpecCP t) -> [AdjunctCP t] -> TP t -> CP t
+mkCP :: Complementizer -> Range -> Maybe (SpecCP t) -> [AdjunctCP t] -> TP t -> CP t
 mkCP mc rng spec adjs tp = XP mc rng spec adjs tp
 
 
