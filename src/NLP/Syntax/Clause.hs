@@ -181,7 +181,7 @@ constructCP tagged vprop = do
             (subj0,sadjs) = identifySubject tagged s z_vp
             subj = ((trResolved . _Just . _SpecTP_DP) %~ splitDP tagged) subj0
             subj_dps = subj^..trResolved._Just
-            verbp = mkVerbP z_vp vprop (cadjs++sadjs) comps
+            verbp = mkVerbP rng_vp vprop (cadjs++sadjs) comps
             dps = subj_dps ++ comps_dps
         case cptag' of
           N.RT   ->
@@ -212,7 +212,7 @@ constructCP tagged vprop = do
         let (comps,_,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToSpecTP)
-            verbp = mkVerbP z_vp vprop cadjs comps
+            verbp = mkVerbP rng_vp vprop cadjs comps
             nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
         in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP rng_vp nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current

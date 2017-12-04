@@ -78,7 +78,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s\n\
                      \Adjunct              :         %s\n\
                      \Tense Phrase         : %-6s\n\
                      \Determiner Phrase    :         %s\n\
-                     \Verb Phrase          : %-6s  %s\n\
+                     \Verb Phrase          : %-6s\n\
                      \Verb Complements     :       %s\n\
                      \Verb Adjunts         :       %s\n"
                 -- (maybe "null" show (getchunk (cp^.maximalProjection)))
@@ -89,8 +89,8 @@ formatCP cp = printf "Complementizer Phrase: %-6s\n\
                 -- (maybe "null" show (getchunk (cp^.complement.maximalProjection)))
                 (show (cp^.complement.maximalProjection))
                 (formatTraceChain formatSpecTP (cp^.complement.specifier))
-                (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
-                ((show . gettoken) (cp^.complement.complement.maximalProjection))
+                -- (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
+                (show (cp^.complement.complement.maximalProjection))
                 ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain formatCompVP ))))
                 ((T.intercalate " | " (cp^..complement.complement.adjunct.traverse.to formatAdjunctVP)))
 

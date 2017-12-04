@@ -289,14 +289,14 @@ data AdjunctVP t = AdjunctVP_Unresolved Range
 
 
 type instance Property   'X_V t = VerbProperty (Zipper t)
-type instance Maximal    'X_V t = Zipper t
+type instance Maximal    'X_V t = Range
 type instance Specifier  'X_V t = ()
 type instance Adjunct    'X_V t = [AdjunctVP t]
 type instance Complement 'X_V t = [TraceChain (CompVP t)]
 
 type VerbP = XP 'X_V
 
-mkVerbP :: Zipper t -> VerbProperty (Zipper t) -> [AdjunctVP t] -> [TraceChain (CompVP t)] -> VerbP t
+mkVerbP :: Range -> VerbProperty (Zipper t) -> [AdjunctVP t] -> [TraceChain (CompVP t)] -> VerbP t
 mkVerbP vp vprop adjs comps = XP vprop vp () adjs comps
 
 
@@ -305,7 +305,7 @@ data SpecTP t = SpecTP_Unresolved Range
 
 
 type instance Property   'X_T t = ()
-type instance Maximal    'X_T t = Range -- Zipper t
+type instance Maximal    'X_T t = Range
 type instance Specifier  'X_T t = TraceChain (SpecTP t)
 type instance Adjunct    'X_T t = ()
 type instance Complement 'X_T t = VerbP t
