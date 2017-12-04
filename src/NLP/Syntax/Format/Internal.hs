@@ -51,8 +51,8 @@ formatPP :: PP t -> Text
 formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
               "-" <>
               case pp^.complement of
-                CompPP_DP dp    -> formatDP dp
-                CompPP_Gerund z -> "ing" <> T.pack (show (getRange (current z)))
+                CompPP_DP dp      -> formatDP dp
+                CompPP_Gerund rng -> "ing" <> T.pack (show rng)
 
 
 formatDP :: DetP t -> Text

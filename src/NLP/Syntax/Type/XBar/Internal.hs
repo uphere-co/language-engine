@@ -260,7 +260,7 @@ data HeadPP = HeadPP { _hp_prep :: Prep
 
 
 data CompPP t = CompPP_DP (DetP t)
-              | CompPP_Gerund (Zipper t)
+              | CompPP_Gerund Range -- (Zipper t)
 
 --
 type instance Property   'X_P t = HeadPP
@@ -276,7 +276,7 @@ mkPP (prep,pclass) rng dp = XP (HeadPP prep pclass) rng () () (CompPP_DP dp)
 
 
 mkPPGerund :: (Prep,PrepClass) -> Range -> Zipper t -> PP t
-mkPPGerund (prep,pclass) rng z = XP (HeadPP prep pclass) rng () () (CompPP_Gerund z)
+mkPPGerund (prep,pclass) rng z = XP (HeadPP prep pclass) rng () () (CompPP_Gerund (getRange (current z)))
 
 data CompVP t = CompVP_Unresolved Range
               | CompVP_CP (CP t)
