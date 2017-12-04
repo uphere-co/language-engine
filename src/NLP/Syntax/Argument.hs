@@ -5,7 +5,7 @@
 
 module NLP.Syntax.Argument where
 
-import           Control.Lens                 ((^..),(^.),(^?),_1,_2,_Just,_Right,to)
+import           Control.Lens                 ((^..),(^.),(^?),_1,_2,_Just,to)
 import           Control.Monad                (join)
 import           Data.Bifunctor               (bimap)
 import           Data.Foldable                (toList)
@@ -54,15 +54,15 @@ phraseNodeType :: Maybe (TP as) -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Te
 phraseNodeType mtp z
   = let rng = getRange (current z)
         subj = do tp <- mtp
-                  dp <- tp^?specifier.trResolved._Just._Right   -- for the time being, later we will support CP subject
+                  dp <- tp^?specifier.trResolved._Just._SpecTP_DP   -- for the time being, later we will support CP subject
                   return (dp^.maximalProjection == rng)
         obj  = do tp <- mtp
                   -- The following must be changed to accommodate PP
-                  let os = zip [1..] (tp^..complement.complement.traverse.trResolved.to (fmap compVPToEither))
+                  let os = zip [1..] (tp^..complement.complement.traverse.trResolved.to (fmap compVPToSpecTP))
                   m <- flip find os $ \o ->
                          case o^._2 of
-                           Just (Right x) -> x^.maximalProjection == rng
-                           Just (Left x)  -> x == rng
+                           Just (SpecTP_DP x) -> x^.maximalProjection == rng
+                           Just (SpecTP_Unresolved x)  -> x == rng
                               -- x^?maximalProjection._Just.to current.to getRange == Just rng
                            Nothing        -> False
                   return (m^._1)

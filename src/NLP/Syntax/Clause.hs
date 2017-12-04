@@ -142,7 +142,7 @@ allAdjunctCPOfVerb vprop =
 identifySubject :: TaggedLemma (Lemma ': as)
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)   -- ^ Verb maximal projection
-                -> (TraceChain (Either Range (DetP (Lemma ': as))), [AdjunctVP (Lemma ': as)])
+                -> (TraceChain (SpecTP (Lemma ': as)), [AdjunctVP (Lemma ': as)])
 identifySubject tagged tag vp = maybe nul smp r
   where
     r = case tag of
@@ -151,7 +151,7 @@ identifySubject tagged tag vp = maybe nul smp r
     nul = (TraceChain (Left (singletonLZ NULL)) Nothing,[])
     smp z = let dp = splitDP tagged (mkOrdDP z)
                 (dp',adjs) = identifyInternalTimePrep tagged dp
-            in (TraceChain (Right []) (Just (Right dp')),adjs)
+            in (TraceChain (Right []) (Just (SpecTP_DP dp')),adjs)
 
 
 --
@@ -159,7 +159,7 @@ identifySubject tagged tag vp = maybe nul smp r
 --
 constructCP :: TaggedLemma (Lemma ': as)
             -> VerbProperty (Zipper (Lemma ': as))
-            -> Maybe (CP (Lemma ': as),[Either Range (DetP (Lemma ': as))])
+            -> Maybe (CP (Lemma ': as),[SpecTP (Lemma ': as)])
 constructCP tagged vprop = do
     z_vp <- maximalProjectionVP vprop
     let rng_vp = getRange (current z_vp)
@@ -173,9 +173,9 @@ constructCP tagged vprop = do
         cptag' <- N.convert <$> getchunk z_cp'
         let (comps,mtop,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
-            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
+            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToSpecTP)
             (subj0,sadjs) = identifySubject tagged s z_vp
-            subj = ((trResolved . _Just . _Right) %~ splitDP tagged) subj0
+            subj = ((trResolved . _Just . _SpecTP_DP) %~ splitDP tagged) subj0
             subj_dps = subj^..trResolved._Just
             verbp = mkVerbP z_vp vprop (cadjs++sadjs) comps
             dps = subj_dps ++ comps_dps
@@ -207,7 +207,7 @@ constructCP tagged vprop = do
       _ -> -- reduced relative clause
         let (comps,_,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
-            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToEither)
+            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToSpecTP)
             verbp = mkVerbP z_vp vprop cadjs comps
             nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
         in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP z_vp nullsubj verbp),comps_dps)
@@ -244,7 +244,7 @@ identifyCPHierarchy :: TaggedLemma (Lemma ': as)
                     -> [VerbProperty (Zipper (Lemma ': as))]
                     -> [X'Tree (Lemma ': as)]
 identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
-  where x'map = (HM.fromList . concat . mapMaybe (hierarchyBits tagged . (_2 %~ rights) <=< constructCP tagged)) vps
+  where x'map = (HM.fromList . concat . mapMaybe (hierarchyBits tagged . (_2 %~ (\x -> x^..traverse._SpecTP_DP)) <=< constructCP tagged)) vps
         rngs = HM.keys x'map
         rtr = rangeTree rngs
         tofull rng = HM.lookup rng x'map
@@ -307,7 +307,7 @@ rewriteX'TreeForFreeWH rng ps w z' = do
 whMovement :: TaggedLemma (Lemma ': as)
            -> (X'Zipper (Lemma ': as),CP (Lemma ': as))
            -> State (X'Tree (Lemma ': as))
-                    (TraceChain (Either Range (DetP (Lemma ': as))))
+                    (TraceChain (SpecTP (Lemma ': as)))
 whMovement tagged (w,cp) = do
   -- letter z denotes zipper for PennTree, w denotes zipper for X'Tree
   let rng_cp = cp^.maximalProjection
@@ -327,7 +327,7 @@ whMovement tagged (w,cp) = do
             ((do -- ordinary relative clause
                  dp' <- splitDP tagged . mkOrdDP <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
                  rewriteX'TreeForModifier id w dp'
-                 return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right dp'))))
+                 return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (SpecTP_DP dp'))))
              <|>
              (do -- free relative clause
                  dp' <- splitDP tagged . mkOrdDP <$> hoistMaybe (cp^?specifier._Just._SpecCP_WH)
@@ -335,7 +335,7 @@ whMovement tagged (w,cp) = do
                  lift (put (toBitree w_dom'))
                  (w',_) <- retrieveWCP rng_cp
                  rewriteX'TreeForModifier id w' dp'
-                 return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (Right dp')))))
+                 return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (SpecTP_DP dp')))))
         _    -> return spec
     Right ps -> do
       -- without trace in subject
@@ -364,7 +364,7 @@ whMovement tagged (w,cp) = do
 
 resolveSilentPRO :: TaggedLemma (Lemma ': as)
                  -> (X'Zipper (Lemma ': as),CP (Lemma ': as))
-                 -> MaybeT (State (X'Tree (Lemma ': as))) (TraceChain (Either Range (DetP (Lemma ': as))))
+                 -> MaybeT (State (X'Tree (Lemma ': as))) (TraceChain (SpecTP (Lemma ': as)))
 resolveSilentPRO tagged (z,cp) = do
   let spec = cp^.complement.specifier
   case spec^.trChain of
@@ -388,8 +388,8 @@ resolveSilentPRO tagged (z,cp) = do
 -- | resolve passive DP-movement. this is ad hoc yet.
 --
 resolveVPComp :: Range
-              -> TraceChain (Either Range (DetP (Lemma ': as)))
-              -> MaybeT (State (X'Tree (Lemma ': as))) (TraceChain (Either Range (DetP (Lemma ': as))))
+              -> TraceChain (SpecTP (Lemma ': as))
+              -> MaybeT (State (X'Tree (Lemma ': as))) (TraceChain (SpecTP (Lemma ': as)))
 resolveVPComp rng spec = do
   (w,cp) <- retrieveWCP rng
   let verbp = cp^.complement.complement
@@ -400,7 +400,7 @@ resolveVPComp rng spec = do
       case cs of
         [] -> trace "No complements?" $ return spec
         c:rest -> do
-          let r = either (const Nothing) (Just . CompVP_DP) =<< spec^.trResolved  -- ignore CP case for the time being.
+          let r = (\case SpecTP_Unresolved _ -> Nothing; SpecTP_DP dp -> Just (CompVP_DP dp)) =<< spec^.trResolved  -- ignore CP case for the time being.
               c' = TraceChain (mergeLeftELZ (c^.trChain) (spec^.trChain)) r
               rf = _2._CPCase.complement.complement.complement .~ (c':rest)
               w' = replaceFocusItem rf rf w
@@ -415,7 +415,7 @@ resolveVPComp rng spec = do
 --
 resolveDP :: TaggedLemma (Lemma ': as)
           -> Range
-          -> State (X'Tree (Lemma ': as)) (TraceChain (Either Range (DetP (Lemma ': as))))
+          -> State (X'Tree (Lemma ': as)) (TraceChain (SpecTP (Lemma ': as)))
 resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   (w,cp) <- retrieveWCP rng
   if is _Just (cp^.specifier)  -- relative clause
@@ -490,7 +490,7 @@ resolveCP xtr = rewriteTree action xtr
       return z'
 
 
-bindingSpec :: Range -> TraceChain (Either Range (DetP t)) -> MaybeT (State (X'Tree t)) (X'Zipper t)
+bindingSpec :: Range -> TraceChain (SpecTP t) -> MaybeT (State (X'Tree t)) (X'Zipper t)
 bindingSpec rng spec = do
   z <- hoistMaybe . extractZipperById rng =<< lift get
   let rf = _2._CPCase.complement.specifier .~ spec
@@ -507,7 +507,7 @@ connectRaisedDP rng = do
   c1:c2:[] <- return (cp^.complement.complement.complement)
   rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.maximalProjection)
   cp' <- hoistMaybe (c2^?trResolved._Just._CompVP_CP)
-  rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._Right.maximalProjection)
+  rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._SpecTP_DP.maximalProjection)
   if rng1 == rng_dp
     then do
       let rf = (_2._CPCase.complement.specifier .~ emptyTraceChain)

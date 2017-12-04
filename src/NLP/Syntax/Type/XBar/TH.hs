@@ -42,6 +42,8 @@ makePrisms ''CompVP
 
 makePrisms ''AdjunctVP
 
+makePrisms ''SpecTP
+
 makePrisms ''Complementizer
 
 makePrisms ''SpecCP
