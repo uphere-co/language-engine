@@ -76,7 +76,7 @@ main = do
   clspath <- getEnv "CLASSPATH"
   cfg <- loadLexDataConfig "../../lexicon-builder/config.json.mark"  >>= \case Left err -> error err
                                                                                Right x -> return x
-  (apredata,netagger) <- loadConfig False cfg
+  (apredata,netagger,_) <- loadConfig False cfg
   withFile "testset.json" WriteMode $ \h ->
     J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
       pp <- loadJVM

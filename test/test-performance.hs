@@ -127,7 +127,7 @@ main = do
   tcfg <- execParser progOption
   cfg <- loadLexDataConfig (tcfg^.tconfig_lexconfig) >>= \case Left err -> error err
                                                                Right x -> return x
-  (apredata,_netagger) <- loadConfig True cfg
+  (apredata,_netagger,_) <- loadConfig True cfg
   let old = tcfg^.tconfig_old
       new = tcfg^.tconfig_new
   putStrLn "create performance testing set"
