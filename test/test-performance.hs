@@ -43,8 +43,10 @@ import Type
 
 
 data TestConfig = TestConfig { _tconfig_lexconfig :: FilePath
-                             , _tconfig_testset :: FilePath
-                             , _tconfig_outputdir     :: FilePath
+                             , _tconfig_testset   :: FilePath
+                             , _tconfig_outputdir :: FilePath
+                             , _tconfig_old       :: FilePath
+                             , _tconfig_new       :: FilePath
                              }
                 deriving Show
 
@@ -54,7 +56,9 @@ pOptions :: Parser TestConfig
 pOptions = TestConfig
            <$> strOption (long "config" <> short 'c' <> help "config file")
            <*> strOption (long "file" <> short 'f' <> help "test text json file")
-           <*> strOption (long "outdir" <> short 'o' <> help "output directory") 
+           <*> strOption (long "outdir" <> short 'd' <> help "output directory")
+           <*> strOption (long "old" <> short 'o' <> help "old version")
+           <*> strOption (long "new" <> short 'n' <> help "new version")
 
 
 
@@ -62,55 +66,59 @@ progOption :: ParserInfo TestConfig
 progOption = info pOptions (fullDesc <> progDesc "test generation")
 
 
-createDotPng :: FilePath -> [(Int,Text,MeaningGraph)] -> IO (FilePath,[(Int,Text,MeaningGraph)])
-createDotPng fn imglst = do
+createDotPng :: String -> FilePath -> [(Int,Text,MeaningGraph)] -> IO (FilePath,[(Int,Text,MeaningGraph)])
+createDotPng new fn imglst = do
   flip mapM imglst $ \(i,title,mg) -> do
-    let fullfilename = fn ++ "_" ++ show i
-    let dotstr = dotMeaningGraph Nothing {- (mkLabelText title) -} mg
+    let fullfilename = new ++ "_" ++ fn ++ "_" ++ show i
+    let dotstr = dotMeaningGraph Nothing mg
     TIO.putStrLn dotstr
     TIO.writeFile (fullfilename <.> "dot") dotstr
     void (readProcess "dot" ["-Tpng", fullfilename <.> "dot","-o" ++ fullfilename <.> "png"] "")
   return (fn,imglst)
 
 
-process apredata t = do
+process apredata new t = do
   TIO.putStrLn (t^.test_id)
   let dainput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = t^.test_dainput
       lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
-      mtokenss = sents ^.. traverse . sentenceToken  
+      mtokenss = sents ^.. traverse . sentenceToken
       mergedtags = t^.test_ner
   synsetss <- runUKB (apredata^.analyze_wordnet)(sents,mptrs)
   let sstrs = mapMaybe (sentStructure apredata mergedtags) (zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss)
-      -- dstr = DocStructure mtokenss sentitems mergedtags sstrs
-      -- sstrs1 = catMaybes sstrs
       mgs = map (meaningGraph apredata) sstrs
       imgs = flip map (zip4 [1..] mgs sstrs mtokenss) $ \(i,mg,sstr,mtoks) ->
                let title = mkTextFromToken mtoks
                    wikilst = mkWikiList sstr
                    mg' = tagMG mg wikilst
                in (i,title,mg')
-  createDotPng (T.unpack (t^.test_id)) imgs
+  createDotPng new (T.unpack (t^.test_id)) imgs
 
 
 
-mainHtml fileimgs =
+mainHtml (old,new) fileimgs =
   H.docTypeHtml $ do
     H.head $ do
       H.title "Test"
     H.body $ do
       H.ul $ do
-        mapM_ onefigure fileimgs
+        mapM_ (onefigure (old,new)) fileimgs
 
 
-onefigure (fn,imglst) =
+onefigure (old,new) (fn,imglst) =
   H.li $ do
     (H.div (H.h1 (H.toHtml (T.pack fn))))
     (H.div (H.h3 (H.toHtml (imglst^.ix 0._2))))
-    H.img ! A.src (H.stringValue (fn ++ "_1.png"))
+    H.div $ do
+      H.div ! A.style "display: inline-block;" $ do
+        H.img ! A.src (H.stringValue (old ++ "_" ++ fn ++ "_1.png")) ! A.width "800" ! A.style "border: solid 1px; margin: 10px 10px 10px 10px;"
+        H.div (H.h1 (H.toHtml old))
+      H.div  ! A.style "display: inline-block;" $ do
+        H.img ! A.src (H.stringValue (new ++ "_" ++ fn ++ "_1.png")) ! A.width "800" ! A.style "border: solid 1px; margin: 10px 10px 10px 10px;"
+        H.div (H.h1 (H.toHtml new))
     H.hr
 
-createIndex :: [(FilePath,[(Int,Text,MeaningGraph)])] -> IO ()
-createIndex fileimgs = TLIO.writeFile "index.html" (renderHtml (mainHtml fileimgs))
+createIndex :: (String,String) -> [(FilePath,[(Int,Text,MeaningGraph)])] -> IO ()
+createIndex (old,new) fileimgs = TLIO.writeFile "index.html" (renderHtml (mainHtml (old,new) fileimgs))
 
 
 
@@ -120,7 +128,8 @@ main = do
   cfg <- loadLexDataConfig (tcfg^.tconfig_lexconfig) >>= \case Left err -> error err
                                                                Right x -> return x
   (apredata,_netagger) <- loadConfig True cfg
-  
+  let old = tcfg^.tconfig_old
+      new = tcfg^.tconfig_new
   putStrLn "create performance testing set"
   bstr <- BL.readFile (tcfg^.tconfig_testset)
   case eitherDecode' bstr :: Either String [Test] of
@@ -128,6 +137,6 @@ main = do
     Right lst -> do
       cwd <- getCurrentDirectory
       setCurrentDirectory (tcfg^.tconfig_outputdir)
-      fileimgs <- mapM (process apredata) lst
-      createIndex fileimgs
+      fileimgs <- mapM (process apredata new) lst
+      createIndex (old,new) fileimgs
       setCurrentDirectory cwd

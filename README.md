@@ -7,7 +7,7 @@ $ cabal sandbox init
 $ cabal install
 $ mkdir output
 $ cabal exec -- runhasekll test/test-gen.hs
-$ cabal exec -- runhaskell test/test-performance.hs -c ../lexicon-builder/config.json.mark -f testset.json -o output
+$ cabal exec -- runhaskell test/test-performance.hs -c ../lexicon-builder/config.json.mark -f testset.json -d output --old D1111 --new D2222
 ```
 
 
