@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -5,7 +6,7 @@
 module Main where
 
 import           Control.Applicative         ((<$>),(<*>))
-import           Control.Lens                ((^.),(^..),to,makeLenses)
+import           Control.Lens                ((^.),(^..),ix,to,makeLenses,_2)
 import           Control.Monad               (void)
 import           Data.Aeson
 import qualified Data.ByteString.Lazy as BL
@@ -65,7 +66,7 @@ createDotPng :: FilePath -> [(Int,Text,MeaningGraph)] -> IO (FilePath,[(Int,Text
 createDotPng fn imglst = do
   flip mapM imglst $ \(i,title,mg) -> do
     let fullfilename = fn ++ "_" ++ show i
-    let dotstr = dotMeaningGraph (mkLabelText title) mg
+    let dotstr = dotMeaningGraph Nothing {- (mkLabelText title) -} mg
     TIO.putStrLn dotstr
     TIO.writeFile (fullfilename <.> "dot") dotstr
     void (readProcess "dot" ["-Tpng", fullfilename <.> "dot","-o" ++ fullfilename <.> "png"] "")
@@ -104,6 +105,7 @@ mainHtml fileimgs =
 onefigure (fn,imglst) =
   H.li $ do
     (H.div (H.toHtml (T.pack fn)))
+    (H.div (H.toHtml (imglst^.ix 0._2)))
     H.img ! A.src (H.stringValue (fn ++ "_1.png"))
 
 createIndex :: [(FilePath,[(Int,Text,MeaningGraph)])] -> IO ()

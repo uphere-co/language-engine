@@ -308,8 +308,8 @@ formatMGVertex (MGEntity i _ _ t ns)
 
 
 
-dotMeaningGraph :: Text -> MeaningGraph -> Text
-dotMeaningGraph title mg = format "digraph G {\n  {}\n  {}\n  {}\n}" (vtxt,etxt,ttxt)
+dotMeaningGraph :: Maybe Text -> MeaningGraph -> Text
+dotMeaningGraph mtitle mg = format "digraph G {\n  {}\n  {}\n  {}\n}" (vtxt,etxt,ttxt)
   where
     format fmt ps = T.L.toStrict (T.F.format fmt ps)
     vtxt = let vertices = mg^.mg_vertices
@@ -321,4 +321,4 @@ dotMeaningGraph title mg = format "digraph G {\n  {}\n  {}\n  {}\n}" (vtxt,etxt,
     --
     etxt = let edges = mg^.mg_edges in (T.intercalate "\n  " . map formatMGEdge) edges
     --
-    ttxt = "labelloc=\"t\"; \n " <> "label=\"" <> title <> "\"; \n "
+    ttxt = maybe "" (\title -> "labelloc=\"t\"; \n " <> "label=\"" <> title <> "\"; \n ") mtitle

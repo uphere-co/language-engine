@@ -133,7 +133,7 @@ printMeaningGraph apredata dstr = do
     putStrLn "-----------------"
     putStrLn "meaning graph dot"
     putStrLn "-----------------"
-    let dotstr = dotMeaningGraph (mkLabelText title) mg
+    let dotstr = dotMeaningGraph (Just (mkLabelText title)) mg
     T.IO.putStrLn dotstr
     T.IO.writeFile ("test" ++ (show i) ++ ".dot") dotstr
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
