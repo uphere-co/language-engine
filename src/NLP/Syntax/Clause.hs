@@ -19,7 +19,6 @@ import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
 import           Data.Bitraversable                     (bitraverse)
-import           Data.Either                            (rights)
 import qualified Data.HashMap.Strict               as HM
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (Last(..))
@@ -97,8 +96,13 @@ complementsOfVerb :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                   -> ([TraceChain (CompVP t)],Maybe (TraceChain (CompVP t)), [AdjunctVP t])
 complementsOfVerb tagged vprop z_vp =
   let (cs,mspec,adjs) = let (xs,mtop) = complementCandidates vprop z_vp
-                            xs' = map xform xs ++ maybeToList (mtop >>= \top -> return (TraceChain (Left (singletonLZ Moved)) (Just (CompVP_Unresolved top)), []))
-                            mspec' = mtop >>= \top -> return (TraceChain (Right [Moved]) (Just (CompVP_Unresolved top)))
+                            xs' = map xform xs ++
+                                  maybeToList (mtop >>= \top -> do
+                                                 let rng_top = getRange (current top)
+                                                 return (TraceChain (Left (singletonLZ Moved)) (Just (CompVP_Unresolved rng_top)), []))
+                            mspec' = mtop >>= \top -> do
+                                                 let rng_top = getRange (current top)
+                                                 return (TraceChain (Right [Moved]) (Just (CompVP_Unresolved rng_top)))
                         in (map fst xs',mspec',concatMap snd xs')
   in case vprop^.vp_voice of
        Active -> (cs,mspec,adjs)
@@ -110,7 +114,7 @@ complementsOfVerb tagged vprop z_vp =
     xform_pp z = (TraceChain (Right []) (checkTimePrep tagged <$> mkPPFromZipper tagged PC_Other z), [])
       -- checkTimePrep tagged
 
-    xform_cp z = (TraceChain (Right []) (Just (CompVP_Unresolved z)), [])
+    xform_cp z = (TraceChain (Right []) (Just (CompVP_Unresolved (getRange (current z)))), [])
     xform z = case rootTag (current z) of
                 Left NP    -> xform_dp z
                 Left PP    -> xform_pp z
@@ -297,8 +301,8 @@ rewriteX'TreeForFreeWH rng ps w z' = do
   let vp_dom = cp_dom^.complement.complement
       comps = vp_dom^.complement
       comps' = flip map comps $ \comp -> fromMaybe comp $ do
-                 z_comp <- comp^?trResolved._Just._CompVP_Unresolved
-                 guard (getRange (current z_comp) == rng)
+                 rng_comp <- comp^?trResolved._Just._CompVP_Unresolved
+                 guard (rng_comp == rng)
                  return (TraceChain (Right (ps++[Moved,WHPRO])) (Just (CompVP_DP z')))
       rf = _2._CPCase.complement.complement.complement .~ comps'
   return (replaceFocusItem rf rf w_dom)
@@ -440,7 +444,7 @@ resolveCP xtr = rewriteTree action xtr
       mx' <- flip traverse mx $ \x ->
                ((do
                     tr <- lift get
-                    rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved.to current.to getRange)
+                    rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved)
                     y <- hoistMaybe (extractZipperById rng tr)
                     y' <- replace y
                     cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
@@ -458,7 +462,7 @@ resolveCP xtr = rewriteTree action xtr
       let xs = cp^.complement.complement.complement
       xs' <- flip traverse xs $ \x ->
                ((do tr <- lift get
-                    rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved.to current.to getRange)
+                    rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved)
                     y <- hoistMaybe (extractZipperById rng tr)
                     y' <- replace y
                     cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)

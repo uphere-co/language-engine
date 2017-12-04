@@ -56,25 +56,19 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
                             (T.intercalate " " (vp^..vp_words.traverse.to (f.fst)))
 
 
-
-
-
-
-
-
 formatAdjunctCP :: AdjunctCP t -> Text
 formatAdjunctCP (AdjunctCP_Unresolved z) = "unresolved" <> (showRange z)
 formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cp^.maximalProjection)
 
 
 adjunctVPText :: TaggedLemma t -> AdjunctVP t -> Text
-adjunctVPText _tagged (AdjunctVP_Unresolved z) = (T.intercalate " " . map (tokenWord.snd) . toList . current) z
-adjunctVPText tagged  (AdjunctVP_PP pp) = T.intercalate " " (tokensByRange tagged (pp^.maximalProjection))
+adjunctVPText tagged (AdjunctVP_Unresolved rng) = T.intercalate " " (tokensByRange tagged rng)
+adjunctVPText tagged  (AdjunctVP_PP pp)         = T.intercalate " " (tokensByRange tagged (pp^.maximalProjection))
 
 
 formatAdjunctVP :: AdjunctVP t -> Text
-formatAdjunctVP (AdjunctVP_Unresolved z) = showRange (getRange (current z))
-formatAdjunctVP (AdjunctVP_PP pp) = formatPP pp
+formatAdjunctVP (AdjunctVP_Unresolved rng) = showRange rng
+formatAdjunctVP (AdjunctVP_PP pp)          = formatPP pp
 
 
 formatCP :: forall as. CP (Lemma ': as) -> String

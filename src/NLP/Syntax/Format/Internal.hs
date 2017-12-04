@@ -66,7 +66,7 @@ formatDP dp = "(DP"        <> dp^.maximalProjection.to show.to T.pack <>
 
 
 formatCompVP :: CompVP as -> Text
-formatCompVP (CompVP_Unresolved z)  = "unresolved" <> T.pack (show (getRange (current z)))
+formatCompVP (CompVP_Unresolved r)  = "unresolved" <> T.pack (show r)
 formatCompVP (CompVP_CP cp) = case cp^.headX of
                                 C_PHI -> "CP" <> cp^.maximalProjection.to show.to T.pack
                                 C_WORD z' -> "CP-" <> (T.intercalate "-" . map (tokenWord.snd) . toList . current) z'

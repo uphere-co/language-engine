@@ -278,13 +278,13 @@ mkPP (prep,pclass) rng dp = XP (HeadPP prep pclass) rng () () (CompPP_DP dp)
 mkPPGerund :: (Prep,PrepClass) -> Range -> Zipper t -> PP t
 mkPPGerund (prep,pclass) rng z = XP (HeadPP prep pclass) rng () () (CompPP_Gerund z)
 
-data CompVP t = CompVP_Unresolved (Zipper t)
+data CompVP t = CompVP_Unresolved Range -- (Zipper t)
               | CompVP_CP (CP t)
               | CompVP_DP (DetP t)
               | CompVP_PP (PP t)
 
 
-data AdjunctVP t = AdjunctVP_Unresolved (Zipper t)
+data AdjunctVP t = AdjunctVP_Unresolved Range -- (Zipper t)
                  | AdjunctVP_PP (PP t)
 
 
