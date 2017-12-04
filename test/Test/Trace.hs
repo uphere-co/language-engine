@@ -241,7 +241,7 @@ checkTrace c =
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
     cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                              -- anyway need to be rewritten.
-    cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cpRange cp0))) x'tr)
+    cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'tr)
     
     case c^._3._1 of
       Subj   -> let dp = fmap (either (const "") (headTextDP tagged)) (cp ^.complement.specifier)  -- for the time being. ignore CP subject

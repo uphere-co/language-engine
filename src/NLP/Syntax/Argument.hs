@@ -62,7 +62,7 @@ phraseNodeType mtp z
                   m <- flip find os $ \o ->
                          case o^._2 of
                            Just (Right x) -> x^.maximalProjection == rng
-                           Just (Left x)  -> (getRange . current) x == rng
+                           Just (Left x)  -> x == rng
                               -- x^?maximalProjection._Just.to current.to getRange == Just rng
                            Nothing        -> False
                   return (m^._1)

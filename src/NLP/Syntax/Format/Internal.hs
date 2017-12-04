@@ -27,9 +27,9 @@ showRange rng = T.pack (printf "%-7s" (show rng))
 formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
 
-rangeText :: Either (Zipper as) (DetP as) -> Text
+rangeText :: Either Range (DetP as) -> Text
 rangeText (Right x) = x^.maximalProjection.to (T.pack . show) -- complement.headX.to show.to T.pack
-rangeText (Left x ) = (T.pack.show.getRange.current) x
+rangeText (Left x) = (T.pack . show) x -- (T.pack.show.getRange.current) x
 
 
 formatCompDP :: CompDP t -> Text

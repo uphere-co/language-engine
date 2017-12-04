@@ -62,8 +62,8 @@ findPAWS :: TaggedLemma (Lemma ': as)
 findPAWS tagged tr vp x'tr = do
   cp <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                            -- anyway need to be rewritten.
-  let rng = cpRange cp
-  cp' <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
+  let rng_cp = cp^.maximalProjection
+  cp' <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng_cp)) x'tr)
   predicateArgWS tagged cp' <$> findVerb (vp^.vp_index) tr <*> pure (cp' ^.. complement.complement.adjunct.traverse._AdjunctVP_Unresolved)
 
 
