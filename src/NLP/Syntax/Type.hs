@@ -39,9 +39,9 @@ import           NLP.Syntax.Type.XBar
 
 -- | workspace for predicate argument
 --
-data PredArgWorkspace as a = PAWS { _pa_CP :: CP as
-                                  , _pa_candidate_args :: [a]
-                                  }
+data PredArgWorkspace a = PAWS { _pa_CP :: CP
+                               , _pa_candidate_args :: [a]
+                               }
 
 makeLenses ''PredArgWorkspace
 

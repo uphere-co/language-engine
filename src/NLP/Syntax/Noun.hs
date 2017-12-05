@@ -50,7 +50,7 @@ import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isL
 -- import Debug.Trace
 
 
-mkPPFromZipper :: TaggedLemma (Lemma ': as) -> PrepClass -> Zipper (Lemma ': as) -> Maybe (PP (Lemma ': as))
+mkPPFromZipper :: TaggedLemma (Lemma ': as) -> PrepClass -> Zipper (Lemma ': as) -> Maybe PP
 mkPPFromZipper tagged pclass z = do
   guard (isChunkAs PP (current z))
   z_prep <- child1 z
@@ -69,11 +69,11 @@ mkPPFromZipper tagged pclass z = do
 
 
 
-removePP :: Range -> [AdjunctDP t] -> [AdjunctDP t]
+removePP :: Range -> [AdjunctDP] -> [AdjunctDP]
 removePP rng xs = xs^..folded.filtered (\x->x^?_AdjunctDP_PP.maximalProjection /= Just rng)
 
 
-splitDP :: TaggedLemma (Lemma ': as) -> DetP (Lemma ': as) -> DetP (Lemma ': as)
+splitDP :: TaggedLemma (Lemma ': as) -> DetP -> DetP
 splitDP tagged dp0 =
   let dp1 = fromMaybe dp0 $ do
               let rng0 = dp0^.maximalProjection
@@ -109,7 +109,7 @@ splitDP tagged dp0 =
 
 
 
-splitParentheticalModifier :: TaggedLemma (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe (DetP (Lemma ': as))
+splitParentheticalModifier :: TaggedLemma (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe DetP
 splitParentheticalModifier tagged z = do
     guard (isChunkAs NP (current z))         -- dominating phrase must be NP
     z1 <- child1 z
@@ -176,7 +176,7 @@ rangeOfNPs z0 = do
 
 
 
-identApposHead :: TaggedLemma t -> Range -> Range -> Zipper t -> DetP t
+identApposHead :: TaggedLemma t -> Range -> Range -> Zipper t -> DetP
 identApposHead tagged rng1 rng2 z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $
   ((do find (\(TagPos (b,e,t)) -> rng1 == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
        return (mkSplittedDP APMod rng1 rng2 z))
@@ -196,8 +196,7 @@ checkProperNoun tagged (b,e) =
 --
 -- | check whether DP is pronoun and change NomClass accordingly
 --
-identifyDeterminer :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
-                      TaggedLemma t -> DetP t -> DetP t
+identifyDeterminer :: TaggedLemma (Lemma ': as) -> DetP -> DetP
 identifyDeterminer tagged dp = fromMaybe dp $ do
     let rng = dp^.maximalProjection -- complement._Just.headX.hn_range
     let zs = extractZipperByRange rng (tagged^.pennTree)
@@ -246,7 +245,7 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
 --   I did not implement the already-splitted case. We need multiple-adjunct
 --   structure.
 --
-bareNounModifier :: TaggedLemma t -> DetP t -> DetP t
+bareNounModifier :: TaggedLemma t -> DetP -> DetP
 bareNounModifier tagged dp = fromMaybe dp $ do
   rng@(b0,_e0) <- headRangeDP dp  -- dp^.maximalProjection
   z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTree))
@@ -264,7 +263,7 @@ bareNounModifier tagged dp = fromMaybe dp $ do
 --
 -- | Set hn_class as identified
 --
-identifyNamedEntity :: TaggedLemma t -> DetP t -> DetP t
+identifyNamedEntity :: TaggedLemma t -> DetP -> DetP
 identifyNamedEntity tagged dp =
   fromMaybe dp $ do
     rng <- dp^?complement._Just.headX.hn_range
@@ -273,10 +272,9 @@ identifyNamedEntity tagged dp =
     (return . (complement._Just.headX.hn_class .~ (Just nec))) dp
 
 
-identifyInternalTimePrep :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
-                            TaggedLemma t
-                         -> DetP t
-                         -> (DetP t,[AdjunctVP t])
+identifyInternalTimePrep :: TaggedLemma (Lemma ': as)
+                         -> DetP
+                         -> (DetP,[AdjunctVP])
 identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   let rng_dp@(b_dp,_e_dp) = dp^.maximalProjection
   TagPos (b0,e0,_)

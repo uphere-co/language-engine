@@ -40,20 +40,20 @@ data TaggedLemma t = TaggedLemma { _pennTree  :: BitreeICP t
 
 data XType = X_V | X_T | X_C | X_D | X_N | X_P
 
-type family Property   (x :: XType) (tag :: [*]) :: *
-type family Maximal    (x :: XType) (tag :: [*]) :: *
-type family Specifier  (x :: XType) (tag :: [*]) :: *
-type family Complement (x :: XType) (tag :: [*]) :: *
-type family Adjunct    (x :: XType) (tag :: [*]) :: *
+type family Property   (x :: XType) :: *
+type family Maximal    (x :: XType) :: *
+type family Specifier  (x :: XType) :: *
+type family Complement (x :: XType) :: *
+type family Adjunct    (x :: XType) :: *
 
 type Zipper tag = BitreeZipperICP tag
 
-data XP x tag = XP { _headX             :: Property x tag
-                   , _maximalProjection :: Maximal x tag
-                   , _specifier         :: Specifier x tag
-                   , _adjunct           :: Adjunct x tag
-                   , _complement        :: Complement x tag
-                   }
+data XP x = XP { _headX             :: Property x
+               , _maximalProjection :: Maximal x
+               , _specifier         :: Specifier x
+               , _adjunct           :: Adjunct x
+               , _complement        :: Complement x
+               }
 
 
 
@@ -91,13 +91,13 @@ data SplitType = CLMod | BNMod | APMod
                deriving (Show,Eq,Ord)
 
 
-data CompDP t = CompDP_Unresolved Range
-              | CompDP_CP (CP t)
-              | CompDP_PP (PP t)
+data CompDP = CompDP_Unresolved Range
+            | CompDP_CP CP
+            | CompDP_PP PP
 
 
-data AdjunctDP t = AdjunctDP_Unresolved Range
-                 | AdjunctDP_PP (PP t)
+data AdjunctDP = AdjunctDP_Unresolved Range
+               | AdjunctDP_PP PP
 
 
 data PronounPerson = P_I | P_You | P_He | P_She | P_It | P_They
@@ -177,22 +177,22 @@ data HeadNP = HeadNP { _hn_range :: Range
 --
 -- NP
 --
-type instance Property   'X_N t = HeadNP -- Range
-type instance Maximal    'X_N t = Range
-type instance Specifier  'X_N t = ()
-type instance Adjunct    'X_N t = ()
-type instance Complement 'X_N t = Maybe (CompDP t)
+type instance Property   'X_N = HeadNP -- Range
+type instance Maximal    'X_N = Range
+type instance Specifier  'X_N = ()
+type instance Adjunct    'X_N = ()
+type instance Complement 'X_N = Maybe CompDP
 
 type NounP = XP 'X_N
 
 
-compDPToRange :: CompDP t -> Range
+compDPToRange :: CompDP -> Range
 compDPToRange (CompDP_Unresolved rng) = rng
 compDPToRange (CompDP_CP cp) = _maximalProjection cp -- getRange (current (_maximalProjection cp))
 compDPToRange (CompDP_PP pp) = _maximalProjection pp
 
 
-mkNP :: (Range,Maybe NamedEntityClass) -> Maybe (CompDP t) -> NounP t
+mkNP :: (Range,Maybe NamedEntityClass) -> Maybe CompDP -> NounP
 mkNP (rng,mclass) mcomp =
   case mcomp of
     Nothing -> XP (HeadNP rng mclass) rng () () Nothing
@@ -205,11 +205,11 @@ mkNP (rng,mclass) mcomp =
 --
 -- DP -> D NP
 --
-type instance Property   'X_D t = HeadDP -- Range -- head
-type instance Maximal    'X_D t = Range
-type instance Specifier  'X_D t = [SpecDP] -- allow multiple spec for the time being
-type instance Adjunct    'X_D t = [AdjunctDP t]
-type instance Complement 'X_D t = Maybe (NounP t) -- Maybe (CompDP t)
+type instance Property   'X_D = HeadDP -- Range -- head
+type instance Maximal    'X_D = Range
+type instance Specifier  'X_D = [SpecDP] -- allow multiple spec for the time being
+type instance Adjunct    'X_D = [AdjunctDP]
+type instance Complement 'X_D = Maybe NounP -- Maybe (CompDP t)
 
 type DetP = XP 'X_D
 
@@ -218,7 +218,7 @@ type DetP = XP 'X_D
 -- | These functions, mkOrdDP and mkSplittedDP, should be rewritten in a
 --   better representation.
 --
-mkOrdDP :: Zipper t -> DetP t
+mkOrdDP :: Zipper t -> DetP
 mkOrdDP z = XP (HeadDP Nothing NoDet) rng [] [] (Just (mkNP (rng,Nothing) Nothing))
   where rng = (getRange . current) z
 
@@ -230,7 +230,7 @@ mkSplittedDP :: SplitType
              -> Range        -- head
              -> Range
              -> Zipper t     -- zipper for maximal projection
-             -> DetP t
+             -> DetP
 mkSplittedDP typ h m o
   = case typ of
       CLMod -> XP (HeadDP Nothing NoDet) rng []             [] (Just (mkNP (h,Nothing) (Just (CompDP_Unresolved m))))
@@ -259,60 +259,60 @@ data HeadPP = HeadPP { _hp_prep :: Prep
                      , _hp_pclass :: PrepClass }
 
 
-data CompPP t = CompPP_DP (DetP t)
-              | CompPP_Gerund Range
+data CompPP = CompPP_DP DetP
+            | CompPP_Gerund Range
 
 --
-type instance Property   'X_P t = HeadPP
-type instance Maximal    'X_P t = Range
-type instance Specifier  'X_P t = ()
-type instance Adjunct    'X_P t = ()
-type instance Complement 'X_P t = CompPP t
+type instance Property   'X_P = HeadPP
+type instance Maximal    'X_P = Range
+type instance Specifier  'X_P = ()
+type instance Adjunct    'X_P = ()
+type instance Complement 'X_P = CompPP
 
 type PP = XP 'X_P
 
-mkPP :: (Prep,PrepClass) -> Range -> DetP t -> PP t
+mkPP :: (Prep,PrepClass) -> Range -> DetP -> PP
 mkPP (prep,pclass) rng dp = XP (HeadPP prep pclass) rng () () (CompPP_DP dp)
 
 
-mkPPGerund :: (Prep,PrepClass) -> Range -> Zipper t -> PP t
+mkPPGerund :: (Prep,PrepClass) -> Range -> Zipper t -> PP
 mkPPGerund (prep,pclass) rng z = XP (HeadPP prep pclass) rng () () (CompPP_Gerund (getRange (current z)))
 
-data CompVP t = CompVP_Unresolved Range
-              | CompVP_CP (CP t)
-              | CompVP_DP (DetP t)
-              | CompVP_PP (PP t)
+data CompVP = CompVP_Unresolved Range
+            | CompVP_CP CP
+            | CompVP_DP DetP
+            | CompVP_PP PP
 
 
-data AdjunctVP t = AdjunctVP_Unresolved Range
-                 | AdjunctVP_PP (PP t)
+data AdjunctVP = AdjunctVP_Unresolved Range
+               | AdjunctVP_PP PP
 
 
-type instance Property   'X_V t = VerbProperty Text -- (Zipper t)
-type instance Maximal    'X_V t = Range
-type instance Specifier  'X_V t = ()
-type instance Adjunct    'X_V t = [AdjunctVP t]
-type instance Complement 'X_V t = [TraceChain (CompVP t)]
+type instance Property   'X_V = VerbProperty Text
+type instance Maximal    'X_V = Range
+type instance Specifier  'X_V = ()
+type instance Adjunct    'X_V = [AdjunctVP]
+type instance Complement 'X_V = [TraceChain CompVP]
 
 type VerbP = XP 'X_V
 
-mkVerbP :: Range -> VerbProperty Text -> [AdjunctVP t] -> [TraceChain (CompVP t)] -> VerbP t
+mkVerbP :: Range -> VerbProperty Text -> [AdjunctVP] -> [TraceChain CompVP] -> VerbP
 mkVerbP vp vprop adjs comps = XP vprop vp () adjs comps
 
 
-data SpecTP t = SpecTP_Unresolved Range
-              | SpecTP_DP (DetP t)
+data SpecTP = SpecTP_Unresolved Range
+            | SpecTP_DP DetP
 
 
-type instance Property   'X_T t = ()
-type instance Maximal    'X_T t = Range
-type instance Specifier  'X_T t = TraceChain (SpecTP t)
-type instance Adjunct    'X_T t = ()
-type instance Complement 'X_T t = VerbP t
+type instance Property   'X_T = ()
+type instance Maximal    'X_T = Range
+type instance Specifier  'X_T = TraceChain SpecTP
+type instance Adjunct    'X_T = ()
+type instance Complement 'X_T = VerbP
 
 type TP = XP 'X_T
 
-mkTP :: Range -> TraceChain (SpecTP t) -> VerbP t -> TP t
+mkTP :: Range -> TraceChain SpecTP -> VerbP -> TP
 mkTP tp mdp vp = XP () tp mdp () vp
 
 
@@ -321,33 +321,34 @@ data Complementizer = C_PHI              -- ^ empty complementizer
                     -- deriving (Show,Eq,Ord)
 
 
-data SpecCP t = SpecCP_WHPHI           -- ^ empty Wh-word
-              | SpecCP_WH Range        -- ^ Wh-phrase, this should be DP or PP. Later, we will change it to DP or PP.
-              | SpecCP_Topic (TraceChain (CompVP t)) -- ^ topicalization (AdjunctCP for the time being)
+data SpecCP = SpecCP_WHPHI           -- ^ empty Wh-word
+            | SpecCP_WH Range        -- ^ Wh-phrase, this should be DP or PP. Later, we will change it to DP or PP.
+            | SpecCP_Topic (TraceChain CompVP) -- ^ topicalization (AdjunctCP for the time being)
 
 
 
-data AdjunctCP t = AdjunctCP_Unresolved Range
-                 | AdjunctCP_CP         (CP t)
+data AdjunctCP = AdjunctCP_Unresolved Range
+               | AdjunctCP_CP         CP
 
 
-type instance Property   'X_C t = Complementizer
-type instance Maximal    'X_C t = Range
-type instance Specifier  'X_C t = Maybe (SpecCP t)
-type instance Adjunct    'X_C t = [AdjunctCP t]
-type instance Complement 'X_C t = TP t
+type instance Property   'X_C = Complementizer
+type instance Maximal    'X_C = Range
+type instance Specifier  'X_C = Maybe SpecCP
+type instance Adjunct    'X_C = [AdjunctCP]
+type instance Complement 'X_C = TP
 
 type CP = XP 'X_C
 
-mkCP :: Complementizer -> Range -> Maybe (SpecCP t) -> [AdjunctCP t] -> TP t -> CP t
+mkCP :: Complementizer -> Range -> Maybe SpecCP -> [AdjunctCP] -> TP -> CP
 mkCP mc rng spec adjs tp = XP mc rng spec adjs tp
 
 
-data CPDPPP t = CPCase (CP t)
-              | DPCase (DetP t)
-              | PPCase (PP t)
+data CPDPPP = CPCase CP
+            | DPCase DetP
+            | PPCase PP
 
 
-type X'Tree t = Bitree (Range,CPDPPP t) (Range,CPDPPP t)
+type X'Tree = Bitree (Range,CPDPPP) (Range,CPDPPP)
 
-type X'Zipper t = BitreeZipper (Range,CPDPPP t) (Range,CPDPPP t)
+
+type X'Zipper = BitreeZipper (Range,CPDPPP) (Range,CPDPPP)
