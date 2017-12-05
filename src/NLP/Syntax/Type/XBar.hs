@@ -34,7 +34,7 @@ determinerText :: TaggedLemma t -> HeadDP -> Maybe Text
 determinerText tagged hdp = fmap (T.intercalate " " . tokensByRange tagged) (hdp^.hd_range)
 
 
-headText :: TaggedLemma t -> NounP t -> Text
+headText :: TaggedLemma t -> NounP -> Text
 headText tagged x = x^.headX.hn_range.to (T.intercalate " " . tokensByRange tagged)
 
 
@@ -44,7 +44,7 @@ specDPText tagged x = case x of
                         SpDP_Gen rng -> T.intercalate " " (tokensByRange tagged rng)
 
 
-compVPToSpecTP :: CompVP t -> SpecTP t
+compVPToSpecTP :: CompVP -> SpecTP
 compVPToSpecTP (CompVP_Unresolved x) = SpecTP_Unresolved x
 compVPToSpecTP (CompVP_CP cp)        = SpecTP_Unresolved (cp^.maximalProjection)
 compVPToSpecTP (CompVP_DP y)         = SpecTP_DP y
@@ -53,14 +53,14 @@ compVPToSpecTP (CompVP_PP y)         = case y^.complement of
                                          CompPP_Gerund rng -> SpecTP_Unresolved rng
 
 
-headTextDP :: TaggedLemma t -> DetP t -> Text
+headTextDP :: TaggedLemma t -> DetP -> Text
 headTextDP tagged dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> fromMaybe "" (fmap (headText tagged) (dp^.complement))
     _ -> T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
 
 
-headRangeDP :: DetP t -> Maybe Range
+headRangeDP :: DetP -> Maybe Range
 headRangeDP dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> dp^?complement._Just.headX.hn_range
@@ -73,7 +73,7 @@ headRangeDP dp =
               (Nothing       , Nothing      ) -> Nothing
 
 
-compVPToHeadText :: TaggedLemma t -> CompVP t -> Text
+compVPToHeadText :: TaggedLemma t -> CompVP -> Text
 compVPToHeadText tagged (CompVP_Unresolved rng) = T.intercalate " " (tokensByRange tagged rng)
 compVPToHeadText tagged (CompVP_CP cp)          = T.intercalate " " (tokensByRange tagged (cp^.maximalProjection))
 compVPToHeadText tagged (CompVP_DP dp)          = headTextDP tagged dp
@@ -83,12 +83,12 @@ compVPToHeadText tagged (CompVP_PP pp)          = case pp^.complement of
 
 
 
-compVPToRange :: CompVP t -> Range
+compVPToRange :: CompVP -> Range
 compVPToRange = (\case SpecTP_Unresolved rng -> rng; SpecTP_DP dp -> dp^.maximalProjection) . compVPToSpecTP
 
 
 
 
-compPPToRange :: CompPP t -> Range
+compPPToRange :: CompPP -> Range
 compPPToRange (CompPP_DP dp) = dp^.maximalProjection
 compPPToRange (CompPP_Gerund rng) = rng

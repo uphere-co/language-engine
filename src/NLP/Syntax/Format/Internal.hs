@@ -27,7 +27,7 @@ showRange rng = T.pack (printf "%-7s" (show rng))
 formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
 
-formatSpecTP :: SpecTP as -> Text
+formatSpecTP :: SpecTP -> Text
 formatSpecTP (SpecTP_DP x) = x^.maximalProjection.to (T.pack . show)
 formatSpecTP (SpecTP_Unresolved x) = (T.pack . show) x
 
@@ -36,19 +36,19 @@ formatComplementizer C_PHI      = ""
 formatComplementizer (C_WORD w) = "-" <> unLemma w
 
 
-formatCompDP :: CompDP t -> Text
+formatCompDP :: CompDP -> Text
 formatCompDP (CompDP_Unresolved rng) = T.pack (show rng)
 formatCompDP (CompDP_CP cp) = "CP" <> cp^.headX.to formatComplementizer <> cp^.maximalProjection.to show.to T.pack
 formatCompDP (CompDP_PP pp) = formatPP pp
 
 
 
-formatAdjunctDP :: AdjunctDP t -> Text
+formatAdjunctDP :: AdjunctDP -> Text
 formatAdjunctDP (AdjunctDP_Unresolved rng) = T.pack (show rng)
 formatAdjunctDP (AdjunctDP_PP pp) = "(" <> formatPP pp <> ")"
 
 
-formatPP :: PP t -> Text
+formatPP :: PP -> Text
 formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
               "-" <>
               case pp^.complement of
@@ -56,7 +56,7 @@ formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
                 CompPP_Gerund rng -> "ing" <> T.pack (show rng)
 
 
-formatDP :: DetP t -> Text
+formatDP :: DetP -> Text
 formatDP dp = "(DP"        <> dp^.maximalProjection.to show.to T.pack <>
               "[D: "       <> maybe "" (T.pack.show) (dp^.headX.hd_range) <>
               " NP: "      <> maybe "" (T.pack.show) (dp^?complement._Just.headX.hn_range) <>
@@ -66,7 +66,7 @@ formatDP dp = "(DP"        <> dp^.maximalProjection.to show.to T.pack <>
               "])"
 
 
-formatCompVP :: CompVP as -> Text
+formatCompVP :: CompVP -> Text
 formatCompVP (CompVP_Unresolved r)  = "unresolved" <> T.pack (show r)
 formatCompVP (CompVP_CP cp) = "CP" <> cp^.headX.to formatComplementizer <> cp^.maximalProjection.to show.to T.pack
 formatCompVP (CompVP_DP dp) = formatDP dp
@@ -90,7 +90,7 @@ formatTraceChain f (TraceChain xs0 x) =
     fmtResolved = maybe "NOT_RESOLVED" f
 
 
-formatX'Tree :: X'Tree as -> Text
+formatX'Tree :: X'Tree -> Text
 formatX'Tree tr = formatBitree fmt tr
   where
         fmt (rng,CPCase _) = "CP" <> showRange rng

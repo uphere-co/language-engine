@@ -28,8 +28,7 @@ import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 
 
-formatPAWS :: PredArgWorkspace as (Either (Range,STag) (Int,POSTag))
-           -> String
+formatPAWS :: PredArgWorkspace (Either (Range,STag) (Int,POSTag)) -> String
 formatPAWS pa =
   printf "              subject       : %s\n\
          \              arg candidates: %s\n\
@@ -49,7 +48,7 @@ formatPAWS pa =
 
 formatVPwithPAWS :: TaggedLemma (Lemma ': as)
                  -> ClauseTree
-                 -> [X'Tree (Lemma ': as)]
+                 -> [X'Tree]
                  -> VerbProperty (BitreeZipperICP (Lemma ': as))
                  -> Text
 formatVPwithPAWS tagged clausetr cpstr vp =

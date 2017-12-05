@@ -40,7 +40,7 @@ isMatchedTime :: Range -> TagPos TokIdx MarkType -> Bool
 isMatchedTime rng (TagPos (b,e,t)) = beginEndToRange (b,e) == rng && t == MarkTime
 
 
-checkEmptyPrep :: TaggedLemma t -> DetP t -> CompVP t
+checkEmptyPrep :: TaggedLemma t -> DetP -> CompVP
 checkEmptyPrep tagged dp =
   let rng = dp^.maximalProjection
       r = fromMaybe False $ do
@@ -52,7 +52,7 @@ checkEmptyPrep tagged dp =
      else CompVP_DP dp
 
 
-checkTimePrep :: TaggedLemma t -> PP t -> CompVP t
+checkTimePrep :: TaggedLemma t -> PP -> CompVP
 checkTimePrep tagged pp = fromMaybe (CompVP_PP pp) $ do
   dp <- pp^? complement . _CompPP_DP
   guard $ fromMaybe False $ do

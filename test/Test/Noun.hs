@@ -212,7 +212,7 @@ test_infinitive_modifier_1 =
   )
 
 
-mkDPFromTest :: TaggedLemma '[Lemma] -> TestNoun -> DetP '[Lemma]
+mkDPFromTest :: TaggedLemma '[Lemma] -> TestNoun -> DetP
 mkDPFromTest tagged x =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) (x^._3))
       lemmapt = mkBitreeICP lmap1 (x^._4)
@@ -221,7 +221,7 @@ mkDPFromTest tagged x =
 
 
 
-adjunctDPToRange :: AdjunctDP t -> Range
+adjunctDPToRange :: AdjunctDP -> Range
 adjunctDPToRange (AdjunctDP_Unresolved rng) = rng
 adjunctDPToRange (AdjunctDP_PP pp) = pp^.maximalProjection
 
