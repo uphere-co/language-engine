@@ -18,6 +18,7 @@ import           Data.Text                  (Text)
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as T.IO
 import qualified Data.Vector          as V
+import           System.FilePath            ((</>))
 --
 import           NER.Type
 import qualified WikiEL.ETL.LoadData     as LD
@@ -46,7 +47,7 @@ loadNameTable = do
 loadCompanies :: IO [CompanyInfo]
 loadCompanies = do
   nt <- loadNameTable
-  companies <- getCompanyList "/data/groups/uphere/data/NER/company/company.json"
+  companies <- getCompanyListFromJSON "/data/groups/uphere/data/NER/company/company2.json"
   return companies
 
 
@@ -58,8 +59,8 @@ aliasFinder nuid uida txt =
     Just uid -> HM.lookup uid uida
 
 
-getCompanyList :: FilePath -> IO [CompanyInfo]
-getCompanyList fp = do
+getCompanyListFromJSON :: FilePath -> IO [CompanyInfo]
+getCompanyListFromJSON fp = do
   lbstr <- BL8.readFile fp
   let mresult = A.decode lbstr
   case mresult of
@@ -67,12 +68,12 @@ getCompanyList fp = do
     Just result -> return result
 
 
-getCompanyList' :: [(Int,Text)] -> IO [CompanyInfo]
-getCompanyList' nameTable = do
+constructCompanyListFromCSV :: [(Int,Text)] -> IO [CompanyInfo]
+constructCompanyListFromCSV nameTable = do
   let nuid = mkNameUIDHM nameTable
       uida = mkUIDAliasHM nameTable
 
-  let fps = ["/home/modori/temp/AMEX.csv","/home/modori/temp/NASDAQ.csv","/home/modori/temp/NYSE.csv"]
+  let fps = map ("/data/groups/uphere/data/NER/company" </>) ["AMEX.csv","NASDAQ.csv","NYSE.csv"]
   clist <- fmap concat $ forM fps $ \fp -> do
     txt' <- T.IO.readFile fp
     let tlines = T.lines txt'
@@ -84,7 +85,7 @@ getCompanyList' nameTable = do
       Right  v -> return $ V.toList v
 
   aList <- flip mapM clist $ \c -> do
-    let cinfo = CompanyInfo (c ^. csvTicker) (c ^. csvName) (fromMaybe [c ^. csvName] $ aliasFinder nuid uida (c ^. csvName)) (c ^. csvSector) (c ^. csvIndustry)
+    let cinfo = \i -> CompanyInfo i (c ^. csvTicker) (c ^. csvName) (fromMaybe [c ^. csvName] $ aliasFinder nuid uida (c ^. csvName)) (c ^. csvSector) (c ^. csvIndustry)
     return cinfo
 
   bstr <- BL.readFile "/data/groups/uphere/wikidata/public_companies.csv"
@@ -97,7 +98,7 @@ getCompanyList' nameTable = do
       return (V.toList v)
 
   aList2 <- flip mapM clist2 $ \c -> do
-    let cinfo = CompanyInfo "" (c ^. _2) (fromMaybe [c ^. _2] $ aliasFinder nuid uida (c ^. _2)) "" ""
+    let cinfo = \i -> CompanyInfo i "" (c ^. _2) (fromMaybe [c ^. _2] $ aliasFinder nuid uida (c ^. _2)) "" ""
     return cinfo
 
-  return (aList ++ aList2)
+  return (zipWith (\x f -> f x) [1..] (aList ++ aList2))

@@ -17,7 +17,8 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Assert
+  exposed-modules:
+                       Assert
                        WikiEL
                        WikiEL.BinarySearch
                        WikiEL.Convert
