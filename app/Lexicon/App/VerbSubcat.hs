@@ -65,9 +65,7 @@ import           PropBank.Type.Prop
 import           Lexicon.Data
 
 
-
 type LemmaList = [(Int,Text)]
-
 
 
 matchVerbPropertyWithRelation :: TaggedLemma '[Lemma]
@@ -75,7 +73,7 @@ matchVerbPropertyWithRelation :: TaggedLemma '[Lemma]
                               -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
                               -> MatchedInstance
                               -> Maybe (VerbProperty (BitreeZipperICP '[Lemma])
-                                       ,Maybe (PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))))
+                                       ,Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag))))
 matchVerbPropertyWithRelation tagged verbprops clausetr minst = do
   relidx <- findRelNode (minst^.mi_arguments)
   vp <- find (\vp->vp^.vp_index==relidx) verbprops
@@ -113,7 +111,7 @@ formatArgMap isStat argmap =
   ++ "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
 
 
-formatArgTable :: Maybe (VerbProperty (Zipper '[Lemma]), Maybe (PredArgWorkspace '[Lemma] (Either (Range,STag) (Int,POSTag))))
+formatArgTable :: Maybe (VerbProperty (Zipper '[Lemma]), Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag))))
                -> ArgTable GRel
                -> String
 formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
