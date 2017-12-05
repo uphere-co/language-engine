@@ -10,7 +10,20 @@ $ cabal exec -- runhasekll test/test-gen.hs
 $ cabal exec -- runhaskell test/test-performance.hs -c ../lexicon-builder/config.json.mark -f testset.json -d output --old D1111 --new D2222
 ```
 
+or using `cabal new-repl`
+to create testset json file
+```
+$ cabal new-repl --ghc-options "-itest -package directory -package blaze-html"
+*SRL.Analyze> :l test/test-gen.hs
+*Main> :main -c ../lexicon-builder/config.json.makr -f test/testset.json
+```
 
+to create graph comparison page
+```
+$ cabal new-repl --ghc-options "-itest -package directory -package blaze-html"
+*SRL.Analyze> :l test/test-performance.hs
+*Main> :main -c ../lexicon-builder/config.json.mark -f test/testset.json -d test/output -o D2063 -n D2064_5
+```
 
 old README
 -----------
