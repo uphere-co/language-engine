@@ -205,7 +205,7 @@ formatVerbStructure (VerbStructure vp senses mrmmtoppatts) =
   , T.pack (formatSenses False senses mrmmtoppatts)
   ]
 
-showMatchedFE :: TaggedLemma '[Lemma] -> (FNFrameElement, CompVP '[Lemma]) -> String
+showMatchedFE :: TaggedLemma '[Lemma] -> (FNFrameElement, CompVP) -> String
 --                                         FE   range prep text
 showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (maybe "" show (dp^?complement._Just.headX)) ("" :: Text) (headTextDP tagged dp)
 showMatchedFE tagged (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (show rng_cp) ("" :: Text) ((T.intercalate " " . tokensByRange tagged) rng_cp)
@@ -228,7 +228,7 @@ showMatchedFE tagged (fe,CompVP_Unresolved rng) = printf "%-15s: %-7s %3s %s" (u
 
 showMatchedFrame :: FrameDB
                  -> TaggedLemma '[Lemma]
-                 -> (VerbStructure, CP '[Lemma])
+                 -> (VerbStructure, CP)
                  -> IO ()
 showMatchedFrame framedb tagged (vstr,cp) = do
   T.IO.putStrLn "---------------------------"

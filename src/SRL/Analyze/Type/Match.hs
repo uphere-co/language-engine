@@ -25,7 +25,7 @@ data EntityInfo = EI { _ei_fullRange :: Range
 makeLenses ''EntityInfo
 
 data FrameMatchResult = FMR { _fmr_frame :: FNFrame
-                            , _fmr_roles :: Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP '[Lemma])])
+                            , _fmr_roles :: Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP)])
                             , _fmr_subframes :: [(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
                             }
 
