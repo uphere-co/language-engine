@@ -47,7 +47,7 @@ import           SRL.Analyze.Type.Match       (DPInfo(..), EntityInfo(..),FrameM
 -- import Debug.Trace
 
 
-dependencyOfX'Tree :: X'Tree p -> [(Range,Range)]
+dependencyOfX'Tree :: X'Tree -> [(Range,Range)]
 dependencyOfX'Tree (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap dependencyOfX'Tree xs
 dependencyOfX'Tree (PL _)           = []
 
@@ -64,7 +64,7 @@ mkEntityFun (EI rng rnghead _mprep txt,di) =
   in (\i -> MGEntity i (Just rng) (Just rnghead) txt []) : (appos ++ compof ++ poss ++ adjs)
 
 
-mkMGVertices :: ([X'Tree '[Lemma]],TaggedLemma '[Lemma],[(Range,Range)])
+mkMGVertices :: ([X'Tree],TaggedLemma '[Lemma],[(Range,Range)])
              -> ([(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,Maybe (SenseID,Bool))]
                 ,[(Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe EntityInfo),(FNFrameElement,EntityInfo))]
                 )
