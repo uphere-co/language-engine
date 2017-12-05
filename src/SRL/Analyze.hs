@@ -61,6 +61,8 @@ import           SRL.Analyze.Match.MeaningGraph (meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure  (docStructure,mkWikiList)
 import           SRL.Analyze.Type
 --
+import Debug.Trace
+
 
 --
 -- | main query loop
@@ -118,7 +120,7 @@ printMeaningGraph apredata dstr = do
   forM_ (zip mtokss (zip ([1..] :: [Int]) mgs)) $ \(mtks,(i,(sstr,mg'))) -> do
     let title = mkTextFromToken mtks
         wikilst = mkWikiList sstr -- sstrs1
-        mg = tagMG mg' wikilst
+        mg = trace (show wikilst) $ tagMG mg' wikilst
     -- mapM_ print (mg^.mg_vertices)
     -- mapM_ print (mg^.mg_edges)
     -- putStrLn "====================="

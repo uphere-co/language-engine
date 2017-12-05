@@ -242,8 +242,7 @@ mkMGEdges vmap (matched,nmatched) (entities1_0,ientities2) =
 
 meaningGraph :: AnalyzePredata -> SentStructure -> MeaningGraph
 meaningGraph apredata sstr =
-  let -- wndb = apredata^.analyze_wordnet
-      (x'tr,lst_vstrcp) = mkTriples sstr
+  let (x'tr,lst_vstrcp) = mkTriples sstr
       tagged = sstr^.ss_tagged
       matched = mapMaybe (matchFrame (apredata^.analyze_framedb)) lst_vstrcp
       depmap = dependencyOfX'Tree =<< x'tr

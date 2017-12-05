@@ -37,7 +37,8 @@ import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..
 import           Text.Search.ParserCustom                  (pTreeAdvGBy)
 import           WikiEL.Convert                            (getRangeFromEntityMention)
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
-import           WikiEL.Type                               (EntityMention,EntityMentionUID(..),IRange(..),TextMatchedEntityType(..),PreNE(..),UIDCite(..))
+import           WikiEL.Type                               (EntityMention,EntityMentionUID(..),IRange(..),TextMatchedEntityType(..)
+                                                           ,PreNE(..),UIDCite(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
 import           WordNet.Type.Lexicographer                (LexicographerFile)
 --
@@ -45,6 +46,8 @@ import           WordNet.Type.Lexicographer                (LexicographerFile)
 import           SRL.Analyze.Sense                         (getVerbSenses)
 import           SRL.Analyze.Type
 import           SRL.Analyze.UKB                           (runUKB)
+
+import Debug.Trace
 
 
 tokenToTagPos  :: (Int,[Token]) -> Maybe (EntityMention Text)
@@ -54,10 +57,12 @@ tokenToTagPos (i,tks) = do
   let b = ft ^. token_tok_idx_range . _1
       e = lt ^. token_tok_idx_range . _2
       txts = tks ^.. traverse . token_text
-  return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched PublicCompany))
+  return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched (999,PublicCompany)))
+
 
 adjustWikiRange :: (Int,Int) -> (Int,Int)
 adjustWikiRange (a,b) = (a,b-1)
+
 
 linkedMentionToTagPos :: (EntityMention Text)
                       -> (TagPos TokIdx (EntityMention Text))
@@ -78,7 +83,7 @@ mkWikiList sstr =
           Resolved (i,c)     -> Just (entityName (_info e) <> "(" <> T.pack (show c) <> "," <> T.pack (show i) <> ")")
           OnlyTextMatched x  -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> ")" )
           UnresolvedClass _  -> Nothing
-  in wikilst
+  in trace ("\nmkWikiList:" ++ show tagposs ++ show wikiel ++ show wikilst)$  wikilst
 
 
 
