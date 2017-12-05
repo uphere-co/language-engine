@@ -425,7 +425,7 @@ resolveCP xtr = rewriteTree action xtr
     action rng = do z <- hoistMaybe . extractZipperById rng =<< lift get
                     (replace z <|> return z)
     --
-    replace :: X'Zipper (Lemma ': as) -> MaybeT (State (X'Tree (Lemma ': as))) (X'Zipper (Lemma ': as))
+    replace :: X'Zipper -> MaybeT (State X'Tree) X'Zipper
     replace = replaceSpecCP >=> replaceCompVP >=> replaceAdjunctCP
     --
     -- I need to deduplicate the following code.

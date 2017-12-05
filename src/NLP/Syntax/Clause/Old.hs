@@ -27,10 +27,10 @@ import           NLP.Syntax.Type.XBar
 
 
 predicateArgWS :: TaggedLemma (Lemma ': as)
-               -> CP (Lemma ': as)
+               -> CP
                -> ClauseTreeZipper
                -> [Zipper (Lemma ': as)]
-               -> PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag))
+               -> PredArgWorkspace (Either (Range,STag) (Int,POSTag))
 predicateArgWS tagged cp z adjs =
   PAWS { _pa_CP = cp
        , _pa_candidate_args = case child1 z of
@@ -57,8 +57,8 @@ predicateArgWS tagged cp z adjs =
 findPAWS :: TaggedLemma (Lemma ': as)
          -> ClauseTree
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
-         -> [X'Tree (Lemma ': as)]
-         -> Maybe (PredArgWorkspace (Lemma ': as) (Either (Range,STag) (Int,POSTag)))
+         -> [X'Tree]
+         -> Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag)))
 findPAWS tagged tr vp x'tr = do
   cp <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                            -- anyway need to be rewritten.
