@@ -1,20 +1,24 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Main where
 
-import           Control.Lens                          ((^.),(^?),(.~),(^..),(&),ix,to,_2,_Just)
+import           Control.Applicative                   ((<$>),(<*>))
+import           Control.Lens                          ((^.),(^?),(.~),(^..),(&),ix,to,_2,_Just,makeLenses)
 import           Data.Aeson                            (encode)
-import           Data.Aeson.Encode.Pretty              (encodePretty)
+-- import           Data.Aeson.Encode.Pretty              (encodePretty)
 import qualified Data.ByteString.Char8            as B
 import qualified Data.ByteString.Lazy.Char8       as BL
 import           Data.Default                          (def)
 import qualified Data.IntMap                      as IM
 import           Data.Maybe                            (fromJust, mapMaybe)
+import           Data.Monoid                           ((<>))
 import           Data.Text                             (Text)
 import qualified Data.Text                        as T
 import           Data.Time.Calendar                    (fromGregorian)
 import           Language.Java                    as J
+import qualified Options.Applicative              as O
 import           System.Environment                    (getEnv)
 import           System.IO                             (withFile,IOMode(..))
 import           Text.ProtocolBuffers.WireMessage      (messageGet)
@@ -70,14 +74,32 @@ listTimexToTagPos tmxs = tmxs^.. Tmx.timexes . traverse . to convert
     convert t = TagPos (fi (t^.Tmx.tokenBegin), fi (t^.Tmx.tokenEnd), t^?Tmx.timex . Tmx.value . _Just . to cutf8)
 
 
+
+data TestConfig = TestConfig { _tconfig_lexconfig :: FilePath
+                             , _tconfig_testset   :: FilePath
+                             }
+                deriving Show
+
+makeLenses ''TestConfig
+
+pOptions :: O.Parser TestConfig
+pOptions = TestConfig
+           <$> O.strOption (O.long "config" <> O.short 'c' <> O.help "config file")
+           <*> O.strOption (O.long "file" <> O.short 'f' <> O.help "test text json file")
+
+
+progOption :: O.ParserInfo TestConfig
+progOption = O.info pOptions (O.fullDesc <> O.progDesc "test generation")
+
 main = do
   putStrLn "generate test text"
-  let txt = (testsets^.ix 0._2)
+  -- let txt = (testsets^.ix 0._2)
+  tcfg <- O.execParser progOption
   clspath <- getEnv "CLASSPATH"
-  cfg <- loadLexDataConfig "../../lexicon-builder/config.json.mark"  >>= \case Left err -> error err
-                                                                               Right x -> return x
+  cfg <- loadLexDataConfig (tcfg^.tconfig_lexconfig)  >>= \case Left err -> error err
+                                                                Right x -> return x
   (apredata,netagger,_) <- loadConfig False cfg
-  withFile "testset.json" WriteMode $ \h ->
+  withFile (tcfg^.tconfig_testset) WriteMode $ \h ->
     J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
       pp <- loadJVM
       lst <- flip mapM testsets $ \(tid,txt) -> do
