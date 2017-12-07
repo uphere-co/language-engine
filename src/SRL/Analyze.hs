@@ -112,7 +112,8 @@ printMeaningGraph apredata dstr = do
   putStrLn "-------------"
   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
       mtokss = (dstr ^. ds_mtokenss)
-      -- wikilst = mkWikiList dstr
+      wikilsts = map mkWikiList sstrs1
+  print wikilsts
   -- print (sstrs1 ^.. traverse . ss_ptr)
   -- print (sstrs1 ^.. traverse . ss_clausetr)
 

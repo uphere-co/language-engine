@@ -34,11 +34,12 @@ import qualified NLP.Type.NamedEntity              as N
 import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,Token,sentenceToken,sentenceLemma,sent_tokenRange,token_text,token_tok_idx_range)
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
-import           Text.Search.ParserCustom                  (pTreeAdvGBy)
+import           Text.Search.ParserCustom               (pTreeAdvGBy)
 import           WikiEL.Convert                            (getRangeFromEntityMention)
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
 import           WikiEL.Type                               (EntityMention,EntityMentionUID(..),IRange(..),TextMatchedEntityType(..)
                                                            ,PreNE(..),UIDCite(..))
+import           WikiEL.Type.Wikidata                      (ItemID(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
 import           WordNet.Type.Lexicographer                (LexicographerFile)
 --
@@ -57,7 +58,7 @@ tokenToTagPos (i,tks) = do
   let b = ft ^. token_tok_idx_range . _1
       e = lt ^. token_tok_idx_range . _2
       txts = tks ^.. traverse . token_text
-  return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched (999,PublicCompany)))
+  return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched (CID 999) PublicCompany))  -- just for test now.
 
 
 adjustWikiRange :: (Int,Int) -> (Int,Int)
@@ -81,7 +82,7 @@ mkWikiList sstr =
           UnresolvedUID x    -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> ")" )
           AmbiguousUID (_,x) -> Just (entityName (_info e) <> "(" <> T.pack (show x)<> ")" )
           Resolved (i,c)     -> Just (entityName (_info e) <> "(" <> T.pack (show c) <> "," <> T.pack (show i) <> ")")
-          OnlyTextMatched x  -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> ")" )
+          OnlyTextMatched i x  -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> "," <> T.pack (show i) <> ")" )
           UnresolvedClass _  -> Nothing
   in trace ("\nmkWikiList:" ++ show tagposs ++ show wikiel ++ show wikilst)$  wikilst
 
@@ -111,7 +112,7 @@ docStructure :: AnalyzePredata
 docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       -- need to revive
-      -- mtokenss = sents ^.. traverse . sentenceToken  
+      -- mtokenss = sents ^.. traverse . sentenceToken
       -- mergedtags = nerDocument apredata netagger docinput
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = netagger (docinput^.dainput_sents)
@@ -126,7 +127,7 @@ docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs 
       lnk_mntns2 = filter (\mntn -> not $ elemIsStrictlyInsideR (getRangeFromEntityMention mntn) tnerange) linked_mentions_resolved
       lnk_mntns_tagpos = map linkedMentionToTagPos (lnk_mntns1 ++ lnk_mntns2)
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
-  synsetss <- runUKB (apredata^.analyze_wordnet)(sents,mptrs)
+  synsetss <- trace ("\nlnk_mntns_tagpos" ++ show lnk_mntns_tagpos) $ runUKB (apredata^.analyze_wordnet)(sents,mptrs)
   let mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
   let sentStructures = map (sentStructure apredata mergedtags) (zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss)
   return (DocStructure mtokenss sentitems mergedtags sentStructures)
@@ -148,6 +149,10 @@ tagToMark (Left x)  = case entityPreNE x of
                           if c `elem` [N.Org,N.Person]
                           then Just (MarkEntity c)
                           else Nothing
+                        OnlyTextMatched _ c ->
+                          if | c == PublicCompany  -> Just (MarkEntity N.Org)
+                             | c == PrivateCompany -> Just (MarkEntity N.Org)
+                             | otherwise           -> Nothing
                         _ -> Nothing
 
 
@@ -170,7 +175,7 @@ sentStructure :: AnalyzePredata
               -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree,[(Int,LexicographerFile)])
               -> Maybe SentStructure
 sentStructure apredata taglst (i,midx,lmas,mptr,synsets) =
-  flip fmap mptr $ \ptr -> 
+  flip fmap mptr $ \ptr ->
     let taglst' = adjustTokenIndexForSentence midx taglst
         taglstMarkOnly = map (fmap snd) taglst'
         lmatkns = (zip [0..] . zip lmas . map (^._2) . toList) ptr
