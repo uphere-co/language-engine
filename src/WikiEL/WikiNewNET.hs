@@ -11,8 +11,9 @@ import           Data.Function                 (on)
 import qualified Data.Text              as T
 import qualified Data.Vector            as V
 import           Data.List                     (foldl',maximumBy,sortBy)
+import qualified Data.HashMap.Strict    as HM
 import           Data.Maybe                    (mapMaybe)
-import qualified Data.IntMap            as IM
+-- import qualified Data.IntMap            as IM
 --
 import           NLP.Type.CoreNLP              (Sentence)
 import           NLP.Type.NamedEntity          (NamedEntityClass(..))
@@ -40,12 +41,12 @@ newNETagger :: IO ([Sentence] -> [EntityMention T.Text])
 newNETagger = do
   reprs <- LD.loadEntityReprs reprFileG
   let wikiTable = WET.buildEntityTable reprs
-      wikiMap = foldl' f IM.empty reprs
-        where f !acc (FF.EntityReprRow (WD.ItemID i) (WD.ItemRepr t)) = IM.insertWith (++) i [t] acc
+      wikiMap = foldl' f HM.empty reprs
+        where f !acc (FF.EntityReprRow (WD.QID i) (WD.ItemRepr t)) = HM.insertWith (++) (WD.QID i) [t] acc
   uidNEtags <- WEC.loadFiles classFilesG -- uidTagFiles
   let tagger = extractFilteredEntityMentions wikiTable uidNEtags
       disambiguatorWorker x (ys,t) =
-        let lst = sortBy (flip compare `on` (length.snd)) .  mapMaybe (\y-> (y,) <$> IM.lookup (WD._itemID y) wikiMap) $ ys
+        let lst = sortBy (flip compare `on` (length.snd)) .  mapMaybe (\y-> (y,) <$> HM.lookup y wikiMap) $ ys
        in case lst of
             [] -> x
             (r:_) -> let (i1,i2,_) = _info x

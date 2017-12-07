@@ -82,18 +82,18 @@ uidCandidates (UnresolvedUID _)      = []
 uidCandidates (AmbiguousUID (ids,_)) = ids
 uidCandidates (Resolved     (id,_))  = [id]
 uidCandidates (UnresolvedClass ids)  = ids
-uidCandidates (OnlyTextMatched _)    = []
+uidCandidates (OnlyTextMatched i _)    = [i]
 
 isResolved :: PreNE -> Bool
 isResolved (Resolved _ ) = True
 isResolved _ = False
 
 resolvedUID :: PreNE -> Either String ItemID
-resolvedUID (Resolved (id,_)) = Right id
-resolvedUID (UnresolvedUID _) = Left "Unresolved ItemID"
-resolvedUID (AmbiguousUID _)  = Left "Ambiguous ItemID"
-resolvedUID (UnresolvedClass _) = Left "Unresolved named entity class"
-resolvedUID (OnlyTextMatched _) = Left "Captured by Text Match"
+resolvedUID (Resolved (id,_))     = Right id
+resolvedUID (UnresolvedUID _)     = Left "Unresolved ItemID"
+resolvedUID (AmbiguousUID _)      = Left "Ambiguous ItemID"
+resolvedUID (UnresolvedClass _)   = Left "Unresolved named entity class"
+resolvedUID (OnlyTextMatched i _) = Right i
 
 resolveNEClass :: WikiuidNETag -> NamedEntityClass -> Vector ItemID -> PreNE
 resolveNEClass ts stag xs = g matchedUIDs

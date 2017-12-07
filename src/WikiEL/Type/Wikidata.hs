@@ -1,9 +1,12 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 module WikiEL.Type.Wikidata where
 
+import           Control.Lens                          (makePrisms)
 import           Data.Aeson
+import           Data.Hashable
 import           Data.Text                             (Text)
 import           GHC.Generics                          (Generic)
 
@@ -14,8 +17,13 @@ import           GHC.Generics                          (Generic)
   ItemRepr is for a name or an alias of Wikidata entity.
 -}
 
-newtype ItemID = ItemID { _itemID :: Int }
-               deriving (Eq,Ord,Generic)
+data ItemID = QID { _qitemID :: Int }
+            | CID { _citemID :: Int }
+            deriving (Eq,Ord,Generic)
+
+makePrisms ''ItemID
+
+instance Hashable ItemID
 
 instance ToJSON ItemID where
   toJSON = genericToJSON defaultOptions
@@ -24,7 +32,8 @@ instance FromJSON ItemID where
   parseJSON = genericParseJSON defaultOptions
 
 instance Show ItemID where
-  show (ItemID uid) = "Q" ++ show uid
+  show (QID i) = "Q" ++ show i
+  show (CID i) = "C" ++ show i
 
 
 newtype PropertyID = PropertyID { _propID :: Int }

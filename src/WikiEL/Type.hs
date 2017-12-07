@@ -74,7 +74,7 @@ data PreNE = UnresolvedUID NamedEntityClass           -- Tagged by CoreNLP NER, 
            | AmbiguousUID ([ItemID],NamedEntityClass) -- Tagged by CoreNLP NER, and matched Wikidata UIDs of the NamedEntityClass
            | Resolved (ItemID, ItemClass)             -- A wikidata UID of a CoreNLP NER Class type.                                
            | UnresolvedClass [ItemID]                 -- Not tagged by CoreNLP NER, but matched Wikidata UID(s)                     
-           | OnlyTextMatched (Int,TextMatchedEntityType)
+           | OnlyTextMatched ItemID TextMatchedEntityType
            deriving(Show, Eq, Generic)
 
 makePrisms ''PreNE
