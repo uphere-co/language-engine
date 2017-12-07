@@ -34,7 +34,7 @@ import qualified NLP.Type.NamedEntity              as N
 import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,Token,sentenceToken,sentenceLemma,sent_tokenRange,token_text,token_tok_idx_range)
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
-import           Text.Search.ParserCustom               (pTreeAdvGBy)
+import           Text.Search.New.ParserCustom              (pTreeAdvGBy)
 import           WikiEL.Convert                            (getRangeFromEntityMention)
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
 import           WikiEL.Type                               (EntityMention,EntityMentionUID(..),IRange(..),TextMatchedEntityType(..)
@@ -51,14 +51,14 @@ import           SRL.Analyze.UKB                           (runUKB)
 import Debug.Trace
 
 
-tokenToTagPos  :: (Int,[Token]) -> Maybe (EntityMention Text)
-tokenToTagPos (i,tks) = do
+tokenToTagPos  :: (Int,(Int,[Token])) -> Maybe (EntityMention Text)
+tokenToTagPos (i,(cid,tks)) = do
   ft <- tks ^? _head
   lt <- tks ^? _last
   let b = ft ^. token_tok_idx_range . _1
       e = lt ^. token_tok_idx_range . _2
       txts = tks ^.. traverse . token_text
-  return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched (CID 999) PublicCompany))  -- just for test now.
+  return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched (CID cid) PublicCompany))  -- just for test now.
 
 
 adjustWikiRange :: (Int,Int) -> (Int,Int)
@@ -106,7 +106,7 @@ nerDocument apredata netagger docinput@(DocAnalysisInput sents sentidxs sentitem
 --
 docStructure :: AnalyzePredata
              -> ([Sentence] -> [EntityMention Text])
-             -> Forest (Maybe Text)
+             -> Forest (Either Int Text)
              -> DocAnalysisInput
              -> IO DocStructure
 docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do

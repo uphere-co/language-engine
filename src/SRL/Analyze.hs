@@ -7,7 +7,7 @@
 
 module SRL.Analyze where
 
-import           Control.Lens                   ((^.),(^..),(.~),(&),_Just)
+import           Control.Lens                   ((^.),(^..),(.~),(&),_Just,to)
 import           Control.Monad                  (forM_,void,when)
 import           Control.Monad.IO.Class         (liftIO)
 import           Control.Monad.Loops            (whileJust_)
@@ -42,13 +42,13 @@ import           Lexicon.Data                   (LexDataConfig(..),cfg_framenet_
                                                 )
 import           MWE.Util                       (mkTextFromToken)
 import           NER.Load                       (loadCompanies)
-import           NER.Type                       (alias)
+import           NER.Type                       (alias,companyId)
 import           NLP.Syntax.Format              (formatX'Tree)
 import           NLP.Type.CoreNLP               (Sentence)
 import           OntoNotes.Corpus.Load          (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory  (inventory_lemma)
 import           Text.Format.Dot                (mkLabelText)
-import           Text.Search.Generic.SearchTree (addTreeItem)
+import           Text.Search.New.Generic.SearchTree (addTreeItem)
 import           WikiEL.Type                    (EntityMention)
 import           WikiEL.WikiNewNET              (newNETagger)
 import           WordNet.Query                  (loadDB)
@@ -71,7 +71,7 @@ queryProcess :: Analyze.Config
              -> J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> AnalyzePredata
              -> ([Sentence] -> [EntityMention Text])
-             -> Forest (Maybe Text)
+             -> Forest (Either Int Text)
              -> IO ()
 queryProcess config pp apredata netagger forest =
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
@@ -147,9 +147,10 @@ printMeaningGraph apredata dstr = do
     T.IO.writeFile ("test" ++ (show i) ++ ".dot") dotstr
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
 
+
 loadConfig :: Bool
            -> LexDataConfig
-           -> IO (AnalyzePredata,[Sentence]->[EntityMention Text],Forest (Maybe Text))
+           -> IO (AnalyzePredata,[Sentence]->[EntityMention Text],Forest (Either Int Text))
 loadConfig bypass_ner cfg = do
   apredata <- loadAnalyzePredata cfg
   createUKBDB (cfg^.cfg_ukb_binfile,cfg^.cfg_ukb_dictfile)
@@ -157,8 +158,7 @@ loadConfig bypass_ner cfg = do
                 then return (const [])
                 else newNETagger
   companies <- loadCompanies
-  let clist = concat $ map (^. alias) companies
-      forest = foldr addTreeItem [] (map T.words clist) -- Temporary. Tokenization should be done by CoreNLP.
+  let forest = foldr addTreeItem [] [(c^.companyId,c^.alias) |  c <- companies] -- Temporary. Tokenization should be done by CoreNLP.
   return (apredata,netagger,forest)
 
 
@@ -175,21 +175,6 @@ loadAnalyzePredata cfg = do
   return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats wndb)
 
 
-{-
-getAnalysis :: DocAnalysisInput
-            -> (HashMap Text Inventory
-               ,HashMap (Text,Text) Int
-               ,FrameDB
-               ,HashMap Text [(Text,FNFrame)]
-               ,([Sentence] -> [EntityMention Text])
-               ,[RoleInstance]
-               ,[RolePattInstance Voice])
-            -> DocStructure
-getAnalysis input config =
-  let (sensemap,sensestat,framedb,ontomap,netagger,rolemap,subcats) = config
-      apredata = AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats
-  in docStructure apredata netagger input
--}
 
 loadJVM :: IO (J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
 loadJVM = prepare (def & (tokenizer .~ True)
@@ -201,6 +186,7 @@ loadJVM = prepare (def & (tokenizer .~ True)
                        . (ner .~ True))
 
 
+--
 -- | main program entry point
 --
 runAnalysis :: LexDataConfig -> Analyze.Config -> IO ()
