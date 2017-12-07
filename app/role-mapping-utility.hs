@@ -193,13 +193,15 @@ prompt = do
           prompt
 
 
-data ProgOption = ProgOption { progCommand :: String
+data ProgOption = ProgOption { configFile :: FilePath
+                             , progCommand :: String
                              , startNum :: Maybe Int
                              } deriving Show
 
 
 pOptions :: O.Parser ProgOption
-pOptions = ProgOption <$> O.strArgument (O.help "program command show or tag")
+pOptions = ProgOption <$> O.strOption (O.long "config" <> O.short 'c' <> O.help "config file")
+                      <*> O.strArgument (O.help "program command show or tag")
                       <*> optional (O.argument O.auto (O.help "starting number"))
 
 progOption :: O.ParserInfo ProgOption
@@ -209,8 +211,8 @@ progOption = O.info pOptions (O.fullDesc <> O.progDesc "role mapping utility pro
 main :: IO ()
 main = do
   opt <- O.execParser progOption
-  cfg  <- loadLexDataConfig "config.json" >>= \case Left err -> error err
-                                                    Right x  -> return x
+  cfg  <- loadLexDataConfig (configFile opt) >>= \case Left err -> error err
+                                                       Right x  -> return x
   (_ludb,_sensestat,_semlinkmap,sensemap,_ws,_) <- loadAllexceptPropBank cfg
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
   (_preddb,rolesetdb) <- loadPropBankDB cfg
