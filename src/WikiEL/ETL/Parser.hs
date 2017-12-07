@@ -26,13 +26,13 @@ parserWikidataItemID :: Parser ItemID
 parserWikidataItemID = do
   string "Q"
   id <- decimal
-  return (ItemID id)
+  return (QID id)
 
 parserBrokenItemID :: Parser ItemID
 parserBrokenItemID = do
   string "Q" <|> string "q"
   id <- decimal
-  return (ItemID id)
+  return (QID id)
 
 parserWikidataPropertyID :: Parser PropertyID
 parserWikidataPropertyID = do

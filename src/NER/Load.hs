@@ -29,19 +29,19 @@ import qualified WikiEL.Type.Wikidata    as WD
 
 
 
-mkNameUIDHM :: [(Int,Text)] -> HM.HashMap Text Int
+mkNameUIDHM :: [(WD.ItemID,Text)] -> HM.HashMap Text WD.ItemID
 mkNameUIDHM nameTable = foldl' (\acc (i,n) -> HM.insert n i acc) HM.empty nameTable
 
 
-mkUIDAliasHM :: [(Int,Text)] -> HM.HashMap Int [Text]
+mkUIDAliasHM :: [(WD.ItemID,Text)] -> HM.HashMap WD.ItemID [Text]
 mkUIDAliasHM nameTable = foldl' (\acc (i,n) -> HM.insertWith (\xs1 -> (\xs2 -> xs1 ++ xs2)) i [n] acc) HM.empty nameTable
 
 
 -- | returns (Wiki UID, Text)
-loadNameTable :: IO [(Int,Text)]
+loadNameTable :: IO [(WD.ItemID,Text)]
 loadNameTable = do
   reprs <- LD.loadEntityReprs reprFileG
-  return $ map (\x -> ((WD._itemID . FF._uid) x,(WD._repr . FF._repr) x)) reprs
+  return $ map (\x -> (FF._uid x,(WD._repr . FF._repr) x)) reprs
 
 
 loadCompanies :: IO [CompanyInfo]
@@ -68,7 +68,7 @@ getCompanyListFromJSON fp = do
     Just result -> return result
 
 
-constructCompanyListFromCSV :: [(Int,Text)] -> IO [CompanyInfo]
+constructCompanyListFromCSV :: [(WD.ItemID,Text)] -> IO [CompanyInfo]
 constructCompanyListFromCSV nameTable = do
   let nuid = mkNameUIDHM nameTable
       uida = mkUIDAliasHM nameTable
