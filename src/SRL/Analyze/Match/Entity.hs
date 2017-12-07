@@ -31,9 +31,9 @@ import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..))
 --
 -- | this is very experimental now, only "the company" is checked.
 --
-definiteCorefResolution :: [X'Tree '[Lemma]]
+definiteCorefResolution :: [X'Tree]
                         -> TaggedLemma '[Lemma]
-                        -> DetP '[Lemma]
+                        -> DetP
                         -> Maybe (Range,Range)
 definiteCorefResolution x'tr tagged dp = do
   let rng_dp = dp^.maximalProjection
@@ -63,9 +63,9 @@ definiteCorefResolution x'tr tagged dp = do
 
 
 
-definiteGenitiveCorefResolution :: [X'Tree '[Lemma]]
+definiteGenitiveCorefResolution :: [X'Tree]
                                 -> TaggedLemma '[Lemma]
-                                -> DetP '[Lemma]
+                                -> DetP
                                 -> Maybe (Range,Range)
 definiteGenitiveCorefResolution x'tr tagged dp = do
   guard (dp^?headX.hd_class._GenitiveClitic == Just ())
@@ -84,8 +84,8 @@ definiteGenitiveCorefResolution x'tr tagged dp = do
     else mzero
 
 
-pronounResolution :: [X'Tree '[Lemma]]
-                  -> DetP '[Lemma]
+pronounResolution :: [X'Tree]
+                  -> DetP
                   -> Maybe (Range,Range)
 pronounResolution x'tr dp = do
     let rng_dp = dp^.maximalProjection
@@ -118,15 +118,16 @@ pronounResolution x'tr dp = do
          | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp'^.maximalProjection)
          | otherwise -> mzero
 
-entityTextDP :: TaggedLemma t -> DetP t -> Text
+entityTextDP :: TaggedLemma t -> DetP -> Text
 entityTextDP tagged dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> fromMaybe "" (fmap (headText tagged) (dp^.complement))
     _ -> T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
 
 
-entityFromDP :: [X'Tree '[Lemma]]
-             -> TaggedLemma '[Lemma] -> DetP '[Lemma]
+entityFromDP :: [X'Tree]
+             -> TaggedLemma '[Lemma]
+             -> DetP
              -> (EntityInfo,DPInfo)
 entityFromDP x'tr tagged dp =
   let rng = dp^.maximalProjection
