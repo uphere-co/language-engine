@@ -14,7 +14,9 @@ import           Control.Monad.Trans.Either                (EitherT(..))
 import           Data.Bifunctor                            (first)
 import           Data.Either                               (lefts,rights)
 import           Data.Foldable                             (toList)
-import           Data.List                                 (zip5)
+import           Data.IntMap                               (IntMap)
+import qualified Data.IntMap                       as IM
+import           Data.List                                 (intercalate,zip5)
 import           Data.Maybe                                (catMaybes,fromMaybe,fromJust,mapMaybe)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
@@ -24,6 +26,7 @@ import qualified Data.Vector                       as V
 --
 import           CoreNLP.Simple.Convert                    (mkLemmaMap)
 import           Data.Range                                (elemIsInsideR,elemIsStrictlyInsideR)
+import           NER.Type                                  (CompanyInfo(..))
 import           NLP.Syntax.Clause                         (bindingAnalysis,bindingAnalysisRaising,identifyCPHierarchy,resolveCP)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (MarkType(..))
@@ -34,10 +37,13 @@ import qualified NLP.Type.NamedEntity              as N
 import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,Token,sentenceToken,sentenceLemma,sent_tokenRange,token_text,token_tok_idx_range)
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
-import           Text.Search.ParserCustom                  (pTreeAdvGBy)
+import           Text.Format.Tree                          (linePrint)
+import           Text.Search.New.ParserCustom              (pTreeAdvGBy)
 import           WikiEL.Convert                            (getRangeFromEntityMention)
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
-import           WikiEL.Type                               (EntityMention,EntityMentionUID(..),IRange(..),TextMatchedEntityType(..),PreNE(..),UIDCite(..))
+import           WikiEL.Type                               (EntityMention,EntityMentionUID(..),IRange(..),TextMatchedEntityType(..)
+                                                           ,PreNE(..),UIDCite(..))
+import           WikiEL.Type.Wikidata                      (ItemID(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
 import           WordNet.Type.Lexicographer                (LexicographerFile)
 --
@@ -46,18 +52,24 @@ import           SRL.Analyze.Sense                         (getVerbSenses)
 import           SRL.Analyze.Type
 import           SRL.Analyze.UKB                           (runUKB)
 
+import Debug.Trace
 
-tokenToTagPos  :: (Int,[Token]) -> Maybe (EntityMention Text)
-tokenToTagPos (i,tks) = do
+
+tokenToTagPos  :: IntMap CompanyInfo -> (Int,(Int,[Token])) -> Maybe (EntityMention Text)
+tokenToTagPos cmap (i,(cid,tks)) = do
   ft <- tks ^? _head
   lt <- tks ^? _last
   let b = ft ^. token_tok_idx_range . _1
       e = lt ^. token_tok_idx_range . _2
       txts = tks ^.. traverse . token_text
-  return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched PublicCompany))
+  -- ctyp <- cmap^?at cid.  IM.lookup cid cmap
+  let ctyp = PublicCompany -- for the time being
+  return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched (CID cid) ctyp))
+
 
 adjustWikiRange :: (Int,Int) -> (Int,Int)
 adjustWikiRange (a,b) = (a,b-1)
+
 
 linkedMentionToTagPos :: (EntityMention Text)
                       -> (TagPos TokIdx (EntityMention Text))
@@ -76,7 +88,7 @@ mkWikiList sstr =
           UnresolvedUID x    -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> ")" )
           AmbiguousUID (_,x) -> Just (entityName (_info e) <> "(" <> T.pack (show x)<> ")" )
           Resolved (i,c)     -> Just (entityName (_info e) <> "(" <> T.pack (show c) <> "," <> T.pack (show i) <> ")")
-          OnlyTextMatched x  -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> ")" )
+          OnlyTextMatched i x  -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> "," <> T.pack (show i) <> ")" )
           UnresolvedClass _  -> Nothing
   in wikilst
 
@@ -100,24 +112,23 @@ nerDocument apredata netagger docinput@(DocAnalysisInput sents sentidxs sentitem
 --
 docStructure :: AnalyzePredata
              -> ([Sentence] -> [EntityMention Text])
-             -> Forest (Maybe Text)
+             -> (Forest (Either Int Text), IntMap CompanyInfo)
              -> DocAnalysisInput
              -> IO DocStructure
-docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
+docStructure apredata netagger (forest,companyMap) docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       -- need to revive
-      -- mtokenss = sents ^.. traverse . sentenceToken  
       -- mergedtags = nerDocument apredata netagger docinput
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = netagger (docinput^.dainput_sents)
 
   let entitiesByNER = map (\tokens -> fst $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens) (map catMaybes mtokenss)
   let ne = concat $ rights entitiesByNER
-  let tne = mapMaybe tokenToTagPos (zip [10001..] ne)
-
+  let tne = mapMaybe (tokenToTagPos companyMap) (zip [10001..] ne)
+  print tne
   let tnerange = map getRangeFromEntityMention tne
       wnerange = map getRangeFromEntityMention linked_mentions_resolved
-      lnk_mntns1 = filter (\mntn -> not $ elemIsInsideR (getRangeFromEntityMention mntn) wnerange) tne
+      lnk_mntns1 = tne -- filter (\mntn -> not $ elemIsInsideR (getRangeFromEntityMention mntn) wnerange) tne
       lnk_mntns2 = filter (\mntn -> not $ elemIsStrictlyInsideR (getRangeFromEntityMention mntn) tnerange) linked_mentions_resolved
       lnk_mntns_tagpos = map linkedMentionToTagPos (lnk_mntns1 ++ lnk_mntns2)
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
@@ -143,6 +154,10 @@ tagToMark (Left x)  = case entityPreNE x of
                           if c `elem` [N.Org,N.Person]
                           then Just (MarkEntity c)
                           else Nothing
+                        OnlyTextMatched _ c ->
+                          if | c == PublicCompany  -> Just (MarkEntity N.Org)
+                             | c == PrivateCompany -> Just (MarkEntity N.Org)
+                             | otherwise           -> Nothing
                         _ -> Nothing
 
 
@@ -165,7 +180,7 @@ sentStructure :: AnalyzePredata
               -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree,[(Int,LexicographerFile)])
               -> Maybe SentStructure
 sentStructure apredata taglst (i,midx,lmas,mptr,synsets) =
-  flip fmap mptr $ \ptr -> 
+  flip fmap mptr $ \ptr ->
     let taglst' = adjustTokenIndexForSentence midx taglst
         taglstMarkOnly = map (fmap snd) taglst'
         lmatkns = (zip [0..] . zip lmas . map (^._2) . toList) ptr
