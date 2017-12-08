@@ -98,7 +98,7 @@ main = do
   clspath <- getEnv "CLASSPATH"
   cfg <- loadLexDataConfig (tcfg^.tconfig_lexconfig)  >>= \case Left err -> error err
                                                                 Right x -> return x
-  (apredata,netagger,_) <- loadConfig False cfg
+  (apredata,netagger,_,_) <- loadConfig False cfg
   withFile (tcfg^.tconfig_testset) WriteMode $ \h ->
     J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
       pp <- loadJVM
