@@ -22,11 +22,11 @@ Officials were struggling Monday to reach the majority of the Florida Keys amid 
 BMO Global Asset Management, owned by Canada's Bank of Montreal, said on Monday it has appointed Fadi Khoury as head of Middle East and North Africa.
 
 
--- PP-as as role. this is resolved 
+-- PP-as as role. this is resolved
 HSBC said it appointed Philip Kunz as head of global private banking for South East Asia.
 
 
--- misidenfied as "used to". now resolved 
+-- misidenfied as "used to". now resolved
 A former top HSBC Holdings Plc executive threw his Scottish client "under the bus" by using his knowledge of its large planned currency transaction to do his own trading first, a U.S. prosecutor said on Monday at the start of a closedly-watched trail.
 
 
@@ -59,7 +59,7 @@ Chinese e-commerce giant Alibaba Group Holding Ltd is raising its stake in logis
 -- | voted as type?
 The council voted six to three that AIG was no longer a risk to financial stability.
 
--- | object-control. 
+-- | object-control.
 The SEC said it charged Maksim Zaslavskiy along with REcoin Group Foundation and DRC World with selling unregistered cryptocurrency securities reputedly backed by investments in real estate and diamonds, when it found no such investment had taken place.
 
 -- | parsing error
@@ -109,7 +109,7 @@ Toyota Motor Corp would begin testing self-driving cars, which needs technology 
 -- | PP inside DP must be matched as an argument.
 UK-based boutique capital markets firm Demica said it appointed Maurice Benisty as chief commercial officer.
 
--- | sell ... on ...  is regarded as suasion, but not. it's "bonds on international market", semantic selectional restriction is needed. 
+-- | sell ... on ...  is regarded as suasion, but not. it's "bonds on international market", semantic selectional restriction is needed.
 Brazilian steelmaker Companhia Siderúrgica Nacional SA plans to sell bonds on international markets in an effort to improve its debt profile, Benjamin Steinbruch, chief executive officer, said on Friday.
 
 
@@ -141,7 +141,7 @@ French retailer Auchan [AUCH.UL] said on Monday it had not been approached by E-
 British ship insurer Standard Club is setting up a new European Union subsidiary in Dublin in case Britain loses access to the single market after Brexit, becoming the second of these specialised providers to opt for Ireland in two days.
 
 -- | Tuesday? on the Nasdaq
-Israeli chip maker Mellanox Technologies saw its shares surge on the Nasdaq on Tuesday after activist hedge fund Starboard Value LP bought a 10.7 percent stake to influence strategy. 
+Israeli chip maker Mellanox Technologies saw its shares surge on the Nasdaq on Tuesday after activist hedge fund Starboard Value LP bought a 10.7 percent stake to influence strategy.
 
 
 -- | damaging millions
@@ -156,7 +156,7 @@ Bayer said it expected antitrust authorities to make the planned acquisition of 
 
 -- | Venture capitalist / Peter Thiel
 Venture capitalist Peter Thiel may be looking to buy online news site Gawker.com, BuzzFeed said on Wednesday.
- 
+
 -- | what he called "missteps"
 Walt Disney Co animation executive John Lasseter told company staff on Tuesday he was taking a six-month leave of absence following what he called "missteps" including unwanted hugs that made employees uncomfortable, according to a memo seen by Reuters.
 
@@ -179,8 +179,18 @@ Bank of Sharjah and Invest Bank are in merger talks that could create an institu
 
 
 
--- | gerund problem. it has NP - S structure with NRC. 
+-- | gerund problem. it has NP - S structure with NRC.
 * Toyota to test self-driving, talking cars by about 2020","description":"Toyota Motor Corp on Monday said it would begin testing self-driving electric cars around 2020, which will use artificial intelligence (AI) to engage with drivers, as the company competes with tech firms to develop new vehicles.
 
 -- | C$ 4.5 billion acquisition = acquire for C$ 4.5 billion
 Canada's Metro Inc said on Wednesday it would sell a major portion of its stake in Alimentation Couche Tard Inc to fund its C$4.5 billion acquisition of pharmacy chain Jean Coutu Group.
+
+
+-- | object of discuss?
+Petrobras Chief Executive Officer Pedro Parente said he will meet this month with the CEO of China National Petroleum Corp in Brazil to discuss the details of their partnership to build a refinery complex in Rio de Janeiro.
+
+-- |
+The U.S. Federal Communications Commission voted 3-2 on Thursday to allow broadcasters to voluntarily use a new technology to improve picture quality and allow better reception on mobile phones and give advertisers dramatically more data about viewing habits.
+
+-- |
+Unspecified pests have prompted JBS USA to halt production temporarily at a Pennsylvania beef processing plant that accounts for about 2 percent of U.S. daily cattle slaughter.

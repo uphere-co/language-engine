@@ -77,7 +77,7 @@ createDotPng new fn imglst = do
   return (fn,imglst)
 
 
-process apredata new t = do
+process apredata companyMap new t = do
   TIO.putStrLn (t^.test_id)
   let dainput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = t^.test_dainput
       lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
@@ -88,7 +88,7 @@ process apredata new t = do
       mgs = map (meaningGraph apredata) sstrs
       imgs = flip map (zip4 [1..] mgs sstrs mtokenss) $ \(i,mg,sstr,mtoks) ->
                let title = mkTextFromToken mtoks
-                   wikilst = mkWikiList sstr
+                   wikilst = mkWikiList companyMap sstr
                    mg' = tagMG mg wikilst
                in (i,title,mg')
   createDotPng new (T.unpack (t^.test_id)) imgs
@@ -127,7 +127,7 @@ main = do
   tcfg <- execParser progOption
   cfg <- loadLexDataConfig (tcfg^.tconfig_lexconfig) >>= \case Left err -> error err
                                                                Right x -> return x
-  (apredata,_netagger,_) <- loadConfig True cfg
+  (apredata,_netagger,_,companyList) <- loadConfig True cfg
   let old = tcfg^.tconfig_old
       new = tcfg^.tconfig_new
   putStrLn "create performance testing set"
@@ -137,6 +137,6 @@ main = do
     Right lst -> do
       cwd <- getCurrentDirectory
       setCurrentDirectory (tcfg^.tconfig_outputdir)
-      fileimgs <- mapM (process apredata new) lst
+      fileimgs <- mapM (process apredata companyList new) lst
       createIndex (old,new) fileimgs
       setCurrentDirectory cwd

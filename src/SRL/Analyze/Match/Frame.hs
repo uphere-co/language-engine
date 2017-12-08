@@ -138,7 +138,7 @@ ppExtraRoles p = join (maybeToList (lookup p ppExtraRoleMap))
 
 ppExtraRoleMap :: [(Text,[FNFrameElement])]
 ppExtraRoleMap = [ ("about"     , ["Topic"])
-                 , ("above"     , ["Location"])
+                 , ("above"     , ["Location","Place"])
                  , ("across"    , ["Path"])
                  , ("after"     , ["Time"])
                  , ("against"   , ["Issue"])
@@ -149,21 +149,21 @@ ppExtraRoleMap = [ ("about"     , ["Topic"])
                  , ("among"     , ["Total","Possibilities"])
                  , ("around"    , ["Area","Location"])
                  , ("as"        , ["Role"])
-                 , ("astride"   , ["Location"])
-                 , ("at"        , ["Location","Time"])
+                 , ("astride"   , ["Location","Place"])
+                 , ("at"        , ["Location","Place","Time"])
                  , ("atop"      , ["Location"])
                  -- ontop
                  -- bar
                  , ("before"    , ["Time"])
-                 , ("behind"    , ["Location"])
-                 , ("below"     , ["Location"])
-                 , ("beneath"   , ["Location"])
-                 , ("beside"    , ["Location"])
-                 , ("besides"   , ["Location"])
-                 , ("between"   , ["Area","Location"])
+                 , ("behind"    , ["Location","Place"])
+                 , ("below"     , ["Location","Place"])
+                 , ("beneath"   , ["Location","Place"])
+                 , ("beside"    , ["Location","Place"])
+                 , ("besides"   , ["Location","Place"])
+                 , ("between"   , ["Area","Location","Place"])
                  , ("beyond"    , ["Standard_item","Domain"])
                  -- but
-                 , ("by"        , ["Means","Location"])
+                 , ("by"        , ["Means","Location","Place"])
                  -- circa
                  -- come
                  , ("despite"   , ["Event_description"])
@@ -172,22 +172,22 @@ ppExtraRoleMap = [ ("about"     , ["Topic"])
                  -- except
                  , ("for"       , ["Purpose","Duration","Goal"])
                  , ("from"      , ["Origin","Support"])
-                 , ("in"        , ["Location","Time"])
+                 , ("in"        , ["Location","Place","Time"])
                  , ("inside"    , ["Area","Location","Ground"])
                  , ("into"      , ["Goal","Effect"])
                  -- less
                  , ("like"      , ["Manner"])
                  -- minus
-                 , ("near"      , ["Location"])
+                 , ("near"      , ["Location","Place"])
                  -- notwithstanding
                  , ("of"        , ["Phenomenon"])
-                 , ("off"       , ["Location"])
-                 , ("on"        , ["Location","Time"])
+                 , ("off"       , ["Location","Place"])
+                 , ("on"        , ["Location","Place","Time"])
                  -- onto
                  -- opposite
                  , ("out"       , ["Direction"])
                  , ("outside"   , ["Area","Ground"])
-                 , ("over"      , ["Duration","Location","Area","Ground"])
+                 , ("over"      , ["Duration","Location","Place","Area","Ground"])
                  , ("past"      , ["Path","Area","Ground","Ground"])
                  -- per
                  -- save
@@ -199,18 +199,18 @@ ppExtraRoleMap = [ ("about"     , ["Topic"])
                  , ("to"        , ["Goal","Effect","Direction"])
                  , ("toward"    , ["Goal","Direction"])
                  , ("towards"   , ["Goal","Direction"])
-                 , ("under"     , ["Location","Ground","Area"])
-                 , ("underneath", ["Location"])
+                 , ("under"     , ["Location","Place","Ground","Area"])
+                 , ("underneath", ["Location","Place"])
                  , ("unlike"    , ["Manner"])
                  , ("until"     , ["Time"])
                  , ("till"      , ["Time"])
                  , ("up"        , ["Direction"])
-                 , ("upon"      , ["Location"])
+                 , ("upon"      , ["Location","Place"])
                  -- upside
                  -- versus
                  -- via
                  , ("with"      , ["Co-participant"])
-                 , ("within"    , ["Location","Ground","Area"])
+                 , ("within"    , ["Location","Place","Ground","Area"])
                  , ("without"   , ["Co-participant"])
                  -- worth
                  ]
