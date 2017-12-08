@@ -26,7 +26,7 @@ import qualified Data.Vector                       as V
 --
 import           CoreNLP.Simple.Convert                    (mkLemmaMap)
 import           Data.Range                                (elemIsInsideR,elemIsStrictlyInsideR)
-import           NER.Type                                  (CompanyInfo(..))
+import           NER.Type                                  (CompanyInfo(..),ticker)
 import           NLP.Syntax.Clause                         (bindingAnalysis,bindingAnalysisRaising,identifyCPHierarchy,resolveCP)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (MarkType(..))
@@ -78,8 +78,8 @@ linkedMentionToTagPos linked_mention =
   in TagPos (TokIdx b, TokIdx e,linked_mention)
 
 
-mkWikiList :: SentStructure -> [((Int, Int), Text)]
-mkWikiList sstr =
+mkWikiList :: IntMap CompanyInfo -> SentStructure -> [((Int, Int), Text)]
+mkWikiList cmap sstr =
   let tagposs = sstr ^.. ss_tagged_full . traverse . to (fmap fst)
       wikiel  = lefts $ map (\(TagPos (i,j,e)) -> first (unTokIdx i,unTokIdx j,) e) tagposs
       wikilst = mapMaybe  (\(i,j,w) -> ((i,j-1),) <$> getNEFunc w) wikiel
@@ -88,7 +88,7 @@ mkWikiList sstr =
           UnresolvedUID x    -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> ")" )
           AmbiguousUID (_,x) -> Just (entityName (_info e) <> "(" <> T.pack (show x)<> ")" )
           Resolved (i,c)     -> Just (entityName (_info e) <> "(" <> T.pack (show c) <> "," <> T.pack (show i) <> ")")
-          OnlyTextMatched i x  -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> "," <> T.pack (show i) <> ")" )
+          OnlyTextMatched i x  -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> "," <> T.pack (show i) <> maybe "" (\x->"," <> x^.ticker) (IM.lookup (_citemID i) cmap)  <> ")" )
           UnresolvedClass _  -> Nothing
   in wikilst
 
