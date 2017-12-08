@@ -90,7 +90,7 @@ mkWikiList sstr =
           Resolved (i,c)     -> Just (entityName (_info e) <> "(" <> T.pack (show c) <> "," <> T.pack (show i) <> ")")
           OnlyTextMatched i x  -> Just (entityName (_info e) <> "(" <> T.pack (show x) <> "," <> T.pack (show i) <> ")" )
           UnresolvedClass _  -> Nothing
-  in trace ("\nmkWikiList:" ++ show tagposs ++ show wikiel ++ show wikilst)$  wikilst
+  in wikilst
 
 
 
@@ -118,7 +118,6 @@ docStructure :: AnalyzePredata
 docStructure apredata netagger (forest,companyMap) docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       -- need to revive
-      -- mtokenss = sents ^.. traverse . sentenceToken
       -- mergedtags = nerDocument apredata netagger docinput
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = netagger (docinput^.dainput_sents)
@@ -133,7 +132,7 @@ docStructure apredata netagger (forest,companyMap) docinput@(DocAnalysisInput se
       lnk_mntns2 = filter (\mntn -> not $ elemIsStrictlyInsideR (getRangeFromEntityMention mntn) tnerange) linked_mentions_resolved
       lnk_mntns_tagpos = map linkedMentionToTagPos (lnk_mntns1 ++ lnk_mntns2)
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
-  synsetss <- trace ("\nforest:\n" ++ T.unpack (T.intercalate "\n" (map (linePrint (T.pack . show)) forest))) $ runUKB (apredata^.analyze_wordnet)(sents,mptrs)
+  synsetss <- runUKB (apredata^.analyze_wordnet)(sents,mptrs)
   let mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
   let sentStructures = map (sentStructure apredata mergedtags) (zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss)
   return (DocStructure mtokenss sentitems mergedtags sentStructures)
