@@ -14,6 +14,8 @@ import           Control.Monad.Trans.Either                (EitherT(..))
 import           Data.Bifunctor                            (first)
 import           Data.Either                               (lefts,rights)
 import           Data.Foldable                             (toList)
+import           Data.IntMap                               (IntMap)
+import qualified Data.IntMap                       as IM
 import           Data.List                                 (intercalate,zip5)
 import           Data.Maybe                                (catMaybes,fromMaybe,fromJust,mapMaybe)
 import           Data.Monoid                               ((<>))
@@ -24,6 +26,7 @@ import qualified Data.Vector                       as V
 --
 import           CoreNLP.Simple.Convert                    (mkLemmaMap)
 import           Data.Range                                (elemIsInsideR,elemIsStrictlyInsideR)
+import           NER.Type                                  (CompanyInfo(..))
 import           NLP.Syntax.Clause                         (bindingAnalysis,bindingAnalysisRaising,identifyCPHierarchy,resolveCP)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (MarkType(..))
@@ -52,14 +55,16 @@ import           SRL.Analyze.UKB                           (runUKB)
 import Debug.Trace
 
 
-tokenToTagPos  :: (Int,(Int,[Token])) -> Maybe (EntityMention Text)
-tokenToTagPos (i,(cid,tks)) = do
+tokenToTagPos  :: IntMap CompanyInfo -> (Int,(Int,[Token])) -> Maybe (EntityMention Text)
+tokenToTagPos cmap (i,(cid,tks)) = do
   ft <- tks ^? _head
   lt <- tks ^? _last
   let b = ft ^. token_tok_idx_range . _1
       e = lt ^. token_tok_idx_range . _2
       txts = tks ^.. traverse . token_text
-  return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched (CID cid) PublicCompany))  -- just for test now.
+  -- ctyp <- cmap^?at cid.  IM.lookup cid cmap
+  let ctyp = PublicCompany -- for the time being
+  return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched (CID cid) ctyp))
 
 
 adjustWikiRange :: (Int,Int) -> (Int,Int)
@@ -107,10 +112,10 @@ nerDocument apredata netagger docinput@(DocAnalysisInput sents sentidxs sentitem
 --
 docStructure :: AnalyzePredata
              -> ([Sentence] -> [EntityMention Text])
-             -> Forest (Either Int Text)
+             -> (Forest (Either Int Text), IntMap CompanyInfo)
              -> DocAnalysisInput
              -> IO DocStructure
-docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
+docStructure apredata netagger (forest,companyMap) docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       -- need to revive
       -- mtokenss = sents ^.. traverse . sentenceToken
@@ -120,7 +125,7 @@ docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs 
 
   let entitiesByNER = map (\tokens -> fst $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens) (map catMaybes mtokenss)
   let ne = concat $ rights entitiesByNER
-  let tne = mapMaybe tokenToTagPos (zip [10001..] ne)
+  let tne = mapMaybe (tokenToTagPos companyMap) (zip [10001..] ne)
 
   let tnerange = map getRangeFromEntityMention tne
       wnerange = map getRangeFromEntityMention linked_mentions_resolved

@@ -14,6 +14,8 @@ import           Control.Monad.Loops            (whileJust_)
 import qualified Data.ByteString.Char8  as B
 import           Data.Default                   (def)
 import qualified Data.HashMap.Strict    as HM
+import           Data.IntMap                    (IntMap)
+import qualified Data.IntMap            as IM
 import           Data.Maybe
 import           Data.Text                      (Text)
 import qualified Data.Text              as T
@@ -42,7 +44,7 @@ import           Lexicon.Data                   (LexDataConfig(..),cfg_framenet_
                                                 )
 import           MWE.Util                       (mkTextFromToken)
 import           NER.Load                       (loadCompanies)
-import           NER.Type                       (alias,companyId)
+import           NER.Type                       (CompanyInfo(..),alias,companyId)
 import           NLP.Syntax.Format              (formatX'Tree)
 import           NLP.Type.CoreNLP               (Sentence)
 import           OntoNotes.Corpus.Load          (senseInstStatistics)
@@ -71,9 +73,9 @@ queryProcess :: Analyze.Config
              -> J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> AnalyzePredata
              -> ([Sentence] -> [EntityMention Text])
-             -> Forest (Either Int Text)
+             -> (Forest (Either Int Text),IntMap CompanyInfo)
              -> IO ()
-queryProcess config pp apredata netagger forest =
+queryProcess config pp apredata netagger (forest,companyMap) =
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     let input = T.pack input'
         (command,rest) = T.splitAt 3 input
@@ -83,14 +85,14 @@ queryProcess config pp apredata netagger forest =
                   txt <- T.IO.readFile fp
                   dainput <- runParser pp txt
                   -- runUKB (apredata^.analyze_wordnet) (dainput^.dainput_sents,dainput^.dainput_mptrs)
-                  dstr <- docStructure apredata netagger forest dainput
+                  dstr <- docStructure apredata netagger (forest,companyMap) dainput
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
                   mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
 
       ":v " -> do dainput <- runParser pp rest
                   -- runUKB (apredata^.analyze_wordnet) (dainput^.dainput_sents,dainput^.dainput_mptrs)
-                  dstr <- docStructure apredata netagger forest dainput
+                  dstr <- docStructure apredata netagger (forest,companyMap) dainput
                   mapM_ (T.IO.putStrLn . formatX'Tree) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'tr . traverse)
                   when (config^.Analyze.showDetail) $ do
                     -- print (dstr^.ds_mergedtags)
@@ -150,7 +152,7 @@ printMeaningGraph apredata dstr = do
 
 loadConfig :: Bool
            -> LexDataConfig
-           -> IO (AnalyzePredata,[Sentence]->[EntityMention Text],Forest (Either Int Text))
+           -> IO (AnalyzePredata,[Sentence]->[EntityMention Text],Forest (Either Int Text),IntMap CompanyInfo)
 loadConfig bypass_ner cfg = do
   apredata <- loadAnalyzePredata cfg
   createUKBDB (cfg^.cfg_ukb_binfile,cfg^.cfg_ukb_dictfile)
@@ -158,12 +160,13 @@ loadConfig bypass_ner cfg = do
                 then return (const [])
                 else newNETagger
   companies <- loadCompanies
+  let companyMap = IM.fromList (map (\x -> (x^.companyId,x)) companies)
   let clist = do c <- companies
                  let cid = c^.companyId
                  a <- c^.alias
                  return (cid,T.words a)
   let forest = foldr addTreeItem [] clist  -- [(c^.companyId,c^.alias) |  c <- companies] -- Temporary. Tokenization should be done by CoreNLP.
-  return (apredata,netagger,forest)
+  return (apredata,netagger,forest,companyMap)
 
 
 loadAnalyzePredata :: LexDataConfig -> IO AnalyzePredata
@@ -195,7 +198,7 @@ loadJVM = prepare (def & (tokenizer .~ True)
 --
 runAnalysis :: LexDataConfig -> Analyze.Config -> IO ()
 runAnalysis cfg acfg = do
-  (apredata,netagger,forest) <- loadConfig (acfg^.Analyze.bypassNER) cfg
+  (apredata,netagger,forest,companyMap) <- loadConfig (acfg^.Analyze.bypassNER) cfg
 
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
@@ -207,4 +210,4 @@ runAnalysis cfg acfg = do
                        . (constituency .~ True)
                        . (ner .~ True)
                   )
-    queryProcess acfg pp apredata netagger forest
+    queryProcess acfg pp apredata netagger (forest,companyMap)
