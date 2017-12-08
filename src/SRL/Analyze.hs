@@ -100,21 +100,21 @@ queryProcess config pp apredata netagger (forest,companyMap) =
 
                   mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
                   --
-                  printMeaningGraph apredata dstr
+                  printMeaningGraph apredata companyMap dstr
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
 
 
 
-printMeaningGraph :: AnalyzePredata -> DocStructure -> IO ()
-printMeaningGraph apredata dstr = do
+printMeaningGraph :: AnalyzePredata -> IntMap CompanyInfo -> DocStructure -> IO ()
+printMeaningGraph apredata companyMap dstr = do
   putStrLn "-------------"
   putStrLn "meaning graph"
   putStrLn "-------------"
   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
       mtokss = (dstr ^. ds_mtokenss)
-      wikilsts = map mkWikiList sstrs1
+      wikilsts = map (mkWikiList companyMap) sstrs1
   print wikilsts
   -- print (sstrs1 ^.. traverse . ss_ptr)
   -- print (sstrs1 ^.. traverse . ss_clausetr)
@@ -122,7 +122,7 @@ printMeaningGraph apredata dstr = do
   let mgs = map (\sstr -> (sstr,meaningGraph apredata sstr)) sstrs1
   forM_ (zip mtokss (zip ([1..] :: [Int]) mgs)) $ \(mtks,(i,(sstr,mg'))) -> do
     let title = mkTextFromToken mtks
-        wikilst = mkWikiList sstr -- sstrs1
+        wikilst = mkWikiList companyMap sstr -- sstrs1
         mg = tagMG mg' wikilst
     -- mapM_ print (mg^.mg_vertices)
     -- mapM_ print (mg^.mg_edges)
