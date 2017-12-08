@@ -14,7 +14,7 @@ import           Control.Monad.Trans.Either                (EitherT(..))
 import           Data.Bifunctor                            (first)
 import           Data.Either                               (lefts,rights)
 import           Data.Foldable                             (toList)
-import           Data.List                                 (zip5)
+import           Data.List                                 (intercalate,zip5)
 import           Data.Maybe                                (catMaybes,fromMaybe,fromJust,mapMaybe)
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
@@ -34,6 +34,7 @@ import qualified NLP.Type.NamedEntity              as N
 import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,Token,sentenceToken,sentenceLemma,sent_tokenRange,token_text,token_tok_idx_range)
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
+import           Text.Format.Tree                          (linePrint)
 import           Text.Search.New.ParserCustom              (pTreeAdvGBy)
 import           WikiEL.Convert                            (getRangeFromEntityMention)
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
@@ -127,7 +128,7 @@ docStructure apredata netagger forest docinput@(DocAnalysisInput sents sentidxs 
       lnk_mntns2 = filter (\mntn -> not $ elemIsStrictlyInsideR (getRangeFromEntityMention mntn) tnerange) linked_mentions_resolved
       lnk_mntns_tagpos = map linkedMentionToTagPos (lnk_mntns1 ++ lnk_mntns2)
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
-  synsetss <- trace ("\nlnk_mntns_tagpos" ++ show lnk_mntns_tagpos) $ runUKB (apredata^.analyze_wordnet)(sents,mptrs)
+  synsetss <- trace ("\nforest:\n" ++ T.unpack (T.intercalate "\n" (map (linePrint (T.pack . show)) forest))) $ runUKB (apredata^.analyze_wordnet)(sents,mptrs)
   let mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
   let sentStructures = map (sentStructure apredata mergedtags) (zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss)
   return (DocStructure mtokenss sentitems mergedtags sentStructures)

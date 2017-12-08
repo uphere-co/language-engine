@@ -158,7 +158,11 @@ loadConfig bypass_ner cfg = do
                 then return (const [])
                 else newNETagger
   companies <- loadCompanies
-  let forest = foldr addTreeItem [] [(c^.companyId,c^.alias) |  c <- companies] -- Temporary. Tokenization should be done by CoreNLP.
+  let clist = do c <- companies
+                 let cid = c^.companyId
+                 a <- c^.alias
+                 return (cid,T.words a)
+  let forest = foldr addTreeItem [] clist  -- [(c^.companyId,c^.alias) |  c <- companies] -- Temporary. Tokenization should be done by CoreNLP.
   return (apredata,netagger,forest)
 
 
