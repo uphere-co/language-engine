@@ -44,4 +44,7 @@ causeDualMap =
   , CauseDual "Locative_relation" "Placing"             "Agent" [("Figure","Theme"),("Ground","Place")]
   , CauseDual "Abundance"        "Cause_proliferation_in_number" "Agent" [("Collection","Attribute")]
   , CauseDual "Change_of_temperature" "Cause_temperature_change" "Agent" [("Initial_temparature","Temparature_start"),("Final_temperature","Temperature_goal")]
+  , CauseDual "Go_into_shape"    "Cause_change"         "Agent" [("Theme","Entity"),("Resultant_configuration","Final_category")]
+  , CauseDual "Experience_bodily_harm" "Cause_harm"     "Agent" [("Experiencer","Victim")]
+  , CauseDual "Breaking_apart"   "Cause_to_fragment"    "Agent" [("Whole","Whole_patient")]
   ]
