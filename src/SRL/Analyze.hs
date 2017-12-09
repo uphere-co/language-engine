@@ -150,22 +150,27 @@ printMeaningGraph apredata companyMap dstr = do
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
 
 
-loadConfig :: Bool
+loadConfig :: (Bool,Bool)
            -> LexDataConfig
            -> IO (AnalyzePredata,[Sentence]->[EntityMention Text],Forest (Either Int Text),IntMap CompanyInfo)
-loadConfig bypass_ner cfg = do
+loadConfig (bypass_ner,bypass_textner) cfg = do
   apredata <- loadAnalyzePredata cfg
   createUKBDB (cfg^.cfg_ukb_binfile,cfg^.cfg_ukb_dictfile)
   netagger <- if bypass_ner
                 then return (const [])
                 else newNETagger
-  companies <- loadCompanies
-  let companyMap = IM.fromList (map (\x -> (x^.companyId,x)) companies)
-  let clist = do c <- companies
-                 let cid = c^.companyId
-                 a <- c^.alias
-                 return (cid,T.words a)
-  let forest = foldr addTreeItem [] clist  -- [(c^.companyId,c^.alias) |  c <- companies] -- Temporary. Tokenization should be done by CoreNLP.
+  (forest,companyMap) <-
+    if bypass_textner
+      then return ([],IM.empty)
+      else do companies <- loadCompanies
+              let companyMap = IM.fromList (map (\x -> (x^.companyId,x)) companies)
+                  clist = do c <- companies
+                             let cid = c^.companyId
+                             a <- c^.alias
+                             return (cid,T.words a)
+              let forest = foldr addTreeItem [] clist  -- [(c^.companyId,c^.alias) |  c <- companies] -- Temporary. Tokenization should be done by CoreNLP.
+              return (forest,companyMap)
+
   return (apredata,netagger,forest,companyMap)
 
 
@@ -198,7 +203,7 @@ loadJVM = prepare (def & (tokenizer .~ True)
 --
 runAnalysis :: LexDataConfig -> Analyze.Config -> IO ()
 runAnalysis cfg acfg = do
-  (apredata,netagger,forest,companyMap) <- loadConfig (acfg^.Analyze.bypassNER) cfg
+  (apredata,netagger,forest,companyMap) <- loadConfig (acfg^.Analyze.bypassNER,acfg^.Analyze.bypassTEXTNER) cfg
 
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do

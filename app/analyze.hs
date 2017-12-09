@@ -18,7 +18,8 @@ pOptions :: O.Parser Analyze.Config
 pOptions = Analyze.Config
            <$> O.switch (O.long "detail" <> O.short 'd' <> O.help "Whether to show detail")
            <*> O.switch (O.long "full" <> O.short 'f' <> O.help "Whether to show full detail")
-           <*> O.switch (O.long "bypassNER" <> O.short 'n' <> O.help "Whether to bypass NER")
+           <*> O.switch (O.long "bypassWIKINER" <> O.short 'n' <> O.help "Whether to bypass wiki-ner")
+           <*> O.switch (O.long "bypassTEXTNER" <> O.short 'm' <> O.help "Whether to bypass text NER")
            <*> O.strOption (O.long "config" <> O.short 'c' <> O.help "config file")
 
 
