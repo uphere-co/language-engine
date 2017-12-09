@@ -43,4 +43,5 @@ causeDualMap =
   , CauseDual "Being_located"    "Placing"              "Agent" []
   , CauseDual "Locative_relation" "Placing"             "Agent" [("Figure","Theme"),("Ground","Place")]
   , CauseDual "Abundance"        "Cause_proliferation_in_number" "Agent" [("Collection","Attribute")]
+  , CauseDual "Change_of_temperature" "Cause_temperature_change" "Agent" [("Initial_temparature","Temparature_start"),("Final_temperature","Temperature_goal")]
   ]
