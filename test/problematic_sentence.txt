@@ -192,5 +192,12 @@ Petrobras Chief Executive Officer Pedro Parente said he will meet this month wit
 -- |
 The U.S. Federal Communications Commission voted 3-2 on Thursday to allow broadcasters to voluntarily use a new technology to improve picture quality and allow better reception on mobile phones and give advertisers dramatically more data about viewing habits.
 
--- |
+-- | ECM. "JBS USA to halt" should be recognized as a single role Effect.
 Unspecified pests have prompted JBS USA to halt production temporarily at a Pennsylvania beef processing plant that accounts for about 2 percent of U.S. daily cattle slaughter.
+
+-- | summon
+A Russian judge summoned the boss of the country's biggest oil company to testify next week in the trial of a former economy minister accused of taking a bribe from him, after Rosneft CEO Igor Sechin failed to appear in court on Wednesday.
+
+
+-- | topicalization
+Igor Sechin, the chief executive of Russian oil major Rosneft, will not be able to appear in court this year to act as a witness in the trial of ex-economy minister Alexei Ulyukayev, judge Larisa Semyonova said during court hearings on Wednesday.
