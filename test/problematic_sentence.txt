@@ -5,6 +5,14 @@ SOLVED
 Chilean copper mine Collahuasi, a joint venture of Anglo American and Glencore, is postponing its plan to seek approval of an environmental impact study for an expansion until next year, the company told Reuters on Tuesday.
 
 
+-- PP-as as role. this is resolved
+HSBC said it appointed Philip Kunz as head of global private banking for South East Asia.
+
+
+-- misidenfied as "used to". now resolved
+A former top HSBC Holdings Plc executive threw his Scottish client "under the bus" by using his knowledge of its large planned currency transaction to do his own trading first, a U.S. prosecutor said on Monday at the start of a closedly-watched trail.
+
+
 UNSOLVED
 
 Russia ordered the U.S. to cut its diplomatic staff in Russia by 755 people.
@@ -22,12 +30,6 @@ Officials were struggling Monday to reach the majority of the Florida Keys amid 
 BMO Global Asset Management, owned by Canada's Bank of Montreal, said on Monday it has appointed Fadi Khoury as head of Middle East and North Africa.
 
 
--- PP-as as role. this is resolved
-HSBC said it appointed Philip Kunz as head of global private banking for South East Asia.
-
-
--- misidenfied as "used to". now resolved
-A former top HSBC Holdings Plc executive threw his Scottish client "under the bus" by using his knowledge of its large planned currency transaction to do his own trading first, a U.S. prosecutor said on Monday at the start of a closedly-watched trail.
 
 
 
@@ -194,3 +196,12 @@ The U.S. Federal Communications Commission voted 3-2 on Thursday to allow broadc
 
 -- |
 Unspecified pests have prompted JBS USA to halt production temporarily at a Pennsylvania beef processing plant that accounts for about 2 percent of U.S. daily cattle slaughter.
+
+-- | conjunction - and
+German healthcare group Fresenius said third-quarter adjusted net income gained 11 percent on higher drug sales and helped by the addition of Spanish hospitals chain Quironsalud.
+
+-- | multi-word expression "step down"
+Hewlett Packard Enterprise Co said on Tuesday that Meg Whitman was stepping down as chief executive officer.
+
+-- | so wrong
+Half a million people have signed an online petition in under 24 hours backing Uber's bid to stay on the roads of London, showing the company is turning to its tried-and-tested tactic of asking  customers for help when it locks horns with regulators.
