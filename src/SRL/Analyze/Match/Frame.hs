@@ -174,7 +174,7 @@ ppExtraRoleMap = [ ("about"     , ["Topic"])
                  , ("from"      , ["Origin","Support"])
                  , ("in"        , ["Location","Place","Time"])
                  , ("inside"    , ["Area","Location","Ground"])
-                 , ("into"      , ["Goal","Effect"])
+                 , ("into"      , ["Goal","Effect","Final_category"])
                  -- less
                  , ("like"      , ["Manner"])
                  -- minus
