@@ -28,6 +28,7 @@ causeDualMap =
   , CauseDual "Change_position_on_a_scale" "Cause_change_of_position_on_a_scale" "Agent" []
   , CauseDual "Self_motion"      "Cause_motion"         "Agent" [("Self_mover","Theme")]
   , CauseDual "Motion"           "Cause_motion"         "Agent" []
+  , CauseDual "Moving_in_place"  "Cause_to_move_in_place" "Agent" []
   , CauseDual "Mass_motion"      "Cause_motion"         "Agent" [("Mass_theme","Theme")]
   , CauseDual "Inclusion"        "Cause_to_be_included" "Agent" [("Part","New_member"),("Total","Group")]
   , CauseDual "Cause_change_of_strength" "Cause_change_of_strength" "Agent" []
@@ -55,4 +56,7 @@ causeDualMap =
   , CauseDual "Proliferating_in_number" "Cause_proliferation_in_number" "Agent" []
   , CauseDual "Progression"      "Cause_to_make_progress" "Agent" []
   , CauseDual "Traversing"       "Cause_motion"         "Agent" []
+  , CauseDual "Impact"           "Cause_impact"         "Agent" []
+  , CauseDual "Experiencer_focus" "Cause_to_experience" "Agent" []   -- it's not clear
+  , CauseDual "Vehicle_landing"  "Cause_to_land"        "Operator" []
   ]
