@@ -40,7 +40,8 @@ causeDualMap =
   , CauseDual "Make_noise"       "Cause_to_make_noise"  "Agent" [("Sound_source","Sound_maker")]
   , CauseDual "Being_attached"   "Attaching"            "Agent" []
   , CauseDual "Emotion_directed" "Cause_emotion"        "Agent" []
-  , CauseDual "Separating"       "Separating"           "Agent" []
+  -- , CauseDual "Separating"       "Separating"           "Agent" []
+  , CauseDual "Becoming_separated" "Separating"         "Agent" []
   , CauseDual "Being_located"    "Placing"              "Agent" []
   , CauseDual "Locative_relation" "Placing"             "Agent" [("Figure","Theme"),("Ground","Place")]
   , CauseDual "Abundance"        "Cause_proliferation_in_number" "Agent" [("Collection","Attribute")]
@@ -59,4 +60,5 @@ causeDualMap =
   , CauseDual "Impact"           "Cause_impact"         "Agent" []
   , CauseDual "Experiencer_focus" "Cause_to_experience" "Agent" []   -- it's not clear
   , CauseDual "Vehicle_landing"  "Cause_to_land"        "Operator" []
+  , CauseDual "Distributed_position" "Dispersal"        "Agent" [("Theme","Individuals"),("Location","Goal_area")]
   ]
