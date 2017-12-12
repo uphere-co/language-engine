@@ -61,4 +61,5 @@ causeDualMap =
   , CauseDual "Experiencer_focus" "Cause_to_experience" "Agent" []   -- it's not clear
   , CauseDual "Vehicle_landing"  "Cause_to_land"        "Operator" []
   , CauseDual "Distributed_position" "Dispersal"        "Agent" [("Theme","Individuals"),("Location","Goal_area")]
+  , CauseDual "Successful_action" "Success_or_failure" "Agent" []
   ]
