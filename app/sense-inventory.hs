@@ -185,37 +185,25 @@ listIdiom cfg = do
   let merged = mergeStatPB2Lemma ws
 
   forM_ merged $ \(lma,f) -> do
-    print lma
+    -- print lma
     let lmav = lma <> "-v"
         senses = do
           si <- maybeToList (HM.lookup lmav sensemap)
           s <- (si^.inventory_senses)
           comment <- maybeToList ( s ^. sense_commentary)
-          return (s^.sense_n,comment,commentToIdiom comment)
+          return ((s^.sense_group,s^.sense_n),comment,commentToIdiom comment)
         commentToIdiom = filter (not . (`elem` blacklist)) . map (T.filter (\x -> not (x `elem` ("',;:" :: [Char])))) . filter f . T.words
           where blacklist = ["WHERE","NOTA","VPC","ID","NOT","CAN","NP","PP","ADVP","PREDICATE","COMP","SCOMP","X","SYNTAX","EX","NOTE","IS","OK","AUX","I","PRED"]
                 whitelist = ["(UP)ON"]
                 f txt = (T.all (\c -> isUpper c || c == '\'' || c == ',' || c == ';' || c == ':') txt)
                         || (txt `elem` whitelist)
-    forM_ senses $ \(x,y,is) -> do
-      print x
-      let is' = (map (\ts -> T.intercalate " " (T.toUpper lma : ts)) . filter (not.null) . tail . splitOn [T.toUpper lma]) is
-      print is'
-      T.IO.putStrLn y
+    forM_ senses $ \((g,n),y,is) -> do
+      let is' = (map (T.toLower . (\ts -> T.intercalate " " (lma : ts))) . filter (not.null) . tail . splitOn [T.toUpper lma]) is
+      -- print is'
+      when (not (null is')) $
+        putStrLn $ printf "%s\t%2s.%-6s\t%s" lma g n (T.intercalate "\t" is')
+      -- T.IO.putStrLn y
 
-
-  -- print sensemap 
-{- 
-  let merged = mergeStatPB2Lemma ws
-
-  forM_ merged $ \(lma,f) -> do
-    T.IO.hPutStrLn stderr lma
-    let doc = text "=====================================================================================================================" //
-              text (printf "%20s:%6d " lma f) //
-              text "---------------------------------------------------------------------------------------------------------------" //
-              vcat top (formatWordNet lma Verb sensemap sensestat wndb)
-    putStrLn (render doc)
--}
 
 
 
