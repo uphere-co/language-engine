@@ -20,6 +20,7 @@ import           Data.Text                        (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import           Data.Text.Read                   (decimal)
+import qualified Options.Applicative        as O
 import           System.IO
 import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
@@ -121,9 +122,10 @@ formatWordNet lma vorn sensemap sensestat wndb = do
                    return (wnsense,result)
       txt_wn_senses = do (wnsense,(_,d)) <- wndatas
                          let wnverbframes = show (d^..data_frames.traverse.to ((,)<$> view frame_f_num <*> view frame_w_num))
+                             lfid = d^.data_lex_filenum
                              restxt = printf "%-20s: %-45s | %25s | %-s  "
                                         wnsense
-                                        (T.intercalate "," (map formatLI (d^.data_word_lex_id)))
+                                        (T.intercalate "," (map (formatLI (POS_V,lfid)) (d^.data_word_lex_id)))
                                         wnverbframes
                                         (d^.data_gloss)
                          return (text restxt)
@@ -173,8 +175,22 @@ listSenseWordNet cfg = do
     putStrLn (render doc)
 
 
+data ProgOption = ProgOption { configFile :: FilePath
+                             } deriving Show
+
+
+pOptions :: O.Parser ProgOption
+pOptions = ProgOption <$> O.strOption (O.long "config" <> O.short 'c' <> O.help "config file")
+
+progOption :: O.ParserInfo ProgOption
+progOption = O.info pOptions (O.fullDesc <> O.progDesc "OntoNotes sense dump")
+
+
+
+
 main :: IO ()
 main = do
-  cfg  <- loadLexDataConfig "config.json" >>= \case Left err -> error err
-                                                    Right x  -> return x
+  opt <- O.execParser progOption
+  cfg  <- loadLexDataConfig (configFile opt) >>= \case Left err -> error err
+                                                       Right x  -> return x
   listSenseWordNet cfg

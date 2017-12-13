@@ -84,31 +84,32 @@ Executable role-mapping-utility
                        lexicon-builder
 
 
--- Executable sense-inventory
---   Main-is:             sense-inventory.hs
---   hs-source-dirs:      app
---   default-language:    Haskell2010
---   ghc-options:         -O2 -Wall
---                        -funbox-strict-fields
---                        -fno-warn-unused-do-bind
---                        -fno-warn-orphans
---                        -threaded
---   ghc-prof-options:    -caf-all -auto-all
---   other-modules:
---   build-depends:       base,
---                        --
---                        boxes,
---                        containers,
---                        lens,
---                        text,
---                        unordered-containers,
---                        --
---                        HFrameNet,
---                        HWordNet,
---                        lexicon,
---                        OntoNotes,
---                        --
---                        lexicon-builder
+Executable sense-inventory
+  Main-is:             sense-inventory.hs
+  hs-source-dirs:      app
+  default-language:    Haskell2010
+  ghc-options:         -O2 -Wall
+                       -funbox-strict-fields
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
+                       -threaded
+  ghc-prof-options:    -caf-all -auto-all
+  other-modules:
+  build-depends:       base,
+                       --
+                       boxes,
+                       containers,
+                       lens,
+                       optparse-applicative,
+                       text,
+                       unordered-containers,
+                       --
+                       HFrameNet,
+                       HWordNet,
+                       lexicon,
+                       OntoNotes,
+                       --
+                       lexicon-builder
 
 
 Executable verb-subcat-propbank-stat
