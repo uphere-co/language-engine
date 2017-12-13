@@ -101,6 +101,7 @@ Executable sense-inventory
                        containers,
                        lens,
                        optparse-applicative,
+                       split,
                        text,
                        unordered-containers,
                        --

@@ -7,13 +7,14 @@ module Main where
 
 import           Control.Lens              hiding (para)
 import           Control.Monad
+import           Data.Char                        (isUpper)
 import           Data.Either                      (rights)
 import           Data.Foldable
-
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import qualified Data.IntMap                as IM
 import           Data.List
+import           Data.List.Split                  (splitOn)
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                        (Text)
@@ -175,6 +176,49 @@ listSenseWordNet cfg = do
     putStrLn (render doc)
 
 
+
+
+
+
+listIdiom cfg = do 
+  (_ludb,_sensestat,_semlinkmap,sensemap,ws,_wndb) <- loadAllexceptPropBank cfg
+  let merged = mergeStatPB2Lemma ws
+
+  forM_ merged $ \(lma,f) -> do
+    print lma
+    let lmav = lma <> "-v"
+        senses = do
+          si <- maybeToList (HM.lookup lmav sensemap)
+          s <- (si^.inventory_senses)
+          comment <- maybeToList ( s ^. sense_commentary)
+          return (s^.sense_n,comment,commentToIdiom comment)
+        commentToIdiom = filter (not . (`elem` blacklist)) . map (T.filter (\x -> not (x `elem` ("',;:" :: [Char])))) . filter f . T.words
+          where blacklist = ["WHERE","NOTA","VPC","ID","NOT","CAN","NP","PP","ADVP","PREDICATE","COMP","SCOMP","X","SYNTAX","EX","NOTE","IS","OK","AUX","I","PRED"]
+                whitelist = ["(UP)ON"]
+                f txt = (T.all (\c -> isUpper c || c == '\'' || c == ',' || c == ';' || c == ':') txt)
+                        || (txt `elem` whitelist)
+    forM_ senses $ \(x,y,is) -> do
+      print x
+      let is' = (map (\ts -> T.intercalate " " (T.toUpper lma : ts)) . filter (not.null) . tail . splitOn [T.toUpper lma]) is
+      print is'
+      T.IO.putStrLn y
+
+
+  -- print sensemap 
+{- 
+  let merged = mergeStatPB2Lemma ws
+
+  forM_ merged $ \(lma,f) -> do
+    T.IO.hPutStrLn stderr lma
+    let doc = text "=====================================================================================================================" //
+              text (printf "%20s:%6d " lma f) //
+              text "---------------------------------------------------------------------------------------------------------------" //
+              vcat top (formatWordNet lma Verb sensemap sensestat wndb)
+    putStrLn (render doc)
+-}
+
+
+
 data ProgOption = ProgOption { configFile :: FilePath
                              , progCommand :: String
                              } deriving Show
@@ -197,5 +241,5 @@ main = do
                                                        Right x  -> return x
   case progCommand opt of
     "full" -> listSenseWordNet cfg
-    "idiom" -> print "not implemented"
+    "idiom" -> listIdiom cfg
     cmd -> putStrLn ("cannot understand: " ++ cmd)
