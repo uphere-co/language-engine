@@ -20,6 +20,7 @@ import           Data.Text                        (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 import           Data.Text.Read                   (decimal)
+import qualified Options.Applicative        as O
 import           System.IO
 import           Text.PrettyPrint.Boxes    hiding ((<>))
 import           Text.Printf
@@ -174,8 +175,22 @@ listSenseWordNet cfg = do
     putStrLn (render doc)
 
 
+data ProgOption = ProgOption { configFile :: FilePath
+                             } deriving Show
+
+
+pOptions :: O.Parser ProgOption
+pOptions = ProgOption <$> O.strOption (O.long "config" <> O.short 'c' <> O.help "config file")
+
+progOption :: O.ParserInfo ProgOption
+progOption = O.info pOptions (O.fullDesc <> O.progDesc "OntoNotes sense dump")
+
+
+
+
 main :: IO ()
 main = do
-  cfg  <- loadLexDataConfig "config.json" >>= \case Left err -> error err
-                                                    Right x  -> return x
+  opt <- O.execParser progOption
+  cfg  <- loadLexDataConfig (configFile opt) >>= \case Left err -> error err
+                                                       Right x  -> return x
   listSenseWordNet cfg
