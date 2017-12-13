@@ -176,15 +176,17 @@ listSenseWordNet cfg = do
 
 
 data ProgOption = ProgOption { configFile :: FilePath
+                             , progCommand :: String
                              } deriving Show
 
 
 pOptions :: O.Parser ProgOption
 pOptions = ProgOption <$> O.strOption (O.long "config" <> O.short 'c' <> O.help "config file")
+                      <*> O.strArgument (O.help "program command full or idiom")
+
 
 progOption :: O.ParserInfo ProgOption
 progOption = O.info pOptions (O.fullDesc <> O.progDesc "OntoNotes sense dump")
-
 
 
 
@@ -193,4 +195,7 @@ main = do
   opt <- O.execParser progOption
   cfg  <- loadLexDataConfig (configFile opt) >>= \case Left err -> error err
                                                        Right x  -> return x
-  listSenseWordNet cfg
+  case progCommand opt of
+    "full" -> listSenseWordNet cfg
+    "idiom" -> print "not implemented"
+    cmd -> putStrLn ("cannot understand: " ++ cmd)
