@@ -8,6 +8,8 @@ import           Control.Applicative
 import           Control.Lens
 import           Data.Function                (on)
 import           Data.Hashable                (Hashable)
+import           Data.HashMap.Strict          (HashMap)
+import qualified Data.HashMap.Strict  as HM
 import           Data.List                    (foldl',groupBy,maximumBy)
 import           Data.Maybe                   (listToMaybe)
 import           Data.Monoid                  ((<>))
@@ -126,3 +128,12 @@ cutHistogram c xs = let ys = scanl (\(!acc,f) (x,i) -> (acc+i, f . ((x,i):))) (0
                         n = fst (last ys )
                         ncut= fromIntegral n * c
                     in (\x -> (x^._2) []) . head  . snd . break (\x->fromIntegral (x^._1) >= ncut) $ ys
+
+
+
+loadIdioms :: FilePath -> IO (HashMap SenseID [[Text]])
+loadIdioms fp = do
+  txt <- T.IO.readFile fp
+  let ts = map (map T.strip . T.splitOn "\t") (T.lines txt)
+  mapM_ print ts
+  return (HM.empty)
