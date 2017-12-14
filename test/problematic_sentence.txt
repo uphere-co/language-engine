@@ -139,9 +139,6 @@ U.S.-based AGCO Corp, an agricultural equipment maker, is still evaluating the a
 French retailer Auchan [AUCH.UL] said on Monday it had not been approached by E-commerce giant Amazon  about deals or partnerships in Europe, with speculation still rife that Amazon may be eyeing European transactions.
 
 
---
-British ship insurer Standard Club is setting up a new European Union subsidiary in Dublin in case Britain loses access to the single market after Brexit, becoming the second of these specialised providers to opt for Ireland in two days.
-
 -- | Tuesday? on the Nasdaq
 Israeli chip maker Mellanox Technologies saw its shares surge on the Nasdaq on Tuesday after activist hedge fund Starboard Value LP bought a 10.7 percent stake to influence strategy.
 
@@ -204,11 +201,68 @@ A Russian judge summoned the boss of the country's biggest oil company to testif
 -- | topicalization
 Igor Sechin, the chief executive of Russian oil major Rosneft, will not be able to appear in court this year to act as a witness in the trial of ex-economy minister Alexei Ulyukayev, judge Larisa Semyonova said during court hearings on Wednesday.
 
--- | conjunction - and
-German healthcare group Fresenius said third-quarter adjusted net income gained 11 percent on higher drug sales and helped by the addition of Spanish hospitals chain Quironsalud.
 
 -- | multi-word expression "step down"
 Hewlett Packard Enterprise Co said on Tuesday that Meg Whitman was stepping down as chief executive officer.
 
 -- | so wrong
 Half a million people have signed an online petition in under 24 hours backing Uber's bid to stay on the roads of London, showing the company is turning to its tried-and-tested tactic of asking  customers for help when it locks horns with regulators.
+
+-- | exposed the date.
+Uber Technologies Inc [UBER.UL] failed to disclose a massive breach last year that exposed the date of some 57 million users of the ride-sharing service, the company's new chief executive officer said on Tuesday.
+
+
+
+
+
+-- | in case
+British ship insurer Standard Club is setting up a new European Union subsidiary in Dublin in case Britain loses access to the single market after Brexit, becoming the second of these specialised providers to opt for Ireland in two days.
+
+
+
+-- nominal frame subject, pull through
+Walt Disney Co’s plan to plunge into a crowded streaming services market, dominated by pioneer Netflix Inc, could bring some initial pain, but the strength of the company’s content is expected to help it pull through in the long run.
+
+
+-- | some of the momentum that pushed stocks in Asia
+European shares opened slightly higher on Wednesday, losing some of the momentum that pushed stocks in Asia and on Wall Street to new highs overnight on continued faith in synchronised economic growth around the world
+
+
+-- | the focus of oil producers is not recognized?  again CoreNLP constituency parser problem! sigh. dependency parser works well.
+Saudi Arabia’s energy minister Khalid al-Falih said on Thursday the focus of oil producers will be to continue to work on drawing down crude inventories.
+
+
+
+-- | topicalization -- parsing? no. because of "is likely to"
+OPEC is likely to stay the course by keeping its current curb on oil production in place for the whole of 2018 despite potential output disruptions next year, Gulf OPEC sources said.
+
+
+
+
+
+
+
+
+
+
+
+-- | conjunction - and
+German healthcare group Fresenius said third-quarter adjusted net income gained 11 percent on higher drug sales and helped by the addition of Spanish hospitals chain Quironsalud.
+
+
+
+-- | conjunction - and
+Samsung Electronics Co Ltd said on Wednesday it would create an artificial intelligence (AI) research centre and strengthen an executive role to look for new business areas for all its three major business groups.
+
+
+
+-- | conjunction - will stop ... and launch ...
+Walt Disney Co (DIS.N) will stop providing new movies to Netflix Inc (NFLX.O) starting in 2019 and launch its own streaming service as the world’s biggest entertainment company tries to capture digital viewers who are dumping traditional television.
+
+
+
+-- | conjunction -  is discussing ... and hopes to .. 
+Brazilian steelmaker Usiminas Siderugicas de Minas Gerais SA is currently discussing a 25 percent steel price hike with automakers and hopes to conclude talks by the end of December, Chief Executive Sergio Leite said on Wednesday.
+
+
+
