@@ -197,4 +197,4 @@ verbStructure apredata tagged vp =
       l = vp^.vp_lemma
       ls = (map (^._2._1) . filter (\(j,_) -> j >= i)) (tagged^.lemmaList)
       (senses,rmtoppatts) = getVerbSenses apredata (l,ls)
-  in trace (show senses) $ VerbStructure vp senses rmtoppatts
+  in VerbStructure vp senses rmtoppatts

@@ -9,6 +9,7 @@ import           Control.Applicative       ((<|>))
 import           Control.Lens
 import           Control.Lens.Extras
 import           Data.List
+import qualified Data.Text             as T
 import           Control.Monad.Loops       (unfoldM)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -98,7 +99,7 @@ findLabel mvs i = do
   case v of
     MGEntity {..}           -> Just _mv_text
     MGPredicate {..}        -> case _mv_pred_info of
-                                 PredVerb _ vrb -> Just (vrb ^. vp_lemma . to unLemma)
+                                 PredVerb idiom _ vrb -> Just (T.intercalate " " idiom) -- (vrb ^. vp_lemma . to unLemma)
                                  PredPrep p     -> Just p
                                  PredNominalized n _ -> Just (unLemma n)
                                  PredAppos      -> Just (unFNFrame _mv_frame)
@@ -114,7 +115,7 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
                             MGEntity           {..} -> hoistMaybe Nothing
                             MGPredicate        {..} ->
                               case _mv_pred_info of
-                                PredVerb sns vrb -> return (unFNFrame _mv_frame,sns,vrb^.vp_negation)
+                                PredVerb _ sns vrb -> return (unFNFrame _mv_frame,sns,vrb^.vp_negation)
                                 PredPrep _       -> return (unFNFrame _mv_frame,Nothing,Nothing)
                                 PredNominalized _ _ -> return (unFNFrame _mv_frame,Nothing,Nothing)
                                 PredAppos        -> return (unFNFrame _mv_frame,Nothing,Nothing)
