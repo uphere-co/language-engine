@@ -9,6 +9,7 @@
     "propbank_framedir"    : "/home/wavewave/repo/srcc/propbank-frames/frames",
     "wsj_corenlp_directory": "/scratch/wavewave/run/ontonotes_corenlp_ptree_udep_lemma_20170710",
     "rolemap_file"         : "/home/wavewave/repo/srcp/lexicon-builder/mapping/final.txt",
+    "idiom_file"         : "/home/wavewave/repo/srcp/lexicon-builder/mapping/idiom.txt",
     "verb_subcat_file"     : "/scratch/wavewave/run/20170919/20170919_verbsubcat_ing.tsv",
     "ukb_binfile"           : "/nix/store/wsbm068k1cq0r09l2z0hfkyfzsjbk40f-ukb-3.0/share/data/wn30.bin",
     "ukb_dictfile"          : "/nix/store/wsbm068k1cq0r09l2z0hfkyfzsjbk40f-ukb-3.0/share/data/wnet30_dict.txt"

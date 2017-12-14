@@ -46,6 +46,7 @@ data LexDataConfig = LexDataConfig { _cfg_sense_inventory_file :: FilePath
                                    , _cfg_propbank_framedir    :: FilePath
                                    , _cfg_wsj_corenlp_directory :: FilePath
                                    , _cfg_rolemap_file         :: FilePath
+                                   , _cfg_idiom_file           :: FilePath
                                    , _cfg_verb_subcat_file     :: FilePath
                                    , _cfg_ukb_binfile          :: FilePath
                                    , _cfg_ukb_dictfile         :: FilePath

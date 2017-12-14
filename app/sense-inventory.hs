@@ -192,8 +192,8 @@ listIdiom cfg = do
           s <- (si^.inventory_senses)
           comment <- maybeToList ( s ^. sense_commentary)
           return ((s^.sense_group,s^.sense_n),comment,commentToIdiom comment)
-        commentToIdiom = filter (not . (`elem` blacklist)) . map (T.filter (\x -> not (x `elem` ("',;:" :: [Char])))) . filter f . T.words
-          where blacklist = ["WHERE","NOTA","VPC","ID","NOT","CAN","NP","PP","ADVP","PREDICATE","COMP","SCOMP","X","SYNTAX","EX","NOTE","IS","OK","AUX","I","PRED"]
+        commentToIdiom = filter (not . (`elem` blacklist)) . map (T.filter (\x -> not (x `elem` (",;:" :: [Char])))) . filter f . T.words
+          where blacklist = ["WHERE","NOTA","VPC","ID","NOT","CAN","NP","PP","ADVP","PREDICATE","COMP","SCOMP","X","SYNTAX","EX","NOTE","IS","OK","AUX","I","PRED","INCLUDES"]
                 whitelist = ["(UP)ON"]
                 f txt = (T.all (\c -> isUpper c || c == '\'' || c == ',' || c == ';' || c == ':') txt)
                         || (txt `elem` whitelist)
