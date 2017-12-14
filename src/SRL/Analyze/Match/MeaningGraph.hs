@@ -27,6 +27,7 @@ import           NLP.Type.PennTreebankII
 --
 import           SRL.Analyze.Match.Entity
 import           SRL.Analyze.Match.Frame
+import           SRL.Analyze.Match.Preposition (ppRelFrame)
 import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
                                               ,SentStructure,AnalyzePredata
                                               ,PredicateInfo(..)

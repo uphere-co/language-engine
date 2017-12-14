@@ -26,6 +26,7 @@ library
                        SRL.Analyze.Match.Entity
                        SRL.Analyze.Match.Frame
                        SRL.Analyze.Match.MeaningGraph
+                       SRL.Analyze.Match.Preposition
                        SRL.Analyze.Parameter
                        SRL.Analyze.Sense
                        SRL.Analyze.SentenceStructure
@@ -34,25 +35,6 @@ library
                        SRL.Analyze.UKB
                        SRL.Analyze.Util
                        SRL.Statistics
-
-                       -- SRL.Old.CoNLL.CoNLL08.Parser
-                       -- SRL.Old.CoNLL.CoNLL08.Type
-                       -- SRL.Old.DataSet.PropBank
-                       -- SRL.Old.Feature.Dependency
-                       -- SRL.Old.Feature.ParseTreePath
-                       -- SRL.Old.Format
-                       -- SRL.Old.Init
-                       -- SRL.Old.PropBankMatch
-                       -- SRL.Old.Type
-                       -- SRL.Old.Util
-                       -- SRL.Old.Vectorize.Dense
-                       -- SRL.Old.Vectorize.Sparse
-                       -- SVM
-
-                       -- -- -- the following module cannot be compiled now
-                       -- -- SRL.Old.Feature
-                       -- -- SRL.Old.Train
-
   -- other-modules:
   -- other-extensions:
   build-depends:       base,
