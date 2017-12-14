@@ -170,7 +170,7 @@ ppExtraRoleMap = [ ("about"     , ["Topic"])
                  , ("down"      , ["Direction"])
                  , ("during"    , ["Duration"])
                  -- except
-                 , ("for"       , ["Purpose","Duration","Goal"])
+                 , ("for"       , ["Purpose","Duration","Goal","Demands"])
                  , ("from"      , ["Origin","Support"])
                  , ("in"        , ["Location","Place","Time"])
                  , ("inside"    , ["Area","Location","Ground"])
