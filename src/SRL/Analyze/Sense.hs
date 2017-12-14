@@ -105,4 +105,4 @@ getVerbSenses apredata (lma,lmas) =
                        in if null match1 then map (\x -> (x,[unLemma lma])) senses else match1
       rmtoppatts = do inst <- sortBy (flip compare `on` (^._2)) matched_senses
                       getTopPatternsFromONFNInst rolemap subcats inst
-  in matched_senses,rmtoppatts
+  in (matched_senses,rmtoppatts)

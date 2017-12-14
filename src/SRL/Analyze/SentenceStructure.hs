@@ -124,7 +124,7 @@ docStructure apredata netagger (forest,companyMap) docinput@(DocAnalysisInput se
   let entitiesByNER = map (\tokens -> fst $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens) (map catMaybes mtokenss)
   let ne = concat $ rights entitiesByNER
   let tne = mapMaybe (tokenToTagPos companyMap) (zip [10001..] ne)
-  print tne
+  -- print tne
   let tnerange = map getRangeFromEntityMention tne
       wnerange = map getRangeFromEntityMention linked_mentions_resolved
       lnk_mntns1 = tne -- filter (\mntn -> not $ elemIsInsideR (getRangeFromEntityMention mntn) wnerange) tne

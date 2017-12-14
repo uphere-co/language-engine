@@ -118,7 +118,7 @@ printMeaningGraph apredata companyMap dstr = do
   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
       mtokss = (dstr ^. ds_mtokenss)
       wikilsts = map (mkWikiList companyMap) sstrs1
-  print wikilsts
+  -- print wikilsts
   -- print (sstrs1 ^.. traverse . ss_ptr)
   -- print (sstrs1 ^.. traverse . ss_clausetr)
 
@@ -190,7 +190,7 @@ loadAnalyzePredata cfg = do
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
   idioms <- loadIdioms (cfg^.cfg_idiom_file)
-  print idioms
+  -- print idioms
   subcats <- adjustRolePattInsts <$> loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats wndb idioms)
 
