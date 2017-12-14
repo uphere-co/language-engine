@@ -201,7 +201,7 @@ listIdiom cfg = do
       let is' = (map (T.toLower . (\ts -> T.intercalate " " (lma : ts))) . filter (not.null) . tail . splitOn [T.toUpper lma]) is
       -- print is'
       when (not (null is')) $
-        putStrLn $ printf "%s\t%2s.%-6s\t%s" lma g n (T.intercalate "\t" is')
+        putStrLn $ printf "%s\t%s.%s\t%s" lma g n (T.intercalate "\t" is')
       -- T.IO.putStrLn y
 
 
