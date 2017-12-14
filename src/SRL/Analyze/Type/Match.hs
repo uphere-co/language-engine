@@ -4,7 +4,7 @@
 
 module SRL.Analyze.Type.Match where
 
-import           Control.Lens                  ((^.),makeLenses,_2)
+import           Control.Lens                  ((^.),makeLenses,_1,_2)
 import           Data.Function                 (on)
 import           Data.List                     (maximumBy)
 import           Data.Text                     (Text)
@@ -24,7 +24,8 @@ data EntityInfo = EI { _ei_fullRange :: Range
 
 makeLenses ''EntityInfo
 
-data FrameMatchResult = FMR { _fmr_frame :: FNFrame
+data FrameMatchResult = FMR { _fmr_lemmas :: [Text]
+                            , _fmr_frame :: FNFrame
                             , _fmr_roles :: Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP)])
                             , _fmr_subframes :: [(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
                             }
@@ -66,9 +67,9 @@ data ONSenseFrameNetInstance = ONFNInstance { _onfn_senseID :: SenseID
 makeLenses ''ONSenseFrameNetInstance
 
 
-
-chooseMostFreqFrame :: [(ONSenseFrameNetInstance,Int)] -> [(ONSenseFrameNetInstance,Int)]
+{-
+chooseMostFreqFrame :: [((ONSenseFrameNetInstance,Int),a)] -> [((ONSenseFrameNetInstance,Int),a)]
 chooseMostFreqFrame [] = []
-chooseMostFreqFrame xs = [maximumBy (compare `on` (^._2)) xs]
-
+chooseMostFreqFrame xs = [maximumBy (compare `on` (^._1._2)) xs]
+-}
 

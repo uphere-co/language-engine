@@ -221,39 +221,40 @@ matchFrameRolesForCauseDual :: VerbP
                             -> [(ArgPattern () GRel,Int)]
                             -> Maybe SpecTP
                             -> LittleV
-                            -> (FNFrame, SenseID, [(PBArg, Text)])
-                            -> (FNFrame, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP)]))
-matchFrameRolesForCauseDual verbp cp toppatts mDP causetype (frame1,sense1,rolemap1) =
+                            -> ([Text], FNFrame, SenseID, [(PBArg, Text)])
+                            -> ([Text], FNFrame, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP)]))
+matchFrameRolesForCauseDual verbp cp toppatts mDP causetype (idiom, frame1,sense1,rolemap1) =
   let (frame2,sense2,rolemap2) = if causetype == LVDual
                                  then extendRoleMapForDual (frame1,sense1,rolemap1)
                                  else (frame1,sense1,rolemap1)
       mselected1 = matchRoles rolemap1 verbp cp toppatts mDP
       mselected2 = matchRoles rolemap2 verbp cp toppatts mDP
   in case (mselected1,mselected2) of
-       (Nothing,Nothing) -> (frame1,(sense1,False),Nothing)
-       (Just _ ,Nothing) -> (frame1,(sense1,False),mselected1)
-       (Nothing,Just _ ) -> (frame2,(sense2,True),mselected2)
+       (Nothing,Nothing) -> (idiom, frame1,(sense1,False),Nothing)
+       (Just _ ,Nothing) -> (idiom, frame1,(sense1,False),mselected1)
+       (Nothing,Just _ ) -> (idiom, frame2,(sense2,True),mselected2)
        (Just s1,Just s2) ->
          case (compare `on` numMatchedRoles) s1 s2 of
-           GT -> (frame1,(sense1,False),mselected1)
-           LT -> (frame2,(sense2,True),mselected2)
-           EQ -> (frame1,(sense1,False),mselected1)   -- choose intransitive because transitive should
+           GT -> (idiom, frame1,(sense1,False),mselected1)
+           LT -> (idiom, frame2,(sense2,True),mselected2)
+           EQ -> (idiom, frame1,(sense1,False),mselected1)   -- choose intransitive because transitive should
                                                       -- have one more argument in general.
 
 
 matchFrameRolesAll :: VerbP
                    -> CP
                    -> Maybe SpecTP
-                   -> [((RoleInstance,Int),[(ArgPattern () GRel,Int)])]
-                   -> [((FNFrame,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP)])),Int)]
+                   -> [(([Text],RoleInstance,Int),[(ArgPattern () GRel,Int)])]
+                   -> [(([Text],FNFrame,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP)])),Int)]
 matchFrameRolesAll verbp cp mDP rmtoppatts = do
   (rm,toppatts) <- rmtoppatts
-  let sense1 = rm^._1._1
-      rolemap1 = rm^._1._2
-      stat = rm^._2
+  let sense1 = rm^._2._1
+      rolemap1 = rm^._2._2
+      stat = rm^._3
+      idiom = rm^._1
   frame1 <- FNFrame <$> maybeToList (lookup "frame" rolemap1)
   causetype <- (\x -> if x == "dual" then LVDual else LVSingle) <$> maybeToList (lookup "cause" rolemap1)
-  return (matchFrameRolesForCauseDual verbp cp toppatts mDP causetype (frame1,sense1,rolemap1),stat)
+  return (matchFrameRolesForCauseDual verbp cp toppatts mDP causetype (idiom,frame1,sense1,rolemap1),stat)
 
 
 matchExtraRolesForPPTime :: CP
@@ -386,9 +387,9 @@ matchSubFrame check prep (frm,fe0,fe1) cp0 = do
 --   This version is ad hoc, so it will be updated when we come up with a better algorithm.
 --
 scoreSelectedFrame :: Int
-                   -> ((FNFrame,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,a)])),Int)
+                   -> (([Text],FNFrame,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement,a)])),Int)
                    -> Double
-scoreSelectedFrame total ((_,_,mselected),n) =
+scoreSelectedFrame total ((_,_,_,mselected),n) =
   let mn = maybe 0 fromIntegral (mselected^?_Just.to numMatchedRoles)
   in mn * (fromIntegral n) / (fromIntegral total) * roleMatchWeightFactor + (mn*(fromIntegral total))
 
@@ -452,7 +453,7 @@ matchFrame frmdb (vstr,cp) =
            let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_NP (Just GA1))) Nothing Nothing Nothing
                role_subj = (FNFrameElement "Instance",CompVP_DP dp_subj)
                role_obj  = (FNFrameElement "Type",CompVP_DP dp_obj)
-           return (rng_cp,vprop,FMR "Instance" (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing))
+           return (rng_cp,vprop,FMR ["be"] "Instance" (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing))
        <|>
        (do pp_obj <- c^?_CompVP_PP
            prep_obj <- pp_obj^?headX.hp_prep._Prep_WORD
@@ -460,11 +461,11 @@ matchFrame frmdb (vstr,cp) =
            let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_PP Nothing)) Nothing Nothing Nothing
                role_subj = (rsbj,CompVP_DP dp_subj)
                role_obj  = (robj,CompVP_PP pp_obj)
-           return (rng_cp,vprop,FMR frm (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing)))
+           return (rng_cp,vprop,FMR ["be"] frm (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing)))
 
 
     else do
-      ((frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
+      ((idiom,frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
       let mselected1 = (_Just . _2 %~ matchExtraRoles frmdb frame cp) mselected0
           mselected  = (_Just . _2 %~ resolveAmbiguityInDP) mselected1
           subfrms = mapMaybe (\(chk,prep,frm) -> matchSubFrame chk prep frm cp)
@@ -475,7 +476,7 @@ matchFrame frmdb (vstr,cp) =
                       ,(hasComplementizer ["if"]    , "if"    , ("Conditional_occurrence","Consequence","Profiled_possibility"))
                       ,(hasComplementizer ["unless"], "unless", ("Negative_conditional","Anti_consequence","Profiled_possibility"))
                       ]
-      return (rng_cp,vprop,FMR frame mselected subfrms,Just sense)
+      return (rng_cp,vprop,FMR idiom frame mselected subfrms,Just sense)
   where
     verbp = cp^.complement.complement
     mDP = cp^.complement.specifier.trResolved
@@ -568,7 +569,7 @@ matchNomFrame apredata x'tr tagged dp = do
       let (senses,rmtoppatts) = getVerbSenses apredata (verb,[verb])
       guard ((not.null) senses && (not.null) rmtoppatts)
       (return . First . Just) (verb,senses,rmtoppatts)
-    (((_sid,rolemap),_),patts) <- listToMaybe rmtoppatts
+    ((_,(_sid,rolemap),_),patts) <- listToMaybe rmtoppatts
     frm <- lookup "frame" rolemap
     patt <- listToMaybe patts
     (ppcase patt rolemap lma frm verb rng_dp mei_subj <|>

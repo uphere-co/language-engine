@@ -47,8 +47,8 @@ makeLenses ''AnalyzePredata
 
 
 data VerbStructure = VerbStructure { _vs_vp           :: VerbProperty (Zipper '[Lemma])
-                                   , _vs_senses       :: [((ONSenseFrameNetInstance,Int),[Text])]
-                                   , _vs_roleTopPatts :: [((RoleInstance,Int), [(ArgPattern () GRel, Int)])]
+                                   , _vs_senses       :: [((ONSenseFrameNetInstance,Int),[Text])] -- rather obsolete
+                                   , _vs_roleTopPatts :: [(([Text],RoleInstance,Int), [(ArgPattern () GRel, Int)])]
                                    }
 
 makeLenses ''VerbStructure
@@ -104,7 +104,8 @@ data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Maybe Range) Int
 makeLenses ''VertexMap
 
 
-data PredicateInfo = PredVerb { _pi_sense :: Maybe (SenseID,Bool)  -- ^ (ON sense ID, idiom, causation)
+data PredicateInfo = PredVerb { _pi_lemmas :: [Text]               -- ^ for idiom
+                              , _pi_sense :: Maybe (SenseID,Bool)  -- ^ (ON sense ID, causation)
                               , _pi_verb  :: VerbProperty Text
                               }
                    | PredPrep { _pi_prep :: Text }

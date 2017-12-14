@@ -76,14 +76,14 @@ mkMGVertices :: ([X'Tree],TaggedLemma '[Lemma],[(Range,Range)])
                 ,[(Range,Range)]
                 )
 mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
-  let preds = flip map matched $ \(rng,vprop,FMR frm _ _,sense) i
-                                   -> MGPredicate i (Just rng) frm (PredVerb sense (simplifyVProp vprop))
+  let preds = flip map matched $ \(rng,vprop,FMR idiom frm _ _,sense) i
+                                   -> MGPredicate i (Just rng) frm (PredVerb idiom sense (simplifyVProp vprop))
       npreds = flip map nmatched $ \(lma,verb,(frm,rng_dp),_,_) ->
                                   \i -> MGPredicate i (Just rng_dp) frm (PredNominalized lma verb)
       ipreds = zipWith ($) (preds ++ npreds) [1..]
 
       ett_verb :: [(EntityInfo,DPInfo)]
-      ett_verb  = do (rng,_,FMR _ mselected _,_) <- matched
+      ett_verb  = do (rng,_,FMR _ _ mselected _,_) <- matched
                      (_,felst) <- maybeToList mselected
                      (_fe,x) <- felst
                      case x of
@@ -117,7 +117,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
 
       ettfunc_verbnom = concatMap mkEntityFun ett_verbnom
 
-      ettfunc_prep = do (_,_,FMR _ _ lst,_) <- matched
+      ettfunc_prep = do (_,_,FMR _ _ _ lst,_) <- matched
                         (frm,prep,felst) <- lst
                         return (\i -> ((i,frm,prep,felst),MGPredicate i Nothing frm (PredPrep prep)))
 
@@ -139,7 +139,7 @@ mkRoleEdges vmap  matched = do
   let rngidxmap = vmap^.vm_rangeToIndex
       depmap = vmap^.vm_rangeDependency
       headfull = vmap^.vm_headRangeToFullRange
-  (rng,_,FMR _ mselected _,_) <- matched
+  (rng,_,FMR _ _ mselected _,_) <- matched
   i <- maybeToList (HM.lookup (0,Just rng) rngidxmap)   -- frame
   (_,felst) <- maybeToList mselected
   (fe,x) <- felst

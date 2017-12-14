@@ -71,19 +71,19 @@ getSenses (Lemma lma) sensemap sensestat framedb ontomap = do
 getTopPatternsFromONFNInst :: [RoleInstance]
                            -> [RolePattInstance Voice]
                            -> ((ONSenseFrameNetInstance,Int),[Text])
-                           -> [((RoleInstance,Int), [(ArgPattern () GRel,Int)])]
-getTopPatternsFromONFNInst rolemap subcats ((inst,n),_) = do
+                           -> [(([Text],RoleInstance,Int), [(ArgPattern () GRel,Int)])]
+getTopPatternsFromONFNInst rolemap subcats ((inst,n),idiom) = do
   let sid = inst^.onfn_senseID
   rm <- filter (\rm -> rm^._1 == sid) rolemap
   let subcats' = maybeToList (find ((== sid) . (^._1)) subcats)
       toppatts_cut = cutHistogram thresholdPattStat . constructTopPatterns . (^._2) =<< subcats'
-  return ((rm,n),toppatts_cut)
+  return ((idiom,rm,n),toppatts_cut)
 
 
 getVerbSenses :: AnalyzePredata
               -> (Lemma,[Lemma])
               -> ([((ONSenseFrameNetInstance,Int),[Text])]
-                 ,[((RoleInstance,Int), [(ArgPattern () GRel, Int)])])
+                 ,[(([Text],RoleInstance,Int), [(ArgPattern () GRel, Int)])])
 getVerbSenses apredata (lma,lmas) =
   let sensemap  = apredata^.analyze_sensemap
       sensestat = apredata^.analyze_sensestat
@@ -102,7 +102,7 @@ getVerbSenses apredata (lma,lmas) =
                              sense <- senses
                              (_,idm) <- filter (\x -> (sense^._1.onfn_senseID == x^._1)) matched_idioms
                              return (sense,idm)
-                       in if null match1 then map (\x -> (x,[])) senses else match1
+                       in if null match1 then map (\x -> (x,[unLemma lma])) senses else match1
       rmtoppatts = do inst <- sortBy (flip compare `on` (^._2)) matched_senses
                       getTopPatternsFromONFNInst rolemap subcats inst
   in {- trace (show test) $ -} (matched_senses,rmtoppatts)
