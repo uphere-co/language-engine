@@ -565,7 +565,7 @@ matchNomFrame apredata x'tr tagged dp = do
           return (EI rng rng Nothing txt)
     (verb,_senses,rmtoppatts) <- getFirst . mconcat $ do
       verb <- extractNominalizedVerb wndb lma
-      let (senses,rmtoppatts) = getVerbSenses apredata verb
+      let (senses,rmtoppatts) = getVerbSenses apredata (verb,[verb])
       guard ((not.null) senses && (not.null) rmtoppatts)
       (return . First . Just) (verb,senses,rmtoppatts)
     (((_sid,rolemap),_),patts) <- listToMaybe rmtoppatts

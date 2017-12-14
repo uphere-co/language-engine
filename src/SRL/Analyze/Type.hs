@@ -40,13 +40,14 @@ data AnalyzePredata = AnalyzePredata { _analyze_sensemap  :: HashMap Text Invent
                                      , _analyze_rolemap   :: [RoleInstance]
                                      , _analyze_subcats   :: [RolePattInstance Voice]
                                      , _analyze_wordnet   :: WordNetDB
+                                     , _analyze_idioms    :: HashMap SenseID [[Text]]
                                      }
 
 makeLenses ''AnalyzePredata
 
 
 data VerbStructure = VerbStructure { _vs_vp           :: VerbProperty (Zipper '[Lemma])
-                                   , _vs_senses       :: [(ONSenseFrameNetInstance,Int)]
+                                   , _vs_senses       :: [((ONSenseFrameNetInstance,Int),[Text])]
                                    , _vs_roleTopPatts :: [((RoleInstance,Int), [(ArgPattern () GRel, Int)])]
                                    }
 
@@ -59,7 +60,6 @@ data SentStructure = SentStructure { _ss_i              :: Int
                                    , _ss_x'tr           :: [X'Tree]
                                    , _ss_tagged_full    :: [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text), MarkType)]
                                    , _ss_tagged         :: TaggedLemma '[Lemma]
---                                   , _ss_tagged_wordnet :: 
                                    , _ss_verbStructures :: [VerbStructure]
                                    }
 
@@ -104,7 +104,7 @@ data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Maybe Range) Int
 makeLenses ''VertexMap
 
 
-data PredicateInfo = PredVerb { _pi_sense :: Maybe (SenseID,Bool)  -- ^ (ON sense ID, causation)
+data PredicateInfo = PredVerb { _pi_sense :: Maybe (SenseID,Bool)  -- ^ (ON sense ID, idiom, causation)
                               , _pi_verb  :: VerbProperty Text
                               }
                    | PredPrep { _pi_prep :: Text }

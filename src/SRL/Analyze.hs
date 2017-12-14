@@ -13,6 +13,7 @@ import           Control.Monad.IO.Class         (liftIO)
 import           Control.Monad.Loops            (whileJust_)
 import qualified Data.ByteString.Char8  as B
 import           Data.Default                   (def)
+import           Data.HashMap.Strict            (HashMap)
 import qualified Data.HashMap.Strict    as HM
 import           Data.IntMap                    (IntMap)
 import qualified Data.IntMap            as IM
@@ -31,9 +32,10 @@ import           CoreNLP.Simple.Type            (tokenizer,words2sentences,posta
 import           FrameNet.Query.Frame           (loadFrameData)
 import           HUKB.PPR                       (createUKBDB)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
-import           Lexicon.Query                  (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts)
+import           Lexicon.Query                  (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts,loadIdioms)
 import           Lexicon.Data                   (LexDataConfig(..),cfg_framenet_framedir
                                                 ,cfg_rolemap_file
+                                                ,cfg_idiom_file
                                                 ,cfg_sense_inventory_file
                                                 ,cfg_verb_subcat_file
                                                 ,cfg_wsj_directory
@@ -42,6 +44,7 @@ import           Lexicon.Data                   (LexDataConfig(..),cfg_framenet_
                                                 ,cfg_ukb_binfile
                                                 ,loadSenseInventory
                                                 )
+import           Lexicon.Type                   (SenseID)
 import           MWE.Util                       (mkTextFromToken)
 import           NER.Load                       (loadCompanies)
 import           NER.Type                       (CompanyInfo(..),alias,companyId)
@@ -170,10 +173,13 @@ loadConfig (bypass_ner,bypass_textner) cfg = do
                              return (cid,T.words a)
               let forest = foldr addTreeItem [] clist  -- [(c^.companyId,c^.alias) |  c <- companies] -- Temporary. Tokenization should be done by CoreNLP.
               return (forest,companyMap)
-
   return (apredata,netagger,forest,companyMap)
 
 
+
+--
+-- | Load all pre-analysis data
+--
 loadAnalyzePredata :: LexDataConfig -> IO AnalyzePredata
 loadAnalyzePredata cfg = do
   framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
@@ -183,8 +189,10 @@ loadAnalyzePredata cfg = do
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
+  idioms <- loadIdioms (cfg^.cfg_idiom_file)
+  print idioms
   subcats <- adjustRolePattInsts <$> loadRolePattInsts (cfg^.cfg_verb_subcat_file)
-  return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats wndb)
+  return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats wndb idioms)
 
 
 

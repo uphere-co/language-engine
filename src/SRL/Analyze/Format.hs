@@ -91,8 +91,8 @@ showFormatTimex' (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex' (s,a
 
 
 
-formatSense :: (ONSenseFrameNetInstance,Int) -> String
-formatSense (onfninst,num) =
+formatSense :: ((ONSenseFrameNetInstance,Int),a) -> String
+formatSense ((onfninst,num),_) =
   printf "%-8s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s "
          (onfninst^.onfn_senseID._3)
          num
@@ -113,15 +113,17 @@ formatFrame t =
 
 
 formatSenses :: Bool  -- ^ doesShowOtherSense
-             -> [(ONSenseFrameNetInstance,Int)]
+             -> [((ONSenseFrameNetInstance,Int),[Text])]
              -> [((RoleInstance,Int), [(ArgPattern () GRel,Int)])]
              -> String
 formatSenses doesShowOtherSense onfnlst rmtoppatts
   =  "--------------------------------------------------------------------------------------------------\n"
      ++ intercalate "\n--------------------------------------------------------------------------------------------------\n" (flip map rmtoppatts (\((rm,_),toppatts) ->
           let argpattstr = formatArgPattStat toppatts
-              mfrm = find (\x -> x^._1.onfn_senseID == rm^._1 ) onfnlst
-              framestr = "Frames: " ++ maybe "" formatFrame mfrm
+              mfrm = find (\x -> x^._1._1.onfn_senseID == rm^._1 ) onfnlst
+              framestr = case mfrm of
+                           Nothing -> "Frames: "
+                           Just (frm,idiom) -> show idiom ++ " " ++ "Frames: " ++ formatFrame frm
           in framestr ++
              (formatRoleMap (rm^._2) ++ ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<> argpattstr))))
      ++ "\n--------------------------------------------------------------------------------------------------\n"
