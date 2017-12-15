@@ -1,6 +1,10 @@
 
 SOLVED
 
+-- | multi-word expression "step down"
+Hewlett Packard Enterprise Co said on Tuesday that Meg Whitman was stepping down as chief executive officer.
+
+
 -- | its plan to seek : SOLVED
 Chilean copper mine Collahuasi, a joint venture of Anglo American and Glencore, is postponing its plan to seek approval of an environmental impact study for an expansion until next year, the company told Reuters on Tuesday.
 
@@ -202,8 +206,6 @@ A Russian judge summoned the boss of the country's biggest oil company to testif
 Igor Sechin, the chief executive of Russian oil major Rosneft, will not be able to appear in court this year to act as a witness in the trial of ex-economy minister Alexei Ulyukayev, judge Larisa Semyonova said during court hearings on Wednesday.
 
 
--- | multi-word expression "step down"
-Hewlett Packard Enterprise Co said on Tuesday that Meg Whitman was stepping down as chief executive officer.
 
 -- | so wrong
 Half a million people have signed an online petition in under 24 hours backing Uber's bid to stay on the roads of London, showing the company is turning to its tried-and-tested tactic of asking  customers for help when it locks horns with regulators.
