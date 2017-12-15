@@ -274,3 +274,5 @@ Brazilian state-run oil company Petroleo Brasileiro SA has filed documents relat
 -- | Kinder Morgan Canada Ltd is not recognized as subject. parsing problem. present perfective introduced additional S-shell.
 Kinder Morgan Canada Ltd has complied with an order by the country's National Energy Board (NEB) to stop some work on its Trans Mountain pipeline expansion, the regulator said on Thursday.
 
+-- | will not be able to
+Igor Sechin, the chief executive of Russian oil major Rosneft, will not be able to appear in court this year to act as a witness in the trial of ex-economy minister Alexei Ulyukayev, judge Larisa Semyonova said during court hearings on Wednesday.
