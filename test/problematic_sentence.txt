@@ -266,3 +266,13 @@ Brazilian steelmaker Usiminas Siderugicas de Minas Gerais SA is currently discus
 
 
 
+
+-- | apposition problem
+Brazilian state-run oil company Petroleo Brasileiro SA has filed documents related to an initial public offering of its fuel distribution unit BR Distribuidora SA, it said in a filing on Wednesday.
+
+
+-- | Kinder Morgan Canada Ltd is not recognized as subject. parsing problem. present perfective introduced additional S-shell.
+Kinder Morgan Canada Ltd has complied with an order by the country's National Energy Board (NEB) to stop some work on its Trans Mountain pipeline expansion, the regulator said on Thursday.
+
+-- | will not be able to
+Igor Sechin, the chief executive of Russian oil major Rosneft, will not be able to appear in court this year to act as a witness in the trial of ex-economy minister Alexei Ulyukayev, judge Larisa Semyonova said during court hearings on Wednesday.

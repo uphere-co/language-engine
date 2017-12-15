@@ -30,8 +30,8 @@ import           NER.Type                                  (CompanyInfo(..),tick
 import           NLP.Syntax.Clause                         (bindingAnalysis,bindingAnalysisRaising,identifyCPHierarchy,resolveCP)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type                           (MarkType(..))
-import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma)
-import           NLP.Syntax.Type.XBar                      (Zipper)
+import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma,vp_index)
+import           NLP.Syntax.Type.XBar                      (Zipper,TaggedLemma,lemmaList)
 import           NLP.Syntax.Util                           (mkTaggedLemma)
 import qualified NLP.Type.NamedEntity              as N
 import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,Token,sentenceToken,sentenceLemma,sent_tokenRange,token_text,token_tok_idx_range)
@@ -62,8 +62,7 @@ tokenToTagPos cmap (i,(cid,tks)) = do
   let b = ft ^. token_tok_idx_range . _1
       e = lt ^. token_tok_idx_range . _2
       txts = tks ^.. traverse . token_text
-  -- ctyp <- cmap^?at cid.  IM.lookup cid cmap
-  let ctyp = PublicCompany -- for the time being
+      ctyp = PublicCompany -- for the time being
   return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched (CID cid) ctyp))
 
 
@@ -125,7 +124,7 @@ docStructure apredata netagger (forest,companyMap) docinput@(DocAnalysisInput se
   let entitiesByNER = map (\tokens -> fst $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens) (map catMaybes mtokenss)
   let ne = concat $ rights entitiesByNER
   let tne = mapMaybe (tokenToTagPos companyMap) (zip [10001..] ne)
-  print tne
+  -- print tne
   let tnerange = map getRangeFromEntityMention tne
       wnerange = map getRangeFromEntityMention linked_mentions_resolved
       lnk_mntns1 = tne -- filter (\mntn -> not $ elemIsInsideR (getRangeFromEntityMention mntn) wnerange) tne
@@ -188,11 +187,14 @@ sentStructure apredata taglst (i,midx,lmas,mptr,synsets) =
         taggedMarkOnly = mkTaggedLemma lmatkns ptr taglstMarkOnly synsets
         vps = verbPropertyFromPennTree lemmamap ptr
         x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis taggedMarkOnly) . identifyCPHierarchy taggedMarkOnly) vps
-        verbStructures = map (verbStructure apredata) vps
+        verbStructures = map (verbStructure apredata taggedMarkOnly) vps
     in SentStructure i ptr vps x'tr taglst' taggedMarkOnly verbStructures
 
 
-verbStructure :: AnalyzePredata -> VerbProperty (Zipper '[Lemma]) -> VerbStructure
-verbStructure apredata vp =
-  let (senses,rmtoppatts) = getVerbSenses apredata (vp^.vp_lemma)
+verbStructure :: AnalyzePredata -> TaggedLemma '[Lemma] -> VerbProperty (Zipper '[Lemma]) -> VerbStructure
+verbStructure apredata tagged vp =
+  let i = vp^.vp_index
+      l = vp^.vp_lemma
+      ls = (map (^._2._1) . filter (\(j,_) -> j >= i)) (tagged^.lemmaList)
+      (senses,rmtoppatts) = getVerbSenses apredata (l,ls)
   in VerbStructure vp senses rmtoppatts

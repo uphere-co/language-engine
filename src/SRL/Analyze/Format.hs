@@ -91,8 +91,8 @@ showFormatTimex' (s,a) = T.IO.putStrLn (T.intercalate "\n" (getFormatTimex' (s,a
 
 
 
-formatSense :: (ONSenseFrameNetInstance,Int) -> String
-formatSense (onfninst,num) =
+formatSense :: ((ONSenseFrameNetInstance,Int),a) -> String
+formatSense ((onfninst,num),_) =
   printf "%-8s (%4d cases) | %-40s | %-20s | %-40s      ------       %-30s "
          (onfninst^.onfn_senseID._3)
          num
@@ -113,15 +113,17 @@ formatFrame t =
 
 
 formatSenses :: Bool  -- ^ doesShowOtherSense
-             -> [(ONSenseFrameNetInstance,Int)]
-             -> [((RoleInstance,Int), [(ArgPattern () GRel,Int)])]
+             -> [((ONSenseFrameNetInstance,Int),[Text])]
+             -> [(([Text],RoleInstance,Int), [(ArgPattern () GRel,Int)])]
              -> String
 formatSenses doesShowOtherSense onfnlst rmtoppatts
   =  "--------------------------------------------------------------------------------------------------\n"
-     ++ intercalate "\n--------------------------------------------------------------------------------------------------\n" (flip map rmtoppatts (\((rm,_),toppatts) ->
+     ++ intercalate "\n--------------------------------------------------------------------------------------------------\n" (flip map rmtoppatts (\((_,rm,_),toppatts) ->
           let argpattstr = formatArgPattStat toppatts
-              mfrm = find (\x -> x^._1.onfn_senseID == rm^._1 ) onfnlst
-              framestr = "Frames: " ++ maybe "" formatFrame mfrm
+              mfrm = find (\x -> x^._1._1.onfn_senseID == rm^._1 ) onfnlst
+              framestr = case mfrm of
+                           Nothing -> "Frames: "
+                           Just (frm,idiom) -> show idiom ++ " " ++ "Frames: " ++ formatFrame frm
           in framestr ++
              (formatRoleMap (rm^._2) ++ ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<> argpattstr))))
      ++ "\n--------------------------------------------------------------------------------------------------\n"
@@ -205,6 +207,7 @@ formatVerbStructure (VerbStructure vp senses mrmmtoppatts) =
   , T.pack (formatSenses False senses mrmmtoppatts)
   ]
 
+
 showMatchedFE :: TaggedLemma '[Lemma] -> (FNFrameElement, CompVP) -> String
 --                                         FE   range prep text
 showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (maybe "" show (dp^?complement._Just.headX)) ("" :: Text) (headTextDP tagged dp)
@@ -232,9 +235,9 @@ showMatchedFrame :: FrameDB
                  -> IO ()
 showMatchedFrame framedb tagged (vstr,cp) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame framedb (vstr,cp)) $ \(rng,_,FMR frame mselected _,_) -> do
+  flip traverse_ (matchFrame framedb (vstr,cp)) $ \(rng,_,FMR idiom frame mselected _,_) -> do
     putStrLn ("predicate: " <> show rng)
-    T.IO.putStrLn ("Verb: " <> (vstr^.vs_vp.vp_lemma.to unLemma))
+    T.IO.putStrLn ("Verb: " <> {- (vstr^.vs_vp.vp_lemma.to unLemma) -} T.intercalate " " idiom)
     T.IO.putStrLn ("Frame: " <> unFNFrame frame)
     flip traverse_ mselected $ \(_,felst) -> mapM_ (putStrLn . showMatchedFE tagged) felst
 
@@ -258,13 +261,13 @@ formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}]
 
 
 formatMGVertex :: MGVertex -> (Int,Text)
-formatMGVertex (MGPredicate i _ f (PredVerb _ v))
+formatMGVertex (MGPredicate i _ f (PredVerb idiom _ v))
   = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
         "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
         "<tr>" <>
-        "<td width=\"20\">" <> T.intercalate " " (v^..vp_auxiliary.traverse._1) <> "</td>" <>
-        "<td width=\"20\">" <> fromMaybe "" (v^?vp_negation._Just._1)           <> "</td>" <>
-        "<td>" <> v^.vp_lemma.to unLemma                           <> "</td>" <>
+        "<td width=\"20\">" <> T.intercalate " " (v^..vp_auxiliary.traverse._1)   <> "</td>" <>
+        "<td width=\"20\">" <> fromMaybe "" (v^?vp_negation._Just._1)             <> "</td>" <>
+        "<td>" <> T.intercalate " " idiom {- v^.vp_lemma.to unLemma -}            <> "</td>" <>
         "<td>" <> formatTense (v^.vp_tense) <> "." <> formatAspect (v^.vp_aspect) <> "</td>" <>
         "</tr>" <>
         "</table>" )
