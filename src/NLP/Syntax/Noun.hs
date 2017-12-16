@@ -9,7 +9,8 @@
 module NLP.Syntax.Noun where
 
 import           Control.Applicative      ((<|>))
-import           Control.Lens             ((^.),(^..),(^?),(.~),(%~),(&),to,_1,_2,_Just,_Nothing,folded,filtered)
+import           Control.Lens             ((^.),(^..),(^?),(.~),(%~),(&),to,_1,_2
+                                          ,_Left,_Just,_Nothing,folded,filtered)
 import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
@@ -44,10 +45,11 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,identifyArticle
                                           ,identifyPronounPerson
                                           ,pennTree,tagList)
-import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs,intLemma)
+import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs,intLemma
+                                          ,rootTag)
 --
+import Debug.Trace
 
--- import Debug.Trace
 
 
 mkPPFromZipper :: TaggedLemma (Lemma ': as) -> PrepClass -> Zipper (Lemma ': as) -> Maybe PP
@@ -79,15 +81,21 @@ splitDP tagged dp0 =
               let rng0 = dp0^.maximalProjection
 
               z <- find (isChunkAs NP . current) (extractZipperByRange rng0 (tagged^.pennTree))
-              z_pp <- childLast z
-              guard (isChunkAs PP (current z_pp))
-              pp <- mkPPFromZipper tagged PC_Other z_pp
-              let ppreplace = case pp^.headX.hp_prep of
-                                Prep_WORD "of" -> complement._Just.complement .~ (Just (CompDP_PP pp))
-                                _              -> adjunct %~ (++ [AdjunctDP_PP pp]) . removePP (pp^.maximalProjection)
-              let (b_pp,_) = pp^.maximalProjection
-              return (dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
-
+              -- adjunct only one.. but this must be recursive.
+              z_last <- childLast z
+              tag <- (rootTag (current z_last))^?_Left
+              case tag of
+                PP -> do -- guard (isChunkAs PP (current z_last))
+                         pp <- mkPPFromZipper tagged PC_Other z_last
+                         let ppreplace = case pp^.headX.hp_prep of
+                                           Prep_WORD "of" -> complement._Just.complement .~ (Just (CompDP_PP pp))
+                                           _              -> adjunct %~ (++ [AdjunctDP_PP pp]) . removePP (pp^.maximalProjection)
+                             (b_pp,_) = pp^.maximalProjection
+                         return (dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace)
+                ADJP -> let (b_ap,e_ap) = getRange (current z_last)
+                            apreplace = adjunct %~ (++ [AdjunctDP_Unresolved (b_ap,e_ap)])
+                        in return (dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_ap-1))) . apreplace)
+                _ -> Nothing
   in identifyDeterminer tagged . identifyNamedEntity tagged . bareNounModifier tagged . fromMaybe dp1 $ do
        let rng1 = dp1^.maximalProjection
            rf = getRange . current
@@ -198,7 +206,7 @@ checkProperNoun tagged (b,e) =
 --
 identifyDeterminer :: TaggedLemma (Lemma ': as) -> DetP -> DetP
 identifyDeterminer tagged dp = fromMaybe dp $ do
-    let rng = dp^.maximalProjection -- complement._Just.headX.hn_range
+    let rng = dp^.maximalProjection
     let zs = extractZipperByRange rng (tagged^.pennTree)
     (singleword zs <|> multiword zs)
 
@@ -267,11 +275,15 @@ identifyNamedEntity :: TaggedLemma t -> DetP -> DetP
 identifyNamedEntity tagged dp =
   fromMaybe dp $ do
     rng <- dp^?complement._Just.headX.hn_range
+    -- trace ("\nidentifyNamedEntity 0 : " ++ show rng) $ return ()    
     TagPos (_,_,MarkEntity nec)
       <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
     (return . (complement._Just.headX.hn_class .~ (Just nec))) dp
 
 
+-- 
+-- |
+--
 identifyInternalTimePrep :: TaggedLemma (Lemma ': as)
                          -> DetP
                          -> (DetP,[AdjunctVP])

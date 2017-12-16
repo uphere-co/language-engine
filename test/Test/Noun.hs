@@ -32,7 +32,7 @@ import           Test.Common
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
--- import Debug.Trace
+import Debug.Trace
 
 
 type TestNoun = (Text
@@ -211,6 +211,15 @@ test_infinitive_modifier_1 =
   , []
   )
 
+test_np_rrc_1 =
+  ( "documents related to an initial public offering of its fuel distribution unit BR Distribuidora SA"
+  , ("",Just "documents",[],Nothing,["related to an initial public offering of its fuel distribution unit BR Distribuidora SA"])
+  , [(0,("document","documents")),(1,("related","related")),(2,("to","to")),(3,("a","an")),(4,("initial","initial")),(5,("public","public")),(6,("offering","offering")),(7,("of","of")),(8,("its","its")),(9,("fuel","fuel")),(10,("distribution","distribution")),(11,("unit","unit")),(12,("BR","BR")),(13,("Distribuidora","Distribuidora")),(14,("SA","SA"))]
+  , PN "NP" [PN "NP" [PL ("NNS","documents")],PN "ADJP" [PL ("JJ","related"),PN "PP" [PL ("TO","to"),PN "NP" [PN "NP" [PL ("DT","an"),PL ("JJ","initial"),PL ("JJ","public"),PL ("NN","offering")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("PRP$","its"),PL ("NN","fuel"),PL ("NN","distribution"),PL ("NN","unit"),PL ("NNP","BR"),PL ("NNP","Distribuidora"),PL ("NNP","SA")]]]]]]
+  , [TagPos (TokIdx 12,TokIdx 15,MarkEntity Org)]
+  , []
+  )
+
 
 mkDPFromTest :: TaggedLemma '[Lemma] -> TestNoun -> DetP
 mkDPFromTest tagged x =
@@ -236,7 +245,8 @@ checkBNM x =
                ,dp^?complement._Just.complement._Just.to (T.intercalate " " . tokensByRange tagged . compDPToRange)
                ,dp^..adjunct.traverse.to (T.intercalate " " . tokensByRange tagged . adjunctDPToRange)
                )
-  in result == x^._2
+  in -- trace (show result) $
+     result == x^._2
 
 
 testcases :: [TestNoun]
@@ -255,6 +265,7 @@ testcases = [ test_bare_noun_modifier_1
             , test_article_1
             , test_possesive_clitic_1
             , test_infinitive_modifier_1
+            , test_np_rrc_1
             ]
 
 
