@@ -414,6 +414,8 @@ scoreSelectedFrame total ((_,_,_,mselected),n) =
   in mn * (fromIntegral n) / (fromIntegral total) * roleMatchWeightFactor + (mn*(fromIntegral total))
 
 
+
+{-
 --
 -- | Resolve PP ambiguity for matched PP
 --   This algorithm is ad hoc but practically works for PP embedded in DP by CoreNLP.
@@ -458,7 +460,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
                in (fe', CompVP_DP dp')
           else (fe', CompVP_DP dp)
     f _ x = x
-
+-}
 
 
 matchFrame :: FrameDB
@@ -488,7 +490,7 @@ matchFrame frmdb x'tr (vstr,cp) =
     else do
       ((idiom,frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
       let mselected1 = (_Just . _2 %~ matchExtraRoles frmdb frame x'tr cp) mselected0
-          mselected  = (_Just . _2 %~ resolveAmbiguityInDP) mselected1
+          mselected  = mselected1 -- (_Just . _2 %~ resolveAmbiguityInDP) mselected1
           subfrms = mapMaybe (\(chk,prep,frm) -> matchExtraClausalSubframe chk prep frm cp)
                       [(hasComplementizer ["after"] , "after" , ("Time_vector","Event","Landmark_event"))
                       ,(hasComplementizer ["before"], "before", ("Time_vector","Event","Landmark_event"))

@@ -12,7 +12,7 @@ import           Control.Monad                (guard)
 import           Data.Bifoldable              (biList)
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
-import           Data.List                    (find,groupBy,sortBy)
+import           Data.List                    (find,groupBy,sortBy,intercalate)
 import           Data.Maybe                   (fromMaybe,mapMaybe,maybeToList)
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
@@ -46,7 +46,10 @@ import           SRL.Analyze.Type.Match       (DPInfo(..), EntityInfo(..),FrameM
                                               )
 
 
--- import Debug.Trace
+import Debug.Trace
+
+import NLP.Syntax.Format.Internal
+
 
 
 dependencyOfX'Tree :: X'Tree -> [(Range,Range)]
@@ -96,7 +99,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
                        CompVP_Unresolved _ -> []
                        CompVP_CP _cp -> [] -- CP is not an entity.
                        CompVP_DP dp -> do
-                         let y@(ei,_) = entityFromDP x'tr tagged dp
+                         let y@(ei,_) = trace ("\nmkMGVertices: " ++ T.unpack (formatDP dp)) $ entityFromDP x'tr tagged dp
                              rng' = ei^.ei_fullRange
                          if is _Just (find (== (rng',rng)) depmap)
                            then []
@@ -121,6 +124,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
                   $ (ett_verb ++ ett_nominal)
 
 
+
       ettfunc_verbnom = concatMap mkEntityFun ett_verbnom
 
       ettfunc_prep = do (_,_,FMR _ _ _ lst,_) <- matched
@@ -135,7 +139,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
       vertices = ipreds ++ iett_verbnom ++ (map snd iett_prep)
       headfull = do (ei,_) <- ett_verbnom
                     return (ei^.ei_headRange,ei^.ei_fullRange)
-  in (vertices,ett_verbnom,iett_prep,headfull)
+  in trace ("\nett_verbnom\n" ++ intercalate "\n" (map show ett_verbnom) )  (vertices,ett_verbnom,iett_prep,headfull)
 
 
 mkRoleEdges :: VertexMap
@@ -268,7 +272,7 @@ meaningGraph apredata sstr =
       rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
       vmap = VertexMap rngidxmap depmap headfull
       edges = mkMGEdges vmap (matched,nmatched) (entities1_0,ientities2)
-  in MeaningGraph vertices edges
+  in trace ("\n\n"++ intercalate "\n" (map show vertices)) MeaningGraph vertices edges
 
 
 isEntity :: MGVertex -> Bool
