@@ -165,7 +165,7 @@ identifySubject tagged tag vp = maybe nul smp r
 --
 constructCP :: TaggedLemma (Lemma ': as)
             -> VerbProperty (Zipper (Lemma ': as))
-            -> Maybe (CP,[SpecTP])
+            -> Maybe (CP,[CompVP])
 constructCP tagged vprop = do
     z_vp <- maximalProjectionVP vprop
     let rng_vp = getRange (current z_vp)
@@ -179,10 +179,10 @@ constructCP tagged vprop = do
         cptag' <- N.convert <$> getchunk z_cp'
         let (comps,mtop,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
-            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToSpecTP)
+            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just) -- .to compVPToSpecTP
             (subj0,sadjs) = identifySubject tagged s z_vp
             subj = ((trResolved . _Just . _SpecTP_DP) %~ splitDP tagged) subj0
-            subj_dps = subj^..trResolved._Just
+            subj_dps = subj^..trResolved._Just.to specTPToCompVP
             verbp = mkVerbP rng_vp (simplifyVProp vprop) (cadjs++sadjs) comps
             dps = subj_dps ++ comps_dps
         case cptag' of
@@ -219,38 +219,51 @@ constructCP tagged vprop = do
       _ -> -- reduced relative clause
         let (comps,_,cadjs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
-            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToSpecTP)
+            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just) -- .to compVPToSpecTP
             verbp = mkVerbP rng_vp (simplifyVProp vprop) cadjs comps
             nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
         in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP rng_vp nullsubj verbp),comps_dps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
-hierarchyBits :: TaggedLemma (Lemma ': as) -> (CP, [DetP]) -> Maybe [(Range, (Range, CPDPPP))]
+hierarchyBits :: TaggedLemma (Lemma ': as) -> (CP, [CompVP]) -> Maybe [(Range, (Range, CPDPPP))]
 hierarchyBits tagged (cp,dps) = do
   let rng = cp^.maximalProjection
       cpbit = (rng,(rng,CPCase cp))
-      f dp = let rng' = dp^.maximalProjection
-                 dpbit = (rng',(rng',DPCase dp))
-                 lst = do adj <- dp^.adjunct
-                          case adj of
-                            AdjunctDP_PP pp ->
-                              let rng_pp = pp^.maximalProjection
-                              in return (rng_pp,(rng_pp,PPCase pp))
-                            AdjunctDP_Unresolved rng_pp -> maybeToList $ do
-                              z_pp <- find (isChunkAs PP . current) (extractZipperByRange rng_pp (tagged^.pennTree))
-                              (rng_pp,) . (rng_pp,) . PPCase <$> mkPPFromZipper tagged PC_Other z_pp
-             in dpbit : lst
+      f (CompVP_DP dp) = let rng' = dp^.maximalProjection
+                             dpbit = (rng',(rng',DPCase dp))
+                             lst1 = do cmp <- dp^..complement._Just.complement._Just
+                                       case cmp of
+                                         CompDP_PP pp -> f (CompVP_PP pp)
+                                         _ -> []
+                             lst2 = do adj <- dp^.adjunct
+                                       case adj of
+                                         AdjunctDP_PP pp ->
+                                           {- let rng_pp = pp^.maximalProjection
+                                           in return (rng_pp,(rng_pp,PPCase pp)) -}
+                                           f (CompVP_PP pp)
+                                         AdjunctDP_Unresolved rng_pp -> maybeToList $ do
+                                           z_pp <- find (isChunkAs PP . current) (extractZipperByRange rng_pp (tagged^.pennTree))
+                                           (rng_pp,) . (rng_pp,) . PPCase <$> mkPPFromZipper tagged PC_Other z_pp
+                         in dpbit : (lst1 ++ lst2)
+      f (CompVP_PP pp) = let rng_pp = pp^.maximalProjection
+                             ppbit = (rng_pp,(rng_pp,PPCase pp))
+                             lst = do dp <- pp^..complement._CompPP_DP
+                                      f (CompVP_DP dp) 
+                         in ppbit:lst
+      f _ = []
   return (cpbit:concatMap f dps)
 
 
+ -- {- . (_2 %~ (\x -> x^..traverse._CompVP_DP) -}
 
 identifyCPHierarchy :: TaggedLemma (Lemma ': as) -> [VerbProperty (Zipper (Lemma ': as))] -> [X'Tree]
 identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
-  where x'map = (HM.fromList . concat . mapMaybe (hierarchyBits tagged . (_2 %~ (\x -> x^..traverse._SpecTP_DP)) <=< constructCP tagged)) vps
+  where x'map = (HM.fromList . concat . mapMaybe (hierarchyBits tagged <=< constructCP tagged)) vps
         rngs = HM.keys x'map
         rtr = rangeTree rngs
         tofull rng = HM.lookup rng x'map
+
 
 
 currentCPDPPP :: X'Zipper -> CPDPPP
@@ -448,10 +461,7 @@ resolveCP xtr = rewriteTree action xtr
                 <|>
                 (return x))
       let rf = _2._CPCase.specifier .~ fmap SpecCP_Topic mx'
-          z' = replaceFocusItem rf rf z
-      putAndReturn z'
-      -- lift (put (toBitree z'))
-      -- return z'
+      putAndReturn (replaceFocusItem rf rf z)
     --
     replaceCompVP z  = do
       cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
@@ -467,10 +477,7 @@ resolveCP xtr = rewriteTree action xtr
                 <|>
                 (return x))
       let rf = _2._CPCase.complement.complement.complement .~ xs'
-          z' = replaceFocusItem rf rf z
-      putAndReturn z'
-      -- lift (put (toBitree z'))
-      -- return z'
+      putAndReturn (replaceFocusItem rf rf z)
     --
     replaceAdjunctCP z = do
       cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
@@ -486,10 +493,8 @@ resolveCP xtr = rewriteTree action xtr
                 <|>
                 (return x))
       let rf = _2._CPCase.adjunct .~ xs'
-          z' = replaceFocusItem rf rf z
-      putAndReturn z'
-      -- lift (put (toBitree z'))
-      -- return z'
+      putAndReturn (replaceFocusItem rf rf z)
+
 
 
 bindingSpec :: Range -> TraceChain SpecTP -> MaybeT (State X'Tree) X'Zipper

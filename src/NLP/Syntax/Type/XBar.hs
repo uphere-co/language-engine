@@ -52,6 +52,9 @@ compVPToSpecTP (CompVP_PP y)         = case y^.complement of
                                          CompPP_DP dp -> SpecTP_DP dp
                                          CompPP_Gerund rng -> SpecTP_Unresolved rng
 
+specTPToCompVP (SpecTP_Unresolved x) = CompVP_Unresolved x
+specTPToCompVP (SpecTP_DP x)         = CompVP_DP x
+
 
 headTextDP :: TaggedLemma t -> DetP -> Text
 headTextDP tagged dp =
