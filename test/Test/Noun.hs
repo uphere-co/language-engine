@@ -21,7 +21,7 @@ import           WordNet.Type.Lexicographer      (LexicographerFile)
 import           NLP.Syntax.Format.Internal      (formatDP)
 import           NLP.Syntax.Noun                 (splitDP)
 import           NLP.Syntax.Type                 (MarkType(..))
-import           NLP.Syntax.Type.XBar            (TaggedLemma,DetP,AdjunctDP(..)
+import           NLP.Syntax.Type.XBar            (TaggedLemma,DetP,AdjunctDP(..),DPTree(..)
                                                  ,adjunct,complement,headX,maximalProjection,specifier
                                                  ,hd_range,headText,tokensByRange,mkOrdDP,compDPToRange
                                                  ,specDPText
@@ -226,13 +226,14 @@ mkDPFromTest tagged x =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) (x^._3))
       lemmapt = mkBitreeICP lmap1 (x^._4)
       z = getRoot1 $ mkBitreeZipper [] lemmapt
-  in splitDP tagged (mkOrdDP z)
+      DPTree dp _ = splitDP tagged (DPTree (mkOrdDP z) [])
+  in dp
 
 
 
 adjunctDPToRange :: AdjunctDP -> Range
-adjunctDPToRange (AdjunctDP_Unresolved rng) = rng
-adjunctDPToRange (AdjunctDP_PP pp) = pp^.maximalProjection
+adjunctDPToRange (AdjunctDP_AP rng) = rng
+adjunctDPToRange (AdjunctDP_PP rng) = rng -- pp^.maximalProjection
 
 
 checkBNM :: TestNoun -> Bool
@@ -245,8 +246,7 @@ checkBNM x =
                ,dp^?complement._Just.complement._Just.to (T.intercalate " " . tokensByRange tagged . compDPToRange)
                ,dp^..adjunct.traverse.to (T.intercalate " " . tokensByRange tagged . adjunctDPToRange)
                )
-  in -- trace (show result) $
-     result == x^._2
+  in result == x^._2
 
 
 testcases :: [TestNoun]

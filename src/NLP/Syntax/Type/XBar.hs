@@ -56,6 +56,13 @@ specTPToCompVP (SpecTP_Unresolved x) = CompVP_Unresolved x
 specTPToCompVP (SpecTP_DP x)         = CompVP_DP x
 
 
+compVPToCPDPPP :: CompVP -> Maybe CPDPPP
+compVPToCPDPPP (CompVP_Unresolved x) = Nothing
+compVPToCPDPPP (CompVP_CP cp) = Just (CPCase cp)
+compVPToCPDPPP (CompVP_DP dp) = Just (DPCase dp)
+compVPToCPDPPP (CompVP_PP pp) = Just (PPCase pp)
+
+
 headTextDP :: TaggedLemma t -> DetP -> Text
 headTextDP tagged dp =
   case dp^.headX.hd_class of
@@ -95,3 +102,9 @@ compVPToRange = (\case SpecTP_Unresolved rng -> rng; SpecTP_DP dp -> dp^.maximal
 compPPToRange :: CompPP -> Range
 compPPToRange (CompPP_DP dp) = dp^.maximalProjection
 compPPToRange (CompPP_Gerund rng) = rng
+
+
+toRange :: CPDPPP -> Range
+toRange (CPCase cp) = cp^.maximalProjection
+toRange (DPCase dp) = dp^.maximalProjection
+toRange (PPCase pp) = pp^.maximalProjection

@@ -95,28 +95,36 @@ complementsOfVerb :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                      TaggedLemma t
                   -> VerbProperty (Zipper t)
                   -> Zipper t
-                  -> ([TraceChain CompVP],Maybe (TraceChain CompVP), [AdjunctVP])
+                  -> ([TraceChain CompVP],Maybe (TraceChain CompVP), [AdjunctVP],[CPDPPP])
 complementsOfVerb tagged vprop z_vp =
-  let (cs,mspec,adjs) = let (xs,mtop) = complementCandidates vprop z_vp
-                            xs' = map xform xs ++
-                                  maybeToList (mtop >>= \top -> do
-                                                 let rng_top = getRange (current top)
-                                                 return (TraceChain (Left (singletonLZ Moved)) (Just (CompVP_Unresolved rng_top)), []))
-                            mspec' = mtop >>= \top -> do
-                                                 let rng_top = getRange (current top)
-                                                 return (TraceChain (Right [Moved]) (Just (CompVP_Unresolved rng_top)))
-                        in (map fst xs',mspec',concatMap snd xs')
-  in case vprop^.vp_voice of
-       Active -> (cs,mspec,adjs)
-       Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,mspec,adjs)
-  where
-    xform_dp z = let dp = splitDP tagged (mkOrdDP z)
-                     (dp',zs) = identifyInternalTimePrep tagged dp
-                 in (TraceChain (Right []) (Just (checkEmptyPrep tagged dp')), zs)
-    xform_pp z = (TraceChain (Right []) (checkTimePrep tagged <$> mkPPFromZipper tagged PC_Other z), [])
-      -- checkTimePrep tagged
+  let (cs,mspec,adjs,dppps) = let (xs,mtop) = complementCandidates vprop z_vp
+                                  xs' = map xform xs ++
+                                        maybeToList (mtop >>= \top -> do
+                                          let rng_top = getRange (current top)
+                                              comp = TraceChain (Left (singletonLZ Moved)) (Just (CompVP_Unresolved rng_top))
 
-    xform_cp z = (TraceChain (Right []) (Just (CompVP_Unresolved (getRange (current z)))), [])
+                                          return (comp,[],[]))
+                                  mspec' = mtop >>= \top -> do
+                                             let rng_top = getRange (current top)
+                                             return (TraceChain (Right [Moved]) (Just (CompVP_Unresolved rng_top)))
+                        in (map (^._1) xs',mspec',concatMap (^._2) xs',concatMap (^._3) xs')
+  in case vprop^.vp_voice of
+       Active -> (cs,mspec,adjs,dppps)
+       Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,mspec,adjs,dppps)
+  where
+    xform_dp z = let dptr = splitDP tagged (DPTree (mkOrdDP z) [])
+
+                     (dp',zs) = identifyInternalTimePrep tagged (dptr^._DPTree._1)
+                     subs = getSubsFromDPTree dptr
+                 in (TraceChain (Right []) (Just (checkEmptyPrep tagged dp')), zs,subs)
+    xform_pp z = fromMaybe (TraceChain (Right []) Nothing,[],[]) $ do
+                   pptr <- mkPPFromZipper tagged PC_Other z
+                   let pp = pptr^._PPTree._1
+                       subs = getSubsFromPPTree pptr
+                   return (TraceChain (Right []) (Just (checkTimePrep tagged pp)), [],subs)
+    xform_cp z = (TraceChain (Right []) (Just (CompVP_Unresolved (getRange (current z)))), [],[])
+
+    xform :: Zipper t -> (TraceChain CompVP, [AdjunctVP], [CPDPPP])
     xform z = case rootTag (current z) of
                 Left NP    -> xform_dp z
                 Left PP    -> xform_pp z
@@ -148,16 +156,17 @@ allAdjunctCPOfVerb vprop =
 identifySubject :: TaggedLemma (Lemma ': as)
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)   -- ^ Verb maximal projection
-                -> (TraceChain SpecTP, [AdjunctVP])
+                -> (TraceChain SpecTP, [AdjunctVP],[CPDPPP])
 identifySubject tagged tag vp = maybe nul smp r
   where
     r = case tag of
           N.SINV -> firstSiblingBy next (isChunkAs NP) vp          -- this should be refined.
           _      -> firstSiblingBy prev (isChunkAs NP) vp          -- this should be refined.
-    nul = (TraceChain (Left (singletonLZ NULL)) Nothing,[])
-    smp z = let dp = splitDP tagged (mkOrdDP z)
-                (dp',adjs) = identifyInternalTimePrep tagged dp
-            in (TraceChain (Right []) (Just (SpecTP_DP dp')),adjs)
+    nul = (TraceChain (Left (singletonLZ NULL)) Nothing,[],[])
+    smp z = let dptr = splitDP tagged (DPTree (mkOrdDP z) [])
+                subs = getSubsFromDPTree dptr
+                (dp',adjs) = identifyInternalTimePrep tagged (dptr^._DPTree._1)
+            in (TraceChain (Right []) (Just (SpecTP_DP dp')),adjs,subs)
 
 
 --
@@ -165,7 +174,7 @@ identifySubject tagged tag vp = maybe nul smp r
 --
 constructCP :: TaggedLemma (Lemma ': as)
             -> VerbProperty (Zipper (Lemma ': as))
-            -> Maybe (CP,[CompVP])
+            -> Maybe (CP,[CPDPPP])
 constructCP tagged vprop = do
     z_vp <- maximalProjectionVP vprop
     let rng_vp = getRange (current z_vp)
@@ -177,14 +186,21 @@ constructCP tagged vprop = do
         z_cp' <- parent z_tp
         let rng_cp' = getRange (current z_cp')
         cptag' <- N.convert <$> getchunk z_cp'
-        let (comps,mtop,cadjs) = complementsOfVerb tagged vprop z_vp
+        let (comps,mtop,cadjs,subs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
-            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just) -- .to compVPToSpecTP
-            (subj0,sadjs) = identifySubject tagged s z_vp
-            subj = ((trResolved . _Just . _SpecTP_DP) %~ splitDP tagged) subj0
-            subj_dps = subj^..trResolved._Just.to specTPToCompVP
+            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just)
+            (subj0,sadjs,subs2) = identifySubject tagged s z_vp
+            (subj,subj_dps) = fromMaybe (subj0,[]) $ do
+                                dp <- subj0 ^? trResolved . _Just . _SpecTP_DP
+                                let dptr@(DPTree dp' _) = splitDP tagged (DPTree dp [])
+                                    subj' = (trResolved._Just._SpecTP_DP .~ dp') subj0
+                                    subj_dps' = getSubsFromDPTree dptr
+                                return (subj',subj_dps')
+             --              ( %~ splitDP tagged) subj0
+            -- subj_dps = subj^..trResolved._Just.to specTPToCompVP
             verbp = mkVerbP rng_vp (simplifyVProp vprop) (cadjs++sadjs) comps
-            dps = subj_dps ++ comps_dps
+            --- dps = subj_dps ++ comps_dps
+            ppdps = subs ++ subs2
         case cptag' of
           N.RT   ->
             let (cphead,cpspec) = case mtop of
@@ -198,7 +214,7 @@ constructCP tagged vprop = do
                                                                         Nothing -> C_PHI
                                                                         Just c -> C_WORD c
                                                        in (cmpmntzr, Nothing)
-            in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),dps)
+            in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),ppdps)
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
                                     Just top -> (C_PHI,Just (SpecCP_Topic top))
@@ -211,48 +227,50 @@ constructCP tagged vprop = do
                                                                         Nothing -> C_PHI
                                                                         Just c -> C_WORD c
                                                        in (cmpmntzr,Nothing)
-            in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),dps)
+            in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),ppdps)
           N.CL _ ->
-            return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),dps)
+            return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),ppdps)
           _      -> -- somewhat problematic case?
-            return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),dps)
+            return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),ppdps)
       _ -> -- reduced relative clause
-        let (comps,_,cadjs) = complementsOfVerb tagged vprop z_vp
+        let (comps,_,cadjs,ppdps) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
-            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just) -- .to compVPToSpecTP
+            -- ppdps = comps & mapMaybe (\x -> x ^? trResolved._Just.to compVPToCPDPPP._Just)
             verbp = mkVerbP rng_vp (simplifyVProp vprop) cadjs comps
             nullsubj = TraceChain (Left (singletonLZ NULL)) Nothing
-        in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP rng_vp nullsubj verbp),comps_dps)
+        in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP rng_vp nullsubj verbp), ppdps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
-hierarchyBits :: TaggedLemma (Lemma ': as) -> (CP, [CompVP]) -> Maybe [(Range, (Range, CPDPPP))]
+hierarchyBits :: TaggedLemma (Lemma ': as) -> (CP, [CPDPPP]) -> Maybe [(Range, (Range, CPDPPP))]
 hierarchyBits tagged (cp,dps) = do
   let rng = cp^.maximalProjection
       cpbit = (rng,(rng,CPCase cp))
-      f (CompVP_DP dp) = let rng' = dp^.maximalProjection
-                             dpbit = (rng',(rng',DPCase dp))
-                             lst1 = do cmp <- dp^..complement._Just.complement._Just
-                                       case cmp of
-                                         CompDP_PP pp -> f (CompVP_PP pp)
-                                         _ -> []
-                             lst2 = do adj <- dp^.adjunct
-                                       case adj of
-                                         AdjunctDP_PP pp ->
-                                           {- let rng_pp = pp^.maximalProjection
-                                           in return (rng_pp,(rng_pp,PPCase pp)) -}
-                                           f (CompVP_PP pp)
-                                         AdjunctDP_Unresolved rng_pp -> maybeToList $ do
-                                           z_pp <- find (isChunkAs PP . current) (extractZipperByRange rng_pp (tagged^.pennTree))
-                                           (rng_pp,) . (rng_pp,) . PPCase <$> mkPPFromZipper tagged PC_Other z_pp
-                         in dpbit : (lst1 ++ lst2)
-      f (CompVP_PP pp) = let rng_pp = pp^.maximalProjection
-                             ppbit = (rng_pp,(rng_pp,PPCase pp))
-                             lst = do dp <- pp^..complement._CompPP_DP
-                                      f (CompVP_DP dp) 
-                         in ppbit:lst
-      f _ = []
-  return (cpbit:concatMap f dps)
+      f x = let rng = toRange x
+            in (rng,(rng,x))
+      {- f (DPCase dp) = let rng' = dp^.maximalProjection
+                          dpbit = (rng',(rng',DPCase dp))
+                          lst1 = do cmp <- dp^..complement._Just.complement._Just
+                                    case cmp of
+                                      CompDP_PP pp -> f (CompVP_PP pp)
+                                      _ -> []
+                          lst2 = do adj <- dp^.adjunct
+                                    case adj of
+                                      AdjunctDP_PP pp ->
+                                        {- let rng_pp = pp^.maximalProjection
+                                        in return (rng_pp,(rng_pp,PPCase pp)) -}
+                                        f (CompVP_PP pp)
+                                      AdjunctDP_AP ap -> [] {- maybeToList $ do
+                                        z_pp <- find (isChunkAs PP . current) (extractZipperByRange rng_pp (tagged^.pennTree))
+                                        (rng_pp,) . (rng_pp,) . PPCase <$> mkPPFromZipper tagged PC_Other z_pp -}
+                      in dpbit : (lst1 ++ lst2)
+      f (PPCase pp) = let rng_pp = pp^.maximalProjection
+                          ppbit = (rng_pp,(rng_pp,PPCase pp))
+                          lst = do dp <- pp^..complement._CompPP_DP
+                                   f (CompVP_DP dp)
+                      in ppbit:lst
+      f _ = [] -}
+  return (cpbit:map f dps)
 
 
  -- {- . (_2 %~ (\x -> x^..traverse._CompVP_DP) -}
@@ -335,14 +353,15 @@ whMovement tagged (w,cp) = do
             -- check subject position for relative pronoun
             z_cp <- hoistMaybe $ listToMaybe (extractZipperByRange rng_cp (tagged^.pennTree))  -- this can be dangerous
             ((do -- ordinary relative clause
-                 dp' <- splitDP tagged . mkOrdDP <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
+                 z_dp <- hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
+                 let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_dp) [])  -- need to rewrite
                  rewriteX'TreeForModifier id w dp'
                  return (TraceChain (Left (LZ ps Moved [WHPRO])) (Just (SpecTP_DP dp'))))
              <|>
              (do -- free relative clause
                  rng_wh <- hoistMaybe (cp^?specifier._Just._SpecCP_WH)
                  z_wh <- hoistMaybe (listToMaybe (extractZipperByRange rng_wh (tagged^.pennTree)))
-                 let dp' = splitDP tagged (mkOrdDP z_wh)
+                 let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_wh) [])   -- need to rewrite
                  w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng_cp (reverse ps) w dp')
                  lift (put (toBitree w_dom'))
                  (w',_) <- retrieveWCP rng_cp
@@ -355,24 +374,25 @@ whMovement tagged (w,cp) = do
       void . runMaybeT $ do
         z_cp <- hoistMaybe $ listToMaybe (extractZipperByRange rng_cp (tagged^.pennTree))  -- this can be dangerous
         ((do -- ordinary relative clause
-             z' <- splitDP tagged . mkOrdDP <$> hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
+             z_dp <- hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
+             let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_dp) [])
              let -- adjust function for complement with relative pronoun resolution
                  rf0 = _2._CPCase.complement.complement.complement
-                         %~ (TraceChain (Left (LZ [] Moved [WHPRO])) (Just (CompVP_DP z')) :)
+                         %~ (TraceChain (Left (LZ [] Moved [WHPRO])) (Just (CompVP_DP dp')) :)
              -- rewrite X'Tree for modifier relation.
-             rewriteX'TreeForModifier rf0 w z')
+             rewriteX'TreeForModifier rf0 w dp')
          <|>
          (do -- free relative clause
              rng_wh <- hoistMaybe (cp^?specifier._Just._SpecCP_WH)
              z_wh <- hoistMaybe (listToMaybe (extractZipperByRange rng_wh (tagged^.pennTree)))
-             let z' = splitDP tagged (mkOrdDP z_wh)
-             w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng_cp ps w z')
+             let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_wh) [])
+             w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng_cp ps w dp')
              lift (put (toBitree w_dom'))
              (w',_) <- retrieveWCP rng_cp
              let -- adjust function for complement with relative pronoun resolution
                  rf0 = _2._CPCase.complement.complement.complement
-                         %~ (TraceChain (Left (LZ [] Moved [WHPRO])) (Just (CompVP_DP z')) :)
-             rewriteX'TreeForModifier rf0 w' z'))
+                         %~ (TraceChain (Left (LZ [] Moved [WHPRO])) (Just (CompVP_DP dp')) :)
+             rewriteX'TreeForModifier rf0 w' dp'))
       return spec
 
 
@@ -430,9 +450,8 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
     then resolveVPComp rng =<< lift (whMovement tagged (w,cp))
     else resolveVPComp rng =<< resolveSilentPRO tagged (w,cp)
 
-
 --
--- | Resolve unresolved CP argument to correct CP argument.
+-- | Resolve unbound CP argument to bound CP argument.
 --
 resolveCP :: X'Tree -> X'Tree
 resolveCP xtr = rewriteTree action xtr

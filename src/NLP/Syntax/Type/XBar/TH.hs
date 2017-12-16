@@ -51,3 +51,8 @@ makePrisms ''SpecCP
 makePrisms ''AdjunctCP
 
 makePrisms ''CPDPPP
+
+
+makePrisms ''PPTree
+
+makePrisms ''DPTree

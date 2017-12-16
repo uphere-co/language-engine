@@ -91,13 +91,13 @@ data SplitType = CLMod | BNMod | APMod
                deriving (Show,Eq,Ord)
 
 
-data CompDP = CompDP_Unresolved Range
-            | CompDP_CP CP
-            | CompDP_PP PP
+data CompDP = -- CompDP_Unresolved Range
+              CompDP_CP Range -- CP
+            | CompDP_PP Range -- PP
 
 
-data AdjunctDP = AdjunctDP_Unresolved Range
-               | AdjunctDP_PP PP
+data AdjunctDP = AdjunctDP_AP Range
+               | AdjunctDP_PP Range
 
 
 data PronounPerson = P_I | P_You | P_He | P_She | P_It | P_They
@@ -187,9 +187,9 @@ type NounP = XP 'X_N
 
 
 compDPToRange :: CompDP -> Range
-compDPToRange (CompDP_Unresolved rng) = rng
-compDPToRange (CompDP_CP cp) = _maximalProjection cp -- getRange (current (_maximalProjection cp))
-compDPToRange (CompDP_PP pp) = _maximalProjection pp
+-- compDPToRange (CompDP_Unresolved rng) = rng
+compDPToRange (CompDP_CP cp) = cp -- _maximalProjection cp -- getRange (current (_maximalProjection cp))
+compDPToRange (CompDP_PP pp) = pp --  _maximalProjection pp
 
 
 mkNP :: (Range,Maybe NamedEntityClass) -> Maybe CompDP -> NounP
@@ -233,7 +233,7 @@ mkSplittedDP :: SplitType
              -> DetP
 mkSplittedDP typ h m o
   = case typ of
-      CLMod -> XP (HeadDP Nothing NoDet) rng []             [] (Just (mkNP (h,Nothing) (Just (CompDP_Unresolved m))))
+      CLMod -> XP (HeadDP Nothing NoDet) rng []             [] (Just (mkNP (h,Nothing) (Just (CompDP_CP m))))
       BNMod -> XP (HeadDP Nothing NoDet) rng [SpDP_Appos m] [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
       APMod -> XP (HeadDP Nothing NoDet) rng [SpDP_Appos m] [] (Just (mkNP (h,Nothing) Nothing)) -- apposition is regarded as a specifier.
   where rng = (getRange . current) o
@@ -352,3 +352,16 @@ type X'Tree = Bitree (Range,CPDPPP) (Range,CPDPPP)
 
 
 type X'Zipper = BitreeZipper (Range,CPDPPP) (Range,CPDPPP)
+
+
+data PPTree = PPTree PP (Maybe DPTree)
+
+
+data DPTree = DPTree DetP [PPTree]
+
+
+
+getSubsFromDPTree (DPTree dp xs) = DPCase dp : (do x@(PPTree pp my) <- xs
+                                                   PPCase pp : (maybe [] getSubsFromDPTree my))
+
+getSubsFromPPTree (PPTree pp my) = PPCase pp : maybe [] getSubsFromDPTree my
