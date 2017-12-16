@@ -48,8 +48,8 @@ import           SRL.Analyze.Type             (SentStructure,VerbStructure,Analy
                                               ,vs_roleTopPatts,vs_vp)
 import           SRL.Analyze.Type.Match       (EntityInfo(..),FrameMatchResult(..),cpdpppFromX'Tree)
 --
--- import Debug.Trace
--- import NLP.Syntax.Format.Internal
+import Debug.Trace
+import NLP.Syntax.Format.Internal
 
 
 
@@ -118,7 +118,9 @@ matchObjects rolemap verbp patt = do
   (p,a) <- maybeToList (pbArgForGArg garg patt)
   case obj of
     CompVP_CP cp -> guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
-    CompVP_DP _  -> guard (a == GR_NP (Just garg))
+    CompVP_DP dp -> do
+                       trace ("\nmatchObjects: " ++ T.unpack (formatDP dp)) (return ())
+                       guard (a == GR_NP (Just garg))
     _            -> []
   fe <- FNFrameElement <$> maybeToList (lookup p rolemap)
   return (fe, obj)

@@ -20,6 +20,7 @@ import           Data.BitreeZipper
 import           Data.Range
 import           NLP.Syntax.Clause        (currentCPDPPP)
 import           NLP.Syntax.Type.XBar
+import           NLP.Syntax.Type.Verb     (vp_auxiliary)
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
 --
@@ -155,6 +156,9 @@ entityFromDP x'tr tagged dp =
                    -- compnp <- dp^?complement._Just.complement
                    -- trace ("\nfind compnp" ++ maybe "Nothing" (\case CompDP_CP _ -> "CP" ; CompDP_PP _ -> "PP") compnp) (return ())
                    rng_cp <- dp^?complement._Just.complement._Just._CompDP_CP
+                   cp <- cpdpppFromX'Tree x'tr rng_cp _CPCase
+                   (_,(_,lma)) <- listToMaybe (cp^.complement.complement.headX.vp_auxiliary)
+                   guard (lma == "to")
                    -- trace ("\n-----\nmcomp1:" ++ T.unpack (formatCompDP cp) ++ "\n-----\n") (return ())
                    -- let rng_comp = cp^.maximalProjection
                    --     rng_head_comp = rng_comp
