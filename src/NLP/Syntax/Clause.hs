@@ -418,7 +418,9 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
     else resolveVPComp rng =<< resolveSilentPRO tagged (w,cp)
 
 
-
+--
+-- | Resolve unresolved CP argument to correct CP argument.
+--
 resolveCP :: X'Tree -> X'Tree
 resolveCP xtr = rewriteTree action xtr
   where
@@ -429,6 +431,8 @@ resolveCP xtr = rewriteTree action xtr
     replace = replaceSpecCP >=> replaceCompVP >=> replaceAdjunctCP
     --
     -- I need to deduplicate the following code.
+    putAndReturn w = lift (put (toBitree w)) >> return w
+
     replaceSpecCP z = do
       cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
       let mx = cp^?specifier._Just._SpecCP_Topic
@@ -445,10 +449,11 @@ resolveCP xtr = rewriteTree action xtr
                 (return x))
       let rf = _2._CPCase.specifier .~ fmap SpecCP_Topic mx'
           z' = replaceFocusItem rf rf z
-      lift (put (toBitree z'))
-      return z'
+      putAndReturn z'
+      -- lift (put (toBitree z'))
+      -- return z'
     --
-    replaceCompVP z = do
+    replaceCompVP z  = do
       cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
       let xs = cp^.complement.complement.complement
       xs' <- flip traverse xs $ \x ->
@@ -463,8 +468,9 @@ resolveCP xtr = rewriteTree action xtr
                 (return x))
       let rf = _2._CPCase.complement.complement.complement .~ xs'
           z' = replaceFocusItem rf rf z
-      lift (put (toBitree z'))
-      return z'
+      putAndReturn z'
+      -- lift (put (toBitree z'))
+      -- return z'
     --
     replaceAdjunctCP z = do
       cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
@@ -481,8 +487,9 @@ resolveCP xtr = rewriteTree action xtr
                 (return x))
       let rf = _2._CPCase.adjunct .~ xs'
           z' = replaceFocusItem rf rf z
-      lift (put (toBitree z'))
-      return z'
+      putAndReturn z'
+      -- lift (put (toBitree z'))
+      -- return z'
 
 
 bindingSpec :: Range -> TraceChain SpecTP -> MaybeT (State X'Tree) X'Zipper
