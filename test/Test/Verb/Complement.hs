@@ -272,22 +272,22 @@ checkSubjCompAdjunct c = fromMaybe False $ do
 
 
 testcases :: [TestVerbComplement]
-testcases = [ -- main_finite_1
-              -- , main_finite_2
+testcases = [ -- -- main_finite_1
+              -- -- , main_finite_2
 
               embedded_that_1
             , restr_rel_1
             , ditransitive_1
-            -- , ditransitive_2
+            -- -- , ditransitive_2
             , ditransitive_3
-            -- , ditransitive_4
-            , preposedTemporalAdjunct
+            -- -- , ditransitive_4
+            -- , preposedTemporalAdjunct
             , preposedCP
-            , complexNP
-            , complexNP_SRParser
+            -- , complexNP
+            -- , complexNP_SRParser
             , complexNP_2
             , prepComplement
-              -- , rrc_passive_1
+              -- -- , rrc_passive_1
             , rrc_passive_2
             ]
 

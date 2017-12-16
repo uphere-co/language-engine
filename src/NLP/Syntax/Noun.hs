@@ -105,10 +105,12 @@ splitDP tagged (DPTree dp0 lst0) =
                 _ -> Nothing
       --  changeDPonly f (DPTree dp lst) = DPTree (f dp) lst
   in dptr1 & ((_DPTree._1) %~
-               (identifyDeterminer tagged
-               .identifyNamedEntity tagged
-               .bareNounModifier tagged)
-               .(\dp1 -> fromMaybe dp1 (identifyClausalModifier tagged dp1)))
+               
+                 ((fst.identifyInternalTimePrep tagged)
+                 .identifyDeterminer tagged
+                 .identifyNamedEntity tagged
+                 .bareNounModifier tagged)
+                 .(\dp1 -> fromMaybe dp1 (identifyClausalModifier tagged dp1)))
 
 
 
