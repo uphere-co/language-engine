@@ -137,7 +137,7 @@ entityFromDP x'tr tagged dp =
 
       mrngtxt' = do rng_sub <- listToMaybe (dp^..specifier.traverse._SpDP_Appos)
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
-                    return (EI rng_sub rng_sub Nothing txt_sub)                 -- for the time being
+                    return (EI rng_sub rng_sub Nothing txt_sub False)                 -- for the time being
       mcoref = pronounResolution x'tr dp <|> definiteCorefResolution x'tr tagged dp <|> definiteGenitiveCorefResolution x'tr tagged dp
       mcomp = ((do rng_pp <- dp^?complement._Just.complement._Just._CompDP_PP
                    pp <- cpdpppFromX'Tree x'tr rng_pp _PPCase
@@ -147,20 +147,18 @@ entityFromDP x'tr tagged dp =
                    let rng_comp = dp'^.maximalProjection
                        rng_head_comp = fromMaybe rng_comp (headRangeDP dp')
                        txt_comp = headTextDP tagged dp'
-                   return (EI rng_comp rng_head_comp (Just "of") txt_comp))
+                   return (EI rng_comp rng_head_comp (Just "of") txt_comp False))
                <|>
                (do trace ("\n-----\nmcomp:" ++ show rng ++ "\n" ++ T.unpack (formatDP dp) ++ "\n-----\n") (return ())
-                   np <- dp^?complement
-                   trace ("\nfind np") (return ())
-                   compnp <- dp^?complement._Just.complement
-                   trace ("\nfind compnp" ++ maybe "Nothing" (\case CompDP_CP _ -> "CP" ; CompDP_PP _ -> "PP") compnp) (return ())
-                   cp <- dp^?complement._Just.complement._Just -- ._CompDP_CP
-                   trace ("\n-----\nmcomp1:" ++ T.unpack (formatCompDP cp) ++ "\n-----\n") (return ())
-                   Nothing))
-                   {- let rng_comp = cp^.maximalProjection
-                       rng_head_comp = rng_comp
-                       txt_comp = "CPCPCPCPP"
-                   return (EI rng_comp rng_head_comp Nothing txt_comp))) -}
+                   -- np <- dp^?complement
+                   -- trace ("\nfind np") (return ())
+                   -- compnp <- dp^?complement._Just.complement
+                   -- trace ("\nfind compnp" ++ maybe "Nothing" (\case CompDP_CP _ -> "CP" ; CompDP_PP _ -> "PP") compnp) (return ())
+                   rng_cp <- dp^?complement._Just.complement._Just._CompDP_CP
+                   -- trace ("\n-----\nmcomp1:" ++ T.unpack (formatCompDP cp) ++ "\n-----\n") (return ())
+                   -- let rng_comp = cp^.maximalProjection
+                   --     rng_head_comp = rng_comp
+                   return (EI rng_cp rng_cp Nothing "" True)))
 
       adjs  = do AdjunctDP_PP rng_pp <- dp^.adjunct
                  pp <- maybeToList (cpdpppFromX'Tree x'tr rng_pp _PPCase)
@@ -169,13 +167,13 @@ entityFromDP x'tr tagged dp =
                  let rng_adj = dp'^.maximalProjection
                      rng_head_adj = fromMaybe rng_adj (headRangeDP dp')
                      txt_adj = headTextDP tagged dp'
-                 return (EI rng_adj rng_head_adj mprep txt_adj)
+                 return (EI rng_adj rng_head_adj mprep txt_adj False)
       mposs1 = do (_ptyp,True) <- dp^?headX.hd_class._Pronoun
                   rng_poss <- dp^.headX.hd_range
                   txt_poss <- determinerText tagged (dp^.headX)
-                  return (EI rng_poss rng_poss Nothing txt_poss)
+                  return (EI rng_poss rng_poss Nothing txt_poss False)
       mposs2 = do rng_poss <- listToMaybe (dp^..specifier.traverse._SpDP_Gen)
                   let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
-                  return (EI rng_poss rng_poss Nothing txt_poss)
+                  return (EI rng_poss rng_poss Nothing txt_poss False)
       poss = maybeToList mposs1 ++ maybeToList mposs2
-  in (EI rng rnghead Nothing headtxt, DI mrngtxt' mcoref mcomp poss adjs)
+  in (EI rng rnghead Nothing headtxt False, DI mrngtxt' mcoref mcomp poss adjs)
