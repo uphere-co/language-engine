@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE MultiWayIf        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -22,10 +23,10 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
 --
-import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..))
+import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..),cpdpppFromX'Tree)
 --
--- import Debug.Trace
-
+import Debug.Trace
+import NLP.Syntax.Format.Internal
 
 
 --
@@ -138,15 +139,31 @@ entityFromDP x'tr tagged dp =
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
                     return (EI rng_sub rng_sub Nothing txt_sub)                 -- for the time being
       mcoref = pronounResolution x'tr dp <|> definiteCorefResolution x'tr tagged dp <|> definiteGenitiveCorefResolution x'tr tagged dp
-      mcomp = do CompDP_PP pp <- dp^?complement._Just.complement._Just
-                 dp' <- pp^?complement._CompPP_DP
-                 let prep = pp^.headX.hp_prep
-                 guard (prep == Prep_WORD "of")
-                 let rng_comp = dp'^.maximalProjection
-                     rng_head_comp = fromMaybe rng_comp (headRangeDP dp')
-                     txt_comp = headTextDP tagged dp'
-                 return (EI rng_comp rng_head_comp (Just "of") txt_comp)
-      adjs  = do AdjunctDP_PP pp <- dp^.adjunct
+      mcomp = ((do rng_pp <- dp^?complement._Just.complement._Just._CompDP_PP
+                   pp <- cpdpppFromX'Tree x'tr rng_pp _PPCase
+                   dp' <- pp^?complement._CompPP_DP
+                   let prep = pp^.headX.hp_prep
+                   guard (prep == Prep_WORD "of")
+                   let rng_comp = dp'^.maximalProjection
+                       rng_head_comp = fromMaybe rng_comp (headRangeDP dp')
+                       txt_comp = headTextDP tagged dp'
+                   return (EI rng_comp rng_head_comp (Just "of") txt_comp))
+               <|>
+               (do trace ("\n-----\nmcomp:" ++ show rng ++ "\n" ++ T.unpack (formatDP dp) ++ "\n-----\n") (return ())
+                   np <- dp^?complement
+                   trace ("\nfind np") (return ())
+                   compnp <- dp^?complement._Just.complement
+                   trace ("\nfind compnp" ++ maybe "Nothing" (\case CompDP_CP _ -> "CP" ; CompDP_PP _ -> "PP") compnp) (return ())
+                   cp <- dp^?complement._Just.complement._Just -- ._CompDP_CP
+                   trace ("\n-----\nmcomp1:" ++ T.unpack (formatCompDP cp) ++ "\n-----\n") (return ())
+                   Nothing))
+                   {- let rng_comp = cp^.maximalProjection
+                       rng_head_comp = rng_comp
+                       txt_comp = "CPCPCPCPP"
+                   return (EI rng_comp rng_head_comp Nothing txt_comp))) -}
+
+      adjs  = do AdjunctDP_PP rng_pp <- dp^.adjunct
+                 pp <- maybeToList (cpdpppFromX'Tree x'tr rng_pp _PPCase)
                  dp' <- pp^..complement._CompPP_DP
                  let mprep = pp^?headX.hp_prep._Prep_WORD
                  let rng_adj = dp'^.maximalProjection

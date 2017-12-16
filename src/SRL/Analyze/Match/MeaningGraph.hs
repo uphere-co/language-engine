@@ -135,7 +135,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
 mkRoleEdges :: VertexMap
             -> [(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,Maybe (SenseID,Bool))]
             -> [MGEdge]
-mkRoleEdges vmap  matched = do
+mkRoleEdges vmap matched = do
   let rngidxmap = vmap^.vm_rangeToIndex
       depmap = vmap^.vm_rangeDependency
       headfull = vmap^.vm_headRangeToFullRange
@@ -245,7 +245,7 @@ meaningGraph :: AnalyzePredata -> SentStructure -> MeaningGraph
 meaningGraph apredata sstr =
   let (x'tr,lst_vstrcp) = mkTriples sstr
       tagged = sstr^.ss_tagged
-      matched = mapMaybe (matchFrame (apredata^.analyze_framedb)) lst_vstrcp
+      matched = mapMaybe (matchFrame (apredata^.analyze_framedb) x'tr) lst_vstrcp
       depmap = dependencyOfX'Tree =<< x'tr
       --
       dps = x'tr^..traverse.to biList.traverse._2._DPCase
