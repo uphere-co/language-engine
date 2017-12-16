@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE KindSignatures      #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
@@ -15,7 +16,7 @@ import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
 import           Data.Foldable            (toList)
-import           Data.List                (find,unfoldr)
+import           Data.List                (find,insert,sort,unfoldr)
 import           Data.Maybe               (fromMaybe,listToMaybe)
 import qualified Data.Text           as T
 --
@@ -75,8 +76,6 @@ mkPPFromZipper tagged pclass z = do
 
 
 
-removePP :: Range -> [AdjunctDP] -> [AdjunctDP]
-removePP rng xs = xs^..folded.filtered (\x->x^?_AdjunctDP_PP /= Just rng)
 
 
 splitDP :: TaggedLemma (Lemma ': as) -> DPTree -> DPTree
@@ -103,23 +102,25 @@ splitDP tagged (DPTree dp0 lst0) =
                             dp = dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_ap-1))) . apreplace
                         in return (DPTree dp [])
                 _ -> Nothing
-      --  changeDPonly f (DPTree dp lst) = DPTree (f dp) lst
   in dptr1 & ((_DPTree._1) %~
-               
-                 ((fst.identifyInternalTimePrep tagged)
-                 .identifyDeterminer tagged
+
+                 (identifyDeterminer tagged
                  .identifyNamedEntity tagged
-                 .bareNounModifier tagged)
+                 .bareNounModifier tagged
+                 .(fst.identifyInternalTimePrep tagged)
+                 )
                  .(\dp1 -> fromMaybe dp1 (identifyClausalModifier tagged dp1)))
 
 
 
 identifyClausalModifier :: TaggedLemma (Lemma ': as) -> DetP -> Maybe DetP
-identifyClausalModifier tagged dp1 = do
-  let rng1 = dp1^.maximalProjection
+identifyClausalModifier tagged dp0 = do
+  let (b0,e0) = dp0^.maximalProjection
+      e0' = (\case [] -> e0; (e:_) -> e-1) (sort (dp0^..adjunct.traverse._AdjunctDP_PP._1))
+      rng0 = (b0,e0')
       rf = getRange . current
 
-  z <- find (isChunkAs NP . current) (extractZipperByRange rng1 (tagged^.pennTree))
+  z <- find (isChunkAs NP . current) (extractZipperByRange rng0 (tagged^.pennTree))
   ((do dp <- child1 z
        guard (isChunkAs NP (current dp))
        sbar <- next dp
@@ -130,7 +131,7 @@ identifyClausalModifier tagged dp1 = do
    <|>
    (do sbar <- childLast z
        guard (isChunkAs S (current sbar))
-       let (b,_e) = rng1
+       let (b,_e) = rng0
            (b1,e1) = rf sbar
        return (mkSplittedDP CLMod (b,b1-1) (b1,e1) z)))
 
@@ -312,15 +313,29 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
   let rng_time = beginEndToRange (b0,e0)
   z_tdp <- find (isChunkAs NP . current) (extractZipperByRange rng_time (tagged^.pennTree))
   z_tpp <- parent z_tdp
+  let rng_tpp = getRange (current z_tpp)
+  guard (rng_tpp `isInsideR` rng_dp)
   guard (isChunkAs PP (current z_tpp))
+
   let (b_tpp,_e_tpp) = getRange (current z_tpp)
       rng_dp' = (b_dp,b_tpp-1)
   (b_h,e_h) <- dp^?complement._Just.headX.hn_range
   let rng_head = if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
   PPTree tpp _ <- mkPPFromZipper tagged PC_Time z_tpp  -- for the time being
-  let dp' = dp & (maximalProjection .~ rng_dp')
-               . (complement._Just.headX.hn_range .~ rng_head)
-               . (complement._Just.maximalProjection .~ rng_dp')
-               . (adjunct %~ removePP (tpp^.maximalProjection))
+  let dp' = dp & -- (maximalProjection .~ rng_dp')
+                  (complement._Just.headX.hn_range .~ rng_head)
+
+               -- . (complement._Just.maximalProjection .~ rng_dp')
+                  . (adjunct %~ addPP (tpp^.maximalProjection))
 
   return (dp',[AdjunctVP_PP tpp])
+
+
+
+removePP :: Range -> [AdjunctDP] -> [AdjunctDP]
+removePP rng xs = xs^..folded.filtered (\x->x^?_AdjunctDP_PP /= Just rng)
+
+
+
+addPP :: Range -> [AdjunctDP] -> [AdjunctDP]
+addPP rng xs = insert (AdjunctDP_PP rng) xs

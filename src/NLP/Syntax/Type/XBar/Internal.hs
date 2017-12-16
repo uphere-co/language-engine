@@ -98,7 +98,7 @@ data CompDP = -- CompDP_Unresolved Range
 
 data AdjunctDP = AdjunctDP_AP Range
                | AdjunctDP_PP Range
-
+               deriving (Show,Eq,Ord)
 
 data PronounPerson = P_I | P_You | P_He | P_She | P_It | P_They
                  deriving (Show,Eq,Ord)
