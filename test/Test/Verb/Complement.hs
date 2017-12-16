@@ -267,7 +267,8 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       b_topicalized = fromMaybe False $ do
                         cp^?specifier._Just._SpecCP_Topic
                         return True
-  trace (formatCP cp) $ return  (b_subj && b_comps && b_adjuncts && (b_topicalized == c^._3._4))
+  {- trace ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr ++ "\n" ++ formatCP cp ++ "\n" ) $ -}
+  return  (b_subj && b_comps && b_adjuncts && (b_topicalized == c^._3._4))
 
 
 testcases :: [TestVerbComplement]
