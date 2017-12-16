@@ -37,15 +37,17 @@ formatComplementizer (C_WORD w) = "-" <> unLemma w
 
 
 formatCompDP :: CompDP -> Text
-formatCompDP (CompDP_Unresolved rng) = T.pack (show rng)
-formatCompDP (CompDP_CP cp) = "CP" <> cp^.headX.to formatComplementizer <> cp^.maximalProjection.to show.to T.pack
-formatCompDP (CompDP_PP pp) = formatPP pp
+-- formatCompDP (CompDP_Unresolved rng) = T.pack (show rng)
+formatCompDP (CompDP_CP cp) = "CP" <> T.pack (show cp)
+
+  -- cp^.headX.to formatComplementizer <> cp^.maximalProjection.to show.to T.pack
+formatCompDP (CompDP_PP pp) = "PP" <> T.pack (show pp) -- formatPP pp
 
 
 
 formatAdjunctDP :: AdjunctDP -> Text
-formatAdjunctDP (AdjunctDP_Unresolved rng) = T.pack (show rng)
-formatAdjunctDP (AdjunctDP_PP pp) = "(" <> formatPP pp <> ")"
+formatAdjunctDP (AdjunctDP_AP rng) = "AP-" <> T.pack (show rng)
+formatAdjunctDP (AdjunctDP_PP rng) = "PP-" <> T.pack (show rng)
 
 
 formatPP :: PP -> Text
