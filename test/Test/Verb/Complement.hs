@@ -281,10 +281,10 @@ testcases = [ -- -- main_finite_1
             -- -- , ditransitive_2
             , ditransitive_3
             -- -- , ditransitive_4
-            , preposedTemporalAdjunct
+            -- , preposedTemporalAdjunct
             , preposedCP
-            , complexNP
-            , complexNP_SRParser
+            -- , complexNP
+            -- , complexNP_SRParser
             , complexNP_2
             , prepComplement
               -- -- , rrc_passive_1

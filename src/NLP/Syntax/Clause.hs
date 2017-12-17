@@ -35,7 +35,7 @@ import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Voice(..))
 --
-import           NLP.Syntax.Noun                        (splitDP,mkPPFromZipper,identifyInternalTimePrep)
+import           NLP.Syntax.Noun                        (splitDP,mkPPFromZipper{- ,identifyInternalTimePrep -})
 import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTimePrep)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -116,15 +116,16 @@ complementsOfVerb tagged vprop z_vp =
 
                      -- DPTree dp' pptrs = identifyInternalTimePrep tagged dptr
                      -- zs = map (\(PPTree pp _) -> AdjunctVP_PP pp) pptrs
-                     adjs = flip mapMaybe pptrs $ \(PPTree pp _) -> do
+                     adjs = []    -- we had better identify time part in SRL
+                     {-flip mapMaybe pptrs $ \(PPTree pp _) -> do
                               guard (pp^.headX.hp_pclass == PC_Time)
                               return (AdjunctVP_PP pp)
-
+                     -}
                      --     AdjunctVP_PP pp) . filter (\(PPTree pp
                      subs = getSubsFromDPTree dptr
                  in (TraceChain (Right []) (Just (checkEmptyPrep tagged dp')),adjs,subs)
     xform_pp z = fromMaybe (TraceChain (Right []) Nothing,[],[]) $ do
-                   pptr <- mkPPFromZipper tagged PC_Other z
+                   pptr <- mkPPFromZipper tagged z
                    let pp = pptr^._PPTree._1
                        subs = getSubsFromPPTree pptr
                    return (TraceChain (Right []) (Just (checkTimePrep tagged pp)), [],subs)
@@ -171,10 +172,11 @@ identifySubject tagged tag vp = maybe nul smp r
     nul = (TraceChain (Left (singletonLZ NULL)) Nothing,[],[])
     smp z = let dptr@(DPTree dp' pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
                 subs = getSubsFromDPTree dptr
-                adjs = flip mapMaybe pptrs $ \(PPTree pp _) -> do
+                adjs = []   -- we had better identify time in SRL.
+                {- flip mapMaybe pptrs $ \(PPTree pp _) -> do
                          guard (pp^.headX.hp_pclass == PC_Time)
                          return (AdjunctVP_PP pp)
-
+                -}
                 -- (dp',adjs) = identifyInternalTimePrep tagged (dptr^._DPTree._1)
             in (TraceChain (Right []) (Just (SpecTP_DP dp')),adjs,subs)
 
@@ -258,32 +260,9 @@ hierarchyBits tagged (cp,dps) = do
       cpbit = (rng,(rng,CPCase cp))
       f x = let rng = toRange x
             in (rng,(rng,x))
-      {- f (DPCase dp) = let rng' = dp^.maximalProjection
-                          dpbit = (rng',(rng',DPCase dp))
-                          lst1 = do cmp <- dp^..complement._Just.complement._Just
-                                    case cmp of
-                                      CompDP_PP pp -> f (CompVP_PP pp)
-                                      _ -> []
-                          lst2 = do adj <- dp^.adjunct
-                                    case adj of
-                                      AdjunctDP_PP pp ->
-                                        {- let rng_pp = pp^.maximalProjection
-                                        in return (rng_pp,(rng_pp,PPCase pp)) -}
-                                        f (CompVP_PP pp)
-                                      AdjunctDP_AP ap -> [] {- maybeToList $ do
-                                        z_pp <- find (isChunkAs PP . current) (extractZipperByRange rng_pp (tagged^.pennTree))
-                                        (rng_pp,) . (rng_pp,) . PPCase <$> mkPPFromZipper tagged PC_Other z_pp -}
-                      in dpbit : (lst1 ++ lst2)
-      f (PPCase pp) = let rng_pp = pp^.maximalProjection
-                          ppbit = (rng_pp,(rng_pp,PPCase pp))
-                          lst = do dp <- pp^..complement._CompPP_DP
-                                   f (CompVP_DP dp)
-                      in ppbit:lst
-      f _ = [] -}
   return (cpbit:map f dps)
 
 
- -- {- . (_2 %~ (\x -> x^..traverse._CompVP_DP) -}
 
 identifyCPHierarchy :: TaggedLemma (Lemma ': as) -> [VerbProperty (Zipper (Lemma ': as))] -> [X'Tree]
 identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)

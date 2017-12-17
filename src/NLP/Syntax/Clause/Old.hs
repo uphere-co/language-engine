@@ -36,7 +36,7 @@ predicateArgWS tagged cp z adjs =
        , _pa_candidate_args = case child1 z of
                                 Nothing -> []
                                 Just z' -> map extractArg (z':iterateMaybe next z')
-                              ++ let f x = let mpptr = mkPPFromZipper tagged PC_Time x
+                              ++ let f x = let mpptr = mkPPFromZipper tagged {- PC_Time -} x
                                            in flip fmap (mpptr^?_Just._PPTree._1) $ \pp ->
                                                 let prep = fromMaybe "" (pp^?headX.hp_prep._Prep_WORD)
                                                     rng = pp ^. maximalProjection

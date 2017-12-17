@@ -192,9 +192,8 @@ type NounP = XP 'X_N
 
 
 compDPToRange :: CompDP -> Range
--- compDPToRange (CompDP_Unresolved rng) = rng
-compDPToRange (CompDP_CP cp) = cp -- _maximalProjection cp -- getRange (current (_maximalProjection cp))
-compDPToRange (CompDP_PP pp) = pp --  _maximalProjection pp
+compDPToRange (CompDP_CP cp) = cp
+compDPToRange (CompDP_PP pp) = pp
 
 
 mkNP :: (Range,Maybe NamedEntityClass) -> Maybe CompDP -> NounP
