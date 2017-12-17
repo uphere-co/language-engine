@@ -67,7 +67,7 @@ mkPPFromZipper tagged {- pclass -} z = do
        let rng_dp = getRange (current z_dp)
            pclass =
              fromMaybe PC_Other $ do
-               find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) (tagged^.tagList)
+               find (\(TagPos (b,e,t)) -> rng_dp `isInsideR` beginEndToRange (b,e) && t == MarkTime) (tagged^.tagList)
                return PC_Time
 
        let dptree = splitDP tagged (DPTree (mkOrdDP z_dp) [])
