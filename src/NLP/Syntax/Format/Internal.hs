@@ -5,6 +5,7 @@ module NLP.Syntax.Format.Internal where
 import           Control.Lens                       ((^.),(^?),_Just,to)
 import           Data.Bifunctor                     (bimap)
 import           Data.Foldable                      (toList)
+import           Data.Maybe                         (fromMaybe)
 import           Data.Monoid                        ((<>))
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
@@ -52,6 +53,7 @@ formatAdjunctDP (AdjunctDP_PP rng) = "PP-" <> T.pack (show rng)
 
 formatPP :: PP -> Text
 formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
+              if pp^.headX.hp_pclass == PC_Time then "-time" else "" <>
               "-" <>
               case pp^.complement of
                 CompPP_DP dp      -> formatDP dp
@@ -61,12 +63,17 @@ formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
 formatDP :: DetP -> Text
 formatDP dp = "(DP"        <> dp^.maximalProjection.to show.to T.pack <>
               "[D: "       <> maybe "" (T.pack.show) (dp^.headX.hd_range) <>
-              " NP: "      <> maybe "" (T.pack.show) (dp^?complement._Just.headX.hn_range) <>
+              "(NP:"      <> maybe "" formatNP (dp^? complement._Just) <> ")" <> 
               " spec: "    <> T.intercalate " " (map (T.pack.show) (dp^.specifier)) <>
               " comp: "    <> maybe "" formatCompDP  (dp^?complement._Just.complement._Just) <>
               " adjunct: " <> (T.intercalate "," . map formatAdjunctDP) (dp^.adjunct) <>
               "])"
 
+formatNP :: NounP -> Text
+formatNP np = (np^.maximalProjection.to show.to T.pack) <>
+              (np^.headX.hn_range.to show.to T.pack) <>
+              fromMaybe "" (np^?complement._Just.to compDPToRange.to show.to T.pack)
+--  maybe "" (T.pack.show) (dp^?complement._Just.headX.hn_range) <>
 
 formatCompVP :: CompVP -> Text
 formatCompVP (CompVP_Unresolved r)  = "unresolved" <> T.pack (show r)

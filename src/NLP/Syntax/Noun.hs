@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE KindSignatures      #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
@@ -12,10 +13,11 @@ import           Control.Applicative      ((<|>))
 import           Control.Lens             ((^.),(^..),(^?),(.~),(%~),(&),to,_1,_2
                                           ,_Left,_Just,_Nothing,folded,filtered)
 import           Control.Lens.Extras      (is)
-import           Control.Monad            (guard)
+import           Control.Monad            (guard,(>=>))
 import           Data.Char                (isUpper)
 import           Data.Foldable            (toList)
-import           Data.List                (find,unfoldr)
+import qualified Data.HashSet        as HS
+import           Data.List                (find,insert,sort,unfoldr)
 import           Data.Maybe               (fromMaybe,listToMaybe)
 import qualified Data.Text           as T
 --
@@ -53,14 +55,21 @@ import Debug.Trace
 
 
 
-mkPPFromZipper :: TaggedLemma (Lemma ': as) -> PrepClass -> Zipper (Lemma ': as) -> Maybe PPTree
-mkPPFromZipper tagged pclass z = do
+mkPPFromZipper :: TaggedLemma (Lemma ': as) {- -> PrepClass -} -> Zipper (Lemma ': as) -> Maybe PPTree
+mkPPFromZipper tagged {- pclass -} z = do
+  
   guard (isChunkAs PP (current z))
   z_prep <- child1 z
   t <- z_prep ^? to current . _PL . _2 . to posTag
   guard (t == IN || t == TO)
   lma <- z_prep ^? to current . _PL . _2 . to tokenWord
   ((do z_dp <- firstSiblingBy next (isChunkAs NP) z_prep
+       let rng_dp = getRange (current z_dp)
+           pclass =
+             fromMaybe PC_Other $ do
+               find (\(TagPos (b,e,t)) -> rng_dp `isInsideR` beginEndToRange (b,e) && t == MarkTime) (tagged^.tagList)
+               return PC_Time
+
        let dptree = splitDP tagged (DPTree (mkOrdDP z_dp) [])
            pp = mkPP (Prep_WORD lma,pclass) (getRange (current z)) (dptree^._DPTree._1)
        return (PPTree pp (Just dptree)))
@@ -70,56 +79,55 @@ mkPPFromZipper tagged pclass z = do
        guard (isChunkAs VP (current z_vp))
        z_v <- child1 z_vp
        guard (isPOSAs VBG (current z_v))
-       let pp = mkPPGerund (Prep_WORD lma,pclass) (getRange (current z)) z_s
+       let pp = mkPPGerund (Prep_WORD lma,PC_Other) (getRange (current z)) z_s
        return (PPTree pp Nothing)))
 
 
-
-removePP :: Range -> [AdjunctDP] -> [AdjunctDP]
-removePP rng xs = xs^..folded.filtered (\x->x^?_AdjunctDP_PP /= Just rng)
+splitDP1 tagged (DPTree dp0 lst0) = do
+  let (b0,_) = dp0^.maximalProjection
+  (_,e0) <- dp0^?complement._Just.headX.hn_range -- dp0^.maximalProjection
+  let rng0 = (b0,e0)
+  z <- find (isChunkAs NP . current) (extractZipperByRange rng0 (tagged^.pennTree))
+  z_last <- childLast z
+  tag <- (rootTag (current z_last))^?_Left
+  case tag of
+    PP -> do pptr@(PPTree pp _) <- mkPPFromZipper tagged z_last   -- for the time being
+             let rng_pp = pp^.maximalProjection
+                 ppreplace = case pp^.headX.hp_prep of
+                               Prep_WORD "of" -> complement._Just.complement .~ (Just (CompDP_PP rng_pp))
+                               _              -> adjunct %~ (addPP rng_pp) -- . removePP (pp^.maximalProjection)
+                 (b_pp,_) = pp^.maximalProjection
+                 dp = dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace
+             return (DPTree dp (pptr:lst0))
+    ADJP -> let (b_ap,e_ap) = getRange (current z_last)
+                apreplace = adjunct %~ (++ [AdjunctDP_AP (b_ap,e_ap)])
+                dp = dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_ap-1))) . apreplace
+            in return (DPTree dp lst0)
+    _ -> Nothing
 
 
 splitDP :: TaggedLemma (Lemma ': as) -> DPTree -> DPTree
-splitDP tagged (DPTree dp0 lst0) =
-  let dptr1 =
-        fromMaybe (DPTree dp0 lst0) $ do
-              let rng0 = dp0^.maximalProjection
+splitDP tagged dptr0@(DPTree dp0 lst0) =
+  let -- fromMaybe (DPTree dp0 lst0) $ splitDPWorker tagged dptr0
+      -- dptr2 = identifyInternalTimePrep tagged dptr1
+      dptr1 = last (dptr0 : unfoldr (splitDP1 tagged >=> \b -> return (b,b)) dptr0) 
+  in dptr1 & (_DPTree._1) %~
 
-              z <- find (isChunkAs NP . current) (extractZipperByRange rng0 (tagged^.pennTree))
-              -- adjunct only one.. but this must be recursive.
-              z_last <- childLast z
-              tag <- (rootTag (current z_last))^?_Left
-              case tag of
-                PP -> do pptr@(PPTree pp _) <- mkPPFromZipper tagged PC_Other z_last   -- for the time being
-                         let rng_pp = pp^.maximalProjection
-                             ppreplace = case pp^.headX.hp_prep of
-                                           Prep_WORD "of" -> complement._Just.complement .~ (Just (CompDP_PP rng_pp))
-                                           _              -> adjunct %~ (++ [AdjunctDP_PP rng_pp]) . removePP (pp^.maximalProjection)
-                             (b_pp,_) = pp^.maximalProjection
-                             dp = dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace
-                         return (DPTree dp [pptr])
-                ADJP -> let (b_ap,e_ap) = getRange (current z_last)
-                            apreplace = adjunct %~ (++ [AdjunctDP_AP (b_ap,e_ap)])
-                            dp = dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_ap-1))) . apreplace
-                        in return (DPTree dp [])
-                _ -> Nothing
-      --  changeDPonly f (DPTree dp lst) = DPTree (f dp) lst
-  in dptr1 & ((_DPTree._1) %~
-               
-                 ((fst.identifyInternalTimePrep tagged)
-                 .identifyDeterminer tagged
+                 (identifyDeterminer tagged
                  .identifyNamedEntity tagged
-                 .bareNounModifier tagged)
+                 .bareNounModifier tagged
                  .(\dp1 -> fromMaybe dp1 (identifyClausalModifier tagged dp1)))
 
 
 
 identifyClausalModifier :: TaggedLemma (Lemma ': as) -> DetP -> Maybe DetP
-identifyClausalModifier tagged dp1 = do
-  let rng1 = dp1^.maximalProjection
+identifyClausalModifier tagged dp0 = do
+  let (b0,e0) = dp0^.maximalProjection
+      e0' = (\case [] -> e0; (e:_) -> e-1) (sort (dp0^..adjunct.traverse._AdjunctDP_PP._1))
+      rng0 = (b0,e0')
       rf = getRange . current
 
-  z <- find (isChunkAs NP . current) (extractZipperByRange rng1 (tagged^.pennTree))
+  z <- find (isChunkAs NP . current) (extractZipperByRange rng0 (tagged^.pennTree))
   ((do dp <- child1 z
        guard (isChunkAs NP (current dp))
        sbar <- next dp
@@ -130,7 +138,7 @@ identifyClausalModifier tagged dp1 = do
    <|>
    (do sbar <- childLast z
        guard (isChunkAs S (current sbar))
-       let (b,_e) = rng1
+       let (b,_e) = rng0
            (b1,e1) = rf sbar
        return (mkSplittedDP CLMod (b,b1-1) (b1,e1) z)))
 
@@ -183,7 +191,7 @@ splitParentheticalModifier tagged z = do
      (guard (isChunkAs VP (current z_appos))   >> return (mkSplittedDP CLMod    (b1,e1) (ba,ea) z)) <|>
      (guard (isChunkAs SBAR (current z_appos)) >> return (mkSplittedDP CLMod    (b1,e1) (ba,ea) z)) <|>
      (do guard (isChunkAs PP (current z_appos))
-         PPTree pp _ <- mkPPFromZipper tagged PC_Other z_appos -- for the time being
+         PPTree pp _ <- mkPPFromZipper tagged z_appos -- for the time being
          let rng_pp = pp^.maximalProjection
          return (XP (HeadDP Nothing NoDet) (rf z) [] [AdjunctDP_PP rng_pp] (Just (mkNP ((b1,e1),Nothing) Nothing)))))
 
@@ -302,25 +310,50 @@ identifyNamedEntity tagged dp =
 --
 -- |
 --
+{-
+
 identifyInternalTimePrep :: TaggedLemma (Lemma ': as)
-                         -> DetP
-                         -> (DetP,[AdjunctVP])
-identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
+                         -> DPTree -- DetP
+                         -> DPTree -- (DetP,[AdjunctVP])
+identifyInternalTimePrep tagged (DPTree dp lst) = fromMaybe (DPTree dp lst) $ do
   let rng_dp@(b_dp,_e_dp) = dp^.maximalProjection
   TagPos (b0,e0,_)
     <- find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) (tagged^.tagList)
   let rng_time = beginEndToRange (b0,e0)
   z_tdp <- find (isChunkAs NP . current) (extractZipperByRange rng_time (tagged^.pennTree))
   z_tpp <- parent z_tdp
+  let rng_tpp = getRange (current z_tpp)
+  guard (rng_tpp `isInsideR` rng_dp)
   guard (isChunkAs PP (current z_tpp))
+
   let (b_tpp,_e_tpp) = getRange (current z_tpp)
       rng_dp' = (b_dp,b_tpp-1)
   (b_h,e_h) <- dp^?complement._Just.headX.hn_range
   let rng_head = if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
-  PPTree tpp _ <- mkPPFromZipper tagged PC_Time z_tpp  -- for the time being
-  let dp' = dp & (maximalProjection .~ rng_dp')
-               . (complement._Just.headX.hn_range .~ rng_head)
-               . (complement._Just.maximalProjection .~ rng_dp')
-               . (adjunct %~ removePP (tpp^.maximalProjection))
+  pptree@(PPTree tpp _) <- mkPPFromZipper tagged PC_Time z_tpp  -- for the time being
+  let dp' = dp & -- (maximalProjection .~ rng_dp')
+                  (complement._Just.headX.hn_range .~ rng_head)
 
-  return (dp',[AdjunctVP_PP tpp])
+               -- . (complement._Just.maximalProjection .~ rng_dp')
+                  . (adjunct %~ addPP (tpp^.maximalProjection))
+
+  return (DPTree dp' (addPPTree pptree lst))  --  ++ pptree tpp  [AdjunctVP_PP tpp])
+-}
+
+
+removePP :: Range -> [AdjunctDP] -> [AdjunctDP]
+removePP rng xs = xs^..folded.filtered (\x->x^?_AdjunctDP_PP /= Just rng)
+
+
+
+addPP :: Range -> [AdjunctDP] -> [AdjunctDP]
+addPP rng xs = (sort . HS.toList . HS.insert (AdjunctDP_PP rng) . HS.fromList) xs
+
+
+addPPTree :: PPTree -> [PPTree] -> [PPTree]
+addPPTree pptree@(PPTree pp _) pplst =
+  let rng = pp^.maximalProjection
+      (xs,ys) = break (\pptree' -> rng == pptree'^._PPTree._1.maximalProjection) pplst
+      ys' = filter (\pptree' -> rng /= pptree'^._PPTree._1.maximalProjection) ys
+  in xs ++ (pptree : ys')
+--   insert (AdjunctDP_PP rng) xs
