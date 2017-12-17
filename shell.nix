@@ -1,6 +1,7 @@
 { pkgs ? import <nixpkgs> {}
 , uphere-nix-overlay ? <uphere-nix-overlay>
 , graph-algorithms   ? <graph-algorithms>
+, HCoreNLP           ? <HCoreNLP>
 , HWordNet           ? <HWordNet>
 , lexicon            ? <lexicon>
 , nlp-types          ? <nlp-types>
@@ -37,6 +38,8 @@ let
     self: super: {
       "graph-algorithms" = self.callPackage (import graph-algorithms) {};
       "HWordNet"         = self.callPackage (import HWordNet) {};
+      "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
+      "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
       "lexicon"          = self.callPackage (import lexicon) {};
       "nlp-types"        = self.callPackage (import nlp-types) {};
       "PropBank"         = self.callPackage (import PropBank) {};
@@ -75,6 +78,8 @@ let
             p.lexicon
             p.nlp-types
             p.PropBank
+            p.HCoreNLP
+            p.HCoreNLP-Proto
             p.HWordNet
             p.wiki-ner
             p.textview
@@ -85,5 +90,10 @@ in
 stdenv.mkDerivation {
   name = "syntactic-analysis-dev";
   buildInputs = [ hsenv libsvm ];
+  shellHook = ''
+    export OMP_NUM_THREADS=12
+    export CLASSPATH="${corenlp_models}:${corenlp}/stanford-corenlp-3.7.0.jar:${corenlp}/protobuf.jar:${corenlp}/joda-time.jar:${corenlp}/jollyday.jar:${hsenv}/share/x86_64-linux-ghc-8.0.2/HCoreNLP-0.1.0.0/HCoreNLPProto.jar";
+  '';
+ 
 }
 
