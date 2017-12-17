@@ -94,7 +94,7 @@ splitDP tagged (DPTree dp0 lst0) =
                          let rng_pp = pp^.maximalProjection
                              ppreplace = case pp^.headX.hp_prep of
                                            Prep_WORD "of" -> complement._Just.complement .~ (Just (CompDP_PP rng_pp))
-                                           _              -> adjunct %~ (addPP rng_pp) . removePP (pp^.maximalProjection)
+                                           _              -> adjunct %~ (addPP rng_pp) -- . removePP (pp^.maximalProjection)
                              (b_pp,_) = pp^.maximalProjection
                              dp = dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace
                          return (DPTree dp [pptr])
@@ -103,13 +103,12 @@ splitDP tagged (DPTree dp0 lst0) =
                             dp = dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_ap-1))) . apreplace
                         in return (DPTree dp [])
                 _ -> Nothing
-  in dptr1 & ((_DPTree._1) %~
+      dptr2 = identifyInternalTimePrep tagged dptr1
+  in dptr2 & (_DPTree._1) %~
 
                  (identifyDeterminer tagged
                  .identifyNamedEntity tagged
                  .bareNounModifier tagged
-                 .(fst.identifyInternalTimePrep tagged)
-                 )
                  .(\dp1 -> fromMaybe dp1 (identifyClausalModifier tagged dp1)))
 
 
@@ -305,9 +304,9 @@ identifyNamedEntity tagged dp =
 -- |
 --
 identifyInternalTimePrep :: TaggedLemma (Lemma ': as)
-                         -> DetP
-                         -> (DetP,[AdjunctVP])
-identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
+                         -> DPTree -- DetP
+                         -> DPTree -- (DetP,[AdjunctVP])
+identifyInternalTimePrep tagged (DPTree dp lst) = fromMaybe (DPTree dp lst) $ do
   let rng_dp@(b_dp,_e_dp) = dp^.maximalProjection
   TagPos (b0,e0,_)
     <- find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) (tagged^.tagList)
@@ -322,14 +321,14 @@ identifyInternalTimePrep tagged dp = fromMaybe (dp,[]) $ do
       rng_dp' = (b_dp,b_tpp-1)
   (b_h,e_h) <- dp^?complement._Just.headX.hn_range
   let rng_head = if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
-  PPTree tpp _ <- mkPPFromZipper tagged PC_Time z_tpp  -- for the time being
+  pptree@(PPTree tpp _) <- mkPPFromZipper tagged PC_Time z_tpp  -- for the time being
   let dp' = dp & -- (maximalProjection .~ rng_dp')
                   (complement._Just.headX.hn_range .~ rng_head)
 
                -- . (complement._Just.maximalProjection .~ rng_dp')
                   . (adjunct %~ addPP (tpp^.maximalProjection))
 
-  return (dp',[AdjunctVP_PP tpp])
+  return (DPTree dp' (addPPTree pptree lst))  --  ++ pptree tpp  [AdjunctVP_PP tpp])
 
 
 
@@ -341,4 +340,11 @@ removePP rng xs = xs^..folded.filtered (\x->x^?_AdjunctDP_PP /= Just rng)
 addPP :: Range -> [AdjunctDP] -> [AdjunctDP]
 addPP rng xs = (sort . HS.toList . HS.insert (AdjunctDP_PP rng) . HS.fromList) xs
 
+
+addPPTree :: PPTree -> [PPTree] -> [PPTree]
+addPPTree pptree@(PPTree pp _) pplst =
+  let rng = pp^.maximalProjection
+      (xs,ys) = break (\pptree' -> rng == pptree'^._PPTree._1.maximalProjection) pplst
+      ys' = filter (\pptree' -> rng /= pptree'^._PPTree._1.maximalProjection) ys
+  in xs ++ (pptree : ys')
 --   insert (AdjunctDP_PP rng) xs

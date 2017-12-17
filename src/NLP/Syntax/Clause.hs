@@ -112,11 +112,17 @@ complementsOfVerb tagged vprop z_vp =
        Active -> (cs,mspec,adjs,dppps)
        Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,mspec,adjs,dppps)
   where
-    xform_dp z = let dptr = splitDP tagged (DPTree (mkOrdDP z) [])
+    xform_dp z = let dptr@(DPTree dp' pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
 
-                     (dp',zs) = identifyInternalTimePrep tagged (dptr^._DPTree._1)
+                     -- DPTree dp' pptrs = identifyInternalTimePrep tagged dptr
+                     -- zs = map (\(PPTree pp _) -> AdjunctVP_PP pp) pptrs
+                     adjs = flip mapMaybe pptrs $ \(PPTree pp _) -> do
+                              guard (pp^.headX.hp_pclass == PC_Time)
+                              return (AdjunctVP_PP pp)
+
+                     --     AdjunctVP_PP pp) . filter (\(PPTree pp
                      subs = getSubsFromDPTree dptr
-                 in (TraceChain (Right []) (Just (checkEmptyPrep tagged dp')), zs,subs)
+                 in (TraceChain (Right []) (Just (checkEmptyPrep tagged dp')),adjs,subs)
     xform_pp z = fromMaybe (TraceChain (Right []) Nothing,[],[]) $ do
                    pptr <- mkPPFromZipper tagged PC_Other z
                    let pp = pptr^._PPTree._1
@@ -163,9 +169,13 @@ identifySubject tagged tag vp = maybe nul smp r
           N.SINV -> firstSiblingBy next (isChunkAs NP) vp          -- this should be refined.
           _      -> firstSiblingBy prev (isChunkAs NP) vp          -- this should be refined.
     nul = (TraceChain (Left (singletonLZ NULL)) Nothing,[],[])
-    smp z = let dptr = splitDP tagged (DPTree (mkOrdDP z) [])
+    smp z = let dptr@(DPTree dp' pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
                 subs = getSubsFromDPTree dptr
-                (dp',adjs) = identifyInternalTimePrep tagged (dptr^._DPTree._1)
+                adjs = flip mapMaybe pptrs $ \(PPTree pp _) -> do
+                         guard (pp^.headX.hp_pclass == PC_Time)
+                         return (AdjunctVP_PP pp)
+
+                -- (dp',adjs) = identifyInternalTimePrep tagged (dptr^._DPTree._1)
             in (TraceChain (Right []) (Just (SpecTP_DP dp')),adjs,subs)
 
 
