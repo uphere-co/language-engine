@@ -42,7 +42,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 
 import           SRL.Analyze.Type.Match       (DPInfo(..), EntityInfo(..),FrameMatchResult(..)
                                               ,adi_appos,adi_compof,adi_coref,adi_poss,adi_adjs
-                                              ,ei_fullRange,ei_headRange,ei_prep,ei_isClause
+                                              ,ei_fullRange,ei_headRange,ei_prep,ei_isClause,ei_isTime
                                               )
 
 
@@ -59,10 +59,10 @@ dependencyOfX'Tree (PL _)           = []
 
 
 mkEntityFun :: (EntityInfo,DPInfo) -> [(Int -> MGVertex)]
-mkEntityFun (EI rng rnghead _mprep txt _,di) =
-  let mkRel frm (EI rng' rng'' _ txt' False) = [ \i'  -> MGEntity i' (Just rng') (Just rng'') txt' []
-                                               , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
-      mkRel frm (EI rng' rng'' _ txt' True)  = [ \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
+mkEntityFun (EI rng rnghead _mprep txt _ _,di) =
+  let mkRel frm (EI rng' rng'' _ txt' False _) = [ \i'  -> MGEntity i' (Just rng') (Just rng'') txt' []
+                                                 , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
+      mkRel frm (EI rng' rng'' _ txt' True _)  = [ \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
 
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
       comp = do c <- maybeToList (di^.adi_compof)
@@ -70,7 +70,14 @@ mkEntityFun (EI rng rnghead _mprep txt _,di) =
                   then mkRel "Purpose" c
                   else mkRel "Partitive" c
       poss = concatMap (mkRel "Possession") (di^.adi_poss)
-      adjs = concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppRelFrame p) >>= \f -> mkRel (f^._1) e) (di^.adi_adjs)
+      adjs = do a <- di^.adi_adjs
+                p <- maybeToList (a^.ei_prep)
+                f <- if (a^.ei_isTime)
+                       then [("Time_vector","Event","Landmark_event")]
+                       else maybeToList (ppRelFrame p)
+                mkRel (f^._1) a
+
+        -- concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppRelFrame p) >>= \f -> mkRel (f^._1) e) (di^.adi_adjs)
   in (\i -> MGEntity i (Just rng) (Just rnghead) txt []) : (appos ++ comp ++ poss ++ adjs)
 
 
@@ -139,7 +146,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
       vertices = ipreds ++ iett_verbnom ++ (map snd iett_prep)
       headfull = do (ei,_) <- ett_verbnom
                     return (ei^.ei_headRange,ei^.ei_fullRange)
-  in (vertices,ett_verbnom,iett_prep,headfull)
+  in {- trace (intercalate "\n" (map show vertices)) $ -} (vertices,ett_verbnom,iett_prep,headfull)
 
 
 mkRoleEdges :: VertexMap
@@ -193,13 +200,21 @@ mkInnerDPEdges :: VertexMap
 mkInnerDPEdges vmap entities = do
     (ei,di) <- entities
     let mrng = Just (ei^.ei_fullRange)
-    let appos = maybe [] (mkRelEdge "Instance" "Type" mrng) (di^.adi_appos)
+        appos = maybe [] (mkRelEdge "Instance" "Type" mrng) (di^.adi_appos)
         comp = do c <- maybeToList (di^.adi_compof)
                   if (c^.ei_isClause)
                     then mkRelEdge "Means" "Goal" mrng c
                     else mkRelEdge "Subset" "Group" mrng c
         poss = concatMap (mkRelEdge "Possession" "Owner" mrng) (di^.adi_poss)
-        adjs = concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppRelFrame p) >>= \f -> mkRelEdge (f^._2) (f^._3) mrng e) (di^.adi_adjs)
+        adjs = do a <- di^.adi_adjs
+                  p <- maybeToList (a^.ei_prep)
+                  f <- if (a^.ei_isTime)
+                         then [("Time_vector","Event","Landmark_event")]
+                         else maybeToList (ppRelFrame p)
+                  -- mkRel (f^._1) a
+                  mkRelEdge (f^._2) (f^._3) mrng a
+
+                    --         concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppRelFrame p) >>= \f -> ) (di^.adi_adjs)
     (appos ++ comp ++ poss ++ adjs)
   where
     rngidxmap = vmap^.vm_rangeToIndex
@@ -250,7 +265,8 @@ mkMGEdges vmap (matched,nmatched) (entities1_0,ientities2) =
       edges1 = mkInnerDPEdges vmap entities1_0
       edges2 = mkPrepEdges vmap ientities2
       edges3 = mkCorefEdges vmap entities1_0
-  in edges0 ++ edges01 ++ edges1 ++ edges2 ++ edges3
+      edges = edges0 ++ edges01 ++ edges1 ++ edges2 ++ edges3
+  in  {- trace ("\nEDGES\n" ++ intercalate "\n" (map show edges)) $ -} edges
 
 
 
