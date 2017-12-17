@@ -136,10 +136,10 @@ matchPP x'tr cp (mprep,mpclass,mising) = do
               let pp's = catMaybes $ do
                     rng <- pp^..complement._CompPP_DP.adjunct.traverse._AdjunctDP_PP
                     return (cpdpppFromX'Tree x'tr rng _PPCase)
-              in (pp:pp's)
-            CompVP_DP dp -> catMaybes $ do
+              in [pp] -- (pp:pp's)  -- now we get back to this
+            CompVP_DP dp -> [] {- catMaybes $ do
                               rng <- dp^..adjunct.traverse._AdjunctDP_PP
-                              return (cpdpppFromX'Tree x'tr rng _PPCase)
+                              return (cpdpppFromX'Tree x'tr rng _PPCase) -}
             _            -> []
     find ppcheck (pps_comp ++ pps_adj)
   where
