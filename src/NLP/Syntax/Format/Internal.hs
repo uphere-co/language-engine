@@ -2,7 +2,7 @@
 
 module NLP.Syntax.Format.Internal where
 
-import           Control.Lens                       ((^.),(^?),_Just,to)
+import           Control.Lens                       ((^.),(^..),(^?),_Just,to)
 import           Data.Bifunctor                     (bimap)
 import           Data.Foldable                      (toList)
 import           Data.Maybe                         (fromMaybe)
@@ -102,6 +102,6 @@ formatTraceChain f (TraceChain xs0 x) =
 formatX'Tree :: X'Tree -> Text
 formatX'Tree tr = formatBitree fmt tr
   where
-        fmt (rng,CPCase _) = "CP" <> showRange rng
+        fmt (rng,CPCase x) = "CP" <> showRange rng <> ": VP-comps: " <> T.intercalate "," (x^..complement.complement.complement.traverse.trResolved._Just.to formatCompVP)
         fmt (_  ,DPCase x) = formatDP x
         fmt (_  ,PPCase x) = formatPP x
