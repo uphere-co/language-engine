@@ -52,6 +52,7 @@ formatAdjunctDP (AdjunctDP_PP rng) = "PP-" <> T.pack (show rng)
 
 formatPP :: PP -> Text
 formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
+              if pp^.headX.hp_pclass == PC_Time then "-time" else "" <>
               "-" <>
               case pp^.complement of
                 CompPP_DP dp      -> formatDP dp
