@@ -138,7 +138,7 @@ entityFromDP x'tr tagged dp =
 
       mrngtxt' = do rng_sub <- listToMaybe (dp^..specifier.traverse._SpDP_Appos)
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
-                    return (EI rng_sub rng_sub Nothing txt_sub False)                 -- for the time being
+                    return (EI rng_sub rng_sub Nothing txt_sub False False)                 -- for the time being
       mcoref = pronounResolution x'tr dp <|> definiteCorefResolution x'tr tagged dp <|> definiteGenitiveCorefResolution x'tr tagged dp
       mcomp = ((do rng_pp <- dp^?complement._Just.complement._Just._CompDP_PP
                    pp <- cpdpppFromX'Tree x'tr rng_pp _PPCase
@@ -148,28 +148,29 @@ entityFromDP x'tr tagged dp =
                    let rng_comp = dp'^.maximalProjection
                        rng_head_comp = fromMaybe rng_comp (headRangeDP dp')
                        txt_comp = headTextDP tagged dp'
-                   return (EI rng_comp rng_head_comp (Just "of") txt_comp False))
+                   return (EI rng_comp rng_head_comp (Just "of") txt_comp False False))
                <|>
                (do rng_cp <- dp^?complement._Just.complement._Just._CompDP_CP
                    cp <- cpdpppFromX'Tree x'tr rng_cp _CPCase
                    (_,(_,lma)) <- listToMaybe (cp^.complement.complement.headX.vp_auxiliary)
                    guard (lma == "to")
-                   return (EI rng_cp rng_cp Nothing "" True)))
+                   return (EI rng_cp rng_cp Nothing "" True False)))
 
       adjs  = do AdjunctDP_PP rng_pp <- dp^.adjunct
                  pp <- maybeToList (cpdpppFromX'Tree x'tr rng_pp _PPCase)
+                 let isTime = pp^.headX.hp_pclass == PC_Time
                  dp' <- pp^..complement._CompPP_DP
                  let mprep = pp^?headX.hp_prep._Prep_WORD
                  let rng_adj = dp'^.maximalProjection
                      rng_head_adj = fromMaybe rng_adj (headRangeDP dp')
                      txt_adj = headTextDP tagged dp'
-                 return (EI rng_adj rng_head_adj mprep txt_adj False)
+                 return (EI rng_adj rng_head_adj mprep txt_adj False isTime)
       mposs1 = do (_ptyp,True) <- dp^?headX.hd_class._Pronoun
                   rng_poss <- dp^.headX.hd_range
                   txt_poss <- determinerText tagged (dp^.headX)
-                  return (EI rng_poss rng_poss Nothing txt_poss False)
+                  return (EI rng_poss rng_poss Nothing txt_poss False False)
       mposs2 = do rng_poss <- listToMaybe (dp^..specifier.traverse._SpDP_Gen)
                   let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
-                  return (EI rng_poss rng_poss Nothing txt_poss False)
+                  return (EI rng_poss rng_poss Nothing txt_poss False False)
       poss = maybeToList mposs1 ++ maybeToList mposs2
-  in (EI rng rnghead Nothing headtxt False, DI mrngtxt' mcoref mcomp poss adjs)
+  in (EI rng rnghead Nothing headtxt False False, DI mrngtxt' mcoref mcomp poss adjs)

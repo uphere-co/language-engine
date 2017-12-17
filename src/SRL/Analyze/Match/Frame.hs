@@ -489,8 +489,8 @@ matchFrame frmdb x'tr (vstr,cp) =
 
     else do
       ((idiom,frame,sense,mselected0),_) <- listToMaybe (sortBy (flip compare `on` scoreSelectedFrame total) frmsels)
-      let mselected1 = (_Just . _2 %~ matchExtraRoles frmdb frame x'tr cp) mselected0
-          mselected  = mselected1 -- (_Just . _2 %~ resolveAmbiguityInDP) mselected1
+      let mselected = (_Just . _2 %~ matchExtraRoles frmdb frame x'tr cp) mselected0
+          -- mselected  = mselected1 -- (_Just . _2 %~ resolveAmbiguityInDP) mselected1
           subfrms = mapMaybe (\(chk,prep,frm) -> matchExtraClausalSubframe chk prep frm cp)
                       [(hasComplementizer ["after"] , "after" , ("Time_vector","Event","Landmark_event"))
                       ,(hasComplementizer ["before"], "before", ("Time_vector","Event","Landmark_event"))
@@ -568,13 +568,20 @@ matchNomFrame :: AnalyzePredata
               -> DetP
               -> Maybe (Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe EntityInfo),(FNFrameElement,EntityInfo))
 matchNomFrame apredata x'tr tagged dp = do
-    (b,e) <- dp^?complement._Just.headX.hn_range
-    -- for the time being, treat only single word nominal as frame
-    guard (b==e)
-    -- For the time being, I identify nominal frame only for a noun phrase with of, or with to-infinitive.
     let rng_dp = dp^.maximalProjection
         wndb = apredata^.analyze_wordnet
+    -- trace ("\nmatchNomFrame1" ++ show rng_dp)  $ return ()
+    (b,e) <- dp^?complement._Just.headX.hn_range
+    -- trace ("\nmatchNomFrame2" ++ show rng_dp ++ show (b,e))  $ return ()
+
+    -- for the time being, treat only single word nominal as frame
+    guard (b==e)
+    -- trace ("\nmatchNomFrame3" ++ show rng_dp)  $ return ()
+
+    -- For the time being, I identify nominal frame only for a noun phrase with of, or with to-infinitive.
     lma <- listToMaybe (tagged^..lemmaList.folded.filtered (^._1.to (\i -> i == b))._2._1)
+    -- trace ("\nmatchNomFrame4" ++ show rng_dp)  $ return ()
+
     let mei_subj :: Maybe EntityInfo
         mei_subj = do
           rng <- case dp^.headX.hd_class of
@@ -586,15 +593,23 @@ matchNomFrame apredata x'tr tagged dp = do
                                      in listToMaybe rngs
                    _ -> Nothing
           let txt = T.intercalate " " (tokensByRange tagged rng)
-          return (EI rng rng Nothing txt False)
+          return (EI rng rng Nothing txt False False)
     (verb,_senses,rmtoppatts) <- getFirst . mconcat $ do
       verb <- extractNominalizedVerb wndb lma
       let (senses,rmtoppatts) = getVerbSenses apredata (verb,[verb])
       guard ((not.null) senses && (not.null) rmtoppatts)
       (return . First . Just) (verb,senses,rmtoppatts)
+    -- trace ("\nmatchNomFrame5" ++ show rng_dp)  $ return ()
+
     ((_,(_sid,rolemap),_),patts) <- listToMaybe rmtoppatts
+    -- trace ("\nmatchNomFrame6" ++ show rng_dp)  $ return ()
+
     frm <- lookup "frame" rolemap
+    -- trace ("\nmatchNomFrame7" ++ show rng_dp)  $ return ()
+
     patt <- listToMaybe patts
+    -- trace ("\nmatchNomFrame8" ++ show rng_dp)  $ return ()
+
     (ppcase patt rolemap lma frm verb rng_dp mei_subj <|>
      cpcase patt rolemap lma frm verb rng_dp mei_subj)
   where
@@ -609,22 +624,35 @@ matchNomFrame apredata x'tr tagged dp = do
       guard (pp^.headX.hp_prep == Prep_WORD "of")
       rng_obj <- pp^?complement._CompPP_DP.maximalProjection
       let txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
-      return (lma,verb,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj (Just "of") txt_obj False)))
+      return (lma,verb,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj (Just "of") txt_obj False False)))
     cpcase patt rolemap lma frm verb rng_dp mei_subj = do
       let (ms,mo) = subjObjSBAR (patt^._1)
+      -- trace ("\nCPCASE : cpcase1" ++ show rng_dp) $ return ()
+
       (args,_) <- ms
+      -- trace ("\nCPCASE : cpcase2" ++ show rng_dp) $ return ()
+
       (argo,_) <- mo
+      -- trace ("\nCPCASE : cpcase3" ++ show rng_dp) $ return ()
+
       subj <- FNFrameElement <$> lookup args rolemap
+      -- trace ("\nCPCASE : cpcase4" ++ show rng_dp) $ return ()
+
       obj  <- FNFrameElement <$> lookup argo rolemap
       compdp <- dp^?complement._Just.complement._Just
+      -- trace ("\nCPCASE : cpcase5" ++ show rng_dp) $ return ()
+
       cp_obj <- case compdp of
-                   -- CompDP_Unresolved rng_obj -> (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng_obj)) x'tr)
-                   CompDP_CP rng_obj -> cpdpppFromX'Tree x'tr rng_obj _CPCase -- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng_obj)) x'tr) -- Just cp_obj
-                   _ -> Nothing
+                  CompDP_CP rng_obj -> cpdpppFromX'Tree x'tr rng_obj _CPCase
+                  _ -> Nothing
+      -- trace "\nCPCASE : cpcase6" $ return ()
+
       let vp = cp_obj^.complement.complement
           rng_obj = cp_obj^.maximalProjection
           txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
-
+      -- trace "\nCPCASE : cpcase7" $ return ()
       aux <- listToMaybe (vp^..headX.vp_auxiliary.traverse._2._2.to unLemma)
+      -- trace "\nCPCASE : cpcase8" $ return ()
       guard (aux == "to")
-      return (lma,verb,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj Nothing txt_obj False)))
+      -- trace "\nCPCASE : cpcase9" $ return ()
+      return (lma,verb,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj Nothing txt_obj False False)))
