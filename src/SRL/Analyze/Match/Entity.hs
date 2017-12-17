@@ -150,18 +150,10 @@ entityFromDP x'tr tagged dp =
                        txt_comp = headTextDP tagged dp'
                    return (EI rng_comp rng_head_comp (Just "of") txt_comp False))
                <|>
-               (do trace ("\n-----\nmcomp:" ++ show rng ++ "\n" ++ T.unpack (formatDP dp) ++ "\n-----\n") (return ())
-                   -- np <- dp^?complement
-                   -- trace ("\nfind np") (return ())
-                   -- compnp <- dp^?complement._Just.complement
-                   -- trace ("\nfind compnp" ++ maybe "Nothing" (\case CompDP_CP _ -> "CP" ; CompDP_PP _ -> "PP") compnp) (return ())
-                   rng_cp <- dp^?complement._Just.complement._Just._CompDP_CP
+               (do rng_cp <- dp^?complement._Just.complement._Just._CompDP_CP
                    cp <- cpdpppFromX'Tree x'tr rng_cp _CPCase
                    (_,(_,lma)) <- listToMaybe (cp^.complement.complement.headX.vp_auxiliary)
                    guard (lma == "to")
-                   -- trace ("\n-----\nmcomp1:" ++ T.unpack (formatCompDP cp) ++ "\n-----\n") (return ())
-                   -- let rng_comp = cp^.maximalProjection
-                   --     rng_head_comp = rng_comp
                    return (EI rng_cp rng_cp Nothing "" True)))
 
       adjs  = do AdjunctDP_PP rng_pp <- dp^.adjunct

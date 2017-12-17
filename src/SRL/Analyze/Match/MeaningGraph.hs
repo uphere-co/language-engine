@@ -99,7 +99,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
                        CompVP_Unresolved _ -> []
                        CompVP_CP _cp -> [] -- CP is not an entity.
                        CompVP_DP dp -> do
-                         let y@(ei,_) = trace ("\nmkMGVertices: " ++ T.unpack (formatDP dp)) $ entityFromDP x'tr tagged dp
+                         let y@(ei,_) = entityFromDP x'tr tagged dp
                              rng' = ei^.ei_fullRange
                          if is _Just (find (== (rng',rng)) depmap)
                            then []
@@ -139,7 +139,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
       vertices = ipreds ++ iett_verbnom ++ (map snd iett_prep)
       headfull = do (ei,_) <- ett_verbnom
                     return (ei^.ei_headRange,ei^.ei_fullRange)
-  in trace ("\nett_verbnom\n" ++ intercalate "\n" (map show ett_verbnom) )  (vertices,ett_verbnom,iett_prep,headfull)
+  in (vertices,ett_verbnom,iett_prep,headfull)
 
 
 mkRoleEdges :: VertexMap
@@ -272,7 +272,7 @@ meaningGraph apredata sstr =
       rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
       vmap = VertexMap rngidxmap depmap headfull
       edges = mkMGEdges vmap (matched,nmatched) (entities1_0,ientities2)
-  in trace ("\n\n"++ intercalate "\n" (map show vertices)) MeaningGraph vertices edges
+  in MeaningGraph vertices edges
 
 
 isEntity :: MGVertex -> Bool

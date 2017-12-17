@@ -118,9 +118,7 @@ matchObjects rolemap verbp patt = do
   (p,a) <- maybeToList (pbArgForGArg garg patt)
   case obj of
     CompVP_CP cp -> guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
-    CompVP_DP dp -> do
-                       trace ("\nmatchObjects: " ++ T.unpack (formatDP dp)) (return ())
-                       guard (a == GR_NP (Just garg))
+    CompVP_DP dp -> guard (a == GR_NP (Just garg))
     _            -> []
   fe <- FNFrameElement <$> maybeToList (lookup p rolemap)
   return (fe, obj)
