@@ -91,7 +91,7 @@ queryProcess config pp apredata netagger (forest,companyMap) =
                   dstr <- docStructure apredata netagger (forest,companyMap) dainput
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
+                  mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap  (\s -> [(s^.ss_tagged,(s^.ss_x'tr,x)) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
 
       ":v " -> do dainput <- runParser pp rest
                   -- runUKB (apredata^.analyze_wordnet) (dainput^.dainput_sents,dainput^.dainput_mptrs)
@@ -101,7 +101,7 @@ queryProcess config pp apredata netagger (forest,companyMap) =
                     -- print (dstr^.ds_mergedtags)
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
 
-                  mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap  (\s -> [(s^.ss_tagged,x) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
+                  mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap  (\s -> [(s^.ss_tagged,(s^.ss_x'tr,x)) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
                   --
                   printMeaningGraph apredata companyMap dstr
       _     ->    putStrLn "cannot understand the command"

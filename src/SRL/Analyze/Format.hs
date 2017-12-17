@@ -33,7 +33,7 @@ import           Lexicon.Type                            (ArgPattern(..),RoleIns
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree,prettyPrint)
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),TaggedLemma,CP
+import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),TaggedLemma,CP,X'Tree
                                                          ,headTextDP,headX,complement,maximalProjection
                                                          ,tokensByRange
                                                          ,hp_prep,hp_pclass)
@@ -231,13 +231,13 @@ showMatchedFE tagged (fe,CompVP_Unresolved rng) = printf "%-15s: %-7s %3s %s" (u
 
 showMatchedFrame :: FrameDB
                  -> TaggedLemma '[Lemma]
-                 -> (VerbStructure, CP)
+                 -> ([X'Tree],(VerbStructure, CP))
                  -> IO ()
-showMatchedFrame framedb tagged (vstr,cp) = do
+showMatchedFrame framedb tagged (x'tr,(vstr,cp)) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame framedb (vstr,cp)) $ \(rng,_,FMR idiom frame mselected _,_) -> do
-    putStrLn ("predicate: " <> show rng)
-    T.IO.putStrLn ("Verb: " <> {- (vstr^.vs_vp.vp_lemma.to unLemma) -} T.intercalate " " idiom)
+  flip traverse_ (matchFrame framedb x'tr (vstr,cp)) $ \(rng,_,FMR idiom frame mselected _,_) -> do
+    putStrLn ("predicate: "  <> show rng)
+    T.IO.putStrLn ("Verb: "  <> T.intercalate " " idiom)
     T.IO.putStrLn ("Frame: " <> unFNFrame frame)
     flip traverse_ mselected $ \(_,felst) -> mapM_ (putStrLn . showMatchedFE tagged) felst
 

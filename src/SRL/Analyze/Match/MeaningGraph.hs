@@ -8,10 +8,11 @@ module SRL.Analyze.Match.MeaningGraph where
 
 import           Control.Lens
 import           Control.Lens.Extras          (is)
+import           Control.Monad                (guard)
 import           Data.Bifoldable              (biList)
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
-import           Data.List                    (find,groupBy,sortBy)
+import           Data.List                    (find,groupBy,sortBy,intercalate)
 import           Data.Maybe                   (fromMaybe,mapMaybe,maybeToList)
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
@@ -41,11 +42,14 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 
 import           SRL.Analyze.Type.Match       (DPInfo(..), EntityInfo(..),FrameMatchResult(..)
                                               ,adi_appos,adi_compof,adi_coref,adi_poss,adi_adjs
-                                              ,ei_fullRange,ei_headRange,ei_prep
+                                              ,ei_fullRange,ei_headRange,ei_prep,ei_isClause
                                               )
 
 
--- import Debug.Trace
+import Debug.Trace
+
+import NLP.Syntax.Format.Internal
+
 
 
 dependencyOfX'Tree :: X'Tree -> [(Range,Range)]
@@ -55,14 +59,19 @@ dependencyOfX'Tree (PL _)           = []
 
 
 mkEntityFun :: (EntityInfo,DPInfo) -> [(Int -> MGVertex)]
-mkEntityFun (EI rng rnghead _mprep txt,di) =
-  let mkRel frm (EI rng' rng'' _ txt') = [ \i'  -> MGEntity i' (Just rng') (Just rng'') txt' []
-                                         , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
+mkEntityFun (EI rng rnghead _mprep txt _,di) =
+  let mkRel frm (EI rng' rng'' _ txt' False) = [ \i'  -> MGEntity i' (Just rng') (Just rng'') txt' []
+                                               , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
+      mkRel frm (EI rng' rng'' _ txt' True)  = [ \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
+
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
-      compof = maybe [] (mkRel "Partitive") (di^.adi_compof)
+      comp = do c <- maybeToList (di^.adi_compof)
+                if (c^.ei_isClause)
+                  then mkRel "Purpose" c
+                  else mkRel "Partitive" c
       poss = concatMap (mkRel "Possession") (di^.adi_poss)
       adjs = concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppRelFrame p) >>= \f -> mkRel (f^._1) e) (di^.adi_adjs)
-  in (\i -> MGEntity i (Just rng) (Just rnghead) txt []) : (appos ++ compof ++ poss ++ adjs)
+  in (\i -> MGEntity i (Just rng) (Just rnghead) txt []) : (appos ++ comp ++ poss ++ adjs)
 
 
 mkMGVertices :: ([X'Tree],TaggedLemma '[Lemma],[(Range,Range)])
@@ -115,6 +124,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
                   $ (ett_verb ++ ett_nominal)
 
 
+
       ettfunc_verbnom = concatMap mkEntityFun ett_verbnom
 
       ettfunc_prep = do (_,_,FMR _ _ _ lst,_) <- matched
@@ -135,7 +145,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
 mkRoleEdges :: VertexMap
             -> [(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,Maybe (SenseID,Bool))]
             -> [MGEdge]
-mkRoleEdges vmap  matched = do
+mkRoleEdges vmap matched = do
   let rngidxmap = vmap^.vm_rangeToIndex
       depmap = vmap^.vm_rangeDependency
       headfull = vmap^.vm_headRangeToFullRange
@@ -184,10 +194,13 @@ mkInnerDPEdges vmap entities = do
     (ei,di) <- entities
     let mrng = Just (ei^.ei_fullRange)
     let appos = maybe [] (mkRelEdge "Instance" "Type" mrng) (di^.adi_appos)
-        compof = maybe [] (mkRelEdge "Subset" "Group" mrng) (di^.adi_compof)
+        comp = do c <- maybeToList (di^.adi_compof)
+                  if (c^.ei_isClause)
+                    then mkRelEdge "Means" "Goal" mrng c
+                    else mkRelEdge "Subset" "Group" mrng c
         poss = concatMap (mkRelEdge "Possession" "Owner" mrng) (di^.adi_poss)
         adjs = concatMap (\e -> maybeToList (e^.ei_prep) >>= \p -> maybeToList (ppRelFrame p) >>= \f -> mkRelEdge (f^._2) (f^._3) mrng e) (di^.adi_adjs)
-    (appos ++ compof ++ poss ++ adjs)
+    (appos ++ comp ++ poss ++ adjs)
   where
     rngidxmap = vmap^.vm_rangeToIndex
     mkRelEdge role1 role2 mrng ei = do
@@ -245,7 +258,7 @@ meaningGraph :: AnalyzePredata -> SentStructure -> MeaningGraph
 meaningGraph apredata sstr =
   let (x'tr,lst_vstrcp) = mkTriples sstr
       tagged = sstr^.ss_tagged
-      matched = mapMaybe (matchFrame (apredata^.analyze_framedb)) lst_vstrcp
+      matched = mapMaybe (matchFrame (apredata^.analyze_framedb) x'tr) lst_vstrcp
       depmap = dependencyOfX'Tree =<< x'tr
       --
       dps = x'tr^..traverse.to biList.traverse._2._DPCase

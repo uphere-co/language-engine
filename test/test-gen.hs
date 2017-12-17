@@ -133,6 +133,7 @@ testsets =
   , ("usiminas_price","Brazilian steelmaker Usiminas Siderugicas de Minas Gerais SA is currently discussing a 25 percent steel price hike with automakers and hopes to conclude talks by the end of December, Chief Executive Sergio Leite said on Wednesday.")
   , ("petroleo_file","Brazilian state-run oil company Petroleo Brasileiro SA has filed documents related to an initial public offering of its fuel distribution unit BR Distribuidora SA, it said in a filing on Wednesday.")
   , ("kinder_morgan","Kinder Morgan Canada Ltd has complied with an order by the country's National Energy Board (NEB) to stop some work on its Trans Mountain pipeline expansion, the regulator said on Thursday.")
+  , ("qualcomm_approval","U.S. smartphone chipmaker Qualcomm Inc may win European Union approval for its bid to acquire NXP Semiconductors NV by the end of the year, Bloomberg reported on Thursday, citing people familiar with the matter.")
   ]
 
 

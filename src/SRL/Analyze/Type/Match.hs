@@ -4,13 +4,17 @@
 
 module SRL.Analyze.Type.Match where
 
-import           Control.Lens                  ((^.),makeLenses,_1,_2)
+import           Control.Lens                  ((^.),(^?),makeLenses,_1,_2)
 import           Data.Function                 (on)
 import           Data.List                     (maximumBy)
+import           Data.Monoid                   (First(..))
 import           Data.Text                     (Text)
+--
+import           Data.BitreeZipper             (extractZipperById)
 import           Data.Range                    (Range)
 import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel
                                                ,SenseID)
+import           NLP.Syntax.Clause             (currentCPDPPP)
 import           NLP.Syntax.Type.XBar          (CompVP)
 import           NLP.Type.PennTreebankII       (Lemma)
 
@@ -19,6 +23,7 @@ data EntityInfo = EI { _ei_fullRange :: Range
                      , _ei_headRange :: Range
                      , _ei_prep      :: Maybe Text
                      , _ei_text      :: Text
+                     , _ei_isClause  :: Bool
                      }
                 deriving Show
 
@@ -73,3 +78,6 @@ chooseMostFreqFrame [] = []
 chooseMostFreqFrame xs = [maximumBy (compare `on` (^._1._2)) xs]
 -}
 
+
+cpdpppFromX'Tree x'tr rng prm
+  = (^? prm) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
