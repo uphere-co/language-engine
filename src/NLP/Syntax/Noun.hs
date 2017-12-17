@@ -16,6 +16,7 @@ import           Control.Lens.Extras      (is)
 import           Control.Monad            (guard)
 import           Data.Char                (isUpper)
 import           Data.Foldable            (toList)
+import qualified Data.HashSet        as HS
 import           Data.List                (find,insert,sort,unfoldr)
 import           Data.Maybe               (fromMaybe,listToMaybe)
 import qualified Data.Text           as T
@@ -93,7 +94,7 @@ splitDP tagged (DPTree dp0 lst0) =
                          let rng_pp = pp^.maximalProjection
                              ppreplace = case pp^.headX.hp_prep of
                                            Prep_WORD "of" -> complement._Just.complement .~ (Just (CompDP_PP rng_pp))
-                                           _              -> adjunct %~ (++ [AdjunctDP_PP rng_pp]) . removePP (pp^.maximalProjection)
+                                           _              -> adjunct %~ (addPP rng_pp) . removePP (pp^.maximalProjection)
                              (b_pp,_) = pp^.maximalProjection
                              dp = dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace
                          return (DPTree dp [pptr])
@@ -338,4 +339,6 @@ removePP rng xs = xs^..folded.filtered (\x->x^?_AdjunctDP_PP /= Just rng)
 
 
 addPP :: Range -> [AdjunctDP] -> [AdjunctDP]
-addPP rng xs = insert (AdjunctDP_PP rng) xs
+addPP rng xs = (sort . HS.toList . HS.insert (AdjunctDP_PP rng) . HS.fromList) xs
+
+--   insert (AdjunctDP_PP rng) xs

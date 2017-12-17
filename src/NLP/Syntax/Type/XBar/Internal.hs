@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE KindSignatures             #-}
@@ -13,8 +14,10 @@ import           Data.Text                   (Text)
 --
 import           Data.Bitree
 import           Data.BitreeZipper
+import           Data.Hashable
 import           Data.ListZipper
 import           Data.Range
+import           GHC.Generics
 --
 import           NLP.Type.NamedEntity        (NamedEntityClass(..))
 import           NLP.Type.PennTreebankII
@@ -98,7 +101,9 @@ data CompDP = -- CompDP_Unresolved Range
 
 data AdjunctDP = AdjunctDP_AP Range
                | AdjunctDP_PP Range
-               deriving (Show,Eq,Ord)
+               deriving (Show,Eq,Ord,Generic)
+
+instance Hashable AdjunctDP
 
 data PronounPerson = P_I | P_You | P_He | P_She | P_It | P_They
                  deriving (Show,Eq,Ord)
