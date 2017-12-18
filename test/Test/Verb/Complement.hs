@@ -284,15 +284,14 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       b_topicalized = fromMaybe False $ do
                         cp^?specifier._Just._SpecCP_Topic
                         return True
-  trace ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr ++ "\n" ++ formatCP cp ++ "\n" ) $ return ()
-  trace ("\n" ++ show lst_comps) $ return ()
+  -- trace ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr ++ "\n" ++ formatCP cp ++ "\n" ) $ return ()
+  -- trace ("\n" ++ show lst_comps) $ return ()
   return  (b_subj && b_comps && b_adjuncts && (b_topicalized == c^._3._4))
 
 
 testcases :: [TestVerbComplement]
-testcases = [ {- -- -- main_finite_1
+testcases = [ -- -- main_finite_1
               -- -- , main_finite_2
-
               embedded_that_1
             , restr_rel_1
             , ditransitive_1
@@ -307,7 +306,7 @@ testcases = [ {- -- -- main_finite_1
             , prepComplement
               -- -- , rrc_passive_1
             , rrc_passive_2 
-            , -} to_infinitive_1
+            , to_infinitive_1
             ]
 
 unitTests :: TestTree

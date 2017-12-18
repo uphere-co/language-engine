@@ -28,7 +28,8 @@ import           NLP.Syntax.Util                   (mkTaggedLemma)
 import           Test.Common
 import           Test.Tasty
 import           Test.Tasty.HUnit
-
+--
+import Debug.Trace
 
 
 data TracePos = Subj | Comp Int
@@ -209,14 +210,24 @@ test_topicalization_move
     )
 
 
+test_that_clause :: TestTrace
+test_that_clause =
+    ( "European shares lost some of the momentum that pushed stocks in Asia."
+    , 8, (Subj,TraceChain (Left  (LZ [] Moved [WHPRO])) (Just "the momentum"))
+    , [(0,("european","European")),(1,("share","shares")),(2,("lose","lost")),(3,("some","some")),(4,("of","of")),(5,("the","the")),(6,("momentum","momentum")),(7,("that","that")),(8,("push","pushed")),(9,("stock","stocks")),(10,("in","in")),(11,("Asia","Asia")),(12,(".","."))]
+    , PN "ROOT" [PN "S" [PN "NP" [PL ("JJ","European"),PL ("NNS","shares")],PN "VP" [PL ("VBD","lost"),PN "NP" [PN "NP" [PL ("DT","some")],PN "PP" [PL ("IN","of"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","momentum")],PN "SBAR" [PN "WHNP" [PL ("WDT","that")],PN "S" [PN "VP" [PL ("VBD","pushed"),PN "NP" [PL ("NNS","stocks")],PN "PP" [PL ("IN","in"),PN "NP" [PL ("NNP","Asia")]]]]]]]]],PL (".",".")]]
+    , []
+    , []
+    )
 
 
+  
 showDetail :: TestTrace -> IO ()
 showDetail (txt,_,_,lma,pt,tagged,synsets) = mapM_ T.IO.putStrLn (formatDetail (txt,lma,pt,tagged,synsets))
 
 
 testcases :: [TestTrace]
-testcases = [ test_silent_pronoun
+testcases = [ {- test_silent_pronoun
             , test_multi_silent_pronoun
             , test_relative_pronoun_subject
             , test_relative_pronoun_object
@@ -229,7 +240,9 @@ testcases = [ test_silent_pronoun
             , test_free_relative_clause_subject_2
             , test_free_relative_clause_object_1
             , test_free_relative_clause_object_2
-            , test_topicalization_move
+            , test_topicalization_move -}
+            -- ,
+              test_that_clause
             ]
 
 checkTrace :: TestTrace -> Bool
@@ -245,7 +258,8 @@ checkTrace c =
     
     case c^._3._1 of
       Subj   -> let dp = fmap (\case SpecTP_DP dp -> headTextDP tagged dp; _ -> "") (cp ^.complement.specifier)  -- for the time being. ignore CP subject
-                in return (dp == c ^._3._2)
+                in {- trace ("\ncheckTrace:" ++ show dp) $ -}
+                   return (dp == c ^._3._2)
       Comp n -> do let comps = cp ^.complement.complement.complement
                    comp <- comps ^? ix (n-1)
                    let dp = fmap (compVPToHeadText tagged) comp
