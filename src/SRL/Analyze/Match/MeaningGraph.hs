@@ -155,7 +155,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
                     {- <- ett_verbnom
                     <-
                     return (ei^.ei_headRange,ei^.ei_fullRange) -}
-  in trace (intercalate "\n" (map show ett_verb) ++ "\n" ++ intercalate "\n" (map show vertices)) $
+  in -- trace (intercalate "\n" (map show ett_verb) ++ "\n" ++ intercalate "\n" (map show vertices)) $
        (vertices,ett_verbnom,iett_prep,headfull)
 
 
@@ -168,8 +168,8 @@ mkRoleEdges vmap matched = do
       depmap = vmap^.vm_rangeDependency
       headfull = vmap^.vm_headRangeToFullRange
   (rng,_,FMR _ _ mselected _,_) <- matched
-  trace ("mkRoleEdges 0:" ++ show rng) (return ())
-  trace ("mkRoleEdges 0: headfull = " ++ show headfull) (return ())
+  -- trace ("mkRoleEdges 0:" ++ show rng) (return ())
+  -- trace ("mkRoleEdges 0: headfull = " ++ show headfull) (return ())
   i <- maybeToList (HM.lookup (0,Just rng) rngidxmap)   -- frame
   (_,felst) <- maybeToList mselected
   (fe,x) <- felst
