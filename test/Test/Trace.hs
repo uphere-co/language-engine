@@ -30,6 +30,8 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 --
 import Debug.Trace
+import NLP.Syntax.Format
+
 
 
 data TracePos = Subj | Comp Int
@@ -221,13 +223,13 @@ test_that_clause =
     )
 
 
-  
+
 showDetail :: TestTrace -> IO ()
 showDetail (txt,_,_,lma,pt,tagged,synsets) = mapM_ T.IO.putStrLn (formatDetail (txt,lma,pt,tagged,synsets))
 
 
 testcases :: [TestTrace]
-testcases = [ {- test_silent_pronoun
+testcases = [ test_silent_pronoun
             , test_multi_silent_pronoun
             , test_relative_pronoun_subject
             , test_relative_pronoun_object
@@ -240,9 +242,8 @@ testcases = [ {- test_silent_pronoun
             , test_free_relative_clause_subject_2
             , test_free_relative_clause_object_1
             , test_free_relative_clause_object_2
-            , test_topicalization_move -}
-            -- ,
-              test_that_clause
+            , test_topicalization_move
+            , test_that_clause
             ]
 
 checkTrace :: TestTrace -> Bool
@@ -255,10 +256,14 @@ checkTrace c =
     cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                              -- anyway need to be rewritten.
     cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'tr)
-    
+
     case c^._3._1 of
-      Subj   -> let dp = fmap (\case SpecTP_DP dp -> headTextDP tagged dp; _ -> "") (cp ^.complement.specifier)  -- for the time being. ignore CP subject
-                in {- trace ("\ncheckTrace:" ++ show dp) $ -}
+      Subj   -> do let dp = fmap (\case SpecTP_DP dp -> headTextDP tagged dp; _ -> "") (cp ^.complement.specifier)  -- for the time being. ignore CP subject
+                   {- trace ("\ncheckTrace:" ++ show dp) $ -}
+                   -- trace ( x'tr) $ return ()
+                   trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (c^._1,c^._4,c^._5,c^._6,c^._7)))) $ return ()
+
+                   trace ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr) $ return ()
                    return (dp == c ^._3._2)
       Comp n -> do let comps = cp ^.complement.complement.complement
                    comp <- comps ^? ix (n-1)
