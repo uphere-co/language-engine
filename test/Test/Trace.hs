@@ -251,10 +251,9 @@ showDetail (txt,_,_,lma,pt,tagged,synsets) = mapM_ T.IO.putStrLn (formatDetail (
 
 
 testcases :: [TestTrace]
-testcases = [ {- test_silent_pronoun_1
-            , -}
-              test_silent_pronoun_2
-            {- , test_multi_silent_pronoun
+testcases = [ test_silent_pronoun_1
+            , test_silent_pronoun_2
+            , test_multi_silent_pronoun
             , test_relative_pronoun_subject
             , test_relative_pronoun_object
             , test_reduced_relative_clause
@@ -267,8 +266,9 @@ testcases = [ {- test_silent_pronoun_1
             , test_free_relative_clause_object_1
             , test_free_relative_clause_object_2
             , test_topicalization_move
-            , test_that_clause -}
+            , test_that_clause
             ]
+
 
 checkTrace :: TestTrace -> Bool
 checkTrace c =
@@ -276,19 +276,19 @@ checkTrace c =
     let tagged = mkTaggedLemma (c^._4) (c^._5) (c^._6) (c^._7)
         vps = mkVPS (c^._4) (c^._5)
         x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
-    trace "checktrace1" $ return ()
+    -- trace "checktrace1" $ return ()
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-    trace "checktrace2" $ return ()
+    -- trace "checktrace2" $ return ()
     cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                              -- anyway need to be rewritten.
-    trace "checktrace3" $ return ()
+    -- trace "checktrace3" $ return ()
 
     cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'tr)
-    trace ("checktrace4" ++ (formatCP cp)) $ return ()
+    -- trace ("checktrace4" ++ (formatCP cp)) $ return ()
 
     case c^._3._1 of
       Subj   -> do let dp = fmap (\case SpecTP_DP dp -> headTextDP tagged dp; _ -> "") (cp ^.complement.specifier)  -- for the time being. ignore CP subject
-                   trace ("\ncheckTrace5:" ++ show dp) $ return ()
+                   -- trace ("\ncheckTrace5:" ++ show dp) $ return ()
                    -- trace ( x'tr) $ return ()
                    -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (c^._1,c^._4,c^._5,c^._6,c^._7)))) $ return ()
 

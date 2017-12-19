@@ -15,7 +15,7 @@ module NLP.Syntax.Clause where
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
 import           Control.Lens.Extras                    (is)
-import           Control.Monad                          ((<=<),(>=>),guard,void)
+import           Control.Monad                          ((<=<),(>=>),guard,void,when)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
@@ -393,22 +393,22 @@ whMovement tagged (w,cp) = do
 
 resolveSilentPRO :: TaggedLemma (Lemma ': as) -> (X'Zipper,CP) -> MaybeT (State X'Tree) (TraceChain SpecTP)
 resolveSilentPRO tagged (z,cp) = do
-  trace ("resolveSilentPRO0: CP" ++ T.unpack (showRange (cp^.maximalProjection))) $ return ()
+  -- trace ("resolveSilentPRO0: CP" ++ T.unpack (showRange (cp^.maximalProjection))) $ return ()
   let spec = cp^.complement.specifier
-  trace ("resolveSilentPRO0_1: "  ++ T.unpack (formatTraceChain formatSpecTP spec)) $ return ()
+  -- trace ("resolveSilentPRO0_1: "  ++ T.unpack (formatTraceChain formatSpecTP spec)) $ return ()
   case spec^.trChain of
     Right _ -> return spec
     Left (xs@(LZ _ c _)) -> case c of
-      NULL      -> ((do trace "resolveSilentPRO1_1" $ return ()
+      NULL      -> ((do -- trace "resolveSilentPRO1_1" $ return ()
                         cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
-                        trace "resolveSilentPRO1_2" $ return ()
+                        -- trace "resolveSilentPRO1_2" $ return ()
                         let rng_cp' = cp'^.maximalProjection
                         TraceChain exs' x' <- lift (resolveDP tagged rng_cp')
-                        trace "resolveSilentPRO1_3" $ return ()
+                        -- trace "resolveSilentPRO1_3" $ return ()
                         return (TraceChain (mergeLeftELZ (Left (replaceLZ SilentPRO xs)) exs') x'))
                     <|>
                     return (TraceChain (Left (replaceLZ SilentPRO xs)) Nothing))
-      SilentPRO -> ((do trace "resolveSilentPRO2_1" $ return ()
+      SilentPRO -> ((do -- trace "resolveSilentPRO2_1" $ return ()
                         cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
                         let rng_cp' = cp'^.maximalProjection
                         TraceChain exs' x' <- lift (resolveDP tagged rng_cp')
@@ -416,7 +416,7 @@ resolveSilentPRO tagged (z,cp) = do
                     <|>
                     return (TraceChain (Left xs) Nothing))
       _         -> do
-        trace "resolveSilentPRO3" $ return ()
+        -- trace "resolveSilentPRO3" $ return ()
         return spec
 
 --
@@ -464,9 +464,10 @@ resolveCP xtr = rewriteTree action xtr
 
     action rng = do -- debugfunc ("action_before: " ++ show rng)
                     z <- hoistMaybe . extractZipperById rng =<< lift get
-                    z' <- (replace z <|> return z)
+                    ((replace z >> return ()) <|> return ())
+                    -- z' <- (replace z <|> return z)
                     -- debugfunc ("action_after" ++ show rng)
-                    return z'
+                    -- return z'
     --
     replace :: X'Zipper -> MaybeT (State X'Tree) X'Zipper
     replace = replaceSpecCP >=> replaceCompVP >=> replaceAdjunctCP
@@ -543,17 +544,17 @@ resolveCP xtr = rewriteTree action xtr
 
 
 
-bindingSpec :: Range -> TraceChain SpecTP -> MaybeT (State X'Tree) X'Zipper
+bindingSpec :: Range -> TraceChain SpecTP -> MaybeT (State X'Tree) () -- X'Zipper
 bindingSpec rng spec = do
   z <- hoistMaybe . extractZipperById rng =<< lift get
   let rf = _2._CPCase.complement.specifier .~ spec
       z' = replaceFocusItem rf rf z
   lift (put (toBitree z'))
-  return z'
+  -- return z'
 
 
 -- consider passive case only now for the time being.
-connectRaisedDP :: Range -> MaybeT (State X'Tree) X'Zipper
+connectRaisedDP :: Range -> MaybeT (State X'Tree) () -- X'Zipper
 connectRaisedDP rng = do
   (w,cp) <- retrieveWCP rng
   guard (cp ^. complement.complement.headX.vp_voice == Passive)
@@ -561,16 +562,16 @@ connectRaisedDP rng = do
   rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.maximalProjection)
   cp' <- hoistMaybe (c2^?trResolved._Just._CompVP_CP)
   rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._SpecTP_DP.maximalProjection)
-  if rng1 == rng_dp
-    then do
-      let rf = (_2._CPCase.complement.specifier .~ emptyTraceChain)
-             . (_2._CPCase.complement.complement.complement .~ [c2])
-          w' = replaceFocusItem rf rf w
-      lift (put (toBitree w'))
-      return w'
+  when (rng1 == rng_dp) $ do
+    let rf = (_2._CPCase.complement.specifier .~ emptyTraceChain)
+           . (_2._CPCase.complement.complement.complement .~ [c2])
+        w' = replaceFocusItem rf rf w
+    lift (put (toBitree w'))
+
+{-      -- return w'
     else
       return w
-
+-}
 
 -- I think we should change the name of these bindingAnalysis.. functions.
 
@@ -578,24 +579,37 @@ connectRaisedDP rng = do
 -- | This is the final step to bind inter-clause trace chain
 --
 bindingAnalysis :: TaggedLemma (Lemma ': as) -> X'Tree -> X'Tree
-bindingAnalysis tagged = rewriteTree $ \rng -> trace ("\nbindingAnalysis: " ++ show rng) $ lift (resolveDP tagged rng) >>= bindingSpec rng
+bindingAnalysis tagged = rewriteTree $ \rng -> {- trace ("\nbindingAnalysis: " ++ show rng) $ -} lift (resolveDP tagged rng) >>= bindingSpec rng
 
 
 --
 -- |
 --
 bindingAnalysisRaising :: X'Tree -> X'Tree
-bindingAnalysisRaising = rewriteTree $ \rng -> do z <- hoistMaybe . extractZipperById rng =<< lift get
-                                                  (connectRaisedDP rng <|> return z)
+bindingAnalysisRaising = rewriteTree (\rng -> connectRaisedDP rng <|> return ())
+
+--  $ \rng -> connectRaisedDP rng  {- do z <- hoistMaybe . extractZipperById rng =<< lift get
+--                                                  (connectRaisedDP rng <|> return z) -}
 
 
-
-rewriteTree :: (Range -> MaybeT (State X'Tree ) X'Zipper) -> X'Tree -> X'Tree
+--
+-- | This is a generic tree-rewriting operation.
+--   It assumes range index is not changed after each operation
+--
+rewriteTree :: (Range -> MaybeT (State X'Tree ) ()) -> X'Tree -> X'Tree
 rewriteTree action xtr = execState (go rng0) xtr
   where getrng = fst . getRoot1 . current
         rng0 = (either fst fst . getRoot) xtr
         go rng = void . runMaybeT $ do
-                   z' <- action rng
-                   ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
+                   action rng
+                   w <- hoistMaybe . extractZipperById rng =<< lift get
+                   (((do
+                        w' <- hoistMaybe (child1 w)  -- depth first
+                        lift (go (getrng w')))
+                     <|> return ())
+
                     >>
-                    (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
+                    ((do
+                         w'' <- hoistMaybe (next w)
+                         lift (go (getrng w'')))
+                     <|> return ()))
