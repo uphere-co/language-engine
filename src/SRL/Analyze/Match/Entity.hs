@@ -24,7 +24,7 @@ import           NLP.Syntax.Type.Verb     (vp_auxiliary)
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
 --
-import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..),cpdpppFromX'Tree)
+import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..),cpdpppFromX'Tree,emptyDPInfo)
 --
 import Debug.Trace
 import NLP.Syntax.Format.Internal
@@ -125,6 +125,15 @@ entityTextDP tagged dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> fromMaybe "" (fmap (headText tagged) (dp^.complement))
     _ -> T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
+
+
+entityFromAP :: TaggedLemma '[Lemma]
+             -> AP
+             -> (EntityInfo,DPInfo)
+entityFromAP tagged ap =
+  let rng = ap^.maximalProjection
+      txt = T.intercalate " " (tokensByRange tagged rng)
+  in (EI rng rng Nothing txt False False, emptyDPInfo)
 
 
 entityFromDP :: [X'Tree]

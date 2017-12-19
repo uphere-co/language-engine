@@ -263,7 +263,7 @@ Walt Disney Co (DIS.N) will stop providing new movies to Netflix Inc (NFLX.O) st
 
 
 
--- | conjunction -  is discussing ... and hopes to .. 
+-- | conjunction -  is discussing ... and hopes to ..
 Brazilian steelmaker Usiminas Siderugicas de Minas Gerais SA is currently discussing a 25 percent steel price hike with automakers and hopes to conclude talks by the end of December, Chief Executive Sergio Leite said on Wednesday.
 
 
@@ -289,3 +289,32 @@ Collahuasi is postponing its plan to seek approval of an environmental impact st
 
 -- | on Tuesday
 Israeli chip maker Mellanox Technologies saw its shares surge on the Nasdaq on Tuesday after activist hedge fund Starboard Value LP bought a 10.7 percent stake to influence strategy.
+
+-- |
+Indian fashion and retail conglomerate Future Group said on Tuesday it plans to open 10,000 member-only stores by 2022, utilizing the technology and data of Alphabet Inc's Google and Facebook Inc.
+
+-- |
+Indian fashion and retail conglomerate Future Group said on Tuesday it plans to open 10,000 member-only stores by 2022.
+
+
+-- | some of the momentum that pushed stocks
+European shares opened slightly higher on Wednesday, losing some of the momentum that pushed stocks in Asia and on Wall Street to new highs overnight on continued faith in synchronised economic growth around the world.
+
+-- |
+A unit of AmerisourceBergen Corp, one of the largest U.S. drug wholesalers, has agreed to pay $625 million to resolve a U.S. government probe involving pre-filled syringes, the company said in a filing with U.S. securities regulators on Tuesday.
+
+
+-- | PRO identification
+India on Wednesday told U. S. Secretary of State Rex Tillerson it plans to retain its North Korean embassy, so as to keep open channels of communication as Washington steps up global pressure to isolate Pyongyang for its nuclear and missile programmes.
+
+-- | smaller than expected volume
+Shares of U.S. Silica Holdings Inc (SLCA.N) fell as much as 11 percent on Tuesday after the sand producer reported smaller than expected volume in quarterly sand sales.
+
+-- | buy payment technology firm Cayan
+Total System Services Inc (TSYS) on Monday said it would buy payment technology firm Cayan for $1.05 billion in cash to expand its offerings to small and mid-sized U.S. businesses.
+
+-- | redomicile (too difficult word)
+Liberty Specialty Markets said on Friday it planned to redomicile its UK insurance company to Luxembourg as a result of Britain's decision to leave the European Union.
+
+-- | that it said
+The U.N. migration agency called on social media giants on Friday to control their platforms that it said are being used by smugglers to lure West African migrants to Libya where they face detention, torture and slavery.

@@ -49,6 +49,7 @@ data DPInfo = DI { _adi_appos :: Maybe EntityInfo
 
 makeLenses ''DPInfo
 
+emptyDPInfo = DI Nothing Nothing Nothing [] []
 
 data ExceptionalFrame = FrameCopula  | FrameIdiom | FrameLightVerb | FrameNone
                       deriving (Show,Eq,Ord)

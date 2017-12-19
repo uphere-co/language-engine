@@ -96,6 +96,7 @@ instance FromJSON DocAnalysisInput where
 
 
 data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Maybe Range) Int
+                           --  , _vm_hnrangeToIndex :: HashMap Range Int
                            , _vm_rangeDependency :: [(Range,Range)]
                            , _vm_headRangeToFullRange :: [(Range,Range)]
                            }

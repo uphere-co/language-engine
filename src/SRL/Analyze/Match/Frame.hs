@@ -114,15 +114,33 @@ matchObjects :: [(PBArg,Text)]
              -> ArgPattern p GRel
              -> [(FNFrameElement, CompVP)]
 matchObjects rolemap verbp patt = do
-  (garg,obj) <- zip [GA1,GA2] (filter (\case CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False) (verbp^..complement.traverse.trResolved._Just))
-  (p,a) <- maybeToList (pbArgForGArg garg patt)
-  case obj of
-    CompVP_CP cp -> guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
-    CompVP_DP dp -> guard (a == GR_NP (Just garg))
-    _            -> []
-  fe <- FNFrameElement <$> maybeToList (lookup p rolemap)
-  return (fe, obj)
-
+    -- trace ("\nmatchObjects1: " ++ show (verbp^.headX.vp_lemma)) (return ())
+    let compvps = verbp^..complement.traverse.trResolved._Just
+    -- trace ("\nmatchObjects1.1: " ++ (T.unpack . T.intercalate "\n" . map formatCompVP) compvps) (return ())
+    matchNormalObjects compvps <|> matchAdj compvps
+  where
+    matchNormalObjects compvps = do
+      (garg,obj) <- zip [GA1,GA2] (filter (\case CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False) compvps) -- (verbp^..complement.traverse.trResolved._Just))
+      -- trace ("\nmatchObjects2: " ++ show (verbp^.headX.vp_lemma)) (return ())
+      (p,a) <- maybeToList (pbArgForGArg garg patt)
+      -- trace ("\nmatchObjects3: " ++ show (verbp^.headX.vp_lemma)) (return ())
+      case obj of
+        CompVP_CP cp -> guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
+        CompVP_DP dp -> guard (a == GR_NP (Just garg))
+        _            -> []
+      -- trace ("\nmatchObjects4: " ++ show (verbp^.headX.vp_lemma)) (return ())
+      fe <- FNFrameElement <$> maybeToList (lookup p rolemap)
+      -- trace ("\nmatchObjects5: " ++ show (verbp^.headX.vp_lemma)) (return ())
+      return (fe, obj)
+    matchAdj compvps = do
+      ap <- case compvps of [] -> [] ; (x:_) -> case x of CompVP_AP ap -> [ap] ; _ -> []
+      -- (garg,obj) <- (GA1,ap)
+      (p,a) <- maybeToList (pbArgForGArg GA1 patt)
+      guard (a == GR_NP (Just GA1))
+      -- trace ("\nmatchObjects4: " ++ show (verbp^.headX.vp_lemma)) (return ())
+      fe <- FNFrameElement <$> maybeToList (lookup p rolemap)
+      -- trace ("\nmatchObjects5: " ++ show (verbp^.headX.vp_lemma)) (return ())
+      return (fe, CompVP_AP ap)
 
 
 matchPP :: [X'Tree] -> CP -> (Maybe Text,Maybe PrepClass,Maybe Bool) -> Maybe PP

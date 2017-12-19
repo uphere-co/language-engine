@@ -134,6 +134,9 @@ testsets =
   , ("petroleo_file","Brazilian state-run oil company Petroleo Brasileiro SA has filed documents related to an initial public offering of its fuel distribution unit BR Distribuidora SA, it said in a filing on Wednesday.")
   , ("kinder_morgan","Kinder Morgan Canada Ltd has complied with an order by the country's National Energy Board (NEB) to stop some work on its Trans Mountain pipeline expansion, the regulator said on Thursday.")
   , ("qualcomm_approval","U.S. smartphone chipmaker Qualcomm Inc may win European Union approval for its bid to acquire NXP Semiconductors NV by the end of the year, Bloomberg reported on Thursday, citing people familiar with the matter.")
+  , ("indian_fashion","Indian fashion and retail conglomerate Future Group said on Tuesday it plans to open 10,000 member-only stores by 2022, utilizing the technology and data of Alphabet Inc's Google and Facebook Inc.")
+  , ("push_momentum","European shares opened slightly higher on Wednesday, losing some of the momentum that pushed stocks in Asia and on Wall Street to new highs overnight on continued faith in synchronised economic growth around the world.")
+
   ]
 
 

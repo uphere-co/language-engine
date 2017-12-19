@@ -208,10 +208,13 @@ formatVerbStructure (VerbStructure vp senses mrmmtoppatts) =
   ]
 
 
+-- maybe "" show (dp^?complement._Just.headX)
+
 showMatchedFE :: TaggedLemma '[Lemma] -> (FNFrameElement, CompVP) -> String
 --                                         FE   range prep text
-showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (maybe "" show (dp^?complement._Just.headX)) ("" :: Text) (headTextDP tagged dp)
-showMatchedFE tagged (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (show rng_cp) ("" :: Text) ((T.intercalate " " . tokensByRange tagged) rng_cp)
+showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (formatDP dp)  ("" :: Text) (headTextDP tagged dp)
+showMatchedFE tagged (fe,CompVP_AP ap) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (formatAP ap)  ("" :: Text) ((T.intercalate " " . tokensByRange tagged) (ap^.maximalProjection))
+showMatchedFE tagged (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("CP" <> showRange rng_cp) ("" :: Text) ((T.intercalate " " . tokensByRange tagged) rng_cp)
   where rng_cp = cp^.maximalProjection
 showMatchedFE tagged (fe,CompVP_PP pp) =
   let prep = case pp^.headX.hp_prep of
