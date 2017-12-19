@@ -261,9 +261,9 @@ checkTrace c =
       Subj   -> do let dp = fmap (\case SpecTP_DP dp -> headTextDP tagged dp; _ -> "") (cp ^.complement.specifier)  -- for the time being. ignore CP subject
                    {- trace ("\ncheckTrace:" ++ show dp) $ -}
                    -- trace ( x'tr) $ return ()
-                   trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (c^._1,c^._4,c^._5,c^._6,c^._7)))) $ return ()
+                   -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (c^._1,c^._4,c^._5,c^._6,c^._7)))) $ return ()
 
-                   trace ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr) $ return ()
+                   -- trace ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr) $ return ()
                    return (dp == c ^._3._2)
       Comp n -> do let comps = cp ^.complement.complement.complement
                    comp <- comps ^? ix (n-1)

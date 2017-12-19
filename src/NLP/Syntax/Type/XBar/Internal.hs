@@ -299,6 +299,9 @@ type instance Complement 'X_A = ()
 
 type AP = XP 'X_A
 
+mkAP :: Range -> AP
+mkAP rng = XP () rng () () ()
+
 data CompVP = CompVP_Unresolved Range
             | CompVP_CP CP
             | CompVP_DP DetP

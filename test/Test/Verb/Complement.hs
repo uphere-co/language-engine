@@ -92,7 +92,7 @@ inf_control_1
 embedded_that_1 :: TestVerbComplement
 embedded_that_1
   = ( "The cat thinks that he is out of the bag.", 5
-    , (("he",Just (Pronoun P_He False)), [], [],False)
+    , (("he",Just (Pronoun P_He False)), ["out of the bag"], [],False)
     , [(0,("the","The")),(1,("cat","cat")),(2,("think","thinks")),(3,("that","that")),(4,("he","he")),(5,("be","is")),(6,("out","out")),(7,("of","of")),(8,("the","the")),(9,("bag","bag")),(10,(".","."))]
     , PN "ROOT" [PN "S" [PN "NP" [PL ("DT","The"),PL ("NN","cat")],PN "VP" [PL ("VBZ","thinks"),PN "SBAR" [PL ("IN","that"),PN "S" [PN "NP" [PL ("PRP","he")],PN "VP" [PL ("VBZ","is"),PN "ADJP" [PL ("IN","out"),PN "PP" [PL ("IN","of"),PN "NP" [PL ("DT","the"),PL ("NN","bag")]]]]]]],PL (".",".")]]
     , []
@@ -248,9 +248,26 @@ to_infinitive_1
     )
 
 
+adjp_1 :: TestVerbComplement
+adjp_1
+  = ( "Shares of U.S. Silica Holdings Inc fell as much as 11 percent on Tuesday after the sand producer reported smaller than expected volume in quarterly sand sales."
+    , 18
+    , (("the sand producer",Just (Article Definite)), ["smaller than expected volume in quarterly sand sales"],[], False)
+    , [(0,("share","Shares")),(1,("of","of")),(2,("U.S.","U.S.")),(3,("Silica","Silica")),(4,("Holdings","Holdings")),(5,("Inc","Inc")),(6,("fall","fell")),(7,("as","as")),(8,("much","much")),(9,("as","as")),(10,("11","11")),(11,("percent","percent")),(12,("on","on")),(13,("Tuesday","Tuesday")),(14,("after","after")),(15,("the","the")),(16,("sand","sand")),(17,("producer","producer")),(18,("report","reported")),(19,("smaller","smaller")),(20,("than","than")),(21,("expect","expected")),(22,("volume","volume")),(23,("in","in")),(24,("quarterly","quarterly")),(25,("sand","sand")),(26,("sale","sales")),(27,(".","."))]
+    , PN "ROOT" [PN "S" [PN "NP" [PN "NP" [PL ("NNS","Shares")],PN "PP" [PL ("IN","of"),PN "NP" [PL ("NNP","U.S."),PL ("NNP","Silica"),PL ("NNPS","Holdings"),PL ("NNP","Inc")]]],PN "VP" [PL ("VBD","fell"),PN "NP" [PN "NP" [PN "QP" [PL ("RB","as"),PL ("JJ","much"),PL ("IN","as"),PL ("CD","11")],PL ("NN","percent")],PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Tuesday")]]],PN "SBAR" [PL ("IN","after"),PN "S" [PN "NP" [PL ("DT","the"),PL ("NN","sand"),PL ("NN","producer")],PN "VP" [PL ("VBD","reported"),PN "ADJP" [PL ("JJR","smaller"),PN "PP" [PL ("IN","than"),PN "NP" [PN "NP" [PL ("VBN","expected"),PL ("NN","volume")],PN "PP" [PL ("IN","in"),PN "NP" [PL ("JJ","quarterly"),PL ("NN","sand"),PL ("NNS","sales")]]]]]]]]],PL (".",".")]]
+    , []
+    , []
+    )
+
 checkSubjCompAdjunct :: TestVerbComplement -> Bool
 checkSubjCompAdjunct c = fromMaybe False $ do
-  let tagged = mkTaggedLemma (c^._4) (c^._5) (c^._6) (c^._7)
+  let txt = c^._1
+      lmatknlst = c^._4
+      pt = c^._5
+      tagposs = c^._6
+      synsets = c^._7
+      tagged = mkTaggedLemma lmatknlst pt tagposs synsets
+
       vps = mkVPS (c^._4) (c^._5)
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
@@ -275,9 +292,9 @@ checkSubjCompAdjunct c = fromMaybe False $ do
                                                   CompPP_Gerund rng -> T.intercalate " " (tokensByRange tagged rng)
       compVP_to_text (CompVP_AP ap)          = T.intercalate " " (tokensByRange tagged (ap^.maximalProjection))
 
-      lst_comps = cp^..complement.complement.complement.traverse.trResolved.to (fmap compVP_to_text)
+      lst_comps = cp^..complement.complement.complement.traverse.trResolved._Just.to compVP_to_text
       lst_comps_test = c^._3._2
-      b_comps = getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst_comps lst_comps_test)) && (length lst_comps == length lst_comps_test)
+      b_comps = lst_comps == lst_comps_test  -- getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst_comps lst_comps_test)) && (length lst_comps == length lst_comps_test)
       -- test adjuncts
       lst_adjs = cp^..complement.complement.adjunct.traverse.to (adjunctVPText tagged)
       lst_adjs_test = c^._3._3
@@ -285,8 +302,12 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       b_topicalized = fromMaybe False $ do
                         cp^?specifier._Just._SpecCP_Topic
                         return True
+  -- trace ("\nHERE I AM!") (return())
   -- trace  ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr ++ "\n" ++ formatCP cp ++ "\n" ) $ return ()
-  -- trace ("\n" ++ show lst_comps) $ return ()
+  -- trace ("\n" ++ show (lst_comps,lst_comps_test)) $ return ()
+  -- trace ("\n" ++ show (b_subj,b_comps,b_adjuncts,b_topicalized)) $ return ()
+  -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (txt,lmatknlst,pt,tagposs,synsets)))) $ return ()
+
   return  (b_subj && b_comps && b_adjuncts && (b_topicalized == c^._3._4))
 
 
@@ -308,10 +329,11 @@ testcases = [ -- -- main_finite_1
               -- -- , rrc_passive_1
             , rrc_passive_2
             , to_infinitive_1
+            , adjp_1
             ]
 
 unitTests :: TestTree
 unitTests = testGroup "Subject and direct/indirect object identification" . flip map testcases $ \c ->
               testCase (T.unpack (c^._1)) $
-                (checkSubjCompAdjunct c == True) @? (let (txt,_,_,lmatknlst,pt,tagged,synsets)=c
-                                                     in T.unpack (T.intercalate "\n" (formatDetail  (txt,lmatknlst,pt,tagged,synsets))))
+                (checkSubjCompAdjunct c == True) @? (let (txt,_,_,lmatknlst,pt,tagposs,synsets)=c
+                                                     in T.unpack (T.intercalate "\n" (formatDetail  (txt,lmatknlst,pt,tagposs,synsets))))

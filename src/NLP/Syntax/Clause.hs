@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE KindSignatures      #-}
 {-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
@@ -63,7 +64,7 @@ headVP vp = getLast (mconcat (map (Last . Just . fst) (vp^.vp_words)))
 complementCandidates :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                         VerbProperty (Zipper t) -> Zipper t -> ([Zipper t],Maybe (Zipper t))
 complementCandidates vprop z_vp =
-    let cs_ord = siblingsBy (nextNotComma) checkNPSBAR =<< maybeToList (headVP vprop)
+    let cs_ord = siblingsBy (nextNotComma) checkCompVPness =<< maybeToList (headVP vprop)
         -- topicalized CP
         c_top = do guard (isChunkAs VP (current z_vp))
                    z_np <- prev z_vp
@@ -79,15 +80,16 @@ complementCandidates vprop z_vp =
     nextNotComma z = do n <- next z
                         guard (not (isPOSAs M_COMMA (current n))) -- ad hoc separation using comma
                         return n
-    checkNPSBAR z = case rootTag z of
-                      Left NP    -> True
-                      Left PP    -> True
-                      Left SBAR  -> True
-                      Left S     -> True
-                      Left SBARQ -> True
-                      Left SQ    -> True
-                      Left _     -> False
-                      Right p    -> isNoun p == Yes
+    checkCompVPness z = case rootTag z of
+                          Left NP    -> True
+                          Left PP    -> True
+                          Left ADJP  -> True
+                          Left SBAR  -> True
+                          Left S     -> True
+                          Left SBARQ -> True
+                          Left SQ    -> True
+                          Left _     -> False
+                          Right p    -> isNoun p == Yes || isAdjective p == Yes
 
 
 complementsOfVerb :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
@@ -129,13 +131,18 @@ complementsOfVerb tagged vprop z_vp =
                        subs = getSubsFromPPTree pptr
                    return (TraceChain (Right []) (Just (checkTimePrep tagged pp)), [],subs)
     xform_cp z = (TraceChain (Right []) (Just (CompVP_Unresolved (getRange (current z)))), [],[])
+    xform_ap z = let ap = mkAP (getRange (current z))
+                 in  (TraceChain (Right []) (Just (CompVP_AP ap)), [],[APCase ap])
 
     xform :: Zipper t -> (TraceChain CompVP, [AdjunctVP], [CPDPPP])
     xform z = case rootTag (current z) of
                 Left NP    -> xform_dp z
                 Left PP    -> xform_pp z
-                Left _     -> xform_cp z
-                Right p    -> if isNoun p == Yes then xform_dp z else xform_cp z
+                Left ADJP  -> xform_ap z
+                Left _     -> xform_cp z  -- for the time being
+                Right p    -> if | isNoun p      == Yes -> xform_dp z
+                                 | isAdjective p == Yes -> xform_ap z
+                                 | otherwise            -> xform_cp z
 
 
 
@@ -254,12 +261,12 @@ constructCP tagged vprop = do
 
 
 hierarchyBits :: TaggedLemma (Lemma ': as) -> (CP, [CPDPPP]) -> Maybe [(Range, (Range, CPDPPP))]
-hierarchyBits _tagged (cp,dps) = do
+hierarchyBits _tagged (cp,subs) = do
   let rng = cp^.maximalProjection
       cpbit = (rng,(rng,CPCase cp))
       f x = let r = toRange x
             in (r,(r,x))
-  return (cpbit:map f dps)
+  return (cpbit:map f subs)
 
 
 
@@ -483,12 +490,12 @@ resolveCP xtr = rewriteTree action xtr
                 <|>
                 (return x))
       -- flip traverse xs' $ \x -> do
-      --   trace ("\nreplaceCompVP7 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())               
+      --   trace ("\nreplaceCompVP7 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
       let rf = _2._CPCase.complement.complement.complement .~ xs'
       z' <- hoistMaybe . extractZipperById rng =<< lift get
       w' <- putAndReturn (replaceFocusItem rf rf z')
       -- debugfunc "replaceCompVP8"
-      
+
       -- trace ("\nreplaceCompVP8 :\n" ++ T.unpack (formatX'Tree xtr')) $ return ()
 
       return w'
