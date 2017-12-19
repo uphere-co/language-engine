@@ -106,6 +106,7 @@ mkMGVertices (x'tr,tagged,depmap) (matched,nmatched) =
                      case x of
                        CompVP_Unresolved _ -> []
                        CompVP_CP _cp -> [] -- CP is not an entity.
+                       CompVP_AP ap -> return (entityFromAP tagged ap)
                        CompVP_DP dp -> do
                          let y@(ei,_) = entityFromDP x'tr tagged dp
                              rng' = ei^.ei_fullRange
@@ -181,6 +182,7 @@ mkRoleEdges vmap matched = do
                                                   C_WORD prep -> if prep == Lemma "that" then Nothing else return (unLemma prep)
                                     in return (rng_cp,mprep)
                     CompVP_DP dp -> return ((dp^.maximalProjection),Nothing)
+                    CompVP_AP ap -> return ((ap^.maximalProjection),Nothing)                    
                     CompVP_PP pp -> return (pp^.complement.to compPPToRange,pp^?headX.hp_prep._Prep_WORD)
   let rng'full = fromMaybe rng' (lookup rng' headfull)
   i' <- maybeToList (HM.lookup (0,Just rng'full) rngidxmap)  -- frame element
