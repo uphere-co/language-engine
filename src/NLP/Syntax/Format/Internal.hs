@@ -4,7 +4,7 @@ module NLP.Syntax.Format.Internal where
 
 import           Control.Lens                       ((^.),(^..),(^?),_Just,to)
 import           Data.Bifunctor                     (bimap)
-import           Data.Foldable                      (toList)
+-- import           Data.Foldable                      (toList)
 import           Data.Maybe                         (fromMaybe)
 import           Data.Monoid                        ((<>))
 import           Data.Text                          (Text)
@@ -12,10 +12,10 @@ import qualified Data.Text                     as T
 import           Text.Printf                        (printf)
 --
 import           Data.Bitree
-import           Data.BitreeZipper                  (current)
+-- import           Data.BitreeZipper                  (current)
 import           Data.ListZipper                    (ListZipper(LZ))
 import           Data.Range                         (Range)
-import           NLP.Type.PennTreebankII            (getRange,tokenWord,Lemma(..))
+import           NLP.Type.PennTreebankII            (Lemma(..))
 import           Text.Format.Tree
 --
 import           NLP.Syntax.Type.XBar
@@ -33,6 +33,7 @@ formatSpecTP (SpecTP_DP x) = x^.maximalProjection.to (T.pack . show)
 formatSpecTP (SpecTP_Unresolved x) = (T.pack . show) x
 
 
+formatComplementizer :: Complementizer -> Text
 formatComplementizer C_PHI      = ""
 formatComplementizer (C_WORD w) = "-" <> unLemma w
 
@@ -60,27 +61,35 @@ formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
                 CompPP_Gerund rng -> "ing" <> T.pack (show rng)
 
 
+
+
 formatDP :: DetP -> Text
 formatDP dp = "(DP"        <> dp^.maximalProjection.to show.to T.pack <>
               "[D: "       <> maybe "" (T.pack.show) (dp^.headX.hd_range) <>
-              "(NP:"      <> maybe "" formatNP (dp^? complement._Just) <> ")" <> 
+              "(NP:"      <> maybe "" formatNP (dp^? complement._Just) <> ")" <>
               " spec: "    <> T.intercalate " " (map (T.pack.show) (dp^.specifier)) <>
               " comp: "    <> maybe "" formatCompDP  (dp^?complement._Just.complement._Just) <>
               " adjunct: " <> (T.intercalate "," . map formatAdjunctDP) (dp^.adjunct) <>
               "])"
 
+
 formatNP :: NounP -> Text
 formatNP np = (np^.maximalProjection.to show.to T.pack) <>
               (np^.headX.hn_range.to show.to T.pack) <>
               fromMaybe "" (np^?complement._Just.to compDPToRange.to show.to T.pack)
---  maybe "" (T.pack.show) (dp^?complement._Just.headX.hn_range) <>
+
+
+formatAP :: AP -> Text
+formatAP ap = "AP" <> (ap^.maximalProjection.to show.to T.pack)
+
+
 
 formatCompVP :: CompVP -> Text
 formatCompVP (CompVP_Unresolved r)  = "unresolved" <> T.pack (show r)
 formatCompVP (CompVP_CP cp) = "CP" <> cp^.headX.to formatComplementizer <> cp^.maximalProjection.to show.to T.pack
 formatCompVP (CompVP_DP dp) = formatDP dp
 formatCompVP (CompVP_PP pp) = formatPP pp
-
+formatCompVP (CompVP_AP ap) = formatAP ap
 
 
 formatTraceChain :: (a -> Text) -> TraceChain a -> Text
@@ -102,6 +111,7 @@ formatTraceChain f (TraceChain xs0 x) =
 formatX'Tree :: X'Tree -> Text
 formatX'Tree tr = formatBitree fmt tr
   where
-        fmt (rng,CPCase x) = "CP" <> showRange rng <> ": VP-comps: " <> T.intercalate "," (x^..complement.complement.complement.traverse.trResolved._Just.to formatCompVP)
-        fmt (_  ,DPCase x) = formatDP x
-        fmt (_  ,PPCase x) = formatPP x
+        fmt (rng, CPCase x) = "CP" <> showRange rng <> ": VP-comps: " <> T.intercalate "," (x^..complement.complement.complement.traverse.trResolved._Just.to formatCompVP)
+        fmt (_  , DPCase x) = formatDP x
+        fmt (_  , PPCase x) = formatPP x
+        fmt (_  , APCase x) = formatAP x

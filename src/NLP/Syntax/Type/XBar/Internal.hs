@@ -41,7 +41,13 @@ data TaggedLemma t = TaggedLemma { _pennTree  :: BitreeICP t
                                  , _tagList   :: [TagPos TokIdx MarkType]
                                  }
 
-data XType = X_V | X_T | X_C | X_D | X_N | X_P
+data XType = X_V
+           | X_T
+           | X_C
+           | X_D
+           | X_N
+           | X_P
+           | X_A
 
 type family Property   (x :: XType) :: *
 type family Maximal    (x :: XType) :: *
@@ -282,10 +288,25 @@ mkPP (prep,pclass) rng dp = XP (HeadPP prep pclass) rng () () (CompPP_DP dp)
 mkPPGerund :: (Prep,PrepClass) -> Range -> Zipper t -> PP
 mkPPGerund (prep,pclass) rng z = XP (HeadPP prep pclass) rng () () (CompPP_Gerund (getRange (current z)))
 
+
+
+type instance Property   'X_A = ()
+type instance Maximal    'X_A = Range
+type instance Specifier  'X_A = ()
+type instance Adjunct    'X_A = ()
+type instance Complement 'X_A = ()
+
+
+type AP = XP 'X_A
+
+mkAP :: Range -> AP
+mkAP rng = XP () rng () () ()
+
 data CompVP = CompVP_Unresolved Range
             | CompVP_CP CP
             | CompVP_DP DetP
             | CompVP_PP PP
+            | CompVP_AP AP
 
 
 data AdjunctVP = AdjunctVP_Unresolved Range
@@ -350,6 +371,7 @@ mkCP mc rng spec adjs tp = XP mc rng spec adjs tp
 data CPDPPP = CPCase CP
             | DPCase DetP
             | PPCase PP
+            | APCase AP
 
 
 type X'Tree = Bitree (Range,CPDPPP) (Range,CPDPPP)
@@ -364,8 +386,10 @@ data PPTree = PPTree PP (Maybe DPTree)
 data DPTree = DPTree DetP [PPTree]
 
 
-
-getSubsFromDPTree (DPTree dp xs) = DPCase dp : (do x@(PPTree pp my) <- xs
+getSubsFromDPTree :: DPTree -> [CPDPPP]
+getSubsFromDPTree (DPTree dp xs) = DPCase dp : (do PPTree pp my <- xs
                                                    PPCase pp : (maybe [] getSubsFromDPTree my))
 
+
+getSubsFromPPTree :: PPTree -> [CPDPPP]
 getSubsFromPPTree (PPTree pp my) = PPCase pp : maybe [] getSubsFromDPTree my

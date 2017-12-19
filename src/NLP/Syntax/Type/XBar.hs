@@ -13,9 +13,8 @@ import           Data.Maybe                         (fromMaybe,maybeToList)
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
 --
-import           Data.BitreeZipper                  (current)
 import           Data.Range                         (Range,isInside)
-import           NLP.Type.PennTreebankII            (tokenWord,getRange)
+import           NLP.Type.PennTreebankII            (tokenWord)
 --
 import           NLP.Syntax.Type.XBar.Internal
 import           NLP.Syntax.Type.XBar.TH
@@ -51,16 +50,20 @@ compVPToSpecTP (CompVP_DP y)         = SpecTP_DP y
 compVPToSpecTP (CompVP_PP y)         = case y^.complement of
                                          CompPP_DP dp -> SpecTP_DP dp
                                          CompPP_Gerund rng -> SpecTP_Unresolved rng
+compVPToSpecTP (CompVP_AP ap)        = SpecTP_Unresolved (ap^.maximalProjection)  -- for the time being
 
+
+specTPToCompVP :: SpecTP -> CompVP
 specTPToCompVP (SpecTP_Unresolved x) = CompVP_Unresolved x
 specTPToCompVP (SpecTP_DP x)         = CompVP_DP x
 
 
 compVPToCPDPPP :: CompVP -> Maybe CPDPPP
-compVPToCPDPPP (CompVP_Unresolved x) = Nothing
+compVPToCPDPPP (CompVP_Unresolved _) = Nothing
 compVPToCPDPPP (CompVP_CP cp) = Just (CPCase cp)
 compVPToCPDPPP (CompVP_DP dp) = Just (DPCase dp)
 compVPToCPDPPP (CompVP_PP pp) = Just (PPCase pp)
+compVPToCPDPPP (CompVP_AP pp) = Just (APCase pp)
 
 
 headTextDP :: TaggedLemma t -> DetP -> Text
@@ -90,13 +93,11 @@ compVPToHeadText tagged (CompVP_DP dp)          = headTextDP tagged dp
 compVPToHeadText tagged (CompVP_PP pp)          = case pp^.complement of
                                                     CompPP_DP dp      -> headTextDP tagged dp
                                                     CompPP_Gerund rng -> T.intercalate " " (tokensByRange tagged rng)
-
+compVPToHeadText tagged (CompVP_AP ap)          = T.intercalate " " (tokensByRange tagged (ap^.maximalProjection))
 
 
 compVPToRange :: CompVP -> Range
 compVPToRange = (\case SpecTP_Unresolved rng -> rng; SpecTP_DP dp -> dp^.maximalProjection) . compVPToSpecTP
-
-
 
 
 compPPToRange :: CompPP -> Range
@@ -108,3 +109,4 @@ toRange :: CPDPPP -> Range
 toRange (CPCase cp) = cp^.maximalProjection
 toRange (DPCase dp) = dp^.maximalProjection
 toRange (PPCase pp) = pp^.maximalProjection
+toRange (APCase ap) = ap^.maximalProjection

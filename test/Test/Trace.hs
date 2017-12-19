@@ -28,6 +28,9 @@ import           NLP.Syntax.Util                   (mkTaggedLemma)
 import           Test.Common
 import           Test.Tasty
 import           Test.Tasty.HUnit
+--
+import Debug.Trace
+import NLP.Syntax.Format
 
 
 
@@ -209,6 +212,16 @@ test_topicalization_move
     )
 
 
+test_that_clause :: TestTrace
+test_that_clause =
+    ( "European shares lost some of the momentum that pushed stocks in Asia."
+    , 8, (Subj,TraceChain (Left  (LZ [] Moved [WHPRO])) (Just "the momentum"))
+    , [(0,("european","European")),(1,("share","shares")),(2,("lose","lost")),(3,("some","some")),(4,("of","of")),(5,("the","the")),(6,("momentum","momentum")),(7,("that","that")),(8,("push","pushed")),(9,("stock","stocks")),(10,("in","in")),(11,("Asia","Asia")),(12,(".","."))]
+    , PN "ROOT" [PN "S" [PN "NP" [PL ("JJ","European"),PL ("NNS","shares")],PN "VP" [PL ("VBD","lost"),PN "NP" [PN "NP" [PL ("DT","some")],PN "PP" [PL ("IN","of"),PN "NP" [PN "NP" [PL ("DT","the"),PL ("NN","momentum")],PN "SBAR" [PN "WHNP" [PL ("WDT","that")],PN "S" [PN "VP" [PL ("VBD","pushed"),PN "NP" [PL ("NNS","stocks")],PN "PP" [PL ("IN","in"),PN "NP" [PL ("NNP","Asia")]]]]]]]]],PL (".",".")]]
+    , []
+    , []
+    )
+
 
 
 showDetail :: TestTrace -> IO ()
@@ -230,6 +243,7 @@ testcases = [ test_silent_pronoun
             , test_free_relative_clause_object_1
             , test_free_relative_clause_object_2
             , test_topicalization_move
+            , test_that_clause
             ]
 
 checkTrace :: TestTrace -> Bool
@@ -242,10 +256,15 @@ checkTrace c =
     cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                              -- anyway need to be rewritten.
     cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'tr)
-    
+
     case c^._3._1 of
-      Subj   -> let dp = fmap (\case SpecTP_DP dp -> headTextDP tagged dp; _ -> "") (cp ^.complement.specifier)  -- for the time being. ignore CP subject
-                in return (dp == c ^._3._2)
+      Subj   -> do let dp = fmap (\case SpecTP_DP dp -> headTextDP tagged dp; _ -> "") (cp ^.complement.specifier)  -- for the time being. ignore CP subject
+                   {- trace ("\ncheckTrace:" ++ show dp) $ -}
+                   -- trace ( x'tr) $ return ()
+                   -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (c^._1,c^._4,c^._5,c^._6,c^._7)))) $ return ()
+
+                   -- trace ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr) $ return ()
+                   return (dp == c ^._3._2)
       Comp n -> do let comps = cp ^.complement.complement.complement
                    comp <- comps ^? ix (n-1)
                    let dp = fmap (compVPToHeadText tagged) comp

@@ -9,23 +9,20 @@ module NLP.Syntax.Format
 ) where
 
 import           Control.Lens
-import           Data.Foldable                 (toList)
 import           Data.Maybe
 import           Data.Monoid                   ((<>))
 import           Data.Text                     (Text)
 import qualified Data.Text               as T
 import           Text.Printf
 --
-import           Data.Bitree
-import           Data.BitreeZipper
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty                (Tense(..),Voice(..),Aspect(..))
 --
-import           NLP.Syntax.Clause
+-- import           NLP.Syntax.Clause
 import           NLP.Syntax.Format.Internal
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                        (rootTag)
+-- import           NLP.Syntax.Util                        (rootTag)
 
 
 formatTense :: Tense -> Text
@@ -94,13 +91,7 @@ formatCP cp = printf "Complementizer Phrase: %-6s\n\
                 ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain formatCompVP ))))
                 ((T.intercalate " | " (cp^..complement.complement.adjunct.traverse.to formatAdjunctVP)))
 
-  where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
-        gettoken = map (tokenWord.snd) . toList . current
-        --
-        formatposchunk (Left c) = show c
-        formatposchunk (Right p) = "(" ++ show p ++ ")"
-        --
-        fmtComplementizer :: Complementizer -> (String,String)
+  where fmtComplementizer :: Complementizer -> (String,String)
         fmtComplementizer C_PHI = ("phi","")
         fmtComplementizer (C_WORD w) = ("",T.unpack (unLemma w))
         --

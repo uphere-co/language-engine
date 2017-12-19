@@ -17,13 +17,13 @@ import           Control.Monad            (guard,(>=>))
 import           Data.Char                (isUpper)
 import           Data.Foldable            (toList)
 import qualified Data.HashSet        as HS
-import           Data.List                (find,insert,sort,unfoldr)
+import           Data.List                (find,sort,unfoldr)
 import           Data.Maybe               (fromMaybe,listToMaybe)
 import qualified Data.Text           as T
 --
 import           Data.Attribute           (ahead)
 import           Data.Bitree              (_PL)
-import           Data.BitreeZipper        (child1,childLast,current,next,parent
+import           Data.BitreeZipper        (child1,childLast,current,next
                                           ,extractZipperByRange)
 import           Data.BitreeZipper.Util   (firstSiblingBy)
 import           Data.Range               (isInside,isInsideR,Range)
@@ -34,9 +34,9 @@ import           NLP.Type.TagPos          (TagPos(..))
 import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
-                                          ,PP, AdjunctDP(..), CompDP(..),HeadDP(..),SpecDP(..)
-                                          ,DetClass(..),XP(..),TaggedLemma, AdjunctVP(..)
-                                          ,PrepClass(..), CPDPPP(..)
+                                          ,AdjunctDP(..), CompDP(..),HeadDP(..),SpecDP(..)
+                                          ,DetClass(..),XP(..),TaggedLemma
+                                          ,PrepClass(..)
                                           ,PPTree(..), DPTree(..), _PPTree, _DPTree
                                           ,_MarkEntity,_AdjunctDP_PP
                                           ,hn_range,hn_class
@@ -51,13 +51,12 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs,intLemma
                                           ,rootTag)
 --
-import Debug.Trace
+-- import Debug.Trace
 
 
 
-mkPPFromZipper :: TaggedLemma (Lemma ': as) {- -> PrepClass -} -> Zipper (Lemma ': as) -> Maybe PPTree
-mkPPFromZipper tagged {- pclass -} z = do
-  
+mkPPFromZipper :: TaggedLemma (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe PPTree
+mkPPFromZipper tagged z = do
   guard (isChunkAs PP (current z))
   z_prep <- child1 z
   t <- z_prep ^? to current . _PL . _2 . to posTag
@@ -67,9 +66,9 @@ mkPPFromZipper tagged {- pclass -} z = do
        let rng_dp = getRange (current z_dp)
            pclass =
              fromMaybe PC_Other $ do
-               find (\(TagPos (b,e,t)) -> rng_dp `isInsideR` beginEndToRange (b,e) && t == MarkTime) (tagged^.tagList)
+               find (\(TagPos (b,e,tag)) -> rng_dp `isInsideR` beginEndToRange (b,e) && tag == MarkTime)
+                    (tagged^.tagList)
                return PC_Time
-
        let dptree = splitDP tagged (DPTree (mkOrdDP z_dp) [])
            pp = mkPP (Prep_WORD lma,pclass) (getRange (current z)) (dptree^._DPTree._1)
        return (PPTree pp (Just dptree)))
@@ -83,9 +82,10 @@ mkPPFromZipper tagged {- pclass -} z = do
        return (PPTree pp Nothing)))
 
 
+splitDP1 :: TaggedLemma (Lemma ': as) -> DPTree -> Maybe DPTree
 splitDP1 tagged (DPTree dp0 lst0) = do
   let (b0,_) = dp0^.maximalProjection
-  (_,e0) <- dp0^?complement._Just.headX.hn_range -- dp0^.maximalProjection
+  (_,e0) <- dp0^?complement._Just.headX.hn_range
   let rng0 = (b0,e0)
   z <- find (isChunkAs NP . current) (extractZipperByRange rng0 (tagged^.pennTree))
   z_last <- childLast z
@@ -107,9 +107,8 @@ splitDP1 tagged (DPTree dp0 lst0) = do
 
 
 splitDP :: TaggedLemma (Lemma ': as) -> DPTree -> DPTree
-splitDP tagged dptr0@(DPTree dp0 lst0) =
-  let -- fromMaybe (DPTree dp0 lst0) $ splitDPWorker tagged dptr0
-      -- dptr2 = identifyInternalTimePrep tagged dptr1
+splitDP tagged dptr0 =
+  let -- dptr2 = identifyInternalTimePrep tagged dptr1
       dptr1 = last (dptr0 : unfoldr (splitDP1 tagged >=> \b -> return (b,b)) dptr0) 
   in dptr1 & (_DPTree._1) %~
 
