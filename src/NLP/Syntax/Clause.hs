@@ -42,8 +42,8 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
 --
 import Debug.Trace
--- import qualified Data.Text as T
--- import NLP.Syntax.Format.Internal
+import qualified Data.Text as T
+import NLP.Syntax.Format.Internal
 
 hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
 hoistMaybe = MaybeT . return
@@ -393,23 +393,31 @@ whMovement tagged (w,cp) = do
 
 resolveSilentPRO :: TaggedLemma (Lemma ': as) -> (X'Zipper,CP) -> MaybeT (State X'Tree) (TraceChain SpecTP)
 resolveSilentPRO tagged (z,cp) = do
+  trace ("resolveSilentPRO0: CP" ++ T.unpack (showRange (cp^.maximalProjection))) $ return ()
   let spec = cp^.complement.specifier
+  trace ("resolveSilentPRO0_1: "  ++ T.unpack (formatTraceChain formatSpecTP spec)) $ return ()
   case spec^.trChain of
     Right _ -> return spec
     Left (xs@(LZ _ c _)) -> case c of
-      NULL      -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
+      NULL      -> ((do trace "resolveSilentPRO1_1" $ return ()
+                        cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
+                        trace "resolveSilentPRO1_2" $ return ()
                         let rng_cp' = cp'^.maximalProjection
                         TraceChain exs' x' <- lift (resolveDP tagged rng_cp')
+                        trace "resolveSilentPRO1_3" $ return ()
                         return (TraceChain (mergeLeftELZ (Left (replaceLZ SilentPRO xs)) exs') x'))
                     <|>
                     return (TraceChain (Left (replaceLZ SilentPRO xs)) Nothing))
-      SilentPRO -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
+      SilentPRO -> ((do trace "resolveSilentPRO2_1" $ return ()
+                        cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
                         let rng_cp' = cp'^.maximalProjection
                         TraceChain exs' x' <- lift (resolveDP tagged rng_cp')
                         return (TraceChain (mergeLeftELZ (Left xs) exs') x'))
                     <|>
                     return (TraceChain (Left xs) Nothing))
-      _         -> return spec
+      _         -> do
+        trace "resolveSilentPRO3" $ return ()
+        return spec
 
 --
 -- | resolve passive DP-movement. this is ad hoc yet.
@@ -570,7 +578,7 @@ connectRaisedDP rng = do
 -- | This is the final step to bind inter-clause trace chain
 --
 bindingAnalysis :: TaggedLemma (Lemma ': as) -> X'Tree -> X'Tree
-bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= bindingSpec rng
+bindingAnalysis tagged = rewriteTree $ \rng -> trace ("\nbindingAnalysis: " ++ show rng) $ lift (resolveDP tagged rng) >>= bindingSpec rng
 
 
 --
@@ -589,5 +597,5 @@ rewriteTree action xtr = execState (go rng0) xtr
         go rng = void . runMaybeT $ do
                    z' <- action rng
                    ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
-                    <|>
+                    >>
                     (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
