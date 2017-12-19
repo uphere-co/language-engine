@@ -15,7 +15,7 @@ module NLP.Type.PennTreebankII
 , RelationTag(..)
 , AnchorTag(..)
 , TernaryLogic(..)
-, isNone, isVerb, isNoun, isAdverb, isWHword, isWHphrase
+, isNone, isVerb, isNoun, isAdjective, isAdverb, isWHword, isWHphrase
 , linkIDChunk
 , identifyPOS, identifyChunk, identifyTrace
 , Bitree(..), LinkID(..)
@@ -122,6 +122,7 @@ isNone :: POSTag -> Bool
 isNone D_NONE = True
 isNone _      = False
 
+
 isVerb :: POSTag -> Bool
 isVerb VB  = True
 isVerb VBZ = True
@@ -145,6 +146,11 @@ isNoun SYM  = Unclear
 isNoun WP   = Yes
 isNoun _    = No
 
+isAdjective :: POSTag -> TernaryLogic
+isAdjective JJ = Yes
+isAdjective JJR = Yes
+isAdjective JJS = Yes
+isAdjective _   = No
 
 isWHword :: POSTag -> Bool
 isWHword WDT      = True
