@@ -324,3 +324,6 @@ Japanese stocks fell to their lowest in more than a week on Friday, with mobile 
 
 -- | frame for "hold" is wrong. two time expressions: on Dec. 20 at 9 a.m 
 Ontario Securities Commission will hold hearings on Aurora Cannabis's hostile takeover bid for rival CanniMed Therapeutics on Dec. 20 at 9 a.m. in Toronto, the regulator said on its website on Wednesday.
+
+-- | Messaging app WhatsApp: where are you?
+Messaging app WhatsApp could be fined if it does not comply with an order from the French data protection regulator to bring its sharing of user data with parent company Facebook in line with French privacy law.
