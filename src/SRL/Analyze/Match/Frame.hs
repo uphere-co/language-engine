@@ -552,7 +552,7 @@ extractNominalizedVerb wndb (Lemma lma) =
         guard (pos == POS_V)
         let vlma = renormalizeVerb (li_v^.lex_word)
         return (Lemma vlma)
-  in trace ("extractNominalizedVerb: " ++ show verbs) $ verbs
+  in {- trace ("extractNominalizedVerb: " ++ show verbs) $ -} verbs
 
 --
 -- | This is a simple utility function to extract subject and object only from a given verb subcategorization pattern.
@@ -615,8 +615,8 @@ matchNomFrame apredata x'tr tagged dp = do
     (verb,_senses,rmtoppatts) <- getFirst . mconcat $ do
       verb <- extractNominalizedVerb wndb lma
       let (senses,rmtoppatts) = getVerbSenses apredata (verb,[verb])
-      trace (show rmtoppatts) $ return ()
-      trace (show senses) $ return ()
+      -- trace (show rmtoppatts) $ return ()
+      -- trace (show senses) $ return ()
       guard ((not.null) senses && (not.null) rmtoppatts)
       (return . First . Just) (verb,senses,rmtoppatts)
     -- trace ("\nmatchNomFrame5" ++ show rng_dp)  $ return ()
