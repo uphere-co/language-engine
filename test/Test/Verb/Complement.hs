@@ -273,7 +273,8 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       compVP_to_text (CompVP_PP pp)          = case pp^.complement of
                                                   CompPP_DP dp      -> headTextDP tagged dp
                                                   CompPP_Gerund rng -> T.intercalate " " (tokensByRange tagged rng)
-                   
+      compVP_to_text (CompVP_AP ap)          = T.intercalate " " (tokensByRange tagged (ap^.maximalProjection))
+
       lst_comps = cp^..complement.complement.complement.traverse.trResolved.to (fmap compVP_to_text)
       lst_comps_test = c^._3._2
       b_comps = getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst_comps lst_comps_test)) && (length lst_comps == length lst_comps_test)
@@ -305,7 +306,7 @@ testcases = [ -- -- main_finite_1
             , complexNP_2
             , prepComplement
               -- -- , rrc_passive_1
-            , rrc_passive_2 
+            , rrc_passive_2
             , to_infinitive_1
             ]
 

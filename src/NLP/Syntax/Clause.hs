@@ -28,7 +28,6 @@ import           Data.Monoid                            (Last(..))
 import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.BitreeZipper.Util
-import           Data.List                              (find)
 import           Data.ListZipper
 import           Data.Range                             (rangeTree)
 import           NLP.Type.PennTreebankII
@@ -42,8 +41,8 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
 --
 import Debug.Trace
-import qualified Data.Text as T
-import NLP.Syntax.Format.Internal
+-- import qualified Data.Text as T
+-- import NLP.Syntax.Format.Internal
 
 hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
 hoistMaybe = MaybeT . return
@@ -112,7 +111,7 @@ complementsOfVerb tagged vprop z_vp =
        Active -> (cs,mspec,adjs,dppps)
        Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,mspec,adjs,dppps)
   where
-    xform_dp z = let dptr@(DPTree dp' pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
+    xform_dp z = let dptr@(DPTree dp' _pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
 
                      -- DPTree dp' pptrs = identifyInternalTimePrep tagged dptr
                      -- zs = map (\(PPTree pp _) -> AdjunctVP_PP pp) pptrs
@@ -170,7 +169,7 @@ identifySubject tagged tag vp = maybe nul smp r
           N.SINV -> firstSiblingBy next (isChunkAs NP) vp          -- this should be refined.
           _      -> firstSiblingBy prev (isChunkAs NP) vp          -- this should be refined.
     nul = (TraceChain (Left (singletonLZ NULL)) Nothing,[],[])
-    smp z = let dptr@(DPTree dp' pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
+    smp z = let dptr@(DPTree dp' _pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
                 subs = getSubsFromDPTree dptr
                 adjs = []   -- we had better identify time in SRL.
                 {- flip mapMaybe pptrs $ \(PPTree pp _) -> do
@@ -200,9 +199,9 @@ constructCP tagged vprop = do
         cptag' <- N.convert <$> getchunk z_cp'
         let (comps,mtop,cadjs,subs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
-            comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just)
+            -- comps_dps = comps & mapMaybe (\x -> x ^? trResolved._Just)
             (subj0,sadjs,subs2) = identifySubject tagged s z_vp
-            (subj,subj_dps) = fromMaybe (subj0,[]) $ do
+            (subj,_subj_dps) = fromMaybe (subj0,[]) $ do
                                 dp <- subj0 ^? trResolved . _Just . _SpecTP_DP
                                 let dptr@(DPTree dp' _) = splitDP tagged (DPTree dp [])
                                     subj' = (trResolved._Just._SpecTP_DP .~ dp') subj0
@@ -255,11 +254,11 @@ constructCP tagged vprop = do
 
 
 hierarchyBits :: TaggedLemma (Lemma ': as) -> (CP, [CPDPPP]) -> Maybe [(Range, (Range, CPDPPP))]
-hierarchyBits tagged (cp,dps) = do
+hierarchyBits _tagged (cp,dps) = do
   let rng = cp^.maximalProjection
       cpbit = (rng,(rng,CPCase cp))
-      f x = let rng = toRange x
-            in (rng,(rng,x))
+      f x = let r = toRange x
+            in (r,(r,x))
   return (cpbit:map f dps)
 
 
@@ -445,8 +444,8 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
 resolveCP :: X'Tree -> X'Tree
 resolveCP xtr = rewriteTree action xtr
   where
-    debugfunc msg = do xtr' <- lift get
-                       trace ("\n" ++ msg ++ "\n" ++ T.unpack (formatX'Tree xtr')) $ return ()
+    -- debugfunc msg = do xtr' <- lift get
+    --                    trace ("\n" ++ msg ++ "\n" ++ T.unpack (formatX'Tree xtr')) $ return ()
 
     action rng = do -- debugfunc ("action_before: " ++ show rng)
                     z <- hoistMaybe . extractZipperById rng =<< lift get
@@ -471,9 +470,9 @@ resolveCP xtr = rewriteTree action xtr
                ((do -- trace ("\nreplaceCompVP1 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     tr <- lift get
                     -- trace ("\nreplaceCompVP2 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
-                    rng <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved)
+                    rng_compvp <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved)
                     -- trace ("\nreplaceCompVP3 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
-                    y <- hoistMaybe (extractZipperById rng tr)
+                    y <- hoistMaybe (extractZipperById rng_compvp tr)
                     -- trace ("\nreplaceCompVP4 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     y' <- replace y
                     -- trace ("\nreplaceCompVP5 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
