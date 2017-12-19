@@ -58,6 +58,7 @@ import           WikiEL.Type                    (EntityMention)
 import           WikiEL.WikiNewNET              (newNETagger)
 import           WordNet.Query                  (loadDB)
 --
+import           SRL.Analyze.ARB                (mkARB)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP            (runParser)
 import           SRL.Analyze.Format             (dotMeaningGraph,formatDocStructure,showMatchedFrame)
@@ -104,6 +105,7 @@ queryProcess config pp apredata netagger (forest,companyMap) =
                   mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap  (\s -> [(s^.ss_tagged,(s^.ss_x'tr,x)) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
                   --
                   printMeaningGraph apredata companyMap dstr
+                  --
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
@@ -151,6 +153,8 @@ printMeaningGraph apredata companyMap dstr = do
     T.IO.putStrLn dotstr
     T.IO.writeFile ("test" ++ (show i) ++ ".dot") dotstr
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
+    --
+    mapM_ print (mkARB (apredata^.analyze_rolemap) mg) 
 
 
 loadConfig :: (Bool,Bool)

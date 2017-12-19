@@ -121,10 +121,11 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
                                 PredAppos        -> return (unFNFrame _mv_frame,Nothing,Nothing)
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) chldrn
-  (sidx,subject) <- hoistMaybe $ do
-                      e <- find (\e -> isSubject rolemap (FNFrame frmtxt) msense (e^.me_relation)) rels
-                      let sidx = e^.me_end
-                      (sidx,) . (unFNFrameElement (e^.me_relation),) <$> findLabel (mg^.mg_vertices) sidx
+  let (sidx,subject) =
+        fromMaybe (-999,("","")) $ do
+          e <- find (\e -> isSubject rolemap (FNFrame frmtxt) msense (e^.me_relation)) rels
+          let sidx = e^.me_end
+          (sidx,) . (unFNFrameElement (e^.me_relation),) <$> findLabel (mg^.mg_vertices) sidx
   (objs :: [(FrameElement,Either (PrepOr ARB) (PrepOr Text))]) <- lift $ do
     fmap catMaybes . flip mapM (filter (\e -> e ^.me_end /= sidx) rels) $ \o -> do
       let oidx = o^.me_end
