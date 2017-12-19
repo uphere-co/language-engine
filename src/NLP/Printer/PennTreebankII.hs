@@ -25,7 +25,7 @@ prettyPrint n (PL ("''",_)) = "\n" <> indent n <> "(''   '')"
 prettyPrint n (PL ("!", _)) = "\n" <> indent n <> "(!     !)"
 prettyPrint n (PL ("?", _)) = "\n" <> indent n <> "(?     ?)"
 prettyPrint n (PL (":", t)) = "\n" <> indent n <> "(:    " <> t <> ")"
-prettyPrint _ (PL (t, txt)) = fmttag t <> " " <> txt
+prettyPrint n (PL (t, txt)) = "\n" <> indent n <> "(" <> fmttag t <> " " <> txt <> ")"
 
 
 formatIndexTokensFromTree :: Int      -- ^ starting token number
