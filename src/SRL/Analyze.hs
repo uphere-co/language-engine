@@ -193,7 +193,7 @@ loadAnalyzePredata cfg = do
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
-  idioms <- loadIdioms (cfg^.cfg_idiom_file)
+  idioms <- loadIdioms (cfg^.cfg_idiom_file)  -- return (HM.empty) --  for the time being, turn off idiom
   -- print idioms
   subcats <- adjustRolePattInsts <$> loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats wndb idioms)
