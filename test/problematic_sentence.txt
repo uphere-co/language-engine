@@ -333,3 +333,7 @@ Canada's main stock index gained in early trading on Friday, as auto parts maker
 
 -- | preposed participle
 The dollar dipped against a basket of major currencies on Monday amid doubt whether a proposed U.S. tax reform programme would have a major impact on economic growth, after the bill moved another step closer to ratification over the weekend.
+
+-- | conjunction: sell vehicles and boost their 2017 numbers
+Major automakers posted mixed U.S. November new vehicle sales on Friday and predicted a competitive December as they rush to sell vehicles and boost their 2017 numbers before the year comes to an end.
+

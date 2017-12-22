@@ -66,7 +66,7 @@ isEntity = (not . isFrame)
 
 subjectList :: [FNFrameElement]
 subjectList = [ "Agent","Speaker","Owner","Cognizer","Actor","Author","Cognizer_agent"
-              , "Protagonist", "Cause"
+              , "Protagonist", "Cause", "Instance", "Figure"
               ]
 
 
