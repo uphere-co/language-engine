@@ -62,4 +62,9 @@ causeDualMap =
   , CauseDual "Vehicle_landing"  "Cause_to_land"        "Operator" []
   , CauseDual "Distributed_position" "Dispersal"        "Agent" [("Theme","Individuals"),("Location","Goal_area")]
   , CauseDual "Successful_action" "Success_or_failure" "Agent" []
+  , CauseDual "Take_place_of"    "Replacing"            "Agent" []
+  , CauseDual "Being_dry"        "Cause_to_be_dry"      "Agent" [("Item","Dryee")]
+  , CauseDual "Expend_resource"  "Expend_resource"      "Agent" []
+  , CauseDual "Transition_to_state" "Cause_change"      "Agent" [("Initial_state","Initial_category")]
+  
   ]
