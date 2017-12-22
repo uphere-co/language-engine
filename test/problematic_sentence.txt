@@ -324,3 +324,16 @@ Japanese stocks fell to their lowest in more than a week on Friday, with mobile 
 
 -- | frame for "hold" is wrong. two time expressions: on Dec. 20 at 9 a.m 
 Ontario Securities Commission will hold hearings on Aurora Cannabis's hostile takeover bid for rival CanniMed Therapeutics on Dec. 20 at 9 a.m. in Toronto, the regulator said on its website on Wednesday.
+
+-- | Messaging app WhatsApp: where are you?
+Messaging app WhatsApp could be fined if it does not comply with an order from the French data protection regulator to bring its sharing of user data with parent company Facebook in line with French privacy law.
+
+-- | why two Self-mover? for jump?
+Canada's main stock index gained in early trading on Friday, as auto parts maker Linamar Corp jumped on news of a C$1.2 billion deal to buy an agricultural equipment maker, and heavyweight energy and financial stocks also rose.
+
+-- | preposed participle
+The dollar dipped against a basket of major currencies on Monday amid doubt whether a proposed U.S. tax reform programme would have a major impact on economic growth, after the bill moved another step closer to ratification over the weekend.
+
+-- | conjunction: sell vehicles and boost their 2017 numbers
+Major automakers posted mixed U.S. November new vehicle sales on Friday and predicted a competitive December as they rush to sell vehicles and boost their 2017 numbers before the year comes to an end.
+
