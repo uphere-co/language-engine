@@ -7,13 +7,14 @@ module Main where
 
 import           Control.Lens              hiding (para)
 import           Control.Monad
+import           Data.Char                        (isUpper)
 import           Data.Either                      (rights)
 import           Data.Foldable
-
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import qualified Data.IntMap                as IM
 import           Data.List
+import           Data.List.Split                  (splitOn)
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                        (Text)
@@ -175,16 +176,49 @@ listSenseWordNet cfg = do
     putStrLn (render doc)
 
 
+
+
+
+
+listIdiom cfg = do 
+  (_ludb,_sensestat,_semlinkmap,sensemap,ws,_wndb) <- loadAllexceptPropBank cfg
+  let merged = mergeStatPB2Lemma ws
+
+  forM_ merged $ \(lma,f) -> do
+    -- print lma
+    let lmav = lma <> "-v"
+        senses = do
+          si <- maybeToList (HM.lookup lmav sensemap)
+          s <- (si^.inventory_senses)
+          comment <- maybeToList ( s ^. sense_commentary)
+          return ((s^.sense_group,s^.sense_n),comment,commentToIdiom comment)
+        commentToIdiom = filter (not . (`elem` blacklist)) . map (T.filter (\x -> not (x `elem` (",;:" :: [Char])))) . filter f . T.words
+          where blacklist = ["WHERE","NOTA","VPC","ID","NOT","CAN","NP","PP","ADVP","PREDICATE","COMP","SCOMP","X","SYNTAX","EX","NOTE","IS","OK","AUX","I","PRED","INCLUDES"]
+                whitelist = ["(UP)ON"]
+                f txt = (T.all (\c -> isUpper c || c == '\'' || c == ',' || c == ';' || c == ':') txt)
+                        || (txt `elem` whitelist)
+    forM_ senses $ \((g,n),y,is) -> do
+      let is' = (map (T.toLower . (\ts -> T.intercalate " " (lma : ts))) . filter (not.null) . tail . splitOn [T.toUpper lma]) is
+      -- print is'
+      when (not (null is')) $
+        putStrLn $ printf "%s\t%s.%s\t%s" lma g n (T.intercalate "\t" is')
+      -- T.IO.putStrLn y
+
+
+
+
 data ProgOption = ProgOption { configFile :: FilePath
+                             , progCommand :: String
                              } deriving Show
 
 
 pOptions :: O.Parser ProgOption
 pOptions = ProgOption <$> O.strOption (O.long "config" <> O.short 'c' <> O.help "config file")
+                      <*> O.strArgument (O.help "program command full or idiom")
+
 
 progOption :: O.ParserInfo ProgOption
 progOption = O.info pOptions (O.fullDesc <> O.progDesc "OntoNotes sense dump")
-
 
 
 
@@ -193,4 +227,7 @@ main = do
   opt <- O.execParser progOption
   cfg  <- loadLexDataConfig (configFile opt) >>= \case Left err -> error err
                                                        Right x  -> return x
-  listSenseWordNet cfg
+  case progCommand opt of
+    "full" -> listSenseWordNet cfg
+    "idiom" -> listIdiom cfg
+    cmd -> putStrLn ("cannot understand: " ++ cmd)
