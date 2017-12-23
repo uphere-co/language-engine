@@ -66,5 +66,5 @@ causeDualMap =
   , CauseDual "Being_dry"        "Cause_to_be_dry"      "Agent" [("Item","Dryee")]
   , CauseDual "Expend_resource"  "Expend_resource"      "Agent" []
   , CauseDual "Transition_to_state" "Cause_change"      "Agent" [("Initial_state","Initial_category")]
-  
+  , CauseDual "Similarity"       "Assessing"            "Assessor"  [("Entity_1","Phenomenon"),("Entity_2","Standard")]
   ]
