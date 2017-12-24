@@ -41,10 +41,12 @@ type TestTrace = (Text,Int,(TracePos,TraceChain Text),[(Int,(Lemma,Text))],PennT
                  ,[(Int,LexicographerFile)]
                  )
 
--- | silent pronoun
+
 --
-test_silent_pronoun :: TestTrace
-test_silent_pronoun =
+-- | silent pronoun 1
+--
+test_silent_pronoun_1 :: TestTrace
+test_silent_pronoun_1 =
   ( "Republican senators plan to write a health-care bill."
   , 4,(Subj,TraceChain (Left (singletonLZ SilentPRO)) (Just "Republican senators"))
   , [(0,("republican","Republican")),(1,("senator","senators")),(2,("plan","plan")),(3,("to","to")),(4,("write","write")),(5,("a","a")),(6,("health-care","health-care")),(7,("bill","bill")),(8,(".","."))]
@@ -54,6 +56,21 @@ test_silent_pronoun =
   )
 
 
+--
+-- | silent pronoun 2
+--
+test_silent_pronoun_2 :: TestTrace
+test_silent_pronoun_2 =
+  ( "Toshiba Corp and Western Digital Corp have agreed in principle to settle a dispute."
+  , 11, (Subj, TraceChain (Left (singletonLZ SilentPRO)) (Just "Toshiba Corp and Western Digital Corp"))
+  , [(0,("Toshiba","Toshiba")),(1,("Corp","Corp")),(2,("and","and")),(3,("Western","Western")),(4,("Digital","Digital")),(5,("Corp","Corp")),(6,("have","have")),(7,("agree","agreed")),(8,("in","in")),(9,("principle","principle")),(10,("to","to")),(11,("settle","settle")),(12,("a","a")),(13,("dispute","dispute")),(14,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PN "NP" [PL ("NNP","Toshiba"),PL ("NNP","Corp")],PL ("CC","and"),PN "NP" [PL ("NNP","Western"),PL ("NNP","Digital"),PL ("NNP","Corp")]],PN "VP" [PL ("VBP","have"),PN "VP" [PL ("VBN","agreed"),PN "PP" [PL ("IN","in"),PN "NP" [PL ("NN","principle")]],PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","settle"),PN "NP" [PL ("DT","a"),PL ("NN","dispute")]]]]]],PL (".",".")]]
+  , []
+  , []
+  )
+
+
+--
 -- | multi-level silent pronoun linking
 --
 test_multi_silent_pronoun :: TestTrace
@@ -66,6 +83,8 @@ test_multi_silent_pronoun =
   , []
   )
 
+
+--
 -- | relative WH-pronoun subject linking
 --
 test_relative_pronoun_subject :: TestTrace
@@ -79,6 +98,7 @@ test_relative_pronoun_subject =
   )
 
 
+--
 -- | relative WH-pronoun object linking
 --
 test_relative_pronoun_object :: TestTrace
@@ -92,7 +112,7 @@ test_relative_pronoun_object =
   )
 
 
-
+--
 -- | reduced relative clause
 --
 test_reduced_relative_clause :: TestTrace
@@ -106,6 +126,7 @@ test_reduced_relative_clause =
   )
 
 
+--
 -- | passive verb
 --
 test_passive :: TestTrace
@@ -131,6 +152,7 @@ test_passive_raising =
   , []
   , []
   )
+
 
 --
 -- | ECM
@@ -229,7 +251,8 @@ showDetail (txt,_,_,lma,pt,tagged,synsets) = mapM_ T.IO.putStrLn (formatDetail (
 
 
 testcases :: [TestTrace]
-testcases = [ test_silent_pronoun
+testcases = [ test_silent_pronoun_1
+            , test_silent_pronoun_2
             , test_multi_silent_pronoun
             , test_relative_pronoun_subject
             , test_relative_pronoun_object
@@ -246,20 +269,26 @@ testcases = [ test_silent_pronoun
             , test_that_clause
             ]
 
+
 checkTrace :: TestTrace -> Bool
 checkTrace c =
   fromMaybe False $ do
     let tagged = mkTaggedLemma (c^._4) (c^._5) (c^._6) (c^._7)
         vps = mkVPS (c^._4) (c^._5)
         x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
+    -- trace "checktrace1" $ return ()
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
+    -- trace "checktrace2" $ return ()
     cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                              -- anyway need to be rewritten.
+    -- trace "checktrace3" $ return ()
+
     cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'tr)
+    -- trace ("checktrace4" ++ (formatCP cp)) $ return ()
 
     case c^._3._1 of
       Subj   -> do let dp = fmap (\case SpecTP_DP dp -> headTextDP tagged dp; _ -> "") (cp ^.complement.specifier)  -- for the time being. ignore CP subject
-                   {- trace ("\ncheckTrace:" ++ show dp) $ -}
+                   -- trace ("\ncheckTrace5:" ++ show dp) $ return ()
                    -- trace ( x'tr) $ return ()
                    -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (c^._1,c^._4,c^._5,c^._6,c^._7)))) $ return ()
 

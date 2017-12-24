@@ -15,7 +15,7 @@ module NLP.Syntax.Clause where
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
 import           Control.Lens.Extras                    (is)
-import           Control.Monad                          ((<=<),(>=>),guard,void)
+import           Control.Monad                          ((<=<),(>=>),guard,void,when)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put)
@@ -42,8 +42,8 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
 --
 import Debug.Trace
--- import qualified Data.Text as T
--- import NLP.Syntax.Format.Internal
+import qualified Data.Text as T
+import NLP.Syntax.Format.Internal
 
 hoistMaybe :: (Monad m) => Maybe a -> MaybeT m a
 hoistMaybe = MaybeT . return
@@ -66,6 +66,17 @@ complementCandidates :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
 complementCandidates vprop z_vp =
     let cs_ord = siblingsBy (nextNotComma) checkCompVPness =<< maybeToList (headVP vprop)
         -- topicalized CP
+        c_frag = do v <- headVP vprop
+                    z <- firstSiblingBy next (\x -> rootTag x == Left FRAG) v
+                    let rng = getRange (current z)
+                    --trace ("c_frag1" ++ show rng) (return ())
+                    guard (rootTag (current z) == Left FRAG)
+                    --trace ("c_frag2" ++ show rng) (return ())
+                    z' <- child1 z
+                    --trace ("c_frag3" ++ show rng) (return ())
+                    guard (checkCompVPness (current z'))
+                    --trace ("c_frag4" ++ show rng) (return ())
+                    return z'
         c_top = do guard (isChunkAs VP (current z_vp))
                    z_np <- prev z_vp
                    guard (isChunkAs NP (current z_np))
@@ -74,7 +85,7 @@ complementCandidates vprop z_vp =
                    z_cp <- prev z_comma
                    (guard (isChunkAs S (current z_cp) || isChunkAs SBAR (current z_cp)))
                    return z_cp
-    in (cs_ord,c_top)
+    in (maybe cs_ord (:cs_ord) c_frag, c_top)
 
   where
     nextNotComma z = do n <- next z
@@ -88,6 +99,7 @@ complementCandidates vprop z_vp =
                           Left S     -> True
                           Left SBARQ -> True
                           Left SQ    -> True
+                          -- Left FRAG  -> True
                           Left _     -> False
                           Right p    -> isNoun p == Yes || isAdjective p == Yes
 
@@ -114,15 +126,7 @@ complementsOfVerb tagged vprop z_vp =
        Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,mspec,adjs,dppps)
   where
     xform_dp z = let dptr@(DPTree dp' _pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
-
-                     -- DPTree dp' pptrs = identifyInternalTimePrep tagged dptr
-                     -- zs = map (\(PPTree pp _) -> AdjunctVP_PP pp) pptrs
                      adjs = []    -- we had better identify time part in SRL
-                     {-flip mapMaybe pptrs $ \(PPTree pp _) -> do
-                              guard (pp^.headX.hp_pclass == PC_Time)
-                              return (AdjunctVP_PP pp)
-                     -}
-                     --     AdjunctVP_PP pp) . filter (\(PPTree pp
                      subs = getSubsFromDPTree dptr
                  in (TraceChain (Right []) (Just (checkEmptyPrep tagged dp')),adjs,subs)
     xform_pp z = fromMaybe (TraceChain (Right []) Nothing,[],[]) $ do
@@ -393,23 +397,31 @@ whMovement tagged (w,cp) = do
 
 resolveSilentPRO :: TaggedLemma (Lemma ': as) -> (X'Zipper,CP) -> MaybeT (State X'Tree) (TraceChain SpecTP)
 resolveSilentPRO tagged (z,cp) = do
+  -- trace ("resolveSilentPRO0: CP" ++ T.unpack (showRange (cp^.maximalProjection))) $ return ()
   let spec = cp^.complement.specifier
+  -- trace ("resolveSilentPRO0_1: "  ++ T.unpack (formatTraceChain formatSpecTP spec)) $ return ()
   case spec^.trChain of
     Right _ -> return spec
     Left (xs@(LZ _ c _)) -> case c of
-      NULL      -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
+      NULL      -> ((do -- trace "resolveSilentPRO1_1" $ return ()
+                        cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
+                        -- trace "resolveSilentPRO1_2" $ return ()
                         let rng_cp' = cp'^.maximalProjection
                         TraceChain exs' x' <- lift (resolveDP tagged rng_cp')
+                        -- trace "resolveSilentPRO1_3" $ return ()
                         return (TraceChain (mergeLeftELZ (Left (replaceLZ SilentPRO xs)) exs') x'))
                     <|>
                     return (TraceChain (Left (replaceLZ SilentPRO xs)) Nothing))
-      SilentPRO -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
+      SilentPRO -> ((do -- trace "resolveSilentPRO2_1" $ return ()
+                        cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
                         let rng_cp' = cp'^.maximalProjection
                         TraceChain exs' x' <- lift (resolveDP tagged rng_cp')
                         return (TraceChain (mergeLeftELZ (Left xs) exs') x'))
                     <|>
                     return (TraceChain (Left xs) Nothing))
-      _         -> return spec
+      _         -> do
+        -- trace "resolveSilentPRO3" $ return ()
+        return spec
 
 --
 -- | resolve passive DP-movement. this is ad hoc yet.
@@ -451,14 +463,15 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
 resolveCP :: X'Tree -> X'Tree
 resolveCP xtr = rewriteTree action xtr
   where
-    -- debugfunc msg = do xtr' <- lift get
-    --                    trace ("\n" ++ msg ++ "\n" ++ T.unpack (formatX'Tree xtr')) $ return ()
+    debugfunc msg = do xtr' <- lift get
+                       trace ("\n" ++ msg ++ "\n" ++ T.unpack (formatX'Tree xtr')) $ return ()
 
     action rng = do -- debugfunc ("action_before: " ++ show rng)
                     z <- hoistMaybe . extractZipperById rng =<< lift get
-                    z' <- (replace z <|> return z)
+                    ((replace z >> return ()) <|> return ())
+                    -- z' <- (replace z <|> return z)
                     -- debugfunc ("action_after" ++ show rng)
-                    return z'
+                    -- return z'
     --
     replace :: X'Zipper -> MaybeT (State X'Tree) X'Zipper
     replace = replaceSpecCP >=> replaceCompVP >=> replaceAdjunctCP
@@ -474,17 +487,17 @@ resolveCP xtr = rewriteTree action xtr
       -- debugfunc ("replaceCompVP_before" ++ (show (cp^.maximalProjection)))
       let xs = cp^.complement.complement.complement
       xs' <- flip traverse xs $ \x ->
-               ((do -- trace ("\nreplaceCompVP1 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
+               ((do --trace ("\nreplaceCompVP1 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     tr <- lift get
-                    -- trace ("\nreplaceCompVP2 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
+                    --trace ("\nreplaceCompVP2 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     rng_compvp <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved)
-                    -- trace ("\nreplaceCompVP3 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
+                    --trace ("\nreplaceCompVP3 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     y <- hoistMaybe (extractZipperById rng_compvp tr)
-                    -- trace ("\nreplaceCompVP4 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
+                    --trace ("\nreplaceCompVP4 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     y' <- replace y
-                    -- trace ("\nreplaceCompVP5 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
+                    --trace ("\nreplaceCompVP5 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
-                    -- trace ("\nreplaceCompVP6 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
+                    --trace ("\nreplaceCompVP6 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     (return . (trResolved .~ Just (CompVP_CP cp'))) x
                 )
                 <|>
@@ -535,17 +548,17 @@ resolveCP xtr = rewriteTree action xtr
 
 
 
-bindingSpec :: Range -> TraceChain SpecTP -> MaybeT (State X'Tree) X'Zipper
+bindingSpec :: Range -> TraceChain SpecTP -> MaybeT (State X'Tree) () -- X'Zipper
 bindingSpec rng spec = do
   z <- hoistMaybe . extractZipperById rng =<< lift get
   let rf = _2._CPCase.complement.specifier .~ spec
       z' = replaceFocusItem rf rf z
   lift (put (toBitree z'))
-  return z'
+  -- return z'
 
 
 -- consider passive case only now for the time being.
-connectRaisedDP :: Range -> MaybeT (State X'Tree) X'Zipper
+connectRaisedDP :: Range -> MaybeT (State X'Tree) () -- X'Zipper
 connectRaisedDP rng = do
   (w,cp) <- retrieveWCP rng
   guard (cp ^. complement.complement.headX.vp_voice == Passive)
@@ -553,16 +566,16 @@ connectRaisedDP rng = do
   rng1 <- hoistMaybe (c1^?trResolved._Just._CompVP_DP.maximalProjection)
   cp' <- hoistMaybe (c2^?trResolved._Just._CompVP_CP)
   rng_dp <- hoistMaybe (cp'^?complement.specifier.trResolved._Just._SpecTP_DP.maximalProjection)
-  if rng1 == rng_dp
-    then do
-      let rf = (_2._CPCase.complement.specifier .~ emptyTraceChain)
-             . (_2._CPCase.complement.complement.complement .~ [c2])
-          w' = replaceFocusItem rf rf w
-      lift (put (toBitree w'))
-      return w'
+  when (rng1 == rng_dp) $ do
+    let rf = (_2._CPCase.complement.specifier .~ emptyTraceChain)
+           . (_2._CPCase.complement.complement.complement .~ [c2])
+        w' = replaceFocusItem rf rf w
+    lift (put (toBitree w'))
+
+{-      -- return w'
     else
       return w
-
+-}
 
 -- I think we should change the name of these bindingAnalysis.. functions.
 
@@ -570,24 +583,37 @@ connectRaisedDP rng = do
 -- | This is the final step to bind inter-clause trace chain
 --
 bindingAnalysis :: TaggedLemma (Lemma ': as) -> X'Tree -> X'Tree
-bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= bindingSpec rng
+bindingAnalysis tagged = rewriteTree $ \rng -> {- trace ("\nbindingAnalysis: " ++ show rng) $ -} lift (resolveDP tagged rng) >>= bindingSpec rng
 
 
 --
 -- |
 --
 bindingAnalysisRaising :: X'Tree -> X'Tree
-bindingAnalysisRaising = rewriteTree $ \rng -> do z <- hoistMaybe . extractZipperById rng =<< lift get
-                                                  (connectRaisedDP rng <|> return z)
+bindingAnalysisRaising = rewriteTree (\rng -> connectRaisedDP rng <|> return ())
+
+--  $ \rng -> connectRaisedDP rng  {- do z <- hoistMaybe . extractZipperById rng =<< lift get
+--                                                  (connectRaisedDP rng <|> return z) -}
 
 
-
-rewriteTree :: (Range -> MaybeT (State X'Tree ) X'Zipper) -> X'Tree -> X'Tree
+--
+-- | This is a generic tree-rewriting operation.
+--   It assumes range index is not changed after each operation
+--
+rewriteTree :: (Range -> MaybeT (State X'Tree ) ()) -> X'Tree -> X'Tree
 rewriteTree action xtr = execState (go rng0) xtr
   where getrng = fst . getRoot1 . current
         rng0 = (either fst fst . getRoot) xtr
         go rng = void . runMaybeT $ do
-                   z' <- action rng
-                   ((hoistMaybe (child1 z') >>= \z'' -> lift (go (getrng z'')))
-                    <|>
-                    (hoistMaybe (next z') >>= \z'' -> lift (go (getrng z''))))
+                   action rng
+                   w <- hoistMaybe . extractZipperById rng =<< lift get
+                   (((do
+                        w' <- hoistMaybe (child1 w)  -- depth first
+                        lift (go (getrng w')))
+                     <|> return ())
+
+                    >>
+                    ((do
+                         w'' <- hoistMaybe (next w)
+                         lift (go (getrng w'')))
+                     <|> return ()))
