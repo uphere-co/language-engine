@@ -129,6 +129,7 @@ printMeaningGraph apredata companyMap dstr = do
     let title = mkTextFromToken mtks
         wikilst = mkWikiList companyMap sstr -- sstrs1
         mg = tagMG mg' wikilst
+        x'tr = sstr^.ss_x'tr
     -- mapM_ print (mg^.mg_vertices)
     -- mapM_ print (mg^.mg_edges)
     -- putStrLn "====================="

@@ -83,3 +83,11 @@ runUKB wndb (sents,parsetrees) = do
         -- putStrLn ("\n\nTHIS RESULT: \n" ++ formatUKBResult r')
 
 
+{-
+Error case:
+
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  context error: #ketsy#n#93#1 has no lemma.
+Aborted
+
+-}
