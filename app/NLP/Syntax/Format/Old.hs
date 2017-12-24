@@ -33,9 +33,9 @@ formatPAWS pa =
   printf "              subject       : %s\n\
          \              arg candidates: %s\n\
          \              complements   : %s"
-         (formatTraceChain formatSpecTP (pa^.pa_CP^.complement.specifier))
+         (formatCoindex formatSpecTP (pa^.pa_CP^.complement.specifier))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
-         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatTraceChain formatCompVP )))
+         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatCoindex formatCompVP )))
   where
     fmtArg a = case a of
                  Right (_  ,p)           -> show p
