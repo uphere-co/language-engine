@@ -8,6 +8,7 @@ module SRL.Analyze.ARB where
 import           Control.Applicative       ((<|>))
 import           Control.Lens
 import           Control.Lens.Extras
+import           Control.Monad             (guard)
 import           Data.List
 import qualified Data.Text             as T
 import           Control.Monad.Loops       (unfoldM)
@@ -25,6 +26,7 @@ import           Lexicon.Mapping.Causation (causeDualMap,cm_causativeFrame,cm_ex
 import           Lexicon.Type              (FNFrame(..),FNFrameElement(..),RoleInstance,SenseID)
 import           NLP.Syntax.Clause         (hoistMaybe) -- this should be moved somewhere
 import           NLP.Syntax.Type.Verb      (vp_lemma,vp_negation)
+import           NLP.Syntax.Type.XBar      (X'Tree)
 import           NLP.Type.PennTreebankII   (Lemma(..))
 import           NLP.Shared.Type
 import           SRL.Analyze.Type
@@ -121,17 +123,18 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
                                 PredAppos        -> return (unFNFrame _mv_frame,Nothing,Nothing)
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) chldrn
-  let (sidx,subject) =
-        fromMaybe (-999,("","")) $ do
-          e <- find (\e -> isSubject rolemap (FNFrame frmtxt) msense (e^.me_relation)) rels
-          let sidx = e^.me_end
-          (sidx,) . (unFNFrameElement (e^.me_relation),) <$> findLabel (mg^.mg_vertices) sidx
+      (sidx,subject,b) = fromMaybe (-999,("",""),False) $ do
+        e <- find (\e -> isSubject rolemap (FNFrame frmtxt) msense (e^.me_relation)) rels 
+        let sidx = e^.me_end
+        (sidx,,e^.me_ismodifier) . (unFNFrameElement (e^.me_relation),) <$> findLabel (mg^.mg_vertices) sidx
+  guard (not b)
   (objs :: [(FrameElement,Either (PrepOr ARB) (PrepOr Text))]) <- lift $ do
     fmap catMaybes . flip mapM (filter (\e -> e ^.me_end /= sidx) rels) $ \o -> do
       let oidx = o^.me_end
           oprep = o^.me_prep
           orole = unFNFrameElement (o^.me_relation)
       runMaybeT $ do
+        guard (not (o^.me_ismodifier))
         v' <- hoistMaybe (findVertex (mg^.mg_vertices) oidx)
         if isFrame v'
           then do
@@ -156,7 +159,7 @@ mkARB1 (rolemap,mg,graph) = do
 
 
 mkARB :: [RoleInstance] -> MeaningGraph -> [ARB]
-mkARB rolemap mg0 = catMaybes $ do
+mkARB rolemap mg0 = filter (^.subjectA._1.to (not.T.null)) . catMaybes $ do
   let mg = squashRelFrame mg0
       mgraph = getGraphFromMG mg
   graph <- maybeToList mgraph
