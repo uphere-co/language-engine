@@ -316,8 +316,8 @@ checkSubjCompAdjunct c = fromMaybe False $ do
                         return True
 
   -- trace  ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr ++ "\n" ++ formatCP cp ++ "\n" ) $ return ()
-  trace ("\n" ++ show (lst_comps,lst_comps_test)) $ return ()
-  trace ("\n" ++ show (b_subj,b_comps,b_adjuncts,b_topicalized)) $ return ()
+  -- trace ("\n" ++ show (lst_comps,lst_comps_test)) $ return ()
+  -- trace ("\n" ++ show (b_subj,b_comps,b_adjuncts,b_topicalized)) $ return ()
   -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (txt,lmatknlst,pt,tagposs,synsets)))) $ return ()
 
   return  (b_subj && b_comps && b_adjuncts && (b_topicalized == c^._3._4))
