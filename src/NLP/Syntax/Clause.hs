@@ -105,7 +105,7 @@ complementCandidates vprop z_vp =
 
 
 complementsOfVerb :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
-                     TaggedLemma t
+                     PreAnalysis t
                   -> VerbProperty (Zipper t)
                   -> Zipper t
                   -> ([TraceChain CompVP],Maybe (TraceChain CompVP), [AdjunctVP],[CPDPPP])
@@ -170,7 +170,7 @@ allAdjunctCPOfVerb vprop =
 
 
     -- for the time being, CP subject is not supported
-identifySubject :: TaggedLemma (Lemma ': as)
+identifySubject :: PreAnalysis (Lemma ': as)
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)   -- ^ Verb maximal projection
                 -> (TraceChain SpecTP, [AdjunctVP],[CPDPPP])
@@ -194,7 +194,7 @@ identifySubject tagged tag vp = maybe nul smp r
 --
 -- | Constructing CP umbrella and all of its ingrediant.
 --
-constructCP :: TaggedLemma (Lemma ': as)
+constructCP :: PreAnalysis (Lemma ': as)
             -> VerbProperty (Zipper (Lemma ': as))
             -> Maybe (CP,[CPDPPP])
 constructCP tagged vprop = do
@@ -264,7 +264,7 @@ constructCP tagged vprop = do
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
-hierarchyBits :: TaggedLemma (Lemma ': as) -> (CP, [CPDPPP]) -> Maybe [(Range, (Range, CPDPPP))]
+hierarchyBits :: PreAnalysis (Lemma ': as) -> (CP, [CPDPPP]) -> Maybe [(Range, (Range, CPDPPP))]
 hierarchyBits _tagged (cp,subs) = do
   let rng = cp^.maximalProjection
       cpbit = (rng,(rng,CPCase cp))
@@ -274,7 +274,7 @@ hierarchyBits _tagged (cp,subs) = do
 
 
 
-identifyCPHierarchy :: TaggedLemma (Lemma ': as) -> [VerbProperty (Zipper (Lemma ': as))] -> [X'Tree]
+identifyCPHierarchy :: PreAnalysis (Lemma ': as) -> [VerbProperty (Zipper (Lemma ': as))] -> [X'Tree]
 identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
   where x'map = (HM.fromList . concat . mapMaybe (hierarchyBits tagged <=< constructCP tagged)) vps
         rngs = HM.keys x'map
@@ -334,7 +334,7 @@ rewriteX'TreeForFreeWH rng ps w z' = do
   return (replaceFocusItem rf rf w_dom)
 
 
-whMovement :: TaggedLemma (Lemma ': as) -> (X'Zipper,CP) -> State X'Tree (TraceChain SpecTP)
+whMovement :: PreAnalysis (Lemma ': as) -> (X'Zipper,CP) -> State X'Tree (TraceChain SpecTP)
 whMovement tagged (w,cp) = do
   -- letter z denotes zipper for PennTree, w denotes zipper for X'Tree
   let rng_cp = cp^.maximalProjection
@@ -395,7 +395,7 @@ whMovement tagged (w,cp) = do
       return spec
 
 
-resolveSilentPRO :: TaggedLemma (Lemma ': as) -> (X'Zipper,CP) -> MaybeT (State X'Tree) (TraceChain SpecTP)
+resolveSilentPRO :: PreAnalysis (Lemma ': as) -> (X'Zipper,CP) -> MaybeT (State X'Tree) (TraceChain SpecTP)
 resolveSilentPRO tagged (z,cp) = do
   -- trace ("resolveSilentPRO0: CP" ++ T.unpack (showRange (cp^.maximalProjection))) $ return ()
   let spec = cp^.complement.specifier
@@ -450,7 +450,7 @@ resolveVPComp rng spec = do
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
-resolveDP :: TaggedLemma (Lemma ': as) -> Range -> State X'Tree (TraceChain SpecTP)
+resolveDP :: PreAnalysis (Lemma ': as) -> Range -> State X'Tree (TraceChain SpecTP)
 resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
   (w,cp) <- retrieveWCP rng
   if is _Just (cp^.specifier)  -- relative clause
@@ -582,7 +582,7 @@ connectRaisedDP rng = do
 --
 -- | This is the final step to bind inter-clause trace chain
 --
-bindingAnalysis :: TaggedLemma (Lemma ': as) -> X'Tree -> X'Tree
+bindingAnalysis :: PreAnalysis (Lemma ': as) -> X'Tree -> X'Tree
 bindingAnalysis tagged = rewriteTree $ \rng -> {- trace ("\nbindingAnalysis: " ++ show rng) $ -} lift (resolveDP tagged rng) >>= bindingSpec rng
 
 

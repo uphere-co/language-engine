@@ -21,12 +21,12 @@ import           WordNet.Type.Lexicographer      (LexicographerFile)
 import           NLP.Syntax.Format.Internal      (formatDP)
 import           NLP.Syntax.Noun                 (splitDP)
 import           NLP.Syntax.Type                 (MarkType(..))
-import           NLP.Syntax.Type.XBar            (TaggedLemma,DetP,AdjunctDP(..),DPTree(..)
+import           NLP.Syntax.Type.XBar            (PreAnalysis,DetP,AdjunctDP(..),DPTree(..)
                                                  ,adjunct,complement,headX,maximalProjection,specifier
                                                  ,hd_range,headText,tokensByRange,mkOrdDP,compDPToRange
                                                  ,specDPText
                                                  )
-import           NLP.Syntax.Util                 (mkBitreeICP,mkTaggedLemma)
+import           NLP.Syntax.Util                 (mkBitreeICP,mkPreAnalysis)
 --
 import           Test.Common
 import           Test.Tasty
@@ -221,7 +221,7 @@ test_np_rrc_1 =
   )
 
 
-mkDPFromTest :: TaggedLemma '[Lemma] -> TestNoun -> DetP
+mkDPFromTest :: PreAnalysis '[Lemma] -> TestNoun -> DetP
 mkDPFromTest tagged x =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) (x^._3))
       lemmapt = mkBitreeICP lmap1 (x^._4)
@@ -238,7 +238,7 @@ adjunctDPToRange (AdjunctDP_PP rng) = rng -- pp^.maximalProjection
 
 checkBNM :: TestNoun -> Bool
 checkBNM x =
-  let tagged = mkTaggedLemma (x^._3) (x^._4) (x^._5) (x^._6)
+  let tagged = mkPreAnalysis (x^._3) (x^._4) (x^._5) (x^._6)
       dp = mkDPFromTest tagged x
       result = (dp^.headX.hd_range.to (maybe "" (T.intercalate " " . tokensByRange tagged))
                ,fmap (headText tagged) (dp^.complement)
@@ -273,7 +273,7 @@ unitTests :: TestTree
 unitTests = testGroup "Bare Noun Modifier test" . flip map testcases $ \c ->
               testCase (T.unpack (c^._1)) $
                 checkBNM c @? (let (txt,_,lma,pt,taglst,synsets) = c
-                                   tagged = mkTaggedLemma lma pt taglst synsets
+                                   tagged = mkPreAnalysis lma pt taglst synsets
                                in T.unpack $ T.intercalate "\n" (formatDetail (txt,lma,pt,taglst,synsets)) <>
                                              "\n" <>
                                              formatDP (mkDPFromTest tagged c)

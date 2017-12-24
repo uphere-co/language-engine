@@ -2,7 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module NLP.Syntax.Type.XBar
-( module NLP.Syntax.Type.XBar.Internal
+( module NLP.Syntax.Type.PreAnalysis
+, module NLP.Syntax.Type.XBar.Internal
 , module NLP.Syntax.Type.XBar.TH
 , module NLP.Syntax.Type.XBar
 ) where
@@ -16,6 +17,7 @@ import qualified Data.Text                     as T
 import           Data.Range                         (Range,isInside)
 import           NLP.Type.PennTreebankII            (tokenWord)
 --
+import           NLP.Syntax.Type.PreAnalysis
 import           NLP.Syntax.Type.XBar.Internal
 import           NLP.Syntax.Type.XBar.TH
 
@@ -25,19 +27,19 @@ getTokens :: BitreeICP as -> Text
 getTokens = T.intercalate " " . map (tokenWord.snd) . toList
 
 
-tokensByRange :: TaggedLemma t -> Range -> [Text]
+tokensByRange :: PreAnalysis t -> Range -> [Text]
 tokensByRange tagged rng = map (^._2._2) . filter (^._1.to (\i -> i `isInside` rng)) $ tagged^.lemmaList
 
 
-determinerText :: TaggedLemma t -> HeadDP -> Maybe Text
+determinerText :: PreAnalysis t -> HeadDP -> Maybe Text
 determinerText tagged hdp = fmap (T.intercalate " " . tokensByRange tagged) (hdp^.hd_range)
 
 
-headText :: TaggedLemma t -> NounP -> Text
+headText :: PreAnalysis t -> NounP -> Text
 headText tagged x = x^.headX.hn_range.to (T.intercalate " " . tokensByRange tagged)
 
 
-specDPText :: TaggedLemma t -> SpecDP -> Text
+specDPText :: PreAnalysis t -> SpecDP -> Text
 specDPText tagged x = case x of
                         SpDP_Appos rng -> T.intercalate " " (tokensByRange tagged rng)
                         SpDP_Gen rng -> T.intercalate " " (tokensByRange tagged rng)
@@ -66,7 +68,7 @@ compVPToCPDPPP (CompVP_PP pp) = Just (PPCase pp)
 compVPToCPDPPP (CompVP_AP pp) = Just (APCase pp)
 
 
-headTextDP :: TaggedLemma t -> DetP -> Text
+headTextDP :: PreAnalysis t -> DetP -> Text
 headTextDP tagged dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> fromMaybe "" (fmap (headText tagged) (dp^.complement))
@@ -86,7 +88,7 @@ headRangeDP dp =
               (Nothing       , Nothing      ) -> Nothing
 
 
-compVPToHeadText :: TaggedLemma t -> CompVP -> Text
+compVPToHeadText :: PreAnalysis t -> CompVP -> Text
 compVPToHeadText tagged (CompVP_Unresolved rng) = T.intercalate " " (tokensByRange tagged rng)
 compVPToHeadText tagged (CompVP_CP cp)          = T.intercalate " " (tokensByRange tagged (cp^.maximalProjection))
 compVPToHeadText tagged (CompVP_DP dp)          = headTextDP tagged dp

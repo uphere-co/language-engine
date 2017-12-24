@@ -58,7 +58,7 @@ formatAdjunctCP (AdjunctCP_Unresolved z) = "unresolved" <> (showRange z)
 formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cp^.maximalProjection)
 
 
-adjunctVPText :: TaggedLemma t -> AdjunctVP -> Text
+adjunctVPText :: PreAnalysis t -> AdjunctVP -> Text
 adjunctVPText tagged (AdjunctVP_Unresolved rng) = T.intercalate " " (tokensByRange tagged rng)
 adjunctVPText tagged  (AdjunctVP_PP pp)         = T.intercalate " " (tokensByRange tagged (pp^.maximalProjection))
 

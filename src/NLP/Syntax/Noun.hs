@@ -35,7 +35,7 @@ import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,Prep(..),PrepClass(..),DetP
                                           ,AdjunctDP(..), CompDP(..),HeadDP(..),SpecDP(..)
-                                          ,DetClass(..),XP(..),TaggedLemma
+                                          ,DetClass(..),XP(..),PreAnalysis
                                           ,PrepClass(..)
                                           ,PPTree(..), DPTree(..), _PPTree, _DPTree
                                           ,_MarkEntity,_AdjunctDP_PP
@@ -55,7 +55,7 @@ import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isL
 
 
 
-mkPPFromZipper :: TaggedLemma (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe PPTree
+mkPPFromZipper :: PreAnalysis (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe PPTree
 mkPPFromZipper tagged z = do
   guard (isChunkAs PP (current z))
   z_prep <- child1 z
@@ -82,7 +82,7 @@ mkPPFromZipper tagged z = do
        return (PPTree pp Nothing)))
 
 
-splitDP1 :: TaggedLemma (Lemma ': as) -> DPTree -> Maybe DPTree
+splitDP1 :: PreAnalysis (Lemma ': as) -> DPTree -> Maybe DPTree
 splitDP1 tagged (DPTree dp0 lst0) = do
   let (b0,_) = dp0^.maximalProjection
   (_,e0) <- dp0^?complement._Just.headX.hn_range
@@ -106,7 +106,7 @@ splitDP1 tagged (DPTree dp0 lst0) = do
     _ -> Nothing
 
 
-splitDP :: TaggedLemma (Lemma ': as) -> DPTree -> DPTree
+splitDP :: PreAnalysis (Lemma ': as) -> DPTree -> DPTree
 splitDP tagged dptr0 =
   let -- dptr2 = identifyInternalTimePrep tagged dptr1
       dptr1 = last (dptr0 : unfoldr (splitDP1 tagged >=> \b -> return (b,b)) dptr0) 
@@ -119,7 +119,7 @@ splitDP tagged dptr0 =
 
 
 
-identifyClausalModifier :: TaggedLemma (Lemma ': as) -> DetP -> Maybe DetP
+identifyClausalModifier :: PreAnalysis (Lemma ': as) -> DetP -> Maybe DetP
 identifyClausalModifier tagged dp0 = do
   let (b0,e0) = dp0^.maximalProjection
       e0' = (\case [] -> e0; (e:_) -> e-1) (sort (dp0^..adjunct.traverse._AdjunctDP_PP._1))
@@ -142,7 +142,7 @@ identifyClausalModifier tagged dp0 = do
        return (mkSplittedDP CLMod (b,b1-1) (b1,e1) z)))
 
 
-splitParentheticalModifier :: TaggedLemma (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe DetP
+splitParentheticalModifier :: PreAnalysis (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe DetP
 splitParentheticalModifier tagged z = do
     guard (isChunkAs NP (current z))         -- dominating phrase must be NP
     z1 <- child1 z
@@ -210,7 +210,7 @@ rangeOfNPs z0 = do
 
 
 
-identApposHead :: TaggedLemma t -> Range -> Range -> Zipper t -> DetP
+identApposHead :: PreAnalysis t -> Range -> Range -> Zipper t -> DetP
 identApposHead tagged rng1 rng2 z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $
   ((do find (\(TagPos (b,e,t)) -> rng1 == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
        return (mkSplittedDP APMod rng1 rng2 z))
@@ -221,7 +221,7 @@ identApposHead tagged rng1 rng2 z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $
 --
 -- | starting with capital letter
 --
-checkProperNoun :: TaggedLemma t -> Range -> Bool
+checkProperNoun :: PreAnalysis t -> Range -> Bool
 checkProperNoun tagged (b,e) =
   let toks = tokensByRange tagged (b,e)
   in (not.null) toks && isUpper (T.head (head toks))   -- unsafe!
@@ -230,7 +230,7 @@ checkProperNoun tagged (b,e) =
 --
 -- | check whether DP is pronoun and change NomClass accordingly
 --
-identifyDeterminer :: TaggedLemma (Lemma ': as) -> DetP -> DetP
+identifyDeterminer :: PreAnalysis (Lemma ': as) -> DetP -> DetP
 identifyDeterminer tagged dp = fromMaybe dp $ do
     let rng = dp^.maximalProjection
     let zs = extractZipperByRange rng (tagged^.pennTree)
@@ -279,7 +279,7 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
 --   I did not implement the already-splitted case. We need multiple-adjunct
 --   structure.
 --
-bareNounModifier :: TaggedLemma t -> DetP -> DetP
+bareNounModifier :: PreAnalysis t -> DetP -> DetP
 bareNounModifier tagged dp = fromMaybe dp $ do
   rng@(b0,_e0) <- headRangeDP dp  -- dp^.maximalProjection
   z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTree))
@@ -297,7 +297,7 @@ bareNounModifier tagged dp = fromMaybe dp $ do
 --
 -- | Set hn_class as identified
 --
-identifyNamedEntity :: TaggedLemma t -> DetP -> DetP
+identifyNamedEntity :: PreAnalysis t -> DetP -> DetP
 identifyNamedEntity tagged dp =
   fromMaybe dp $ do
     rng <- dp^?complement._Just.headX.hn_range
@@ -305,39 +305,6 @@ identifyNamedEntity tagged dp =
       <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
     (return . (complement._Just.headX.hn_class .~ (Just nec))) dp
 
-
---
--- |
---
-{-
-
-identifyInternalTimePrep :: TaggedLemma (Lemma ': as)
-                         -> DPTree -- DetP
-                         -> DPTree -- (DetP,[AdjunctVP])
-identifyInternalTimePrep tagged (DPTree dp lst) = fromMaybe (DPTree dp lst) $ do
-  let rng_dp@(b_dp,_e_dp) = dp^.maximalProjection
-  TagPos (b0,e0,_)
-    <- find (\(TagPos (b,e,t)) -> beginEndToRange (b,e) `isInsideR` rng_dp && t == MarkTime) (tagged^.tagList)
-  let rng_time = beginEndToRange (b0,e0)
-  z_tdp <- find (isChunkAs NP . current) (extractZipperByRange rng_time (tagged^.pennTree))
-  z_tpp <- parent z_tdp
-  let rng_tpp = getRange (current z_tpp)
-  guard (rng_tpp `isInsideR` rng_dp)
-  guard (isChunkAs PP (current z_tpp))
-
-  let (b_tpp,_e_tpp) = getRange (current z_tpp)
-      rng_dp' = (b_dp,b_tpp-1)
-  (b_h,e_h) <- dp^?complement._Just.headX.hn_range
-  let rng_head = if e_h > b_tpp-1 then (b_h,b_tpp-1) else (b_h,e_h)
-  pptree@(PPTree tpp _) <- mkPPFromZipper tagged PC_Time z_tpp  -- for the time being
-  let dp' = dp & -- (maximalProjection .~ rng_dp')
-                  (complement._Just.headX.hn_range .~ rng_head)
-
-               -- . (complement._Just.maximalProjection .~ rng_dp')
-                  . (adjunct %~ addPP (tpp^.maximalProjection))
-
-  return (DPTree dp' (addPPTree pptree lst))  --  ++ pptree tpp  [AdjunctVP_PP tpp])
--}
 
 
 removePP :: Range -> [AdjunctDP] -> [AdjunctDP]

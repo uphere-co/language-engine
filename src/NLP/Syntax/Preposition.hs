@@ -20,12 +20,12 @@ import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type         (MarkType(..))
 import           NLP.Syntax.Type.XBar    (DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP,_CompPP_DP
-                                         ,TaggedLemma(..),pennTree,tagList
+                                         ,PreAnalysis(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
                                          ,mkPP,hp_prep,hp_pclass)
 
 
-hasEmptyPreposition :: TaggedLemma t -> Range -> Bool
+hasEmptyPreposition :: PreAnalysis t -> Range -> Bool
 hasEmptyPreposition tagged rng =
   fromMaybe False $ do
     z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTree))
@@ -40,7 +40,7 @@ isMatchedTime :: Range -> TagPos TokIdx MarkType -> Bool
 isMatchedTime rng (TagPos (b,e,t)) = beginEndToRange (b,e) == rng && t == MarkTime
 
 
-checkEmptyPrep :: TaggedLemma t -> DetP -> CompVP
+checkEmptyPrep :: PreAnalysis t -> DetP -> CompVP
 checkEmptyPrep tagged dp =
   let rng = dp^.maximalProjection
       r = fromMaybe False $ do
@@ -52,7 +52,7 @@ checkEmptyPrep tagged dp =
      else CompVP_DP dp
 
 
-checkTimePrep :: TaggedLemma t -> PP -> CompVP
+checkTimePrep :: PreAnalysis t -> PP -> CompVP
 checkTimePrep tagged pp = fromMaybe (CompVP_PP pp) $ do
   dp <- pp^? complement . _CompPP_DP
   guard $ fromMaybe False $ do

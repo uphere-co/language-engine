@@ -23,7 +23,7 @@ import           NLP.Syntax.Clause
 import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                   (mkTaggedLemma)
+import           NLP.Syntax.Util                   (mkPreAnalysis)
 --
 import           Test.Common
 import           Test.Tasty
@@ -273,7 +273,7 @@ testcases = [ test_silent_pronoun_1
 checkTrace :: TestTrace -> Bool
 checkTrace c =
   fromMaybe False $ do
-    let tagged = mkTaggedLemma (c^._4) (c^._5) (c^._6) (c^._7)
+    let tagged = mkPreAnalysis (c^._4) (c^._5) (c^._6) (c^._7)
         vps = mkVPS (c^._4) (c^._5)
         x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
     -- trace "checktrace1" $ return ()

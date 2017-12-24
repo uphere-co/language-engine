@@ -27,7 +27,7 @@ import           NLP.Syntax.Format
 import           NLP.Syntax.Type                   (MarkType(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                   (mkTaggedLemma)
+import           NLP.Syntax.Util                   (mkPreAnalysis)
 --
 import           Test.Common
 import           Test.Tasty.HUnit
@@ -278,7 +278,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       pt = c^._5
       tagposs = c^._6
       synsets = c^._7
-      tagged = mkTaggedLemma lmatknlst pt tagposs synsets
+      tagged = mkPreAnalysis lmatknlst pt tagposs synsets
 
       vps = mkVPS (c^._4) (c^._5)
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
