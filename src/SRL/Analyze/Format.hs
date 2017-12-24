@@ -33,7 +33,7 @@ import           Lexicon.Type                            (ArgPattern(..),RoleIns
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree,prettyPrint)
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),TaggedLemma,CP,X'Tree
+import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),PreAnalysis,CP,X'Tree
                                                          ,headTextDP,headX,complement,maximalProjection
                                                          ,tokensByRange
                                                          ,hp_prep,hp_pclass)
@@ -210,7 +210,7 @@ formatVerbStructure (VerbStructure vp senses mrmmtoppatts) =
 
 -- maybe "" show (dp^?complement._Just.headX)
 
-showMatchedFE :: TaggedLemma '[Lemma] -> (FNFrameElement, CompVP) -> String
+showMatchedFE :: PreAnalysis '[Lemma] -> (FNFrameElement, CompVP) -> String
 --                                         FE   range prep text
 showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (formatDP dp)  ("" :: Text) (headTextDP tagged dp)
 showMatchedFE tagged (fe,CompVP_AP ap) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (formatAP ap)  ("" :: Text) ((T.intercalate " " . tokensByRange tagged) (ap^.maximalProjection))
@@ -233,7 +233,7 @@ showMatchedFE tagged (fe,CompVP_Unresolved rng) = printf "%-15s: %-7s %3s %s" (u
 
 
 showMatchedFrame :: FrameDB
-                 -> TaggedLemma '[Lemma]
+                 -> PreAnalysis '[Lemma]
                  -> ([X'Tree],(VerbStructure, CP))
                  -> IO ()
 showMatchedFrame framedb tagged (x'tr,(vstr,cp)) = do

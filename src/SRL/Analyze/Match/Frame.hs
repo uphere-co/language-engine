@@ -582,7 +582,7 @@ subjObjSBAR argpatt =
 
 matchNomFrame :: AnalyzePredata
               -> [X'Tree]
-              -> TaggedLemma '[Lemma]
+              -> PreAnalysis '[Lemma]
               -> DetP
               -> Maybe (Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe EntityInfo),(FNFrameElement,EntityInfo))
 matchNomFrame apredata x'tr tagged dp = do

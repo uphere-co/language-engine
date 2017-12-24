@@ -377,7 +377,7 @@ Apple Inc  said on Tuesday it has removed several apps including Skype, Microsof
 -- | submit a formal bid (fictitious S problem)
 Kentucky plans to submit a formal bid asking Amazon.com Inc (AMZN.O) to open its second headquarters in the state, an official told Reuters on Thursday.
 
--- | buy payment technology firm Cayan
+-- | buy payment technology firm Cayan:   dependency is good, constituency messed up
 Total System Services Inc (TSYS) on Monday said it would buy payment technology firm Cayan for $1.05 billion in cash to expand its offerings to small and mid-sized U.S. businesses.
 
 -- | FRAG ("talking is not the answer,")
@@ -387,8 +387,11 @@ U.S. President Donald Trump on Wednesday dismissed any diplomatic negotiations w
 -- | not fictitious.. why escalating deadly violence not captured.  escalate is not yet registered. ahah.
 Britain has asked for the U.N. Security Council to meet on Wednesday to discuss escalating deadly violence between Rohingya insurgents and Myanmar security forces in Rakhine state, Britain’s U.N. Ambassador Matthew Rycroft said on Tuesday.
 
--- | engage two financial advisers. show work.
+-- | engage two financial advisers. show work. NOT BAD. PROMOTE INNER-DP PP to outer frame: dependency parser result is correct.
 Canadian construction company Aecon Group Inc (ARE.TO) said on Friday it had engaged two financial advisers to explore a potential sale of the company, sending its shares up as much as 26.7 percent.
+
+-- | aims to launch     -- need to be analyzed. no reason.    on Thursday it aims ... in one PP. WRONG!
+UBS Group’s (UBSG.S) asset management unit said on Thursday it aims to launch its first Chinese private fund by the end of the year, as Europe’s fourth-biggest money manager seeks a slice of China’s fast-growing, 10 trillion yuan ($1.54 trillion) private fund market.
 
 -------------------------
 -- Preposed participle --
@@ -408,7 +411,8 @@ German e-commerce investor Rocket Internet  reported that its leading start-ups 
 -- | to resolve a probe: so wrong.. dependency parser result is correct
 Massachusetts Attorney General Maura Healey announced a settlement on Thursday in which fantasy sports companies DraftKings Inc and FanDuel Inc will pay a combined $2.6 million to resolve a probe of what she called unfair and deceptive practices affecting consumers.
 
-
+-- | UCP?  dependency is good.
+President Petro Poroshenko said on Thursday that Ukraine would struggle badly if it ditched its IMF aid program, urging lawmakers to pass anti-corruption and pension reforms that the Fund has called for.
 
 -----------------------
 -- wrong POS tagging --

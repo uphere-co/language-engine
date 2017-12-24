@@ -34,7 +34,7 @@ import NLP.Syntax.Format.Internal
 -- | this is very experimental now, only "the company" is checked.
 --
 definiteCorefResolution :: [X'Tree]
-                        -> TaggedLemma '[Lemma]
+                        -> PreAnalysis '[Lemma]
                         -> DetP
                         -> Maybe (Range,Range)
 definiteCorefResolution x'tr tagged dp = do
@@ -66,7 +66,7 @@ definiteCorefResolution x'tr tagged dp = do
 
 
 definiteGenitiveCorefResolution :: [X'Tree]
-                                -> TaggedLemma '[Lemma]
+                                -> PreAnalysis '[Lemma]
                                 -> DetP
                                 -> Maybe (Range,Range)
 definiteGenitiveCorefResolution x'tr tagged dp = do
@@ -120,14 +120,14 @@ pronounResolution x'tr dp = do
          | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp'^.maximalProjection)
          | otherwise -> mzero
 
-entityTextDP :: TaggedLemma t -> DetP -> Text
+entityTextDP :: PreAnalysis t -> DetP -> Text
 entityTextDP tagged dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> fromMaybe "" (fmap (headText tagged) (dp^.complement))
     _ -> T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
 
 
-entityFromAP :: TaggedLemma '[Lemma]
+entityFromAP :: PreAnalysis '[Lemma]
              -> AP
              -> (EntityInfo,DPInfo)
 entityFromAP tagged ap =
@@ -137,7 +137,7 @@ entityFromAP tagged ap =
 
 
 entityFromDP :: [X'Tree]
-             -> TaggedLemma '[Lemma]
+             -> PreAnalysis '[Lemma]
              -> DetP
              -> (EntityInfo,DPInfo)
 entityFromDP x'tr tagged dp =

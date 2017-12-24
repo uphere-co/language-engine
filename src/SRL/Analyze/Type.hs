@@ -19,7 +19,7 @@ import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElemen
                                                ,RoleInstance,RolePattInstance,SenseID)
 import           NLP.Syntax.Type               (MarkType(..))
 import           NLP.Syntax.Type.Verb          (VerbProperty(..))
-import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,TaggedLemma)
+import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,PreAnalysis)
 import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
 import           NLP.Type.PennTreebankII       (Lemma,PennTree)
 import           NLP.Type.SyntaxProperty       (Voice)
@@ -59,7 +59,7 @@ data SentStructure = SentStructure { _ss_i              :: Int
                                    , _ss_vps            :: [VerbProperty (Zipper '[Lemma])]
                                    , _ss_x'tr           :: [X'Tree]
                                    , _ss_tagged_full    :: [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text), MarkType)]
-                                   , _ss_tagged         :: TaggedLemma '[Lemma]
+                                   , _ss_tagged         :: PreAnalysis '[Lemma]
                                    , _ss_verbStructures :: [VerbStructure]
                                    }
 

@@ -82,7 +82,7 @@ mkEntityFun (EI rng rnghead _mprep txt _ _,di) =
   in (\i -> MGEntity i (Just rng) (Just rnghead) txt []) : (appos ++ comp ++ poss ++ adjs)
 
 
-mkMGVertices :: ([X'Tree],TaggedLemma '[Lemma],[(Range,Range)])
+mkMGVertices :: ([X'Tree],PreAnalysis '[Lemma],[(Range,Range)])
              -> ([(Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,Maybe (SenseID,Bool))]
                 ,[(Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe EntityInfo),(FNFrameElement,EntityInfo))]
                 )
