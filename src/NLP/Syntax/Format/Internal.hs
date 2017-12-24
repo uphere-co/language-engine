@@ -53,13 +53,13 @@ formatAdjunctDP (AdjunctDP_PP rng) = "PP-" <> T.pack (show rng)
 
 
 formatPP :: PP -> Text
-formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
-              if pp^.headX.hp_pclass == PC_Time then "-time" else "" <>
+formatPP pp = "PP" <> if pp^.headX.hp_pclass == PC_Time then "-time" else "" <> T.pack (show (pp^.maximalProjection))
+{-                <>
               "-" <>
               case pp^.complement of
                 CompPP_DP dp      -> formatDP dp
                 CompPP_Gerund rng -> "ing" <> T.pack (show rng)
-
+-}
 
 
 
@@ -87,7 +87,7 @@ formatAP ap = "AP" <> (ap^.maximalProjection.to show.to T.pack)
 formatCompVP :: CompVP -> Text
 formatCompVP (CompVP_Unresolved r)  = "unresolved" <> T.pack (show r)
 formatCompVP (CompVP_CP cp) = "CP" <> cp^.headX.to formatComplementizer <> cp^.maximalProjection.to show.to T.pack
-formatCompVP (CompVP_DP dp) = formatDP dp
+formatCompVP (CompVP_DP dp) = "DP" <> T.pack (show (dp^.maximalProjection)) --  formatDP dp
 formatCompVP (CompVP_PP pp) = formatPP pp
 formatCompVP (CompVP_AP ap) = formatAP ap
 
@@ -98,10 +98,6 @@ formatCoindex f (Coindex mi e) = either fmt f e <> maybe "" (\i -> "_" <> T.pack
     fmt PRO   = "PRO"
     fmt Moved = "t"
     fmt WHPRO = "WHP"
-    --
-    fmtLst = T.concat . map ((<> " -> ") . fmt)
-    --
-    fmtResolved = maybe "NOT_RESOLVED" f
 
 {- 
 formatTraceChain :: (a -> Text) -> TraceChain a -> Text

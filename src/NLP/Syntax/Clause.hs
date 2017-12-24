@@ -22,7 +22,9 @@ import           Control.Monad.Trans.State              (State,execState,get,put
 import           Data.Attribute                         (ahead)
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Foldable                          (toList)
+import           Data.Function                          (on)
 import qualified Data.HashMap.Strict               as HM
+import           Data.List                              (sortBy)
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (Last(..))
 --
@@ -267,7 +269,9 @@ identifyCPHierarchy :: PreAnalysis (Lemma ': as) -> [VerbProperty (Zipper (Lemma
 identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
   where x'map = (HM.fromList . concat . mapMaybe (hierarchyBits tagged <=< constructCP tagged)) vps
         rngs = HM.keys x'map
-        rtr = rangeTree rngs
+        rangeSort (PN x xs) = PN x (sortBy (compare `on` (fst . getRoot1)) (map rangeSort xs))
+        rangeSort (PL x)    = PL x
+        rtr = map rangeSort (rangeTree rngs)
         tofull rng = HM.lookup rng x'map
 
 
