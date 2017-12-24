@@ -58,7 +58,7 @@ ppRelFrame p = lookup p [ ("about"     , ("Topic"                        , "Text
                         , ("of"        , ("Partitive"                    , "Subset"   , "Group"))
                         , ("off"       , ("Spatial_contact"              , "Figure"   , "Ground"))
                         , ("on"        , ("Locative_relation"            , "Figure"   , "Ground"))
-                        -- onto
+                        , ("onto"      , ("Locative_relation"            , "Figure"   , "Ground"))
                         -- opposite
                         , ("out"       , ("Locative_relation"            , "Figure"   , "Ground"))
                         , ("outside"   , ("Interior_profile_relation"    , "Figure"   , "Ground"))
@@ -143,7 +143,7 @@ ppExtraRoleMap = [ ("about"     , ["Topic"])
                  , ("of"        , ["Phenomenon"])
                  , ("off"       , ["Location","Place"])
                  , ("on"        , ["Location","Place","Time"])
-                 -- onto
+                 , ("onto"      , ["Location","Place","Path"])
                  -- opposite
                  , ("out"       , ["Direction"])
                  , ("outside"   , ["Area","Ground"])

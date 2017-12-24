@@ -1,12 +1,13 @@
 
+
+
+
 SOLVED
 
 -- | multi-word expression "step down"
 Hewlett Packard Enterprise Co said on Tuesday that Meg Whitman was stepping down as chief executive officer.
 
 
--- | its plan to seek : SOLVED
-Chilean copper mine Collahuasi, a joint venture of Anglo American and Glencore, is postponing its plan to seek approval of an environmental impact study for an expansion until next year, the company told Reuters on Tuesday.
 
 
 -- PP-as as role. this is resolved
@@ -163,18 +164,10 @@ Venture capitalist Peter Thiel may be looking to buy online news site Gawker.com
 -- | what he called "missteps"
 Walt Disney Co animation executive John Lasseter told company staff on Tuesday he was taking a six-month leave of absence following what he called "missteps" including unwanted hugs that made employees uncomfortable, according to a memo seen by Reuters.
 
--- | its drug to treat
-Eli Lilly and Co said on Tuesday its drug to treat non-small cell lung cancer failed to meet the main goal of improving overall survival in patients in a late-stage study.
-
--- | proposal to pay
-The United Nations said on Tuesday it had accepted a proposal from Iraq to pay 0.5 percent of its 2018 oil proceeds towards compensation for $4.6 billion owed to Kuwait for destruction of its oil facilities during the 1990-91 Gulf War occupation.
 
 
 -- | it takes
 Russia's communication watchdog Roskomnadzor said on Tuesday it would consider retaliatory measures against Alphabet Inc's Google over any action it takes in respect of Russian media outlets RT and Sputnik, Interfax news agency reported.
-
--- |
-Apple Inc  said on Tuesday it has removed several apps including Skype, Microsoft Corp's internet phone call and messaging service, from its app store in China after the country's government pointed to violations of local laws.
 
 
 -- | be + PP
@@ -245,28 +238,6 @@ OPEC is likely to stay the course by keeping its current curb on oil production 
 
 
 
-conjunction collection
-
-
--- | conjunction - and
-German healthcare group Fresenius said third-quarter adjusted net income gained 11 percent on higher drug sales and helped by the addition of Spanish hospitals chain Quironsalud.
-
-
-
--- | conjunction - and
-Samsung Electronics Co Ltd said on Wednesday it would create an artificial intelligence (AI) research centre and strengthen an executive role to look for new business areas for all its three major business groups.
-
-
-
--- | conjunction - will stop ... and launch ...
-Walt Disney Co (DIS.N) will stop providing new movies to Netflix Inc (NFLX.O) starting in 2019 and launch its own streaming service as the world’s biggest entertainment company tries to capture digital viewers who are dumping traditional television.
-
-
-
--- | conjunction -  is discussing ... and hopes to ..
-Brazilian steelmaker Usiminas Siderugicas de Minas Gerais SA is currently discussing a 25 percent steel price hike with automakers and hopes to conclude talks by the end of December, Chief Executive Sergio Leite said on Wednesday.
-
-
 
 
 -- | apposition problem: solved. now ADJP RRC
@@ -280,8 +251,6 @@ Kinder Morgan Canada Ltd has complied with an order by the country's National En
 Igor Sechin, the chief executive of Russian oil major Rosneft, will not be able to appear in court this year to act as a witness in the trial of ex-economy minister Alexei Ulyukayev, judge Larisa Semyonova said during court hearings on Wednesday.
 
 
--- | for its bid to acquire..
-U.S. smartphone chipmaker Qualcomm Inc may win European Union approval for its bid to acquire NXP Semiconductors NV by the end of the year, Bloomberg reported on Thursday, citing people familiar with the matter.
 
 
 -- | until next year cause problem
@@ -310,8 +279,6 @@ India on Wednesday told U. S. Secretary of State Rex Tillerson it plans to retai
 -- | smaller than expected volume
 Shares of U.S. Silica Holdings Inc (SLCA.N) fell as much as 11 percent on Tuesday after the sand producer reported smaller than expected volume in quarterly sand sales.
 
--- | buy payment technology firm Cayan
-Total System Services Inc (TSYS) on Monday said it would buy payment technology firm Cayan for $1.05 billion in cash to expand its offerings to small and mid-sized U.S. businesses.
 
 -- | redomicile (too difficult word)
 Liberty Specialty Markets said on Friday it planned to redomicile its UK insurance company to Luxembourg as a result of Britain's decision to leave the European Union.
@@ -325,38 +292,130 @@ Japanese stocks fell to their lowest in more than a week on Friday, with mobile 
 -- | frame for "hold" is wrong. two time expressions: on Dec. 20 at 9 a.m 
 Ontario Securities Commission will hold hearings on Aurora Cannabis's hostile takeover bid for rival CanniMed Therapeutics on Dec. 20 at 9 a.m. in Toronto, the regulator said on its website on Wednesday.
 
--- | Messaging app WhatsApp: where are you?
-Messaging app WhatsApp could be fined if it does not comply with an order from the French data protection regulator to bring its sharing of user data with parent company Facebook in line with French privacy law.
 
 -- | why two Self-mover? for jump?
 Canada's main stock index gained in early trading on Friday, as auto parts maker Linamar Corp jumped on news of a C$1.2 billion deal to buy an agricultural equipment maker, and heavyweight energy and financial stocks also rose.
 
--- | preposed participle
-The dollar dipped against a basket of major currencies on Monday amid doubt whether a proposed U.S. tax reform programme would have a major impact on economic growth, after the bill moved another step closer to ratification over the weekend.
+
+
+
+
+
+
+---------------------------------
+-- Noun phrase + to infinitive --
+---------------------------------
+
+-- | its plan to seek : SOLVED
+Chilean copper mine Collahuasi, a joint venture of Anglo American and Glencore, is postponing its plan to seek approval of an environmental impact study for an expansion until next year, the company told Reuters on Tuesday.
+
+-- | its drug to treat
+Eli Lilly and Co said on Tuesday its drug to treat non-small cell lung cancer failed to meet the main goal of improving overall survival in patients in a late-stage study.
+
+-- | proposal to pay
+The United Nations said on Tuesday it had accepted a proposal from Iraq to pay 0.5 percent of its 2018 oil proceeds towards compensation for $4.6 billion owed to Kuwait for destruction of its oil facilities during the 1990-91 Gulf War occupation.
+
+-- | for its bid to acquire..
+U.S. smartphone chipmaker Qualcomm Inc may win European Union approval for its bid to acquire NXP Semiconductors NV by the end of the year, Bloomberg reported on Thursday, citing people familiar with the matter.
+
+
+
+
+
+----------------------------
+-- conjunction collection --
+----------------------------
+
+-- | conjunction - and
+German healthcare group Fresenius said third-quarter adjusted net income gained 11 percent on higher drug sales and helped by the addition of Spanish hospitals chain Quironsalud.
+
+-- | conjunction - and
+Samsung Electronics Co Ltd said on Wednesday it would create an artificial intelligence (AI) research centre and strengthen an executive role to look for new business areas for all its three major business groups.
+
+-- | conjunction - will stop ... and launch ...
+Walt Disney Co (DIS.N) will stop providing new movies to Netflix Inc (NFLX.O) starting in 2019 and launch its own streaming service as the world’s biggest entertainment company tries to capture digital viewers who are dumping traditional television.
+
+-- | conjunction -  is discussing ... and hopes to ..
+Brazilian steelmaker Usiminas Siderugicas de Minas Gerais SA is currently discussing a 25 percent steel price hike with automakers and hopes to conclude talks by the end of December, Chief Executive Sergio Leite said on Wednesday.
 
 -- | conjunction: sell vehicles and boost their 2017 numbers
 Major automakers posted mixed U.S. November new vehicle sales on Friday and predicted a competitive December as they rush to sell vehicles and boost their 2017 numbers before the year comes to an end.
 
--- | preposed gerundive adjective, leading
-German e-commerce investor Rocket Internet  reported that its leading start-ups narrowed their losses in the first half of 2017, while revenue growth picked up slightly to 29 percent.
-
 -- | conjunction
 The U.S. Justice Department said on Thursday it had shut down the dark web marketplace AlphaBay, working with international partners to knock offline the site accused of allowing hundreds of thousands of people to buy and sell drugs, firearms, computer hacking tools and other illicit goods.
 
+-- | double (S (S ...) (CC and) (S ..))  due to wrong "and" , dependency parser is also wrong
+But for this to happen, inspectors must believe such checks are necessary and so far they do not, officials say.
+
+
+-- | conjunction
+Engelhart CTP is shifting some of its big purchase of certified robusta stocks to a new warehouse, industry sources have told Reuters, signalling it may plan to keep the coffee off the market and potentially move to extend its grip on stocks.
+
+-- | conjunction
+Thailand is preparing to receive people fleeing fighting in Myanmar and send them back “when they are ready”, the prime minister said on Tuesday, following a series of attacks by Rohingya Muslim insurgents on Myanmar security forces last week.
+
+
+-- | selling ... and ... 
+Veridium Labs, an environmental technology startup headquartered in Hong Kong, said on Monday it hopes to raise $150 million in October by selling two types of tokens backed by forest carbon offset credits and other credits used to fund environmental mitigation efforts.
+
+----------------
+-- Possessive --
+----------------
+
+-- | Possessive
+Japanese Prime Minister Shinzo Abe said on Thursday he had received assurances that Britain’s negotiations on leaving the European Union (EU) would be transparent.
+
+-- | Possessive problem + wrong POS. Skype as verb!
+Apple Inc  said on Tuesday it has removed several apps including Skype, Microsoft Corp's internet phone call and messaging service, from its app store in China after the country's government pointed to violations of local laws.
 
 
 
--- Fictitious S problem
+---------------------------
+-- Fictitious S/FRAG problem  --
+---------------------------
 
 -- | submit a formal bid (fictitious S problem)
 Kentucky plans to submit a formal bid asking Amazon.com Inc (AMZN.O) to open its second headquarters in the state, an official told Reuters on Thursday.
 
--- | to resolve a probe
+-- | buy payment technology firm Cayan
+Total System Services Inc (TSYS) on Monday said it would buy payment technology firm Cayan for $1.05 billion in cash to expand its offerings to small and mid-sized U.S. businesses.
+
+-- | FRAG ("talking is not the answer,")
+U.S. President Donald Trump on Wednesday dismissed any diplomatic negotiations with North Korea, saying “talking is not the answer,” one day after Pyongyang fired a ballistic missile over Japan and drew international condemnation.
+
+
+-- | not fictitious.. why escalating deadly violence not captured.  escalate is not yet registered. ahah.
+Britain has asked for the U.N. Security Council to meet on Wednesday to discuss escalating deadly violence between Rohingya insurgents and Myanmar security forces in Rakhine state, Britain’s U.N. Ambassador Matthew Rycroft said on Tuesday.
+
+-- | engage two financial advisers. show work.
+Canadian construction company Aecon Group Inc (ARE.TO) said on Friday it had engaged two financial advisers to explore a potential sale of the company, sending its shares up as much as 26.7 percent.
+
+-------------------------
+-- Preposed participle --
+-------------------------
+
+-- | preposed participle
+The dollar dipped against a basket of major currencies on Monday amid doubt whether a proposed U.S. tax reform programme would have a major impact on economic growth, after the bill moved another step closer to ratification over the weekend.
+
+-- | preposed gerundive adjective, leading
+German e-commerce investor Rocket Internet  reported that its leading start-ups narrowed their losses in the first half of 2017, while revenue growth picked up slightly to 29 percent.
+
+
+----------------------------------
+-- so wrong constituency parser --
+----------------------------------
+
+-- | to resolve a probe: so wrong.. dependency parser result is correct
 Massachusetts Attorney General Maura Healey announced a settlement on Thursday in which fantasy sports companies DraftKings Inc and FanDuel Inc will pay a combined $2.6 million to resolve a probe of what she called unfair and deceptive practices affecting consumers.
 
 
 
-
+-----------------------
+-- wrong POS tagging --
+-----------------------
 
 -- | fired tear gas, tear is recognized as VB
 Security forces fired tear gas at hundreds of anti-government protesters carrying out a late night sit-in at an intersection in central Lome as part of a bid to force President Faure Gnassingbe to step aside, witnesses said on Thursday.
+
+-- | Messaging app WhatsApp: where are you? Messaging as VB
+Messaging app WhatsApp could be fined if it does not comply with an order from the French data protection regulator to bring its sharing of user data with parent company Facebook in line with French privacy law.
