@@ -66,6 +66,17 @@ complementCandidates :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
 complementCandidates vprop z_vp =
     let cs_ord = siblingsBy (nextNotComma) checkCompVPness =<< maybeToList (headVP vprop)
         -- topicalized CP
+        c_frag = do v <- headVP vprop
+                    z <- firstSiblingBy next (\x -> rootTag x == Left FRAG) v
+                    let rng = getRange (current z)
+                    --trace ("c_frag1" ++ show rng) (return ())
+                    guard (rootTag (current z) == Left FRAG)
+                    --trace ("c_frag2" ++ show rng) (return ())
+                    z' <- child1 z
+                    --trace ("c_frag3" ++ show rng) (return ())
+                    guard (checkCompVPness (current z'))
+                    --trace ("c_frag4" ++ show rng) (return ())
+                    return z'
         c_top = do guard (isChunkAs VP (current z_vp))
                    z_np <- prev z_vp
                    guard (isChunkAs NP (current z_np))
@@ -74,7 +85,7 @@ complementCandidates vprop z_vp =
                    z_cp <- prev z_comma
                    (guard (isChunkAs S (current z_cp) || isChunkAs SBAR (current z_cp)))
                    return z_cp
-    in (cs_ord,c_top)
+    in (maybe cs_ord (:cs_ord) c_frag, c_top)
 
   where
     nextNotComma z = do n <- next z
@@ -88,6 +99,7 @@ complementCandidates vprop z_vp =
                           Left S     -> True
                           Left SBARQ -> True
                           Left SQ    -> True
+                          -- Left FRAG  -> True
                           Left _     -> False
                           Right p    -> isNoun p == Yes || isAdjective p == Yes
 
@@ -114,15 +126,7 @@ complementsOfVerb tagged vprop z_vp =
        Passive -> (TraceChain (Left (singletonLZ Moved)) Nothing : cs,mspec,adjs,dppps)
   where
     xform_dp z = let dptr@(DPTree dp' _pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
-
-                     -- DPTree dp' pptrs = identifyInternalTimePrep tagged dptr
-                     -- zs = map (\(PPTree pp _) -> AdjunctVP_PP pp) pptrs
                      adjs = []    -- we had better identify time part in SRL
-                     {-flip mapMaybe pptrs $ \(PPTree pp _) -> do
-                              guard (pp^.headX.hp_pclass == PC_Time)
-                              return (AdjunctVP_PP pp)
-                     -}
-                     --     AdjunctVP_PP pp) . filter (\(PPTree pp
                      subs = getSubsFromDPTree dptr
                  in (TraceChain (Right []) (Just (checkEmptyPrep tagged dp')),adjs,subs)
     xform_pp z = fromMaybe (TraceChain (Right []) Nothing,[],[]) $ do
@@ -459,8 +463,8 @@ resolveDP tagged rng = fmap (fromMaybe emptyTraceChain) . runMaybeT $ do
 resolveCP :: X'Tree -> X'Tree
 resolveCP xtr = rewriteTree action xtr
   where
-    -- debugfunc msg = do xtr' <- lift get
-    --                    trace ("\n" ++ msg ++ "\n" ++ T.unpack (formatX'Tree xtr')) $ return ()
+    debugfunc msg = do xtr' <- lift get
+                       trace ("\n" ++ msg ++ "\n" ++ T.unpack (formatX'Tree xtr')) $ return ()
 
     action rng = do -- debugfunc ("action_before: " ++ show rng)
                     z <- hoistMaybe . extractZipperById rng =<< lift get
@@ -483,17 +487,17 @@ resolveCP xtr = rewriteTree action xtr
       -- debugfunc ("replaceCompVP_before" ++ (show (cp^.maximalProjection)))
       let xs = cp^.complement.complement.complement
       xs' <- flip traverse xs $ \x ->
-               ((do -- trace ("\nreplaceCompVP1 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
+               ((do --trace ("\nreplaceCompVP1 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     tr <- lift get
-                    -- trace ("\nreplaceCompVP2 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
+                    --trace ("\nreplaceCompVP2 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     rng_compvp <- hoistMaybe (x^?trResolved._Just._CompVP_Unresolved)
-                    -- trace ("\nreplaceCompVP3 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
+                    --trace ("\nreplaceCompVP3 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     y <- hoistMaybe (extractZipperById rng_compvp tr)
-                    -- trace ("\nreplaceCompVP4 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
+                    --trace ("\nreplaceCompVP4 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     y' <- replace y
-                    -- trace ("\nreplaceCompVP5 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
+                    --trace ("\nreplaceCompVP5 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
-                    -- trace ("\nreplaceCompVP6 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
+                    --trace ("\nreplaceCompVP6 " ++ T.unpack (formatTraceChain formatCompVP x) ) (return ())
                     (return . (trResolved .~ Just (CompVP_CP cp'))) x
                 )
                 <|>

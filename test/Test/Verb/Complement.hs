@@ -259,6 +259,18 @@ adjp_1
     , []
     )
 
+frag_1 :: TestVerbComplement
+frag_1 =
+  ( "U.S. President Donald Trump on Wednesday dismissed any diplomatic negotiations with North Korea, saying “talking is not the answer,” one day after Pyongyang fired a ballistic missile over Japan and drew international condemnation."
+  , 14
+  , (("U.S. President Donald Trump",Nothing),["talking is not the answer"],[],False)
+  , [(0,("U.S.","U.S.")),(1,("President","President")),(2,("Donald","Donald")),(3,("Trump","Trump")),(4,("on","on")),(5,("Wednesday","Wednesday")),(6,("dismiss","dismissed")),(7,("any","any")),(8,("diplomatic","diplomatic")),(9,("negotiation","negotiations")),(10,("with","with")),(11,("North","North")),(12,("Korea","Korea")),(13,(",",",")),(14,("say","saying")),(15,("``","``")),(16,("talk","talking")),(17,("be","is")),(18,("not","not")),(19,("the","the")),(20,("answer","answer")),(21,(",",",")),(22,("''","''")),(23,("one","one")),(24,("day","day")),(25,("after","after")),(26,("Pyongyang","Pyongyang")),(27,("fire","fired")),(28,("a","a")),(29,("ballistic","ballistic")),(30,("missile","missile")),(31,("over","over")),(32,("Japan","Japan")),(33,("and","and")),(34,("draw","drew")),(35,("international","international")),(36,("condemnation","condemnation")),(37,(".","."))]
+  , PN "ROOT" [PN "S" [PN "NP" [PN "NP" [PL ("NNP","U.S."),PL ("NNP","President"),PL ("NNP","Donald"),PL ("NNP","Trump")],PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Wednesday")]]],PN "VP" [PL ("VBD","dismissed"),PN "NP" [PN "NP" [PL ("DT","any"),PL ("JJ","diplomatic"),PL ("NNS","negotiations")],PN "PP" [PL ("IN","with"),PN "NP" [PL ("NNP","North"),PL ("NNP","Korea")]]],PL (",",","),PN "S" [PN "VP" [PL ("VBG","saying"),PL ("``","``"),PN "FRAG" [PN "S" [PL ("VBG","talking"),PN "VP" [PL ("VBZ","is"),PL ("RB","not"),PN "NP" [PL ("DT","the"),PL ("NN","answer")]]],PL (",",","),PL ("''","''"),PN "SBAR" [PN "NP" [PL ("CD","one"),PL ("NN","day")],PL ("IN","after"),PN "S" [PN "NP" [PL ("NNP","Pyongyang")],PN "VP" [PN "VP" [PL ("VBD","fired"),PN "NP" [PL ("DT","a"),PL ("JJ","ballistic"),PL ("NN","missile")],PN "PP" [PL ("IN","over"),PN "NP" [PL ("NNP","Japan")]]],PL ("CC","and"),PN "VP" [PL ("VBD","drew"),PN "NP" [PL ("JJ","international"),PL ("NN","condemnation")]]]]]]]]],PL (".",".")]]
+  , []
+  , []
+  )
+
+
 checkSubjCompAdjunct :: TestVerbComplement -> Bool
 checkSubjCompAdjunct c = fromMaybe False $ do
   let txt = c^._1
@@ -302,10 +314,10 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       b_topicalized = fromMaybe False $ do
                         cp^?specifier._Just._SpecCP_Topic
                         return True
-  -- trace ("\nHERE I AM!") (return())
+
   -- trace  ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr ++ "\n" ++ formatCP cp ++ "\n" ) $ return ()
-  -- trace ("\n" ++ show (lst_comps,lst_comps_test)) $ return ()
-  -- trace ("\n" ++ show (b_subj,b_comps,b_adjuncts,b_topicalized)) $ return ()
+  trace ("\n" ++ show (lst_comps,lst_comps_test)) $ return ()
+  trace ("\n" ++ show (b_subj,b_comps,b_adjuncts,b_topicalized)) $ return ()
   -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (txt,lmatknlst,pt,tagposs,synsets)))) $ return ()
 
   return  (b_subj && b_comps && b_adjuncts && (b_topicalized == c^._3._4))
@@ -330,6 +342,7 @@ testcases = [ -- -- main_finite_1
             , rrc_passive_2
             , to_infinitive_1
             , adjp_1
+            , frag_1
             ]
 
 unitTests :: TestTree
