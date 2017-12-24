@@ -129,6 +129,7 @@ Executable verb-subcat-propbank-stat
                        --
                        aeson,
                        attoparsec,
+                       bifunctors,
                        containers,
                        directory,
                        directory-tree,

@@ -44,7 +44,7 @@ import           NLP.Syntax.Format.Old
 import           NLP.Syntax.Type                        (PredArgWorkspace,STag)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                        (mkTaggedLemma)
+import           NLP.Syntax.Util                        (mkPreAnalysis)
 import           NLP.Syntax.Verb
 import           NLP.Type.CoreNLP                       (Dependency)
 import           NLP.Type.PennTreebankII
@@ -68,7 +68,7 @@ import           Lexicon.Data
 type LemmaList = [(Int,Text)]
 
 
-matchVerbPropertyWithRelation :: TaggedLemma '[Lemma]
+matchVerbPropertyWithRelation :: PreAnalysis '[Lemma]
                               -> [VerbProperty (BitreeZipperICP '[Lemma])]
                               -> Bitree (Range,(STag,Int)) (Either (Range,(STag,Int)) (Int,(POSTag,Text)))
                               -> MatchedInstance
@@ -173,7 +173,7 @@ formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,_sense) =
       nlemmamapfull = adjustedLemmaMap lemmamap proptr
       nlemmamap = fmap (^._1) nlemmamapfull
       verbprops = verbPropertyFromPennTree nlemmamap proptr
-      tagged = mkTaggedLemma (IM.toList nlemmamapfull) proptr [] [] -- for the time being
+      tagged = mkPreAnalysis (IM.toList nlemmamapfull) proptr [] [] -- for the time being
       clausetr = clauseStructure tagged verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr)) -- coretr))
       l2p = linkID2PhraseNode proptr
       iproptr = mkPennTreeIdx proptr
@@ -261,7 +261,7 @@ updateStatMap !acc (filesidtid,corenlp,proptr,inst,_sense) =
       lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
       nlemmamapfull = adjustedLemmaMap lemmamap proptr
       nlemmamap = fmap (^._1) nlemmamapfull
-      tagged = mkTaggedLemma (IM.toList nlemmamapfull) proptr [] [] -- for the time being
+      tagged = mkPreAnalysis (IM.toList nlemmamapfull) proptr [] [] -- for the time being
       verbprops = verbPropertyFromPennTree nlemmamap proptr
 
       clausetr = clauseStructure tagged verbprops (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx proptr))
