@@ -21,25 +21,12 @@ import           GHC.Generics
 --
 import           NLP.Type.NamedEntity        (NamedEntityClass(..))
 import           NLP.Type.PennTreebankII
-import           NLP.Type.TagPos             (TagPos,TokIdx)
-import           WordNet.Type.Lexicographer  (LexicographerFile)
+-- import           NLP.Type.TagPos             (TagPos,TokIdx)
+-- import           WordNet.Type.Lexicographer  (LexicographerFile)
 --
 import           NLP.Syntax.Type.Verb
+import           NLP.Syntax.Type.PreAnalysis
 
-
-type BitreeICP lst = Bitree (Range,(ANAtt '[])) (Int,(ALAtt lst))
-
-type BitreeZipperICP lst = BitreeZipper (Range,(ANAtt '[])) (Int,(ALAtt lst))
-
-data MarkType = MarkTime | MarkEntity NamedEntityClass
-              deriving (Show,Eq)
-
-
-data TaggedLemma t = TaggedLemma { _pennTree  :: BitreeICP t
-                                 , _lemmaList :: [(Int,(Lemma,Text))]
-                                 , _synsetList :: [(Int,LexicographerFile)]
-                                 , _tagList   :: [TagPos TokIdx MarkType]
-                                 }
 
 data XType = X_V
            | X_T
