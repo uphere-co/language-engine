@@ -21,8 +21,6 @@ import           GHC.Generics
 --
 import           NLP.Type.NamedEntity        (NamedEntityClass(..))
 import           NLP.Type.PennTreebankII
--- import           NLP.Type.TagPos             (TagPos,TokIdx)
--- import           WordNet.Type.Lexicographer  (LexicographerFile)
 --
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.PreAnalysis
@@ -57,7 +55,7 @@ data XP x = XP { _headX             :: Property x
 --   Empty categories are first identified as NULL and
 --   will be resolved step by step.
 --
-data TraceType = NULL | SilentPRO | Moved | WHPRO
+data TraceType = NULL | PRO | Moved | WHPRO
                deriving (Show,Eq,Ord)
 
 
@@ -72,6 +70,8 @@ data TraceType = NULL | SilentPRO | Moved | WHPRO
 --   * If c is focused, (Left ([a,b],c,[]),d)
 --   * If d is focused, (Right [a,b,c], d)
 --
+
+{- 
 data TraceChain a = TraceChain { _trChain    :: Either (ListZipper TraceType) [TraceType]
                                , _trResolved :: Maybe a
                                }
@@ -80,7 +80,15 @@ data TraceChain a = TraceChain { _trChain    :: Either (ListZipper TraceType) [T
 
 emptyTraceChain :: TraceChain a
 emptyTraceChain = TraceChain (Right []) Nothing
+-}
 
+-- type Coindex = Int
+
+data Coindex a = Coindex { _coidx_i :: Maybe Int
+                         , _coidx_content :: Either TraceType a }
+               deriving (Show,Functor,Ord,Eq)
+
+emptyCoindex = Coindex Nothing (Left NULL)
 
 
 data SplitType = CLMod | BNMod | APMod
@@ -304,11 +312,11 @@ type instance Property   'X_V = VerbProperty Text
 type instance Maximal    'X_V = Range
 type instance Specifier  'X_V = ()
 type instance Adjunct    'X_V = [AdjunctVP]
-type instance Complement 'X_V = [TraceChain CompVP]
+type instance Complement 'X_V = [Coindex CompVP]
 
 type VerbP = XP 'X_V
 
-mkVerbP :: Range -> VerbProperty Text -> [AdjunctVP] -> [TraceChain CompVP] -> VerbP
+mkVerbP :: Range -> VerbProperty Text -> [AdjunctVP] -> [Coindex CompVP] -> VerbP
 mkVerbP vp vprop adjs comps = XP vprop vp () adjs comps
 
 
@@ -318,13 +326,13 @@ data SpecTP = SpecTP_Unresolved Range
 
 type instance Property   'X_T = ()
 type instance Maximal    'X_T = Range
-type instance Specifier  'X_T = TraceChain SpecTP
+type instance Specifier  'X_T = Coindex SpecTP
 type instance Adjunct    'X_T = ()
 type instance Complement 'X_T = VerbP
 
 type TP = XP 'X_T
 
-mkTP :: Range -> TraceChain SpecTP -> VerbP -> TP
+mkTP :: Range -> Coindex SpecTP -> VerbP -> TP
 mkTP tp mdp vp = XP () tp mdp () vp
 
 
@@ -335,7 +343,7 @@ data Complementizer = C_PHI              -- ^ empty complementizer
 
 data SpecCP = SpecCP_WHPHI           -- ^ empty Wh-word
             | SpecCP_WH Range        -- ^ Wh-phrase, this should be DP or PP. Later, we will change it to DP or PP.
-            | SpecCP_Topic (TraceChain CompVP) -- ^ topicalization (AdjunctCP for the time being)
+            | SpecCP_Topic (Coindex CompVP) -- ^ topicalization (AdjunctCP for the time being)
 
 
 

@@ -2,7 +2,7 @@
 
 module NLP.Syntax.Format.Internal where
 
-import           Control.Lens                       ((^.),(^..),(^?),_Just,to)
+import           Control.Lens                       ((^.),(^..),(^?),_Just,_Right,to)
 import           Data.Bifunctor                     (bimap)
 -- import           Data.Foldable                      (toList)
 import           Data.Maybe                         (fromMaybe)
@@ -91,7 +91,19 @@ formatCompVP (CompVP_DP dp) = formatDP dp
 formatCompVP (CompVP_PP pp) = formatPP pp
 formatCompVP (CompVP_AP ap) = formatAP ap
 
+formatCoindex :: (a -> Text) -> Coindex a -> Text
+formatCoindex f (Coindex mi e) = either fmt f e <> maybe "" (\i -> "_" <> T.pack (show i)) mi
+  where
+    fmt NULL  = "NUL"
+    fmt PRO   = "PRO"
+    fmt Moved = "t"
+    fmt WHPRO = "WHP"
+    --
+    fmtLst = T.concat . map ((<> " -> ") . fmt)
+    --
+    fmtResolved = maybe "NOT_RESOLVED" f
 
+{- 
 formatTraceChain :: (a -> Text) -> TraceChain a -> Text
 formatTraceChain f (TraceChain xs0 x) =
     case xs0 of
@@ -106,12 +118,12 @@ formatTraceChain f (TraceChain xs0 x) =
     fmtLst = T.concat . map ((<> " -> ") . fmt)
     --
     fmtResolved = maybe "NOT_RESOLVED" f
-
+-}
 
 formatX'Tree :: X'Tree -> Text
 formatX'Tree tr = formatBitree fmt tr
   where
-        fmt (rng, CPCase x) = "CP" <> showRange rng <> ": VP-comps: " <> T.intercalate "," (x^..complement.complement.complement.traverse.trResolved._Just.to formatCompVP)
+        fmt (rng, CPCase x) = "CP" <> showRange rng <> ": VP-comps: " <> T.intercalate "," (x^..complement.complement.complement.traverse.coidx_content._Right.to formatCompVP)
         fmt (_  , DPCase x) = formatDP x
         fmt (_  , PPCase x) = formatPP x
         fmt (_  , APCase x) = formatAP x

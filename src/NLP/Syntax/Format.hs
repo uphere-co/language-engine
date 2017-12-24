@@ -85,10 +85,10 @@ formatCP cp = printf "Complementizer Phrase: %-6s\n\
                 (T.intercalate " | " (cp^..adjunct.traverse.to formatAdjunctCP))
                 -- (maybe "null" show (getchunk (cp^.complement.maximalProjection)))
                 (show (cp^.complement.maximalProjection))
-                (formatTraceChain formatSpecTP (cp^.complement.specifier))
+                (formatCoindex formatSpecTP (cp^.complement.specifier))
                 -- (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
                 (show (cp^.complement.complement.maximalProjection))
-                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain formatCompVP ))))
+                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatCoindex formatCompVP ))))
                 ((T.intercalate " | " (cp^..complement.complement.adjunct.traverse.to formatAdjunctVP)))
 
   where fmtComplementizer :: Complementizer -> (String,String)
