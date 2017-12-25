@@ -2,7 +2,7 @@
 
 module NLP.Syntax.Format.Internal where
 
-import           Control.Lens                       ((^.),(^..),(^?),_Just,to)
+import           Control.Lens                       ((^.),(^..),(^?),_Just,_Right,to)
 import           Data.Bifunctor                     (bimap)
 -- import           Data.Foldable                      (toList)
 import           Data.Maybe                         (fromMaybe)
@@ -29,13 +29,18 @@ formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
 
 formatSpecTP :: SpecTP -> Text
-formatSpecTP (SpecTP_DP x) = x^.maximalProjection.to (T.pack . show)
+formatSpecTP (SpecTP_DP x) = "DP" <> x^.maximalProjection.to (T.pack . show)
 formatSpecTP (SpecTP_Unresolved x) = (T.pack . show) x
+
+formatSpecCP :: SpecCP -> Text
+formatSpecCP SpecCP_WHPHI = "WHφ"
+formatSpecCP (SpecCP_WH rng) = "WH" <> T.pack (show rng)
+formatSpecCP (SpecCP_Topic c) = "Topic" <> formatCoindex (T.pack.show.compVPToRange) c
 
 
 formatComplementizer :: Complementizer -> Text
-formatComplementizer C_PHI      = ""
-formatComplementizer (C_WORD w) = "-" <> unLemma w
+formatComplementizer C_PHI      = "φ"
+formatComplementizer (C_WORD w) = unLemma w
 
 
 formatCompDP :: CompDP -> Text
@@ -53,13 +58,13 @@ formatAdjunctDP (AdjunctDP_PP rng) = "PP-" <> T.pack (show rng)
 
 
 formatPP :: PP -> Text
-formatPP pp = "PP" <> T.pack (show (pp^.maximalProjection)) <>
-              if pp^.headX.hp_pclass == PC_Time then "-time" else "" <>
+formatPP pp = "PP" <> if pp^.headX.hp_pclass == PC_Time then "-time" else "" <> T.pack (show (pp^.maximalProjection))
+{-                <>
               "-" <>
               case pp^.complement of
                 CompPP_DP dp      -> formatDP dp
                 CompPP_Gerund rng -> "ing" <> T.pack (show rng)
-
+-}
 
 
 
@@ -74,9 +79,10 @@ formatDP dp = "(DP"        <> dp^.maximalProjection.to show.to T.pack <>
 
 
 formatNP :: NounP -> Text
-formatNP np = (np^.maximalProjection.to show.to T.pack) <>
-              (np^.headX.hn_range.to show.to T.pack) <>
-              fromMaybe "" (np^?complement._Just.to compDPToRange.to show.to T.pack)
+formatNP np = np^.maximalProjection.to show.to T.pack <>
+              np^.headX.coidx_content.hn_range.to show.to T.pack <>
+              np^.headX.coidx_i.to (maybe "" (\i -> "_" <> T.pack (show i))) --  <>
+              -- fromMaybe "" (np^?complement._Just.to compDPToRange.to show.to T.pack)
 
 
 formatAP :: AP -> Text
@@ -87,11 +93,19 @@ formatAP ap = "AP" <> (ap^.maximalProjection.to show.to T.pack)
 formatCompVP :: CompVP -> Text
 formatCompVP (CompVP_Unresolved r)  = "unresolved" <> T.pack (show r)
 formatCompVP (CompVP_CP cp) = "CP" <> cp^.headX.to formatComplementizer <> cp^.maximalProjection.to show.to T.pack
-formatCompVP (CompVP_DP dp) = formatDP dp
+formatCompVP (CompVP_DP dp) = "DP" <> T.pack (show (dp^.maximalProjection)) --  formatDP dp
 formatCompVP (CompVP_PP pp) = formatPP pp
 formatCompVP (CompVP_AP ap) = formatAP ap
 
+formatCoindex :: (a -> Text) -> Coindex (Either TraceType a) -> Text
+formatCoindex f (Coindex mi e) = either fmt f e <> maybe "" (\i -> "_" <> T.pack (show i)) mi
+  where
+    fmt NULL  = "NUL"
+    fmt PRO   = "PRO"
+    fmt Moved = "t"
+    fmt WHPRO = "WHP"
 
+{- 
 formatTraceChain :: (a -> Text) -> TraceChain a -> Text
 formatTraceChain f (TraceChain xs0 x) =
     case xs0 of
@@ -106,12 +120,23 @@ formatTraceChain f (TraceChain xs0 x) =
     fmtLst = T.concat . map ((<> " -> ") . fmt)
     --
     fmtResolved = maybe "NOT_RESOLVED" f
+-}
 
+formatCP :: CP -> Text
+formatCP cp =
+  let rng = cp^.maximalProjection
+  in "CP" <> showRange rng <>
+     "[C:" <> formatComplementizer (cp^.headX) <>
+     " spec: " <> maybe "" formatSpecCP (cp^.specifier) <>
+     " (TP: spec:" <> formatCoindex formatSpecTP (cp^.complement.specifier) <> 
+     " (VP: comp:" <>
+     T.intercalate "," (cp^..complement.complement.complement.traverse.coidx_content._Right.to formatCompVP) <>
+     "))]"
 
 formatX'Tree :: X'Tree -> Text
 formatX'Tree tr = formatBitree fmt tr
   where
-        fmt (rng, CPCase x) = "CP" <> showRange rng <> ": VP-comps: " <> T.intercalate "," (x^..complement.complement.complement.traverse.trResolved._Just.to formatCompVP)
+        fmt (rng, CPCase x) = formatCP x 
         fmt (_  , DPCase x) = formatDP x
         fmt (_  , PPCase x) = formatPP x
         fmt (_  , APCase x) = formatAP x

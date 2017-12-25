@@ -11,7 +11,9 @@ import           NLP.Syntax.Type.XBar.Internal
 
 makeLenses ''XP
 
-makeLenses ''TraceChain
+-- makeLenses ''TraceChain
+
+makeLenses ''Coindex
 
 makePrisms ''DetClass
 -- makePrisms ''NomClass

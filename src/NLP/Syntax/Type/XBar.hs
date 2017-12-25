@@ -36,7 +36,7 @@ determinerText tagged hdp = fmap (T.intercalate " " . tokensByRange tagged) (hdp
 
 
 headText :: PreAnalysis t -> NounP -> Text
-headText tagged x = x^.headX.hn_range.to (T.intercalate " " . tokensByRange tagged)
+headText tagged x = x^.headX.coidx_content.hn_range.to (T.intercalate " " . tokensByRange tagged)
 
 
 specDPText :: PreAnalysis t -> SpecDP -> Text
@@ -78,9 +78,9 @@ headTextDP tagged dp =
 headRangeDP :: DetP -> Maybe Range
 headRangeDP dp =
   case dp^.headX.hd_class of
-    GenitiveClitic -> dp^?complement._Just.headX.hn_range
+    GenitiveClitic -> dp^?complement._Just.headX.coidx_content.hn_range
     _ -> let mrng_det = dp^.headX.hd_range
-             mrng_np = dp^?complement._Just.headX.hn_range
+             mrng_np = dp^?complement._Just.headX.coidx_content.hn_range
          in case (mrng_det,mrng_np) of
               (Just (b_det,_), Just (_,e_np)) -> Just (b_det,e_np)
               (Just rng_det  , Nothing      ) -> Just rng_det

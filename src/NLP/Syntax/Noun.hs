@@ -39,6 +39,7 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
                                           ,PrepClass(..)
                                           ,PPTree(..), DPTree(..), _PPTree, _DPTree
                                           ,_MarkEntity,_AdjunctDP_PP
+                                          ,coidx_content
                                           ,hn_range,hn_class
                                           ,adjunct,complement,headX,maximalProjection,specifier
                                           ,tokensByRange
@@ -85,7 +86,7 @@ mkPPFromZipper tagged z = do
 splitDP1 :: PreAnalysis (Lemma ': as) -> DPTree -> Maybe DPTree
 splitDP1 tagged (DPTree dp0 lst0) = do
   let (b0,_) = dp0^.maximalProjection
-  (_,e0) <- dp0^?complement._Just.headX.hn_range
+  (_,e0) <- dp0^?complement._Just.headX.coidx_content.hn_range
   let rng0 = (b0,e0)
   z <- find (isChunkAs NP . current) (extractZipperByRange rng0 (tagged^.pennTree))
   z_last <- childLast z
@@ -97,11 +98,11 @@ splitDP1 tagged (DPTree dp0 lst0) = do
                                Prep_WORD "of" -> complement._Just.complement .~ (Just (CompDP_PP rng_pp))
                                _              -> adjunct %~ (addPP rng_pp) -- . removePP (pp^.maximalProjection)
                  (b_pp,_) = pp^.maximalProjection
-                 dp = dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace
+                 dp = dp0 & (complement._Just.headX.coidx_content.hn_range %~ (\(b,_) -> (b,b_pp-1))) . ppreplace
              return (DPTree dp (pptr:lst0))
     ADJP -> let (b_ap,e_ap) = getRange (current z_last)
                 apreplace = adjunct %~ (++ [AdjunctDP_AP (b_ap,e_ap)])
-                dp = dp0 & (complement._Just.headX.hn_range %~ (\(b,_) -> (b,b_ap-1))) . apreplace
+                dp = dp0 & (complement._Just.headX.coidx_content.hn_range %~ (\(b,_) -> (b,b_ap-1))) . apreplace
             in return (DPTree dp lst0)
     _ -> Nothing
 
@@ -259,18 +260,18 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
       ( return
        .(headX.hd_range .~ Just (i,i))
        .(headX.hd_class .~ dtyp)
-       .(complement._Just.headX.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
+       .(complement._Just.headX.coidx_content.hn_range %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))
        .(complement._Just.maximalProjection %~ (\(b,e) -> if b == i then (i+1,e) else (b,e)))) dp
     --
     cliticGen z = do
-      rng_np <- dp^?complement._Just.headX.hn_range
+      rng_np <- dp^?complement._Just.headX.coidx_content.hn_range
       let ps = (filter (\x -> (x^._1) `isInside` rng_np) . toList . current) z
       (i,_) <- find (\(_,y) -> posTag y == POS) ps
       ( return
        .(specifier %~ (SpDP_Gen (rng_np^._1,i-1) :) )
        .(headX.hd_range .~ Just (i,i))
        .(headX.hd_class .~ GenitiveClitic)
-       .(complement._Just.headX.hn_range %~ (\(_b',e') -> (i+1,e')))
+       .(complement._Just.headX.coidx_content.hn_range %~ (\(_b',e') -> (i+1,e')))
        .(complement._Just.maximalProjection %~ (\(_b',e') -> (i+1,e')))) dp
 
 
@@ -300,10 +301,10 @@ bareNounModifier tagged dp = fromMaybe dp $ do
 identifyNamedEntity :: PreAnalysis t -> DetP -> DetP
 identifyNamedEntity tagged dp =
   fromMaybe dp $ do
-    rng <- dp^?complement._Just.headX.hn_range
+    rng <- dp^?complement._Just.headX.coidx_content.hn_range
     TagPos (_,_,MarkEntity nec)
       <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
-    (return . (complement._Just.headX.hn_class .~ (Just nec))) dp
+    (return . (complement._Just.headX.coidx_content.hn_class .~ (Just nec))) dp
 
 
 

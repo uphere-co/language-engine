@@ -68,28 +68,29 @@ formatAdjunctVP (AdjunctVP_Unresolved rng) = showRange rng
 formatAdjunctVP (AdjunctVP_PP pp)          = formatPP pp
 
 
-formatCP :: CP -> String
-formatCP cp = printf "Complementizer Phrase: %-6s\n\
-                     \Complementizer       : %-6s  %s\n\
-                     \Specifier            : %-6s  %s\n\
-                     \Adjunct              :         %s\n\
-                     \Tense Phrase         : %-6s\n\
-                     \Determiner Phrase    :         %s\n\
-                     \Verb Phrase          : %-6s\n\
-                     \Verb Complements     :       %s\n\
-                     \Verb Adjunts         :       %s\n"
-                -- (maybe "null" show (getchunk (cp^.maximalProjection)))
-                (show (cp^.maximalProjection))
-                head1 head2
-                spec1 spec2
-                (T.intercalate " | " (cp^..adjunct.traverse.to formatAdjunctCP))
-                -- (maybe "null" show (getchunk (cp^.complement.maximalProjection)))
-                (show (cp^.complement.maximalProjection))
-                (formatTraceChain formatSpecTP (cp^.complement.specifier))
-                -- (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
-                (show (cp^.complement.complement.maximalProjection))
-                ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatTraceChain formatCompVP ))))
-                ((T.intercalate " | " (cp^..complement.complement.adjunct.traverse.to formatAdjunctVP)))
+formatCPDetail :: CP -> String
+formatCPDetail cp =
+  printf "Complementizer Phrase: %-6s\n\
+         \Complementizer       : %-6s  %s\n\
+         \Specifier            : %-6s  %s\n\
+         \Adjunct              :         %s\n\
+         \Tense Phrase         : %-6s\n\
+         \Determiner Phrase    :         %s\n\
+         \Verb Phrase          : %-6s\n\
+         \Verb Complements     :       %s\n\
+         \Verb Adjunts         :       %s\n"
+    -- (maybe "null" show (getchunk (cp^.maximalProjection)))
+    (show (cp^.maximalProjection))
+    head1 head2
+    spec1 spec2
+    (T.intercalate " | " (cp^..adjunct.traverse.to formatAdjunctCP))
+    -- (maybe "null" show (getchunk (cp^.complement.maximalProjection)))
+    (show (cp^.complement.maximalProjection))
+    (formatCoindex formatSpecTP (cp^.complement.specifier))
+    -- (maybe "null" show (getchunk (cp^.complement.complement.maximalProjection)))
+    (show (cp^.complement.complement.maximalProjection))
+    ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatCoindex formatCompVP ))))
+    ((T.intercalate " | " (cp^..complement.complement.adjunct.traverse.to formatAdjunctVP)))
 
   where fmtComplementizer :: Complementizer -> (String,String)
         fmtComplementizer C_PHI = ("phi","")

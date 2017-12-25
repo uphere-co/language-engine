@@ -281,7 +281,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       tagged = mkPreAnalysis lmatknlst pt tagposs synsets
 
       vps = mkVPS (c^._4) (c^._5)
-      x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
+      x'tr = (map ((^.xts_tree) . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged . XTS 0) . identifyCPHierarchy tagged) vps
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
       -- test subjects
   cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
@@ -289,7 +289,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
   cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'tr)
   let subj_test = c^._3._1
       b_subj = fromMaybe False $ do
-                 subj <- cp^?complement.specifier.trResolved._Just
+                 subj <- cp^?complement.specifier.coidx_content._Right
                  let sclass = subj^?_SpecTP_DP.headX.hd_class
                      stxt = (\case SpecTP_Unresolved x -> {- (T.intercalate " " . tokensByRange tagged) x -} "error" ; SpecTP_DP dp -> headTextDP tagged dp) subj
                  case subj_test^._2 of
@@ -304,7 +304,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
                                                   CompPP_Gerund rng -> T.intercalate " " (tokensByRange tagged rng)
       compVP_to_text (CompVP_AP ap)          = T.intercalate " " (tokensByRange tagged (ap^.maximalProjection))
 
-      lst_comps = cp^..complement.complement.complement.traverse.trResolved._Just.to compVP_to_text
+      lst_comps = cp^..complement.complement.complement.traverse.coidx_content._Right.to compVP_to_text
       lst_comps_test = c^._3._2
       b_comps = lst_comps == lst_comps_test  -- getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst_comps lst_comps_test)) && (length lst_comps == length lst_comps_test)
       -- test adjuncts
@@ -316,8 +316,8 @@ checkSubjCompAdjunct c = fromMaybe False $ do
                         return True
 
   -- trace  ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr ++ "\n" ++ formatCP cp ++ "\n" ) $ return ()
-  trace ("\n" ++ show (lst_comps,lst_comps_test)) $ return ()
-  trace ("\n" ++ show (b_subj,b_comps,b_adjuncts,b_topicalized)) $ return ()
+  -- trace ("\n" ++ show (lst_comps,lst_comps_test)) $ return ()
+  -- trace ("\n" ++ show (b_subj,b_comps,b_adjuncts,b_topicalized)) $ return ()
   -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (txt,lmatknlst,pt,tagposs,synsets)))) $ return ()
 
   return  (b_subj && b_comps && b_adjuncts && (b_topicalized == c^._3._4))

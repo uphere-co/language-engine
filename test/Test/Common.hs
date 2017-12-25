@@ -3,6 +3,7 @@
 
 module Test.Common where
 
+import           Control.Lens                    ((^.))
 import           Data.Foldable                   (toList)
 import qualified Data.IntMap             as IM
 import           Data.Monoid                     ((<>))
@@ -36,15 +37,16 @@ formatDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType],[(I
 formatDetail (_txt,lma,pt,taglst,synsets) =
   let tagged = mkPreAnalysis lma pt taglst synsets
       vps  = mkVPS lma pt
-      -- clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
-      x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
+      x'tr0 = (identifyCPHierarchy tagged) vps
+      -- xts = map (0,) x'tr0
+      x'tr = map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged . (XTS 0)) x'tr0
 
   in
   [ "===================================================================================================================="
   , (T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList) pt
   , "--------------------------------------------------------------------------------------------------------------------"
   ]
-  ++ map formatX'Tree x'tr
+  ++ map (formatX'Tree . (^.xts_tree)) x'tr
   -- ++ map (formatVPwithPAWS tagged clausetr x'tr) vps
   ++
   [ "--------------------------------------------------------------------------------------------------------------------"
