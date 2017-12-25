@@ -19,7 +19,7 @@ import           Control.Lens.Extras                    (is)
 import           Control.Monad                          ((<=<),(>=>),guard,void,when)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
-import           Control.Monad.Trans.State              (State,execState,get,put)
+import           Control.Monad.Trans.State              (State,execState,get,put,modify')
 import           Data.Attribute                         (ahead)
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Foldable                          (toList)
@@ -274,7 +274,6 @@ hierarchyBits _tagged (cp,subs) = do
 
 identifyCPHierarchy :: PreAnalysis (Lemma ': as) -> [VerbProperty (Zipper (Lemma ': as))] -> [X'Tree]
 identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
-                                 -- in trace ((T.unpack . T.intercalate "\n" . map formatX'Tree) r) r 
   where x'map = (HM.fromList . concat . mapMaybe (hierarchyBits tagged <=< constructCP tagged)) vps
         rngs = HM.keys x'map
         rangeSort (PN x xs) = PN x (sortBy (compare `on` (fst . getRoot1)) (map rangeSort xs))
@@ -288,6 +287,19 @@ currentCPDPPP :: X'Zipper -> CPDPPP
 currentCPDPPP = snd . getRoot1 . current
 
 
+
+issueIndex :: State X'TreeState Int
+issueIndex = do
+  XTS i x'tr <- get
+  put (XTS (i+1) x'tr)
+  return i
+
+
+updateTree :: X'Tree -> State X'TreeState ()
+updateTree tr = modify' (xts_tree .~ tr)
+
+
+{-
 --
 -- | rewrite X'Tree. Now it's focusing on modifier relation, but this should
 --   be more generalized.
@@ -311,7 +323,7 @@ rewriteX'TreeForModifier f w z = do
                       newtr (PL y)    = PN y [otr]
                       w'' =replaceFocusTree newtr w'
                   lift (put (XTS i (toBitree w'')))
-
+-}
 
 
 retrieveWCP :: Range -> MaybeT (State X'TreeState) (X'Zipper,CP)
@@ -358,17 +370,19 @@ whMovement tagged (w,cp) = do
              z_dp <- hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
              let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_dp) [])  -- need to rewrite
              -- rewriteX'TreeForModifier id w dp'
-             return (mkDefCoindex (Left WHPRO)))              -- (SpecTP_DP dp')
+             i <- lift issueIndex 
+             return (mkCoindex i (Left Moved)))              -- (SpecTP_DP dp')
          <|>
          (do -- free relative clause
              rng_wh <- hoistMaybe (cp^?specifier._Just._SpecCP_WH)
              z_wh <- hoistMaybe (listToMaybe (extractZipperByRange rng_wh (tagged^.pennTree)))
              let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_wh) [])   -- need to rewrite
              w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng_cp w dp')
-             lift (put (XTS i (toBitree w_dom')))
+             i <- lift issueIndex
+             lift (updateTree (toBitree w_dom'))
              (w',_) <- retrieveWCP rng_cp
              -- rewriteX'TreeForModifier id w' dp'
-             return (mkDefCoindex (Left WHPRO)))) --  (SpecTP_DP dp')
+             return (mkCoindex i (Left Moved)))) --  (SpecTP_DP dp')
     Left _    -> return spec
     Right _   -> do
       -- without trace in subject
@@ -400,14 +414,22 @@ whMovement tagged (w,cp) = do
       return spec
 
 
-resolvePRO :: PreAnalysis (Lemma ': as) -> (X'Zipper,CP) -> MaybeT (State X'TreeState) (Coindex (Either TraceType SpecTP))
+
+
+
+resolvePRO :: PreAnalysis (Lemma ': as)
+           -> (X'Zipper,CP)
+           -> MaybeT (State X'TreeState) (Coindex (Either TraceType SpecTP))
 resolvePRO tagged (z,cp) = do
+  -- XTS i x'tr <- lift get
   let spec = cp^.complement.specifier
   case spec^.coidx_content of
     Left NULL -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
                       let rng_cp' = cp'^.maximalProjection
                       -- Coindex exs' x' <- lift (resolveDP tagged rng_cp')
-                      return (mkDefCoindex (Left PRO)))
+                      i <- lift issueIndex
+                      -- lift (put (XTS (i+1) x'tr))
+                      return (mkCoindex i (Left PRO)))
                   <|>
                   return (mkDefCoindex (Left PRO)))
     Left PRO  -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
@@ -582,9 +604,6 @@ bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= b
 --
 bindingAnalysisRaising :: X'TreeState -> X'TreeState
 bindingAnalysisRaising = rewriteTree (\rng -> connectRaisedDP rng <|> return ())
-
---  $ \rng -> connectRaisedDP rng  {- do z <- hoistMaybe . extractZipperById rng =<< lift get
---                                                  (connectRaisedDP rng <|> return z) -}
 
 
 --

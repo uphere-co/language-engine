@@ -35,18 +35,18 @@ mkVPS lmatknlst pt =
 
 formatDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType],[(Int,LexicographerFile)]) -> [Text]
 formatDetail (_txt,lma,pt,taglst,synsets) =
-  let tagged = mkPreAnalysis lma pt taglst synsets
+  let pre = mkPreAnalysis lma pt taglst synsets
       vps  = mkVPS lma pt
-      x'tr0 = (identifyCPHierarchy tagged) vps
+      x'tr = map ((^.xts_tree) . {- bindingAnalysisRaising . -} bindingAnalysis pre . resolveCP . (XTS 0)) (identifyCPHierarchy pre vps)
       -- xts = map (0,) x'tr0
-      x'tr = map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged . (XTS 0)) x'tr0
+      -- x'tr = x'tr0 -- map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged . (XTS 0)) x'tr0
 
   in
   [ "===================================================================================================================="
   , (T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList) pt
   , "--------------------------------------------------------------------------------------------------------------------"
   ]
-  ++ map (formatX'Tree . (^.xts_tree)) x'tr
+  ++ map formatX'Tree x'tr
   -- ++ map (formatVPwithPAWS tagged clausetr x'tr) vps
   ++
   [ "--------------------------------------------------------------------------------------------------------------------"

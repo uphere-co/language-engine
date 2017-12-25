@@ -275,7 +275,7 @@ checkTrace c =
   fromMaybe False $ do
     let tagged = mkPreAnalysis (c^._4) (c^._5) (c^._6) (c^._7)
         vps = mkVPS (c^._4) (c^._5)
-        x'tr = (map ((^.xts_tree) . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged . XTS 0) . identifyCPHierarchy tagged) vps
+        x'tr = (map ((^.xts_tree) {- . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged -} . XTS 0) . identifyCPHierarchy tagged) vps
     -- trace "checktrace1" $ return ()
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
     -- trace "checktrace2" $ return ()
