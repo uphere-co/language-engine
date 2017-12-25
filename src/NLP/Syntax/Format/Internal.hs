@@ -34,8 +34,8 @@ formatSpecTP (SpecTP_Unresolved x) = (T.pack . show) x
 
 formatSpecCP :: SpecCP -> Text
 formatSpecCP SpecCP_WHPHI = "WHφ"
-formatSpecCP (SpecCP_WH rng) = T.pack (show rng)
-formatSpecCP (SpecCP_Topic c) = formatCoindex formatCompVP c
+formatSpecCP (SpecCP_WH rng) = "WH" <> T.pack (show rng)
+formatSpecCP (SpecCP_Topic c) = "Topic" <> formatCoindex (T.pack.show.compVPToRange) c
 
 
 formatComplementizer :: Complementizer -> Text
@@ -79,9 +79,10 @@ formatDP dp = "(DP"        <> dp^.maximalProjection.to show.to T.pack <>
 
 
 formatNP :: NounP -> Text
-formatNP np = (np^.maximalProjection.to show.to T.pack) <>
-              (np^.headX.hn_range.to show.to T.pack) <>
-              fromMaybe "" (np^?complement._Just.to compDPToRange.to show.to T.pack)
+formatNP np = np^.maximalProjection.to show.to T.pack <>
+              np^.headX.coidx_content.hn_range.to show.to T.pack <>
+              np^.headX.coidx_i.to (maybe "" (\i -> "_" <> T.pack (show i))) --  <>
+              -- fromMaybe "" (np^?complement._Just.to compDPToRange.to show.to T.pack)
 
 
 formatAP :: AP -> Text

@@ -116,28 +116,28 @@ complementsOfVerb tagged vprop z_vp =
                              xs' = map xform xs ++
                                    maybeToList (mtop >>= \top -> do
                                      let rng_top = getRange (current top)
-                                         comp = Coindex Nothing (Left Moved)
+                                         comp = mkDefCoindex (Left Moved)
                                      return (comp,[]))
                              mspec' = mtop >>= \top -> do
                                         let rng_top = getRange (current top)
-                                        return (Coindex Nothing (Right (CompVP_Unresolved rng_top)))
+                                        return (mkDefCoindex (Right (CompVP_Unresolved rng_top)))
                          in (map (^._1) xs',mspec',concatMap (^._2) xs')
   in case vprop^.vp_voice of
        Active -> (cs,mspec,dppps)
-       Passive -> (Coindex Nothing (Left Moved) : cs,mspec,dppps)
+       Passive -> (mkDefCoindex (Left Moved) : cs,mspec,dppps)
   where
     xform_dp z = let dptr@(DPTree dp' _pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
                      -- adjs = []    -- we had better identify time part in SRL
                      subs = getSubsFromDPTree dptr
-                 in (Coindex Nothing (Right (checkEmptyPrep tagged dp')),subs)
-    xform_pp z = fromMaybe (Coindex Nothing (Left NULL),[]) $ do
+                 in (mkDefCoindex (Right (checkEmptyPrep tagged dp')),subs)
+    xform_pp z = fromMaybe (mkDefCoindex (Left NULL),[]) $ do
                    pptr <- mkPPFromZipper tagged z
                    let pp = pptr^._PPTree._1
                        subs = getSubsFromPPTree pptr
-                   return (Coindex Nothing (Right (checkTimePrep tagged pp)), subs)
-    xform_cp z = (Coindex Nothing (Right (CompVP_Unresolved (getRange (current z)))), [])
+                   return (mkDefCoindex (Right (checkTimePrep tagged pp)), subs)
+    xform_cp z = (mkDefCoindex (Right (CompVP_Unresolved (getRange (current z)))), [])
     xform_ap z = let ap = mkAP (getRange (current z))
-                 in  (Coindex Nothing (Right (CompVP_AP ap)), [APCase ap])
+                 in  (mkDefCoindex (Right (CompVP_AP ap)), [APCase ap])
 
     xform :: Zipper t -> (Coindex (Either TraceType CompVP), [CPDPPP])
     xform z = case rootTag (current z) of
@@ -180,10 +180,10 @@ identifySubject tagged tag vp = maybe nul smp r
     r = case tag of
           N.SINV -> firstSiblingBy next (isChunkAs NP) vp          -- this should be refined.
           _      -> firstSiblingBy prev (isChunkAs NP) vp          -- this should be refined.
-    nul = (Coindex Nothing (Left NULL),[])
+    nul = (mkDefCoindex (Left NULL),[])
     smp z = let dptr@(DPTree dp' _pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
                 subs = getSubsFromDPTree dptr
-            in (Coindex Nothing (Right (SpecTP_DP dp')),subs)
+            in (mkDefCoindex (Right (SpecTP_DP dp')),subs)
 
 
 --
@@ -249,7 +249,7 @@ constructCP tagged vprop = do
         let (comps,_,ppdps) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             verbp = mkVerbP rng_vp (simplifyVProp vprop) [] comps
-            nullsubj = Coindex Nothing (Left NULL)
+            nullsubj = mkDefCoindex (Left NULL)
         in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP rng_vp nullsubj verbp), ppdps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
@@ -322,7 +322,7 @@ rewriteX'TreeForFreeWH rng w z' = do
       comps' = flip map comps $ \comp -> fromMaybe comp $ do
                  rng_comp <- comp^?coidx_content._Right._CompVP_Unresolved
                  guard (rng_comp == rng)
-                 return (Coindex Nothing (Right (CompVP_DP z')))
+                 return (mkDefCoindex (Right (CompVP_DP z')))
       rf = _2._CPCase.complement.complement.complement .~ comps'
   return (replaceFocusItem rf rf w_dom)
 
@@ -341,14 +341,14 @@ whMovement tagged (w,cp) = do
     Left NULL -> do
       -- ignore ns.
       -- let xspro = LZ ps PRO []
-      fmap (fromMaybe (Coindex Nothing (Left PRO))) . runMaybeT $ do
+      fmap (fromMaybe (mkDefCoindex (Left PRO))) . runMaybeT $ do
         -- check subject position for relative pronoun
         z_cp <- hoistMaybe $ listToMaybe (extractZipperByRange rng_cp (tagged^.pennTree))  -- this can be dangerous
         ((do -- ordinary relative clause
              z_dp <- hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
              let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_dp) [])  -- need to rewrite
              -- rewriteX'TreeForModifier id w dp'
-             return (Coindex Nothing (Left WHPRO)))              -- (SpecTP_DP dp')
+             return (mkDefCoindex (Left WHPRO)))              -- (SpecTP_DP dp')
          <|>
          (do -- free relative clause
              rng_wh <- hoistMaybe (cp^?specifier._Just._SpecCP_WH)
@@ -358,7 +358,7 @@ whMovement tagged (w,cp) = do
              lift (put (toBitree w_dom'))
              (w',_) <- retrieveWCP rng_cp
              -- rewriteX'TreeForModifier id w' dp'
-             return (Coindex Nothing (Left WHPRO)))) --  (SpecTP_DP dp')
+             return (mkDefCoindex (Left WHPRO)))) --  (SpecTP_DP dp')
     Left _    -> return spec
     Right _   -> do
       -- without trace in subject
@@ -370,7 +370,7 @@ whMovement tagged (w,cp) = do
              let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_dp) [])
              let -- adjust function for complement with relative pronoun resolution
                  -- rf0 = _2._CPCase.complement.complement.complement
-                 --         %~ ((Coindex Nothing (Left Moved)):)   -- CompVP_DP dp'
+                 --         %~ ((mkDefCoindex (Left Moved)):)   -- CompVP_DP dp'
              -- rewrite X'Tree for modifier relation.
              -- rewriteX'TreeForModifier rf0 w dp')
              return ())
@@ -384,7 +384,7 @@ whMovement tagged (w,cp) = do
              (w',_) <- retrieveWCP rng_cp
              let -- adjust function for complement with relative pronoun resolution
                  -- rf0 = _2._CPCase.complement.complement.complement
-                 --        %~ ((Coindex Nothing (Left Moved)):)  --  CompVP_DP dp'
+                 --        %~ ((mkDefCoindex (Left Moved)):)  --  CompVP_DP dp'
              -- rewriteX'TreeForModifier rf0 w' dp'))
              return ()))
       return spec
@@ -397,15 +397,15 @@ resolvePRO tagged (z,cp) = do
     Left NULL -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
                       let rng_cp' = cp'^.maximalProjection
                       -- Coindex exs' x' <- lift (resolveDP tagged rng_cp')
-                      return (Coindex Nothing (Left PRO)))
+                      return (mkDefCoindex (Left PRO)))
                   <|>
-                  return (Coindex Nothing (Left PRO)))
+                  return (mkDefCoindex (Left PRO)))
     Left PRO  -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
                       let rng_cp' = cp'^.maximalProjection
                       -- Coindex exs' x' <- lift (resolveDP tagged rng_cp')
-                      return (Coindex Nothing (Left PRO))) -- (mergeLeftELZ (Left xs) exs') x'
+                      return (mkDefCoindex (Left PRO))) -- (mergeLeftELZ (Left xs) exs') x'
                   <|>
-                  return (Coindex Nothing (Left NULL)))
+                  return (mkDefCoindex (Left NULL)))
     _   -> return spec
 
 

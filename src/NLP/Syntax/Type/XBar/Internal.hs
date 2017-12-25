@@ -91,6 +91,8 @@ data Coindex a = Coindex { _coidx_i :: Maybe Int
 
 emptyCoindex = Coindex Nothing (Left NULL)
 
+mkDefCoindex = Coindex Nothing
+
 
 data SplitType = CLMod | BNMod | APMod
                deriving (Show,Eq,Ord)
@@ -184,7 +186,7 @@ data HeadNP = HeadNP { _hn_range :: Range
 --
 -- NP
 --
-type instance Property   'X_N = HeadNP -- Coindex HeadNP -- Range
+type instance Property   'X_N = Coindex HeadNP -- Range
 type instance Maximal    'X_N = Range
 type instance Specifier  'X_N = ()
 type instance Adjunct    'X_N = ()
@@ -201,11 +203,11 @@ compDPToRange (CompDP_PP pp) = pp
 mkNP :: (Range,Maybe NamedEntityClass) -> Maybe CompDP -> NounP
 mkNP (rng,mclass) mcomp =
   case mcomp of
-    Nothing -> XP {- (Coindex Nothing (HeadNP rng mclass)) -} (HeadNP rng mclass) rng () () Nothing
+    Nothing -> XP (mkDefCoindex (HeadNP rng mclass)) rng () () Nothing
     Just comp -> let (b,_e) = rng
                      (b1,_e1) = compDPToRange comp
                      rng' = (b,b1-1)
-                 in XP (HeadNP rng' mclass) rng () () (Just comp)
+                 in XP (mkDefCoindex (HeadNP rng' mclass)) rng () () (Just comp)
 
 
 --
