@@ -86,7 +86,7 @@ emptyTraceChain = TraceChain (Right []) Nothing
 -- type Coindex = Int
 
 data Coindex a = Coindex { _coidx_i :: Maybe Int
-                         , _coidx_content :: Either TraceType a }
+                         , _coidx_content :: a {- Either TraceType a -} }
                deriving (Show,Functor,Ord,Eq)
 
 emptyCoindex = Coindex Nothing (Left NULL)
@@ -184,7 +184,7 @@ data HeadNP = HeadNP { _hn_range :: Range
 --
 -- NP
 --
-type instance Property   'X_N = HeadNP -- Range
+type instance Property   'X_N = HeadNP -- Coindex HeadNP -- Range
 type instance Maximal    'X_N = Range
 type instance Specifier  'X_N = ()
 type instance Adjunct    'X_N = ()
@@ -201,7 +201,7 @@ compDPToRange (CompDP_PP pp) = pp
 mkNP :: (Range,Maybe NamedEntityClass) -> Maybe CompDP -> NounP
 mkNP (rng,mclass) mcomp =
   case mcomp of
-    Nothing -> XP (HeadNP rng mclass) rng () () Nothing
+    Nothing -> XP {- (Coindex Nothing (HeadNP rng mclass)) -} (HeadNP rng mclass) rng () () Nothing
     Just comp -> let (b,_e) = rng
                      (b1,_e1) = compDPToRange comp
                      rng' = (b,b1-1)
@@ -313,11 +313,11 @@ type instance Property   'X_V = VerbProperty Text
 type instance Maximal    'X_V = Range
 type instance Specifier  'X_V = ()
 type instance Adjunct    'X_V = [AdjunctVP]
-type instance Complement 'X_V = [Coindex CompVP]
+type instance Complement 'X_V = [Coindex (Either TraceType CompVP)]
 
 type VerbP = XP 'X_V
 
-mkVerbP :: Range -> VerbProperty Text -> [AdjunctVP] -> [Coindex CompVP] -> VerbP
+mkVerbP :: Range -> VerbProperty Text -> [AdjunctVP] -> [Coindex (Either TraceType CompVP)] -> VerbP
 mkVerbP vp vprop adjs comps = XP vprop vp () adjs comps
 
 
@@ -327,13 +327,13 @@ data SpecTP = SpecTP_Unresolved Range
 
 type instance Property   'X_T = ()
 type instance Maximal    'X_T = Range
-type instance Specifier  'X_T = Coindex SpecTP
+type instance Specifier  'X_T = Coindex (Either TraceType SpecTP)
 type instance Adjunct    'X_T = ()
 type instance Complement 'X_T = VerbP
 
 type TP = XP 'X_T
 
-mkTP :: Range -> Coindex SpecTP -> VerbP -> TP
+mkTP :: Range -> Coindex (Either TraceType SpecTP) -> VerbP -> TP
 mkTP tp mdp vp = XP () tp mdp () vp
 
 
@@ -344,7 +344,7 @@ data Complementizer = C_PHI              -- ^ empty complementizer
 
 data SpecCP = SpecCP_WHPHI           -- ^ empty Wh-word
             | SpecCP_WH Range        -- ^ Wh-phrase, this should be DP or PP. Later, we will change it to DP or PP.
-            | SpecCP_Topic (Coindex CompVP) -- ^ topicalization (AdjunctCP for the time being)
+            | SpecCP_Topic (Coindex (Either TraceType CompVP)) -- ^ topicalization (AdjunctCP for the time being)
 
 
 

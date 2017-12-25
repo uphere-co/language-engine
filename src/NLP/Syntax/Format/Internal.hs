@@ -96,7 +96,7 @@ formatCompVP (CompVP_DP dp) = "DP" <> T.pack (show (dp^.maximalProjection)) --  
 formatCompVP (CompVP_PP pp) = formatPP pp
 formatCompVP (CompVP_AP ap) = formatAP ap
 
-formatCoindex :: (a -> Text) -> Coindex a -> Text
+formatCoindex :: (a -> Text) -> Coindex (Either TraceType a) -> Text
 formatCoindex f (Coindex mi e) = either fmt f e <> maybe "" (\i -> "_" <> T.pack (show i)) mi
   where
     fmt NULL  = "NUL"
