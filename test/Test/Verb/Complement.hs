@@ -281,7 +281,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       tagged = mkPreAnalysis lmatknlst pt tagposs synsets
 
       vps = mkVPS (c^._4) (c^._5)
-      x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
+      x'tr = (map ((^.xts_tree) . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged . XTS 0) . identifyCPHierarchy tagged) vps
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
       -- test subjects
   cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
