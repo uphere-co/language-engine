@@ -10,6 +10,7 @@
 
 module NLP.Syntax.Type.XBar.Internal where
 
+import           Control.Lens                ((^.))
 import           Data.Text                   (Text)
 --
 import           Data.Bitree
@@ -367,6 +368,12 @@ data CPDPPP = CPCase CP
             | DPCase DetP
             | PPCase PP
             | APCase AP
+
+instance Show CPDPPP where
+  show (CPCase cp) = "CP" ++ show (_maximalProjection cp)
+  show (DPCase dp) = "DP" ++ show (_maximalProjection dp)
+  show (PPCase pp) = "PP" ++ show (_maximalProjection pp)
+  show (APCase ap) = "AP" ++ show (_maximalProjection ap)
 
 
 type X'Tree = Bitree (Range,CPDPPP) (Range,CPDPPP)

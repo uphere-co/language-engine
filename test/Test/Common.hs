@@ -36,7 +36,6 @@ formatDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType],[(I
 formatDetail (_txt,lma,pt,taglst,synsets) =
   let tagged = mkPreAnalysis lma pt taglst synsets
       vps  = mkVPS lma pt
-      -- clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx pt))
       x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
 
   in

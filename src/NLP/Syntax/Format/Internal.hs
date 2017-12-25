@@ -29,13 +29,18 @@ formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
 
 formatSpecTP :: SpecTP -> Text
-formatSpecTP (SpecTP_DP x) = x^.maximalProjection.to (T.pack . show)
+formatSpecTP (SpecTP_DP x) = "DP" <> x^.maximalProjection.to (T.pack . show)
 formatSpecTP (SpecTP_Unresolved x) = (T.pack . show) x
+
+formatSpecCP :: SpecCP -> Text
+formatSpecCP SpecCP_WHPHI = "WHφ"
+formatSpecCP (SpecCP_WH rng) = T.pack (show rng)
+formatSpecCP (SpecCP_Topic c) = formatCoindex formatCompVP c
 
 
 formatComplementizer :: Complementizer -> Text
-formatComplementizer C_PHI      = ""
-formatComplementizer (C_WORD w) = "-" <> unLemma w
+formatComplementizer C_PHI      = "φ"
+formatComplementizer (C_WORD w) = unLemma w
 
 
 formatCompDP :: CompDP -> Text
@@ -116,10 +121,21 @@ formatTraceChain f (TraceChain xs0 x) =
     fmtResolved = maybe "NOT_RESOLVED" f
 -}
 
+formatCP :: CP -> Text
+formatCP cp =
+  let rng = cp^.maximalProjection
+  in "CP" <> showRange rng <>
+     "[C:" <> formatComplementizer (cp^.headX) <>
+     " spec: " <> maybe "" formatSpecCP (cp^.specifier) <>
+     " (TP: spec:" <> formatCoindex formatSpecTP (cp^.complement.specifier) <> 
+     " (VP: comp:" <>
+     T.intercalate "," (cp^..complement.complement.complement.traverse.coidx_content._Right.to formatCompVP) <>
+     "))]"
+
 formatX'Tree :: X'Tree -> Text
 formatX'Tree tr = formatBitree fmt tr
   where
-        fmt (rng, CPCase x) = "CP" <> showRange rng <> ": VP-comps: " <> T.intercalate "," (x^..complement.complement.complement.traverse.coidx_content._Right.to formatCompVP)
+        fmt (rng, CPCase x) = formatCP x 
         fmt (_  , DPCase x) = formatDP x
         fmt (_  , PPCase x) = formatPP x
         fmt (_  , APCase x) = formatAP x

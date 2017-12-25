@@ -267,6 +267,7 @@ hierarchyBits _tagged (cp,subs) = do
 
 identifyCPHierarchy :: PreAnalysis (Lemma ': as) -> [VerbProperty (Zipper (Lemma ': as))] -> [X'Tree]
 identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
+                                 -- in trace ((T.unpack . T.intercalate "\n" . map formatX'Tree) r) r 
   where x'map = (HM.fromList . concat . mapMaybe (hierarchyBits tagged <=< constructCP tagged)) vps
         rngs = HM.keys x'map
         rangeSort (PN x xs) = PN x (sortBy (compare `on` (fst . getRoot1)) (map rangeSort xs))
@@ -347,7 +348,7 @@ whMovement tagged (w,cp) = do
         ((do -- ordinary relative clause
              z_dp <- hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
              let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_dp) [])  -- need to rewrite
-             rewriteX'TreeForModifier id w dp'
+             -- rewriteX'TreeForModifier id w dp'
              return (Coindex Nothing (Left WHPRO)))              -- (SpecTP_DP dp')
          <|>
          (do -- free relative clause
@@ -357,7 +358,7 @@ whMovement tagged (w,cp) = do
              w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng_cp w dp')
              lift (put (toBitree w_dom'))
              (w',_) <- retrieveWCP rng_cp
-             rewriteX'TreeForModifier id w' dp'
+             -- rewriteX'TreeForModifier id w' dp'
              return (Coindex Nothing (Left WHPRO)))) --  (SpecTP_DP dp')
     Left _    -> return spec
     Right _   -> do
@@ -369,10 +370,11 @@ whMovement tagged (w,cp) = do
              z_dp <- hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
              let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_dp) [])
              let -- adjust function for complement with relative pronoun resolution
-                 rf0 = _2._CPCase.complement.complement.complement
-                         %~ ((Coindex Nothing (Left Moved)):)   -- CompVP_DP dp'
+                 -- rf0 = _2._CPCase.complement.complement.complement
+                 --         %~ ((Coindex Nothing (Left Moved)):)   -- CompVP_DP dp'
              -- rewrite X'Tree for modifier relation.
-             rewriteX'TreeForModifier rf0 w dp')
+             -- rewriteX'TreeForModifier rf0 w dp')
+             return ())
          <|>
          (do -- free relative clause
              rng_wh <- hoistMaybe (cp^?specifier._Just._SpecCP_WH)
@@ -382,9 +384,10 @@ whMovement tagged (w,cp) = do
              lift (put (toBitree w_dom'))
              (w',_) <- retrieveWCP rng_cp
              let -- adjust function for complement with relative pronoun resolution
-                 rf0 = _2._CPCase.complement.complement.complement
-                         %~ ((Coindex Nothing (Left Moved)):)  --  CompVP_DP dp'
-             rewriteX'TreeForModifier rf0 w' dp'))
+                 -- rf0 = _2._CPCase.complement.complement.complement
+                 --        %~ ((Coindex Nothing (Left Moved)):)  --  CompVP_DP dp'
+             -- rewriteX'TreeForModifier rf0 w' dp'))
+             return ()))
       return spec
 
 
@@ -555,7 +558,7 @@ connectRaisedDP rng = do
 -- | This is the final step to bind inter-clause trace chain
 --
 bindingAnalysis :: PreAnalysis (Lemma ': as) -> X'Tree -> X'Tree
-bindingAnalysis tagged = rewriteTree $ \rng -> {- trace ("\nbindingAnalysis: " ++ show rng) $ -} lift (resolveDP tagged rng) >>= bindingSpec rng
+bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= bindingSpec rng
 
 
 --
