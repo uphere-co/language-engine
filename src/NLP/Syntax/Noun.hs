@@ -31,8 +31,8 @@ import           NLP.Type.PennTreebankII  (ChunkTag(..),POSTag(..),TernaryLogic(
                                           ,getRange,isNoun,posTag,tokenWord,getAnnot)
 import           NLP.Type.TagPos          (TagPos(..))
 --
-import           NLP.Syntax.Type          (MarkType(..))
-import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..)
+-- import           NLP.Syntax.Type          (MarkType(..))
+import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),MarkType(..),Phase(..)
                                           ,Prep(..),PrepClass(..),DetP
                                           ,AdjunctDP(..), CompDP(..),HeadDP(..),SpecDP(..)
                                           ,DetClass(..),XP(..),PreAnalysis
@@ -56,7 +56,7 @@ import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isL
 
 
 
-mkPPFromZipper :: PreAnalysis (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe PPTree
+mkPPFromZipper :: PreAnalysis (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe (PPTree 'PH0)
 mkPPFromZipper tagged z = do
   guard (isChunkAs PP (current z))
   z_prep <- child1 z
@@ -83,7 +83,7 @@ mkPPFromZipper tagged z = do
        return (PPTree pp Nothing)))
 
 
-splitDP1 :: PreAnalysis (Lemma ': as) -> DPTree -> Maybe DPTree
+splitDP1 :: PreAnalysis (Lemma ': as) -> DPTree 'PH0 -> Maybe (DPTree 'PH0)
 splitDP1 tagged (DPTree dp0 lst0) = do
   let (b0,_) = dp0^.maximalProjection
   (_,e0) <- dp0^?complement._Just.headX.coidx_content.hn_range
@@ -107,7 +107,7 @@ splitDP1 tagged (DPTree dp0 lst0) = do
     _ -> Nothing
 
 
-splitDP :: PreAnalysis (Lemma ': as) -> DPTree -> DPTree
+splitDP :: PreAnalysis (Lemma ': as) -> DPTree 'PH0 -> DPTree 'PH0
 splitDP tagged dptr0 =
   let -- dptr2 = identifyInternalTimePrep tagged dptr1
       dptr1 = last (dptr0 : unfoldr (splitDP1 tagged >=> \b -> return (b,b)) dptr0) 
@@ -120,7 +120,7 @@ splitDP tagged dptr0 =
 
 
 
-identifyClausalModifier :: PreAnalysis (Lemma ': as) -> DetP -> Maybe DetP
+identifyClausalModifier :: PreAnalysis (Lemma ': as) -> DetP 'PH0 -> Maybe (DetP 'PH0)
 identifyClausalModifier tagged dp0 = do
   let (b0,e0) = dp0^.maximalProjection
       e0' = (\case [] -> e0; (e:_) -> e-1) (sort (dp0^..adjunct.traverse._AdjunctDP_PP._1))
@@ -143,7 +143,7 @@ identifyClausalModifier tagged dp0 = do
        return (mkSplittedDP CLMod (b,b1-1) (b1,e1) z)))
 
 
-splitParentheticalModifier :: PreAnalysis (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe DetP
+splitParentheticalModifier :: PreAnalysis (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe (DetP 'PH0)
 splitParentheticalModifier tagged z = do
     guard (isChunkAs NP (current z))         -- dominating phrase must be NP
     z1 <- child1 z
@@ -211,7 +211,7 @@ rangeOfNPs z0 = do
 
 
 
-identApposHead :: PreAnalysis t -> Range -> Range -> Zipper t -> DetP
+identApposHead :: PreAnalysis t -> Range -> Range -> Zipper t -> DetP 'PH0
 identApposHead tagged rng1 rng2 z = fromMaybe (mkSplittedDP APMod rng1 rng2 z) $
   ((do find (\(TagPos (b,e,t)) -> rng1 == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
        return (mkSplittedDP APMod rng1 rng2 z))
@@ -231,7 +231,7 @@ checkProperNoun tagged (b,e) =
 --
 -- | check whether DP is pronoun and change NomClass accordingly
 --
-identifyDeterminer :: PreAnalysis (Lemma ': as) -> DetP -> DetP
+identifyDeterminer :: PreAnalysis (Lemma ': as) -> DetP 'PH0 -> DetP 'PH0
 identifyDeterminer tagged dp = fromMaybe dp $ do
     let rng = dp^.maximalProjection
     let zs = extractZipperByRange rng (tagged^.pennTree)
@@ -280,7 +280,7 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
 --   I did not implement the already-splitted case. We need multiple-adjunct
 --   structure.
 --
-bareNounModifier :: PreAnalysis t -> DetP -> DetP
+bareNounModifier :: PreAnalysis t -> DetP 'PH0 -> DetP 'PH0
 bareNounModifier tagged dp = fromMaybe dp $ do
   rng@(b0,_e0) <- headRangeDP dp  -- dp^.maximalProjection
   z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTree))
@@ -298,7 +298,7 @@ bareNounModifier tagged dp = fromMaybe dp $ do
 --
 -- | Set hn_class as identified
 --
-identifyNamedEntity :: PreAnalysis t -> DetP -> DetP
+identifyNamedEntity :: PreAnalysis t -> DetP 'PH0 -> DetP 'PH0
 identifyNamedEntity tagged dp =
   fromMaybe dp $ do
     rng <- dp^?complement._Just.headX.coidx_content.hn_range
@@ -317,7 +317,7 @@ addPP :: Range -> [AdjunctDP] -> [AdjunctDP]
 addPP rng xs = (sort . HS.toList . HS.insert (AdjunctDP_PP rng) . HS.fromList) xs
 
 
-addPPTree :: PPTree -> [PPTree] -> [PPTree]
+addPPTree :: PPTree 'PH0 -> [PPTree 'PH0] -> [PPTree 'PH0]
 addPPTree pptree@(PPTree pp _) pplst =
   let rng = pp^.maximalProjection
       (xs,ys) = break (\pptree' -> rng == pptree'^._PPTree._1.maximalProjection) pplst

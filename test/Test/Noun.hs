@@ -20,8 +20,9 @@ import           WordNet.Type.Lexicographer      (LexicographerFile)
 --
 import           NLP.Syntax.Format.Internal      (formatDP)
 import           NLP.Syntax.Noun                 (splitDP)
-import           NLP.Syntax.Type                 (MarkType(..))
-import           NLP.Syntax.Type.XBar            (PreAnalysis,DetP,AdjunctDP(..),DPTree(..)
+-- import           NLP.Syntax.Type                 (MarkType(..))
+import           NLP.Syntax.Type.XBar            (PreAnalysis,DetP,AdjunctDP(..),DPTree(..),MarkType(..)
+                                                 ,Phase(..)
                                                  ,adjunct,complement,headX,maximalProjection,specifier
                                                  ,hd_range,headText,tokensByRange,mkOrdDP,compDPToRange
                                                  ,specDPText
@@ -221,7 +222,7 @@ test_np_rrc_1 =
   )
 
 
-mkDPFromTest :: PreAnalysis '[Lemma] -> TestNoun -> DetP
+mkDPFromTest :: PreAnalysis '[Lemma] -> TestNoun -> DetP 'PH0
 mkDPFromTest tagged x =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) (x^._3))
       lemmapt = mkBitreeICP lmap1 (x^._4)

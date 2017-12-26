@@ -18,7 +18,7 @@ import           WordNet.Type.Lexicographer      (LexicographerFile)
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
 import           NLP.Syntax.Verb
-import           NLP.Syntax.Type                 (MarkType(..))
+-- import           NLP.Syntax.Type                 (MarkType(..))
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util

@@ -53,22 +53,22 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
                             (T.intercalate " " (vp^..vp_words.traverse.to (f.fst)))
 
 
-formatAdjunctCP :: AdjunctCP -> Text
+formatAdjunctCP :: AdjunctCP 'PH0 -> Text
 -- formatAdjunctCP (AdjunctCP_Unresolved z) = "unresolved" <> (showRange z)
 formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cp^.maximalProjection)
 
 
-adjunctVPText :: PreAnalysis t -> AdjunctVP -> Text
+adjunctVPText :: PreAnalysis t -> AdjunctVP 'PH0 -> Text
 -- adjunctVPText tagged (AdjunctVP_Unresolved rng) = T.intercalate " " (tokensByRange tagged rng)
 adjunctVPText tagged  (AdjunctVP_PP pp)         = T.intercalate " " (tokensByRange tagged (pp^.maximalProjection))
 
 
-formatAdjunctVP :: AdjunctVP -> Text
+formatAdjunctVP :: AdjunctVP 'PH0 -> Text
 -- formatAdjunctVP (AdjunctVP_Unresolved rng) = showRange rng
 formatAdjunctVP (AdjunctVP_PP pp)          = formatPP pp
 
 
-formatCPDetail :: CP -> String
+formatCPDetail :: CP 'PH0 -> String
 formatCPDetail cp =
   printf "Complementizer Phrase: %-6s\n\
          \Complementizer       : %-6s  %s\n\
@@ -93,7 +93,7 @@ formatCPDetail cp =
         fmtComplementizer C_PHI = ("phi","")
         fmtComplementizer (C_WORD w) = ("",T.unpack (unLemma w))
         --
-        formatSpecCP :: Maybe SpecCP -> (String,String)
+        formatSpecCP :: Maybe (SpecCP 'PH0) -> (String,String)
         formatSpecCP Nothing              = ("","")
         formatSpecCP (Just SpecCP_WHPHI)  = ("phi_WH","")
         formatSpecCP (Just (SpecCP_WH rng)) = ("WH",show rng) -- (formatposchunk (rootTag (current z)), show (gettoken z))

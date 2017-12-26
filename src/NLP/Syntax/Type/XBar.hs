@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -35,7 +36,7 @@ determinerText :: PreAnalysis t -> HeadDP -> Maybe Text
 determinerText tagged hdp = fmap (T.intercalate " " . tokensByRange tagged) (hdp^.hd_range)
 
 
-headText :: PreAnalysis t -> NounP -> Text
+headText :: PreAnalysis t -> NounP 'PH0 -> Text
 headText tagged x = x^.headX.coidx_content.hn_range.to (T.intercalate " " . tokensByRange tagged)
 
 
@@ -45,7 +46,7 @@ specDPText tagged x = case x of
                         SpDP_Gen rng -> T.intercalate " " (tokensByRange tagged rng)
 
 
-compVPToSpecTP :: CompVP -> Either Range SpecTP
+compVPToSpecTP :: CompVP 'PH0 -> Either Range (SpecTP 'PH0)
 -- compVPToSpecTP (CompVP_Unresolved x) = LeftSpecTP_Unresolved x
 compVPToSpecTP (CompVP_CP cp)        = Left  (cp^.maximalProjection)
 compVPToSpecTP (CompVP_DP y)         = Right (SpecTP_DP y)
@@ -55,12 +56,12 @@ compVPToSpecTP (CompVP_PP y)         = case y^.complement of
 compVPToSpecTP (CompVP_AP ap)        = Left (ap^.maximalProjection)  -- for the time being
 
 
-specTPToCompVP :: SpecTP -> CompVP
+specTPToCompVP :: SpecTP 'PH0 -> CompVP 'PH0
 -- specTPToCompVP (SpecTP_Unresolved x) = CompVP_Unresolved x
 specTPToCompVP (SpecTP_DP x)         = CompVP_DP x
 
 
-compVPToCPDPPP :: CompVP -> CPDPPP
+compVPToCPDPPP :: CompVP 'PH0 -> CPDPPP 'PH0
 -- compVPToCPDPPP (CompVP_Unresolved _) = Nothing
 compVPToCPDPPP (CompVP_CP cp) = CPCase cp
 compVPToCPDPPP (CompVP_DP dp) = DPCase dp
@@ -68,14 +69,14 @@ compVPToCPDPPP (CompVP_PP pp) = PPCase pp
 compVPToCPDPPP (CompVP_AP pp) = APCase pp
 
 
-headTextDP :: PreAnalysis t -> DetP -> Text
+headTextDP :: PreAnalysis t -> DetP 'PH0 -> Text
 headTextDP tagged dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> fromMaybe "" (fmap (headText tagged) (dp^.complement))
     _ -> T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
 
 
-headRangeDP :: DetP -> Maybe Range
+headRangeDP :: DetP 'PH0 -> Maybe Range
 headRangeDP dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> dp^?complement._Just.headX.coidx_content.hn_range
@@ -88,7 +89,7 @@ headRangeDP dp =
               (Nothing       , Nothing      ) -> Nothing
 
 
-compVPToHeadText :: PreAnalysis t -> CompVP -> Text
+compVPToHeadText :: PreAnalysis t -> CompVP 'PH0 -> Text
 -- compVPToHeadText tagged (CompVP_Unresolved rng) = T.intercalate " " (tokensByRange tagged rng)
 compVPToHeadText tagged (CompVP_CP cp)          = T.intercalate " " (tokensByRange tagged (cp^.maximalProjection))
 compVPToHeadText tagged (CompVP_DP dp)          = headTextDP tagged dp
@@ -98,16 +99,16 @@ compVPToHeadText tagged (CompVP_PP pp)          = case pp^.complement of
 compVPToHeadText tagged (CompVP_AP ap)          = T.intercalate " " (tokensByRange tagged (ap^.maximalProjection))
 
 
-compVPToRange :: CompVP -> Range
+compVPToRange :: CompVP 'PH0 -> Range
 compVPToRange = (\case Left rng -> rng; Right (SpecTP_DP dp) -> dp^.maximalProjection) . compVPToSpecTP
 
 
-compPPToRange :: CompPP -> Range
+compPPToRange :: CompPP 'PH0 -> Range
 compPPToRange (CompPP_DP dp) = dp^.maximalProjection
 compPPToRange (CompPP_Gerund rng) = rng
 
 
-toRange :: CPDPPP -> Range
+toRange :: CPDPPP 'PH0 -> Range
 toRange (CPCase cp) = cp^.maximalProjection
 toRange (DPCase dp) = dp^.maximalProjection
 toRange (PPCase pp) = pp^.maximalProjection

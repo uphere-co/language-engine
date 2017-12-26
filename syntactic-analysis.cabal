@@ -26,7 +26,7 @@ library
                        NLP.Syntax.Format.Internal
                        NLP.Syntax.Noun
                        NLP.Syntax.Preposition
-                       NLP.Syntax.Type
+                       -- NLP.Syntax.Type
                        NLP.Syntax.Type.PreAnalysis
                        NLP.Syntax.Type.Verb
                        NLP.Syntax.Type.XBar
