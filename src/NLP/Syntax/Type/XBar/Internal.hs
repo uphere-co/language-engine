@@ -63,7 +63,7 @@ data TraceType = NULL | PRO | Moved | WHPRO
 --   * If d is focused, (Right [a,b,c], d)
 --
 
-{- 
+{-
 data TraceChain a = TraceChain { _trChain    :: Either (ListZipper TraceType) [TraceType]
                                , _trResolved :: Maybe a
                                }
@@ -259,6 +259,9 @@ data CompVP p = CompVP_CP (CP p)
               | CompVP_PP (PP p)
               | CompVP_AP (AP p)
 
+type family CoindexCompVP (p :: Phase) where
+  CoindexCompVP 'PH0 = Coindex (Either TraceType (Either Range (CompVP 'PH0)))
+  CoindexCompVP 'PH1 = Coindex (Either TraceType (CompVP 'PH1))
 
 data AdjunctVP p = AdjunctVP_PP (PP p)
 
@@ -288,9 +291,13 @@ data Complementizer = C_PHI              -- ^ empty complementizer
                     deriving (Show,Eq,Ord)
 
 
-data SpecCP p = SpecCP_WHPHI     -- ^ empty Wh-word
-              | SpecCP_WH Range  -- ^ Wh-phrase, this should be DP or PP. Later, we will change it to DP or PP.
-              | SpecCP_Topic (Coindex (Either TraceType (Either Range (CompVP p)))) -- ^ topicalization (AdjunctCP for the time being)
+data SpecCP p
+  = SpecCP_WHPHI     -- ^ empty Wh-word
+  | SpecCP_WH Range  -- ^ Wh-phrase, this should be DP or PP. Later, we will change it to DP or PP.
+  | SpecCP_Topic (CoindexCompVP p)
+
+
+    -- (Coindex (Either TraceType (Either Range (CompVP t)))) -- ^ topicalization (AdjunctCP for the time being)
 
 
 
@@ -307,7 +314,7 @@ data CPDPPP p = CPCase (CP p)
               | PPCase (PP p)
               | APCase (AP p)
 
-instance Show (CPDPPP 'PH0) where
+instance Show (CPDPPP p) where
   show (CPCase cp) = "CP" ++ show (_maximalProjection cp)
   show (DPCase dp) = "DP" ++ show (_maximalProjection dp)
   show (PPCase pp) = "PP" ++ show (_maximalProjection pp)
@@ -347,11 +354,11 @@ type family Property (p :: Phase) (x :: XType) where
   Property _    'X_T = ()
   Property _    'X_C = Complementizer
 
-  
+
 type family Maximal (p :: Phase) (x :: XType) where
   Maximal _ _ = Range
 
-    
+
 type family Specifier  (p :: Phase) (x :: XType) where
   Specifier  _    'X_N = ()
   Specifier  _    'X_D = [SpecDP] -- allow multiple spec for the time being
@@ -364,17 +371,6 @@ type family Specifier  (p :: Phase) (x :: XType) where
   Specifier  'PH1 'X_C = Maybe (SpecCP 'PH1)
 
 
-type family Complement (p :: Phase) (x :: XType) where
-  Complement _    'X_N = Maybe CompDP
-  Complement p    'X_D = Maybe (NounP p)
-  Complement p    'X_P = CompPP p
-  Complement _    'X_A = ()
-  Complement 'PH0 'X_V = [Coindex (Either TraceType (Either Range (CompVP 'PH0)))]
-  Complement 'PH1 'X_V = [Coindex (Either TraceType (CompVP 'PH1))]
-  Complement p    'X_T = VerbP p
-  Complement p    'X_C = TP p
-
-
 type family Adjunct    (p :: Phase) (x :: XType) where
   Adjunct _    'X_N = ()
   Adjunct _    'X_D = [AdjunctDP]
@@ -385,9 +381,19 @@ type family Adjunct    (p :: Phase) (x :: XType) where
   Adjunct _    'X_T = ()
   Adjunct 'PH0 'X_C = [Either Range (AdjunctCP 'PH0)]
   Adjunct 'PH1 'X_C = [AdjunctCP 'PH1]
-  
 
-  
+
+type family Complement (p :: Phase) (x :: XType) where
+  Complement _    'X_N = Maybe CompDP
+  Complement p    'X_D = Maybe (NounP p)
+  Complement p    'X_P = CompPP p
+  Complement _    'X_A = ()
+  Complement p    'X_V = [CoindexCompVP p]
+  Complement p    'X_T = VerbP p
+  Complement p    'X_C = TP p
+
+
+
 
 data XP p x = XP { _headX             :: Property   p x
                  , _maximalProjection :: Maximal    p x
@@ -396,86 +402,13 @@ data XP p x = XP { _headX             :: Property   p x
                  , _complement        :: Complement p x
                  }
 
-  
---
--- NP
---
 
-
---
--- NP1
---
 
 
 type NounP p = XP p 'X_N
-
---
--- DP -> D NP
---
-
-
---
--- DP1
---
-
 type DetP p = XP p 'X_D
-
-
-
---
--- PP
---
-
-
---
--- PP1
---
-
 type PP p = XP p 'X_P
-
-
-
---
--- AP
---
-
 type AP p = XP p 'X_A
-
-
-
---
--- VerbPH0
---
-
-
---
--- VerbP1
---
-
 type VerbP p = XP p 'X_V
-
-
-
---
--- TP
---
-
-
-
---
--- TP1
---
-
 type TP p = XP p 'X_T
-
-
---
--- CP
---
-
-
---
--- CP1
---
-
 type CP p = XP p 'X_C

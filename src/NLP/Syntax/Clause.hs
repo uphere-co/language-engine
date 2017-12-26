@@ -638,3 +638,75 @@ rewriteTree action xts = execState (go rng0) xts
                          w'' <- hoistMaybe (next w)
                          lift (go (getrng w'')))
                      <|> return ()))
+
+
+
+
+mkX'TreePH1 :: X'Tree 'PH0 -> X'Tree 'PH1
+mkX'TreePH1 x'tr = bimap f f x'tr
+  where
+    f (rng,x) = (rng,mkCPDPPPPH1 x)
+
+
+{-  where
+    replaceCompVP z = do
+      cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
+      let rng = cp^.maximalProjection
+      let xs = cp^.complement.complement.complement
+      xs' <- flip traverse xs $ \x ->
+               ((do tr <- (^.xts_tree) <$> lift get
+                    rng_compvp <- hoistMaybe (x^?coidx_content._Right._Left)
+                    y <- hoistMaybe (extractZipperById rng_compvp tr)
+                    y' <- replace y
+                    cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
+                    (return . (coidx_content .~ Right (Right (CompVP_CP cp')))) x
+                )
+                <|>
+                (return x))
+      -- flip traverse xs' $ \x -> do
+      --   trace ("\nreplaceCompVP7 " ++ T.unpack (formatCoindex formatCompVP x) ) (return ())
+      let rf = _2._CPCase.complement.complement.complement .~ xs'
+      z' <- hoistMaybe . extractZipperById rng . (^.xts_tree) =<< lift get
+      w' <- putAndReturn (replaceFocusItem rf rf z')
+      -- debugfunc "replaceCompVP8"
+
+      -- trace ("\nreplaceCompVP8 :\n" ++ T.unpack (formatX'Tree xtr')) $ return ()
+
+      return w'
+    --
+    -- replaceSpecCP :: X'Zipper -> MaybeT (State X'TreeState) X'Zipper
+    replaceSpecCP z = do
+      cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
+      let mx = cp^?specifier._Just._SpecCP_Topic
+      mx' <- flip traverse mx $ \x ->
+               ((do
+                    tr <- (^.xts_tree) <$> lift get
+                    rng <- hoistMaybe (x^?coidx_content._Right._Left)
+                    y <- hoistMaybe (extractZipperById rng tr)
+                    y' <- replace y
+                    cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
+                    (return . (coidx_content .~ Right (Right (CompVP_CP cp')))) x
+                )
+                <|>
+                (return x))
+      let rf = _2._CPCase.specifier .~ fmap SpecCP_Topic mx'
+      putAndReturn (replaceFocusItem rf rf z)
+    --
+    -- replaceAdjunctCP :: X'Zipper -> MaybeT (State X'TreeState) X'Zipper
+    replaceAdjunctCP z = do
+      cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
+      let xs = cp^.adjunct
+      xs' <- flip traverse xs $ \x ->
+               ((do tr <- (^.xts_tree) <$> lift get
+                    rng <- hoistMaybe (x^?_Left)
+                    y <- hoistMaybe (extractZipperById rng tr)
+                    y' <- replace y
+                    cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
+                    return (Right (AdjunctCP_CP cp'))
+                )
+                <|>
+                (return x))
+      let rf = _2._CPCase.adjunct .~ xs'
+      putAndReturn (replaceFocusItem rf rf z)
+
+-}

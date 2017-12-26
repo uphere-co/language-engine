@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
 
 module NLP.Syntax.Type.XBar
 ( module NLP.Syntax.Type.PreAnalysis
@@ -9,9 +10,9 @@ module NLP.Syntax.Type.XBar
 , module NLP.Syntax.Type.XBar
 ) where
 
-import           Control.Lens                       ((^.),(^?),_1,_2,_Just,to)
+import           Control.Lens                       ((^.),(^?),(.~),_1,_2,_Just,to)
 import           Data.Foldable                      (toList)
-import           Data.Maybe                         (fromMaybe,maybeToList)
+import           Data.Maybe                         (fromMaybe,mapMaybe,maybeToList)
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
 --
@@ -113,3 +114,109 @@ toRange (CPCase cp) = cp^.maximalProjection
 toRange (DPCase dp) = dp^.maximalProjection
 toRange (PPCase pp) = pp^.maximalProjection
 toRange (APCase ap) = ap^.maximalProjection
+
+
+
+mkSpecTPPH1 :: SpecTP 'PH0 -> SpecTP 'PH1
+mkSpecTPPH1 (SpecTP_DP dp) = SpecTP_DP (mkDPPH1 dp)
+
+
+mkAdjunctCPPH1 :: AdjunctCP 'PH0 -> AdjunctCP 'PH1
+mkAdjunctCPPH1 (AdjunctCP_CP cp) = AdjunctCP_CP (mkCPPH1 cp)
+
+
+
+mkNPPH1 np = XP { _headX = _headX np
+                , _maximalProjection = _maximalProjection np
+                , _specifier = _specifier np
+                , _adjunct = _adjunct np
+                , _complement = _complement np
+                }
+
+mkDPPH1 dp = XP { _headX = _headX dp
+                , _maximalProjection = _maximalProjection dp
+                , _specifier = _specifier dp
+                , _adjunct = _adjunct dp
+                , _complement = fmap mkNPPH1 (_complement dp)
+                }
+
+
+mkAPPH1 :: AP 'PH0 -> AP 'PH1
+mkAPPH1 ap = XP { _headX = _headX ap
+                , _maximalProjection = _maximalProjection ap
+                , _specifier = _specifier ap
+                , _adjunct = _adjunct ap
+                , _complement = _complement ap
+                }
+
+
+
+mkCompPPPH1 (CompPP_DP dp) = CompPP_DP (mkDPPH1 dp)
+mkCompPPPH1 (CompPP_Gerund rng) = CompPP_Gerund rng
+
+mkPPPH1 :: PP 'PH0 -> PP 'PH1
+mkPPPH1 pp = XP { _headX = _headX pp
+                , _maximalProjection = _maximalProjection pp
+                , _specifier = _specifier pp
+                , _adjunct = _adjunct pp
+                , _complement = mkCompPPPH1 (_complement pp)
+                }
+
+mkAdjunctVPPH1 (AdjunctVP_PP pp) = AdjunctVP_PP (mkPPPH1 pp)
+
+
+mkVerbPPH1 :: VerbP 'PH0 -> VerbP 'PH1
+mkVerbPPH1 vp = XP { _headX = _headX vp
+                   , _maximalProjection = _maximalProjection vp
+                   , _specifier = _specifier vp
+                   , _adjunct = mapMaybe (either (const Nothing) (Just . mkAdjunctVPPH1)) (_adjunct vp)
+                   , _complement = flip map (_complement vp) $ \t ->
+                                     case t^.coidx_content of
+                                       Left tr         -> (coidx_content .~ Left tr) t
+                                       Right (Right p) -> (coidx_content .~ Right (mkCompVPPH1 p)) t
+                                       Right (Left _)  -> (coidx_content .~ Left NULL) t
+                   }
+
+mkTPPH1 :: TP 'PH0 -> TP 'PH1
+mkTPPH1 tp = XP { _headX = _headX tp
+                , _maximalProjection = _maximalProjection tp
+                , _specifier = let t = _specifier tp
+                               in case t^.coidx_content of
+                                    Left tr         -> (coidx_content .~ Left tr) t
+                                    Right (Right p) -> (coidx_content .~ Right (mkSpecTPPH1 p)) t
+                                    Right (Left _)  -> (coidx_content .~ Left NULL) t
+                , _adjunct = _adjunct tp
+                , _complement = mkVerbPPH1 (_complement tp)
+                }
+
+
+mkCPPH1 :: CP 'PH0 -> CP 'PH1
+mkCPPH1 cp = XP { _headX = _headX cp
+                , _maximalProjection = _maximalProjection cp
+                , _specifier = mkSpecCPPH1 =<< _specifier cp
+                , _adjunct = mapMaybe (either (const Nothing) (Just. mkAdjunctCPPH1)) (_adjunct cp)
+                , _complement = mkTPPH1 (_complement cp)
+                }
+
+
+mkCompVPPH1 (CompVP_CP cp) = CompVP_CP (mkCPPH1 cp)
+mkCompVPPH1 (CompVP_DP dp) = CompVP_DP (mkDPPH1 dp)
+mkCompVPPH1 (CompVP_PP pp) = CompVP_PP (mkPPPH1 pp)
+mkCompVPPH1 (CompVP_AP ap) = CompVP_AP (mkAPPH1 ap)
+
+
+mkSpecCPPH1 :: SpecCP 'PH0 -> Maybe (SpecCP 'PH1)
+mkSpecCPPH1 SpecCP_WHPHI    = Just SpecCP_WHPHI
+mkSpecCPPH1 (SpecCP_WH rng) = Just (SpecCP_WH rng)
+mkSpecCPPH1 (SpecCP_Topic t) = case t^.coidx_content of
+                                 Left tr         -> Just (SpecCP_Topic ((coidx_content .~ Left tr) t))
+                                 Right (Right p) -> Just (SpecCP_Topic ((coidx_content .~ Right (mkCompVPPH1 p)) t))
+                                 Right (Left _)  -> Nothing
+
+
+
+
+mkCPDPPPPH1 (CPCase cp) = CPCase (mkCPPH1 cp)
+mkCPDPPPPH1 (DPCase dp) = DPCase (mkDPPH1 dp)
+mkCPDPPPPH1 (PPCase pp) = PPCase (mkPPPH1 pp)
+mkCPDPPPPH1 (APCase ap) = APCase (mkAPPH1 ap)

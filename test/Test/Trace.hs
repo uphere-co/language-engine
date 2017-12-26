@@ -270,20 +270,26 @@ testcases = [ test_silent_pronoun_1
             ]
 
 
+
 checkTrace :: TestTrace -> Bool
 checkTrace c =
   fromMaybe False $ do
     let tagged = mkPreAnalysis (c^._4) (c^._5) (c^._6) (c^._7)
         vps = mkVPS (c^._4) (c^._5)
-        x'tr = (map ((^.xts_tree) {- . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged -} . XTS 0) . identifyCPHierarchy tagged) vps
-    -- trace "checktrace1" $ return ()
+        x'trs0 = identifyCPHierarchy tagged vps
+        x'trs1 = map ((^.xts_tree) {- . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged -} . XTS 0) x'trs0
+        -- trace "checktrace1" $ return ()
+        testX'tr = map mkX'TreePH1 x'trs0
+
+
+    trace (show testX'tr) $ return ()
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
     -- trace "checktrace2" $ return ()
     cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                              -- anyway need to be rewritten.
     -- trace "checktrace3" $ return ()
 
-    cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'tr)
+    cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'trs1)
     -- trace ("checktrace4" ++ (formatCP cp)) $ return ()
 
     case c^._3._1 of
