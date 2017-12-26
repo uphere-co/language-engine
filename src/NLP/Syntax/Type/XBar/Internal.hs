@@ -338,12 +338,56 @@ getSubsFromPPTree (PPTree pp my) = PPCase pp : maybe [] getSubsFromDPTree my
 
 
 
-type family Property   (p :: Phase) (x :: XType) :: *
-type family Maximal    (p :: Phase) (x :: XType) :: *
-type family Specifier  (p :: Phase) (x :: XType) :: *
-type family Complement (p :: Phase) (x :: XType) :: *
-type family Adjunct    (p :: Phase) (x :: XType) :: *
+type family Property (p :: Phase) (x :: XType) where
+  Property _    'X_N = Coindex HeadNP
+  Property _    'X_D = HeadDP
+  Property _    'X_P = HeadPP
+  Property _    'X_A = ()
+  Property _    'X_V = VerbProperty Text
+  Property _    'X_T = ()
+  Property _    'X_C = Complementizer
 
+  
+type family Maximal (p :: Phase) (x :: XType) where
+  Maximal _ _ = Range
+
+    
+type family Specifier  (p :: Phase) (x :: XType) where
+  Specifier  _    'X_N = ()
+  Specifier  _    'X_D = [SpecDP] -- allow multiple spec for the time being
+  Specifier  _    'X_P = ()
+  Specifier  _    'X_A = ()
+  Specifier  _    'X_V = ()
+  Specifier  'PH0 'X_T = Coindex (Either TraceType (Either Range (SpecTP 'PH0)))
+  Specifier  'PH1 'X_T = Coindex (Either TraceType (SpecTP 'PH1))
+  Specifier  'PH0 'X_C = Maybe (SpecCP 'PH0)
+  Specifier  'PH1 'X_C = Maybe (SpecCP 'PH1)
+
+
+type family Complement (p :: Phase) (x :: XType) where
+  Complement _    'X_N = Maybe CompDP
+  Complement p    'X_D = Maybe (NounP p)
+  Complement p    'X_P = CompPP p
+  Complement _    'X_A = ()
+  Complement 'PH0 'X_V = [Coindex (Either TraceType (Either Range (CompVP 'PH0)))]
+  Complement 'PH1 'X_V = [Coindex (Either TraceType (CompVP 'PH1))]
+  Complement p    'X_T = VerbP p
+  Complement p    'X_C = TP p
+
+
+type family Adjunct    (p :: Phase) (x :: XType) where
+  Adjunct _    'X_N = ()
+  Adjunct _    'X_D = [AdjunctDP]
+  Adjunct _    'X_P = ()
+  Adjunct _    'X_A = ()
+  Adjunct 'PH0 'X_V = [Either Range (AdjunctVP 'PH0)]
+  Adjunct 'PH1 'X_V = [AdjunctVP 'PH1]
+  Adjunct _    'X_T = ()
+  Adjunct 'PH0 'X_C = [Either Range (AdjunctCP 'PH0)]
+  Adjunct 'PH1 'X_C = [AdjunctCP 'PH1]
+  
+
+  
 
 data XP p x = XP { _headX             :: Property   p x
                  , _maximalProjection :: Maximal    p x
@@ -356,43 +400,23 @@ data XP p x = XP { _headX             :: Property   p x
 --
 -- NP
 --
-type instance Property   'PH0 'X_N = Coindex HeadNP -- Range
-type instance Maximal    'PH0 'X_N = Range
-type instance Specifier  'PH0 'X_N = ()
-type instance Adjunct    'PH0 'X_N = ()
-type instance Complement 'PH0 'X_N = Maybe CompDP
 
 
 --
 -- NP1
 --
 
-type instance Property   'PH1 'X_N = Coindex HeadNP -- Range
-type instance Maximal    'PH1 'X_N = Range
-type instance Specifier  'PH1 'X_N = ()
-type instance Adjunct    'PH1 'X_N = ()
-type instance Complement 'PH1 'X_N = Maybe CompDP
 
 type NounP p = XP p 'X_N
 
 --
 -- DP -> D NP
 --
-type instance Property   'PH0 'X_D = HeadDP -- Range -- head
-type instance Maximal    'PH0 'X_D = Range
-type instance Specifier  'PH0 'X_D = [SpecDP] -- allow multiple spec for the time being
-type instance Adjunct    'PH0 'X_D = [AdjunctDP]
-type instance Complement 'PH0 'X_D = Maybe (NounP 'PH0)
 
 
 --
 -- DP1
 --
-type instance Property   'PH1 'X_D = HeadDP -- Range -- head
-type instance Maximal    'PH1 'X_D = Range
-type instance Specifier  'PH1 'X_D = [SpecDP] -- allow multiple spec for the time being
-type instance Adjunct    'PH1 'X_D = [AdjunctDP]
-type instance Complement 'PH1 'X_D = Maybe (NounP 'PH1) -- Maybe (CompDP t)
 
 type DetP p = XP p 'X_D
 
@@ -401,21 +425,11 @@ type DetP p = XP p 'X_D
 --
 -- PP
 --
-type instance Property   'PH0 'X_P = HeadPP
-type instance Maximal    'PH0 'X_P = Range
-type instance Specifier  'PH0 'X_P = ()
-type instance Adjunct    'PH0 'X_P = ()
-type instance Complement 'PH0 'X_P = CompPP 'PH0
 
 
 --
 -- PP1
 --
-type instance Property   'PH1 'X_P = HeadPP
-type instance Maximal    'PH1 'X_P = Range
-type instance Specifier  'PH1 'X_P = ()
-type instance Adjunct    'PH1 'X_P = ()
-type instance Complement 'PH1 'X_P = CompPP 'PH1
 
 type PP p = XP p 'X_P
 
@@ -424,11 +438,6 @@ type PP p = XP p 'X_P
 --
 -- AP
 --
-type instance Property   p 'X_A = ()
-type instance Maximal    p 'X_A = Range
-type instance Specifier  p 'X_A = ()
-type instance Adjunct    p 'X_A = ()
-type instance Complement p 'X_A = ()
 
 type AP p = XP p 'X_A
 
@@ -437,21 +446,11 @@ type AP p = XP p 'X_A
 --
 -- VerbPH0
 --
-type instance Property   'PH0 'X_V = VerbProperty Text
-type instance Maximal    'PH0 'X_V = Range
-type instance Specifier  'PH0 'X_V = ()
-type instance Adjunct    'PH0 'X_V = [Either Range (AdjunctVP 'PH0)]
-type instance Complement 'PH0 'X_V = [Coindex (Either TraceType (Either Range (CompVP 'PH0)))]
 
 
 --
 -- VerbP1
 --
-type instance Property   'PH1 'X_V = VerbProperty Text
-type instance Maximal    'PH1 'X_V = Range
-type instance Specifier  'PH1 'X_V = ()
-type instance Adjunct    'PH1 'X_V = [AdjunctVP 'PH1]
-type instance Complement 'PH1 'X_V = [Coindex (Either TraceType (CompVP 'PH1))]
 
 type VerbP p = XP p 'X_V
 
@@ -460,22 +459,12 @@ type VerbP p = XP p 'X_V
 --
 -- TP
 --
-type instance Property   'PH0 'X_T = ()
-type instance Maximal    'PH0 'X_T = Range
-type instance Specifier  'PH0 'X_T = Coindex (Either TraceType (Either Range (SpecTP 'PH0)))
-type instance Adjunct    'PH0 'X_T = ()
-type instance Complement 'PH0 'X_T = VerbP 'PH0
 
 
 
 --
 -- TP1
 --
-type instance Property   'PH1 'X_T = ()
-type instance Maximal    'PH1 'X_T = Range
-type instance Specifier  'PH1 'X_T = Coindex (Either TraceType (SpecTP 'PH1))
-type instance Adjunct    'PH1 'X_T = ()
-type instance Complement 'PH1 'X_T = VerbP 'PH1
 
 type TP p = XP p 'X_T
 
@@ -483,20 +472,10 @@ type TP p = XP p 'X_T
 --
 -- CP
 --
-type instance Property   'PH0 'X_C = Complementizer
-type instance Maximal    'PH0 'X_C = Range
-type instance Specifier  'PH0 'X_C = Maybe (SpecCP 'PH0)
-type instance Adjunct    'PH0 'X_C = [Either Range (AdjunctCP 'PH0)]
-type instance Complement 'PH0 'X_C = TP 'PH0
 
 
 --
 -- CP1
 --
-type instance Property   'PH1 'X_C = Complementizer
-type instance Maximal    'PH1 'X_C = Range
-type instance Specifier  'PH1 'X_C = Maybe (SpecCP 'PH1)
-type instance Adjunct    'PH1 'X_C = [AdjunctCP 'PH1]
-type instance Complement 'PH1 'X_C = TP 'PH1
 
 type CP p = XP p 'X_C
