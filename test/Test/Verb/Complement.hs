@@ -289,14 +289,14 @@ checkSubjCompAdjunct c = fromMaybe False $ do
   cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'tr)
   let subj_test = c^._3._1
       b_subj = fromMaybe False $ do
-                 subj <- cp^?complement.specifier.coidx_content._Right
+                 subj <- cp^?complement.specifier.coidx_content._Right._Right
                  let sclass = subj^?_SpecTP_DP.headX.hd_class
-                     stxt = (\case SpecTP_Unresolved x -> {- (T.intercalate " " . tokensByRange tagged) x -} "error" ; SpecTP_DP dp -> headTextDP tagged dp) subj
+                     stxt = (\case SpecTP_DP dp -> headTextDP tagged dp) subj
                  case subj_test^._2 of
                    Nothing -> return (stxt == subj_test^._1)
                    Just p -> return (stxt == subj_test^._1 && sclass == Just p)
       -- test complements
-      compVP_to_text (CompVP_Unresolved rng) = "error"
+      -- compVP_to_text (CompVP_Unresolved rng) = "error"
       compVP_to_text (CompVP_CP cp)          = T.intercalate " " (tokensByRange tagged (cp^.maximalProjection))
       compVP_to_text (CompVP_DP dp)          = headTextDP tagged dp
       compVP_to_text (CompVP_PP pp)          = case pp^.complement of
@@ -304,11 +304,11 @@ checkSubjCompAdjunct c = fromMaybe False $ do
                                                   CompPP_Gerund rng -> T.intercalate " " (tokensByRange tagged rng)
       compVP_to_text (CompVP_AP ap)          = T.intercalate " " (tokensByRange tagged (ap^.maximalProjection))
 
-      lst_comps = cp^..complement.complement.complement.traverse.coidx_content._Right.to compVP_to_text
+      lst_comps = cp^..complement.complement.complement.traverse.coidx_content._Right._Right.to compVP_to_text
       lst_comps_test = c^._3._2
       b_comps = lst_comps == lst_comps_test  -- getAll (mconcat (zipWith (\a b -> All (a == Just b)) lst_comps lst_comps_test)) && (length lst_comps == length lst_comps_test)
       -- test adjuncts
-      lst_adjs = cp^..complement.complement.adjunct.traverse.to (adjunctVPText tagged)
+      lst_adjs = cp^..complement.complement.adjunct.traverse._Right.to (adjunctVPText tagged)
       lst_adjs_test = c^._3._3
       b_adjuncts = lst_adjs == lst_adjs_test
       b_topicalized = fromMaybe False $ do

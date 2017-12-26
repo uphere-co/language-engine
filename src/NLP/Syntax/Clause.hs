@@ -118,7 +118,7 @@ complementsOfVerb :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                      PreAnalysis t
                   -> VerbProperty (Zipper t)
                   -> Zipper t
-                  -> ([Coindex (Either TraceType CompVP)],Maybe (Coindex (Either TraceType CompVP)),[CPDPPP])
+                  -> ([Coindex (Either TraceType (Either Range CompVP))],Maybe (Coindex (Either TraceType (Either Range CompVP))),[CPDPPP])
 complementsOfVerb tagged vprop z_vp =
   let (cs,mspec,dppps) = let (xs,mtop) = complementCandidates vprop z_vp
                              xs' = map xform xs ++
@@ -128,7 +128,7 @@ complementsOfVerb tagged vprop z_vp =
                                      return (comp,[]))
                              mspec' = mtop >>= \top -> do
                                         let rng_top = getRange (current top)
-                                        return (mkDefCoindex (Right (CompVP_Unresolved rng_top)))
+                                        return (mkDefCoindex (Right (Left rng_top)))
                          in (map (^._1) xs',mspec',concatMap (^._2) xs')
   in case vprop^.vp_voice of
        Active -> (cs,mspec,dppps)
@@ -137,17 +137,17 @@ complementsOfVerb tagged vprop z_vp =
     xform_dp z = let dptr@(DPTree dp' _pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
                      -- adjs = []    -- we had better identify time part in SRL
                      subs = getSubsFromDPTree dptr
-                 in (mkDefCoindex (Right (checkEmptyPrep tagged dp')),subs)
+                 in (mkDefCoindex (Right (Right (checkEmptyPrep tagged dp'))),subs)
     xform_pp z = fromMaybe (mkDefCoindex (Left NULL),[]) $ do
                    pptr <- mkPPFromZipper tagged z
                    let pp = pptr^._PPTree._1
                        subs = getSubsFromPPTree pptr
-                   return (mkDefCoindex (Right (checkTimePrep tagged pp)), subs)
-    xform_cp z = (mkDefCoindex (Right (CompVP_Unresolved (getRange (current z)))), [])
+                   return (mkDefCoindex (Right (Right (checkTimePrep tagged pp))), subs)
+    xform_cp z = (mkDefCoindex (Right (Left (getRange (current z)))), [])
     xform_ap z = let ap = mkAP (getRange (current z))
-                 in  (mkDefCoindex (Right (CompVP_AP ap)), [APCase ap])
+                 in  (mkDefCoindex (Right (Right (CompVP_AP ap))), [APCase ap])
 
-    xform :: Zipper t -> (Coindex (Either TraceType CompVP), [CPDPPP])
+    -- xform :: Zipper t -> (Coindex (Either TraceType CompVP), [CPDPPP])
     xform z = case rootTag (current z) of
                 Left NP    -> xform_dp z
                 Left PP    -> xform_pp z
@@ -161,12 +161,12 @@ complementsOfVerb tagged vprop z_vp =
 
 
 allAdjunctCPOfVerb :: VerbProperty (Zipper (Lemma ': as))
-                   -> [AdjunctCP]
+                   -> [Either Range AdjunctCP]
 allAdjunctCPOfVerb vprop =
     let mcomma = firstSiblingBy next (isPOSAs M_COMMA) =<< headVP vprop  -- ad hoc separation using comma
     in case mcomma of
          Nothing -> []
-         Just comma -> map (AdjunctCP_Unresolved . getRange . current) (siblingsBy next checkS comma)
+         Just comma -> map (Left . getRange . current) (siblingsBy next checkS comma)
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkS z = case tag z of
@@ -182,7 +182,7 @@ allAdjunctCPOfVerb vprop =
 identifySubject :: PreAnalysis (Lemma ': as)
                 -> N.ClauseTag
                 -> Zipper (Lemma ': as)   -- ^ Verb maximal projection
-                -> (Coindex (Either TraceType SpecTP),[CPDPPP])
+                -> (Coindex (Either TraceType (Either Range SpecTP)),[CPDPPP])
 identifySubject tagged tag vp = maybe nul smp r
   where
     r = case tag of
@@ -191,7 +191,7 @@ identifySubject tagged tag vp = maybe nul smp r
     nul = (mkDefCoindex (Left NULL),[])
     smp z = let dptr@(DPTree dp' _pptrs) = splitDP tagged (DPTree (mkOrdDP z) [])
                 subs = getSubsFromDPTree dptr
-            in (mkDefCoindex (Right (SpecTP_DP dp')),subs)
+            in (mkDefCoindex (Right (Right (SpecTP_DP dp'))),subs)
 
 
 --
@@ -215,9 +215,9 @@ constructCP tagged vprop = do
             adjs  = allAdjunctCPOfVerb vprop
             (subj0,subs2) = identifySubject tagged s z_vp
             subj = fromMaybe subj0 $ do
-                     dp <- subj0 ^? coidx_content . _Right . _SpecTP_DP
+                     dp <- subj0 ^? coidx_content._Right._Right._SpecTP_DP
                      let dptr@(DPTree dp' _) = splitDP tagged (DPTree dp [])
-                         subj' = (coidx_content._Right._SpecTP_DP .~ dp') subj0
+                         subj' = (coidx_content._Right._Right._SpecTP_DP .~ dp') subj0
                          -- subj_dps' = getSubsFromDPTree dptr
                      return subj'
             verbp = mkVerbP rng_vp (simplifyVProp vprop) [] comps
@@ -341,14 +341,14 @@ rewriteX'TreeForFreeWH rng w z' = do
   let vp_dom = cp_dom^.complement.complement
       comps = vp_dom^.complement
       comps' = flip map comps $ \comp -> fromMaybe comp $ do
-                 rng_comp <- comp^?coidx_content._Right._CompVP_Unresolved
+                 rng_comp <- comp^?coidx_content._Right._Left
                  guard (rng_comp == rng)
-                 return (mkDefCoindex (Right (CompVP_DP z')))
+                 return (mkDefCoindex (Right (Right (CompVP_DP z'))))
       rf = _2._CPCase.complement.complement.complement .~ comps'
   return (replaceFocusItem rf rf w_dom)
 
 
-whMovement :: PreAnalysis (Lemma ': as) -> (X'Zipper,CP) -> State X'TreeState (Coindex (Either TraceType SpecTP))
+whMovement :: PreAnalysis (Lemma ': as) -> (X'Zipper,CP) -> State X'TreeState (Coindex (Either TraceType (Either Range SpecTP)))
 whMovement tagged (w,cp) = do
   i <- (^.xts_nextIndex) <$> get
   -- letter z denotes zipper for PennTree, w denotes zipper for X'Tree
@@ -419,7 +419,7 @@ whMovement tagged (w,cp) = do
 
 resolvePRO :: PreAnalysis (Lemma ': as)
            -> (X'Zipper,CP)
-           -> MaybeT (State X'TreeState) (Coindex (Either TraceType SpecTP))
+           -> MaybeT (State X'TreeState) (Coindex (Either TraceType (Either Range SpecTP)))
 resolvePRO tagged (z,cp) = do
   -- XTS i x'tr <- lift get
   let spec = cp^.complement.specifier
@@ -445,8 +445,8 @@ resolvePRO tagged (z,cp) = do
 -- | resolve passive DP-movement. this is ad hoc yet.
 --
 resolveVPComp :: Range
-              -> Coindex (Either TraceType SpecTP)
-              -> MaybeT (State X'TreeState) (Coindex (Either TraceType SpecTP))
+              -> Coindex (Either TraceType (Either Range SpecTP))
+              -> MaybeT (State X'TreeState) (Coindex (Either TraceType (Either Range SpecTP)))
 resolveVPComp rng spec = do
   i <- (^.xts_nextIndex) <$> lift get    
   (w,cp) <- retrieveWCP rng
@@ -458,7 +458,7 @@ resolveVPComp rng spec = do
       case cs of
         [] -> trace "No complements?" $ return spec
         c:rest -> do
-          let r = (\case SpecTP_Unresolved _ -> Nothing; SpecTP_DP dp -> Just (CompVP_DP dp)) =<< spec^?coidx_content._Right -- ignore CP case for the time being.
+          let r = (\case SpecTP_DP dp -> Just (CompVP_DP dp)) =<< spec^?coidx_content._Right._Right  -- ignore CP case for the time being.
               c' = c -- (mergeLeftELZ (c^.trChain) (spec^.trChain)) r
               rf = _2._CPCase.complement.complement.complement .~ (c':rest)
               w' = replaceFocusItem rf rf w
@@ -471,7 +471,7 @@ resolveVPComp rng spec = do
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
-resolveDP :: PreAnalysis (Lemma ': as) -> Range -> State X'TreeState (Coindex (Either TraceType SpecTP))
+resolveDP :: PreAnalysis (Lemma ': as) -> Range -> State X'TreeState (Coindex (Either TraceType (Either Range SpecTP)))
 resolveDP tagged rng = fmap (fromMaybe emptyCoindex) . runMaybeT $ do
   (w,cp) <- retrieveWCP rng
   if is _Just (cp^.specifier)  -- relative clause
@@ -507,11 +507,11 @@ resolveCP = rewriteTree action
       let xs = cp^.complement.complement.complement
       xs' <- flip traverse xs $ \x ->
                ((do tr <- (^.xts_tree) <$> lift get
-                    rng_compvp <- hoistMaybe (x^?coidx_content._Right._CompVP_Unresolved)
+                    rng_compvp <- hoistMaybe (x^?coidx_content._Right._Left)
                     y <- hoistMaybe (extractZipperById rng_compvp tr)
                     y' <- replace y
                     cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
-                    (return . (coidx_content .~ Right (CompVP_CP cp'))) x
+                    (return . (coidx_content .~ Right (Right (CompVP_CP cp')))) x
                 )
                 <|>
                 (return x))
@@ -533,11 +533,11 @@ resolveCP = rewriteTree action
       mx' <- flip traverse mx $ \x ->
                ((do
                     tr <- (^.xts_tree) <$> lift get
-                    rng <- hoistMaybe (x^?coidx_content._Right._CompVP_Unresolved)
+                    rng <- hoistMaybe (x^?coidx_content._Right._Left)
                     y <- hoistMaybe (extractZipperById rng tr)
                     y' <- replace y
                     cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
-                    (return . (coidx_content .~ Right (CompVP_CP cp'))) x
+                    (return . (coidx_content .~ Right (Right (CompVP_CP cp')))) x
                 )
                 <|>
                 (return x))
@@ -550,11 +550,11 @@ resolveCP = rewriteTree action
       let xs = cp^.adjunct
       xs' <- flip traverse xs $ \x ->
                ((do tr <- (^.xts_tree) <$> lift get
-                    rng <- hoistMaybe (x^?_AdjunctCP_Unresolved)
+                    rng <- hoistMaybe (x^?_Left)
                     y <- hoistMaybe (extractZipperById rng tr)
                     y' <- replace y
                     cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
-                    return (AdjunctCP_CP cp')
+                    return (Right (AdjunctCP_CP cp'))
                 )
                 <|>
                 (return x))
@@ -563,7 +563,7 @@ resolveCP = rewriteTree action
 
 
 
-bindingSpec :: Range -> Coindex (Either TraceType SpecTP) -> MaybeT (State X'TreeState) () -- X'Zipper
+bindingSpec :: Range -> Coindex (Either TraceType (Either Range SpecTP)) -> MaybeT (State X'TreeState) () -- X'Zipper
 bindingSpec rng spec = do
   XTS i x'tr <- lift get
   z <- hoistMaybe (extractZipperById rng x'tr)
@@ -580,9 +580,9 @@ connectRaisedDP rng = do
   (w,cp) <- retrieveWCP rng
   guard (cp ^. complement.complement.headX.vp_voice == Passive)
   c1:c2:[] <- return (cp^.complement.complement.complement)
-  rng1 <- hoistMaybe (c1^?coidx_content._Right._CompVP_DP.maximalProjection)
-  cp' <- hoistMaybe (c2^?coidx_content._Right._CompVP_CP)
-  rng_dp <- hoistMaybe (cp'^?complement.specifier.coidx_content._Right._SpecTP_DP.maximalProjection)
+  rng1 <- hoistMaybe (c1^?coidx_content._Right._Right._CompVP_DP.maximalProjection)
+  cp' <- hoistMaybe (c2^?coidx_content._Right._Right._CompVP_CP)
+  rng_dp <- hoistMaybe (cp'^?complement.specifier.coidx_content._Right._Right._SpecTP_DP.maximalProjection)
   when (rng1 == rng_dp) $ do
     let rf = (_2._CPCase.complement.specifier .~ emptyCoindex)
            . (_2._CPCase.complement.complement.complement .~ [c2])

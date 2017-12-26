@@ -30,12 +30,12 @@ formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
 
 formatSpecTP :: SpecTP -> Text
 formatSpecTP (SpecTP_DP x) = "DP" <> x^.maximalProjection.to (T.pack . show)
-formatSpecTP (SpecTP_Unresolved x) = (T.pack . show) x
+-- formatSpecTP (SpecTP_Unresolved x) = (T.pack . show) x
 
 formatSpecCP :: SpecCP -> Text
 formatSpecCP SpecCP_WHPHI = "WHφ"
 formatSpecCP (SpecCP_WH rng) = "WH" <> T.pack (show rng)
-formatSpecCP (SpecCP_Topic c) = "Topic" <> formatCoindex (T.pack.show.compVPToRange) c
+formatSpecCP (SpecCP_Topic c) = "Topic" <> formatCoindex (T.pack.show.either id compVPToRange) c
 
 
 formatComplementizer :: Complementizer -> Text
@@ -89,13 +89,13 @@ formatAP :: AP -> Text
 formatAP ap = "AP" <> (ap^.maximalProjection.to show.to T.pack)
 
 
-
 formatCompVP :: CompVP -> Text
-formatCompVP (CompVP_Unresolved r)  = "unresolved" <> T.pack (show r)
+-- formatCompVP (CompVP_Unresolved r)  = "unresolved" <> T.pack (show r)
 formatCompVP (CompVP_CP cp) = "CP" <> cp^.headX.to formatComplementizer <> cp^.maximalProjection.to show.to T.pack
 formatCompVP (CompVP_DP dp) = "DP" <> T.pack (show (dp^.maximalProjection)) --  formatDP dp
 formatCompVP (CompVP_PP pp) = formatPP pp
 formatCompVP (CompVP_AP ap) = formatAP ap
+
 
 formatCoindex :: (a -> Text) -> Coindex (Either TraceType a) -> Text
 formatCoindex f (Coindex mi e) = either fmt f e <> maybe "" (\i -> "_" <> T.pack (show i)) mi
@@ -128,9 +128,9 @@ formatCP cp =
   in "CP" <> showRange rng <>
      "[C:" <> formatComplementizer (cp^.headX) <>
      " spec: " <> maybe "" formatSpecCP (cp^.specifier) <>
-     " (TP: spec:" <> formatCoindex formatSpecTP (cp^.complement.specifier) <> 
+     " (TP: spec:" <> formatCoindex (either (T.pack.show) formatSpecTP) (cp^.complement.specifier) <> 
      " (VP: comp:" <>
-     T.intercalate "," (cp^..complement.complement.complement.traverse.coidx_content._Right.to formatCompVP) <>
+     T.intercalate "," (cp^..complement.complement.complement.traverse.coidx_content._Right.to (either (T.pack.show) formatCompVP)) <>
      "))]"
 
 formatX'Tree :: X'Tree -> Text

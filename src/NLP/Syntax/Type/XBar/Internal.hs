@@ -253,28 +253,29 @@ mkPPGerund (prep,pclass) rng z = XP (HeadPP prep pclass) rng () () (CompPP_Gerun
 mkAP :: Range -> AP
 mkAP rng = XP () rng () () ()
 
-data CompVP = CompVP_Unresolved Range
-            | CompVP_CP CP
+data CompVP = -- CompVP_Unresolved Range
+              CompVP_CP CP
             | CompVP_DP DetP
             | CompVP_PP PP
             | CompVP_AP AP
 
 
-data AdjunctVP = AdjunctVP_Unresolved Range
-               | AdjunctVP_PP PP
+data AdjunctVP = -- AdjunctVP_Unresolved Range
+                 AdjunctVP_PP PP
 
 
 
-mkVerbP :: Range -> VerbProperty Text -> [AdjunctVP] -> [Coindex (Either TraceType CompVP)] -> VerbP
+mkVerbP :: Range -> VerbProperty Text -> [Either Range AdjunctVP] -> [Coindex (Either TraceType (Either Range CompVP))]
+        -> VerbP
 mkVerbP vp vprop adjs comps = XP vprop vp () adjs comps
 
 
-data SpecTP = SpecTP_Unresolved Range
-            | SpecTP_DP DetP
+data SpecTP = -- SpecTP_Unresolved Range
+              SpecTP_DP DetP
 
 
 
-mkTP :: Range -> Coindex (Either TraceType SpecTP) -> VerbP -> TP
+mkTP :: Range -> Coindex (Either TraceType (Either Range SpecTP)) -> VerbP -> TP
 mkTP tp mdp vp = XP () tp mdp () vp
 
 
@@ -285,16 +286,16 @@ data Complementizer = C_PHI              -- ^ empty complementizer
 
 data SpecCP = SpecCP_WHPHI                -- ^ empty Wh-word
             | SpecCP_WH Range --  (Coindex (Either TraceType DetP))   -- ^ Wh-phrase, this should be DP or PP. Later, we will change it to DP or PP.
-            | SpecCP_Topic (Coindex (Either TraceType CompVP)) -- ^ topicalization (AdjunctCP for the time being)
+            | SpecCP_Topic (Coindex (Either TraceType (Either Range CompVP))) -- ^ topicalization (AdjunctCP for the time being)
 
 
 
-data AdjunctCP = AdjunctCP_Unresolved Range
-               | AdjunctCP_CP         CP
+data AdjunctCP = -- AdjunctCP_Unresolved Range
+                 AdjunctCP_CP         CP
 
 
 
-mkCP :: Complementizer -> Range -> Maybe SpecCP -> [AdjunctCP] -> TP -> CP
+mkCP :: Complementizer -> Range -> Maybe SpecCP -> [Either Range AdjunctCP] -> TP -> CP
 mkCP mc rng spec adjs tp = XP mc rng spec adjs tp
 
 
@@ -397,15 +398,15 @@ type AP = XP 'P0 'X_A
 type instance Property   'P0 'X_V = VerbProperty Text
 type instance Maximal    'P0 'X_V = Range
 type instance Specifier  'P0 'X_V = ()
-type instance Adjunct    'P0 'X_V = [AdjunctVP]
-type instance Complement 'P0 'X_V = [Coindex (Either TraceType CompVP)]
+type instance Adjunct    'P0 'X_V = [Either Range AdjunctVP]
+type instance Complement 'P0 'X_V = [Coindex (Either TraceType (Either Range CompVP))]
 
 type VerbP = XP 'P0 'X_V
 
 
 type instance Property   'P0 'X_T = ()
 type instance Maximal    'P0 'X_T = Range
-type instance Specifier  'P0 'X_T = Coindex (Either TraceType SpecTP)
+type instance Specifier  'P0 'X_T = Coindex (Either TraceType (Either Range SpecTP))
 type instance Adjunct    'P0 'X_T = ()
 type instance Complement 'P0 'X_T = VerbP
 
@@ -415,7 +416,7 @@ type TP = XP 'P0 'X_T
 type instance Property   'P0 'X_C = Complementizer
 type instance Maximal    'P0 'X_C = Range
 type instance Specifier  'P0 'X_C = Maybe SpecCP
-type instance Adjunct    'P0 'X_C = [AdjunctCP]
+type instance Adjunct    'P0 'X_C = [Either Range AdjunctCP]
 type instance Complement 'P0 'X_C = TP
 
 type CP = XP 'P0 'X_C

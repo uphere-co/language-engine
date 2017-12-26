@@ -45,27 +45,27 @@ specDPText tagged x = case x of
                         SpDP_Gen rng -> T.intercalate " " (tokensByRange tagged rng)
 
 
-compVPToSpecTP :: CompVP -> SpecTP
-compVPToSpecTP (CompVP_Unresolved x) = SpecTP_Unresolved x
-compVPToSpecTP (CompVP_CP cp)        = SpecTP_Unresolved (cp^.maximalProjection)
-compVPToSpecTP (CompVP_DP y)         = SpecTP_DP y
+compVPToSpecTP :: CompVP -> Either Range SpecTP
+-- compVPToSpecTP (CompVP_Unresolved x) = LeftSpecTP_Unresolved x
+compVPToSpecTP (CompVP_CP cp)        = Left  (cp^.maximalProjection)
+compVPToSpecTP (CompVP_DP y)         = Right (SpecTP_DP y)
 compVPToSpecTP (CompVP_PP y)         = case y^.complement of
-                                         CompPP_DP dp -> SpecTP_DP dp
-                                         CompPP_Gerund rng -> SpecTP_Unresolved rng
-compVPToSpecTP (CompVP_AP ap)        = SpecTP_Unresolved (ap^.maximalProjection)  -- for the time being
+                                         CompPP_DP dp -> Right (SpecTP_DP dp)
+                                         CompPP_Gerund rng -> Left rng
+compVPToSpecTP (CompVP_AP ap)        = Left (ap^.maximalProjection)  -- for the time being
 
 
 specTPToCompVP :: SpecTP -> CompVP
-specTPToCompVP (SpecTP_Unresolved x) = CompVP_Unresolved x
+-- specTPToCompVP (SpecTP_Unresolved x) = CompVP_Unresolved x
 specTPToCompVP (SpecTP_DP x)         = CompVP_DP x
 
 
-compVPToCPDPPP :: CompVP -> Maybe CPDPPP
-compVPToCPDPPP (CompVP_Unresolved _) = Nothing
-compVPToCPDPPP (CompVP_CP cp) = Just (CPCase cp)
-compVPToCPDPPP (CompVP_DP dp) = Just (DPCase dp)
-compVPToCPDPPP (CompVP_PP pp) = Just (PPCase pp)
-compVPToCPDPPP (CompVP_AP pp) = Just (APCase pp)
+compVPToCPDPPP :: CompVP -> CPDPPP
+-- compVPToCPDPPP (CompVP_Unresolved _) = Nothing
+compVPToCPDPPP (CompVP_CP cp) = CPCase cp
+compVPToCPDPPP (CompVP_DP dp) = DPCase dp
+compVPToCPDPPP (CompVP_PP pp) = PPCase pp
+compVPToCPDPPP (CompVP_AP pp) = APCase pp
 
 
 headTextDP :: PreAnalysis t -> DetP -> Text
@@ -89,7 +89,7 @@ headRangeDP dp =
 
 
 compVPToHeadText :: PreAnalysis t -> CompVP -> Text
-compVPToHeadText tagged (CompVP_Unresolved rng) = T.intercalate " " (tokensByRange tagged rng)
+-- compVPToHeadText tagged (CompVP_Unresolved rng) = T.intercalate " " (tokensByRange tagged rng)
 compVPToHeadText tagged (CompVP_CP cp)          = T.intercalate " " (tokensByRange tagged (cp^.maximalProjection))
 compVPToHeadText tagged (CompVP_DP dp)          = headTextDP tagged dp
 compVPToHeadText tagged (CompVP_PP pp)          = case pp^.complement of
@@ -99,7 +99,7 @@ compVPToHeadText tagged (CompVP_AP ap)          = T.intercalate " " (tokensByRan
 
 
 compVPToRange :: CompVP -> Range
-compVPToRange = (\case SpecTP_Unresolved rng -> rng; SpecTP_DP dp -> dp^.maximalProjection) . compVPToSpecTP
+compVPToRange = (\case Left rng -> rng; Right (SpecTP_DP dp) -> dp^.maximalProjection) . compVPToSpecTP
 
 
 compPPToRange :: CompPP -> Range
