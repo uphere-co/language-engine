@@ -125,6 +125,9 @@ Executable verb-subcat-propbank-stat
                        -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:       Lexicon.App.VerbSubcat
+                       NLP.Syntax.Clause.Old
+                       NLP.Syntax.Format.Old
+                       NLP.Syntax.Type
   build-depends:       base,
                        --
                        aeson,
