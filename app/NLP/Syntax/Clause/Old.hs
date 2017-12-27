@@ -65,7 +65,7 @@ findPAWS tagged tr vp x'tr = do
                                            -- anyway need to be rewritten.
   let rng_cp = cp^.maximalProjection
   cp' <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng_cp)) x'tr)
-  let zs_adj = mapMaybe (\rng_adj -> listToMaybe (extractZipperByRange rng_adj (tagged^.pennTree)))
+  let zs_adj = mapMaybe (\rng_adj -> listToMaybe (extractZipperByRange rng_adj (tagged^.pennTreeAnn)))
                         (cp' ^.. complement.complement.adjunct.traverse._Left)  -- can be dangerous
   predicateArgWS tagged cp' <$> findVerb (vp^.vp_index) tr <*> pure zs_adj
 
