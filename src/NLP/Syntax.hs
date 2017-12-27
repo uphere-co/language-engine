@@ -20,9 +20,8 @@ import           NLP.Syntax.Type.XBar              (X'Tree,Phase(..))
 
 
 syntacticAnalysis :: PreAnalysis '[Lemma] -> [X'Tree 'PH1]
-syntacticAnalysis pre = 
+syntacticAnalysis pre =
   let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) (pre^.lemmaList))
       vps  = verbPropertyFromPennTree lemmamap (pre^.pennTree)
       x'trs0 = identifyCPHierarchy pre vps
   in map (bindingWH2 . (\tr -> evalState (bindingWH1 tr) 0) . mkX'TreePH1) x'trs0
-

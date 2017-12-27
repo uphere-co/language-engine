@@ -17,6 +17,7 @@ import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos
 import           WordNet.Type.Lexicographer      (LexicographerFile)
 --
+import           NLP.Syntax                      (syntacticAnalysis)
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
 import           NLP.Syntax.Verb
@@ -43,11 +44,11 @@ formatX'TreeAndResolution x'tr =
 formatDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType],[(Int,LexicographerFile)]) -> [Text]
 formatDetail (_txt,lma,pt,taglst,synsets) =
   let pre = mkPreAnalysis lma pt taglst synsets
-      vps  = mkVPS lma pt
-      x'trs0 = identifyCPHierarchy pre vps
+      --- vps  = mkVPS lma pt
+      x'trs = syntacticAnalysis pre -- identifyCPHierarchy pre vps
       -- x'trs1 = map ((^.xts_tree) . {- bindingAnalysisRaising . bindingAnalysis pre . resolveCP  . -} (XTS 0)) x'trs0
       -- testX'trs0 = map mkX'TreePH1 x'trs0
-      x'trs = map (bindingWH2 . (\tr -> evalState (bindingWH1 tr) 0) . mkX'TreePH1) x'trs0
+      -- x'trs = map (bindingWH2 . (\tr -> evalState (bindingWH1 tr) 0) . mkX'TreePH1) x'trs0
       -- xts = map (0,) x'tr0
       -- x'tr = x'tr0 -- map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged . (XTS 0)) x'tr0
 
