@@ -313,7 +313,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       lst_adjs_test = c^._3._3
       b_adjuncts = lst_adjs == lst_adjs_test
       b_topicalized = fromMaybe False $ do
-                        cp^?specifier._Just._SpecCP_Topic
+                        cp^?specifier._Just.coidx_content._SpecCP_Topic
                         return True
 
   -- trace  ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr ++ "\n" ++ formatCP cp ++ "\n" ) $ return ()

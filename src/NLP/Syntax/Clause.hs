@@ -226,12 +226,12 @@ constructCP tagged vprop = do
         case cptag' of
           N.RT   ->
             let (cphead,cpspec) = case mtop of
-                                    Just top -> (C_PHI,Just (SpecCP_Topic top))
+                                    Just top -> (C_PHI,Just (mkDefCoindex (SpecCP_Topic top)))
                                     Nothing ->
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
-                                                  then (C_PHI,Just (SpecCP_WH (getRange (current z))))
+                                                  then (C_PHI,Just (mkDefCoindex (SpecCP_WH (getRange (current z)))))
                                                   else let cmpmntzr = case (listToMaybe . map (ahead . getAnnot . snd) . toList . current) z of
                                                                         Nothing -> C_PHI
                                                                         Just c -> C_WORD c
@@ -239,12 +239,12 @@ constructCP tagged vprop = do
             in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),ppdps)
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
-                                    Just top -> (C_PHI,Just (SpecCP_Topic top))
+                                    Just top -> (C_PHI,Just (mkDefCoindex (SpecCP_Topic top)))
                                     Nothing ->
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
-                                                  then (C_PHI,Just (SpecCP_WH (getRange (current z))))
+                                                  then (C_PHI,Just (mkDefCoindex (SpecCP_WH (getRange (current z)))))
                                                   else let cmpmntzr = case (listToMaybe . map (ahead . getAnnot . snd) . toList . current) z of
                                                                         Nothing -> C_PHI
                                                                         Just c -> C_WORD c
@@ -259,7 +259,7 @@ constructCP tagged vprop = do
             adjs  = allAdjunctCPOfVerb vprop
             verbp = mkVerbP rng_vp (simplifyVProp vprop) [] comps
             nullsubj = mkDefCoindex (Left NULL)
-        in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP rng_vp nullsubj verbp), ppdps)
+        in return (mkCP C_PHI rng_vp (Just (mkDefCoindex SpecCP_WHPHI)) adjs (mkTP rng_vp nullsubj verbp), ppdps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -355,26 +355,45 @@ rewriteX'TreeForFreeWH rng w z' = do
 
 
 
-whMovement1 :: CP 'PH1 -> CP 'PH1
-whMovement1 cp = fromMaybe cp $ do
+whMovement1 :: (Int,CP 'PH1) -> (Int,CP 'PH1)
+whMovement1 (i,cp) = fromMaybe (i,cp) $ do
   let spec_cp = cp^.specifier
       spec_tp = cp^.complement.specifier
-  guard (case spec_cp of Just SpecCP_WHPHI -> True; Just (SpecCP_WH _) -> True; _ -> False)
-  trace ("\nwhMovement1: " ++ T.unpack (formatCoindex (formatSpecTP SPH1) spec_tp)) (return ())
+  guard $ fromMaybe False $
+    spec_cp^?_Just.coidx_content >>= \case SpecCP_WHPHI -> return True
+                                           SpecCP_WH _  -> return True
+                                           _            -> return False
+
+
+  -- (case spec_cp of Just (Coindex _SpecCP_WHPHI -> True; Just (SpecCP_WH _) -> True; _ -> False)
+  -- trace ("\nwhMovement1: " ++ T.unpack (formatCoindex (formatSpecTP SPH1) spec_tp)) (return ())
   case spec_tp^.coidx_content of
-    Left NULL -> return ((complement.specifier.coidx_content .~ Left Moved) cp) -- subject is moved
-    Left _    -> return cp
-    Right _   -> do
-      trace ("\nwhMovement1_2" ++ (T.unpack (formatCP SPH1 cp))) (return ())
-      let cp' = (complement.complement.complement %~ (mkDefCoindex (Left Moved):)) cp
-      trace ("\nwhMovement1_3" ++ (T.unpack (formatCP SPH1 cp'))) (return ())
-      return cp'
+    Left NULL -> -- subject case
+                 let cp' = cp & (complement.specifier .~ mkCoindex i (Left Moved))
+                              . (specifier._Just.coidx_i .~ Just i)
+                 in return (i+1,cp')
+    Left _    -> return (i,cp)
+    Right _   -> -- object case
+                 let cp' = cp & (complement.complement.complement %~ (mkCoindex i (Left Moved):))
+                              . (specifier._Just.coidx_i .~ Just i)
+                 in return (i+1,cp')
 
 
-bindingWH :: X'Tree 'PH1 -> X'Tree 'PH1
-bindingWH = bimap f f  where f = _2._CPCase %~ whMovement1
+bindingWH :: (X'Tree 'PH1) -> State Int (X'Tree 'PH1) -- X'Tree 'PH1 -> X'Tree 'PH1
+bindingWH x'tr = bitraverse f f x'tr
+ where f x = case x^._2 of
+               CPCase cp -> do
+                 i <- get
+                 let (i',cp') = whMovement1 (i,cp)
+                 put i'
+                 (return . (_2._CPCase .~ cp')) x
+               _ -> return x
 
 
+
+--   bimap f f  where f = _2._CPCase %~ whMovement1
+
+{-
 
 whMovement :: PreAnalysis (Lemma ': as)
            -> (X'Zipper 'PH0,CP 'PH0)
@@ -444,7 +463,7 @@ whMovement tagged (w,cp) = do
       return spec
 
 
-
+-}
 
 
 resolvePRO :: PreAnalysis (Lemma ': as)
@@ -502,6 +521,7 @@ resolveVPComp rng spec = do
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
+{- 
 resolveDP :: PreAnalysis (Lemma ': as)
           -> Range
           -> State (X'TreeState 'PH0) (Coindex (Either TraceType (Either Range (SpecTP 'PH0))))
@@ -511,7 +531,7 @@ resolveDP tagged rng = fmap (fromMaybe emptyCoindex) . runMaybeT $ do
     then resolveVPComp rng =<< lift (whMovement tagged (w,cp))
     else resolveVPComp rng =<< resolvePRO tagged (w,cp)
 
-
+-}
 
 {- 
 --
@@ -630,12 +650,13 @@ connectRaisedDP rng = do
 
 -- I think we should change the name of these bindingAnalysis.. functions.
 
+{- 
 --
 -- | This is the final step to bind inter-clause trace chain
 --
 bindingAnalysis :: PreAnalysis (Lemma ': as) -> X'TreeState 'PH0 -> X'TreeState 'PH0
 bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= bindingSpec rng
-
+-}
 
 --
 -- |

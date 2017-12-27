@@ -237,7 +237,9 @@ mkPPPH1 pp = XP { _headX = _headX pp
 mkCPPH1 :: CP 'PH0 -> CP 'PH1
 mkCPPH1 cp = XP { _headX = _headX cp
                 , _maximalProjection = _maximalProjection cp
-                , _specifier = mkSpecCPPH1 =<< _specifier cp
+                , _specifier = do x <- _specifier cp
+                                  c <- mkSpecCPPH1 (x^.coidx_content)
+                                  return ((coidx_content .~ c) x)
                 , _adjunct = mapMaybe (either (const Nothing) (Just. mkAdjunctCPPH1)) (_adjunct cp)
                 , _complement = mkTPPH1 (_complement cp)
                 }

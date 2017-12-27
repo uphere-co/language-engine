@@ -97,4 +97,4 @@ formatCPDetail cp =
         formatSpecCP (Just (SpecCP_Topic _)) = ("Topic","Topic")
         --
         (head1,head2) = fmtComplementizer (cp^.headX)
-        (spec1,spec2) = formatSpecCP (cp^.specifier)
+        (spec1,spec2) = formatSpecCP (cp^?specifier._Just.coidx_content)

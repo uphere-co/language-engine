@@ -92,8 +92,14 @@ formatCompVP SPH1 (CompVP_PP pp) = "PP" <> T.pack (show pp)
 formatCompVP SPH1 (CompVP_AP ap) = "AP" <> T.pack (show ap)
 
 
+
+formatCoindexOnly :: (a -> Text) -> Coindex a -> Text
+formatCoindexOnly f (Coindex mi e) = f e <> maybe "" (\i -> "_" <> T.pack (show i)) mi
+
 formatCoindex :: (a -> Text) -> Coindex (Either TraceType a) -> Text
-formatCoindex f (Coindex mi e) = either fmt f e <> maybe "" (\i -> "_" <> T.pack (show i)) mi
+formatCoindex f x@(Coindex mi e) = formatCoindexOnly (either fmt f) x
+
+  -- either fmt f e <> maybe "" (\i -> "_" <> T.pack (show i)) mi
   where
     fmt NULL  = "NUL"
     fmt PRO   = "PRO"
@@ -162,8 +168,8 @@ formatCP p cp =
      "[C:" <> formatComplementizer (cp^.headX) <>
      " spec: " <>
      (case p of
-        SPH0 -> maybe "" (formatSpecCP p) (cp^.specifier)
-        SPH1 -> maybe "" (formatSpecCP p) (cp^.specifier))  <>
+        SPH0 -> maybe "" (formatCoindexOnly (formatSpecCP p)) (cp^.specifier)
+        SPH1 -> maybe "" (formatCoindexOnly (formatSpecCP p)) (cp^.specifier))  <>
      " (TP: spec:" <>
      (case p of
         SPH0 -> formatCoindex (either (T.pack.show) (formatSpecTP p)) (cp^.complement.specifier)

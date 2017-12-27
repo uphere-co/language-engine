@@ -336,7 +336,12 @@ data AdjunctCP (p :: Phase) = AdjunctCP_CP (I 'X_C p)
 
 
 
-mkCP :: Complementizer -> Range -> Maybe (SpecCP 'PH0) -> [Either Range (AdjunctCP 'PH0)] -> TP 'PH0 -> CP 'PH0
+mkCP :: Complementizer
+     -> Range
+     -> Maybe (Coindex (SpecCP 'PH0))
+     -> [Either Range (AdjunctCP 'PH0)]
+     -> TP 'PH0
+     -> CP 'PH0
 mkCP mc rng spec adjs tp = XP mc rng spec adjs tp
 
 
@@ -398,8 +403,8 @@ type family Specifier  (p :: Phase) (x :: XType) where
   Specifier  _    'X_V = ()
   Specifier  'PH0 'X_T = Coindex (Either TraceType (Either Range (SpecTP 'PH0)))
   Specifier  'PH1 'X_T = Coindex (Either TraceType (SpecTP 'PH1))
-  Specifier  'PH0 'X_C = Maybe (SpecCP 'PH0)
-  Specifier  'PH1 'X_C = Maybe (SpecCP 'PH1)
+  Specifier  'PH0 'X_C = Maybe (Coindex (SpecCP 'PH0))
+  Specifier  'PH1 'X_C = Maybe (Coindex (SpecCP 'PH1))
 
 
 type family Adjunct    (p :: Phase) (x :: XType) where

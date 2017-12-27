@@ -4,6 +4,7 @@
 module Test.Common where
 
 import           Control.Lens                    ((^.))
+import           Control.Monad.Trans.State       (evalState)
 import           Data.Foldable                   (toList)
 import qualified Data.IntMap             as IM
 import           Data.Monoid                     ((<>))
@@ -39,7 +40,8 @@ formatDetail (_txt,lma,pt,taglst,synsets) =
       vps  = mkVPS lma pt
       x'trs0 = identifyCPHierarchy pre vps
       x'trs1 = map ((^.xts_tree) . {- bindingAnalysisRaising . bindingAnalysis pre . resolveCP  . -} (XTS 0)) x'trs0
-      testX'trs = map (bindingWH . mkX'TreePH1) x'trs0
+      testX'trs0 = map mkX'TreePH1 x'trs0
+      testX'trs = map (\tr -> evalState (bindingWH tr) 0) testX'trs0
       -- xts = map (0,) x'tr0
       -- x'tr = x'tr0 -- map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged . (XTS 0)) x'tr0
 
