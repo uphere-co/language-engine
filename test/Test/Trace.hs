@@ -257,9 +257,9 @@ testcases = [ {- test_silent_pronoun_1
             , -} test_relative_pronoun_subject
             , test_relative_pronoun_object
             , test_reduced_relative_clause
-            {- , test_passive
+            , test_passive
             , test_passive_raising
-            , test_ECM
+            {- , test_ECM
             , test_nonrestrictive_relative_clause
             , test_free_relative_clause_subject_1
             , test_free_relative_clause_subject_2
@@ -279,7 +279,7 @@ checkTrace c =
         x'trs0 = identifyCPHierarchy tagged vps
         x'trs1 = map ((^.xts_tree) {- . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged -} . XTS 0) x'trs0
         -- trace "checktrace1" $ return ()
-        testX'tr = map (bindingWH . mkX'TreePH1) x'trs0
+        -- testX'tr = map (bindingWH1 . mkX'TreePH1) x'trs0
 
 
     -- trace (show testX'tr) $ return ()

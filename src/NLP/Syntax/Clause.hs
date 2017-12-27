@@ -288,8 +288,7 @@ identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull toful
 
 
 
-currentCPDPPP :: X'Zipper 'PH0
-              -> CPDPPP 'PH0
+currentCPDPPP :: X'Zipper p -> CPDPPP p
 currentCPDPPP = snd . getRoot1 . current
 
 
@@ -355,23 +354,50 @@ rewriteX'TreeForFreeWH rng w z' = do
 
 
 
-whMovement1 :: (Int,CP 'PH1) -> (Int,CP 'PH1)
-whMovement1 (i,cp) = fromMaybe (i,cp) $ do
+{- 
+-- consider passive case only now for the time being.
+connectRaisedDP :: Range -> MaybeT (State (X'TreeState 'PH0)) () -- X'Zipper
+connectRaisedDP rng = do
+  i <- (^.xts_nextIndex) <$> lift get
+  (w,cp) <- retrieveWCP rng
+  guard (cp ^. complement.complement.headX.vp_voice == Passive)
+  c1:c2:[] <- return (cp^.complement.complement.complement)
+  rng1 <- hoistMaybe (c1^?coidx_content._Right._Right._CompVP_DP.maximalProjection)
+  cp' <- hoistMaybe (c2^?coidx_content._Right._Right._CompVP_CP)
+  rng_dp <- hoistMaybe (cp'^?complement.specifier.coidx_content._Right._Right._SpecTP_DP.maximalProjection)
+  when (rng1 == rng_dp) $ do
+    let rf = (_2._CPCase.complement.specifier .~ emptyCoindex)
+           . (_2._CPCase.complement.complement.complement .~ [c2])
+        w' = replaceFocusItem rf rf w
+    lift (put (XTS i (toBitree w')))
+-}
+
+movePassive :: (Int,CP 'PH1) -> (Int,CP 'PH1)
+movePassive (i,cp) = fromMaybe (i,cp) $ do
+  guard (cp^.complement.complement.headX.vp_voice == Passive)
+  c:cs <- return (cp^.complement.complement.complement)
+  let c' = (coidx_i .~ Just i) c
+      cp'= cp & (complement.complement.complement .~ c':cs)
+              . (complement.specifier.coidx_i .~ Just i)
+  return (i+1,cp')
+
+
+moveWH :: (Int,CP 'PH1) -> (Int,CP 'PH1)
+moveWH (i,cp) = fromMaybe (i,cp) $ do
   let spec_cp = cp^.specifier
       spec_tp = cp^.complement.specifier
   guard $ fromMaybe False $
     spec_cp^?_Just.coidx_content >>= \case SpecCP_WHPHI -> return True
                                            SpecCP_WH _  -> return True
                                            _            -> return False
-
-
-  -- (case spec_cp of Just (Coindex _SpecCP_WHPHI -> True; Just (SpecCP_WH _) -> True; _ -> False)
-  -- trace ("\nwhMovement1: " ++ T.unpack (formatCoindex (formatSpecTP SPH1) spec_tp)) (return ())
   case spec_tp^.coidx_content of
     Left NULL -> -- subject case
-                 let cp' = cp & (complement.specifier .~ mkCoindex i (Left Moved))
-                              . (specifier._Just.coidx_i .~ Just i)
-                 in return (i+1,cp')
+                 let mj = spec_tp^.coidx_i
+                     i' = maybe (i+1) (const i) mj
+                     j = fromMaybe i mj
+                     cp' = cp & (complement.specifier .~ mkCoindex j (Left Moved))
+                              . (specifier._Just.coidx_i .~ Just j)
+                 in return (i',cp')
     Left _    -> return (i,cp)
     Right _   -> -- object case
                  let cp' = cp & (complement.complement.complement %~ (mkCoindex i (Left Moved):))
@@ -379,15 +405,38 @@ whMovement1 (i,cp) = fromMaybe (i,cp) $ do
                  in return (i+1,cp')
 
 
-bindingWH :: (X'Tree 'PH1) -> State Int (X'Tree 'PH1) -- X'Tree 'PH1 -> X'Tree 'PH1
-bindingWH x'tr = bitraverse f f x'tr
+bindingWH1 :: (X'Tree 'PH1) -> State Int (X'Tree 'PH1) -- X'Tree 'PH1 -> X'Tree 'PH1
+bindingWH1 x'tr = bitraverse f f x'tr
  where f x = case x^._2 of
                CPCase cp -> do
                  i <- get
-                 let (i',cp') = whMovement1 (i,cp)
+                 let (i',cp') = (moveWH . movePassive) (i,cp)
                  put i'
                  (return . (_2._CPCase .~ cp')) x
                _ -> return x
+
+
+
+resolveWH :: X'Tree 'PH1 -> DetP 'PH1 -> DetP 'PH1
+resolveWH x'tr dp = fromMaybe dp $ do
+  np <- dp^.complement
+  CompDP_CP rng_cp <- np^.complement
+  w <- extractZipperById rng_cp x'tr
+  cp <- currentCPDPPP w ^? _CPCase
+  case cp^.specifier of
+    Just (Coindex (Just i) SpecCP_WHPHI ) -> (return . (complement._Just.headX.coidx_i .~ Just i)) dp
+    Just (Coindex (Just i) (SpecCP_WH _)) -> (return . (complement._Just.headX.coidx_i .~ Just i)) dp
+    _                                     -> return dp
+
+  
+
+bindingWH2 :: X'Tree 'PH1 -> X'Tree 'PH1
+bindingWH2 x'tr = bimap f f x'tr
+ where f x = case x^._2 of
+               DPCase dp -> 
+                 let dp' = resolveWH x'tr dp
+                 in (_2._DPCase .~ dp') x
+               _ -> x
 
 
 
@@ -630,7 +679,7 @@ bindingSpec rng spec = do
   lift (put (XTS i (toBitree z')))
   -- return z'
 
-
+{- 
 -- consider passive case only now for the time being.
 connectRaisedDP :: Range -> MaybeT (State (X'TreeState 'PH0)) () -- X'Zipper
 connectRaisedDP rng = do
@@ -646,7 +695,7 @@ connectRaisedDP rng = do
            . (_2._CPCase.complement.complement.complement .~ [c2])
         w' = replaceFocusItem rf rf w
     lift (put (XTS i (toBitree w')))
-
+-}
 
 -- I think we should change the name of these bindingAnalysis.. functions.
 
@@ -658,12 +707,13 @@ bindingAnalysis :: PreAnalysis (Lemma ': as) -> X'TreeState 'PH0 -> X'TreeState 
 bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= bindingSpec rng
 -}
 
+{-
 --
 -- |
 --
 bindingAnalysisRaising :: X'TreeState 'PH0 -> X'TreeState 'PH0
 bindingAnalysisRaising = rewriteTree (\rng -> connectRaisedDP rng <|> return ())
-
+-}
 
 --
 -- | This is a generic tree-rewriting operation.
