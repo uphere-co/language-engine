@@ -4,7 +4,9 @@
 
 module Test.Trace where
 
+import           Control.Arrow                     (first)
 import           Control.Lens               hiding (levels)
+import           Control.Monad.Trans.State         (runState)
 import           Data.Foldable
 import           Data.Maybe                        (fromMaybe)
 import           Data.Monoid                       (First(..))
@@ -277,7 +279,9 @@ checkTrace c =
     let tagged = mkPreAnalysis (c^._4) (c^._5) (c^._6) (c^._7)
         vps = mkVPS (c^._4) (c^._5)
         x'trs0 = identifyCPHierarchy tagged vps
-        x'trs1 = map ((^.xts_tree) {- . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged -} . XTS 0) x'trs0
+        x'trs1 = map (first bindingWH2 . (\tr -> runState (bindingWH1 tr) 0) . mkX'TreePH1) x'trs0
+        
+        -- x'trs1 = map ((^.xts_tree) {- . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged -} . XTS 0) x'trs0
         -- trace "checktrace1" $ return ()
         -- testX'tr = map (bindingWH1 . mkX'TreePH1) x'trs0
 
@@ -289,7 +293,7 @@ checkTrace c =
                                              -- anyway need to be rewritten.
     -- trace "checktrace3" $ return ()
 
-    cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'trs1)
+    cp <- (^? _CPCase) . currentCPDPPP =<< (getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection)) . map fst) x'trs1
     -- trace ("checktrace4" ++ (formatCP cp)) $ return ()
 
     case c^._3._1 of

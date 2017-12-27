@@ -34,7 +34,7 @@ mkVPS lmatknlst pt =
 
 
 
-testfunc (x'tr,n) =
+formatX'TreeAndResolution (x'tr,n) =
   let lst = take n [0..]
   in formatX'Tree1 x'tr <> "\n" <> T.pack (show (map (retrieveResolved x'tr) lst))
 
@@ -43,9 +43,9 @@ formatDetail (_txt,lma,pt,taglst,synsets) =
   let pre = mkPreAnalysis lma pt taglst synsets
       vps  = mkVPS lma pt
       x'trs0 = identifyCPHierarchy pre vps
-      x'trs1 = map ((^.xts_tree) . {- bindingAnalysisRaising . bindingAnalysis pre . resolveCP  . -} (XTS 0)) x'trs0
-      testX'trs0 = map mkX'TreePH1 x'trs0
-      ntestX'trs = map (first bindingWH2 . (\tr -> runState (bindingWH1 tr) 0)) testX'trs0
+      -- x'trs1 = map ((^.xts_tree) . {- bindingAnalysisRaising . bindingAnalysis pre . resolveCP  . -} (XTS 0)) x'trs0
+      -- testX'trs0 = map mkX'TreePH1 x'trs0
+      nx'trs = map (first bindingWH2 . (\tr -> runState (bindingWH1 tr) 0) . mkX'TreePH1) x'trs0
       -- xts = map (0,) x'tr0
       -- x'tr = x'tr0 -- map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged . (XTS 0)) x'tr0
 
@@ -55,7 +55,7 @@ formatDetail (_txt,lma,pt,taglst,synsets) =
   , "--------------------------------------------------------------------------------------------------------------------"
   ]
   -- ++ map (formatX'Tree1.fst) ntestX'trs -- x'tr
-  ++ map testfunc ntestX'trs
+  ++ map formatX'TreeAndResolution nx'trs
   -- ++ map (formatVPwithPAWS tagged clausetr x'tr) vps
   ++
   [ "--------------------------------------------------------------------------------------------------------------------"
