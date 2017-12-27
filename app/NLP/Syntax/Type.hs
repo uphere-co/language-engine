@@ -8,12 +8,6 @@
 
 module NLP.Syntax.Type
 (
-
---  --   * reexport from NLP.Type.SyntaxProperty
---   Tense(..)
--- , Voice(..)
--- , Aspect(..)
-
   -- * Predicate Argument Workspace
   PredArgWorkspace(..), pa_CP, pa_candidate_args
   
@@ -39,7 +33,7 @@ import           NLP.Syntax.Type.XBar
 
 -- | workspace for predicate argument
 --
-data PredArgWorkspace a = PAWS { _pa_CP :: CP
+data PredArgWorkspace a = PAWS { _pa_CP :: CP 'PH0
                                , _pa_candidate_args :: [a]
                                }
 

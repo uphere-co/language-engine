@@ -33,9 +33,9 @@ formatPAWS pa =
   printf "              subject       : %s\n\
          \              arg candidates: %s\n\
          \              complements   : %s"
-         (formatCoindex formatSpecTP (pa^.pa_CP^.complement.specifier))
+         (formatCoindex (either (T.pack.show) (formatSpecTP SPH0)) (pa^.pa_CP^.complement.specifier))
          ((intercalate " " . map (printf "%7s" . fmtArg)) (pa^.pa_candidate_args))
-         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatCoindex formatCompVP )))
+         (T.intercalate " | " (pa^..pa_CP.complement.complement.complement.traverse.to (formatCoindex (either (T.pack.show) (formatCompVP SPH0)))))
   where
     fmtArg a = case a of
                  Right (_  ,p)           -> show p
@@ -48,7 +48,7 @@ formatPAWS pa =
 
 formatVPwithPAWS :: PreAnalysis (Lemma ': as)
                  -> ClauseTree
-                 -> [X'Tree]
+                 -> [X'Tree 'PH0]
                  -> VerbProperty (BitreeZipperICP (Lemma ': as))
                  -> Text
 formatVPwithPAWS tagged clausetr cpstr vp =
@@ -62,7 +62,7 @@ formatVPwithPAWS tagged clausetr cpstr vp =
                                    (formatVerbProperty fmt vp)
                                    (maybe "" formatPAWS mpaws))
                           <> "\n"
-                          <> T.pack (formatCP (paws^.pa_CP))
+                          <> formatCP SPH0 (paws^.pa_CP)
                           <> "\n"
 
 
@@ -85,7 +85,8 @@ showClauseStructure :: PreAnalysis '[Lemma] -> IntMap Lemma -> PennTree -> IO ()
 showClauseStructure tagged lemmamap ptree  = do
   let vps  = verbPropertyFromPennTree lemmamap ptree
       clausetr = clauseStructure tagged vps (bimap (\(rng,c) -> (rng,N.convert c)) id (mkPennTreeIdx ptree))
-      cpstr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
-      xs = map (formatVPwithPAWS tagged clausetr cpstr) vps
-  mapM_ (T.IO.putStrLn . formatX'Tree) cpstr
+      x'trs = identifyCPHierarchy tagged vps
+        -- (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
+      xs = map (formatVPwithPAWS tagged clausetr x'trs) vps
+  mapM_ (T.IO.putStrLn . formatX'Tree) x'trs
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
@@ -50,19 +51,24 @@ headAdverb xs = getLast (foldMap (Last . f) xs)
         f (PL (_,(pos,t))) = if isAdverb pos then Just (T.toLower t) else Nothing
 
 
-phraseNodeType :: Maybe TP -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text)) -> GRel
+phraseNodeType :: Maybe (TP 'PH0) -> BitreeZipper (Range,ChunkTag) (Int,(POSTag,Text)) -> GRel
 phraseNodeType mtp z
   = let rng = getRange (current z)
         subj = do tp <- mtp
-                  dp <- tp^?specifier.coidx_content._Right._SpecTP_DP   -- for the time being, later we will support CP subject
+                  dp <- tp^?specifier.coidx_content._Right._Right._SpecTP_DP   -- for the time being, later we will support CP subject
                   return (dp^.maximalProjection == rng)
         obj  = do tp <- mtp
                   -- The following must be changed to accommodate PP
-                  let os = zip [1..] (tp^..complement.complement.traverse.coidx_content._Right.to compVPToSpecTP)
+                  let os = zip [1..] (tp^..complement.complement.traverse.coidx_content._Right) -- .to compVPToSpecTP)
                   m <- flip find os $ \o ->
                          case o^._2 of
-                           SpecTP_DP x         -> x^.maximalProjection == rng
-                           SpecTP_Unresolved x -> x == rng
+                           Left x -> x == rng
+                           Right (CompVP_CP x) -> x^.maximalProjection == rng
+                           Right (CompVP_DP x) -> x^.maximalProjection == rng
+                           Right (CompVP_PP x) -> x^.maximalProjection == rng
+                           Right (CompVP_AP x) -> x^.maximalProjection == rng
+                           -- SpecTP_DP x         -> x^.maximalProjection == rng
+                           -- SpecTP_Unresolved x -> x == rng
                               -- x^?maximalProjection._Just.to current.to getRange == Just rng
                            -- Nothing        -> False
                   return (m^._1)
@@ -147,7 +153,7 @@ mkArgTable itr l2p (file,sid,tid) args  =
                          _   -> Nothing
 
 
-mkArgPattern :: Maybe TP -> ArgTable (ATNode a) -> ArgPattern Voice a
+mkArgPattern :: Maybe (TP 'PH0) -> ArgTable (ATNode a) -> ArgPattern Voice a
 mkArgPattern mtp ArgTable {..} =
   ArgPattern { _patt_property = mtp^?_Just.complement.headX.vp_voice
              , _patt_arg0 = fmap chooseATNode _tbl_arg0
