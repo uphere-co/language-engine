@@ -54,17 +54,14 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
 
 
 formatAdjunctCP :: AdjunctCP 'PH0 -> Text
--- formatAdjunctCP (AdjunctCP_Unresolved z) = "unresolved" <> (showRange z)
 formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cp^.maximalProjection)
 
 
 adjunctVPText :: PreAnalysis t -> AdjunctVP 'PH0 -> Text
--- adjunctVPText tagged (AdjunctVP_Unresolved rng) = T.intercalate " " (tokensByRange tagged rng)
 adjunctVPText tagged  (AdjunctVP_PP pp)         = T.intercalate " " (tokensByRange tagged (pp^.maximalProjection))
 
 
 formatAdjunctVP :: AdjunctVP 'PH0 -> Text
--- formatAdjunctVP (AdjunctVP_Unresolved rng) = showRange rng
 formatAdjunctVP (AdjunctVP_PP pp)          = formatPP pp
 
 
@@ -84,9 +81,9 @@ formatCPDetail cp =
     spec1 spec2
     (T.intercalate " | " (cp^..adjunct.traverse.to (either (T.pack.show) formatAdjunctCP)))
     (show (cp^.complement.maximalProjection))
-    (formatCoindex (either (T.pack.show) formatSpecTP) (cp^.complement.specifier))
+    (formatCoindex (either (T.pack.show) (formatSpecTP SPH0)) (cp^.complement.specifier))
     (show (cp^.complement.complement.maximalProjection))
-    ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatCoindex (either (T.pack.show) formatCompVP)))))
+    ((T.intercalate " | " (cp^..complement.complement.complement.traverse.to (formatCoindex (either (T.pack.show) (formatCompVP SPH0))))))
     ((T.intercalate " | " (cp^..complement.complement.adjunct.traverse.to (either (T.pack.show) formatAdjunctVP))))
 
   where fmtComplementizer :: Complementizer -> (String,String)

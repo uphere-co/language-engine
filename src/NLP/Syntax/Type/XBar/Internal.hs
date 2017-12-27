@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
@@ -28,6 +29,19 @@ import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.PreAnalysis
 
 data Phase = PH0 | PH1
+
+
+
+-- class SingI s where
+--  sing :: s ->
+
+--
+-- singleton instances for pi-type
+--
+data SPhase (p :: Phase) where
+ SPH0 :: SPhase 'PH0
+ SPH1 :: SPhase 'PH1
+
 
 data XType = X_V
            | X_T
@@ -237,8 +251,6 @@ data HeadPP = HeadPP { _hp_prep :: Prep
                      , _hp_pclass :: PrepClass }
 
 
-data CompPP p = CompPP_DP (DetP p)
-              | CompPP_Gerund Range
 
 
 mkPP :: (Prep,PrepClass) -> Range -> DetP 'PH0 -> PP 'PH0
@@ -254,16 +266,35 @@ mkPPGerund (prep,pclass) rng z = XP (HeadPP prep pclass) rng () () (CompPP_Gerun
 mkAP :: Range -> AP 'PH0
 mkAP rng = XP () rng () () ()
 
-data CompVP p = CompVP_CP (CP p)
-              | CompVP_DP (DetP p)
-              | CompVP_PP (PP p)
-              | CompVP_AP (AP p)
+
+type family I (t :: XType) (p :: Phase) where
+  I 'X_V 'PH0 = VerbP 'PH0
+  I 'X_T 'PH0 = TP 'PH0
+  I 'X_C 'PH0 = CP 'PH0
+  I 'X_D 'PH0 = DetP 'PH0
+  I 'X_N 'PH0 = NounP 'PH0
+  I 'X_P 'PH0 = PP 'PH0
+  I 'X_A 'PH0 = AP 'PH0
+  I _ 'PH1 = Range
+
+
+
+
+data CompPP (p :: Phase) = CompPP_DP (I 'X_D p)
+                         | CompPP_Gerund Range
+
+data CompVP (p :: Phase) = CompVP_CP (I 'X_C p)
+                         | CompVP_DP (I 'X_D p)
+                         | CompVP_PP (I 'X_P p)
+                         | CompVP_AP (I 'X_A p)
+
+
 
 type family CoindexCompVP (p :: Phase) where
   CoindexCompVP 'PH0 = Coindex (Either TraceType (Either Range (CompVP 'PH0)))
   CoindexCompVP 'PH1 = Coindex (Either TraceType (CompVP 'PH1))
 
-data AdjunctVP p = AdjunctVP_PP (PP p)
+data AdjunctVP (p :: Phase) = AdjunctVP_PP (I 'X_P p)
 
 
 
@@ -275,7 +306,7 @@ mkVerbP :: Range
 mkVerbP vp vprop adjs comps = XP vprop vp () adjs comps
 
 
-data SpecTP p = SpecTP_DP (DetP p)
+data SpecTP (p :: Phase) = SpecTP_DP (I 'X_D p)
 
 
 
@@ -301,7 +332,7 @@ data SpecCP p
 
 
 
-data AdjunctCP p = AdjunctCP_CP (CP p)
+data AdjunctCP (p :: Phase) = AdjunctCP_CP (I 'X_C p)
 
 
 

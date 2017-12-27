@@ -47,13 +47,27 @@ specDPText tagged x = case x of
                         SpDP_Gen rng -> T.intercalate " " (tokensByRange tagged rng)
 
 
-compVPToSpecTP :: CompVP p -> Either Range (SpecTP p)
-compVPToSpecTP (CompVP_CP cp)        = Left  (cp^.maximalProjection)
-compVPToSpecTP (CompVP_DP y)         = Right (SpecTP_DP y)
-compVPToSpecTP (CompVP_PP y)         = case y^.complement of
-                                         CompPP_DP dp -> Right (SpecTP_DP dp)
-                                         CompPP_Gerund rng -> Left rng
-compVPToSpecTP (CompVP_AP ap)        = Left (ap^.maximalProjection)  -- for the time being
+compVPToSpecTP :: SPhase p -> CompVP p -> Either Range (SpecTP p)
+compVPToSpecTP SPH0 (CompVP_CP cp) = Left (cp^.maximalProjection)
+compVPToSpecTP SPH0 (CompVP_DP y)  = Right (SpecTP_DP y)
+compVPToSpecTP SPH0 (CompVP_PP y)  = case y^.complement of
+                                       CompPP_DP dp -> Right (SpecTP_DP dp)
+                                       CompPP_Gerund rng -> Left rng
+compVPToSpecTP SPH0 (CompVP_AP ap) = Left (ap^.maximalProjection)  -- for the time being
+compVPToSpecTP SPH1 (CompVP_CP cp) = Left cp
+compVPToSpecTP SPH1 (CompVP_DP y)  = Right (SpecTP_DP y)
+compVPToSpecTP SPH1 (CompVP_PP y)  = Left y   -- for the time being
+                                     -- case y^.complement of
+                                     --   CompPP_DP dp -> Right (SpecTP_DP dp)
+                                     --  CompPP_Gerund rng -> Left rng
+compVPToSpecTP SPH1 (CompVP_AP ap) = Left ap -- Left (ap^.maximalProjection)  -- for the time being
+
+
+
+{-
+  = case s of
+                                           SPH0 -> Left (cp^.maximalProjection)
+                                           SPH1 -> Left cp -}
 
 
 specTPToCompVP :: SpecTP 'PH0 -> CompVP 'PH0
@@ -98,8 +112,15 @@ compVPToHeadText tagged (CompVP_PP pp)          = case pp^.complement of
 compVPToHeadText tagged (CompVP_AP ap)          = T.intercalate " " (tokensByRange tagged (ap^.maximalProjection))
 
 
-compVPToRange :: CompVP p -> Range
-compVPToRange = (\case Left rng -> rng; Right (SpecTP_DP dp) -> dp^.maximalProjection) . compVPToSpecTP
+compVPToRange :: SPhase p -> CompVP p -> Range
+compVPToRange SPH0 (CompVP_CP cp) = cp^.maximalProjection
+compVPToRange SPH0 (CompVP_DP dp) = dp^.maximalProjection
+compVPToRange SPH0 (CompVP_PP pp) = pp^.maximalProjection
+compVPToRange SPH0 (CompVP_AP ap) = ap^.maximalProjection
+compVPToRange SPH1 (CompVP_CP cp) = cp
+compVPToRange SPH1 (CompVP_DP dp) = dp
+compVPToRange SPH1 (CompVP_PP pp) = pp
+compVPToRange SPH1 (CompVP_AP ap) = ap
 
 
 compPPToRange :: CompPP 'PH0 -> Range
@@ -116,11 +137,65 @@ toRange (APCase ap) = ap^.maximalProjection
 
 
 mkSpecTPPH1 :: SpecTP 'PH0 -> SpecTP 'PH1
-mkSpecTPPH1 (SpecTP_DP dp) = SpecTP_DP (mkDPPH1 dp)
+mkSpecTPPH1 (SpecTP_DP dp) = SpecTP_DP (dp^.maximalProjection) -- (mkDPPH1 dp)
 
 
 mkAdjunctCPPH1 :: AdjunctCP 'PH0 -> AdjunctCP 'PH1
-mkAdjunctCPPH1 (AdjunctCP_CP cp) = AdjunctCP_CP (mkCPPH1 cp)
+mkAdjunctCPPH1 (AdjunctCP_CP cp) = AdjunctCP_CP (cp^.maximalProjection) -- (mkCPPH1 cp)
+
+
+
+
+mkCompPPPH1 (CompPP_DP dp) = CompPP_DP (dp^.maximalProjection) -- (mkDPPH1 dp)
+mkCompPPPH1 (CompPP_Gerund rng) = CompPP_Gerund rng
+
+
+mkAdjunctVPPH1 (AdjunctVP_PP pp) = AdjunctVP_PP (pp^.maximalProjection) -- (mkPPPH1 pp)
+
+
+mkVerbPPH1 :: VerbP 'PH0 -> VerbP 'PH1
+mkVerbPPH1 vp = XP { _headX = _headX vp
+                   , _maximalProjection = _maximalProjection vp
+                   , _specifier = _specifier vp
+                   , _adjunct = mapMaybe (either (const Nothing) (Just . mkAdjunctVPPH1)) (_adjunct vp)
+                   , _complement = flip map (_complement vp) $ \t ->
+                                     case t^.coidx_content of
+                                       Left tr         -> (coidx_content .~ Left tr) t
+                                       Right (Right p) -> (coidx_content .~ Right (mkCompVPPH1 p)) t
+                                       Right (Left _)  -> (coidx_content .~ Left NULL) t
+                   }
+
+mkTPPH1 :: TP 'PH0 -> TP 'PH1
+mkTPPH1 tp = XP { _headX = _headX tp
+                , _maximalProjection = _maximalProjection tp
+                , _specifier = let t = _specifier tp
+                               in case t^.coidx_content of
+                                    Left tr         -> (coidx_content .~ Left tr) t
+                                    Right (Right p) -> (coidx_content .~ Right (mkSpecTPPH1 p)) t
+                                    Right (Left _)  -> (coidx_content .~ Left NULL) t
+                , _adjunct = _adjunct tp
+                , _complement = mkVerbPPH1 (_complement tp)
+                }
+
+
+
+
+mkCompVPPH1 (CompVP_CP cp) = CompVP_CP (cp^.maximalProjection) -- (mkCPPH1 cp)
+mkCompVPPH1 (CompVP_DP dp) = CompVP_DP (dp^.maximalProjection) -- (mkDPPH1 dp)
+mkCompVPPH1 (CompVP_PP pp) = CompVP_PP (pp^.maximalProjection) -- (mkPPPH1 pp)
+mkCompVPPH1 (CompVP_AP ap) = CompVP_AP (ap^.maximalProjection) -- (mkAPPH1 ap)
+
+
+mkSpecCPPH1 :: SpecCP 'PH0 -> Maybe (SpecCP 'PH1)
+mkSpecCPPH1 SpecCP_WHPHI    = Just SpecCP_WHPHI
+mkSpecCPPH1 (SpecCP_WH rng) = Just (SpecCP_WH rng)
+mkSpecCPPH1 (SpecCP_Topic t) = case t^.coidx_content of
+                                 Left tr         -> Just (SpecCP_Topic ((coidx_content .~ Left tr) t))
+                                 Right (Right p) -> Just (SpecCP_Topic ((coidx_content .~ Right (mkCompVPPH1 p)) t))
+                                 Right (Left _)  -> Nothing
+
+
+
 
 
 
@@ -149,9 +224,6 @@ mkAPPH1 ap = XP { _headX = _headX ap
 
 
 
-mkCompPPPH1 (CompPP_DP dp) = CompPP_DP (mkDPPH1 dp)
-mkCompPPPH1 (CompPP_Gerund rng) = CompPP_Gerund rng
-
 mkPPPH1 :: PP 'PH0 -> PP 'PH1
 mkPPPH1 pp = XP { _headX = _headX pp
                 , _maximalProjection = _maximalProjection pp
@@ -160,32 +232,6 @@ mkPPPH1 pp = XP { _headX = _headX pp
                 , _complement = mkCompPPPH1 (_complement pp)
                 }
 
-mkAdjunctVPPH1 (AdjunctVP_PP pp) = AdjunctVP_PP (mkPPPH1 pp)
-
-
-mkVerbPPH1 :: VerbP 'PH0 -> VerbP 'PH1
-mkVerbPPH1 vp = XP { _headX = _headX vp
-                   , _maximalProjection = _maximalProjection vp
-                   , _specifier = _specifier vp
-                   , _adjunct = mapMaybe (either (const Nothing) (Just . mkAdjunctVPPH1)) (_adjunct vp)
-                   , _complement = flip map (_complement vp) $ \t ->
-                                     case t^.coidx_content of
-                                       Left tr         -> (coidx_content .~ Left tr) t
-                                       Right (Right p) -> (coidx_content .~ Right (mkCompVPPH1 p)) t
-                                       Right (Left _)  -> (coidx_content .~ Left NULL) t
-                   }
-
-mkTPPH1 :: TP 'PH0 -> TP 'PH1
-mkTPPH1 tp = XP { _headX = _headX tp
-                , _maximalProjection = _maximalProjection tp
-                , _specifier = let t = _specifier tp
-                               in case t^.coidx_content of
-                                    Left tr         -> (coidx_content .~ Left tr) t
-                                    Right (Right p) -> (coidx_content .~ Right (mkSpecTPPH1 p)) t
-                                    Right (Left _)  -> (coidx_content .~ Left NULL) t
-                , _adjunct = _adjunct tp
-                , _complement = mkVerbPPH1 (_complement tp)
-                }
 
 
 mkCPPH1 :: CP 'PH0 -> CP 'PH1
@@ -195,23 +241,6 @@ mkCPPH1 cp = XP { _headX = _headX cp
                 , _adjunct = mapMaybe (either (const Nothing) (Just. mkAdjunctCPPH1)) (_adjunct cp)
                 , _complement = mkTPPH1 (_complement cp)
                 }
-
-
-mkCompVPPH1 (CompVP_CP cp) = CompVP_CP (mkCPPH1 cp)
-mkCompVPPH1 (CompVP_DP dp) = CompVP_DP (mkDPPH1 dp)
-mkCompVPPH1 (CompVP_PP pp) = CompVP_PP (mkPPPH1 pp)
-mkCompVPPH1 (CompVP_AP ap) = CompVP_AP (mkAPPH1 ap)
-
-
-mkSpecCPPH1 :: SpecCP 'PH0 -> Maybe (SpecCP 'PH1)
-mkSpecCPPH1 SpecCP_WHPHI    = Just SpecCP_WHPHI
-mkSpecCPPH1 (SpecCP_WH rng) = Just (SpecCP_WH rng)
-mkSpecCPPH1 (SpecCP_Topic t) = case t^.coidx_content of
-                                 Left tr         -> Just (SpecCP_Topic ((coidx_content .~ Left tr) t))
-                                 Right (Right p) -> Just (SpecCP_Topic ((coidx_content .~ Right (mkCompVPPH1 p)) t))
-                                 Right (Left _)  -> Nothing
-
-
 
 
 mkCPDPPPPH1 (CPCase cp) = CPCase (mkCPPH1 cp)

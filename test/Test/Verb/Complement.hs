@@ -297,6 +297,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
                    Just p -> return (stxt == subj_test^._1 && sclass == Just p)
       -- test complements
       -- compVP_to_text (CompVP_Unresolved rng) = "error"
+      compVP_to_text :: CompVP 'PH0 -> Text
       compVP_to_text (CompVP_CP cp)          = T.intercalate " " (tokensByRange tagged (cp^.maximalProjection))
       compVP_to_text (CompVP_DP dp)          = headTextDP tagged dp
       compVP_to_text (CompVP_PP pp)          = case pp^.complement of

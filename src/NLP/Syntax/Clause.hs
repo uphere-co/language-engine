@@ -466,7 +466,8 @@ resolveVPComp rng spec = do
       case cs of
         [] -> trace "No complements?" $ return spec
         c:rest -> do
-          let r = (\case SpecTP_DP dp -> Just (CompVP_DP dp)) =<< spec^?coidx_content._Right._Right  -- ignore CP case for the time being.
+          let r :: Maybe (CompVP 'PH0)
+              r = (\case SpecTP_DP dp -> Just (CompVP_DP dp)) =<< spec^?coidx_content._Right._Right  -- ignore CP case for the time being.
               c' = c -- (mergeLeftELZ (c^.trChain) (spec^.trChain)) r
               rf = _2._CPCase.complement.complement.complement .~ (c':rest)
               w' = replaceFocusItem rf rf w
