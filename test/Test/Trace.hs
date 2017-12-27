@@ -282,7 +282,7 @@ checkTrace c =
         testX'tr = map mkX'TreePH1 x'trs0
 
 
-    trace (show testX'tr) $ return ()
+    -- trace (show testX'tr) $ return ()
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
     -- trace "checktrace2" $ return ()
     cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.

@@ -47,8 +47,7 @@ specDPText tagged x = case x of
                         SpDP_Gen rng -> T.intercalate " " (tokensByRange tagged rng)
 
 
-compVPToSpecTP :: CompVP 'PH0 -> Either Range (SpecTP 'PH0)
--- compVPToSpecTP (CompVP_Unresolved x) = LeftSpecTP_Unresolved x
+compVPToSpecTP :: CompVP p -> Either Range (SpecTP p)
 compVPToSpecTP (CompVP_CP cp)        = Left  (cp^.maximalProjection)
 compVPToSpecTP (CompVP_DP y)         = Right (SpecTP_DP y)
 compVPToSpecTP (CompVP_PP y)         = case y^.complement of
@@ -58,7 +57,6 @@ compVPToSpecTP (CompVP_AP ap)        = Left (ap^.maximalProjection)  -- for the 
 
 
 specTPToCompVP :: SpecTP 'PH0 -> CompVP 'PH0
--- specTPToCompVP (SpecTP_Unresolved x) = CompVP_Unresolved x
 specTPToCompVP (SpecTP_DP x)         = CompVP_DP x
 
 
@@ -100,7 +98,7 @@ compVPToHeadText tagged (CompVP_PP pp)          = case pp^.complement of
 compVPToHeadText tagged (CompVP_AP ap)          = T.intercalate " " (tokensByRange tagged (ap^.maximalProjection))
 
 
-compVPToRange :: CompVP 'PH0 -> Range
+compVPToRange :: CompVP p -> Range
 compVPToRange = (\case Left rng -> rng; Right (SpecTP_DP dp) -> dp^.maximalProjection) . compVPToSpecTP
 
 
