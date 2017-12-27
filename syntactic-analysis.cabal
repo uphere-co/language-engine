@@ -74,6 +74,7 @@ test-suite test-syntax-property
                      , containers
                      , lens
                      , text
+                     , transformers
                      --
                      , HWordNet
                      , nlp-types
