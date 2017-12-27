@@ -23,7 +23,8 @@ data MarkType = MarkTime | MarkEntity NamedEntityClass
 
 makePrisms ''MarkType
 
-data PreAnalysis t = PreAnalysis { _pennTree  :: BitreeICP t
+data PreAnalysis t = PreAnalysis { _pennTree :: PennTree
+                                 , _pennTreeAnn  :: BitreeICP t
                                  , _lemmaList :: [(Int,(Lemma,Text))]
                                  , _synsetList :: [(Int,LexicographerFile)]
                                  , _tagList   :: [TagPos TokIdx MarkType]

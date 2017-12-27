@@ -440,16 +440,18 @@ bindingWH2 x'tr = bimap f f x'tr
                _ -> x
 
 
-retrieveResolved :: X'Tree 'PH1 -> Int -> [(Range,Range)]
-retrieveResolved x'tr i = bifoldMap f f x'tr
+retrieveResolved :: X'Tree 'PH1 -> [(Int,Range,Range)]
+retrieveResolved x'tr = bifoldMap f f x'tr
   where f x = case x^._2 of
                 DPCase dp -> do hn <- dp^..complement._Just.headX
-                                guard (hn^.coidx_i == Just i)
-                                [(dp^.maximalProjection,hn^.coidx_content.hn_range)]
+                                i <- hn^..coidx_i._Just
+                                -- guard (hn^.coidx_i == Just i)
+                                [(i,dp^.maximalProjection,hn^.coidx_content.hn_range)]
                 CPCase cp -> do spectp <- cp^..complement.specifier
-                                guard (spectp^.coidx_i == Just i)
+                                i <- spectp^..coidx_i._Just
+                                -- guard (spectp^.coidx_i == Just i)
                                 spectp1 <- spectp^..coidx_content._Right._SpecTP_DP
-                                [(spectp1,spectp1)]
+                                [(i,spectp1,spectp1)]
                 _         -> []
                                
                                
