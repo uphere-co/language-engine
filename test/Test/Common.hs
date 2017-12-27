@@ -3,8 +3,9 @@
 
 module Test.Common where
 
+import           Control.Arrow                   (first,second)
 import           Control.Lens                    ((^.))
-import           Control.Monad.Trans.State       (evalState)
+import           Control.Monad.Trans.State       (evalState,runState)
 import           Data.Foldable                   (toList)
 import qualified Data.IntMap             as IM
 import           Data.Monoid                     ((<>))
@@ -33,6 +34,9 @@ mkVPS lmatknlst pt =
 
 
 
+testfunc (x'tr,n) =
+  let lst = take n [0..]
+  in formatX'Tree1 x'tr <> "\n" <> T.pack (show (map (retrieveResolved x'tr) lst))
 
 formatDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType],[(Int,LexicographerFile)]) -> [Text]
 formatDetail (_txt,lma,pt,taglst,synsets) =
@@ -41,7 +45,7 @@ formatDetail (_txt,lma,pt,taglst,synsets) =
       x'trs0 = identifyCPHierarchy pre vps
       x'trs1 = map ((^.xts_tree) . {- bindingAnalysisRaising . bindingAnalysis pre . resolveCP  . -} (XTS 0)) x'trs0
       testX'trs0 = map mkX'TreePH1 x'trs0
-      testX'trs = map (bindingWH2 . (\tr -> evalState (bindingWH1 tr) 0)) testX'trs0
+      ntestX'trs = map (first bindingWH2 . (\tr -> runState (bindingWH1 tr) 0)) testX'trs0
       -- xts = map (0,) x'tr0
       -- x'tr = x'tr0 -- map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged . (XTS 0)) x'tr0
 
@@ -50,7 +54,8 @@ formatDetail (_txt,lma,pt,taglst,synsets) =
   , (T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList) pt
   , "--------------------------------------------------------------------------------------------------------------------"
   ]
-  ++ map formatX'Tree1 testX'trs -- x'tr
+  -- ++ map (formatX'Tree1.fst) ntestX'trs -- x'tr
+  ++ map testfunc ntestX'trs
   -- ++ map (formatVPwithPAWS tagged clausetr x'tr) vps
   ++
   [ "--------------------------------------------------------------------------------------------------------------------"

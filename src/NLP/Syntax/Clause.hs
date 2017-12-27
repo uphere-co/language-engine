@@ -21,6 +21,7 @@ import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put,modify')
 import           Data.Attribute                         (ahead)
+import           Data.Bifoldable                        (bifoldMap)
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Foldable                          (toList)
 import           Data.Function                          (on)
@@ -438,6 +439,19 @@ bindingWH2 x'tr = bimap f f x'tr
                  in (_2._DPCase .~ dp') x
                _ -> x
 
+
+retrieveResolved :: X'Tree 'PH1 -> Int -> [Range]
+retrieveResolved x'tr i = bifoldMap f f x'tr
+  where f x = case x^._2 of
+                DPCase dp -> do hn <- dp^..complement._Just.headX
+                                guard (hn^.coidx_i == Just i)
+                                [hn^.coidx_content.hn_range]
+                CPCase cp -> do spectp <- cp^..complement.specifier
+                                guard (spectp^.coidx_i == Just i)
+                                spectp^..coidx_content._Right._SpecTP_DP
+                _         -> []
+                               
+                               
 
 
 --   bimap f f  where f = _2._CPCase %~ whMovement1
