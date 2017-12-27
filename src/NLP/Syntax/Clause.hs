@@ -449,7 +449,7 @@ retrieveResolved x'tr i = bifoldMap f f x'tr
                 CPCase cp -> do spectp <- cp^..complement.specifier
                                 guard (spectp^.coidx_i == Just i)
                                 spectp1 <- spectp^..coidx_content._Right._SpecTP_DP
-                                [(cp^.maximalProjection,spectp1)]
+                                [(spectp1,spectp1)]
                 _         -> []
                                
                                
