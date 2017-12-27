@@ -17,9 +17,10 @@ import           NLP.Type.PennTreebankII (ChunkTag(..))
 import           NLP.Type.TagPos         (TagPos(..),TokIdx)
 --
 import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
-import           NLP.Syntax.Type         (MarkType(..))
+-- import           NLP.Syntax.Type         (MarkType(..))
 import           NLP.Syntax.Type.XBar    (DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP,_CompPP_DP
+                                         ,MarkType(..),Phase(..)
                                          ,PreAnalysis(..),pennTree,tagList
                                          ,complement,headX,maximalProjection
                                          ,mkPP,hp_prep,hp_pclass)
@@ -40,7 +41,7 @@ isMatchedTime :: Range -> TagPos TokIdx MarkType -> Bool
 isMatchedTime rng (TagPos (b,e,t)) = beginEndToRange (b,e) == rng && t == MarkTime
 
 
-checkEmptyPrep :: PreAnalysis t -> DetP -> CompVP
+checkEmptyPrep :: PreAnalysis t -> DetP 'PH0 -> CompVP 'PH0
 checkEmptyPrep tagged dp =
   let rng = dp^.maximalProjection
       r = fromMaybe False $ do
@@ -52,7 +53,7 @@ checkEmptyPrep tagged dp =
      else CompVP_DP dp
 
 
-checkTimePrep :: PreAnalysis t -> PP -> CompVP
+checkTimePrep :: PreAnalysis t -> PP 'PH0 -> CompVP 'PH0
 checkTimePrep tagged pp = fromMaybe (CompVP_PP pp) $ do
   dp <- pp^? complement . _CompPP_DP
   guard $ fromMaybe False $ do
