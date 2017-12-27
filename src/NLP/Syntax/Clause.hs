@@ -354,6 +354,28 @@ rewriteX'TreeForFreeWH rng w z' = do
   return (replaceFocusItem rf rf w_dom)
 
 
+
+whMovement1 :: CP 'PH1 -> CP 'PH1
+whMovement1 cp = fromMaybe cp $ do
+  let spec_cp = cp^.specifier
+      spec_tp = cp^.complement.specifier
+  guard (case spec_cp of Just SpecCP_WHPHI -> True; Just (SpecCP_WH _) -> True; _ -> False)
+  trace ("\nwhMovement1: " ++ T.unpack (formatCoindex (formatSpecTP SPH1) spec_tp)) (return ())
+  case spec_tp^.coidx_content of
+    Left NULL -> return ((complement.specifier.coidx_content .~ Left Moved) cp) -- subject is moved
+    Left _    -> return cp
+    Right _   -> do
+      trace ("\nwhMovement1_2" ++ (T.unpack (formatCP SPH1 cp))) (return ())
+      let cp' = (complement.complement.complement %~ (mkDefCoindex (Left Moved):)) cp
+      trace ("\nwhMovement1_3" ++ (T.unpack (formatCP SPH1 cp'))) (return ())
+      return cp'
+
+
+bindingWH :: X'Tree 'PH1 -> X'Tree 'PH1
+bindingWH = bimap f f  where f = _2._CPCase %~ whMovement1
+
+
+
 whMovement :: PreAnalysis (Lemma ': as)
            -> (X'Zipper 'PH0,CP 'PH0)
            -> State (X'TreeState 'PH0) (Coindex (Either TraceType (Either Range (SpecTP 'PH0))))
@@ -489,6 +511,9 @@ resolveDP tagged rng = fmap (fromMaybe emptyCoindex) . runMaybeT $ do
     then resolveVPComp rng =<< lift (whMovement tagged (w,cp))
     else resolveVPComp rng =<< resolvePRO tagged (w,cp)
 
+
+
+{- 
 --
 -- | Resolve unbound CP argument to bound CP argument.
 --
@@ -571,7 +596,7 @@ resolveCP = rewriteTree action
                 (return x))
       let rf = _2._CPCase.adjunct .~ xs'
       putAndReturn (replaceFocusItem rf rf z)
-
+-}
 
 
 bindingSpec :: Range

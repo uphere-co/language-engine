@@ -170,8 +170,8 @@ formatCP p cp =
         SPH1 -> formatCoindex (formatSpecTP p) (cp^.complement.specifier)) <>
      " (VP: comp:" <>
      (case p of
-        SPH0 -> T.intercalate "," (cp^..complement.complement.complement.traverse.coidx_content._Right.to (either (T.pack.show) (formatCompVP SPH0)))
-        SPH1 -> T.intercalate "," (cp^..complement.complement.complement.traverse.coidx_content._Right.to (formatCompVP SPH1))) <>
+        SPH0 -> T.intercalate "," (cp^..complement.complement.complement.traverse.to (formatCoindex (either (T.pack.show) (formatCompVP SPH0))))
+        SPH1 -> T.intercalate "," (cp^..complement.complement.complement.traverse.to (formatCoindex (formatCompVP SPH1)))) <>
      "))]"
 
 {-

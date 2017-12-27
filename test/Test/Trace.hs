@@ -251,13 +251,13 @@ showDetail (txt,_,_,lma,pt,tagged,synsets) = mapM_ T.IO.putStrLn (formatDetail (
 
 
 testcases :: [TestTrace]
-testcases = [ test_silent_pronoun_1
+testcases = [ {- test_silent_pronoun_1
             , test_silent_pronoun_2
             , test_multi_silent_pronoun
-            , test_relative_pronoun_subject
+            , -} test_relative_pronoun_subject
             , test_relative_pronoun_object
             , test_reduced_relative_clause
-            , test_passive
+            {- , test_passive
             , test_passive_raising
             , test_ECM
             , test_nonrestrictive_relative_clause
@@ -266,7 +266,7 @@ testcases = [ test_silent_pronoun_1
             , test_free_relative_clause_object_1
             , test_free_relative_clause_object_2
             , test_topicalization_move
-            , test_that_clause
+            , test_that_clause -}
             ]
 
 
@@ -279,7 +279,7 @@ checkTrace c =
         x'trs0 = identifyCPHierarchy tagged vps
         x'trs1 = map ((^.xts_tree) {- . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged -} . XTS 0) x'trs0
         -- trace "checktrace1" $ return ()
-        testX'tr = map mkX'TreePH1 x'trs0
+        testX'tr = map (bindingWH . mkX'TreePH1) x'trs0
 
 
     -- trace (show testX'tr) $ return ()
