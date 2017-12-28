@@ -33,7 +33,8 @@ import           Lexicon.Type                            (ArgPattern(..),RoleIns
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree,prettyPrint)
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),PreAnalysis,CP,X'Tree
+import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),PreAnalysis
+                                                         ,CP,X'Tree,Phase(..)
                                                          ,headTextDP,headX,complement,maximalProjection
                                                          ,tokensByRange
                                                          ,hp_prep,hp_pclass)
@@ -51,7 +52,7 @@ import           SRL.Analyze.Type                        (DocStructure(..),SentS
                                                          ,_MGPredicate,_MGEntity
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
-                                                         ,vs_vp,ss_x'tr
+                                                         ,vs_vp,ss_x'trs
                                                          )
 import           SRL.Analyze.Type.Match                  (ExceptionalFrame(..),ONSenseFrameNetInstance(..),FrameMatchResult(..)
                                                          ,onfn_senseID,onfn_definition,onfn_frame
@@ -194,7 +195,7 @@ formatSentStructure _showdetail ss@(SentStructure i ptr _ _ _ _ vstrs) =
                   , prettyPrint 0 ptr ] 
 
        subline1_1 = [ "--------------------------------------------------------------------------------------------------" ] ++
-                    map formatX'Tree (ss^.ss_x'tr) ++
+                    map formatX'Tree1 (ss^.ss_x'trs) ++
                     [ "=================================================================================================" ]
        subline2 = map formatVerbStructure vstrs
    in subline1 ++ subline1_1 ++ concat subline2
@@ -210,13 +211,15 @@ formatVerbStructure (VerbStructure vp senses mrmmtoppatts) =
 
 -- maybe "" show (dp^?complement._Just.headX)
 
-showMatchedFE :: PreAnalysis '[Lemma] -> (FNFrameElement, CompVP) -> String
+showMatchedFE :: PreAnalysis '[Lemma] -> (FNFrameElement, CompVP 'PH1) -> String
 --                                         FE   range prep text
-showMatchedFE tagged (fe,CompVP_DP dp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (formatDP dp)  ("" :: Text) (headTextDP tagged dp)
-showMatchedFE tagged (fe,CompVP_AP ap) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (formatAP ap)  ("" :: Text) ((T.intercalate " " . tokensByRange tagged) (ap^.maximalProjection))
-showMatchedFE tagged (fe,CompVP_CP cp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("CP" <> showRange rng_cp) ("" :: Text) ((T.intercalate " " . tokensByRange tagged) rng_cp)
-  where rng_cp = cp^.maximalProjection
-showMatchedFE tagged (fe,CompVP_PP pp) =
+showMatchedFE tagged (fe,CompVP_DP rng_dp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("DP" ++ show rng_dp)  ("" :: Text) ("" :: Text) -- (headTextDP tagged rng_dp)
+showMatchedFE tagged (fe,CompVP_AP rng_ap) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("AP" ++ show rng_ap)  ("" :: Text) ("" :: Text) -- ((T.intercalate " " . tokensByRange tagged) (ap^.maximalProjection))
+showMatchedFE tagged (fe,CompVP_CP rng_cp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("CP" ++ show rng_cp) ("" :: Text) ("" :: Text) -- ((T.intercalate " " . tokensByRange tagged) rng_cp)
+--  where rng_cp = cp^.maximalProjection
+showMatchedFE tagged (fe,CompVP_PP rng_pp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("PP" ++ show rng_pp) ("" :: Text) ("" :: Text) -- ((T.intercalate " " . tokensByRange tagged) rng_cp)
+
+{-
   let prep = case pp^.headX.hp_prep of
                Prep_NULL -> ""
                Prep_WORD p -> p
@@ -227,18 +230,18 @@ showMatchedFE tagged (fe,CompVP_PP pp) =
   in case pp^.complement of
        CompPP_DP dp    -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) (maybe "" show (dp^?complement._Just.headX)) prep pclass (headTextDP tagged dp)
        CompPP_Gerund rng -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) (show rng) prep pclass (T.intercalate " " (tokensByRange tagged rng))
-showMatchedFE tagged (fe,CompVP_Unresolved rng) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (show rng) ("UNKNOWN" :: Text) (T.intercalate " " (tokensByRange tagged rng))
-
+-- showMatchedFE tagged (fe,CompVP_Unresolved rng) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (show rng) ("UNKNOWN" :: Text) (T.intercalate " " (tokensByRange tagged rng))
+-}
 
 
 
 showMatchedFrame :: FrameDB
                  -> PreAnalysis '[Lemma]
-                 -> ([X'Tree],(VerbStructure, CP))
+                 -> (X'Tree 'PH1,VerbStructure, CP 'PH1)
                  -> IO ()
-showMatchedFrame framedb tagged (x'tr,(vstr,cp)) = do
+showMatchedFrame framedb tagged (x'tr,vstr,cp) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame framedb x'tr (vstr,cp)) $ \(rng,_,FMR idiom frame mselected _,_) -> do
+  flip traverse_ (matchFrame framedb x'tr (vstr,cp)) $ \(rng,_,x'tr,FMR idiom frame mselected _,_) -> do
     putStrLn ("predicate: "  <> show rng)
     T.IO.putStrLn ("Verb: "  <> T.intercalate " " idiom)
     T.IO.putStrLn ("Frame: " <> unFNFrame frame)

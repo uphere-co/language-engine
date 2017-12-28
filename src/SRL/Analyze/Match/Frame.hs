@@ -23,7 +23,7 @@ import           Data.Monoid                  (First(..),(<>))
 import           Data.Text                    (Text)
 import qualified Data.Text               as T
 --
-import           Data.BitreeZipper            (current,extractZipperById)
+import           Data.BitreeZipper            (current,extractZipperById,toBitree)
 import           Data.Range                   (Range,isInsideR)
 import           FrameNet.Query.Frame         (FrameDB,frameDB)
 import           FrameNet.Type.Frame          (frame_FE,fe_name)
@@ -45,9 +45,11 @@ import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
 import           SRL.Analyze.Sense            (getVerbSenses)
 import           SRL.Analyze.Type             (SentStructure,VerbStructure,AnalyzePredata(..)
                                               ,analyze_wordnet
-                                              ,ss_x'tr,ss_tagged,ss_verbStructures
+                                              ,ss_x'trs,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp)
-import           SRL.Analyze.Type.Match       (EntityInfo(..),FrameMatchResult(..),cpdpppFromX'Tree)
+import           SRL.Analyze.Type.Match       (EntityInfo(..),FrameMatchResult(..),cpdpppFromX'Tree
+                                              ,resolvedCompVP,resolvedSpecTP
+                                              )
 --
 import Debug.Trace
 import NLP.Syntax.Format.Internal
@@ -55,19 +57,20 @@ import NLP.Syntax.Format.Internal
 
 
 
-mkTriples :: SentStructure -> ([X'Tree 'PH1],[(VerbStructure, CP 'PH1)])
-mkTriples sstr =
-  let x'tr = sstr^.ss_x'tr
-  in ( x'tr
-     , [(vstr,cp)| vstr <- sstr ^.ss_verbStructures
-                 , let vp = vstr^.vs_vp
-                 , cp <- maybeToList $ do
-                           let tagged = sstr^.ss_tagged
-                           cp0 <- (^._1) <$> constructCP tagged vp
-                           let rng_cp0 = cp0^.maximalProjection
-                           (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng_cp0)) x'tr)
-                 ]
-     )
+mkTriples :: SentStructure -> [(X'Tree 'PH1, VerbStructure, CP 'PH1)]
+mkTriples sstr = do
+  vstr <- sstr ^.ss_verbStructures
+  let vp = vstr^.vs_vp
+      tagged = sstr^.ss_tagged
+  cp0 <- maybeToList $ (^._1) <$> constructCP tagged vp -- very inefficient, we should have VP-shell in X'Tree
+                                          -- so to find cp directly from X'Tree zipper.
+  let rng_cp0 = cp0^.maximalProjection
+  w <- maybeToList $ (getFirst . foldMap (First . extractZipperById rng_cp0)) (sstr^.ss_x'trs)
+  let x'tr = toBitree w
+  cp <- currentCPDPPP w ^.. _CPCase
+  return (x'tr,vstr,cp)
+
+
 
 pbArgForGArg :: GArg -> ArgPattern p GRel -> Maybe (Text,GRel)
 pbArgForGArg garg patt = check patt_arg0 "arg0" <|>
@@ -109,20 +112,6 @@ isPhiOrThat cp = case cp^.headX of
                    C_PHI -> True
                    C_WORD word -> word == "that"
 
-
-resolvedCompVP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (CompVP 'PH1)) -> Maybe (CompVP 'PH1)
-resolvedCompVP resmap c =
-  case c of
-    Coindex (Just i) (Left _) -> (^._1) <$> lookup i resmap
-    Coindex Nothing  (Left _) -> Nothing
-    Coindex _        (Right x) -> Just x
-
-resolvedSpecTP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (SpecTP 'PH1)) -> Maybe (SpecTP 'PH1)
-resolvedSpecTP resmap s =
-  case s of
-    Coindex (Just i) (Left _) -> (^._1.to (compVPToSpecTP SPH1).to rightMay) =<< lookup i resmap
-    Coindex Nothing  (Left _) -> Nothing
-    Coindex _        (Right x) -> Just x
 
 
 
@@ -560,7 +549,7 @@ resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
 matchFrame :: FrameDB
            -> X'Tree 'PH1
            -> (VerbStructure,CP 'PH1)
-           -> Maybe (Range,VerbProperty (Zipper '[Lemma]),FrameMatchResult,Maybe (SenseID,Bool))
+           -> Maybe (Range,VerbProperty (Zipper '[Lemma]),X'Tree 'PH1,FrameMatchResult,Maybe (SenseID,Bool))
 matchFrame frmdb x'tr (vstr,cp) =
     if verbp^.headX.vp_lemma == "be"
     then do
@@ -574,7 +563,7 @@ matchFrame frmdb x'tr (vstr,cp) =
            let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_NP (Just GA1))) Nothing Nothing Nothing
                role_subj = (FNFrameElement "Instance",CompVP_DP rng_dp_subj)
                role_obj  = (FNFrameElement "Type",CompVP_DP rng_dp_obj)
-           return (rng_cp,vprop,FMR ["be"] "Instance" (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing))
+           return (rng_cp,vprop,x'tr,FMR ["be"] "Instance" (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing))
        <|>
        (do rng_pp_obj <- c^?_CompVP_PP
            pp_obj <- extractZipperById rng_pp_obj x'tr >>= \w -> currentCPDPPP w ^? _PPCase
@@ -583,7 +572,7 @@ matchFrame frmdb x'tr (vstr,cp) =
            let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_PP Nothing)) Nothing Nothing Nothing
                role_subj = (rsbj,CompVP_DP rng_dp_subj)
                role_obj  = (robj,CompVP_PP rng_pp_obj)
-           return (rng_cp,vprop,FMR ["be"] frm (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing)))
+           return (rng_cp,vprop,x'tr,FMR ["be"] frm (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing)))
 
 
     else do
@@ -598,7 +587,7 @@ matchFrame frmdb x'tr (vstr,cp) =
                       ,(hasComplementizer ["if"]    , "if"    , ("Conditional_occurrence","Consequence","Profiled_possibility"))
                       ,(hasComplementizer ["unless"], "unless", ("Negative_conditional","Anti_consequence","Profiled_possibility"))
                       ]
-      return (rng_cp,vprop,FMR idiom frame mselected subfrms,Just sense)
+      return (rng_cp,vprop,x'tr,FMR idiom frame mselected subfrms,Just sense)
   where
     resmap = retrieveResolved x'tr
 
@@ -669,10 +658,10 @@ subjObjSBAR argpatt =
 
 
 matchNomFrame :: AnalyzePredata
-              -> [X'Tree 'PH1]
+              -> X'Tree 'PH1
               -> PreAnalysis '[Lemma]
               -> DetP 'PH1
-              -> Maybe (Lemma,Lemma,(FNFrame,Range),(FNFrameElement,Maybe EntityInfo),(FNFrameElement,EntityInfo))
+              -> Maybe (Lemma,Lemma,X'Tree 'PH1,(FNFrame,Range),(FNFrameElement,Maybe EntityInfo),(FNFrameElement,EntityInfo))
 matchNomFrame apredata x'tr tagged dp = do
     let rng_dp = dp^.maximalProjection
         wndb = apredata^.analyze_wordnet
@@ -715,7 +704,7 @@ matchNomFrame apredata x'tr tagged dp = do
       guard (pp^.headX.hp_prep == Prep_WORD "of")
       rng_obj <- pp^?complement._CompPP_DP -- .maximalProjection
       let txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
-      return (lma,verb,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj (Just "of") txt_obj False False)))
+      return (lma,verb,x'tr,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj (Just "of") txt_obj False False)))
     cpcase patt rolemap lma frm verb rng_dp mei_subj = do
       let (ms,mo) = subjObjSBAR (patt^._1)
       (args,_) <- ms
@@ -731,4 +720,4 @@ matchNomFrame apredata x'tr tagged dp = do
           txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
       aux <- listToMaybe (vp^..headX.vp_auxiliary.traverse._2._2.to unLemma)
       guard (aux == "to")
-      return (lma,verb,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj Nothing txt_obj False False)))
+      return (lma,verb,x'tr,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj Nothing txt_obj False False)))

@@ -18,13 +18,15 @@ import qualified Data.Text           as T
 --
 import           Data.BitreeZipper
 import           Data.Range
-import           NLP.Syntax.Clause        (currentCPDPPP)
+import           NLP.Syntax.Clause        (currentCPDPPP,retrieveResolved)
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Type.Verb     (vp_auxiliary)
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
 --
-import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..),cpdpppFromX'Tree,emptyDPInfo)
+import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..),cpdpppFromX'Tree,emptyDPInfo
+                                          ,resolvedSpecTP,resolvedCompVP
+                                          )
 --
 import Debug.Trace
 import NLP.Syntax.Format.Internal
@@ -38,6 +40,7 @@ definiteCorefResolution :: X'Tree 'PH1
                         -> DetP 'PH1
                         -> Maybe (Range,Range)
 definiteCorefResolution x'tr tagged dp = do
+  let resmap = retrieveResolved x'tr
   let rng_dp = dp^.maximalProjection
   guard (dp^?headX.hd_class._Article == Just Definite)
   np <- dp^.complement
@@ -45,22 +48,25 @@ definiteCorefResolution x'tr tagged dp = do
   guard (b == e)  -- a single word
   let ntxt = headText tagged np
   guard (ntxt == "company")  -- for the time being
-  w <- getFirst (foldMap (First . extractZipperById rng_dp) x'tr)
+  w <- extractZipperById rng_dp x'tr
   w' <- parent w
   cp' <- currentCPDPPP w' ^? _CPCase
   ((do w'' <- parent w'
        cp'' <- currentCPDPPP w'' ^? _CPCase
-       dp'' <- cp''^?complement.specifier.trResolved._Just._SpecTP_DP
-       nclass <- dp''^?complement._Just.headX.hn_class._Just
+       rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
+       dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
+       nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
        if nclass == Org
-         then return (rng_dp,dp''^.maximalProjection)
+         then return (rng_dp,rng_dp'')
          else mzero)
    <|>
-   (do cp'' <- cp'^?specifier._Just._SpecCP_Topic.trResolved._Just._CompVP_CP
-       dp'' <- cp''^?complement.specifier.trResolved._Just._SpecTP_DP
-       nclass <- dp''^?complement._Just.headX.hn_class._Just
+   (do rng_cp'' <- cp'^?specifier._Just.coidx_content._SpecCP_Topic -- .trResolved._Just._CompVP_CP
+       cp'' <- cpdpppFromX'Tree x'tr rng_cp'' _CPCase
+       rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
+       dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
+       nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
        if nclass == Org
-         then return (rng_dp,dp''^.maximalProjection)
+         then return (rng_dp,rng_dp'')
          else mzero))
 
 
@@ -70,19 +76,21 @@ definiteGenitiveCorefResolution :: X'Tree 'PH1
                                 -> DetP 'PH1
                                 -> Maybe (Range,Range)
 definiteGenitiveCorefResolution x'tr tagged dp = do
+  let resmap = retrieveResolved x'tr
   guard (dp^?headX.hd_class._GenitiveClitic == Just ())
   rng_specdp <- listToMaybe (dp^..specifier.traverse._SpDP_Gen)
   let stxt = T.intercalate " " (tokensByRange tagged rng_specdp)
   guard (stxt == "the company") -- for the time being
-  w <- getFirst (foldMap (First . extractZipperById rng_specdp) x'tr)
+  w <- extractZipperById rng_specdp x'tr
   w' <- parent w
   cp' <- currentCPDPPP w' ^? _CPCase
   -- w'' <- parent w'                        -- this need to be revived.
   -- cp'' <- currentCPDPPP w'' ^? _CPCase
-  dp' <- cp'^?complement.specifier.trResolved._Just._SpecTP_DP
-  nclass <- dp'^?complement._Just.headX.hn_class._Just
+  rng_dp' <- cp'^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
+  dp' <- cpdpppFromX'Tree x'tr rng_dp' _DPCase
+  nclass <- dp'^?complement._Just.headX.coidx_content.hn_class._Just
   if nclass == Org
-    then return (rng_specdp,dp'^.maximalProjection)
+    then return (rng_specdp,rng_dp')
     else mzero
 
 
@@ -90,34 +98,39 @@ pronounResolution :: X'Tree 'PH1
                   -> DetP 'PH1
                   -> Maybe (Range,Range)
 pronounResolution x'tr dp = do
+    let resmap = retrieveResolved x'tr
     let rng_dp = dp^.maximalProjection
     rng_pro <- dp^.headX.hd_range
     (prnclass,isgenitive) <- dp^?headX.hd_class._Pronoun
-    w <- getFirst (foldMap (First . extractZipperById rng_dp) x'tr)
+    w <- extractZipperById rng_dp x'tr
     w' <- parent w
     cp' <- currentCPDPPP w' ^? _CPCase
 
     ((if isgenitive
         then do
-          dp' <- cp'^?complement.specifier.trResolved._Just._SpecTP_DP
-          nclass <- dp'^?complement._Just.headX.hn_class._Just
-          match (rng_pro,prnclass) (nclass,dp')
+          rng_dp' <- cp'^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
+          dp' <- cpdpppFromX'Tree x'tr rng_dp' _DPCase
+          nclass <- dp'^?complement._Just.headX.coidx_content.hn_class._Just
+          match (rng_pro,prnclass) (nclass,rng_dp')
         else mzero)
      <|>
      (do w'' <- parent w'
          cp'' <- currentCPDPPP w'' ^? _CPCase
-         dp'' <- cp''^?complement.specifier.trResolved._Just._SpecTP_DP
-         nclass <- dp''^?complement._Just.headX.hn_class._Just
-         match (rng_pro,prnclass) (nclass,dp''))
+         rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
+         dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
+         nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
+         match (rng_pro,prnclass) (nclass,rng_dp''))
      <|>
-     (do cp'' <- cp'^?specifier._Just._SpecCP_Topic.trResolved._Just._CompVP_CP
-         dp'' <- cp''^?complement.specifier.trResolved._Just._SpecTP_DP
-         nclass <- dp''^?complement._Just.headX.hn_class._Just
-         match (rng_pro,prnclass) (nclass,dp'')))
+     (do rng_cp'' <- cp'^?specifier._Just.coidx_content._SpecCP_Topic
+         cp'' <- cpdpppFromX'Tree x'tr rng_cp'' _CPCase
+         rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
+         dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
+         nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
+         match (rng_pro,prnclass) (nclass,rng_dp'')))
   where
-    match (rng_pro,prnclass) (nclass,dp') =
-      if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,dp'^.maximalProjection)
-         | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp'^.maximalProjection)
+    match (rng_pro,prnclass) (nclass,rng_dp') =
+      if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,rng_dp')
+         | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,rng_dp')
          | otherwise -> mzero
 
 entityTextDP :: PreAnalysis t -> DetP 'PH1 -> Text
@@ -151,10 +164,11 @@ entityFromDP x'tr tagged dp =
       mcoref = pronounResolution x'tr dp <|> definiteCorefResolution x'tr tagged dp <|> definiteGenitiveCorefResolution x'tr tagged dp
       mcomp = ((do rng_pp <- dp^?complement._Just.complement._Just._CompDP_PP
                    pp <- cpdpppFromX'Tree x'tr rng_pp _PPCase
-                   dp' <- pp^?complement._CompPP_DP
+                   rng_dp' <- pp^?complement._CompPP_DP
+                   dp' <- cpdpppFromX'Tree x'tr rng_dp' _DPCase
                    let prep = pp^.headX.hp_prep
                    guard (prep == Prep_WORD "of")
-                   let rng_comp = dp'^.maximalProjection
+                   let rng_comp = rng_dp'
                        rng_head_comp = fromMaybe rng_comp (headRangeDP dp')
                        txt_comp = headTextDP tagged dp'
                    return (EI rng_comp rng_head_comp (Just "of") txt_comp False False))
@@ -168,9 +182,10 @@ entityFromDP x'tr tagged dp =
       adjs  = do AdjunctDP_PP rng_pp <- dp^.adjunct
                  pp <- maybeToList (cpdpppFromX'Tree x'tr rng_pp _PPCase)
                  let isTime = pp^.headX.hp_pclass == PC_Time
-                 dp' <- pp^..complement._CompPP_DP
+                 rng_dp' <- pp^..complement._CompPP_DP
+                 dp' <- maybeToList (cpdpppFromX'Tree x'tr rng_dp' _DPCase)
                  let mprep = pp^?headX.hp_prep._Prep_WORD
-                 let rng_adj = dp'^.maximalProjection
+                 let rng_adj = rng_dp'
                      rng_head_adj = fromMaybe rng_adj (headRangeDP dp')
                      txt_adj = headTextDP tagged dp'
                  return (EI rng_adj rng_head_adj mprep txt_adj False isTime)

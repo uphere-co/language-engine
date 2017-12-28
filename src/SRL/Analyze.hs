@@ -48,7 +48,7 @@ import           Lexicon.Type                   (SenseID)
 import           MWE.Util                       (mkTextFromToken)
 import           NER.Load                       (loadCompanies)
 import           NER.Type                       (CompanyInfo(..),alias,companyId)
-import           NLP.Syntax.Format              (formatX'Tree)
+import           NLP.Syntax.Format              (formatX'Tree1)
 import           NLP.Type.CoreNLP               (Sentence)
 import           OntoNotes.Corpus.Load          (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory  (inventory_lemma)
@@ -88,21 +88,18 @@ queryProcess config pp apredata netagger (forest,companyMap) =
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
                   dainput <- runParser pp txt
-                  -- runUKB (apredata^.analyze_wordnet) (dainput^.dainput_sents,dainput^.dainput_mptrs)
                   dstr <- docStructure apredata netagger (forest,companyMap) dainput
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap  (\s -> [(s^.ss_tagged,(s^.ss_x'tr,x)) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
+                  mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap (\s -> [(s^.ss_tagged,x)| x <- mkTriples s ]) . catMaybes $ (dstr^.ds_sentStructures)
 
       ":v " -> do dainput <- runParser pp rest
-                  -- runUKB (apredata^.analyze_wordnet) (dainput^.dainput_sents,dainput^.dainput_mptrs)
                   dstr <- docStructure apredata netagger (forest,companyMap) dainput
-                  mapM_ (T.IO.putStrLn . formatX'Tree) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'tr . traverse)
+                  mapM_ (T.IO.putStrLn . formatX'Tree1) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'trs . traverse)
                   when (config^.Analyze.showDetail) $ do
-                    -- print (dstr^.ds_mergedtags)
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
 
-                  mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap  (\s -> [(s^.ss_tagged,(s^.ss_x'tr,x)) | x <- snd (mkTriples s)]) . catMaybes $ (dstr^.ds_sentStructures)
+                  mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap (\s -> [(s^.ss_tagged,x)|  x <- mkTriples s]) . catMaybes $ (dstr^.ds_sentStructures)
                   --
                   printMeaningGraph apredata companyMap dstr
                   --
@@ -120,32 +117,13 @@ printMeaningGraph apredata companyMap dstr = do
   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
       mtokss = (dstr ^. ds_mtokenss)
       wikilsts = map (mkWikiList companyMap) sstrs1
-  -- print wikilsts
-  -- print (sstrs1 ^.. traverse . ss_ptr)
-  -- print (sstrs1 ^.. traverse . ss_clausetr)
 
   let mgs = map (\sstr -> (sstr,meaningGraph apredata sstr)) sstrs1
   forM_ (zip mtokss (zip ([1..] :: [Int]) mgs)) $ \(mtks,(i,(sstr,mg'))) -> do
     let title = mkTextFromToken mtks
         wikilst = mkWikiList companyMap sstr -- sstrs1
         mg = tagMG mg' wikilst
-        x'tr = sstr^.ss_x'tr
-    -- mapM_ print (mg^.mg_vertices)
-    -- mapM_ print (mg^.mg_edges)
-    -- putStrLn "====================="
-    -- print mg
-    -- putStrLn "====================="
-    -- let mg' = squashRelFrame mg
-    -- putStrLn "====================="
-
-
-    -- putStrLn "-----------------"
-    -- putStrLn "meaning graph ARB"
-    -- putStrLn "-----------------"
-
-    -- print mg
-    -- print (getGraphFromMG mg)
-    -- mapM_ print (mkARB rolemap mg)
+        x'trs = sstr^.ss_x'trs
 
     putStrLn "-----------------"
     putStrLn "meaning graph dot"

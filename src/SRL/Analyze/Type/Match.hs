@@ -4,7 +4,8 @@
 
 module SRL.Analyze.Type.Match where
 
-import           Control.Lens                  ((^.),(^?),makeLenses,_1,_2)
+import           Control.Error.Safe            (rightMay)
+import           Control.Lens                  ((^.),(^?),makeLenses,_1,_2,to)
 import           Data.Function                 (on)
 import           Data.List                     (maximumBy)
 import           Data.Monoid                   (First(..))
@@ -15,7 +16,10 @@ import           Data.Range                    (Range)
 import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel
                                                ,SenseID)
 import           NLP.Syntax.Clause             (currentCPDPPP)
-import           NLP.Syntax.Type.XBar          (CompVP,Phase(..))
+import           NLP.Syntax.Type.XBar          (CompVP,Phase(..),Coindex(..),TraceType(..),SpecTP(..)
+                                               ,SPhase(..)
+                                               ,compVPToSpecTP
+                                               )
 import           NLP.Type.PennTreebankII       (Lemma)
 
 
@@ -82,4 +86,22 @@ chooseMostFreqFrame xs = [maximumBy (compare `on` (^._1._2)) xs]
 
 
 cpdpppFromX'Tree x'tr rng prm
-  = (^? prm) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
+  = (^? prm) . currentCPDPPP =<< extractZipperById rng x'tr
+
+
+
+
+resolvedCompVP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (CompVP 'PH1)) -> Maybe (CompVP 'PH1)
+resolvedCompVP resmap c =
+  case c of
+    Coindex (Just i) (Left _) -> (^._1) <$> lookup i resmap
+    Coindex Nothing  (Left _) -> Nothing
+    Coindex _        (Right x) -> Just x
+
+resolvedSpecTP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (SpecTP 'PH1)) -> Maybe (SpecTP 'PH1)
+resolvedSpecTP resmap s =
+  case s of
+    Coindex (Just i) (Left _) -> (^._1.to (compVPToSpecTP SPH1).to rightMay) =<< lookup i resmap
+    Coindex Nothing  (Left _) -> Nothing
+    Coindex _        (Right x) -> Just x
+
