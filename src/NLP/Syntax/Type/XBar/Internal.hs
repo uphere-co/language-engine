@@ -288,6 +288,11 @@ data CompVP (p :: Phase) = CompVP_CP (I 'X_C p)
                          | CompVP_PP (I 'X_P p)
                          | CompVP_AP (I 'X_A p)
 
+instance Show (CompVP 'PH1) where
+  show (CompVP_CP x) = "CP" ++ show x
+  show (CompVP_DP x) = "DP" ++ show x
+  show (CompVP_PP x) = "PP" ++ show x
+  show (CompVP_AP x) = "AP" ++ show x
 
 
 type family CoindexCompVP (p :: Phase) where

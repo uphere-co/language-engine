@@ -37,7 +37,7 @@ determinerText :: PreAnalysis t -> HeadDP -> Maybe Text
 determinerText tagged hdp = fmap (T.intercalate " " . tokensByRange tagged) (hdp^.hd_range)
 
 
-headText :: PreAnalysis t -> NounP 'PH0 -> Text
+headText :: PreAnalysis t -> NounP p -> Text
 headText tagged x = x^.headX.coidx_content.hn_range.to (T.intercalate " " . tokensByRange tagged)
 
 
@@ -82,7 +82,7 @@ compVPToCPDPPP (CompVP_PP pp) = PPCase pp
 compVPToCPDPPP (CompVP_AP pp) = APCase pp
 
 
-headTextDP :: PreAnalysis t -> DetP 'PH0 -> Text
+headTextDP :: PreAnalysis t -> DetP p -> Text
 headTextDP tagged dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> fromMaybe "" (fmap (headText tagged) (dp^.complement))
@@ -123,9 +123,11 @@ compVPToRange SPH1 (CompVP_PP pp) = pp
 compVPToRange SPH1 (CompVP_AP ap) = ap
 
 
-compPPToRange :: CompPP 'PH0 -> Range
-compPPToRange (CompPP_DP dp) = dp^.maximalProjection
-compPPToRange (CompPP_Gerund rng) = rng
+compPPToRange :: SPhase p -> CompPP p -> Range
+compPPToRange SPH0 (CompPP_DP dp)    = dp^.maximalProjection
+compPPToRange SPH0 (CompPP_Gerund r) = r
+compPPToRange SPH1 (CompPP_DP r)     = r
+compPPToRange SPH1 (CompPP_Gerund r) = r
 
 
 toRange :: CPDPPP 'PH0 -> Range
