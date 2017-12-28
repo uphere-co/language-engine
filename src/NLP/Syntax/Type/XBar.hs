@@ -89,7 +89,7 @@ headTextDP tagged dp =
     _ -> T.intercalate " " (maybeToList (determinerText tagged (dp^.headX)) ++ maybeToList (fmap (headText tagged) (dp^.complement)))
 
 
-headRangeDP :: DetP 'PH0 -> Maybe Range
+headRangeDP :: DetP p -> Maybe Range
 headRangeDP dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> dp^?complement._Just.headX.coidx_content.hn_range
