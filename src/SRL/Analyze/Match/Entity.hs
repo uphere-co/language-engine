@@ -33,9 +33,9 @@ import NLP.Syntax.Format.Internal
 --
 -- | this is very experimental now, only "the company" is checked.
 --
-definiteCorefResolution :: [X'Tree]
+definiteCorefResolution :: X'Tree 'PH1
                         -> PreAnalysis '[Lemma]
-                        -> DetP
+                        -> DetP 'PH1
                         -> Maybe (Range,Range)
 definiteCorefResolution x'tr tagged dp = do
   let rng_dp = dp^.maximalProjection
@@ -65,9 +65,9 @@ definiteCorefResolution x'tr tagged dp = do
 
 
 
-definiteGenitiveCorefResolution :: [X'Tree]
+definiteGenitiveCorefResolution :: X'Tree 'PH1
                                 -> PreAnalysis '[Lemma]
-                                -> DetP
+                                -> DetP 'PH1
                                 -> Maybe (Range,Range)
 definiteGenitiveCorefResolution x'tr tagged dp = do
   guard (dp^?headX.hd_class._GenitiveClitic == Just ())
@@ -86,8 +86,8 @@ definiteGenitiveCorefResolution x'tr tagged dp = do
     else mzero
 
 
-pronounResolution :: [X'Tree]
-                  -> DetP
+pronounResolution :: X'Tree 'PH1
+                  -> DetP 'PH1
                   -> Maybe (Range,Range)
 pronounResolution x'tr dp = do
     let rng_dp = dp^.maximalProjection
@@ -120,7 +120,7 @@ pronounResolution x'tr dp = do
          | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,dp'^.maximalProjection)
          | otherwise -> mzero
 
-entityTextDP :: PreAnalysis t -> DetP -> Text
+entityTextDP :: PreAnalysis t -> DetP 'PH1 -> Text
 entityTextDP tagged dp =
   case dp^.headX.hd_class of
     GenitiveClitic -> fromMaybe "" (fmap (headText tagged) (dp^.complement))
@@ -128,7 +128,7 @@ entityTextDP tagged dp =
 
 
 entityFromAP :: PreAnalysis '[Lemma]
-             -> AP
+             -> AP 'PH1
              -> (EntityInfo,DPInfo)
 entityFromAP tagged ap =
   let rng = ap^.maximalProjection
@@ -136,9 +136,9 @@ entityFromAP tagged ap =
   in (EI rng rng Nothing txt False False, emptyDPInfo)
 
 
-entityFromDP :: [X'Tree]
+entityFromDP :: X'Tree 'PH1
              -> PreAnalysis '[Lemma]
-             -> DetP
+             -> DetP 'PH1
              -> (EntityInfo,DPInfo)
 entityFromDP x'tr tagged dp =
   let rng = dp^.maximalProjection

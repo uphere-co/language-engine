@@ -27,11 +27,12 @@ import qualified Data.Vector                       as V
 import           CoreNLP.Simple.Convert                    (mkLemmaMap)
 import           Data.Range                                (elemIsInsideR,elemIsStrictlyInsideR)
 import           NER.Type                                  (CompanyInfo(..),ticker)
-import           NLP.Syntax.Clause                         (bindingAnalysis,bindingAnalysisRaising,identifyCPHierarchy,resolveCP)
+import           NLP.Syntax                                (syntacticAnalysis)
+-- import           NLP.Syntax.Clause                         (bindingAnalysis,bindingAnalysisRaising,identifyCPHierarchy,resolveCP)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
-import           NLP.Syntax.Type                           (MarkType(..))
+-- import           NLP.Syntax.Type                           (MarkType(..))
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma,vp_index)
-import           NLP.Syntax.Type.XBar                      (Zipper,PreAnalysis,lemmaList)
+import           NLP.Syntax.Type.XBar                      (MarkType(..),Zipper,PreAnalysis,lemmaList,pennTree)
 import           NLP.Syntax.Util                           (mkPreAnalysis)
 import qualified NLP.Type.NamedEntity              as N
 import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,Token,sentenceToken,sentenceLemma,sent_tokenRange,token_text,token_tok_idx_range)
@@ -184,11 +185,12 @@ sentStructure apredata taglst (i,midx,lmas,mptr,synsets) =
         taglstMarkOnly = map (fmap snd) taglst'
         lmatkns = (zip [0..] . zip lmas . map (^._2) . toList) ptr
         lemmamap = (mkLemmaMap . map unLemma) lmas
-        taggedMarkOnly = mkPreAnalysis lmatkns ptr taglstMarkOnly synsets
-        vps = verbPropertyFromPennTree lemmamap ptr
-        x'tr = (map (bindingAnalysisRaising . resolveCP . bindingAnalysis taggedMarkOnly) . identifyCPHierarchy taggedMarkOnly) vps
-        verbStructures = map (verbStructure apredata taggedMarkOnly) vps
-    in SentStructure i ptr vps x'tr taglst' taggedMarkOnly verbStructures
+        pre = mkPreAnalysis lmatkns ptr taglstMarkOnly synsets
+        vps = verbPropertyFromPennTree lemmamap (pre^.pennTree)
+        x'tr = syntacticAnalysis pre
+          -- (map (bindingAnalysisRaising . resolveCP . bindingAnalysis taggedMarkOnly) . identifyCPHierarchy taggedMarkOnly) vps
+        verbStructures = map (verbStructure apredata pre) vps
+    in SentStructure i ptr vps x'tr taglst' pre verbStructures
 
 
 verbStructure :: AnalyzePredata -> PreAnalysis '[Lemma] -> VerbProperty (Zipper '[Lemma]) -> VerbStructure

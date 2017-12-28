@@ -17,9 +17,9 @@ import           Data.Range                    (Range)
 import           FrameNet.Query.Frame          (FrameDB)
 import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel
                                                ,RoleInstance,RolePattInstance,SenseID)
-import           NLP.Syntax.Type               (MarkType(..))
+-- import           NLP.Syntax.Type               (MarkType(..))
 import           NLP.Syntax.Type.Verb          (VerbProperty(..))
-import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,PreAnalysis)
+import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,PreAnalysis,MarkType(..),Phase(..))
 import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
 import           NLP.Type.PennTreebankII       (Lemma,PennTree)
 import           NLP.Type.SyntaxProperty       (Voice)
@@ -57,7 +57,7 @@ makeLenses ''VerbStructure
 data SentStructure = SentStructure { _ss_i              :: Int
                                    , _ss_ptr            :: PennTree
                                    , _ss_vps            :: [VerbProperty (Zipper '[Lemma])]
-                                   , _ss_x'tr           :: [X'Tree]
+                                   , _ss_x'tr           :: [X'Tree 'PH1]
                                    , _ss_tagged_full    :: [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text), MarkType)]
                                    , _ss_tagged         :: PreAnalysis '[Lemma]
                                    , _ss_verbStructures :: [VerbStructure]

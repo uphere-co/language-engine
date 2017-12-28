@@ -15,7 +15,7 @@ import           Data.Range                    (Range)
 import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel
                                                ,SenseID)
 import           NLP.Syntax.Clause             (currentCPDPPP)
-import           NLP.Syntax.Type.XBar          (CompVP)
+import           NLP.Syntax.Type.XBar          (CompVP,Phase(..))
 import           NLP.Type.PennTreebankII       (Lemma)
 
 
@@ -32,7 +32,7 @@ makeLenses ''EntityInfo
 
 data FrameMatchResult = FMR { _fmr_lemmas :: [Text]
                             , _fmr_frame :: FNFrame
-                            , _fmr_roles :: Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP)])
+                            , _fmr_roles :: Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP 'PH1)])
                             , _fmr_subframes :: [(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
                             }
 
