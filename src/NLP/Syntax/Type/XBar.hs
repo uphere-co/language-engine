@@ -10,7 +10,7 @@ module NLP.Syntax.Type.XBar
 , module NLP.Syntax.Type.XBar
 ) where
 
-import           Control.Lens                       ((^.),(^?),(.~),_1,_2,_Just,to)
+import           Control.Lens                       ((^.),(^?),(.~),_1,_2,_Just,_Right,to)
 import           Data.Foldable                      (toList)
 import           Data.Maybe                         (fromMaybe,mapMaybe,maybeToList)
 import           Data.Text                          (Text)
@@ -189,13 +189,17 @@ mkCompVPPH1 (CompVP_AP ap) = CompVP_AP (ap^.maximalProjection) -- (mkAPPH1 ap)
 
 
 mkSpecCPPH1 :: SpecCP 'PH0 -> Maybe (SpecCP 'PH1)
-mkSpecCPPH1 SpecCP_WHPHI    = Just SpecCP_WHPHI
-mkSpecCPPH1 (SpecCP_WH rng) = Just (SpecCP_WH rng)
-mkSpecCPPH1 (SpecCP_Topic t) = case t^.coidx_content of
+mkSpecCPPH1 SpecCP_WHPHI      = Just SpecCP_WHPHI
+mkSpecCPPH1 (SpecCP_WH rng)   = Just (SpecCP_WH rng)
+mkSpecCPPH1 (SpecCP_Topic (Left rng)) = Nothing -- (cp^.maximalProjection)
+mkSpecCPPH1 (SpecCP_Topic (Right cp)) = Just (SpecCP_Topic (cp^.maximalProjection))
+
+{-
+                               case t^.coidx_content of
                                  Left tr         -> Just (SpecCP_Topic ((coidx_content .~ Left tr) t))
                                  Right (Right p) -> Just (SpecCP_Topic ((coidx_content .~ Right (mkCompVPPH1 p)) t))
                                  Right (Left _)  -> Nothing
-
+-}
 
 
 
@@ -240,8 +244,13 @@ mkCPPH1 :: CP 'PH0 -> CP 'PH1
 mkCPPH1 cp = XP { _headX = _headX cp
                 , _maximalProjection = _maximalProjection cp
                 , _specifier = do x <- _specifier cp
+                                  s <- x^.coidx_content.to mkSpecCPPH1
+                                  (return . (coidx_content .~ s)) x
+                  {-
+                    fmap (fmap mkSpecCPPH1) (_specifier cp) -}
+                  {- do 
                                   c <- mkSpecCPPH1 (x^.coidx_content)
-                                  return ((coidx_content .~ c) x)
+                                  return ((coidx_content .~ c) x) -}
                 , _adjunct = mapMaybe (either (const Nothing) (Just. mkAdjunctCPPH1)) (_adjunct cp)
                 , _complement = mkTPPH1 (_complement cp)
                 }

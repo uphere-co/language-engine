@@ -94,7 +94,8 @@ formatCPDetail cp =
         formatSpecCP Nothing              = ("","")
         formatSpecCP (Just SpecCP_WHPHI)  = ("phi_WH","")
         formatSpecCP (Just (SpecCP_WH rng)) = ("WH",show rng) -- (formatposchunk (rootTag (current z)), show (gettoken z))
-        formatSpecCP (Just (SpecCP_Topic _)) = ("Topic","Topic")
+        formatSpecCP (Just (SpecCP_Topic (Left rng))) = ("Topic","Unresolved" ++ show rng)
+        formatSpecCP (Just (SpecCP_Topic (Right cp))) = ("Topic","CP" ++ show (cp^.maximalProjection))
         --
         (head1,head2) = fmtComplementizer (cp^.headX)
         (spec1,spec2) = formatSpecCP (cp^?specifier._Just.coidx_content)

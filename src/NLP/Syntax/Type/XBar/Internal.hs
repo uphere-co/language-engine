@@ -330,7 +330,12 @@ data Complementizer = C_PHI              -- ^ empty complementizer
 data SpecCP p
   = SpecCP_WHPHI     -- ^ empty Wh-word
   | SpecCP_WH Range  -- ^ Wh-phrase, this should be DP or PP. Later, we will change it to DP or PP.
-  | SpecCP_Topic (CoindexCompVP p)
+  | SpecCP_Topic (SpecTopicP p)  -- (CoindexCompVP p)
+
+
+type family SpecTopicP (p :: Phase) where
+  SpecTopicP 'PH0 = Either Range (CP 'PH0)
+  SpecTopicP 'PH1 = Range
 
 
     -- (Coindex (Either TraceType (Either Range (CompVP t)))) -- ^ topicalization (AdjunctCP for the time being)

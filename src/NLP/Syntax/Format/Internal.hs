@@ -144,8 +144,10 @@ formatX'Tree tr = formatBitree fmt tr
 formatSpecCP :: SPhase p -> SpecCP p -> Text
 formatSpecCP _    SpecCP_WHPHI     = "WHφ"
 formatSpecCP _    (SpecCP_WH rng)  = "WH" <> T.pack (show rng)
-formatSpecCP SPH0 (SpecCP_Topic c) = "Topic" <> formatCoindex (T.pack.show.either id (compVPToRange SPH0)) c
-formatSpecCP SPH1 (SpecCP_Topic c) = "Topic" <> formatCoindex (T.pack.show.compVPToRange SPH1) c
+formatSpecCP SPH0 (SpecCP_Topic (Right c)) = "Topic:CP" <> T.pack (show (c^.maximalProjection))
+formatSpecCP SPH0 (SpecCP_Topic (Left c)) = "Topic:Unresolved" <> T.pack (show c)
+    -- formatCoindex (T.pack.show.either id (compVPToRange SPH0)) c
+formatSpecCP SPH1 (SpecCP_Topic c) = "Topic:CP" <> T.pack (show c) -- formatCoindex (T.pack.show.compVPToRange SPH1) c
 
 
 {-

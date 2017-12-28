@@ -120,7 +120,8 @@ complementsOfVerb :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                   -> VerbProperty (Zipper t)
                   -> Zipper t
                   -> ([Coindex (Either TraceType (Either Range (CompVP 'PH0)))]
-                     ,Maybe (Coindex (Either TraceType (Either Range (CompVP 'PH0))))
+                     -- ,Maybe (Coindex (Either TraceType (Either Range (CompVP 'PH0))))
+                     ,Maybe (Coindex (SpecCP 'PH0))
                      ,[CPDPPP 'PH0]
                      )
 complementsOfVerb tagged vprop z_vp =
@@ -132,7 +133,7 @@ complementsOfVerb tagged vprop z_vp =
                                      return (comp,[]))
                              mspec' = mtop >>= \top -> do
                                         let rng_top = getRange (current top)
-                                        return (mkDefCoindex (Right (Left rng_top)))
+                                        return (mkDefCoindex (SpecCP_Topic (Left rng_top)))
                          in (map (^._1) xs',mspec',concatMap (^._2) xs')
   in case vprop^.vp_voice of
        Active -> (cs,mspec,dppps)
@@ -227,7 +228,7 @@ constructCP tagged vprop = do
         case cptag' of
           N.RT   ->
             let (cphead,cpspec) = case mtop of
-                                    Just top -> (C_PHI,Just (mkDefCoindex (SpecCP_Topic top)))
+                                    Just top -> (C_PHI,Just top) -- (mkDefCoindex (SpecCP_Topic top)))
                                     Nothing ->
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
@@ -240,7 +241,7 @@ constructCP tagged vprop = do
             in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),ppdps)
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
-                                    Just top -> (C_PHI,Just (mkDefCoindex (SpecCP_Topic top)))
+                                    Just top -> (C_PHI,Just top) --  (mkDefCoindex (SpecCP_Topic top)))
                                     Nothing ->
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
