@@ -331,20 +331,10 @@ data SpecTopicP = SpecTopicP_CP Range
 data SpecCP
   = SpecCP_WHPHI     -- ^ empty Wh-word
   | SpecCP_WH Range  -- ^ Wh-phrase, this should be DP or PP. Later, we will change it to DP or PP.
-  | SpecCP_Topic SpecTopicP  -- (CoindexCompVP p)
-
-
-
-{- 
-type family SpecTopicP (p :: Phase) where
-  SpecTopicP 'PH0 = Range -- (CP 'PH0)
-  SpecTopicP 'PH1 = Range
-
--}
+  | SpecCP_Topic SpecTopicP
 
 
     -- (Coindex (Either TraceType (Either Range (CompVP t)))) -- ^ topicalization (AdjunctCP for the time being)
-
 
 
 data AdjunctCP (p :: Phase) = AdjunctCP_CP (I 'X_C p)
