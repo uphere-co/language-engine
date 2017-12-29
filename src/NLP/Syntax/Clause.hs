@@ -356,7 +356,7 @@ rewriteX'TreeForFreeWH rng w z' = do
 
 
 
-{- 
+{-
 -- consider passive case only now for the time being.
 connectRaisedDP :: Range -> MaybeT (State (X'TreeState 'PH0)) () -- X'Zipper
 connectRaisedDP rng = do
@@ -373,6 +373,21 @@ connectRaisedDP rng = do
         w' = replaceFocusItem rf rf w
     lift (put (XTS i (toBitree w')))
 -}
+
+
+moveTopic :: (Int,CP 'PH1) -> (Int, CP 'PH1)
+moveTopic (i,cp) = fromMaybe (i,cp) $ do
+  t <- cp^?specifier._Just
+  guard (case t^.coidx_content of SpecCP_Topic _ -> True; _ -> False)
+  let t' = (coidx_i .~ Just i) t
+      rf c = case c^.coidx_content of
+               Left Moved -> c & coidx_i .~ Just i
+               _          -> c
+      cp' = cp & (specifier._Just .~ t') .  (complement.complement.complement.traverse %~ rf)
+  return (i+1,cp')
+  -- let cs = filter (\c -> c^?coidx_content._Left == Just Moved) $ cp^.complement.complement.complement
+
+
 
 movePassive :: (Int,CP 'PH1) -> (Int,CP 'PH1)
 movePassive (i,cp) = fromMaybe (i,cp) $ do
@@ -412,7 +427,7 @@ bindingWH1 x'tr = bitraverse f f x'tr
  where f x = case x^._2 of
                CPCase cp -> do
                  i <- get
-                 let (i',cp') = (moveWH . movePassive) (i,cp)
+                 let (i',cp') = (moveWH . movePassive . moveTopic) (i,cp)
                  put i'
                  (return . (_2._CPCase .~ cp')) x
                _ -> return x
@@ -430,12 +445,12 @@ resolveWH x'tr dp = fromMaybe dp $ do
     Just (Coindex (Just i) (SpecCP_WH _)) -> (return . (complement._Just.headX.coidx_i .~ Just i)) dp
     _                                     -> return dp
 
-  
+
 
 bindingWH2 :: X'Tree 'PH1 -> X'Tree 'PH1
 bindingWH2 x'tr = bimap f f x'tr
  where f x = case x^._2 of
-               DPCase dp -> 
+               DPCase dp ->
                  let dp' = resolveWH x'tr dp
                  in (_2._DPCase .~ dp') x
                _ -> x
@@ -454,8 +469,8 @@ retrieveResolved x'tr = bifoldMap f f x'tr
                                 spectp1 <- spectp^..coidx_content._Right._SpecTP_DP
                                 [(i,(CompVP_DP spectp1,spectp1))]  -- for the time being, only DP
                 _         -> []
-                               
-                               
+
+
 
 
 --   bimap f f  where f = _2._CPCase %~ whMovement1
@@ -588,7 +603,7 @@ resolveVPComp rng spec = do
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
-{- 
+{-
 resolveDP :: PreAnalysis (Lemma ': as)
           -> Range
           -> State (X'TreeState 'PH0) (Coindex (Either TraceType (Either Range (SpecTP 'PH0))))
@@ -600,7 +615,7 @@ resolveDP tagged rng = fmap (fromMaybe emptyCoindex) . runMaybeT $ do
 
 -}
 
-{- 
+{-
 --
 -- | Resolve unbound CP argument to bound CP argument.
 --
@@ -697,7 +712,7 @@ bindingSpec rng spec = do
   lift (put (XTS i (toBitree z')))
   -- return z'
 
-{- 
+{-
 -- consider passive case only now for the time being.
 connectRaisedDP :: Range -> MaybeT (State (X'TreeState 'PH0)) () -- X'Zipper
 connectRaisedDP rng = do
@@ -717,7 +732,7 @@ connectRaisedDP rng = do
 
 -- I think we should change the name of these bindingAnalysis.. functions.
 
-{- 
+{-
 --
 -- | This is the final step to bind inter-clause trace chain
 --
