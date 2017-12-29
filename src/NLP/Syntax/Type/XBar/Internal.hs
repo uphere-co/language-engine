@@ -326,16 +326,21 @@ data Complementizer = C_PHI              -- ^ empty complementizer
                     | C_WORD Lemma       -- ^ complementizer lemma
                     deriving (Show,Eq,Ord)
 
+data SpecTopicP = SpecTopicP_CP Range
 
-data SpecCP p
+data SpecCP
   = SpecCP_WHPHI     -- ^ empty Wh-word
   | SpecCP_WH Range  -- ^ Wh-phrase, this should be DP or PP. Later, we will change it to DP or PP.
-  | SpecCP_Topic (SpecTopicP p)  -- (CoindexCompVP p)
+  | SpecCP_Topic SpecTopicP  -- (CoindexCompVP p)
 
 
+
+{- 
 type family SpecTopicP (p :: Phase) where
-  SpecTopicP 'PH0 = Either Range (CP 'PH0)
+  SpecTopicP 'PH0 = Range -- (CP 'PH0)
   SpecTopicP 'PH1 = Range
+
+-}
 
 
     -- (Coindex (Either TraceType (Either Range (CompVP t)))) -- ^ topicalization (AdjunctCP for the time being)
@@ -348,7 +353,7 @@ data AdjunctCP (p :: Phase) = AdjunctCP_CP (I 'X_C p)
 
 mkCP :: Complementizer
      -> Range
-     -> Maybe (Coindex (SpecCP 'PH0))
+     -> Maybe (Coindex SpecCP)
      -> [Either Range (AdjunctCP 'PH0)]
      -> TP 'PH0
      -> CP 'PH0
@@ -413,8 +418,8 @@ type family Specifier  (p :: Phase) (x :: XType) where
   Specifier  _    'X_V = ()
   Specifier  'PH0 'X_T = Coindex (Either TraceType (Either Range (SpecTP 'PH0)))
   Specifier  'PH1 'X_T = Coindex (Either TraceType (SpecTP 'PH1))
-  Specifier  'PH0 'X_C = Maybe (Coindex (SpecCP 'PH0))
-  Specifier  'PH1 'X_C = Maybe (Coindex (SpecCP 'PH1))
+  Specifier  _    'X_C = Maybe (Coindex SpecCP)
+  -- Specifier  'PH1 'X_C = Maybe (Coindex (SpecCP 'PH1))
 
 
 type family Adjunct    (p :: Phase) (x :: XType) where

@@ -141,13 +141,13 @@ formatX'Tree tr = formatBitree fmt tr
 
 
 
-formatSpecCP :: SPhase p -> SpecCP p -> Text
-formatSpecCP _    SpecCP_WHPHI     = "WHφ"
-formatSpecCP _    (SpecCP_WH rng)  = "WH" <> T.pack (show rng)
-formatSpecCP SPH0 (SpecCP_Topic (Right c)) = "Topic:CP" <> T.pack (show (c^.maximalProjection))
-formatSpecCP SPH0 (SpecCP_Topic (Left c)) = "Topic:Unresolved" <> T.pack (show c)
+formatSpecCP :: SpecCP -> Text
+formatSpecCP SpecCP_WHPHI     = "WHφ"
+formatSpecCP (SpecCP_WH rng)  = "WH" <> T.pack (show rng)
+formatSpecCP (SpecCP_Topic (SpecTopicP_CP rng)) = "Topic:CP" <> T.pack (show rng) -- (c^.maximalProjection)
+--formatSpecCP (SpecCP_Topic (Left c)) = "Topic:Unresolved" <> T.pack (show c)
     -- formatCoindex (T.pack.show.either id (compVPToRange SPH0)) c
-formatSpecCP SPH1 (SpecCP_Topic c) = "Topic:CP" <> T.pack (show c) -- formatCoindex (T.pack.show.compVPToRange SPH1) c
+-- formatSpecCP (SpecCP_Topic c) = "Topic:CP" <> T.pack (show c) -- formatCoindex (T.pack.show.compVPToRange SPH1) c
 
 
 {-
@@ -163,9 +163,7 @@ formatCP p cp =
   in "CP" <> showRange rng <>
      "[C:" <> formatComplementizer (cp^.headX) <>
      " spec: " <>
-     (case p of
-        SPH0 -> maybe "" (formatCoindexOnly (formatSpecCP p)) (cp^.specifier)
-        SPH1 -> maybe "" (formatCoindexOnly (formatSpecCP p)) (cp^.specifier))  <>
+     maybe "" (formatCoindexOnly formatSpecCP) (cp^.specifier) <>
      " (TP: spec:" <>
      (case p of
         SPH0 -> formatCoindex (either (T.pack.show) (formatSpecTP p)) (cp^.complement.specifier)

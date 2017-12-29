@@ -188,11 +188,14 @@ mkCompVPPH1 (CompVP_PP pp) = CompVP_PP (pp^.maximalProjection) -- (mkPPPH1 pp)
 mkCompVPPH1 (CompVP_AP ap) = CompVP_AP (ap^.maximalProjection) -- (mkAPPH1 ap)
 
 
+{- 
 mkSpecCPPH1 :: SpecCP 'PH0 -> Maybe (SpecCP 'PH1)
 mkSpecCPPH1 SpecCP_WHPHI      = Just SpecCP_WHPHI
 mkSpecCPPH1 (SpecCP_WH rng)   = Just (SpecCP_WH rng)
 mkSpecCPPH1 (SpecCP_Topic (Left rng)) = Nothing -- (cp^.maximalProjection)
 mkSpecCPPH1 (SpecCP_Topic (Right cp)) = Just (SpecCP_Topic (cp^.maximalProjection))
+-}
+
 
 {-
                                case t^.coidx_content of
@@ -243,9 +246,9 @@ mkPPPH1 pp = XP { _headX = _headX pp
 mkCPPH1 :: CP 'PH0 -> CP 'PH1
 mkCPPH1 cp = XP { _headX = _headX cp
                 , _maximalProjection = _maximalProjection cp
-                , _specifier = do x <- _specifier cp
+                , _specifier = _specifier cp {- do x <- _specifier cp
                                   s <- x^.coidx_content.to mkSpecCPPH1
-                                  (return . (coidx_content .~ s)) x
+                                  (return . (coidx_content .~ s)) x -}
                   {-
                     fmap (fmap mkSpecCPPH1) (_specifier cp) -}
                   {- do 

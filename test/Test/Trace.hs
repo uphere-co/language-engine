@@ -254,22 +254,22 @@ showDetail (txt,_,_,lma,pt,tagged,synsets) = mapM_ T.IO.putStrLn (formatDetail (
 
 
 testcases :: [TestTrace]
-testcases = [ {- test_silent_pronoun_1
+testcases = [ test_silent_pronoun_1
             , test_silent_pronoun_2
             , test_multi_silent_pronoun
-            , -} test_relative_pronoun_subject
+            , test_relative_pronoun_subject
             , test_relative_pronoun_object
             , test_reduced_relative_clause
             , test_passive
             , test_passive_raising
-            {- , test_ECM
+            , test_ECM
             , test_nonrestrictive_relative_clause
             , test_free_relative_clause_subject_1
             , test_free_relative_clause_subject_2
             , test_free_relative_clause_object_1
             , test_free_relative_clause_object_2
             , test_topicalization_move
-            , test_that_clause -}
+            , test_that_clause
             ]
 
 
