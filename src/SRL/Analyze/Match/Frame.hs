@@ -131,7 +131,7 @@ matchObjects x'tr rolemap verbp patt = do
     matchNormalObjects compvps <|> matchAdj compvps
   where
     matchNormalObjects compvps = do
-      (garg,obj) <- zip [GA1,GA2] (filter (\case CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False) compvps) -- (verbp^..complement.traverse.trResolved._Just))
+      (garg,obj) <- zip [GA1,GA2] (filter (\case CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False) compvps)
       (p,a) <- maybeToList (pbArgForGArg garg patt)
       case obj of
         CompVP_CP rng_cp -> do
@@ -157,7 +157,6 @@ matchPP x'tr cp (mprep,mpclass,mising) = do
     let compvps = do
           c <- cp^.complement.complement.complement
           maybeToList (resolvedCompVP resmap c)
-        -- compvps = cp^..complement.complement.complement.traverse.trResolved._Just
         pps_adj = do
           rng_pp <- cp^..complement.complement.adjunct.traverse._AdjunctVP_PP
           maybeToList (extractZipperById rng_pp x'tr >>= \w -> currentCPDPPP w ^? _PPCase)
@@ -192,9 +191,8 @@ matchPrepArgs :: X'Tree 'PH1
 matchPrepArgs x'tr rolemap cp patt felst = do
   (p,(prep,mising)) <- pbArgForPP patt
   role <- FNFrameElement <$> maybeToList (lookup p rolemap)
-
   pp <- maybeToList (matchPP x'tr cp (Just prep,Nothing,mising))
-  let rng_pp = pp^.maximalProjection -- compVPToRange SPH1 comp
+  let rng_pp = pp^.maximalProjection
       comp_pp = CompVP_PP rng_pp
   guard (is _Nothing (find (\x -> x^?_2.to (compVPToRange SPH1) == Just rng_pp) felst))
   return (role, comp_pp)
@@ -305,7 +303,6 @@ matchPPObjectRange x'tr felst rng =
     rng1 <- x^?_2._CompVP_PP
     pp1 <- extractZipperById rng1 x'tr >>= \w -> currentCPDPPP w ^? _PPCase
     let rng'  = pp1^.complement.to (compPPToRange SPH1)
-    --     rng'' = pp^.complement.to (compPPToRange SPH1)
     return (rng' == rng)
 
 

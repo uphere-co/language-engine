@@ -60,7 +60,7 @@ definiteCorefResolution x'tr tagged dp = do
          then return (rng_dp,rng_dp'')
          else mzero)
    <|>
-   (do rng_cp'' <- cp'^?specifier._Just.coidx_content._SpecCP_Topic -- .trResolved._Just._CompVP_CP
+   (do rng_cp'' <- cp'^?specifier._Just.coidx_content._SpecCP_Topic._SpecTopicP_CP -- .trResolved._Just._CompVP_CP
        cp'' <- cpdpppFromX'Tree x'tr rng_cp'' _CPCase
        rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
        dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
@@ -121,7 +121,7 @@ pronounResolution x'tr dp = do
          nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
          match (rng_pro,prnclass) (nclass,rng_dp''))
      <|>
-     (do rng_cp'' <- cp'^?specifier._Just.coidx_content._SpecCP_Topic
+     (do rng_cp'' <- cp'^?specifier._Just.coidx_content._SpecCP_Topic._SpecTopicP_CP
          cp'' <- cpdpppFromX'Tree x'tr rng_cp'' _CPCase
          rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
          dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
