@@ -48,7 +48,7 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),MarkType(..),Pha
                                           ,mkPP,mkPPGerund,hp_prep
                                           ,identifyArticle
                                           ,identifyPronounPerson
-                                          ,pennTree,tagList)
+                                          ,pennTreeAnn,tagList)
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs,intLemma
                                           ,rootTag)
 --
@@ -88,7 +88,7 @@ splitDP1 tagged (DPTree dp0 lst0) = do
   let (b0,_) = dp0^.maximalProjection
   (_,e0) <- dp0^?complement._Just.headX.coidx_content.hn_range
   let rng0 = (b0,e0)
-  z <- find (isChunkAs NP . current) (extractZipperByRange rng0 (tagged^.pennTree))
+  z <- find (isChunkAs NP . current) (extractZipperByRange rng0 (tagged^.pennTreeAnn))
   z_last <- childLast z
   tag <- (rootTag (current z_last))^?_Left
   case tag of
@@ -127,7 +127,7 @@ identifyClausalModifier tagged dp0 = do
       rng0 = (b0,e0')
       rf = getRange . current
 
-  z <- find (isChunkAs NP . current) (extractZipperByRange rng0 (tagged^.pennTree))
+  z <- find (isChunkAs NP . current) (extractZipperByRange rng0 (tagged^.pennTreeAnn))
   ((do dp <- child1 z
        guard (isChunkAs NP (current dp))
        sbar <- next dp
@@ -234,7 +234,7 @@ checkProperNoun tagged (b,e) =
 identifyDeterminer :: PreAnalysis (Lemma ': as) -> DetP 'PH0 -> DetP 'PH0
 identifyDeterminer tagged dp = fromMaybe dp $ do
     let rng = dp^.maximalProjection
-    let zs = extractZipperByRange rng (tagged^.pennTree)
+    let zs = extractZipperByRange rng (tagged^.pennTreeAnn)
     (singleword zs <|> multiword zs)
 
   where
@@ -283,7 +283,7 @@ identifyDeterminer tagged dp = fromMaybe dp $ do
 bareNounModifier :: PreAnalysis t -> DetP 'PH0 -> DetP 'PH0
 bareNounModifier tagged dp = fromMaybe dp $ do
   rng@(b0,_e0) <- headRangeDP dp  -- dp^.maximalProjection
-  z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTree))
+  z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTreeAnn))
   -- check entity for the last words
   let f (xb,xe) (yb,ye) = xe == ye && xb < yb && checkProperNoun tagged (yb,ye)
   TagPos (b1'',e1'',_t)

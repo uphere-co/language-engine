@@ -7,7 +7,6 @@ module NLP.Syntax.Format.Internal where
 
 import           Control.Lens                       ((^.),(^..),(^?),_Just,_Right,to)
 import           Data.Bifunctor                     (bimap)
--- import           Data.Foldable                      (toList)
 import           Data.Maybe                         (fromMaybe)
 import           Data.Monoid                        ((<>))
 import           Data.Text                          (Text)
@@ -15,7 +14,6 @@ import qualified Data.Text                     as T
 import           Text.Printf                        (printf)
 --
 import           Data.Bitree
--- import           Data.BitreeZipper                  (current)
 import           Data.ListZipper                    (ListZipper(LZ))
 import           Data.Range                         (Range)
 import           NLP.Type.PennTreebankII            (Lemma(..))
@@ -31,12 +29,10 @@ showRange rng = T.pack (printf "%-7s" (show rng))
 formatBitree :: (a -> Text) ->  Bitree a a -> Text
 formatBitree fmt tr = linePrint fmt (toTree (bimap id id tr))
 
+
 formatSpecTP :: SPhase p -> SpecTP p -> Text
 formatSpecTP SPH0 (SpecTP_DP x) = "DP" <> x^.maximalProjection.to (T.pack . show)
 formatSpecTP SPH1 (SpecTP_DP x) = "DP" <> (T.pack . show) x
--- formatSpecTP (SpecTP_DP x) = "DP" <> x^.maximalProjection.to (T.pack . show)
-
-
 
 
 formatComplementizer :: Complementizer -> Text
@@ -46,7 +42,7 @@ formatComplementizer (C_WORD w) = unLemma w
 
 formatCompDP :: CompDP -> Text
 formatCompDP (CompDP_CP cp) = "CP" <> T.pack (show cp)
-formatCompDP (CompDP_PP pp) = "PP" <> T.pack (show pp) -- formatPP pp
+formatCompDP (CompDP_PP pp) = "PP" <> T.pack (show pp)
 
 
 
@@ -74,7 +70,7 @@ formatNP :: NounP p -> Text
 formatNP np = np^.maximalProjection.to show.to T.pack <>
               np^.headX.coidx_content.hn_range.to show.to T.pack <>
               np^.headX.coidx_i.to (maybe "" (\i -> "_" <> T.pack (show i))) --  <>
-              -- fromMaybe "" (np^?complement._Just.to compDPToRange.to show.to T.pack)
+
 
 
 formatAP :: AP p -> Text
@@ -83,7 +79,7 @@ formatAP ap = "AP" <> (ap^.maximalProjection.to show.to T.pack)
 
 formatCompVP :: SPhase p -> CompVP p -> Text
 formatCompVP SPH0 (CompVP_CP cp) = "CP" <> cp^.headX.to formatComplementizer <> cp^.maximalProjection.to show.to T.pack
-formatCompVP SPH0 (CompVP_DP dp) = "DP" <> T.pack (show (dp^.maximalProjection)) --  formatDP dp
+formatCompVP SPH0 (CompVP_DP dp) = "DP" <> T.pack (show (dp^.maximalProjection))
 formatCompVP SPH0 (CompVP_PP pp) = formatPP pp
 formatCompVP SPH0 (CompVP_AP ap) = formatAP ap
 formatCompVP SPH1 (CompVP_CP cp) = "CP" <> T.pack (show cp)
@@ -92,8 +88,12 @@ formatCompVP SPH1 (CompVP_PP pp) = "PP" <> T.pack (show pp)
 formatCompVP SPH1 (CompVP_AP ap) = "AP" <> T.pack (show ap)
 
 
+
+formatCoindexOnly :: (a -> Text) -> Coindex a -> Text
+formatCoindexOnly f (Coindex mi e) = f e <> maybe "" (\i -> "_" <> T.pack (show i)) mi
+
 formatCoindex :: (a -> Text) -> Coindex (Either TraceType a) -> Text
-formatCoindex f (Coindex mi e) = either fmt f e <> maybe "" (\i -> "_" <> T.pack (show i)) mi
+formatCoindex f x@(Coindex mi e) = formatCoindexOnly (either fmt f) x
   where
     fmt NULL  = "NUL"
     fmt PRO   = "PRO"
@@ -141,11 +141,13 @@ formatX'Tree tr = formatBitree fmt tr
 
 
 
-formatSpecCP :: SPhase p -> SpecCP p -> Text
-formatSpecCP _    SpecCP_WHPHI     = "WHφ"
-formatSpecCP _    (SpecCP_WH rng)  = "WH" <> T.pack (show rng)
-formatSpecCP SPH0 (SpecCP_Topic c) = "Topic" <> formatCoindex (T.pack.show.either id (compVPToRange SPH0)) c
-formatSpecCP SPH1 (SpecCP_Topic c) = "Topic" <> formatCoindex (T.pack.show.compVPToRange SPH1) c
+formatSpecCP :: SpecCP -> Text
+formatSpecCP SpecCP_WHPHI     = "WHφ"
+formatSpecCP (SpecCP_WH rng)  = "WH" <> T.pack (show rng)
+formatSpecCP (SpecCP_Topic (SpecTopicP_CP rng)) = "Topic:CP" <> T.pack (show rng) -- (c^.maximalProjection)
+--formatSpecCP (SpecCP_Topic (Left c)) = "Topic:Unresolved" <> T.pack (show c)
+    -- formatCoindex (T.pack.show.either id (compVPToRange SPH0)) c
+-- formatSpecCP (SpecCP_Topic c) = "Topic:CP" <> T.pack (show c) -- formatCoindex (T.pack.show.compVPToRange SPH1) c
 
 
 {-
@@ -161,17 +163,15 @@ formatCP p cp =
   in "CP" <> showRange rng <>
      "[C:" <> formatComplementizer (cp^.headX) <>
      " spec: " <>
-     (case p of
-        SPH0 -> maybe "" (formatSpecCP p) (cp^.specifier)
-        SPH1 -> maybe "" (formatSpecCP p) (cp^.specifier))  <>
+     maybe "" (formatCoindexOnly formatSpecCP) (cp^.specifier) <>
      " (TP: spec:" <>
      (case p of
         SPH0 -> formatCoindex (either (T.pack.show) (formatSpecTP p)) (cp^.complement.specifier)
         SPH1 -> formatCoindex (formatSpecTP p) (cp^.complement.specifier)) <>
      " (VP: comp:" <>
      (case p of
-        SPH0 -> T.intercalate "," (cp^..complement.complement.complement.traverse.coidx_content._Right.to (either (T.pack.show) (formatCompVP SPH0)))
-        SPH1 -> T.intercalate "," (cp^..complement.complement.complement.traverse.coidx_content._Right.to (formatCompVP SPH1))) <>
+        SPH0 -> T.intercalate "," (cp^..complement.complement.complement.traverse.to (formatCoindex (either (T.pack.show) (formatCompVP SPH0))))
+        SPH1 -> T.intercalate "," (cp^..complement.complement.complement.traverse.to (formatCoindex (formatCompVP SPH1)))) <>
      "))]"
 
 {-

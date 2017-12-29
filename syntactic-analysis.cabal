@@ -18,15 +18,12 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:
-                       -- NLP.Syntax.Argument
+                       NLP.Syntax
                        NLP.Syntax.Clause
-                       -- NLP.Syntax.Clause.Old
                        NLP.Syntax.Format
-                       -- NLP.Syntax.Format.Old
                        NLP.Syntax.Format.Internal
                        NLP.Syntax.Noun
                        NLP.Syntax.Preposition
-                       -- NLP.Syntax.Type
                        NLP.Syntax.Type.PreAnalysis
                        NLP.Syntax.Type.Verb
                        NLP.Syntax.Type.XBar
@@ -74,6 +71,7 @@ test-suite test-syntax-property
                      , containers
                      , lens
                      , text
+                     , transformers
                      --
                      , HWordNet
                      , nlp-types

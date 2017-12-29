@@ -47,6 +47,8 @@ makePrisms ''Complementizer
 
 makePrisms ''SpecCP
 
+makePrisms ''SpecTopicP
+
 makePrisms ''AdjunctCP
 
 makePrisms ''CPDPPP

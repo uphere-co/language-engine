@@ -21,6 +21,7 @@ import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put,modify')
 import           Data.Attribute                         (ahead)
+import           Data.Bifoldable                        (bifoldMap)
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Foldable                          (toList)
 import           Data.Function                          (on)
@@ -119,7 +120,8 @@ complementsOfVerb :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
                   -> VerbProperty (Zipper t)
                   -> Zipper t
                   -> ([Coindex (Either TraceType (Either Range (CompVP 'PH0)))]
-                     ,Maybe (Coindex (Either TraceType (Either Range (CompVP 'PH0))))
+                     -- ,Maybe (Coindex (Either TraceType (Either Range (CompVP 'PH0))))
+                     ,Maybe (Coindex SpecCP)
                      ,[CPDPPP 'PH0]
                      )
 complementsOfVerb tagged vprop z_vp =
@@ -131,7 +133,7 @@ complementsOfVerb tagged vprop z_vp =
                                      return (comp,[]))
                              mspec' = mtop >>= \top -> do
                                         let rng_top = getRange (current top)
-                                        return (mkDefCoindex (Right (Left rng_top)))
+                                        return (mkDefCoindex (SpecCP_Topic (SpecTopicP_CP rng_top)))
                          in (map (^._1) xs',mspec',concatMap (^._2) xs')
   in case vprop^.vp_voice of
        Active -> (cs,mspec,dppps)
@@ -226,12 +228,12 @@ constructCP tagged vprop = do
         case cptag' of
           N.RT   ->
             let (cphead,cpspec) = case mtop of
-                                    Just top -> (C_PHI,Just (SpecCP_Topic top))
+                                    Just top -> (C_PHI,Just top) -- (mkDefCoindex (SpecCP_Topic top)))
                                     Nothing ->
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
-                                                  then (C_PHI,Just (SpecCP_WH (getRange (current z))))
+                                                  then (C_PHI,Just (mkDefCoindex (SpecCP_WH (getRange (current z)))))
                                                   else let cmpmntzr = case (listToMaybe . map (ahead . getAnnot . snd) . toList . current) z of
                                                                         Nothing -> C_PHI
                                                                         Just c -> C_WORD c
@@ -239,12 +241,12 @@ constructCP tagged vprop = do
             in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),ppdps)
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
-                                    Just top -> (C_PHI,Just (SpecCP_Topic top))
+                                    Just top -> (C_PHI,Just top) --  (mkDefCoindex (SpecCP_Topic top)))
                                     Nothing ->
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
                                         Just z -> if (isChunkAs WHNP (current z))
-                                                  then (C_PHI,Just (SpecCP_WH (getRange (current z))))
+                                                  then (C_PHI,Just (mkDefCoindex (SpecCP_WH (getRange (current z)))))
                                                   else let cmpmntzr = case (listToMaybe . map (ahead . getAnnot . snd) . toList . current) z of
                                                                         Nothing -> C_PHI
                                                                         Just c -> C_WORD c
@@ -259,7 +261,7 @@ constructCP tagged vprop = do
             adjs  = allAdjunctCPOfVerb vprop
             verbp = mkVerbP rng_vp (simplifyVProp vprop) [] comps
             nullsubj = mkDefCoindex (Left NULL)
-        in return (mkCP C_PHI rng_vp (Just SpecCP_WHPHI) adjs (mkTP rng_vp nullsubj verbp), ppdps)
+        in return (mkCP C_PHI rng_vp (Just (mkDefCoindex SpecCP_WHPHI)) adjs (mkTP rng_vp nullsubj verbp), ppdps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -288,8 +290,7 @@ identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull toful
 
 
 
-currentCPDPPP :: X'Zipper 'PH0
-              -> CPDPPP 'PH0
+currentCPDPPP :: X'Zipper p -> CPDPPP p
 currentCPDPPP = snd . getRoot1 . current
 
 
@@ -353,6 +354,132 @@ rewriteX'TreeForFreeWH rng w z' = do
       rf = _2._CPCase.complement.complement.complement .~ comps'
   return (replaceFocusItem rf rf w_dom)
 
+
+
+{-
+-- consider passive case only now for the time being.
+connectRaisedDP :: Range -> MaybeT (State (X'TreeState 'PH0)) () -- X'Zipper
+connectRaisedDP rng = do
+  i <- (^.xts_nextIndex) <$> lift get
+  (w,cp) <- retrieveWCP rng
+  guard (cp ^. complement.complement.headX.vp_voice == Passive)
+  c1:c2:[] <- return (cp^.complement.complement.complement)
+  rng1 <- hoistMaybe (c1^?coidx_content._Right._Right._CompVP_DP.maximalProjection)
+  cp' <- hoistMaybe (c2^?coidx_content._Right._Right._CompVP_CP)
+  rng_dp <- hoistMaybe (cp'^?complement.specifier.coidx_content._Right._Right._SpecTP_DP.maximalProjection)
+  when (rng1 == rng_dp) $ do
+    let rf = (_2._CPCase.complement.specifier .~ emptyCoindex)
+           . (_2._CPCase.complement.complement.complement .~ [c2])
+        w' = replaceFocusItem rf rf w
+    lift (put (XTS i (toBitree w')))
+-}
+
+
+moveTopic :: (Int,CP 'PH1) -> (Int, CP 'PH1)
+moveTopic (i,cp) = fromMaybe (i,cp) $ do
+  t <- cp^?specifier._Just
+  guard (case t^.coidx_content of SpecCP_Topic _ -> True; _ -> False)
+  let t' = (coidx_i .~ Just i) t
+      rf c = case c^.coidx_content of
+               Left Moved -> c & coidx_i .~ Just i
+               _          -> c
+      cp' = cp & (specifier._Just .~ t') .  (complement.complement.complement.traverse %~ rf)
+  return (i+1,cp')
+  -- let cs = filter (\c -> c^?coidx_content._Left == Just Moved) $ cp^.complement.complement.complement
+
+
+
+movePassive :: (Int,CP 'PH1) -> (Int,CP 'PH1)
+movePassive (i,cp) = fromMaybe (i,cp) $ do
+  guard (cp^.complement.complement.headX.vp_voice == Passive)
+  c:cs <- return (cp^.complement.complement.complement)
+  let c' = (coidx_i .~ Just i) c
+      cp'= cp & (complement.complement.complement .~ c':cs)
+              . (complement.specifier.coidx_i .~ Just i)
+  return (i+1,cp')
+
+
+moveWH :: (Int,CP 'PH1) -> (Int,CP 'PH1)
+moveWH (i,cp) = fromMaybe (i,cp) $ do
+  let spec_cp = cp^.specifier
+      spec_tp = cp^.complement.specifier
+  guard $ fromMaybe False $
+    spec_cp^?_Just.coidx_content >>= \case SpecCP_WHPHI -> return True
+                                           SpecCP_WH _  -> return True
+                                           _            -> return False
+  case spec_tp^.coidx_content of
+    Left NULL -> -- subject case
+                 let mj = spec_tp^.coidx_i
+                     i' = maybe (i+1) (const i) mj
+                     j = fromMaybe i mj
+                     cp' = cp & (complement.specifier .~ mkCoindex j (Left Moved))
+                              . (specifier._Just.coidx_i .~ Just j)
+                 in return (i',cp')
+    Left _    -> return (i,cp)
+    Right _   -> -- object case
+                 let cp' = cp & (complement.complement.complement %~ (mkCoindex i (Left Moved):))
+                              . (specifier._Just.coidx_i .~ Just i)
+                 in return (i+1,cp')
+
+
+bindingWH1 :: (X'Tree 'PH1) -> State Int (X'Tree 'PH1) -- X'Tree 'PH1 -> X'Tree 'PH1
+bindingWH1 x'tr = bitraverse f f x'tr
+ where f x = case x^._2 of
+               CPCase cp -> do
+                 i <- get
+                 let (i',cp') = (moveWH . movePassive . moveTopic) (i,cp)
+                 put i'
+                 (return . (_2._CPCase .~ cp')) x
+               _ -> return x
+
+
+
+resolveWH :: X'Tree 'PH1 -> DetP 'PH1 -> DetP 'PH1
+resolveWH x'tr dp = fromMaybe dp $ do
+  np <- dp^.complement
+  CompDP_CP rng_cp <- np^.complement
+  w <- extractZipperById rng_cp x'tr
+  cp <- currentCPDPPP w ^? _CPCase
+  case cp^.specifier of
+    Just (Coindex (Just i) SpecCP_WHPHI ) -> (return . (complement._Just.headX.coidx_i .~ Just i)) dp
+    Just (Coindex (Just i) (SpecCP_WH _)) -> (return . (complement._Just.headX.coidx_i .~ Just i)) dp
+    _                                     -> return dp
+
+
+
+bindingWH2 :: X'Tree 'PH1 -> X'Tree 'PH1
+bindingWH2 x'tr = bimap f f x'tr
+ where f x = case x^._2 of
+               DPCase dp ->
+                 let dp' = resolveWH x'tr dp
+                 in (_2._DPCase .~ dp') x
+               _ -> x
+
+
+retrieveResolved :: X'Tree 'PH1 -> [(Int,(CompVP 'PH1,Range))]
+retrieveResolved x'tr = bifoldMap f f x'tr
+  where f x = case x^._2 of
+                DPCase dp -> do hn <- dp^..complement._Just.headX
+                                i <- hn^..coidx_i._Just
+                                [(i,(CompVP_DP (dp^.maximalProjection),hn^.coidx_content.hn_range))]
+                CPCase cp -> let lst1 = do spectp <- cp^..complement.specifier
+                                           i <- spectp^..coidx_i._Just
+                                           spectp1 <- spectp^..coidx_content._Right._SpecTP_DP
+                                           [(i,(CompVP_DP spectp1,spectp1))]  -- for the time being, only DP
+                                 lst2 = do speccp <- cp^..specifier._Just
+                                           guard (case speccp^.coidx_content of SpecCP_Topic _ -> True; _ -> False)
+                                           i <- speccp^..coidx_i._Just
+                                           rng_cp <- speccp^..coidx_content._SpecCP_Topic._SpecTopicP_CP
+                                           [(i,(CompVP_CP rng_cp,rng_cp))]
+                             in lst1 ++ lst2
+                _         -> []
+
+
+
+
+--   bimap f f  where f = _2._CPCase %~ whMovement1
+
+{-
 
 whMovement :: PreAnalysis (Lemma ': as)
            -> (X'Zipper 'PH0,CP 'PH0)
@@ -422,7 +549,7 @@ whMovement tagged (w,cp) = do
       return spec
 
 
-
+-}
 
 
 resolvePRO :: PreAnalysis (Lemma ': as)
@@ -480,6 +607,7 @@ resolveVPComp rng spec = do
 --   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
 --   of TP of which is marked as silent pronoun.
 --
+{-
 resolveDP :: PreAnalysis (Lemma ': as)
           -> Range
           -> State (X'TreeState 'PH0) (Coindex (Either TraceType (Either Range (SpecTP 'PH0))))
@@ -489,6 +617,9 @@ resolveDP tagged rng = fmap (fromMaybe emptyCoindex) . runMaybeT $ do
     then resolveVPComp rng =<< lift (whMovement tagged (w,cp))
     else resolveVPComp rng =<< resolvePRO tagged (w,cp)
 
+-}
+
+{-
 --
 -- | Resolve unbound CP argument to bound CP argument.
 --
@@ -571,7 +702,7 @@ resolveCP = rewriteTree action
                 (return x))
       let rf = _2._CPCase.adjunct .~ xs'
       putAndReturn (replaceFocusItem rf rf z)
-
+-}
 
 
 bindingSpec :: Range
@@ -585,7 +716,7 @@ bindingSpec rng spec = do
   lift (put (XTS i (toBitree z')))
   -- return z'
 
-
+{-
 -- consider passive case only now for the time being.
 connectRaisedDP :: Range -> MaybeT (State (X'TreeState 'PH0)) () -- X'Zipper
 connectRaisedDP rng = do
@@ -601,23 +732,25 @@ connectRaisedDP rng = do
            . (_2._CPCase.complement.complement.complement .~ [c2])
         w' = replaceFocusItem rf rf w
     lift (put (XTS i (toBitree w')))
-
+-}
 
 -- I think we should change the name of these bindingAnalysis.. functions.
 
+{-
 --
 -- | This is the final step to bind inter-clause trace chain
 --
 bindingAnalysis :: PreAnalysis (Lemma ': as) -> X'TreeState 'PH0 -> X'TreeState 'PH0
 bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= bindingSpec rng
+-}
 
-
+{-
 --
 -- |
 --
 bindingAnalysisRaising :: X'TreeState 'PH0 -> X'TreeState 'PH0
 bindingAnalysisRaising = rewriteTree (\rng -> connectRaisedDP rng <|> return ())
-
+-}
 
 --
 -- | This is a generic tree-rewriting operation.

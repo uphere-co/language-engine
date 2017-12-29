@@ -21,7 +21,7 @@ import           NLP.Syntax.Util         (beginEndToRange,isChunkAs)
 import           NLP.Syntax.Type.XBar    (DetP,CompVP(..)
                                          ,Prep(..),PrepClass(..),PP,_CompPP_DP
                                          ,MarkType(..),Phase(..)
-                                         ,PreAnalysis(..),pennTree,tagList
+                                         ,PreAnalysis(..),pennTreeAnn,tagList
                                          ,complement,headX,maximalProjection
                                          ,mkPP,hp_prep,hp_pclass)
 
@@ -29,7 +29,7 @@ import           NLP.Syntax.Type.XBar    (DetP,CompVP(..)
 hasEmptyPreposition :: PreAnalysis t -> Range -> Bool
 hasEmptyPreposition tagged rng =
   fromMaybe False $ do
-    z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTree))
+    z <- find (isChunkAs NP . current) (extractZipperByRange rng (tagged^.pennTreeAnn))
     case parent z of
       Nothing -> return True
       Just z' -> do

@@ -4,7 +4,9 @@
 
 module Test.Trace where
 
+import           Control.Arrow                     (first)
 import           Control.Lens               hiding (levels)
+import           Control.Monad.Trans.State         (evalState)
 import           Data.Foldable
 import           Data.Maybe                        (fromMaybe)
 import           Data.Monoid                       (First(..))
@@ -19,6 +21,7 @@ import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos
 import           WordNet.Type.Lexicographer        (LexicographerFile)
 --
+import           NLP.Syntax                        (syntacticAnalysis)
 import           NLP.Syntax.Clause
 -- import           NLP.Syntax.Type
 import           NLP.Syntax.Type.Verb
@@ -274,22 +277,24 @@ testcases = [ test_silent_pronoun_1
 checkTrace :: TestTrace -> Bool
 checkTrace c =
   fromMaybe False $ do
-    let tagged = mkPreAnalysis (c^._4) (c^._5) (c^._6) (c^._7)
+    let pre = mkPreAnalysis (c^._4) (c^._5) (c^._6) (c^._7)
         vps = mkVPS (c^._4) (c^._5)
-        x'trs0 = identifyCPHierarchy tagged vps
-        x'trs1 = map ((^.xts_tree) {- . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged -} . XTS 0) x'trs0
+        -- x'trs0 = identifyCPHierarchy tagged vps
+        x'trs = syntacticAnalysis pre -- map (bindingWH2 . (\tr -> evalState (bindingWH1 tr) 0) . mkX'TreePH1) x'trs0
+        
+        -- x'trs1 = map ((^.xts_tree) {- . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged -} . XTS 0) x'trs0
         -- trace "checktrace1" $ return ()
-        testX'tr = map mkX'TreePH1 x'trs0
+        -- testX'tr = map (bindingWH1 . mkX'TreePH1) x'trs0
 
 
     -- trace (show testX'tr) $ return ()
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
     -- trace "checktrace2" $ return ()
-    cp0 <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
+    cp0 <- (^._1) <$> constructCP pre vp   -- seems very inefficient. but mcpstr can have memoized one.
                                              -- anyway need to be rewritten.
     -- trace "checktrace3" $ return ()
 
-    cp <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'trs1)
+    cp <- (^? _CPCase) . currentCPDPPP =<< (getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'trs
     -- trace ("checktrace4" ++ (formatCP cp)) $ return ()
 
     case c^._3._1 of

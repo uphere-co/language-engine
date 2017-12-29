@@ -115,4 +115,4 @@ mkPreAnalysis :: [(Int,(Lemma,Text))] -> PennTree -> [TagPos TokIdx MarkType] ->
 mkPreAnalysis lma pt taglst synsets =
   let lmap1 = IM.fromList (map (_2 %~ (^._1)) lma)
       lemmapt = mkBitreeICP lmap1 pt
-  in PreAnalysis lemmapt lma synsets taglst
+  in PreAnalysis pt lemmapt lma synsets taglst

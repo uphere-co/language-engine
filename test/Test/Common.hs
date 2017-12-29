@@ -3,7 +3,9 @@
 
 module Test.Common where
 
+import           Control.Arrow                   (first,second)
 import           Control.Lens                    ((^.))
+import           Control.Monad.Trans.State       (evalState,runState)
 import           Data.Foldable                   (toList)
 import qualified Data.IntMap             as IM
 import           Data.Monoid                     ((<>))
@@ -15,6 +17,7 @@ import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos
 import           WordNet.Type.Lexicographer      (LexicographerFile)
 --
+import           NLP.Syntax                      (syntacticAnalysis)
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
 import           NLP.Syntax.Verb
@@ -32,14 +35,22 @@ mkVPS lmatknlst pt =
 
 
 
+formatX'TreeAndResolution x'tr =
+  -- let lst = take n [0..]
+  formatX'Tree1 x'tr <> "\n" <> T.pack (show (retrieveResolved x'tr))
+
+
 
 formatDetail :: (Text,[(Int,(Lemma,Text))],PennTree,[TagPos TokIdx MarkType],[(Int,LexicographerFile)]) -> [Text]
 formatDetail (_txt,lma,pt,taglst,synsets) =
   let pre = mkPreAnalysis lma pt taglst synsets
+      x'trs = syntacticAnalysis pre
+
       vps  = mkVPS lma pt
       x'trs0 = identifyCPHierarchy pre vps
-      x'trs1 = map ((^.xts_tree) . {- bindingAnalysisRaising . -} bindingAnalysis pre . resolveCP . (XTS 0)) x'trs0
-      testX'trs = map mkX'TreePH1 x'trs0
+      -- x'trs1 = map ((^.xts_tree) . {- bindingAnalysisRaising . bindingAnalysis pre . resolveCP  . -} (XTS 0)) x'trs0
+      -- testX'trs0 = map mkX'TreePH1 x'trs0
+      -- x'trs = map (bindingWH2 . (\tr -> evalState (bindingWH1 tr) 0) . mkX'TreePH1) x'trs0
       -- xts = map (0,) x'tr0
       -- x'tr = x'tr0 -- map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged . (XTS 0)) x'tr0
 
@@ -48,7 +59,9 @@ formatDetail (_txt,lma,pt,taglst,synsets) =
   , (T.intercalate "\t" . map (\(i,t) ->  (t <> "-" <> T.pack (show i))) . zip ([0..] :: [Int]) . map snd . toList) pt
   , "--------------------------------------------------------------------------------------------------------------------"
   ]
-  ++ map formatX'Tree1 testX'trs -- x'tr
+  -- ++ map (formatX'Tree1.fst) ntestX'trs -- x'tr
+  ++ map formatX'Tree x'trs0
+  ++ map formatX'TreeAndResolution x'trs
   -- ++ map (formatVPwithPAWS tagged clausetr x'tr) vps
   ++
   [ "--------------------------------------------------------------------------------------------------------------------"
