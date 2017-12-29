@@ -18,15 +18,13 @@ import qualified Data.Text           as T
 --
 import           Data.BitreeZipper
 import           Data.Range
-import           NLP.Syntax.Clause        (currentCPDPPP,retrieveResolved)
+import           NLP.Syntax.Clause        (retrieveResolved)
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Type.Verb     (vp_auxiliary)
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
 --
-import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..),cpdpppFromX'Tree,emptyDPInfo
-                                          ,resolvedSpecTP,resolvedCompVP
-                                          )
+import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..),emptyDPInfo)
 --
 import Debug.Trace
 import NLP.Syntax.Format.Internal

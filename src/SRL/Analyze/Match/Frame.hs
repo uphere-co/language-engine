@@ -30,7 +30,7 @@ import           FrameNet.Type.Frame          (frame_FE,fe_name)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
-import           NLP.Syntax.Clause            (constructCP,currentCPDPPP,retrieveResolved)
+import           NLP.Syntax.Clause            (constructCP,retrieveResolved)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs)
@@ -47,9 +47,7 @@ import           SRL.Analyze.Type             (SentStructure,VerbStructure,Analy
                                               ,analyze_wordnet
                                               ,ss_x'trs,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp)
-import           SRL.Analyze.Type.Match       (EntityInfo(..),FrameMatchResult(..),cpdpppFromX'Tree
-                                              ,resolvedCompVP,resolvedSpecTP
-                                              )
+import           SRL.Analyze.Type.Match       (EntityInfo(..),FrameMatchResult(..))
 --
 import Debug.Trace
 import NLP.Syntax.Format.Internal

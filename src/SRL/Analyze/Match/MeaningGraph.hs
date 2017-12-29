@@ -46,7 +46,6 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGr
 import           SRL.Analyze.Type.Match       (DPInfo(..), EntityInfo(..),FrameMatchResult(..)
                                               ,adi_appos,adi_compof,adi_coref,adi_poss,adi_adjs
                                               ,ei_fullRange,ei_headRange,ei_prep,ei_isClause,ei_isTime
-                                              ,cpdpppFromX'Tree
                                               )
 
 
