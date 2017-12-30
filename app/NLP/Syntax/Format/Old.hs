@@ -88,5 +88,5 @@ showClauseStructure tagged lemmamap ptree  = do
       x'trs = identifyCPHierarchy tagged vps
         -- (map (bindingAnalysisRaising . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) vps
       xs = map (formatVPwithPAWS tagged clausetr x'trs) vps
-  mapM_ (T.IO.putStrLn . formatX'Tree) x'trs
+  mapM_ (T.IO.putStrLn . formatX'Tree SPH0) x'trs
   flip mapM_ xs (\vp -> putStrLn $ T.unpack vp)
