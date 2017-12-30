@@ -48,7 +48,8 @@ import           Lexicon.Type                   (SenseID)
 import           MWE.Util                       (mkTextFromToken)
 import           NER.Load                       (loadCompanies)
 import           NER.Type                       (CompanyInfo(..),alias,companyId)
-import           NLP.Syntax.Format              (formatX'Tree1)
+import           NLP.Syntax.Format              (formatX'Tree)
+import           NLP.Syntax.Type.XBar           (SPhase(..))
 import           NLP.Type.CoreNLP               (Sentence)
 import           OntoNotes.Corpus.Load          (senseInstStatistics)
 import           OntoNotes.Type.SenseInventory  (inventory_lemma)
@@ -95,7 +96,7 @@ queryProcess config pp apredata netagger (forest,companyMap) =
 
       ":v " -> do dainput <- runParser pp rest
                   dstr <- docStructure apredata netagger (forest,companyMap) dainput
-                  mapM_ (T.IO.putStrLn . formatX'Tree1) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'trs . traverse)
+                  mapM_ (T.IO.putStrLn . formatX'Tree SPH1) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'trs . traverse)
                   when (config^.Analyze.showDetail) $ do
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
 

@@ -34,7 +34,7 @@ import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree,prettyPrint)
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
 import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),PreAnalysis
-                                                         ,CP,X'Tree,Phase(..)
+                                                         ,CP,X'Tree,Phase(..),SPhase(..)
                                                          ,headTextDP,headX,complement,maximalProjection
                                                          ,tokensByRange
                                                          ,hp_prep,hp_pclass)
@@ -195,7 +195,7 @@ formatSentStructure _showdetail ss@(SentStructure i ptr _ _ _ _ vstrs) =
                   , prettyPrint 0 ptr ] 
 
        subline1_1 = [ "--------------------------------------------------------------------------------------------------" ] ++
-                    map formatX'Tree1 (ss^.ss_x'trs) ++
+                    map (formatX'Tree SPH1) (ss^.ss_x'trs) ++
                     [ "=================================================================================================" ]
        subline2 = map formatVerbStructure vstrs
    in subline1 ++ subline1_1 ++ concat subline2
