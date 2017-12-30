@@ -4,7 +4,8 @@
 
 module SRL.Analyze.Type.Match where
 
-import           Control.Lens                  ((^.),(^?),makeLenses,_1,_2)
+import           Control.Error.Safe            (rightMay)
+import           Control.Lens                  ((^.),(^?),makeLenses,_1,_2,to)
 import           Data.Function                 (on)
 import           Data.List                     (maximumBy)
 import           Data.Monoid                   (First(..))
@@ -14,8 +15,12 @@ import           Data.BitreeZipper             (extractZipperById)
 import           Data.Range                    (Range)
 import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel
                                                ,SenseID)
-import           NLP.Syntax.Clause             (currentCPDPPP)
-import           NLP.Syntax.Type.XBar          (CompVP)
+-- import           NLP.Syntax.Clause             (currentCPDPPP)
+import           NLP.Syntax.Type.XBar          (CompVP,Phase(..),Coindex(..),TraceType(..),SpecTP(..)
+                                               ,SPhase(..)
+                                               ,currentCPDPPP
+                                               ,compVPToSpecTP
+                                               )
 import           NLP.Type.PennTreebankII       (Lemma)
 
 
@@ -32,7 +37,7 @@ makeLenses ''EntityInfo
 
 data FrameMatchResult = FMR { _fmr_lemmas :: [Text]
                             , _fmr_frame :: FNFrame
-                            , _fmr_roles :: Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP)])
+                            , _fmr_roles :: Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP 'PH1)])
                             , _fmr_subframes :: [(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
                             }
 
@@ -79,7 +84,3 @@ chooseMostFreqFrame :: [((ONSenseFrameNetInstance,Int),a)] -> [((ONSenseFrameNet
 chooseMostFreqFrame [] = []
 chooseMostFreqFrame xs = [maximumBy (compare `on` (^._1._2)) xs]
 -}
-
-
-cpdpppFromX'Tree x'tr rng prm
-  = (^? prm) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng)) x'tr)
