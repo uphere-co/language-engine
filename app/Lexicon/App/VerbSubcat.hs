@@ -77,8 +77,8 @@ matchVerbPropertyWithRelation :: PreAnalysis '[Lemma]
 matchVerbPropertyWithRelation tagged verbprops clausetr minst = do
   relidx <- findRelNode (minst^.mi_arguments)
   vp <- find (\vp->vp^.vp_index==relidx) verbprops
-  let x'tr = (map (bindingAnalysisRaising  . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) verbprops
-      mpa = findPAWS tagged clausetr vp x'tr
+  let x'trs = identifyCPHierarchy tagged verbprops -- (map (bindingAnalysisRaising  . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) verbprops
+      mpa = findPAWS tagged clausetr vp x'trs
   return (vp,mpa)
 
 

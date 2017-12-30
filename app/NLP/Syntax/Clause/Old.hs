@@ -27,7 +27,7 @@ import           NLP.Syntax.Type.XBar
 
 
 predicateArgWS :: PreAnalysis (Lemma ': as)
-               -> CP
+               -> CP 'PH0
                -> ClauseTreeZipper
                -> [Zipper (Lemma ': as)]
                -> PredArgWorkspace (Either (Range,STag) (Int,POSTag))
@@ -58,15 +58,15 @@ predicateArgWS tagged cp z adjs =
 findPAWS :: PreAnalysis (Lemma ': as)
          -> ClauseTree
          -> VerbProperty (BitreeZipperICP (Lemma ': as))
-         -> [X'Tree]
+         -> [X'Tree 'PH0]
          -> Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag)))
 findPAWS tagged tr vp x'tr = do
   cp <- (^._1) <$> constructCP tagged vp   -- seems very inefficient. but mcpstr can have memoized one.
                                            -- anyway need to be rewritten.
   let rng_cp = cp^.maximalProjection
   cp' <- (^? _CPCase) . currentCPDPPP =<< ((getFirst . foldMap (First . extractZipperById rng_cp)) x'tr)
-  let zs_adj = mapMaybe (\rng_adj -> listToMaybe (extractZipperByRange rng_adj (tagged^.pennTree)))
-                        (cp' ^.. complement.complement.adjunct.traverse._AdjunctVP_Unresolved)  -- can be dangerous
+  let zs_adj = mapMaybe (\rng_adj -> listToMaybe (extractZipperByRange rng_adj (tagged^.pennTreeAnn)))
+                        (cp' ^.. complement.complement.adjunct.traverse._Left)  -- can be dangerous
   predicateArgWS tagged cp' <$> findVerb (vp^.vp_index) tr <*> pure zs_adj
 
 
