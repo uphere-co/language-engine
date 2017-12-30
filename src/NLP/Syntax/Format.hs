@@ -53,8 +53,9 @@ formatVerbProperty f vp = printf "%3d %-15s : %-19s aux: %-7s neg: %-5s | %s"
                             (T.intercalate " " (vp^..vp_words.traverse.to (f.fst)))
 
 
-formatAdjunctCP :: AdjunctCP 'PH0 -> Text
-formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cp^.maximalProjection)
+
+-- formatAdjunctCP :: AdjunctCP 'PH0 -> Text
+-- formatAdjunctCP (AdjunctCP_CP         cp) = "CP" <> showRange (cp^.maximalProjection)
 
 
 adjunctVPText :: PreAnalysis t -> AdjunctVP 'PH0 -> Text
@@ -79,7 +80,7 @@ formatCPDetail cp =
     (show (cp^.maximalProjection))
     head1 head2
     spec1 spec2
-    (T.intercalate " | " (cp^..adjunct.traverse.to (either (T.pack.show) formatAdjunctCP)))
+    (T.intercalate " | " (cp^..adjunct.traverse.to (either (T.pack.show) (formatAdjunctCP SPH0))))
     (show (cp^.complement.maximalProjection))
     (formatCoindex (either (T.pack.show) (formatSpecTP SPH0)) (cp^.complement.specifier))
     (show (cp^.complement.complement.maximalProjection))

@@ -10,12 +10,15 @@ module NLP.Syntax.Type.XBar
 , module NLP.Syntax.Type.XBar
 ) where
 
+import           Control.Error.Safe                 (rightMay)
 import           Control.Lens                       ((^.),(^?),(.~),_1,_2,_Just,_Right,to)
 import           Data.Foldable                      (toList)
 import           Data.Maybe                         (fromMaybe,mapMaybe,maybeToList)
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
 --
+import           Data.Bitree                        (getRoot1)
+import           Data.BitreeZipper                  (current,extractZipperById)
 import           Data.Range                         (Range,isInside)
 import           NLP.Type.PennTreebankII            (tokenWord)
 --
@@ -23,6 +26,30 @@ import           NLP.Syntax.Type.PreAnalysis
 import           NLP.Syntax.Type.XBar.Internal
 import           NLP.Syntax.Type.XBar.TH
 
+
+currentCPDPPP :: X'Zipper p -> CPDPPP p
+currentCPDPPP = snd . getRoot1 . current
+
+
+
+cpdpppFromX'Tree x'tr rng prm
+  = (^? prm) . currentCPDPPP =<< extractZipperById rng x'tr
+
+
+resolvedCompVP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (CompVP 'PH1)) -> Maybe (CompVP 'PH1)
+resolvedCompVP resmap c =
+  case c of
+    Coindex (Just i) (Left _) -> (^._1) <$> lookup i resmap
+    Coindex Nothing  (Left _) -> Nothing
+    Coindex _        (Right x) -> Just x
+
+
+resolvedSpecTP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (SpecTP 'PH1)) -> Maybe (SpecTP 'PH1)
+resolvedSpecTP resmap s =
+  case s of
+    Coindex (Just i) (Left _) -> (^._1.to (compVPToSpecTP SPH1).to rightMay) =<< lookup i resmap
+    Coindex Nothing  (Left _) -> Nothing
+    Coindex _        (Right x) -> Just x
 
 
 getTokens :: BitreeICP as -> Text
@@ -70,16 +97,25 @@ compVPToSpecTP SPH1 (CompVP_AP ap) = Left ap -- Left (ap^.maximalProjection)  --
                                            SPH1 -> Left cp -}
 
 
-specTPToCompVP :: SpecTP 'PH0 -> CompVP 'PH0
+specTPToCompVP :: SpecTP p-> CompVP p
 specTPToCompVP (SpecTP_DP x)         = CompVP_DP x
 
 
+-- we had better unify compVP with CPDPPP
+
 compVPToCPDPPP :: CompVP 'PH0 -> CPDPPP 'PH0
--- compVPToCPDPPP (CompVP_Unresolved _) = Nothing
 compVPToCPDPPP (CompVP_CP cp) = CPCase cp
 compVPToCPDPPP (CompVP_DP dp) = DPCase dp
 compVPToCPDPPP (CompVP_PP pp) = PPCase pp
 compVPToCPDPPP (CompVP_AP pp) = APCase pp
+
+
+cpdpppToCompVP :: CPDPPP 'PH0 -> CompVP 'PH0
+cpdpppToCompVP (CPCase cp) = CompVP_CP cp
+cpdpppToCompVP (DPCase dp) = CompVP_DP dp
+cpdpppToCompVP (PPCase pp) = CompVP_PP pp
+cpdpppToCompVP (APCase ap) = CompVP_AP ap
+
 
 
 headTextDP :: PreAnalysis t -> DetP p -> Text
@@ -102,14 +138,32 @@ headRangeDP dp =
               (Nothing       , Nothing      ) -> Nothing
 
 
-compVPToHeadText :: PreAnalysis t -> CompVP 'PH0 -> Text
--- compVPToHeadText tagged (CompVP_Unresolved rng) = T.intercalate " " (tokensByRange tagged rng)
-compVPToHeadText tagged (CompVP_CP cp)          = T.intercalate " " (tokensByRange tagged (cp^.maximalProjection))
-compVPToHeadText tagged (CompVP_DP dp)          = headTextDP tagged dp
-compVPToHeadText tagged (CompVP_PP pp)          = case pp^.complement of
-                                                    CompPP_DP dp      -> headTextDP tagged dp
-                                                    CompPP_Gerund rng -> T.intercalate " " (tokensByRange tagged rng)
-compVPToHeadText tagged (CompVP_AP ap)          = T.intercalate " " (tokensByRange tagged (ap^.maximalProjection))
+
+
+
+
+compVPToHeadText :: SPhase p -> PreAnalysis t -> X'Tree p -> CompVP p -> Text
+compVPToHeadText SPH0 pre _ (CompVP_CP cp) = T.intercalate " " (tokensByRange pre (cp^.maximalProjection))
+compVPToHeadText SPH0 pre _ (CompVP_DP dp) = headTextDP pre dp
+compVPToHeadText SPH0 pre _ (CompVP_PP pp) = case pp^.complement of
+                                             CompPP_DP dp      -> headTextDP pre dp
+                                             CompPP_Gerund rng -> T.intercalate " " (tokensByRange pre rng)
+compVPToHeadText SPH0 pre _ (CompVP_AP ap) = T.intercalate " " (tokensByRange pre (ap^.maximalProjection))
+compVPToHeadText SPH1 pre _    (CompVP_CP rng_cp) = T.intercalate " " (tokensByRange pre rng_cp)
+compVPToHeadText SPH1 pre x'tr (CompVP_DP rng_dp) = fromMaybe "" $ do
+                                                      dp <- cpdpppFromX'Tree x'tr rng_dp _DPCase  
+                                                      return (headTextDP pre dp)
+compVPToHeadText SPH1 pre x'tr (CompVP_PP rng_pp) = fromMaybe "" $ do
+                                                      pp <- cpdpppFromX'Tree x'tr rng_pp _PPCase
+                                                      case pp^.complement of
+                                                        CompPP_DP rng_dp -> do
+                                                          dp <- cpdpppFromX'Tree x'tr rng_dp _DPCase
+                                                          return (headTextDP pre dp)
+                                                        CompPP_Gerund rng -> return (T.intercalate " " (tokensByRange pre rng))
+compVPToHeadText SPH1 pre _    (CompVP_AP rng_ap) = T.intercalate " " (tokensByRange pre rng_ap)
+
+
+
 
 
 compVPToRange :: SPhase p -> CompVP p -> Range
