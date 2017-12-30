@@ -35,6 +35,11 @@ formatSpecTP SPH0 (SpecTP_DP x) = "DP" <> x^.maximalProjection.to (T.pack . show
 formatSpecTP SPH1 (SpecTP_DP x) = "DP" <> (T.pack . show) x
 
 
+formatAdjunctCP :: SPhase p -> AdjunctCP p -> Text
+formatAdjunctCP SPH0 (AdjunctCP_CP cp) = "CP" <> cp^.maximalProjection.to (T.pack . show)
+formatAdjunctCP SPH1 (AdjunctCP_CP rng) = "CP" <> (T.pack . show) rng
+
+
 formatComplementizer :: Complementizer -> Text
 formatComplementizer C_PHI      = "φ"
 formatComplementizer (C_WORD w) = unLemma w
@@ -130,14 +135,22 @@ formatCP cp =
      "))]"
 -}
 
-formatX'Tree :: X'Tree 'PH0 -> Text
-formatX'Tree tr = formatBitree fmt tr
+formatX'Tree :: SPhase p -> X'Tree p -> Text
+formatX'Tree s tr = formatBitree fmt tr
   where
-        fmt (rng, CPCase x) = formatCP SPH0 x
+        fmt (rng, CPCase x) = formatCP s x
         fmt (_  , DPCase x) = formatDP x
         fmt (_  , PPCase x) = formatPP x
         fmt (_  , APCase x) = formatAP x
 
+{-
+formatX'Tree SPH1 tr = formatBitree fmt tr
+  where
+        fmt (rng, CPCase x) = formatCP SPH1 x
+        fmt (_  , DPCase x) = formatDP x
+        fmt (_  , PPCase x) = formatPP x
+        fmt (_  , APCase x) = formatAP x
+-}
 
 
 
@@ -164,6 +177,10 @@ formatCP p cp =
      "[C:" <> formatComplementizer (cp^.headX) <>
      " spec: " <>
      maybe "" (formatCoindexOnly formatSpecCP) (cp^.specifier) <>
+     " adjunct: " <>
+     (case p of
+        SPH0 -> T.intercalate "," (cp^..adjunct.traverse.to (either (T.pack.show) (formatAdjunctCP p)))
+        SPH1 -> T.intercalate "," (cp^..adjunct.traverse.to (formatAdjunctCP p))) <>
      " (TP: spec:" <>
      (case p of
         SPH0 -> formatCoindex (either (T.pack.show) (formatSpecTP p)) (cp^.complement.specifier)
@@ -184,11 +201,3 @@ formatCP SPH1 cp =
      " (VP: comp:" <> T.intercalate "," (cp^..complement.complement.complement.traverse.coidx_content._Right.to (formatCompVP SPH1)) <>
      "))]"
 -}
-
-formatX'Tree1 :: X'Tree 'PH1 -> Text
-formatX'Tree1 tr = formatBitree fmt tr
-  where
-        fmt (rng, CPCase x) = formatCP SPH1 x
-        fmt (_  , DPCase x) = formatDP x
-        fmt (_  , PPCase x) = formatPP x
-        fmt (_  , APCase x) = formatAP x

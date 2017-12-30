@@ -37,7 +37,7 @@ mkVPS lmatknlst pt =
 
 formatX'TreeAndResolution x'tr =
   -- let lst = take n [0..]
-  formatX'Tree1 x'tr <> "\n" <> T.pack (show (retrieveResolved x'tr))
+  formatX'Tree SPH1 x'tr <> "\n" <> T.pack (show (retrieveResolved x'tr))
 
 
 
@@ -61,7 +61,7 @@ formatDetail (_txt,lma,pt,taglst,synsets) =
   ]
   -- ++ map (formatX'Tree1.fst) ntestX'trs -- x'tr
   ++ ["PHASE0"]
-  ++ map formatX'Tree x'trs0
+  ++ map (formatX'Tree SPH0) x'trs0
   ++ ["PHASE1"]
   ++ map formatX'TreeAndResolution x'trs
   -- ++ map (formatVPwithPAWS tagged clausetr x'tr) vps

@@ -167,6 +167,16 @@ preposedTemporalAdjunct
     )
 
 
+adjunctCP_1 :: TestVerbComplement
+adjunctCP_1
+  = ( "Sansiri would invest $80 million in overseas markets as the Thai real estate developer seeks to expand beyond its core business.", 2
+    , (("Sansiri",Just NoDet),["$ 80 million", "overseas markets"], ["as the Thai real estate developer seeks to expand beyond its core business"], False)
+    , [(0,("Sansiri","Sansiri")),(1,("would","would")),(2,("invest","invest")),(3,("$","$")),(4,("80","80")),(5,("million","million")),(6,("in","in")),(7,("overseas","overseas")),(8,("market","markets")),(9,("as","as")),(10,("the","the")),(11,("Thai","Thai")),(12,("real","real")),(13,("estate","estate")),(14,("developer","developer")),(15,("seek","seeks")),(16,("to","to")),(17,("expand","expand")),(18,("beyond","beyond")),(19,("its","its")),(20,("core","core")),(21,("business","business")),(22,(".","."))]
+    , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","Sansiri")],PN "VP" [PL ("MD","would"),PN "VP" [PL ("VB","invest"),PN "NP" [PN "QP" [PL ("$","$"),PL ("CD","80"),PL ("CD","million")]],PN "PP" [PL ("IN","in"),PN "NP" [PL ("JJ","overseas"),PL ("NNS","markets")]],PN "SBAR" [PL ("IN","as"),PN "S" [PN "NP" [PL ("DT","the"),PL ("NNP","Thai"),PL ("JJ","real"),PL ("NN","estate"),PL ("NN","developer")],PN "VP" [PL ("VBZ","seeks"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","expand"),PN "PP" [PL ("IN","beyond"),PN "NP" [PL ("PRP$","its"),PL ("NN","core"),PL ("NN","business")]]]]]]]]]],PL (".",".")]]
+    , []
+    , []
+    )
+
 preposedCP :: TestVerbComplement
 preposedCP
   = ( "Brazilian steelmaker Companhia Siderugica Nacional SA plans to sell bonds on international markets in an effort to improve its debt profile, Benjamin Steinbruch, chief executive officer, said on Friday."
@@ -311,22 +321,18 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       lst_comps_test = c^._3._2
       b_comps = lst_comps == lst_comps_test
       -- test adjuncts
-      lst_adjs = [] -- for the time being 
-{-        a <- cp^..complement.complement.adjunct.traverse._Right
-                    a^.coidx
-
-                      .to (adjunctVPText pre) -}
+      lst_adjs = cp^..adjunct.traverse._AdjunctCP_CP.to (T.intercalate " " . tokensByRange pre)
       lst_adjs_test = c^._3._3
       b_adjuncts = lst_adjs == lst_adjs_test
       b_topicalized = fromMaybe False $ do
                         cp^?specifier._Just.coidx_content._SpecCP_Topic
                         return True
   {-
-  trace  ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr ++ "\n" ++ formatCP cp ++ "\n" ) $ return ()
   trace ("\n" ++ show (lst_comps,lst_comps_test)) $ return ()
-  trace ("\n" ++ show (b_subj,b_comps,b_adjuncts,b_topicalized)) $ return ()
-  trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (txt,lmatknlst,pt,tagposs,synsets)))) $ return ()
-  -}
+  trace ("\n" ++ show (lst_adjs,lst_adjs_test)) $ return ()
+  trace ("\n" ++ show (b_subj,b_comps,b_adjuncts,b_topicalized == c^._3._4)) $ return () -}
+  -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (txt,lmatknlst,pt,tagposs,synsets)))) $ return ()
+
   return  (b_subj && b_comps && b_adjuncts && (b_topicalized == c^._3._4))
 
 
@@ -336,11 +342,12 @@ testcases = [ -- -- main_finite_1
               embedded_that_1
             , restr_rel_1
             , ditransitive_1
-            -- -- , ditransitive_2 
+            -- -- , ditransitive_2
             , ditransitive_3
             -- -- , ditransitive_4
             -- , preposedTemporalAdjunct
             , preposedCP
+            , adjunctCP_1
             -- , complexNP
             -- , complexNP_SRParser
             , complexNP_2

@@ -26,7 +26,7 @@ import           Data.Bitraversable                     (bitraverse)
 import           Data.Foldable                          (toList)
 import           Data.Function                          (on)
 import qualified Data.HashMap.Strict               as HM
-import           Data.List                              (sortBy)
+import           Data.List                              (partition,sortBy)
 import           Data.Maybe                             (fromMaybe,listToMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                            (Last(..))
 --
@@ -296,12 +296,12 @@ resolveCP x'tr = bimap f f x'tr
     x'map = biList x'tr
     f (rng,(CPCase cp)) = (rng,CPCase (replace cp))
     f x                 = x
-    
+
     -- action rng = do z <- hoistMaybe . extractZipperById rng . (^.xts_tree) =<< lift get
     --                 ((replace z >> return ()) <|> return ())
     --
     -- replace :: X'Zipper -> MaybeT (State X'TreeState) X'Zipper
-    replace = replaceCompVP -- replaceSpecCP >=> replaceCompVP >=> replaceAdjunctCP
+    replace = {- replaceAdjunctCP . -} replaceCompVP -- replaceSpecCP >=> replaceCompVP >=> replaceAdjunctCP
     --
     -- I need to deduplicate the following code.
     {- putAndReturn w = do
@@ -319,11 +319,33 @@ resolveCP x'tr = bimap f f x'tr
     replaceCompVP cp =
       let rng = cp^.maximalProjection
           xs = cp^.complement.complement.complement
-          xs' =  map (coidx_content %~ resolve) xs
-          cp' = cp & complement.complement.complement .~ xs'
+          (as,xs') =  (partition f . map (coidx_content %~ resolve)) xs
+            where f x = fromMaybe False $ do
+                          cp <- x^?coidx_content._Right._Right._CompVP_CP
+                          (/= "that") <$> cp^?headX._C_WORD.to unLemma
+          as' = mapMaybe f as
+            where f x = do cp <- x^?coidx_content._Right._Right._CompVP_CP
+                           return (Right (AdjunctCP_CP cp))
+
+          cp' = cp & (adjunct .~ as')
+                   . (complement.complement.complement .~ xs')
       in cp'
 
-{- 
+
+
+     {-
+            (comps_adjs',comps) = trace ("\ntest:" ++ T.unpack (T.intercalate "\n" (formatCoindex formatComcomps $ partition f comps0
+              where f x = fromMaybe False $ do
+                            cp <- x^?coidx_content._Right._Right._CompVP_CP
+                            trace ("\nhere:" ++ T.unpack (formatCP SPH0 cp)) $ return ()
+                            (/= "that") <$> cp^?headX._C_WORD.to unLemma
+            adjs' = mapMaybe f comps_adjs'
+              where f x = do cp <- x^?coidx_content._Right._Right._CompVP_CP
+                             return (Right (AdjunctCP_CP cp))
+
+-}
+
+{-
          ((do tr <- (^.xts_tree) <$> lift get
                     rng_compvp <- hoistMaybe (x^?coidx_content._Right._Left)
                     y <- hoistMaybe (extractZipperById rng_compvp tr)
