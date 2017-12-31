@@ -43,7 +43,6 @@ library
                        array,
                        attoparsec,
                        bifunctors,
-                       bindings-svm,
                        boxes,
                        bytestring,
                        containers,

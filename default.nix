@@ -1,4 +1,4 @@
-{ mkDerivation, attoparsec, base, bifunctors, bindings-svm, boxes
+{ mkDerivation, attoparsec, base, bifunctors, boxes
 , bytestring, containers, data-default, discrimination, either, errors
 , fastText, filepath, foreign-store, html-entities, HCoreNLP, HCoreNLP-Proto, HFrameNet, HUKB-driver, jni
 , jvm, lens, lexicon-builder, multi-word-tagger, nlp-shared-types, nlp-types
@@ -15,7 +15,7 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    attoparsec base bifunctors bindings-svm boxes bytestring containers
+    attoparsec base bifunctors boxes bytestring containers
     data-default discrimination either errors fastText filepath foreign-store
     html-entities HCoreNLP HCoreNLP-Proto HFrameNet jni jvm lens lexicon-builder multi-word-tagger
     nlp-shared-types nlp-types OntoNotes PropBank
