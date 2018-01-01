@@ -18,7 +18,6 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        SRL.Analyze
-                       SRL.Analyze.ARB
                        SRL.Analyze.Config
                        SRL.Analyze.CoreNLP
                        SRL.Analyze.Format
@@ -27,6 +26,7 @@ library
                        SRL.Analyze.Match.Frame
                        SRL.Analyze.Match.MeaningGraph
                        SRL.Analyze.Match.Preposition
+                       SRL.Analyze.MeaningTree
                        SRL.Analyze.Parameter
                        SRL.Analyze.Sense
                        SRL.Analyze.SentenceStructure

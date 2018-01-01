@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
 
-module SRL.Analyze.ARB where
+module SRL.Analyze.MeaningTree where
 
 import           Control.Applicative       ((<|>))
 import           Control.Lens
@@ -34,7 +34,7 @@ import           SRL.Statistics
 --
 
 
-type VertexARB = (Vertex, Vertex, [Vertex])
+-- type VertexTriple = (Vertex, Vertex, [Vertex])
 
 squashRelFrame :: MeaningGraph -> MeaningGraph
 squashRelFrame mg0 = last (mg0 : unfoldr f mg0)
@@ -101,7 +101,7 @@ findLabel mvs i = do
   case v of
     MGEntity {..}           -> Just _mv_text
     MGPredicate {..}        -> case _mv_pred_info of
-                                 PredVerb idiom _ vrb -> Just (T.intercalate " " idiom) -- (vrb ^. vp_lemma . to unLemma)
+                                 PredVerb idiom _ vrb -> Just (T.intercalate " " idiom)
                                  PredPrep p     -> Just p
                                  PredNominalized n _ -> Just (unLemma n)
                                  PredAppos      -> Just (unFNFrame _mv_frame)
@@ -109,7 +109,7 @@ findLabel mvs i = do
 
 findSubjectObjects :: ([RoleInstance],MeaningGraph,Graph)
                    -> Vertex
-                   -> MaybeT (State [Vertex]) ARB
+                   -> MaybeT (State [Vertex]) MeaningTree
 findSubjectObjects (rolemap,mg,grph) frmid = do
   let chldrn = grph ! frmid
   v <- hoistMaybe $ findVertex (mg^.mg_vertices) frmid
@@ -123,13 +123,15 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
                                 PredAppos        -> return (unFNFrame _mv_frame,Nothing,Nothing)
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) chldrn
-      (sidx,subject,b) = fromMaybe (-999,("",""),False) $ do
+      subjresult {- (sidx,subject,b) -} = do
         e <- find (\e -> isSubject rolemap (FNFrame frmtxt) msense (e^.me_relation)) rels 
         let sidx = e^.me_end
-        (sidx,,e^.me_ismodifier) . (unFNFrameElement (e^.me_relation),) <$> findLabel (mg^.mg_vertices) sidx
-  guard (not b)
-  (objs :: [(FrameElement,Either (PrepOr ARB) (PrepOr Text))]) <- lift $ do
-    fmap catMaybes . flip mapM (filter (\e -> e ^.me_end /= sidx) rels) $ \o -> do
+        lbl <- findLabel (mg^.mg_vertices) sidx
+        let fe = unFNFrameElement (e^.me_relation)
+        return (sidx,(fe,Right (PrepOr Nothing lbl)),e^.me_ismodifier)
+  guard (maybe True (not . (^._3)) subjresult)
+  (objs :: [(FrameElement,Either (PrepOr MeaningTree) (PrepOr Text))]) <- lift $ do
+    fmap catMaybes . flip mapM (filter (\e -> Just (e ^.me_end) /= subjresult^?_Just._1) rels) $ \o -> do
       let oidx = o^.me_end
           oprep = o^.me_prep
           orole = unFNFrameElement (o^.me_relation)
@@ -144,11 +146,12 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
           else do
             olabel <- hoistMaybe (findLabel (mg^.mg_vertices) oidx)
             return (orole,Right (PrepOr oprep olabel))
-  return (ARB frmtxt subject (frmtxt,verbtxt) (maybe False (const True) mneg) objs [])
+  let arguments = maybe objs (\subj -> subj:objs) (subjresult^?_Just._2)
+  return (MeaningTree frmtxt verbtxt (maybe False (const True) mneg) arguments)
 
 
-mkARB1 :: ([RoleInstance],MeaningGraph,Graph) -> State [Vertex] (Maybe (Maybe ARB))
-mkARB1 (rolemap,mg,graph) = do
+mkMeaningTree1 :: ([RoleInstance],MeaningGraph,Graph) -> State [Vertex] (Maybe (Maybe MeaningTree))
+mkMeaningTree1 (rolemap,mg,graph) = do
   xs <- get
   case xs of
     [] -> return Nothing
@@ -158,11 +161,11 @@ mkARB1 (rolemap,mg,graph) = do
       return (Just r)
 
 
-mkARB :: [RoleInstance] -> MeaningGraph -> [ARB]
-mkARB rolemap mg0 = filter (^.subjectA._1.to (not.T.null)) . catMaybes $ do
+mkMeaningTree :: [RoleInstance] -> MeaningGraph -> [MeaningTree]
+mkMeaningTree rolemap mg0 = catMaybes $ do
   let mg = squashRelFrame mg0
       mgraph = getGraphFromMG mg
   graph <- maybeToList mgraph
   let framelst = map (^.mv_id) $ filter isFrame $ mg^. mg_vertices
       vs = filter (`elem` framelst) $ topSort graph
-  evalState (unfoldM (mkARB1 (rolemap,mg,graph))) vs
+  evalState (unfoldM (mkMeaningTree1 (rolemap,mg,graph))) vs
