@@ -24,6 +24,18 @@ type Frame = Text
 type FrameElement = Text
 type TWord = Text
 
+--
+-- | MeaningRole is a single instance of each Frame element to content matching.
+--   Content can be either a final sequence of words or a subframe represented by MeaningTree.
+--
+data MeaningRole = MeaningRole { _mr_id :: Int
+                               , _mr_role :: FrameElement
+                               , _mr_content :: Either (PrepOr MeaningTree) (PrepOr (TWord,Maybe Int))
+                               }
+                 deriving (Eq,Show,Generic)
+
+instance ToJSON MeaningRole
+instance FromJSON MeaningRole
 
 --
 -- | MeaningTree is a representation of meaning. This is necessary in web interface because original
@@ -32,14 +44,15 @@ type TWord = Text
 --
 data MeaningTree = MeaningTree
   { _mt_vertexID :: Int
-  , _mt_frame:: Frame       -- ^ Unlemma form of verb when predicate. Frame when nominal predicate.
-  , _mt_predicate :: TWord      -- ^ Predicate word.
-  , _mt_isNegated :: Bool       -- ^ Negation information of verb.
-  , _mt_arguments :: [(Int,FrameElement,Either (PrepOr MeaningTree) (PrepOr (TWord,Maybe Int)))]
-    -- ^ A tuple of FrameElement and word, or a tuple of FrameElement and subsequent ARB.
+  , _mt_frame:: Frame              -- ^ Unlemma form of verb when predicate. Frame when nominal predicate.
+  , _mt_predicate :: TWord         -- ^ Predicate word.
+  , _mt_isNegated :: Bool          -- ^ Negation information of verb.
+  , _mt_arguments :: [MeaningRole] -- ^ A list of MeaningRole's
   } deriving (Eq,Show, Generic)
 
-makeLenses ''MeaningTree
 
 instance ToJSON MeaningTree
 instance FromJSON MeaningTree
+
+makeLenses ''MeaningRole
+makeLenses ''MeaningTree
