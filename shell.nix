@@ -8,10 +8,10 @@
 , lexicon            ? <lexicon>
 , lexicon-builder    ? <lexicon-builder>
 , multi-word-tagger  ? <multi-word-tagger>
-, nlp-shared-types   ? <nlp-shared-types>
 , nlp-types          ? <nlp-types>
 , OntoNotes          ? <OntoNotes>
 , PropBank           ? <PropBank>
+, semantic-types     ? <semantic-types>
 , syntactic-analysis ? <syntactic-analysis>
 , textview           ? <textview>
 , VerbNet            ? <VerbNet>
@@ -52,7 +52,6 @@ let
     self: super: {
       "lexicon"        = self.callPackage (import lexicon) {};
       "multi-word-tagger" = self.callPackage (import multi-word-tagger) {};
-      "nlp-shared-types" = self.callPackage (import nlp-shared-types) {};
       "nlp-types"      = self.callPackage (import nlp-types) {};
       "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
       "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
@@ -65,6 +64,7 @@ let
       "VerbNet"        = self.callPackage (import VerbNet) {};
       "wiki-ner"       = self.callPackage (import wiki-ner) {};
       "fastText"       = self.callPackage fastTextNix { inherit fasttext; };
+      "semantic-types" = self.callPackage (import semantic-types) {};
       "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
       "textview"       = self.callPackage (import textview) {};
     };
@@ -110,13 +110,13 @@ let
             p.lexicon
             p.lexicon-builder
             p.multi-word-tagger
-            p.nlp-shared-types
             p.nlp-types
             p.OntoNotes
             p.PropBank
             p.HCoreNLP
             p.HCoreNLP-Proto
             p.HUKB-driver
+            p.semantic-types
             p.syntactic-analysis
             p.textview
             p.wiki-ner

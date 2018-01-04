@@ -18,7 +18,6 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        SRL.Analyze
-                       SRL.Analyze.ARB
                        SRL.Analyze.Config
                        SRL.Analyze.CoreNLP
                        SRL.Analyze.Format
@@ -27,6 +26,7 @@ library
                        SRL.Analyze.Match.Frame
                        SRL.Analyze.Match.MeaningGraph
                        SRL.Analyze.Match.Preposition
+                       SRL.Analyze.MeaningTree
                        SRL.Analyze.Parameter
                        SRL.Analyze.Sense
                        SRL.Analyze.SentenceStructure
@@ -43,7 +43,6 @@ library
                        array,
                        attoparsec,
                        bifunctors,
-                       bindings-svm,
                        boxes,
                        bytestring,
                        containers,
@@ -73,7 +72,7 @@ library
                        lexicon,
                        lexicon-builder,
                        multi-word-tagger,
-                       nlp-shared-types,
+                       -- nlp-shared-types,
                        nlp-types,
                        HCoreNLP,
                        HCoreNLP-Proto,
@@ -82,6 +81,7 @@ library
                        HWordNet,
                        OntoNotes,
                        PropBank,
+                       semantic-types,
                        syntactic-analysis,
                        textview,
                        wiki-ner,
@@ -120,31 +120,3 @@ Executable analyze
                        semantic-role-labeler
 
 
--- Executable dependency
---   Main-is:             dependency.hs
---   hs-source-dirs:      app
---   default-language:    Haskell2010
---   ghc-options:         -O2 -Wall
---                        -funbox-strict-fields
---                        -fno-warn-unused-do-bind
---                        -fno-warn-orphans
---   ghc-prof-options:    -caf-all -auto-all
---   other-modules:
---   build-depends:       base,
---                        --
---                        bytestring,
---                        containers,
---                        data-default,
---                        either,
---                        jvm,
---                        lens,
---                        nlp-types,
---                        text,
---                        time,
---                        transformers,
---                        --
---                        HCoreNLP,
---                        HCoreNLP-Proto,
---                        --
---                        semantic-role-labeler,
---                        foreign-store

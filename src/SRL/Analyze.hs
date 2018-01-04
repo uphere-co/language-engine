@@ -59,7 +59,7 @@ import           WikiEL.Type                    (EntityMention)
 import           WikiEL.WikiNewNET              (newNETagger)
 import           WordNet.Query                  (loadDB)
 --
-import           SRL.Analyze.ARB                (mkARB)
+import           SRL.Analyze.MeaningTree        (mkMeaningTree)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP            (runParser)
 import           SRL.Analyze.Format             (dotMeaningGraph,formatDocStructure,showMatchedFrame)
@@ -134,7 +134,7 @@ printMeaningGraph apredata companyMap dstr = do
     T.IO.writeFile ("test" ++ (show i) ++ ".dot") dotstr
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
     --
-    mapM_ print (mkARB (apredata^.analyze_rolemap) mg) 
+    mapM_ print (mkMeaningTree (apredata^.analyze_rolemap) mg)
 
 
 loadConfig :: (Bool,Bool)
