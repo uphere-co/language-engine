@@ -24,13 +24,23 @@ type Frame = Text
 type FrameElement = Text
 type TWord = Text
 
+
+data MeaningRoleContent = SubFrame MeaningTree
+                        --  | Modifier TWord MeaningTree
+                        | Terminal TWord (Maybe Int)
+                        deriving (Eq,Show,Generic)
+
+instance ToJSON MeaningRoleContent
+instance FromJSON MeaningRoleContent
+
+
 --
 -- | MeaningRole is a single instance of each Frame element to content matching.
 --   Content can be either a final sequence of words or a subframe represented by MeaningTree.
 --
 data MeaningRole = MeaningRole { _mr_id :: Int
                                , _mr_role :: FrameElement
-                               , _mr_content :: Either (PrepOr MeaningTree) (PrepOr (TWord,Maybe Int))
+                               , _mr_content :: PrepOr MeaningRoleContent -- Either (PrepOr MeaningTree) (PrepOr (TWord,Maybe Int))
                                }
                  deriving (Eq,Show,Generic)
 
@@ -54,5 +64,6 @@ data MeaningTree = MeaningTree
 instance ToJSON MeaningTree
 instance FromJSON MeaningTree
 
+makeLenses ''MeaningRoleContent
 makeLenses ''MeaningRole
 makeLenses ''MeaningTree
