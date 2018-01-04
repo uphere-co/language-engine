@@ -72,7 +72,7 @@ library
                        lexicon,
                        lexicon-builder,
                        multi-word-tagger,
-                       nlp-shared-types,
+                       -- nlp-shared-types,
                        nlp-types,
                        HCoreNLP,
                        HCoreNLP-Proto,
@@ -81,6 +81,7 @@ library
                        HWordNet,
                        OntoNotes,
                        PropBank,
+                       semantic-types,
                        syntactic-analysis,
                        textview,
                        wiki-ner,
@@ -119,31 +120,3 @@ Executable analyze
                        semantic-role-labeler
 
 
--- Executable dependency
---   Main-is:             dependency.hs
---   hs-source-dirs:      app
---   default-language:    Haskell2010
---   ghc-options:         -O2 -Wall
---                        -funbox-strict-fields
---                        -fno-warn-unused-do-bind
---                        -fno-warn-orphans
---   ghc-prof-options:    -caf-all -auto-all
---   other-modules:
---   build-depends:       base,
---                        --
---                        bytestring,
---                        containers,
---                        data-default,
---                        either,
---                        jvm,
---                        lens,
---                        nlp-types,
---                        text,
---                        time,
---                        transformers,
---                        --
---                        HCoreNLP,
---                        HCoreNLP-Proto,
---                        --
---                        semantic-role-labeler,
---                        foreign-store
