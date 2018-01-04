@@ -24,7 +24,8 @@ import           Data.Text                 (Text)
 --
 import           Lexicon.Mapping.Causation (causeDualMap,cm_causativeFrame,cm_externalAgent)
 import           Lexicon.Type              (FNFrame(..),FNFrameElement(..),RoleInstance,SenseID)
-import           NLP.Semantics.Type        (MeaningRole(..),MeaningTree(..),FrameElement,PrepOr(..))
+import           NLP.Semantics.Type        (MeaningRoleContent(..),MeaningRole(..),MeaningTree(..)
+                                           ,FrameElement,PrepOr(..))
 import           NLP.Syntax.Clause         (hoistMaybe) -- this should be moved somewhere
 import           NLP.Syntax.Type.Verb      (vp_lemma,vp_negation)
 import           NLP.Syntax.Type.XBar      (X'Tree)
@@ -138,7 +139,7 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
         lbl <- findLabel (mg^.mg_vertices) sidx
         let mlnk = findLink (mg^.mg_edges) sidx
         let fe = unFNFrameElement (e^.me_relation)
-        return (sidx,MeaningRole sidx fe (Right (PrepOr Nothing (lbl,mlnk))),e^.me_ismodifier)
+        return (sidx,MeaningRole sidx fe (PrepOr Nothing (Terminal lbl mlnk)),e^.me_ismodifier)
   guard (maybe True (not . (^._3)) subjresult)
   (objs :: [MeaningRole]) <- lift $ do
     fmap catMaybes . flip mapM (filter (\e -> Just (e ^.me_end) /= subjresult^?_Just._1) rels) $ \o -> do
@@ -151,12 +152,12 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
         if isFrame v'
           then do
             lift (modify' (delete oidx))
-            arb <- findSubjectObjects (rolemap,mg,grph) oidx
-            return (MeaningRole oidx orole (Left (PrepOr oprep arb)))
+            sub <- findSubjectObjects (rolemap,mg,grph) oidx
+            return (MeaningRole oidx orole (PrepOr oprep (SubFrame sub)))
           else do
             olabel <- hoistMaybe (findLabel (mg^.mg_vertices) oidx)
             let mlnk = findLink (mg^.mg_edges) oidx
-            return (MeaningRole oidx orole (Right (PrepOr oprep (olabel,mlnk))))
+            return (MeaningRole oidx orole (PrepOr oprep (Terminal olabel mlnk)))
   let arguments = maybe objs (\subj -> subj:objs) (subjresult^?_Just._2)
   return (MeaningTree vid frmtxt verbtxt (maybe False (const True) mneg) arguments)
 
