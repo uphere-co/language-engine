@@ -134,6 +134,7 @@ printMeaningGraph apredata companyMap dstr = do
     T.IO.writeFile ("test" ++ (show i) ++ ".dot") dotstr
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
     --
+    -- mapM_ print (mg^.mg_vertices)
     mapM_ print (mkMeaningTree (apredata^.analyze_rolemap) mg)
 
 

@@ -11,7 +11,8 @@ import           Data.Maybe          (mapMaybe)
 --
 import           SRL.Analyze.Type    (SentStructure(..),MeaningGraph
                                      ,_MGPredicate,_PredVerb
-                                     ,me_start,me_end,mg_edges,mg_vertices,mv_id
+                                     ,me_start,me_end,me_ismodifier
+                                     ,mg_edges,mg_vertices,mv_id
                                      ,ss_verbStructures
                                      )
 
@@ -20,8 +21,8 @@ import           SRL.Analyze.Type    (SentStructure(..),MeaningGraph
 
 getGraphFromMG :: MeaningGraph -> Maybe Graph
 getGraphFromMG mg =
-  let vtxs = mg ^. mg_vertices ^.. traverse . mv_id  
-      edgs = mg ^. mg_edges ^.. traverse . to (\x -> (x ^. me_start, x ^. me_end))
+  let vtxs = mg ^.. mg_vertices . traverse . mv_id
+      edgs = mg ^.. mg_edges . traverse . to (\x -> if x^.me_ismodifier then (x^.me_end,x^.me_start) else (x ^. me_start, x ^. me_end))
   in case vtxs of
     [] -> Nothing
     v  -> let bounds = (minimum v, maximum v)
