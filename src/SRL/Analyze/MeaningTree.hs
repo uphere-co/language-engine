@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,6 +12,7 @@ import           Control.Lens.Extras
 import           Control.Monad             (guard)
 import           Data.List
 import qualified Data.Text             as T
+import           Control.Monad             (mzero)
 import           Control.Monad.Loops       (unfoldM)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -18,7 +20,7 @@ import           Control.Monad.Trans.State (State,evalState,get,put,modify')
 import           Data.Array                ((!))
 import           Data.Graph                (Graph,Vertex,topSort)
 import           Data.List                 (delete,find,elem)
-import           Data.Maybe                (catMaybes,fromMaybe
+import           Data.Maybe                (catMaybes,fromMaybe,listToMaybe
                                            ,mapMaybe,maybeToList)
 import           Data.Text                 (Text)
 --
@@ -34,6 +36,7 @@ import           NLP.Type.PennTreebankII   (Lemma(..))
 import           SRL.Analyze.Type
 import           SRL.Statistics
 --
+import Debug.Trace
 
 
 -- type VertexTriple = (Vertex, Vertex, [Vertex])
@@ -92,10 +95,15 @@ isSubject rolemap frame (Just (sense,cause)) rel =
 findRel :: [MGEdge] -> Int -> Int -> Maybe MGEdge
 findRel mes i j = find (\me -> (me ^. me_start) == i && (me ^. me_end) == j) mes
 
-findLink :: [MGEdge] -> Int -> Maybe Int
-findLink mes i = do
-  me <- find (\me -> (me ^. me_start) == i) mes
-  return (me^.me_end)
+
+forwardLinks :: [MGEdge] -> Int -> [Int]
+forwardLinks mes i = [me^.me_end| me <- filter (\me -> (me ^. me_start) == i) mes]
+
+
+backwardLinks :: [MGEdge] -> Int -> [Int]
+backwardLinks mes i = [me^.me_start| me <- filter (\me -> (me ^. me_end) == i && me^.me_ismodifier) mes]
+
+
 
 
 findVertex :: [MGVertex] -> Int -> Maybe MGVertex
@@ -113,71 +121,85 @@ findLabel mvs i = do
                                  PredNominalized n _ -> Just (unLemma n)
                                  PredAppos      -> Just (unFNFrame _mv_frame)
 
-
-
-findSubjectObjects :: ([RoleInstance],MeaningGraph,Graph)
-                   -> Vertex
-                   -> MaybeT (State [Vertex]) MeaningTree
-findSubjectObjects (rolemap,mg,grph) frmid = do
-  let chldrn = grph ! frmid
-  v <- hoistMaybe $ findVertex (mg^.mg_vertices) frmid
-  (vid,frmtxt,msense,mneg) <- case v of
-                            MGEntity    {..} -> hoistMaybe Nothing
-                            MGPredicate {..} ->
-                              let vid = v^.mv_id
-                              in
-                              case _mv_pred_info of
-                                PredVerb _ sns vrb -> return (vid,unFNFrame _mv_frame,sns,vrb^.vp_negation)
-                                PredPrep _       -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
-                                PredNominalized _ _ -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
-                                PredAppos        -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
-  verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
-  let rels = mapMaybe (findRel (mg^.mg_edges) frmid) chldrn
-      subjresult = do
-        e <- find (\e -> isSubject rolemap (FNFrame frmtxt) msense (e^.me_relation)) rels 
-        let sidx = e^.me_end
-        lbl <- findLabel (mg^.mg_vertices) sidx
-        let mlnk = findLink (mg^.mg_edges) sidx
-        let fe = unFNFrameElement (e^.me_relation)
-        return (sidx,MeaningRole sidx fe (PrepOr Nothing (Terminal lbl mlnk)),e^.me_ismodifier)
-  guard (maybe True (not . (^._3)) subjresult)
-  (objs :: [MeaningRole]) <- lift $ do
-    fmap catMaybes . flip mapM (filter (\e -> Just (e ^.me_end) /= subjresult^?_Just._1) rels) $ \o -> do
-      let oidx = o^.me_end
-          oprep = o^.me_prep
-          orole = unFNFrameElement (o^.me_relation)
-      runMaybeT $ do
-        guard (not (o^.me_ismodifier))
-        v' <- hoistMaybe (findVertex (mg^.mg_vertices) oidx)
-        if isFrame v'
-          then do
+constructMeaningRole :: ([RoleInstance],MeaningGraph,Graph)
+                     -> MGEdge
+                     -> State [Vertex] (Maybe MeaningRole)
+constructMeaningRole (rolemap,mg,grph) o = do
+  let oidx = o^.me_end
+      oprep = o^.me_prep
+      orole = unFNFrameElement (o^.me_relation)
+  runMaybeT $ do
+    v' <- hoistMaybe (findVertex (mg^.mg_vertices) oidx)
+    let isM = o^.me_ismodifier
+        isF = isFrame v'
+    -- guard (not isM)
+    -- trace ("\no = " ++ show o) $ return ()
+    --    trace ("\nisM = " ++ show isM) $ return ()
+    if isM
+    then return (MeaningRole oidx orole (PrepOr oprep (Terminal "" (Just (v'^.mv_id)))))
+    else if isF
+         then do
             lift (modify' (delete oidx))
-            sub <- findSubjectObjects (rolemap,mg,grph) oidx
+            sub <- constructMeaningTree (rolemap,mg,grph) oidx
             return (MeaningRole oidx orole (PrepOr oprep (SubFrame sub)))
-          else do
+         else do
             olabel <- hoistMaybe (findLabel (mg^.mg_vertices) oidx)
-            let mlnk = findLink (mg^.mg_edges) oidx
-            return (MeaningRole oidx orole (PrepOr oprep (Terminal olabel mlnk)))
-  let arguments = maybe objs (\subj -> subj:objs) (subjresult^?_Just._2)
+            let mblnk = listToMaybe (backwardLinks (mg^.mg_edges) oidx)
+                mlnk = listToMaybe (forwardLinks (mg^.mg_edges) oidx)
+            case mblnk of
+              Nothing -> return (MeaningRole oidx orole (PrepOr oprep (Terminal olabel mlnk)))
+              Just blnk -> do
+                -- trace ("\n(oidx,blnk) = " ++ show (oidx,blnk)) $ return ()
+                v'' <- hoistMaybe (findVertex (mg^.mg_vertices) blnk)
+                guard (isFrame v'')
+                lift (modify' (delete blnk))
+                sub <- constructMeaningTree (rolemap,mg,grph) blnk
+                return (MeaningRole oidx orole (PrepOr oprep (Modifier olabel sub)))
+
+
+constructMeaningTree :: ([RoleInstance],MeaningGraph,Graph)
+                     -> Vertex
+                     -> MaybeT (State [Vertex]) MeaningTree
+constructMeaningTree (rolemap,mg,grph) frmid = do
+  let chldrn = grph ! frmid
+      chldrn0 = forwardLinks (mg^.mg_edges) frmid
+  v <- hoistMaybe $ findVertex (mg^.mg_vertices) frmid
+  (vid,frmtxt,msense,mneg) <-
+    case v of
+      MGEntity    {..} -> mzero
+      MGPredicate {..} ->
+        let vid = v^.mv_id
+        in case _mv_pred_info of
+             PredVerb _ sns vrb  -> return (vid,unFNFrame _mv_frame,sns,vrb^.vp_negation)
+             PredPrep _          -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
+             PredNominalized _ _ -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
+             PredAppos           -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
+  -- trace ("\nvid = " ++ show vid ++ ", frmtxt = " ++ show frmtxt ++ " " ++ show chldrn) $ return ()
+  verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
+
+  let rels = mapMaybe (findRel (mg^.mg_edges) frmid) chldrn0
+  arguments :: [MeaningRole] <- lift (catMaybes <$> mapM (constructMeaningRole (rolemap,mg,grph)) rels)
   return (MeaningTree vid frmtxt verbtxt (maybe False (const True) mneg) arguments)
 
 
-mkMeaningTree1 :: ([RoleInstance],MeaningGraph,Graph) -> State [Vertex] (Maybe (Maybe MeaningTree))
+mkMeaningTree1 :: ([RoleInstance],MeaningGraph,Graph) -> State [Vertex] (Maybe MeaningTree)
 mkMeaningTree1 (rolemap,mg,graph) = do
   xs <- get
   case xs of
     [] -> return Nothing
     (y:ys) -> do
       put ys
-      r <- runMaybeT $ findSubjectObjects (rolemap,mg,graph) y
-      return (Just r)
+      runMaybeT $ constructMeaningTree (rolemap,mg,graph) y
+      -- return (Just r)
+      -- return (Just r)
 
 
 mkMeaningTree :: [RoleInstance] -> MeaningGraph -> [MeaningTree]
-mkMeaningTree rolemap mg0 = catMaybes $ do
+mkMeaningTree rolemap mg0 = do
   let mg = squashRelFrame mg0
       mgraph = getGraphFromMG mg
   graph <- maybeToList mgraph
   let framelst = map (^.mv_id) $ filter isFrame $ mg^. mg_vertices
       vs = filter (`elem` framelst) $ topSort graph
+  -- trace ("\nedges" ++ intercalate "\n" (map show (mg^.mg_edges)) ) $ return ()
   evalState (unfoldM (mkMeaningTree1 (rolemap,mg,graph))) vs
