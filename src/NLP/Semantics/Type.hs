@@ -26,7 +26,7 @@ type TWord = Text
 
 
 data MeaningRoleContent = SubFrame MeaningTree
-                        | Modifier TWord MeaningTree
+                        | Modifier TWord [MeaningTree]
                         | Terminal TWord (Maybe (Bool,Int))
                         deriving (Eq,Show,Generic)
 
