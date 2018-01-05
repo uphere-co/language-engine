@@ -26,8 +26,8 @@ type TWord = Text
 
 
 data MeaningRoleContent = SubFrame MeaningTree
-                        --  | Modifier TWord MeaningTree
-                        | Terminal TWord (Maybe Int)
+                        | Modifier TWord MeaningTree
+                        | Terminal TWord (Maybe (Bool,Int))
                         deriving (Eq,Show,Generic)
 
 instance ToJSON MeaningRoleContent
@@ -40,7 +40,7 @@ instance FromJSON MeaningRoleContent
 --
 data MeaningRole = MeaningRole { _mr_id :: Int
                                , _mr_role :: FrameElement
-                               , _mr_content :: PrepOr MeaningRoleContent -- Either (PrepOr MeaningTree) (PrepOr (TWord,Maybe Int))
+                               , _mr_content :: PrepOr MeaningRoleContent
                                }
                  deriving (Eq,Show,Generic)
 
