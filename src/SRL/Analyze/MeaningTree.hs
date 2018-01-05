@@ -40,7 +40,7 @@ import Debug.Trace
 
 
 -- type VertexTriple = (Vertex, Vertex, [Vertex])
-
+{-
 squashRelFrame :: MeaningGraph -> MeaningGraph
 squashRelFrame mg0 = last (mg0 : unfoldr f mg0)
   where f mg = do
@@ -60,7 +60,7 @@ squashRelFrame mg0 = last (mg0 : unfoldr f mg0)
              mg' = mg & (mg_vertices .~ vs') . (mg_edges .~ es')
 
          return (mg',mg')
-
+-}
 
 isFrame :: MGVertex -> Bool
 isFrame (MGEntity {..})           = False
@@ -118,7 +118,7 @@ findLabel mvs i = do
     MGPredicate {..}        -> case _mv_pred_info of
                                  PredVerb idiom _ vrb -> Just (T.intercalate " " idiom)
                                  PredPrep p           -> Just p
-                                 PredNominalized n _  -> Just ""  -- Nothing -- Just (unLemma n)
+                                 PredNominalized n _  -> Just (unLemma n)
                                  PredAppos            -> Just "" -- Nothing -- Just (unFNFrame _mv_frame)
 
 constructMeaningRole :: ([RoleInstance],MeaningGraph,Graph)
@@ -132,11 +132,18 @@ constructMeaningRole (rolemap,mg,grph) o = do
     v' <- hoistMaybe (findVertex (mg^.mg_vertices) oidx)
     let isM = o^.me_ismodifier
         isF = isFrame v'
+        blnks = backwardLinks (mg^.mg_edges) oidx
+        mlnk = (False,) <$> listToMaybe (forwardLinks (mg^.mg_edges) oidx)
     -- guard (not isM)
     -- trace ("\no = " ++ show o) $ return ()
-    --    trace ("\nisM = " ++ show isM) $ return ()
+    -- trace ("\nisM = " ++ show isM) $ return ()
     if isM
-    then return (MeaningRole oidx orole (PrepOr oprep (Terminal "<t>" (Just (True,v'^.mv_id)))))
+    then {- if isF 
+         then do
+            lift (modify' (delete oidx))
+            sub <- constructMeaningTree (rolemap,mg,grph) oidx
+            return (MeaningRole oidx orole (PrepOr oprep (ModifierSubFrame sub)))
+         else -} return (MeaningRole oidx orole (PrepOr oprep (Terminal "<t>" (Just (True,v'^.mv_id)))))
     else if isF
          then do
             lift (modify' (delete oidx))
@@ -144,8 +151,6 @@ constructMeaningRole (rolemap,mg,grph) o = do
             return (MeaningRole oidx orole (PrepOr oprep (SubFrame sub)))
          else do
             olabel <- hoistMaybe (findLabel (mg^.mg_vertices) oidx)
-            let blnks = backwardLinks (mg^.mg_edges) oidx
-                mlnk = (False,) <$> listToMaybe (forwardLinks (mg^.mg_edges) oidx)
             case blnks of
               [] -> return (MeaningRole oidx orole (PrepOr oprep (Terminal olabel mlnk)))
               _ -> do
@@ -192,11 +197,12 @@ mkMeaningTree1 (rolemap,mg,graph) = do
 
 
 mkMeaningTree :: [RoleInstance] -> MeaningGraph -> [MeaningTree]
-mkMeaningTree rolemap mg0 = do
-  let mg = squashRelFrame mg0
+mkMeaningTree rolemap mg = do
+  let -- mg = squashRelFrame mg0
       mgraph = getGraphFromMG mg
   graph <- maybeToList mgraph
   let framelst = map (^.mv_id) $ filter isFrame $ mg^. mg_vertices
       vs = filter (`elem` framelst) $ topSort graph
-  -- trace ("\nedges" ++ intercalate "\n" (map show (mg^.mg_edges)) ) $ return ()
+  -- trace ("\vertices\n" ++ intercalate "\n" (map show (mg^.mg_vertices)) ) $ return ()      
+  -- trace ("\nedges\n" ++ intercalate "\n" (map show (mg^.mg_edges)) ) $ return ()
   evalState (unfoldM (mkMeaningTree1 (rolemap,mg,graph))) vs
