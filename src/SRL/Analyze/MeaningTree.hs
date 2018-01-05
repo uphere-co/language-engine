@@ -144,17 +144,17 @@ constructMeaningRole (rolemap,mg,grph) o = do
             return (MeaningRole oidx orole (PrepOr oprep (SubFrame sub)))
          else do
             olabel <- hoistMaybe (findLabel (mg^.mg_vertices) oidx)
-            let mblnk = listToMaybe (backwardLinks (mg^.mg_edges) oidx)
+            let blnks = backwardLinks (mg^.mg_edges) oidx
                 mlnk = (False,) <$> listToMaybe (forwardLinks (mg^.mg_edges) oidx)
-            case mblnk of
-              Nothing -> return (MeaningRole oidx orole (PrepOr oprep (Terminal olabel mlnk)))
-              Just blnk -> do
-                -- trace ("\n(oidx,blnk) = " ++ show (oidx,blnk)) $ return ()
-                v'' <- hoistMaybe (findVertex (mg^.mg_vertices) blnk)
-                guard (isFrame v'')
-                lift (modify' (delete blnk))
-                sub <- constructMeaningTree (rolemap,mg,grph) blnk
-                return (MeaningRole oidx orole (PrepOr oprep (Modifier olabel sub)))
+            case blnks of
+              [] -> return (MeaningRole oidx orole (PrepOr oprep (Terminal olabel mlnk)))
+              _ -> do
+                subs <- flip mapM blnks $ \blnk -> do
+                  v'' <- hoistMaybe (findVertex (mg^.mg_vertices) blnk)
+                  guard (isFrame v'')
+                  lift (modify' (delete blnk))
+                  constructMeaningTree (rolemap,mg,grph) blnk
+                return (MeaningRole oidx orole (PrepOr oprep (Modifier olabel subs)))
 
 
 constructMeaningTree :: ([RoleInstance],MeaningGraph,Graph)
@@ -174,7 +174,6 @@ constructMeaningTree (rolemap,mg,grph) frmid = do
              PredPrep _          -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
              PredNominalized _ _ -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
              PredAppos           -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
-  -- trace ("\nvid = " ++ show vid ++ ", frmtxt = " ++ show frmtxt ++ " " ++ show chldrn) $ return ()
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
 
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) chldrn0
@@ -190,8 +189,6 @@ mkMeaningTree1 (rolemap,mg,graph) = do
     (y:ys) -> do
       put ys
       runMaybeT $ constructMeaningTree (rolemap,mg,graph) y
-      -- return (Just r)
-      -- return (Just r)
 
 
 mkMeaningTree :: [RoleInstance] -> MeaningGraph -> [MeaningTree]
