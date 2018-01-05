@@ -117,9 +117,9 @@ findLabel mvs i = do
     MGEntity {..}           -> Just _mv_text
     MGPredicate {..}        -> case _mv_pred_info of
                                  PredVerb idiom _ vrb -> Just (T.intercalate " " idiom)
-                                 PredPrep p     -> Just p
-                                 PredNominalized n _ -> Just (unLemma n)
-                                 PredAppos      -> Just (unFNFrame _mv_frame)
+                                 PredPrep p           -> Just p
+                                 PredNominalized n _  -> Just ""  -- Nothing -- Just (unLemma n)
+                                 PredAppos            -> Just "" -- Nothing -- Just (unFNFrame _mv_frame)
 
 constructMeaningRole :: ([RoleInstance],MeaningGraph,Graph)
                      -> MGEdge
