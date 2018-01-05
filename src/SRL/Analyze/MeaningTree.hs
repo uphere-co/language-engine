@@ -136,7 +136,7 @@ constructMeaningRole (rolemap,mg,grph) o = do
     -- trace ("\no = " ++ show o) $ return ()
     --    trace ("\nisM = " ++ show isM) $ return ()
     if isM
-    then return (MeaningRole oidx orole (PrepOr oprep (Terminal "" (Just (v'^.mv_id)))))
+    then return (MeaningRole oidx orole (PrepOr oprep (Terminal "<t>" (Just (True,v'^.mv_id)))))
     else if isF
          then do
             lift (modify' (delete oidx))
@@ -145,7 +145,7 @@ constructMeaningRole (rolemap,mg,grph) o = do
          else do
             olabel <- hoistMaybe (findLabel (mg^.mg_vertices) oidx)
             let mblnk = listToMaybe (backwardLinks (mg^.mg_edges) oidx)
-                mlnk = listToMaybe (forwardLinks (mg^.mg_edges) oidx)
+                mlnk = (False,) <$> listToMaybe (forwardLinks (mg^.mg_edges) oidx)
             case mblnk of
               Nothing -> return (MeaningRole oidx orole (PrepOr oprep (Terminal olabel mlnk)))
               Just blnk -> do
