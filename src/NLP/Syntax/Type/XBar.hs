@@ -117,6 +117,11 @@ cpdpppToCompVP (PPCase pp) = CompVP_PP pp
 cpdpppToCompVP (APCase ap) = CompVP_AP ap
 
 
+cpdpppToAdjunctCP :: CPDPPP 'PH0 -> Maybe (AdjunctCP 'PH0)
+cpdpppToAdjunctCP (CPCase cp) = Just (AdjunctCP_CP cp)
+cpdpppToAdjunctCP _           = Nothing
+
+
 
 headTextDP :: PreAnalysis t -> DetP p -> Text
 headTextDP tagged dp =
