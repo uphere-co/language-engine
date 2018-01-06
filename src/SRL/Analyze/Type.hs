@@ -112,8 +112,13 @@ data PredicateInfo = PredVerb { _pi_lemmas :: [Text]               -- ^ for idio
 makePrisms ''PredicateInfo
 
 
+data VertexID = RegularRange Range
+              | InnerDPRange Range
+              deriving (Generic,Show,Eq)
 
-data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Maybe Range) Int     --  (0: outer-DP 1: inner-DP)
+instance Hashable VertexID
+
+data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap VertexID Int     -- (Int,Maybe Range)  (0: outer-DP 1: inner-DP)
                            , _vm_rangeDependency :: [(Range,Range)]
                            , _vm_headRangeToFullRange :: [(Range,Range)]
                            }

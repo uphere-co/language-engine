@@ -15,7 +15,7 @@ import           Data.Bifunctor               (second)
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy,intercalate)
-import           Data.Maybe                   (fromMaybe,mapMaybe,maybeToList)
+import           Data.Maybe                   (fromJust,fromMaybe,mapMaybe,maybeToList)
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
@@ -35,6 +35,7 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..)
                                               ,MeaningGraph(..)
                                               ,SentStructure,AnalyzePredata
                                               ,PredicateInfo(..)
+                                              ,VertexID(..)
                                               ,VertexMap(..)
                                               ,vm_rangeToIndex
                                               -- ,vm_hnrangeToIndex
@@ -175,7 +176,7 @@ mkRoleEdges vmap matched = do
       depmap = vmap^.vm_rangeDependency
       headfull = vmap^.vm_headRangeToFullRange
   (rng,_,x'tr,FMR _ _ mselected _,_) <- matched
-  i <- maybeToList (HM.lookup (0,Just rng) rngidxmap)   -- frame
+  i <- maybeToList (HM.lookup (RegularRange rng) rngidxmap)   -- frame
   (_,felst) <- maybeToList mselected
   (fe,x) <- felst
   (t,rng',mprep) <- case x of
@@ -191,7 +192,7 @@ mkRoleEdges vmap matched = do
                         pp <- maybeToList (cpdpppFromX'Tree x'tr rng_pp _PPCase)
                         return (t,pp^.complement.to (compPPToRange SPH1),pp^?headX.hp_prep._Prep_WORD)
   let rng'full = fromMaybe rng' (lookup rng' headfull)
-  i' <- maybeToList (HM.lookup (0,Just rng'full) rngidxmap)  -- frame element
+  i' <- maybeToList (HM.lookup (RegularRange rng'full) rngidxmap)  -- frame element
   let b = is _Just (find (== (rng',rng)) depmap)
       eci = case t of
               Just (PRO,i) -> Just (ECI_PRO i)
@@ -206,12 +207,12 @@ mkNomRoleEdges :: VertexMap
 mkNomRoleEdges vmap nmatched = do
   let rngidxmap = vmap^.vm_rangeToIndex
   (_lma,_verb,_,(_frm,rng_dp),(subj,mei_subj),(obj,ei_obj)) <- nmatched
-  i <- maybeToList (HM.lookup (0,Just rng_dp) rngidxmap)   -- frame
+  i <- maybeToList (HM.lookup (RegularRange rng_dp) rngidxmap)   -- frame
   let rng_obj = ei_obj^.ei_rangePair.rp_full
-  i' <- maybeToList (HM.lookup (0,Just rng_obj) rngidxmap)  -- frame element
+  i' <- maybeToList (HM.lookup (RegularRange rng_obj) rngidxmap)  -- frame element
   let lstsubj = case mei_subj of
                   Just ei_subj -> do
-                    i'' <- maybeToList (HM.lookup (0,Just (ei_subj^.ei_rangePair.rp_full)) rngidxmap)  -- frame element
+                    i'' <- maybeToList (HM.lookup (RegularRange (ei_subj^.ei_rangePair.rp_full)) rngidxmap)  -- frame element
                     [MGEdge subj False Nothing Nothing i i'']
                   Nothing -> []
   (MGEdge obj False (ei_obj^.ei_prep) Nothing i i') : lstsubj
@@ -223,28 +224,31 @@ mkInnerDPEdges :: VertexMap
                -> [MGEdge]
 mkInnerDPEdges vmap entities = do
     (ei,di) <- entities
-    let mrng = Just (ei^.ei_rangePair.rp_full)
-        appos = maybe [] (mkRelEdge "Instance" "Type" mrng) (di^.adi_appos)
+    let rng = ei^.ei_rangePair.rp_full
+        -- mrng = Just rng -- (ei^.ei_rangePair.rp_full)
+
+
+        appos = maybe [] (mkRelEdge "Instance" "Type" rng) (di^.adi_appos)
         comp = do c <- maybeToList (di^.adi_compof)
                   if (c^.ei_isClause)
-                    then mkRelEdge "Means" "Goal" mrng c
-                    else mkRelEdge "Subset" "Group" mrng c
-        poss = concatMap (mkRelEdge "Possession" "Owner" mrng) (di^.adi_poss)
+                    then mkRelEdge "Means" "Goal" rng c
+                    else mkRelEdge "Subset" "Group" rng c
+        poss = concatMap (mkRelEdge "Possession" "Owner" rng) (di^.adi_poss)
         adjs = do a <- di^.adi_adjs
                   p <- maybeToList (a^.ei_prep)
                   f <- if (a^.ei_isTime)
                          then [("Time_vector","Event","Landmark_event")]
                          else maybeToList (ppRelFrame p)
-                  mkRelEdge (f^._2) (f^._3) mrng a
+                  mkRelEdge (f^._2) (f^._3) rng a
     (appos ++ comp ++ poss ++ adjs)
   where
     rngidxmap = vmap^.vm_rangeToIndex
-    mkRelEdge role1 role2 mrng ei = do
+    mkRelEdge role1 role2 rng ei = do
       let rng' = ei^.ei_rangePair.rp_full
-      let mprep = ei^.ei_prep
-      i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
-      i_1 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
-      i_2 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
+          mprep = ei^.ei_prep
+      i_frame <- maybeToList (HM.lookup (InnerDPRange rng') rngidxmap)
+      i_1 <- maybeToList (HM.lookup (RegularRange rng) rngidxmap)
+      i_2 <- maybeToList (HM.lookup (RegularRange rng') rngidxmap)
       [MGEdge role1 True Nothing Nothing i_frame i_1, MGEdge role2 False mprep Nothing i_frame i_2]
 
 
@@ -255,7 +259,7 @@ mkPrepEdges vmap ientities2 = do
   let rngidxmap = vmap^.vm_rangeToIndex
   (i_frame,_frm,_prep,felst) <- map fst ientities2
   (fe,(b,rng)) <- felst
-  i_elem <- maybeToList (HM.lookup (0,Just rng) rngidxmap)
+  i_elem <- maybeToList (HM.lookup (RegularRange rng) rngidxmap)
   [MGEdge fe b Nothing Nothing i_frame i_elem]
 
 
@@ -266,8 +270,8 @@ mkCorefEdges vmap entities = do
   let rngidxmap = vmap^.vm_rangeToIndex
   (_,di) <- entities
   (rng0,rng1) <- maybeToList (di^.adi_coref)
-  i_0 <- maybeToList (HM.lookup (0,Just rng0) rngidxmap)
-  i_1 <- maybeToList (HM.lookup (0,Just rng1) rngidxmap)
+  i_0 <- maybeToList (HM.lookup (RegularRange rng0) rngidxmap)
+  i_1 <- maybeToList (HM.lookup (RegularRange rng1) rngidxmap)
   [MGEdge "ref" False Nothing Nothing i_0 i_1]
 
 
@@ -304,8 +308,10 @@ meaningGraph apredata sstr =
       --
       (vertices,entities1_0,ientities2,headfull) = mkMGVertices (tagged,depmap) (matched,nmatched)
       --
-      rangeid :: MGVertex -> (Int,Maybe Range)
-      rangeid mv = (if mv^?_MGPredicate._4._PredAppos == Just () then 1 else 0, mv^.mv_range)
+      rangeid :: MGVertex -> VertexID
+      rangeid mv = if mv^?_MGPredicate._4._PredAppos == Just ()
+                   then InnerDPRange (fromJust (mv^.mv_range))
+                   else RegularRange (fromJust (mv^.mv_range))
       --
       rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
       -- hnrngidxmap = HM.fromList [(rng, v^.mv_id) | v <- vertices, rng <- v^.._MGEntity._3._Just ]
