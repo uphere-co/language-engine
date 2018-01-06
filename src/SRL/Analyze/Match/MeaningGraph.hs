@@ -67,7 +67,7 @@ dependencyOfX'Tree (PL _)           = []
 mkEntityFun :: (EntityInfo,DPInfo) -> [(Int -> MGVertex)]
 mkEntityFun (EI _ (RangePair rng rnghead) _mprep txt _ _,di) =
   let mkRel frm (EI _ (RangePair rng' rng'') _ txt' False _) = [ \i'  -> MGEntity i' (Right rng') (Just rng'') txt' []
-                                                                     , \i'' -> MGPredicate i'' (Right rng') frm PredAppos ]
+                                                               , \i'' -> MGPredicate i'' (Right rng') frm PredAppos ]
       mkRel frm (EI _ (RangePair rng' rng'') _ txt' True _)  = [ \i'' -> MGPredicate i'' (Right rng') frm PredAppos ]
       -- mkRel frm (EI (Left _                      ) _ _    _    _)  = error "mkRel not implemented"
 

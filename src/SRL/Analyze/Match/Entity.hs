@@ -151,7 +151,7 @@ entityFromAP tagged ap =
 
 entityFromDP :: X'Tree 'PH1
              -> PreAnalysis '[Lemma]
-             -> (Maybe TraceType,DetP 'PH1)
+             -> (Maybe (TraceType,Int),DetP 'PH1)
              -> (EntityInfo,DPInfo)
 entityFromDP x'tr tagged (trc,dp) =
   let rng = dp^.maximalProjection
@@ -198,6 +198,6 @@ entityFromDP x'tr tagged (trc,dp) =
                   return (EI Nothing (RangePair rng_poss rng_poss) Nothing txt_poss False False)
       poss = maybeToList mposs1 ++ maybeToList mposs2
       eci = case trc of
-              Just PRO -> Just ECI_PRO
-              _        -> Nothing
+              Just (PRO,i) -> Just (ECI_PRO i)
+              _            -> Nothing
   in (EI eci (RangePair rng rnghead) Nothing headtxt False False, DI mrngtxt' mcoref mcomp poss adjs)

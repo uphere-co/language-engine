@@ -41,7 +41,7 @@ instance FromJSON RangePair
 instance ToJSON RangePair
 instance Hashable RangePair
 
-data EmptyCategoryIndex = ECI_PRO --  RangePair --  (Maybe RangePair)
+data EmptyCategoryIndex = ECI_PRO Int --  RangePair --  (Maybe RangePair)
                         | ECI_NULL
                         deriving (Generic, Show, Eq, Ord)
 
@@ -69,7 +69,7 @@ eiRangeID :: EntityInfo -> Range --  Either EmptyCategoryIndex Range
 eiRangeID e = e^.ei_rangePair.rp_full -- e^.ei_id.to (second (^.rp_full))
 
 
-type MatchedElement = (Maybe TraceType,CompVP 'PH1)
+type MatchedElement = (Maybe (TraceType,Int),CompVP 'PH1)
 
 data FrameMatchResult = FMR { _fmr_lemmas :: [Text]
                             , _fmr_frame :: FNFrame

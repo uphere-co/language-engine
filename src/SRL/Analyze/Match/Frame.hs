@@ -96,7 +96,7 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
 
 matchSubject :: X'Tree 'PH1
              -> [(PBArg,Text)]
-             -> Maybe (Maybe TraceType,SpecTP 'PH1)
+             -> Maybe (Maybe (TraceType,Int),SpecTP 'PH1)
              -> ArgPattern p GRel
              -> Maybe (FNFrameElement, MatchedElement)
 matchSubject x'tr rolemap mDP patt = do
@@ -204,7 +204,7 @@ matchAgentForPassive x'tr rolemap cp patt = do
 
 matchSO :: X'Tree 'PH1
         -> [(PBArg,Text)]
-        -> (Maybe (Maybe TraceType,SpecTP 'PH1),VerbP 'PH1,CP 'PH1)
+        -> (Maybe (Maybe (TraceType,Int),SpecTP 'PH1),VerbP 'PH1,CP 'PH1)
         -> (ArgPattern p GRel, Int)
         -> ((ArgPattern p GRel, Int), [(FNFrameElement, MatchedElement)])
 matchSO x'tr rolemap (mDP,verbp,cp) (patt,num) =
@@ -236,7 +236,7 @@ matchRoles :: X'Tree 'PH1
            -> VerbP 'PH1
            -> CP 'PH1
            -> [(ArgPattern () GRel, Int)]
-           -> Maybe (Maybe TraceType,SpecTP 'PH1)
+           -> Maybe (Maybe (TraceType,Int),SpecTP 'PH1)
            -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, MatchedElement)])
 matchRoles x'tr rolemap verbp cp toppattstats mDP =
     (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy (flip compare `on` numMatchedRoles)) matched
@@ -251,7 +251,7 @@ matchFrameRolesForCauseDual :: X'Tree 'PH1
                             -> VerbP 'PH1
                             -> CP 'PH1
                             -> [(ArgPattern () GRel,Int)]
-                            -> Maybe (Maybe TraceType,SpecTP 'PH1)
+                            -> Maybe (Maybe (TraceType,Int),SpecTP 'PH1)
                             -> LittleV
                             -> ([Text], FNFrame, SenseID, [(PBArg, Text)])
                             -> ([Text], FNFrame, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, MatchedElement)]))
@@ -276,7 +276,7 @@ matchFrameRolesForCauseDual x'tr verbp cp toppatts mDP causetype (idiom, frame1,
 matchFrameRolesAll :: X'Tree 'PH1
                    -> VerbP 'PH1
                    -> CP 'PH1
-                   -> Maybe (Maybe TraceType,SpecTP 'PH1)
+                   -> Maybe (Maybe (TraceType,Int),SpecTP 'PH1)
                    -> [(([Text],RoleInstance,Int),[(ArgPattern () GRel,Int)])]
                    -> [(([Text],FNFrame,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, MatchedElement)])),Int)]
 matchFrameRolesAll x'tr verbp cp mDP rmtoppatts = do
