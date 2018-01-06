@@ -90,8 +90,6 @@ mkEntityFun (EI t (RangePair rng rnghead) _mprep txt _ _,di) =
                        then [("Time_vector","Event","Landmark_event")]
                        else maybeToList (ppRelFrame p)
                 mkRel (f^._1) a
-
-      -- trace ("\nmkEntityFun" ++ show rng ++ show t) $
   in [ \i -> MGEntity i (mkECIVertex t) (Just rnghead) (case t of Just (ECI_PRO j) -> "PRO_" <> T.pack (show j); _ -> txt) [] ]
      ++ appos ++ comp ++ poss ++ adjs
 
@@ -173,7 +171,7 @@ mkMGVertices (tagged,depmap) (matched,nmatched) =
                        adjs = di^.adi_adjs
                        eis = ei : (appos ++ compof ++ poss ++ adjs)
                    in map (\e -> (e^.ei_rangePair.rp_head,e^.ei_rangePair.rp_full)) eis
-  in trace (intercalate "\n" (map show ett_verb)) $ (vertices,ett_verbnom,iett_prep,headfull)
+  in (vertices,ett_verbnom,iett_prep,headfull)
 
 
 mkRoleEdges :: VertexMap
@@ -211,12 +209,6 @@ mkRoleEdges vmap matched = do
       let b = is _Just (find (== (rng',rng)) depmap)
       [MGEdge fe b mprep i i']
 
-{-
-      Nothing
-
-
-  return ()
--}
 
 mkNomRoleEdges :: VertexMap
                -> [(Lemma,Lemma,X'Tree 'PH1,(FNFrame,Range),(FNFrameElement,Maybe EntityInfo),(FNFrameElement,EntityInfo))]
@@ -242,9 +234,6 @@ mkInnerDPEdges :: VertexMap
 mkInnerDPEdges vmap entities = do
     (ei,di) <- entities
     let rng = ei^.ei_rangePair.rp_full
-        -- mrng = Just rng -- (ei^.ei_rangePair.rp_full)
-
-
         appos = maybe [] (mkRelEdge "Instance" "Type" rng) (di^.adi_appos)
         comp = do c <- maybeToList (di^.adi_compof)
                   if (c^.ei_isClause)
@@ -261,15 +250,11 @@ mkInnerDPEdges vmap entities = do
   where
     rngidxmap = vmap^.vm_rangeToIndex
     mkRelEdge role1 role2 rng ei = do
-      -- trace ("\nmkRelEdge1:" ++ show (role1,role2,rng)) $ return ()
       let rng' = ei^.ei_rangePair.rp_full
           mprep = ei^.ei_prep
       i_frame <- maybeToList (HM.lookup (InnerDPRange rng') rngidxmap)
-      -- trace ("\nmkRelEdge2:" ++ show (role1,role2,rng)) $ return ()
       i_1 <- maybeToList (HM.lookup (RegularRange rng) rngidxmap)
-      -- trace ("\nmkRelEdge3:" ++ show (role1,role2,rng)) $ return ()
       i_2 <- maybeToList (HM.lookup (RegularRange rng') rngidxmap)
-      -- trace ("\nmkRelEdge4:" ++ show (role1,role2,rng)) $ return ()
       [MGEdge role1 True Nothing i_frame i_1, MGEdge role2 False mprep i_frame i_2]
 
 

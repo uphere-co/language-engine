@@ -200,4 +200,4 @@ entityFromDP x'tr tagged (trc,dp) =
       eci = case trc of
               Just (PRO,i) -> Just (ECI_PRO i)
               _            -> Nothing
-  in trace ("\nentityFromDP" ++ show rng ++ show eci) $ (EI eci (RangePair rng rnghead) Nothing headtxt False False, DI mrngtxt' mcoref mcomp poss adjs)
+  in (EI eci (RangePair rng rnghead) Nothing headtxt False False, DI mrngtxt' mcoref mcomp poss adjs)
