@@ -302,7 +302,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       tagposs = c^._6
       synsets = c^._7
       pre = mkPreAnalysis lmatknlst pt tagposs synsets
-      vps = mkVPS (c^._4) (c^._5)
+      vps = mkVPS lmatknlst pt -- (c^._4) (c^._5)
       x'trs = syntacticAnalysis pre -- map (resolveCP  . identifyCPHierarchy pre) vps
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
       -- test subjects

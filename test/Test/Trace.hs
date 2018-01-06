@@ -254,14 +254,14 @@ showDetail (txt,_,_,lma,pt,tagged,synsets) = mapM_ T.IO.putStrLn (formatDetail (
 
 
 testcases :: [TestTrace]
-testcases = [ {- test_silent_pronoun_1
+testcases = [ test_silent_pronoun_1
             , test_silent_pronoun_2
             , test_multi_silent_pronoun
-            , -} test_relative_pronoun_subject
+            , test_relative_pronoun_subject
             , test_relative_pronoun_object
             , test_reduced_relative_clause
-            , test_passive
-            , test_passive_raising
+            -- , test_passive
+            -- , test_passive_raising
             {- , test_ECM
             , test_nonrestrictive_relative_clause
             , test_free_relative_clause_subject_1
@@ -277,8 +277,13 @@ testcases = [ {- test_silent_pronoun_1
 checkTrace :: TestTrace -> Bool
 checkTrace c =
   fromMaybe False $ do
-    let pre = mkPreAnalysis (c^._4) (c^._5) (c^._6) (c^._7)
-        vps = mkVPS (c^._4) (c^._5)
+    let txt = c^._1
+        lmatknlst = c^._4
+        pt = c^._5
+        tagposs = c^._6
+        synsets = c^._7
+        pre = mkPreAnalysis lmatknlst pt tagposs synsets -- (c^._4) (c^._5) (c^._6) (c^._7)
+        vps = mkVPS lmatknlst pt -- (c^._4) (c^._5)
         -- x'trs0 = identifyCPHierarchy tagged vps
         x'trs = syntacticAnalysis pre -- map (bindingWH2 . (\tr -> evalState (bindingWH1 tr) 0) . mkX'TreePH1) x'trs0
         
@@ -299,6 +304,8 @@ checkTrace c =
     x'tr <- listToMaybe x'trs
     let r = map (_2 %~ (\x -> x^._2 .to (T.intercalate " " . tokensByRange pre))) (retrieveResolved x'tr)
     -- trace (show (r,c^._3)) $ return ()
+    
+    trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (txt,lmatknlst,pt,tagposs,synsets)))) $ return ()
 
     return (r == c^._3)
     {- 

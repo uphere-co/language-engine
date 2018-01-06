@@ -457,12 +457,23 @@ moveWH (i,cp) = fromMaybe (i,cp) $ do
                  in return (i+1,cp')
 
 
+markPRO :: (Int,CP 'PH1) -> (Int,CP 'PH1)
+markPRO (i,cp) = fromMaybe (i,cp) $ do
+  let spec_tp = cp^.complement.specifier
+  Left NULL <- return (spec_tp^.coidx_content)
+  let mj = spec_tp^.coidx_i
+      i' = maybe (i+1) (const i) mj
+      j = fromMaybe i mj
+  let cp' = cp & (complement.specifier .~ mkCoindex j (Left PRO))
+  return (i',cp')
+
+
 bindingWH1 :: (X'Tree 'PH1) -> State Int (X'Tree 'PH1)
 bindingWH1 x'tr = bitraverse f f x'tr
  where f x = case x^._2 of
                CPCase cp -> do
                  i <- get
-                 let (i',cp') = (moveWH . movePassive . moveTopic) (i,cp)
+                 let (i',cp') = (markPRO . moveWH . movePassive . moveTopic) (i,cp)
                  put i'
                  (return . (_2._CPCase .~ cp')) x
                _ -> return x
@@ -490,6 +501,33 @@ bindingWH2 x'tr = bimap f f x'tr
                _ -> x
 
 
+resolvePRO :: X'Tree 'PH1 -> CP 'PH1 -> CP 'PH1
+resolvePRO x'tr cp = fromMaybe cp $ do
+  let rng_cp = cp^.maximalProjection
+  case cp^.complement.specifier.coidx_content of
+    Left PRO -> do
+      w <- extractZipperById rng_cp x'tr
+      w0 <- parent w
+      cp0 <- currentCPDPPP w0 ^? _CPCase
+      i0 <- cp0^.complement.specifier.coidx_i
+      let cpresult = cp & (complement.specifier.coidx_i .~ Just i0)
+      return cpresult
+    _ -> do
+      rng_cp' <- listToMaybe (cp^..complement.complement.complement.traverse.coidx_content._Right._CompVP_CP)
+      w' <- extractZipperById rng_cp' x'tr
+      cp' <- currentCPDPPP w' ^? _CPCase
+      Left PRO <- return (cp'^.complement.specifier.coidx_content)
+      i <- cp'^.complement.specifier.coidx_i
+      let cpresult = cp & (complement.specifier.coidx_i .~ Just i)
+      return cpresult
+
+
+bindingPRO :: X'Tree 'PH1 -> X'Tree 'PH1
+bindingPRO x'tr = bimap f f x'tr
+ where f x = case x^._2 of
+               CPCase cp -> (_2._CPCase %~ resolvePRO x'tr) x
+               _ -> x
+
 retrieveResolved :: X'Tree 'PH1 -> [(Int,(CompVP 'PH1,Range))]
 retrieveResolved x'tr = bifoldMap f f x'tr
   where f x = case x^._2 of
@@ -509,6 +547,11 @@ retrieveResolved x'tr = bifoldMap f f x'tr
                 _         -> []
 
 
+
+mkX'TreePH1 :: X'Tree 'PH0 -> X'Tree 'PH1
+mkX'TreePH1 x'tr = bimap f f x'tr
+  where
+    f (rng,x) = (rng,mkCPDPPPPH1 x)
 
 
 {-
@@ -583,7 +626,7 @@ whMovement tagged (w,cp) = do
 
 -}
 
-
+{-
 resolvePRO :: PreAnalysis (Lemma ': as)
            -> (X'Zipper 'PH0,CP 'PH0)
            -> MaybeT (State (X'TreeState 'PH0)) (Coindex (Either TraceType (Either Range (SpecTP 'PH0))))
@@ -632,7 +675,7 @@ resolveVPComp rng spec = do
               w' = replaceFocusItem rf rf w
           lift (put (XTS i (toBitree w')))
           return spec --  -- (mergeRightELZ (c^.trChain) (spec^.trChain)) (spec^.coidx_content))
-
+-}
 
 --
 -- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
@@ -657,7 +700,7 @@ resolveDP tagged rng = fmap (fromMaybe emptyCoindex) . runMaybeT $ do
 --
 -}
 
-
+{-
 bindingSpec :: Range
             -> Coindex (Either TraceType (Either Range (SpecTP 'PH0)))
             -> MaybeT (State (X'TreeState 'PH0)) () -- X'Zipper
@@ -668,7 +711,7 @@ bindingSpec rng spec = do
       z' = replaceFocusItem rf rf z
   lift (put (XTS i (toBitree z')))
   -- return z'
-
+-}
 {-
 -- consider passive case only now for the time being.
 connectRaisedDP :: Range -> MaybeT (State (X'TreeState 'PH0)) () -- X'Zipper
@@ -705,6 +748,7 @@ bindingAnalysisRaising :: X'TreeState 'PH0 -> X'TreeState 'PH0
 bindingAnalysisRaising = rewriteTree (\rng -> connectRaisedDP rng <|> return ())
 -}
 
+{- 
 --
 -- | This is a generic tree-rewriting operation.
 --   It assumes range index is not changed after each operation
@@ -727,10 +771,4 @@ rewriteTree action xts = execState (go rng0) xts
                      <|> return ()))
 
 
-
-
-mkX'TreePH1 :: X'Tree 'PH0 -> X'Tree 'PH1
-mkX'TreePH1 x'tr = bimap f f x'tr
-  where
-    f (rng,x) = (rng,mkCPDPPPPH1 x)
-
+-}
