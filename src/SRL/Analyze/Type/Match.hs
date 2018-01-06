@@ -41,7 +41,7 @@ instance FromJSON RangePair
 instance ToJSON RangePair
 instance Hashable RangePair
 
-data EmptyCategoryIndex = ECI_PRO Int RangePair --  (Maybe RangePair)
+data EmptyCategoryIndex = ECI_PRO --  RangePair --  (Maybe RangePair)
                         | ECI_NULL
                         deriving (Generic, Show, Eq, Ord)
 
@@ -53,8 +53,8 @@ instance Hashable EmptyCategoryIndex
 
 
 
-data EntityInfo = EI { _ei_id :: Either EmptyCategoryIndex RangePair -- (Range,Range) -- ^ (full,head) -- fullRange :: Range
-                     -- , _ei_headRange :: Range
+data EntityInfo = EI { _ei_eci :: Maybe EmptyCategoryIndex -- (Range,Range) -- ^ (full,head) -- fullRange :: Range
+                     , _ei_rangePair :: RangePair
                      , _ei_prep      :: Maybe Text
                      , _ei_text      :: Text
                      , _ei_isClause  :: Bool
@@ -64,8 +64,9 @@ data EntityInfo = EI { _ei_id :: Either EmptyCategoryIndex RangePair -- (Range,R
 
 makeLenses ''EntityInfo
 
-eiRangeID :: EntityInfo -> Either EmptyCategoryIndex Range
-eiRangeID e = e^.ei_id.to (second (^.rp_full))
+
+eiRangeID :: EntityInfo -> Range --  Either EmptyCategoryIndex Range
+eiRangeID e = e^.ei_rangePair.rp_full -- e^.ei_id.to (second (^.rp_full))
 
 
 type MatchedElement = (Maybe TraceType,CompVP 'PH1)

@@ -604,7 +604,7 @@ matchNomFrame apredata x'tr tagged dp = do
                                      in listToMaybe rngs
                    _ -> Nothing
           let txt = T.intercalate " " (tokensByRange tagged rng)
-          return (EI (Right (RangePair rng rng)) Nothing txt False False)
+          return (EI Nothing (RangePair rng rng) Nothing txt False False)
     (verb,_senses,rmtoppatts) <- getFirst . mconcat $ do
       verb <- extractNominalizedVerb wndb lma
       let (senses,rmtoppatts) = getVerbSenses apredata (verb,[verb])
@@ -627,7 +627,7 @@ matchNomFrame apredata x'tr tagged dp = do
       guard (pp^.headX.hp_prep == Prep_WORD "of")
       rng_obj <- pp^?complement._CompPP_DP -- .maximalProjection
       let txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
-      return (lma,verb,x'tr,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI (Right (RangePair rng_obj rng_obj)) (Just "of") txt_obj False False)))
+      return (lma,verb,x'tr,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI Nothing (RangePair rng_obj rng_obj) (Just "of") txt_obj False False)))
     cpcase patt rolemap lma frm verb rng_dp mei_subj = do
       let (ms,mo) = subjObjSBAR (patt^._1)
       (args,_) <- ms
@@ -643,4 +643,4 @@ matchNomFrame apredata x'tr tagged dp = do
           txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
       aux <- listToMaybe (vp^..headX.vp_auxiliary.traverse._2._2.to unLemma)
       guard (aux == "to")
-      return (lma,verb,x'tr,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI (Right (RangePair rng_obj rng_obj)) Nothing txt_obj False False)))
+      return (lma,verb,x'tr,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI Nothing (RangePair rng_obj rng_obj) Nothing txt_obj False False)))
