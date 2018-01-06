@@ -113,7 +113,7 @@ makePrisms ''PredicateInfo
 
 
 
-data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Either EmptyCategoryIndex Range) Int
+data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Maybe Range) Int     --  (0: outer-DP 1: inner-DP)
                            , _vm_rangeDependency :: [(Range,Range)]
                            , _vm_headRangeToFullRange :: [(Range,Range)]
                            }
@@ -124,13 +124,14 @@ makeLenses ''VertexMap
 
 
 data MGVertex = MGEntity    { _mv_id :: Int
-                            , _mv_range :: Either EmptyCategoryIndex Range
+                            , _mv_range :: Maybe Range
                             , _mv_head_range :: Maybe Range
+                            , _mv_eci :: Maybe EmptyCategoryIndex
                             , _mv_text :: Text
                             , _mv_resolved_entities :: [Text]   -- resolved named entity candidates
                             }
               | MGPredicate { _mv_id    :: Int
-                            , _mv_range :: Either EmptyCategoryIndex Range
+                            , _mv_range :: Maybe Range
                             , _mv_frame :: FNFrame
                             , _mv_pred_info :: PredicateInfo
                             }
@@ -140,7 +141,7 @@ data MGVertex = MGEntity    { _mv_id :: Int
 mv_id :: Simple Lens MGVertex Int
 mv_id = lens _mv_id (\f a -> f { _mv_id = a })
 
-mv_range :: Simple Lens MGVertex (Either EmptyCategoryIndex Range)
+mv_range :: Simple Lens MGVertex (Maybe Range)
 mv_range = lens _mv_range (\f a -> f { _mv_range = a })
 
 
