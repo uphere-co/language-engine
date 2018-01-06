@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE KindSignatures     #-}
+{-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
 
@@ -9,6 +10,7 @@ module SRL.Analyze.Type where
 
 import           Control.Lens
 import           Data.Aeson
+import           Data.Hashable                 (Hashable)
 import           Data.HashMap.Strict           (HashMap)
 import           Data.Text                     (Text)
 import           GHC.Generics
@@ -95,14 +97,6 @@ instance FromJSON DocAnalysisInput where
 
 
 
-data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Maybe Range) Int
-                           --  , _vm_hnrangeToIndex :: HashMap Range Int
-                           , _vm_rangeDependency :: [(Range,Range)]
-                           , _vm_headRangeToFullRange :: [(Range,Range)]
-                           }
-               deriving Show
-
-makeLenses ''VertexMap
 
 
 data PredicateInfo = PredVerb { _pi_lemmas :: [Text]               -- ^ for idiom
@@ -117,15 +111,34 @@ data PredicateInfo = PredVerb { _pi_lemmas :: [Text]               -- ^ for idio
 
 makePrisms ''PredicateInfo
 
+data EmptyCategoryIndex = ECI_PRO Int
+                        | ECI_NULL
+                        deriving (Generic, Show, Eq)
+
+makePrisms ''EmptyCategoryIndex
+
+instance FromJSON EmptyCategoryIndex
+instance ToJSON EmptyCategoryIndex
+instance Hashable EmptyCategoryIndex
+
+
+data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Either EmptyCategoryIndex Range) Int
+                           , _vm_rangeDependency :: [(Range,Range)]
+                           , _vm_headRangeToFullRange :: [(Range,Range)]
+                           }
+               deriving Show
+
+makeLenses ''VertexMap
+
 
 data MGVertex = MGEntity    { _mv_id :: Int
-                            , _mv_range :: Maybe Range
+                            , _mv_range :: Either EmptyCategoryIndex Range
                             , _mv_head_range :: Maybe Range
                             , _mv_text :: Text
                             , _mv_resolved_entities :: [Text]   -- resolved named entity candidates
                             }
               | MGPredicate { _mv_id    :: Int
-                            , _mv_range :: Maybe Range
+                            , _mv_range :: Either EmptyCategoryIndex Range
                             , _mv_frame :: FNFrame
                             , _mv_pred_info :: PredicateInfo
                             }
@@ -135,11 +148,17 @@ data MGVertex = MGEntity    { _mv_id :: Int
 mv_id :: Simple Lens MGVertex Int
 mv_id = lens _mv_id (\f a -> f { _mv_id = a })
 
-mv_range :: Simple Lens MGVertex (Maybe Range)
+mv_range :: Simple Lens MGVertex (Either EmptyCategoryIndex Range)
 mv_range = lens _mv_range (\f a -> f { _mv_range = a })
 
 
 makePrisms ''MGVertex
+
+isEntity :: MGVertex -> Bool
+isEntity x = case x of
+               MGEntity {..} -> True
+               _             -> False
+
 
 -- orphan
 deriving instance Generic (VerbProperty Text)
