@@ -126,7 +126,6 @@ makeLenses ''VertexMap
 data MGVertex = MGEntity    { _mv_id :: Int
                             , _mv_range :: Maybe Range
                             , _mv_head_range :: Maybe Range
-                            , _mv_eci :: Maybe EmptyCategoryIndex
                             , _mv_text :: Text
                             , _mv_resolved_entities :: [Text]   -- resolved named entity candidates
                             }
@@ -173,6 +172,7 @@ instance FromJSON MGVertex
 data MGEdge = MGEdge { _me_relation :: FNFrameElement
                      , _me_ismodifier :: Bool
                      , _me_prep :: Maybe Text
+                     , _me_eci :: Maybe EmptyCategoryIndex
                      , _me_start :: Int
                      , _me_end :: Int }
 

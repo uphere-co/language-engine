@@ -51,12 +51,13 @@ import           SRL.Analyze.Type                        (DocStructure(..),SentS
                                                          ,PredicateInfo(..)
                                                          ,_MGPredicate,_MGEntity
                                                          ,mg_vertices,mg_edges
-                                                         ,me_relation,me_ismodifier,me_prep,me_start,me_end
+                                                         ,me_relation,me_ismodifier,me_prep,me_start,me_end,me_eci
                                                          ,vs_vp,ss_x'trs)
 import           SRL.Analyze.Type.Match                  (ExceptionalFrame(..),ONSenseFrameNetInstance(..),FrameMatchResult(..)
                                                          ,MatchedElement
                                                          ,onfn_senseID,onfn_definition,onfn_frame
-                                                         ,tf_frameID,tf_feCore,tf_fePeri)
+                                                         ,tf_frameID,tf_feCore,tf_fePeri
+                                                         ,mkPROText)
 import           SRL.Analyze.Util                        (addTag,convertTagPosFromTokenToChar,underlineText)
 
 
@@ -250,7 +251,7 @@ formatMGEdge :: MGEdge -> Text
 formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}];"
                    (e^.me_start
                    ,e^.me_end
-                   ,unFNFrameElement (e^.me_relation) <> maybe "" (":" <>) (e^.me_prep)
+                   ,unFNFrameElement (e^.me_relation) <> maybe "" (":" <>) (e^.me_prep) <> maybe "" (":" <>) (mkPROText =<< e^.me_eci)
                    ,if e^.me_relation == "ref" then "dotted" else if (e^.me_ismodifier) then "bold" else "solid" :: Text
                    ,"" :: Text -- if e^.me_relation == "ref" then "constraint=false" else "" :: Text
                    )
@@ -304,7 +305,7 @@ formatMGVertex (MGPredicate i _ f PredAppos)
         "<td> Nom.Appos </td>" <>
         "</tr>" <>
         "</table>" )
-formatMGVertex (MGEntity i _ _ _ t ns)
+formatMGVertex (MGEntity i _ _ t ns)
   = (i,"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
        "<tr><td>" <> (HTMLT.text t) <> "</td></tr>" <>
        T.concat (map (\x -> "<tr><td>"<> (HTMLT.text x) <>"</td></tr>") ns) <>

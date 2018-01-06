@@ -1,7 +1,8 @@
-{-# LANGUAGE DataKinds       #-}
-{-# LANGUAGE DeriveGeneric   #-}
-{-# LANGUAGE KindSignatures  #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE KindSignatures    #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module SRL.Analyze.Type.Match where
 
@@ -12,8 +13,9 @@ import           Data.Bifunctor                (second)
 import           Data.Function                 (on)
 import           Data.Hashable                 (Hashable)
 import           Data.List                     (maximumBy)
-import           Data.Monoid                   (First(..))
+import           Data.Monoid                   (First(..),(<>))
 import           Data.Text                     (Text)
+import qualified Data.Text                as T
 import           GHC.Generics                  (Generic)
 --
 import           Data.BitreeZipper             (extractZipperById)
@@ -51,6 +53,8 @@ instance FromJSON EmptyCategoryIndex
 instance ToJSON EmptyCategoryIndex
 instance Hashable EmptyCategoryIndex
 
+mkPROText (ECI_PRO i) = Just ("PRO_" <> T.pack (show i))
+mkPROText _           = Nothing
 
 
 data EntityInfo = EI { _ei_eci :: Maybe EmptyCategoryIndex -- (Range,Range) -- ^ (full,head) -- fullRange :: Range
