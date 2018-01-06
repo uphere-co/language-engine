@@ -302,7 +302,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       tagposs = c^._6
       synsets = c^._7
       pre = mkPreAnalysis lmatknlst pt tagposs synsets
-      vps = mkVPS (c^._4) (c^._5)
+      vps = mkVPS lmatknlst pt -- (c^._4) (c^._5)
       x'trs = syntacticAnalysis pre -- map (resolveCP  . identifyCPHierarchy pre) vps
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
       -- test subjects
@@ -316,7 +316,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       b_subj = fromMaybe False $ do
                  let subj = cp^.complement.specifier
                  let (sclass,stxt) = fromMaybe (Nothing,"") $ do
-                       spectp <- resolvedSpecTP resmap subj
+                       spectp <- (^._2) <$> resolvedSpecTP resmap subj
                        let sclass = do
                              rng_dp <- spectp^?_SpecTP_DP
                              dp <- cpdpppFromX'Tree x'tr rng_dp _DPCase
@@ -327,7 +327,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
                    Just p -> return (stxt == subj_test^._1 && sclass == Just p)
       lst_comps = do
         c <- cp^.complement.complement.complement
-        r <- maybeToList (resolvedCompVP resmap c)
+        r <- (^._2) <$> maybeToList (resolvedCompVP resmap c)
         return (compVPToHeadText SPH1 pre x'tr r)
       lst_comps_test = c^._3._2
       b_comps = lst_comps == lst_comps_test

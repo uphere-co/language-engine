@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeFamilies      #-}
 
 module NLP.Syntax.Type.XBar
@@ -36,20 +37,20 @@ cpdpppFromX'Tree x'tr rng prm
   = (^? prm) . currentCPDPPP =<< extractZipperById rng x'tr
 
 
-resolvedCompVP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (CompVP 'PH1)) -> Maybe (CompVP 'PH1)
+resolvedCompVP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (CompVP 'PH1)) -> Maybe (Maybe (TraceType,Int),CompVP 'PH1)
 resolvedCompVP resmap c =
   case c of
-    Coindex (Just i) (Left _) -> (^._1) <$> lookup i resmap
-    Coindex Nothing  (Left _) -> Nothing
-    Coindex _        (Right x) -> Just x
+    Coindex (Just i) (Left t) -> (Just (t,i),) . (^._1) <$> lookup i resmap
+    Coindex Nothing  (Left t) -> Nothing
+    Coindex _        (Right x) -> Just (Nothing,x)
 
 
-resolvedSpecTP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (SpecTP 'PH1)) -> Maybe (SpecTP 'PH1)
+resolvedSpecTP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (SpecTP 'PH1)) -> Maybe (Maybe (TraceType,Int),SpecTP 'PH1)
 resolvedSpecTP resmap s =
   case s of
-    Coindex (Just i) (Left _) -> (^._1.to (compVPToSpecTP SPH1).to rightMay) =<< lookup i resmap
+    Coindex (Just i) (Left t) -> (Just (t,i),) <$> ((^._1.to (compVPToSpecTP SPH1).to rightMay) =<< lookup i resmap)
     Coindex Nothing  (Left _) -> Nothing
-    Coindex _        (Right x) -> Just x
+    Coindex _        (Right x) -> Just (Nothing,x)
 
 
 getTokens :: BitreeICP as -> Text
@@ -88,13 +89,6 @@ compVPToSpecTP SPH1 (CompVP_PP y)  = Left y   -- for the time being
                                      --   CompPP_DP dp -> Right (SpecTP_DP dp)
                                      --  CompPP_Gerund rng -> Left rng
 compVPToSpecTP SPH1 (CompVP_AP ap) = Left ap -- Left (ap^.maximalProjection)  -- for the time being
-
-
-
-{-
-  = case s of
-                                           SPH0 -> Left (cp^.maximalProjection)
-                                           SPH1 -> Left cp -}
 
 
 specTPToCompVP :: SpecTP p-> CompVP p
@@ -143,10 +137,6 @@ headRangeDP dp =
               (Nothing       , Nothing      ) -> Nothing
 
 
-
-
-
-
 compVPToHeadText :: SPhase p -> PreAnalysis t -> X'Tree p -> CompVP p -> Text
 compVPToHeadText SPH0 pre _ (CompVP_CP cp) = T.intercalate " " (tokensByRange pre (cp^.maximalProjection))
 compVPToHeadText SPH0 pre _ (CompVP_DP dp) = headTextDP pre dp
@@ -166,9 +156,6 @@ compVPToHeadText SPH1 pre x'tr (CompVP_PP rng_pp) = fromMaybe "" $ do
                                                           return (headTextDP pre dp)
                                                         CompPP_Gerund rng -> return (T.intercalate " " (tokensByRange pre rng))
 compVPToHeadText SPH1 pre _    (CompVP_AP rng_ap) = T.intercalate " " (tokensByRange pre rng_ap)
-
-
-
 
 
 compVPToRange :: SPhase p -> CompVP p -> Range
@@ -198,20 +185,19 @@ toRange (APCase ap) = ap^.maximalProjection
 
 
 mkSpecTPPH1 :: SpecTP 'PH0 -> SpecTP 'PH1
-mkSpecTPPH1 (SpecTP_DP dp) = SpecTP_DP (dp^.maximalProjection) -- (mkDPPH1 dp)
+mkSpecTPPH1 (SpecTP_DP dp) = SpecTP_DP (dp^.maximalProjection)
 
 
 mkAdjunctCPPH1 :: AdjunctCP 'PH0 -> AdjunctCP 'PH1
-mkAdjunctCPPH1 (AdjunctCP_CP cp) = AdjunctCP_CP (cp^.maximalProjection) -- (mkCPPH1 cp)
+mkAdjunctCPPH1 (AdjunctCP_CP cp) = AdjunctCP_CP (cp^.maximalProjection)
 
 
 
-
-mkCompPPPH1 (CompPP_DP dp) = CompPP_DP (dp^.maximalProjection) -- (mkDPPH1 dp)
+mkCompPPPH1 (CompPP_DP dp) = CompPP_DP (dp^.maximalProjection)
 mkCompPPPH1 (CompPP_Gerund rng) = CompPP_Gerund rng
 
 
-mkAdjunctVPPH1 (AdjunctVP_PP pp) = AdjunctVP_PP (pp^.maximalProjection) -- (mkPPPH1 pp)
+mkAdjunctVPPH1 (AdjunctVP_PP pp) = AdjunctVP_PP (pp^.maximalProjection)
 
 
 mkVerbPPH1 :: VerbP 'PH0 -> VerbP 'PH1
@@ -241,29 +227,10 @@ mkTPPH1 tp = XP { _headX = _headX tp
 
 
 
-mkCompVPPH1 (CompVP_CP cp) = CompVP_CP (cp^.maximalProjection) -- (mkCPPH1 cp)
-mkCompVPPH1 (CompVP_DP dp) = CompVP_DP (dp^.maximalProjection) -- (mkDPPH1 dp)
-mkCompVPPH1 (CompVP_PP pp) = CompVP_PP (pp^.maximalProjection) -- (mkPPPH1 pp)
-mkCompVPPH1 (CompVP_AP ap) = CompVP_AP (ap^.maximalProjection) -- (mkAPPH1 ap)
-
-
-{- 
-mkSpecCPPH1 :: SpecCP 'PH0 -> Maybe (SpecCP 'PH1)
-mkSpecCPPH1 SpecCP_WHPHI      = Just SpecCP_WHPHI
-mkSpecCPPH1 (SpecCP_WH rng)   = Just (SpecCP_WH rng)
-mkSpecCPPH1 (SpecCP_Topic (Left rng)) = Nothing -- (cp^.maximalProjection)
-mkSpecCPPH1 (SpecCP_Topic (Right cp)) = Just (SpecCP_Topic (cp^.maximalProjection))
--}
-
-
-{-
-                               case t^.coidx_content of
-                                 Left tr         -> Just (SpecCP_Topic ((coidx_content .~ Left tr) t))
-                                 Right (Right p) -> Just (SpecCP_Topic ((coidx_content .~ Right (mkCompVPPH1 p)) t))
-                                 Right (Left _)  -> Nothing
--}
-
-
+mkCompVPPH1 (CompVP_CP cp) = CompVP_CP (cp^.maximalProjection)
+mkCompVPPH1 (CompVP_DP dp) = CompVP_DP (dp^.maximalProjection)
+mkCompVPPH1 (CompVP_PP pp) = CompVP_PP (pp^.maximalProjection)
+mkCompVPPH1 (CompVP_AP ap) = CompVP_AP (ap^.maximalProjection)
 
 
 
@@ -305,14 +272,7 @@ mkPPPH1 pp = XP { _headX = _headX pp
 mkCPPH1 :: CP 'PH0 -> CP 'PH1
 mkCPPH1 cp = XP { _headX = _headX cp
                 , _maximalProjection = _maximalProjection cp
-                , _specifier = _specifier cp {- do x <- _specifier cp
-                                  s <- x^.coidx_content.to mkSpecCPPH1
-                                  (return . (coidx_content .~ s)) x -}
-                  {-
-                    fmap (fmap mkSpecCPPH1) (_specifier cp) -}
-                  {- do 
-                                  c <- mkSpecCPPH1 (x^.coidx_content)
-                                  return ((coidx_content .~ c) x) -}
+                , _specifier = _specifier cp
                 , _adjunct = mapMaybe (either (const Nothing) (Just. mkAdjunctCPPH1)) (_adjunct cp)
                 , _complement = mkTPPH1 (_complement cp)
                 }

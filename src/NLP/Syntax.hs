@@ -12,7 +12,8 @@ import qualified Data.IntMap                 as IM
 --
 import           NLP.Type.PennTreebankII           (Lemma)
 --
-import           NLP.Syntax.Clause                 (identifyCPHierarchy,bindingWH1,bindingWH2
+import           NLP.Syntax.Clause                 (identifyCPHierarchy
+                                                   ,bindingWH1,bindingWH2,bindingPRO
                                                    ,mkX'TreePH1,resolveCP)
 import           NLP.Syntax.Verb                   (verbPropertyFromPennTree)
 import           NLP.Syntax.Type.PreAnalysis       (PreAnalysis(..),lemmaList,pennTree)
@@ -24,4 +25,4 @@ syntacticAnalysis pre =
   let lemmamap= IM.fromList (map (\(i,(l,_)) -> (i,l)) (pre^.lemmaList))
       vps  = verbPropertyFromPennTree lemmamap (pre^.pennTree)
       x'trs0 = (map resolveCP . identifyCPHierarchy pre) vps
-  in map (bindingWH2 . (\tr -> evalState (bindingWH1 tr) 0) . mkX'TreePH1) x'trs0
+  in map (bindingPRO . bindingWH2 . (\tr -> evalState (bindingWH1 tr) 0) . mkX'TreePH1) x'trs0
