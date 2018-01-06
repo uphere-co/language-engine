@@ -51,7 +51,7 @@ import           SRL.Analyze.Type                        (DocStructure(..),SentS
                                                          ,PredicateInfo(..)
                                                          ,_MGPredicate,_MGEntity
                                                          ,mg_vertices,mg_edges
-                                                         ,me_relation,me_ismodifier,me_prep,me_start,me_end,me_eci
+                                                         ,me_relation,me_ismodifier,me_prep,me_start,me_end
                                                          ,vs_vp,ss_x'trs)
 import           SRL.Analyze.Type.Match                  (ExceptionalFrame(..),ONSenseFrameNetInstance(..),FrameMatchResult(..)
                                                          ,MatchedElement
@@ -251,8 +251,12 @@ formatMGEdge :: MGEdge -> Text
 formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}];"
                    (e^.me_start
                    ,e^.me_end
-                   ,unFNFrameElement (e^.me_relation) <> maybe "" (":" <>) (e^.me_prep) <> maybe "" (":" <>) (mkPROText =<< e^.me_eci)
-                   ,if e^.me_relation == "ref" then "dotted" else if (e^.me_ismodifier) then "bold" else "solid" :: Text
+                   ,unFNFrameElement (e^.me_relation) <> maybe "" (":" <>) (e^.me_prep) -- <> maybe "" (":" <>) (mkPROText =<< e^.me_eci)
+                   ,if e^.me_relation == "ref" || e^.me_relation == "PRO"
+                    then "dotted"
+                    else if (e^.me_ismodifier)
+                         then "bold"
+                         else "solid" :: Text
                    ,"" :: Text -- if e^.me_relation == "ref" then "constraint=false" else "" :: Text
                    )
                  <>
