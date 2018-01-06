@@ -177,6 +177,17 @@ adjunctCP_1
     , []
     )
 
+
+adjunctCP_2 :: TestVerbComplement
+adjunctCP_2
+  = ( "Sansiri Pcl said on Wednesday it would invest $80 million in overseas markets, including a 35 percent stake purchase in a U.S.-based hotel chain, as the Thai real estate developer seeks to expand beyond its core business.", 7
+    , (("it",Just (Pronoun P_It False)),["$ 80 million","overseas markets"],["as the Thai real estate developer seeks to expand beyond its core business"], False)
+    , [(0,("Sansiri","Sansiri")),(1,("Pcl","Pcl")),(2,("say","said")),(3,("on","on")),(4,("Wednesday","Wednesday")),(5,("it","it")),(6,("would","would")),(7,("invest","invest")),(8,("$","$")),(9,("80","80")),(10,("million","million")),(11,("in","in")),(12,("overseas","overseas")),(13,("market","markets")),(14,(",",",")),(15,("include","including")),(16,("a","a")),(17,("35","35")),(18,("percent","percent")),(19,("stake","stake")),(20,("purchase","purchase")),(21,("in","in")),(22,("a","a")),(23,("u.s.-based","U.S.-based")),(24,("hotel","hotel")),(25,("chain","chain")),(26,(",",",")),(27,("as","as")),(28,("the","the")),(29,("Thai","Thai")),(30,("real","real")),(31,("estate","estate")),(32,("developer","developer")),(33,("seek","seeks")),(34,("to","to")),(35,("expand","expand")),(36,("beyond","beyond")),(37,("its","its")),(38,("core","core")),(39,("business","business")),(40,(".","."))]
+    , PN "ROOT" [PN "S" [PN "NP" [PL ("NNP","Sansiri"),PL ("NNP","Pcl")],PN "VP" [PL ("VBD","said"),PN "PP" [PL ("IN","on"),PN "NP" [PL ("NNP","Wednesday")]],PN "SBAR" [PN "S" [PN "NP" [PL ("PRP","it")],PN "VP" [PL ("MD","would"),PN "VP" [PL ("VB","invest"),PN "NP" [PN "QP" [PL ("$","$"),PL ("CD","80"),PL ("CD","million")]],PN "PP" [PL ("IN","in"),PN "NP" [PL ("JJ","overseas"),PL ("NNS","markets")]],PL (",",","),PN "PP" [PL ("VBG","including"),PN "NP" [PN "NP" [PL ("DT","a"),PN "ADJP" [PL ("CD","35"),PL ("NN","percent")],PL ("NN","stake"),PL ("NN","purchase")],PN "PP" [PL ("IN","in"),PN "NP" [PL ("DT","a"),PL ("JJ","U.S.-based"),PL ("NN","hotel"),PL ("NN","chain")]]]],PL (",",","),PN "SBAR" [PL ("IN","as"),PN "S" [PN "NP" [PL ("DT","the"),PL ("NNP","Thai"),PL ("JJ","real"),PL ("NN","estate"),PL ("NN","developer")],PN "VP" [PL ("VBZ","seeks"),PN "S" [PN "VP" [PL ("TO","to"),PN "VP" [PL ("VB","expand"),PN "PP" [PL ("IN","beyond"),PN "NP" [PL ("PRP$","its"),PL ("NN","core"),PL ("NN","business")]]]]]]]]]]]]],PL (".",".")]]
+    , []
+    , []
+    )
+
 preposedCP :: TestVerbComplement
 preposedCP
   = ( "Brazilian steelmaker Companhia Siderugica Nacional SA plans to sell bonds on international markets in an effort to improve its debt profile, Benjamin Steinbruch, chief executive officer, said on Friday."
@@ -348,6 +359,7 @@ testcases = [ -- -- main_finite_1
             -- , preposedTemporalAdjunct
             , preposedCP
             , adjunctCP_1
+            , adjunctCP_2
             -- , complexNP
             -- , complexNP_SRParser
             , complexNP_2

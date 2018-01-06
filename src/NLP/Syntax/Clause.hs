@@ -22,6 +22,7 @@ import           Control.Monad.Trans.Maybe              (MaybeT(..))
 import           Control.Monad.Trans.State              (State,execState,get,put,modify')
 import           Data.Attribute                         (ahead)
 import           Data.Bifoldable                        (bifoldMap,biList)
+import           Data.Bifunctor                         (second)
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Foldable                          (toList)
 import           Data.Function                          (on)
@@ -46,8 +47,13 @@ import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
 --
 import Debug.Trace
+import           Data.List (intercalate)
+import           Data.Monoid ((<>))
 import qualified Data.Text as T
 import NLP.Syntax.Format.Internal
+
+
+
 
 data X'TreeState p = XTS { _xts_nextIndex :: Int
                          , _xts_tree      :: X'Tree p
@@ -165,11 +171,18 @@ complementsOfVerb tagged vprop z_vp =
 
 allAdjunctCPOfVerb :: VerbProperty (Zipper (Lemma ': as))
                    -> [Either Range (AdjunctCP 'PH0)]
-allAdjunctCPOfVerb vprop =
-    let mcomma = firstSiblingBy next (isPOSAs M_COMMA) =<< headVP vprop  -- ad hoc separation using comma
-    in case mcomma of
-         Nothing -> []
-         Just comma -> map (Left . getRange . current) (siblingsBy next checkS comma)
+allAdjunctCPOfVerb vprop = fromMaybe [] $ do
+    trace "\nallAdjunctCPOfVerb 1" $ return ()
+    comma1 <- firstSiblingBy next (isPOSAs M_COMMA) =<< headVP vprop  -- ad hoc separation using comma
+    trace "\nallAdjunctCPOfVerb 2" $ return ()
+    ((do comma2 <- firstSiblingBy next (isPOSAs M_COMMA) comma1  -- parenthetical. inside parenthesis is not yet handled.
+         trace "\nHere I am" $ return ()
+         let x = map (Left . getRange . current) (siblingsBy next checkS comma2)
+         trace ("allAdjunctCPOfVerb:" ++ T.unpack (T.intercalate "," (map (either (T.pack.show) (formatAdjunctCP SPH0)) x))) $ return ()
+         return x
+         )
+     <|>
+     (return (map (Left . getRange . current) (siblingsBy next checkS comma1))))
   where
     tag = bimap (chunkTag.snd) (posTag.snd) . getRoot
     checkS z = case tag z of
@@ -213,6 +226,7 @@ constructCP tagged vprop = do
       N.CL s -> do
         z_cp' <- parent z_tp
         let rng_cp' = getRange (current z_cp')
+        trace "\nconstructCP" $ return ()
         cptag' <- N.convert <$> getchunk z_cp'
         let (comps,mtop,subs) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
@@ -220,15 +234,13 @@ constructCP tagged vprop = do
             subj = fromMaybe subj0 $ do
                      dp <- subj0 ^? coidx_content._Right._Right._SpecTP_DP
                      let dptr@(DPTree dp' _) = splitDP tagged (DPTree dp [])
-                         subj' = (coidx_content._Right._Right._SpecTP_DP .~ dp') subj0
-                         -- subj_dps' = getSubsFromDPTree dptr
-                     return subj'
+                     return ((coidx_content._Right._Right._SpecTP_DP .~ dp') subj0)
             verbp = mkVerbP rng_vp (simplifyVProp vprop) [] comps
             ppdps = subs ++ subs2
         case cptag' of
           N.RT   ->
             let (cphead,cpspec) = case mtop of
-                                    Just top -> (C_PHI,Just top) -- (mkDefCoindex (SpecCP_Topic top)))
+                                    Just top -> (C_PHI,Just top)
                                     Nothing ->
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
@@ -238,10 +250,10 @@ constructCP tagged vprop = do
                                                                         Nothing -> C_PHI
                                                                         Just c -> C_WORD c
                                                        in (cmpmntzr, Nothing)
-            in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),ppdps)
+            in trace ("\nRT" ++ show rng_tp) $ return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),ppdps)
           N.CL N.SBAR ->
             let (cphead,cpspec) = case mtop of
-                                    Just top -> (C_PHI,Just top) --  (mkDefCoindex (SpecCP_Topic top)))
+                                    Just top -> (C_PHI,Just top)
                                     Nothing ->
                                       case prev z_tp of
                                         Nothing -> (C_PHI,Nothing)
@@ -251,17 +263,18 @@ constructCP tagged vprop = do
                                                                         Nothing -> C_PHI
                                                                         Just c -> C_WORD c
                                                        in (cmpmntzr,Nothing)
-            in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),ppdps)
-          N.CL _ ->
-            return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),ppdps)
-          _      -> -- somewhat problematic case?
-            return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),ppdps)
-      _ -> -- reduced relative clause
+                cpxxx  = mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp)
+            in adjs `seq` trace ("\nSBAR" ++ show rng_tp ++ ": length=" ++ show (length adjs) ++ " : "++ (T.unpack (T.intercalate "," (map (either (T.pack.show) (formatAdjunctCP SPH0)) adjs) <> "\n" <> formatCP SPH0 cpxxx))) $ return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),ppdps)
+          N.CL x ->
+            trace ("\nCLOTHER:" ++ show x ++ show rng_tp ++ show (length adjs)) $ return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),ppdps)
+          x      -> -- somewhat problematic case?
+            trace ("\nPROB:" ++ show x ++ show rng_tp)$ return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),ppdps)
+      x -> -- reduced relative clause
         let (comps,_,ppdps) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             verbp = mkVerbP rng_vp (simplifyVProp vprop) [] comps
             nullsubj = mkDefCoindex (Left NULL)
-        in return (mkCP C_PHI rng_vp (Just (mkDefCoindex SpecCP_WHPHI)) adjs (mkTP rng_vp nullsubj verbp), ppdps)
+        in trace ("\nREDUCED:" ++ show x ++ show rng_tp)$  return (mkCP C_PHI rng_vp (Just (mkDefCoindex SpecCP_WHPHI)) adjs (mkTP rng_vp nullsubj verbp), ppdps)
   where getchunk = either (Just . chunkTag . snd) (const Nothing) . getRoot . current
 
 
@@ -280,7 +293,7 @@ hierarchyBits _tagged (cp,subs) = do
 identifyCPHierarchy :: PreAnalysis (Lemma ': as)
                     -> [VerbProperty (Zipper (Lemma ': as))]
                     -> [X'Tree 'PH0]
-identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
+identifyCPHierarchy tagged vps = trace ("\nidentifyCPHierarchy" ++ (show x'map)) $ fromMaybe [] (traverse (bitraverse tofull tofull) rtr)
   where x'map = (HM.fromList . concat . mapMaybe (hierarchyBits tagged <=< constructCP tagged)) vps
         rngs = HM.keys x'map
         rangeSort (PN x xs) = PN x (sortBy (compare `on` (fst . getRoot1)) (map rangeSort xs))
@@ -301,7 +314,8 @@ resolveCP x'tr = bimap f f x'tr
     --                 ((replace z >> return ()) <|> return ())
     --
     -- replace :: X'Zipper -> MaybeT (State X'TreeState) X'Zipper
-    replace = {- replaceAdjunctCP . -} replaceCompVP -- replaceSpecCP >=> replaceCompVP >=> replaceAdjunctCP
+    replace :: CP 'PH0 -> CP 'PH0
+    replace = replaceAdjunctCP . replaceCompVP -- replaceSpecCP >=> replaceCompVP >=> replaceAdjunctCP
     --
     -- I need to deduplicate the following code.
     {- putAndReturn w = do
@@ -309,29 +323,52 @@ resolveCP x'tr = bimap f f x'tr
       lift (put (XTS i (toBitree w)))
       return w -}
 
-    resolve (Left x)           = Left x
-    resolve (Right (Right x))  = Right (Right x)
-    resolve (Right (Left rng)) = case lookup rng x'map of
-                                   Nothing -> Right (Left rng)
-                                   Just cpdppp -> Right (Right (cpdpppToCompVP cpdppp))
+    -- resolve f (Left x)           = Left x
+    resolve f (Right x)  = Right x
+    resolve f (Left rng) = case lookup rng x'map of
+                             Nothing -> Left rng
+                             Just cpdppp -> case f cpdppp of
+                                              Nothing -> Left rng
+                                              Just y  -> Right y
+
     --
     -- replaceCompVP :: CP 'PH0 -> Maybe (CP 'PH0)
     replaceCompVP cp =
       let rng = cp^.maximalProjection
           xs = cp^.complement.complement.complement
-          (as,xs') =  (partition f . map (coidx_content %~ resolve)) xs
+          (as,xs') =  (partition f . map (coidx_content %~ second (resolve (Just . cpdpppToCompVP)))) xs
             where f x = fromMaybe False $ do
                           cp <- x^?coidx_content._Right._Right._CompVP_CP
                           (/= "that") <$> cp^?headX._C_WORD.to unLemma
           as' = mapMaybe f as
             where f x = do cp <- x^?coidx_content._Right._Right._CompVP_CP
                            return (Right (AdjunctCP_CP cp))
-
-          cp' = cp & (adjunct .~ as')
+          cp' = cp & (adjunct %~ (++as'))
                    . (complement.complement.complement .~ xs')
       in cp'
 
-
+    --
+    -- replaceAdjunctCP :: X'Zipper -> MaybeT (State X'TreeState) X'Zipper
+    replaceAdjunctCP cp =
+      let rng = cp^.maximalProjection
+          xs = cp^.adjunct
+          xs' = map (resolve cpdpppToAdjunctCP) xs
+          cp' = cp & (adjunct .~ xs')
+      in cp'
+        {-
+      xs' <- flip traverse xs $ \x ->
+               ((do tr <- (^.xts_tree) <$> lift get
+                    rng <- hoistMaybe (x^?_Left)
+                    y <- hoistMaybe (extractZipperById rng tr)
+                    y' <- replace y
+                    cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
+                    return (Right (AdjunctCP_CP cp'))
+                )
+                <|>
+                (return x))
+      let rf = _2._CPCase.adjunct .~ xs'
+      putAndReturn (replaceFocusItem rf rf z)
+    -}
 
      {-
             (comps_adjs',comps) = trace ("\ntest:" ++ T.unpack (T.intercalate "\n" (formatCoindex formatComcomps $ partition f comps0
@@ -382,23 +419,6 @@ resolveCP x'tr = bimap f f x'tr
                 <|>
                 (return x))
       let rf = _2._CPCase.specifier .~ fmap SpecCP_Topic mx'
-      putAndReturn (replaceFocusItem rf rf z)
-    --
-    -- replaceAdjunctCP :: X'Zipper -> MaybeT (State X'TreeState) X'Zipper
-    replaceAdjunctCP z = do
-      cp <- hoistMaybe (z ^? to current.to getRoot1._2._CPCase)
-      let xs = cp^.adjunct
-      xs' <- flip traverse xs $ \x ->
-               ((do tr <- (^.xts_tree) <$> lift get
-                    rng <- hoistMaybe (x^?_Left)
-                    y <- hoistMaybe (extractZipperById rng tr)
-                    y' <- replace y
-                    cp' <- hoistMaybe (y' ^? to current . to getRoot1 . _2 . _CPCase)
-                    return (Right (AdjunctCP_CP cp'))
-                )
-                <|>
-                (return x))
-      let rf = _2._CPCase.adjunct .~ xs'
       putAndReturn (replaceFocusItem rf rf z)
 -}
 
