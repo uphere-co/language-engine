@@ -47,7 +47,7 @@ import           SRL.Analyze.Type             (SentStructure,VerbStructure,Analy
                                               ,analyze_wordnet
                                               ,ss_x'trs,ss_tagged,ss_verbStructures
                                               ,vs_roleTopPatts,vs_vp)
-import           SRL.Analyze.Type.Match       (EntityInfo(..),FrameMatchResult(..))
+import           SRL.Analyze.Type.Match       (EntityInfo(..),FrameMatchResult(..),RangePair(..),MatchedElement)
 --
 import Debug.Trace
 import NLP.Syntax.Format.Internal
@@ -96,13 +96,14 @@ pbArgForPP patt = catMaybes [ check patt_arg0 "arg0"
 
 matchSubject :: X'Tree 'PH1
              -> [(PBArg,Text)]
-             -> Maybe (SpecTP 'PH1)
+             -> Maybe (Maybe TraceType,SpecTP 'PH1)
              -> ArgPattern p GRel
-             -> Maybe (FNFrameElement, CompVP 'PH1)
+             -> Maybe (FNFrameElement, MatchedElement)
 matchSubject x'tr rolemap mDP patt = do
-  dp <- mDP^?_Just._SpecTP_DP            -- for the time being
+  (trc,dp) <- mDP >>= \x -> case x^._2 of SpecTP_DP r -> return (x^._1,r); _ -> Nothing -- ignore CP for the time being
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
-  (,CompVP_DP dp) . FNFrameElement <$> lookup p rolemap
+  (,(trc,CompVP_DP dp)) . FNFrameElement <$> lookup p rolemap
+
 
 
 isPhiOrThat :: CP 'PH1 -> Bool
@@ -119,7 +120,7 @@ matchObjects :: X'Tree 'PH1
              -> [(PBArg,Text)]
              -> VerbP 'PH1
              -> ArgPattern p GRel
-             -> [(FNFrameElement, CompVP 'PH1)]
+             -> [(FNFrameElement, MatchedElement)]
 matchObjects x'tr rolemap verbp patt = do
     let resmap = retrieveResolved x'tr
     let compvps = do
@@ -129,24 +130,24 @@ matchObjects x'tr rolemap verbp patt = do
     matchNormalObjects compvps <|> matchAdj compvps
   where
     matchNormalObjects compvps = do
-      (garg,obj) <- zip [GA1,GA2] (filter (\case CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False) compvps)
+      (garg,obj) <- zip [GA1,GA2] (filter (\case (_,CompVP_CP _) -> True; (_,CompVP_DP _) -> True; _ -> False) compvps)
       (p,a) <- maybeToList (pbArgForGArg garg patt)
       case obj of
-        CompVP_CP rng_cp -> do
+        (_,CompVP_CP rng_cp) -> do
           cp <- maybeToList (extractZipperById rng_cp x'tr >>= \w -> currentCPDPPP w ^? _CPCase)
           guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
-        CompVP_DP rng_dp -> do
+        (_,CompVP_DP rng_dp) -> do
           dp <- maybeToList (extractZipperById rng_dp x'tr >>= \w -> currentCPDPPP w ^? _DPCase)
           guard (a == GR_NP (Just garg))
         _            -> []
       fe <- FNFrameElement <$> maybeToList (lookup p rolemap)
       return (fe, obj)
     matchAdj compvps = do
-      ap <- case compvps of [] -> [] ; (x:_) -> case x of CompVP_AP ap -> [ap] ; _ -> []
+      (t,ap) <- case compvps of [] -> [] ; (x:_) -> case x of (t,CompVP_AP ap) -> [(t,ap)] ; _ -> []
       (p,a) <- maybeToList (pbArgForGArg GA1 patt)
       guard (a == GR_NP (Just GA1))
       fe <- FNFrameElement <$> maybeToList (lookup p rolemap)
-      return (fe, CompVP_AP ap)
+      return (fe, (t,CompVP_AP ap))
 
 
 matchPP :: X'Tree 'PH1 -> CP 'PH1 -> (Maybe Text,Maybe PrepClass,Maybe Bool) -> Maybe (PP 'PH1)
@@ -154,7 +155,7 @@ matchPP x'tr cp (mprep,mpclass,mising) = do
     let resmap = retrieveResolved x'tr
     let compvps = do
           c <- cp^.complement.complement.complement
-          maybeToList (resolvedCompVP resmap c)
+          maybeToList ((^._2) <$> resolvedCompVP resmap c)
         pps_adj = do
           rng_pp <- cp^..complement.complement.adjunct.traverse._AdjunctVP_PP
           maybeToList (extractZipperById rng_pp x'tr >>= \w -> currentCPDPPP w ^? _PPCase)
@@ -162,15 +163,8 @@ matchPP x'tr cp (mprep,mpclass,mising) = do
           compvp <- compvps
           case compvp of
             CompVP_PP rng_pp -> maybeToList (extractZipperById rng_pp x'tr >>= \w -> currentCPDPPP w ^? _PPCase)
-
-              {- let pp's = catMaybes $ do
-                    rng <- pp^..complement._CompPP_DP.adjunct.traverse._AdjunctDP_PP
-                    return (cpdpppFromX'Tree x'tr rng _PPCase)
-              in [pp] -} -- (pp:pp's)  -- now we get back to this
-            CompVP_DP _ -> [] {- catMaybes $ do
-                              rng <- dp^..adjunct.traverse._AdjunctDP_PP
-                              return (cpdpppFromX'Tree x'tr rng _PPCase) -}
-            _            -> []
+            CompVP_DP _ -> []
+            _           -> []
     find ppcheck (pps_comp ++ pps_adj)
   where
     ppcheck pp = let HeadPP prep' pclass' = pp^.headX
@@ -184,35 +178,35 @@ matchPrepArgs :: X'Tree 'PH1
               -> [(PBArg,Text)]
               -> CP 'PH1
               -> ArgPattern p GRel
-              -> [(FNFrameElement, CompVP 'PH1)]
-              -> [(FNFrameElement, CompVP 'PH1)]
+              -> [(FNFrameElement, MatchedElement)]
+              -> [(FNFrameElement, MatchedElement)]
 matchPrepArgs x'tr rolemap cp patt felst = do
   (p,(prep,mising)) <- pbArgForPP patt
   role <- FNFrameElement <$> maybeToList (lookup p rolemap)
   pp <- maybeToList (matchPP x'tr cp (Just prep,Nothing,mising))
   let rng_pp = pp^.maximalProjection
       comp_pp = CompVP_PP rng_pp
-  guard (is _Nothing (find (\x -> x^?_2.to (compVPToRange SPH1) == Just rng_pp) felst))
-  return (role, comp_pp)
+  guard (is _Nothing (find (\x -> x^._2._2.to (compVPToRange SPH1) == rng_pp) felst))
+  return (role, (Nothing,comp_pp))          -- only DP is associated with trace for the time being
 
 
 matchAgentForPassive :: X'Tree 'PH1
                      -> [(PBArg,Text)]
                      -> CP 'PH1
                      -> ArgPattern p GRel
-                     -> Maybe (FNFrameElement, CompVP 'PH1)
+                     -> Maybe (FNFrameElement, MatchedElement)
 matchAgentForPassive x'tr rolemap cp patt = do
     (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
     pp  <- matchPP x'tr cp (Just "by",Just PC_Other,Nothing)
-    let comp = CompVP_PP (pp^.maximalProjection)
+    let comp = (Nothing,CompVP_PP (pp^.maximalProjection)) -- only DP is associated with trace for the time being
     (,comp) . FNFrameElement <$> lookup p rolemap
 
 
 matchSO :: X'Tree 'PH1
         -> [(PBArg,Text)]
-        -> (Maybe (SpecTP 'PH1),VerbP 'PH1,CP 'PH1)
+        -> (Maybe (Maybe TraceType,SpecTP 'PH1),VerbP 'PH1,CP 'PH1)
         -> (ArgPattern p GRel, Int)
-        -> ((ArgPattern p GRel, Int), [(FNFrameElement, CompVP 'PH1)])
+        -> ((ArgPattern p GRel, Int), [(FNFrameElement, MatchedElement)])
 matchSO x'tr rolemap (mDP,verbp,cp) (patt,num) =
   let rmatched0 = case verbp^.headX.vp_voice of
                     Active  -> maybeToList (matchSubject x'tr rolemap mDP patt) ++ matchObjects x'tr rolemap verbp patt
@@ -242,8 +236,8 @@ matchRoles :: X'Tree 'PH1
            -> VerbP 'PH1
            -> CP 'PH1
            -> [(ArgPattern () GRel, Int)]
-           -> Maybe (SpecTP 'PH1)
-           -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, CompVP 'PH1)])
+           -> Maybe (Maybe TraceType,SpecTP 'PH1)
+           -> Maybe ((ArgPattern () GRel, Int),[(FNFrameElement, MatchedElement)])
 matchRoles x'tr rolemap verbp cp toppattstats mDP =
     (listToMaybe . sortBy cmpstat . head . groupBy eq . sortBy (flip compare `on` numMatchedRoles)) matched
   where
@@ -257,10 +251,10 @@ matchFrameRolesForCauseDual :: X'Tree 'PH1
                             -> VerbP 'PH1
                             -> CP 'PH1
                             -> [(ArgPattern () GRel,Int)]
-                            -> Maybe (SpecTP 'PH1)
+                            -> Maybe (Maybe TraceType,SpecTP 'PH1)
                             -> LittleV
                             -> ([Text], FNFrame, SenseID, [(PBArg, Text)])
-                            -> ([Text], FNFrame, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP 'PH1)]))
+                            -> ([Text], FNFrame, (SenseID,Bool) , Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, MatchedElement)]))
 matchFrameRolesForCauseDual x'tr verbp cp toppatts mDP causetype (idiom, frame1,sense1,rolemap1) =
   let (frame2,sense2,rolemap2) = if causetype == LVDual
                                  then extendRoleMapForDual (frame1,sense1,rolemap1)
@@ -282,9 +276,9 @@ matchFrameRolesForCauseDual x'tr verbp cp toppatts mDP causetype (idiom, frame1,
 matchFrameRolesAll :: X'Tree 'PH1
                    -> VerbP 'PH1
                    -> CP 'PH1
-                   -> Maybe (SpecTP 'PH1)
+                   -> Maybe (Maybe TraceType,SpecTP 'PH1)
                    -> [(([Text],RoleInstance,Int),[(ArgPattern () GRel,Int)])]
-                   -> [(([Text],FNFrame,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, CompVP 'PH1)])),Int)]
+                   -> [(([Text],FNFrame,(SenseID,Bool),Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, MatchedElement)])),Int)]
 matchFrameRolesAll x'tr verbp cp mDP rmtoppatts = do
   (rm,toppatts) <- rmtoppatts
   let sense1 = rm^._2._1
@@ -296,9 +290,10 @@ matchFrameRolesAll x'tr verbp cp mDP rmtoppatts = do
   return (matchFrameRolesForCauseDual x'tr verbp cp toppatts mDP causetype (idiom,frame1,sense1,rolemap1),stat)
 
 
+matchPPObjectRange :: X'Tree 'PH1 -> [(FNFrameElement,MatchedElement)] -> Range -> Maybe (FNFrameElement,MatchedElement)
 matchPPObjectRange x'tr felst rng =
   flip find felst $ \x -> fromMaybe False $ do
-    rng1 <- x^?_2._CompVP_PP
+    rng1 <- x^?_2._2._CompVP_PP
     pp1 <- extractZipperById rng1 x'tr >>= \w -> currentCPDPPP w ^? _PPCase
     let rng'  = pp1^.complement.to (compPPToRange SPH1)
     return (rng' == rng)
@@ -306,21 +301,14 @@ matchPPObjectRange x'tr felst rng =
 
 matchExtraRolesForPPTime :: X'Tree 'PH1
                          -> CP 'PH1
-                         -> [(FNFrameElement, CompVP 'PH1)]
-                         -> Maybe (FNFrameElement,CompVP 'PH1)
+                         -> [(FNFrameElement, MatchedElement)]
+                         -> Maybe (FNFrameElement,MatchedElement)
 matchExtraRolesForPPTime x'tr cp felst = do
   guard (is _Nothing (find (\x -> x^._1 == "Time" || x^._1 == "Duration") felst))
   pp <- matchPP x'tr cp (Nothing,Just PC_Time,Just False)
   let rng_pp = pp^.maximalProjection
-      comp = CompVP_PP rng_pp
+      comp = (Nothing,CompVP_PP rng_pp)   -- only DP is associated with trace for the time being
       matched = matchPPObjectRange x'tr felst (pp^.complement.to (compPPToRange SPH1))
-        {- flip find felst $ \x -> fromMaybe False $ do
-        rng1 <- x^?_2._CompVP_PP
-        pp1 <- extractZipperById rng1 x'tr >>= \w -> currentCPDPPP w ^? _PPCase
-        let rng'  = pp1^.complement.to (compPPToRange SPH1)
-            rng'' = pp^.complement.to (compPPToRange SPH1)
-        return (rng' == rng'') -}
-        -- .complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst)
   guard (is _Nothing matched)
   ((do prep <- pp^?headX.hp_prep._Prep_WORD
        find (\x -> (x^._1 == prep) && ("Duration" `elem` x^._2)) ppExtraRoleMap
@@ -333,8 +321,8 @@ matchExtraRolesForPPTime x'tr cp felst = do
 matchExtraRolesForGenericPP :: [Text]
                             -> X'Tree 'PH1
                             -> CP 'PH1
-                            -> [(FNFrameElement, CompVP 'PH1)]
-                            -> Maybe (FNFrameElement,CompVP 'PH1)
+                            -> [(FNFrameElement, MatchedElement)]
+                            -> Maybe (FNFrameElement,MatchedElement)
 matchExtraRolesForGenericPP fes x'tr cp felst = do
   let fes0 = map (^._1) felst
   pp <- matchPP x'tr cp (Nothing,Just PC_Other,Just False)
@@ -343,8 +331,7 @@ matchExtraRolesForGenericPP fes x'tr cp felst = do
   role <- find (\r -> r /= "Time" && r /= "Duration" && unFNFrameElement r `elem` fes && not (r `elem` fes0)) roles
   let matched = matchPPObjectRange x'tr felst (pp^.complement.to (compPPToRange SPH1))
   guard (is _Nothing matched)
-  -- guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
-  let comp = CompVP_PP (pp^.maximalProjection)
+  let comp = (Nothing,CompVP_PP (pp^.maximalProjection))   -- only DP is associated with trace for the time being
   return (role,comp)
 
 
@@ -352,16 +339,14 @@ matchExtraRolesForPPing :: Text
                         -> FNFrameElement
                         -> X'Tree 'PH1
                         -> CP 'PH1
-                        -> [(FNFrameElement, CompVP 'PH1)]
-                        -> Maybe (FNFrameElement,CompVP 'PH1)
+                        -> [(FNFrameElement, MatchedElement)]
+                        -> Maybe (FNFrameElement,MatchedElement)
 matchExtraRolesForPPing prep role x'tr cp felst = do
   guard (isNothing (find (\x -> x^._1 == role) felst))
   pp <- matchPP x'tr cp (Just prep,Just PC_Other,Just True)
   let matched = matchPPObjectRange x'tr felst (pp^.complement.to (compPPToRange SPH1))
   guard (is _Nothing matched)
-
-  -- guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just (pp^.complement.to compPPToRange)) felst))
-  let comp = CompVP_PP (pp^.maximalProjection)
+  let comp = (Nothing,CompVP_PP (pp^.maximalProjection))  -- only DP is associated with trace for the time being
   return (role,comp)
 
 
@@ -369,24 +354,21 @@ matchExtraRolesForCPInCompVP :: (CP 'PH1 -> Bool)
                              -> FNFrameElement
                              -> X'Tree 'PH1
                              -> CP 'PH1
-                             -> [(FNFrameElement, CompVP 'PH1)]
-                             -> Maybe (FNFrameElement,CompVP 'PH1)
+                             -> [(FNFrameElement, MatchedElement)]
+                             -> Maybe (FNFrameElement,MatchedElement)
 matchExtraRolesForCPInCompVP check role x'tr cp0 felst = do
   guard (is _Nothing (find (\x -> x^._1 == role) felst))
   let resmap = retrieveResolved x'tr
   let candidates = do
         c <- cp0 ^.complement.complement.complement
-        CompVP_CP rng_cp <- maybeToList (resolvedCompVP resmap c)
+        CompVP_CP rng_cp <- maybeToList ((^._2) <$> resolvedCompVP resmap c)
         cp <- maybeToList (extractZipperById rng_cp x'tr >>= \w -> currentCPDPPP w ^? _CPCase)
         return (rng_cp,cp)
   (rng_cp,cp) <- find (check.snd) candidates
-
-  -- let rng_cp = cp^.maximalProjection
   let matched = matchPPObjectRange x'tr felst rng_cp
   guard (is _Nothing matched)
-  -- guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just rng_cp) felst))
-  guard (is _Nothing (find (\x -> x^?_2._CompVP_CP == Just rng_cp) felst))
-  let comp = CompVP_CP rng_cp
+  guard (is _Nothing (find (\x -> x^?_2._2._CompVP_CP == Just rng_cp) felst))
+  let comp = (Nothing,CompVP_CP rng_cp)  -- only DP is associated with trace for the time being
   return (role,comp)
 
 
@@ -394,8 +376,8 @@ matchExtraRolesForCPInAdjunctCP :: (CP 'PH1 -> Bool)
                                 -> FNFrameElement
                                 -> X'Tree 'PH1
                                 -> CP 'PH1
-                                -> [(FNFrameElement, CompVP 'PH1)]
-                                -> Maybe (FNFrameElement,CompVP 'PH1)
+                                -> [(FNFrameElement, MatchedElement)]
+                                -> Maybe (FNFrameElement,MatchedElement)
 matchExtraRolesForCPInAdjunctCP check role x'tr cp0 felst = do
   guard (is _Nothing (find (\x -> x^._1 == role) felst))
   let resmap = retrieveResolved x'tr
@@ -403,14 +385,11 @@ matchExtraRolesForCPInAdjunctCP check role x'tr cp0 felst = do
         rng_cp <- cp0^..adjunct.traverse._AdjunctCP_CP
         cp <- maybeToList (extractZipperById rng_cp x'tr >>= \w -> currentCPDPPP w ^? _CPCase)
         return (rng_cp,cp)
-
   (rng_cp,cp) <- find (check.snd) candidates
-  -- let rng_cp = cp^.maximalProjection
-  -- guard (is _Nothing (find (\x -> x^?_2._CompVP_PP.complement.to compPPToRange == Just rng_cp) felst))
   let matched = matchPPObjectRange x'tr felst rng_cp
   guard (is _Nothing matched)
-  guard (is _Nothing (find (\x -> x^?_2._CompVP_CP == Just rng_cp) felst))
-  let comp = CompVP_CP rng_cp
+  guard (is _Nothing (find (\x -> x^?_2._2._CompVP_CP == Just rng_cp) felst))
+  let comp = (Nothing, CompVP_CP rng_cp) -- only DP is associated with trace for the time being
   return (role,comp)
 
 
@@ -434,8 +413,8 @@ matchExtraRoles :: FrameDB
                 -> FNFrame
                 -> X'Tree 'PH1
                 -> CP 'PH1
-                -> [(FNFrameElement, CompVP 'PH1)]
-                -> [(FNFrameElement, CompVP 'PH1)]
+                -> [(FNFrameElement, MatchedElement)]
+                -> [(FNFrameElement, MatchedElement)]
 matchExtraRoles frmdb frame x'tr cp felst =
   let mmeans = matchExtraRolesForPPing "by" "Means" x'tr cp felst
       felst1 = felst ++ maybeToList mmeans
@@ -467,7 +446,7 @@ matchExtraClausalSubframe check prep (frm,fe0,fe1) x'tr cp0 = do
   let resmap = retrieveResolved x'tr
   let candidates1 = do
         c <- cp0 ^.complement.complement.complement
-        CompVP_CP rng_cp <- maybeToList (resolvedCompVP resmap c)
+        CompVP_CP rng_cp <- maybeToList ((^._2) <$> resolvedCompVP resmap c)
         cp <- maybeToList (extractZipperById rng_cp x'tr >>= \w -> currentCPDPPP w ^? _CPCase)
         return (rng_cp,cp)
       candidates2 = do
@@ -493,54 +472,6 @@ scoreSelectedFrame total ((_,_,_,mselected),n) =
 
 
 
-{-
---
--- | Resolve PP ambiguity for matched PP
---   This algorithm is ad hoc but practically works for PP embedded in DP by CoreNLP.
---   We need to have a systematic treatment and tests for PP ambiguity.
---
-resolveAmbiguityInDP :: [(FNFrameElement, CompVP 'PH1)]
-                     -> [(FNFrameElement, CompVP 'PH1)]
-resolveAmbiguityInDP [] = []
-resolveAmbiguityInDP felst = foldr1 (.) (map go felst) felst
-  where
-    go :: (FNFrameElement,CompVP 'PH1)
-       -> [(FNFrameElement,CompVP 'PH1)]
-       -> [(FNFrameElement,CompVP 'PH1)]
-    go (fe,CompVP_PP pp) lst = let rng = pp^.maximalProjection
-                               in map (f (fe,rng)) lst
-    go (fe,CompVP_DP dp) lst = map (f (fe,fromMaybe (dp^.maximalProjection) (dp^?complement._Just.headX.hn_range))) lst
-    go (_ ,_           ) lst = lst
-
-    f (fe,rng@(b,e)) (fe',CompVP_PP pp)
-      = let HeadPP p1 p2 = pp^.headX
-            prep' = (p1,p2)
-            o'    = pp^.maximalProjection
-        in case pp^.complement of
-             CompPP_DP dp    -> let rng'@(b',_) = dp^.maximalProjection
-                                in -- for the time being, use this ad hoc algorithm
-                                   if fe /= fe' && rng `isInsideR` rng' && b /= b'
-                                   then let dp' = dp & (complement._Just.headX.hn_range .~  (b',b-1))
-                                                     . (complement._Just.maximalProjection .~ (b,e))
-                                                     . (maximalProjection .~ (b,e))
-                                                     . (adjunct .~ [])
-                                        in (fe',CompVP_PP (mkPP prep' o' dp'))
-                                   else (fe',CompVP_PP pp)
-             CompPP_Gerund _ -> (fe',CompVP_PP pp)
-    f (fe,rng@(b,e)) (fe',CompVP_DP dp)
-      = let rng'@(b',_) = dp^.maximalProjection
-        in -- for the time being, use this ad hoc algorithm
-          if fe /= fe' && rng `isInsideR` rng' && b /= b'
-          then let dp' = dp & (complement._Just.headX.hn_range .~ (b',b-1))
-                            . (complement._Just.maximalProjection .~ (b,e))
-                            . (maximalProjection .~ (b,e))
-                            . (adjunct .~ [])
-               in (fe', CompVP_DP dp')
-          else (fe', CompVP_DP dp)
-    f _ x = x
--}
-
-
 matchFrame :: FrameDB
            -> X'Tree 'PH1
            -> (VerbStructure,CP 'PH1)
@@ -548,25 +479,23 @@ matchFrame :: FrameDB
 matchFrame frmdb x'tr (vstr,cp) =
     if verbp^.headX.vp_lemma == "be"
     then do
-      rng_dp_subj <- mDP^?_Just._SpecTP_DP   -- for the time being, ignore CP subject
+      (trc_subj,rng_dp_subj) <- mDP >>= \x -> (case x^._2 of SpecTP_DP r -> return (x^._1,r); _ -> Nothing)
       c <- listToMaybe $ do
              c <- verbp^.complement
              maybeToList (resolvedCompVP resmap c)
-
-      -- c <- listToMaybe (verbp^..complement.traverse.trResolved._Just)
-      ((do rng_dp_obj <- c^?_CompVP_DP
+      ((do (trc_obj,rng_dp_obj) <- case c^._2 of CompVP_DP r -> return (c^._1,r); _ -> Nothing
            let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_NP (Just GA1))) Nothing Nothing Nothing
-               role_subj = (FNFrameElement "Instance",CompVP_DP rng_dp_subj)
-               role_obj  = (FNFrameElement "Type",CompVP_DP rng_dp_obj)
+               role_subj = (FNFrameElement "Instance",(trc_subj,CompVP_DP rng_dp_subj))
+               role_obj  = (FNFrameElement "Type",(trc_obj,CompVP_DP rng_dp_obj))
            return (rng_cp,vprop,x'tr,FMR ["be"] "Instance" (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing))
        <|>
-       (do rng_pp_obj <- c^?_CompVP_PP
+       (do rng_pp_obj <- c^?_2._CompVP_PP
            pp_obj <- extractZipperById rng_pp_obj x'tr >>= \w -> currentCPDPPP w ^? _PPCase
            prep_obj <- pp_obj^?headX.hp_prep._Prep_WORD
            (frm,rsbj,robj) <- ppRelFrame prep_obj
            let argpatt = ArgPattern Nothing (Just (GR_NP (Just GASBJ))) (Just (GR_PP Nothing)) Nothing Nothing Nothing
-               role_subj = (rsbj,CompVP_DP rng_dp_subj)
-               role_obj  = (robj,CompVP_PP rng_pp_obj)
+               role_subj = (rsbj,(trc_subj,CompVP_DP rng_dp_subj))
+               role_obj  = (robj,(Nothing,CompVP_PP rng_pp_obj))
            return (rng_cp,vprop,x'tr,FMR ["be"] frm (Just ((argpatt,1),[role_subj,role_obj])) [],Nothing)))
 
 
@@ -589,9 +518,8 @@ matchFrame frmdb x'tr (vstr,cp) =
     verbp = cp^.complement.complement
     mDP = do
       let s = cp^.complement.specifier -- .trResolved
-      -- SpecTP_DP rng_dp <-
       resolvedSpecTP resmap s
-      -- extractZipperById rng_dp x'tr >>= \w -> currentCPDPPP w ^? _DPCase
+
 
     vprop = vstr^.vs_vp
     rng_cp = cp^.maximalProjection
@@ -676,7 +604,7 @@ matchNomFrame apredata x'tr tagged dp = do
                                      in listToMaybe rngs
                    _ -> Nothing
           let txt = T.intercalate " " (tokensByRange tagged rng)
-          return (EI rng rng Nothing txt False False)
+          return (EI (Right (RangePair rng rng)) Nothing txt False False)
     (verb,_senses,rmtoppatts) <- getFirst . mconcat $ do
       verb <- extractNominalizedVerb wndb lma
       let (senses,rmtoppatts) = getVerbSenses apredata (verb,[verb])
@@ -699,7 +627,7 @@ matchNomFrame apredata x'tr tagged dp = do
       guard (pp^.headX.hp_prep == Prep_WORD "of")
       rng_obj <- pp^?complement._CompPP_DP -- .maximalProjection
       let txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
-      return (lma,verb,x'tr,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj (Just "of") txt_obj False False)))
+      return (lma,verb,x'tr,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI (Right (RangePair rng_obj rng_obj)) (Just "of") txt_obj False False)))
     cpcase patt rolemap lma frm verb rng_dp mei_subj = do
       let (ms,mo) = subjObjSBAR (patt^._1)
       (args,_) <- ms
@@ -715,4 +643,4 @@ matchNomFrame apredata x'tr tagged dp = do
           txt_obj = T.intercalate " " (tokensByRange tagged rng_obj)
       aux <- listToMaybe (vp^..headX.vp_auxiliary.traverse._2._2.to unLemma)
       guard (aux == "to")
-      return (lma,verb,x'tr,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI rng_obj rng_obj Nothing txt_obj False False)))
+      return (lma,verb,x'tr,(FNFrame frm,rng_dp),(subj,mei_subj),(obj,(EI (Right (RangePair rng_obj rng_obj)) Nothing txt_obj False False)))

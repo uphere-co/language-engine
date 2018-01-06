@@ -52,14 +52,11 @@ import           SRL.Analyze.Type                        (DocStructure(..),SentS
                                                          ,_MGPredicate,_MGEntity
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
-                                                         ,vs_vp,ss_x'trs
-                                                         )
+                                                         ,vs_vp,ss_x'trs)
 import           SRL.Analyze.Type.Match                  (ExceptionalFrame(..),ONSenseFrameNetInstance(..),FrameMatchResult(..)
+                                                         ,MatchedElement
                                                          ,onfn_senseID,onfn_definition,onfn_frame
-                                                         ,tf_frameID,tf_feCore,tf_fePeri                                                         
-                                                         )
-
-
+                                                         ,tf_frameID,tf_feCore,tf_fePeri)
 import           SRL.Analyze.Util                        (addTag,convertTagPosFromTokenToChar,underlineText)
 
 
@@ -211,13 +208,13 @@ formatVerbStructure (VerbStructure vp senses mrmmtoppatts) =
 
 -- maybe "" show (dp^?complement._Just.headX)
 
-showMatchedFE :: PreAnalysis '[Lemma] -> (FNFrameElement, CompVP 'PH1) -> String
+showMatchedFE :: PreAnalysis '[Lemma] -> (FNFrameElement,MatchedElement) -> String
 --                                         FE   range prep text
-showMatchedFE tagged (fe,CompVP_DP rng_dp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("DP" ++ show rng_dp)  ("" :: Text) ("" :: Text) -- (headTextDP tagged rng_dp)
-showMatchedFE tagged (fe,CompVP_AP rng_ap) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("AP" ++ show rng_ap)  ("" :: Text) ("" :: Text) -- ((T.intercalate " " . tokensByRange tagged) (ap^.maximalProjection))
-showMatchedFE tagged (fe,CompVP_CP rng_cp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("CP" ++ show rng_cp) ("" :: Text) ("" :: Text) -- ((T.intercalate " " . tokensByRange tagged) rng_cp)
+showMatchedFE tagged (fe,(_,CompVP_DP rng_dp)) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("DP" ++ show rng_dp)  ("" :: Text) ("" :: Text) -- (headTextDP tagged rng_dp)
+showMatchedFE tagged (fe,(_,CompVP_AP rng_ap)) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("AP" ++ show rng_ap)  ("" :: Text) ("" :: Text) -- ((T.intercalate " " . tokensByRange tagged) (ap^.maximalProjection))
+showMatchedFE tagged (fe,(_,CompVP_CP rng_cp)) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("CP" ++ show rng_cp) ("" :: Text) ("" :: Text) -- ((T.intercalate " " . tokensByRange tagged) rng_cp)
 --  where rng_cp = cp^.maximalProjection
-showMatchedFE tagged (fe,CompVP_PP rng_pp) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("PP" ++ show rng_pp) ("" :: Text) ("" :: Text) -- ((T.intercalate " " . tokensByRange tagged) rng_cp)
+showMatchedFE tagged (fe,(_,CompVP_PP rng_pp)) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("PP" ++ show rng_pp) ("" :: Text) ("" :: Text) -- ((T.intercalate " " . tokensByRange tagged) rng_cp)
 
 {-
   let prep = case pp^.headX.hp_prep of

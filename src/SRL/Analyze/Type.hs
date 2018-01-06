@@ -31,7 +31,7 @@ import           WordNet.Query                 (WordNetDB)
 --
 import           OntoNotes.Type.SenseInventory (Inventory)
 --
-import           SRL.Analyze.Type.Match        (ONSenseFrameNetInstance)
+import           SRL.Analyze.Type.Match        (ONSenseFrameNetInstance,EmptyCategoryIndex)
 
 
 
@@ -111,15 +111,6 @@ data PredicateInfo = PredVerb { _pi_lemmas :: [Text]               -- ^ for idio
 
 makePrisms ''PredicateInfo
 
-data EmptyCategoryIndex = ECI_PRO Int
-                        | ECI_NULL
-                        deriving (Generic, Show, Eq)
-
-makePrisms ''EmptyCategoryIndex
-
-instance FromJSON EmptyCategoryIndex
-instance ToJSON EmptyCategoryIndex
-instance Hashable EmptyCategoryIndex
 
 
 data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Either EmptyCategoryIndex Range) Int
@@ -129,6 +120,7 @@ data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Either EmptyCatego
                deriving Show
 
 makeLenses ''VertexMap
+
 
 
 data MGVertex = MGEntity    { _mv_id :: Int
