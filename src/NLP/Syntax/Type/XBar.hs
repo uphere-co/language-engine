@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeFamilies      #-}
 
 module NLP.Syntax.Type.XBar
@@ -36,20 +37,20 @@ cpdpppFromX'Tree x'tr rng prm
   = (^? prm) . currentCPDPPP =<< extractZipperById rng x'tr
 
 
-resolvedCompVP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (CompVP 'PH1)) -> Maybe (CompVP 'PH1)
+resolvedCompVP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (CompVP 'PH1)) -> Maybe (Maybe TraceType,CompVP 'PH1)
 resolvedCompVP resmap c =
   case c of
-    Coindex (Just i) (Left _) -> (^._1) <$> lookup i resmap
-    Coindex Nothing  (Left _) -> Nothing
-    Coindex _        (Right x) -> Just x
+    Coindex (Just i) (Left t) -> (Just t,) . (^._1) <$> lookup i resmap
+    Coindex Nothing  (Left t) -> Nothing
+    Coindex _        (Right x) -> Just (Nothing,x)
 
 
-resolvedSpecTP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (SpecTP 'PH1)) -> Maybe (SpecTP 'PH1)
+resolvedSpecTP :: [(Int,(CompVP 'PH1,Range))] -> Coindex (Either TraceType (SpecTP 'PH1)) -> Maybe (Maybe TraceType,SpecTP 'PH1)
 resolvedSpecTP resmap s =
   case s of
-    Coindex (Just i) (Left _) -> (^._1.to (compVPToSpecTP SPH1).to rightMay) =<< lookup i resmap
+    Coindex (Just i) (Left t) -> (Just t,) <$> ((^._1.to (compVPToSpecTP SPH1).to rightMay) =<< lookup i resmap)
     Coindex Nothing  (Left _) -> Nothing
-    Coindex _        (Right x) -> Just x
+    Coindex _        (Right x) -> Just (Nothing,x)
 
 
 getTokens :: BitreeICP as -> Text
