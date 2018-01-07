@@ -3,7 +3,7 @@
 
 module NLP.Semantics.Type where
 
-import           Control.Lens (makeLenses)
+import           Control.Lens (makeLenses,makePrisms)
 import           Data.Aeson
 import           Data.Text
 import           GHC.Generics
@@ -26,8 +26,9 @@ type TWord = Text
 
 
 data MeaningRoleContent = SubFrame MeaningTree
+                        --  | ModifierSubFrame MeaningTree
                         | Modifier TWord [MeaningTree]
-                        | Terminal TWord (Maybe (Bool,Int))
+                        | Terminal TWord (Maybe (Bool,Int))  -- Bool = relative (backward)
                         deriving (Eq,Show,Generic)
 
 instance ToJSON MeaningRoleContent
@@ -58,12 +59,13 @@ data MeaningTree = MeaningTree
   , _mt_predicate :: TWord         -- ^ Predicate word.
   , _mt_isNegated :: Bool          -- ^ Negation information of verb.
   , _mt_arguments :: [MeaningRole] -- ^ A list of MeaningRole's
+  --   , _mt_modifierFrame :: [MeaningTree]
   } deriving (Eq,Show, Generic)
 
 
 instance ToJSON MeaningTree
 instance FromJSON MeaningTree
 
-makeLenses ''MeaningRoleContent
+makePrisms ''MeaningRoleContent
 makeLenses ''MeaningRole
 makeLenses ''MeaningTree
