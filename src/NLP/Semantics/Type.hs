@@ -3,7 +3,7 @@
 
 module NLP.Semantics.Type where
 
-import           Control.Lens (makeLenses)
+import           Control.Lens (makeLenses,makePrisms)
 import           Data.Aeson
 import           Data.Text
 import           GHC.Generics
@@ -25,6 +25,29 @@ type FrameElement = Text
 type TWord = Text
 
 
+data MeaningRoleContent = SubFrame MeaningTree
+                        --  | ModifierSubFrame MeaningTree
+                        | Modifier TWord [MeaningTree]
+                        | Terminal TWord (Maybe (Bool,Int))  -- Bool = relative (backward)
+                        deriving (Eq,Show,Generic)
+
+instance ToJSON MeaningRoleContent
+instance FromJSON MeaningRoleContent
+
+
+--
+-- | MeaningRole is a single instance of each Frame element to content matching.
+--   Content can be either a final sequence of words or a subframe represented by MeaningTree.
+--
+data MeaningRole = MeaningRole { _mr_id :: Int
+                               , _mr_role :: FrameElement
+                               , _mr_content :: PrepOr MeaningRoleContent
+                               }
+                 deriving (Eq,Show,Generic)
+
+instance ToJSON MeaningRole
+instance FromJSON MeaningRole
+
 --
 -- | MeaningTree is a representation of meaning. This is necessary in web interface because original
 --   meaning graph is too lengthy to be appeared in webpage. It consists of frame, predicate and
@@ -32,14 +55,17 @@ type TWord = Text
 --
 data MeaningTree = MeaningTree
   { _mt_vertexID :: Int
-  , _mt_frame:: Frame       -- ^ Unlemma form of verb when predicate. Frame when nominal predicate.
-  , _mt_predicate :: TWord      -- ^ Predicate word.
-  , _mt_isNegated :: Bool       -- ^ Negation information of verb.
-  , _mt_arguments :: [(Int,FrameElement,Either (PrepOr MeaningTree) (PrepOr (TWord,Maybe Int)))]
-    -- ^ A tuple of FrameElement and word, or a tuple of FrameElement and subsequent ARB.
+  , _mt_frame:: Frame              -- ^ Unlemma form of verb when predicate. Frame when nominal predicate.
+  , _mt_predicate :: TWord         -- ^ Predicate word.
+  , _mt_isNegated :: Bool          -- ^ Negation information of verb.
+  , _mt_arguments :: [MeaningRole] -- ^ A list of MeaningRole's
+  --   , _mt_modifierFrame :: [MeaningTree]
   } deriving (Eq,Show, Generic)
 
-makeLenses ''MeaningTree
 
 instance ToJSON MeaningTree
 instance FromJSON MeaningTree
+
+makePrisms ''MeaningRoleContent
+makeLenses ''MeaningRole
+makeLenses ''MeaningTree
