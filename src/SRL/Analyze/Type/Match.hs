@@ -23,6 +23,7 @@ import           Data.Range                    (Range)
 import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel
                                                ,SenseID)
 -- import           NLP.Syntax.Clause             (currentCPDPPP)
+import           NLP.Syntax.Type.Resolve       (Referent)
 import           NLP.Syntax.Type.XBar          (CompVP,Phase(..),Coindex(..),TraceType(..),SpecTP(..)
                                                ,SPhase(..)
                                                ,currentCPDPPP
@@ -73,11 +74,11 @@ eiRangeID :: EntityInfo -> Range --  Either EmptyCategoryIndex Range
 eiRangeID e = e^.ei_rangePair.rp_full -- e^.ei_id.to (second (^.rp_full))
 
 
-type MatchedElement = (Maybe (TraceType,Int),CompVP 'PH1)
+-- type MatchedElement = -- (Maybe (TraceType,Int),CompVP 'PH1)
 
 data FrameMatchResult = FMR { _fmr_lemmas :: [Text]
                             , _fmr_frame :: FNFrame
-                            , _fmr_roles :: Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, MatchedElement)])
+                            , _fmr_roles :: Maybe ((ArgPattern () GRel,Int),[(FNFrameElement, Referent (CompVP 'PH1))])
                             , _fmr_subframes :: [(FNFrame,Text,[(FNFrameElement,(Bool,Range))])]
                             }
 

@@ -24,6 +24,7 @@ import           Data.Bitree                  (getRoot1)
 import           Data.BitreeZipper            (current)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Type
+import           NLP.Syntax.Type.Resolve      (referent2CompVP,referent2Trace)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util              (GetIntLemma(..),intLemma0)
@@ -116,18 +117,18 @@ mkMGVertices (tagged,depmap) (matched,nmatched) =
       ett_verb  = do (rng,_,x'tr,FMR _ _ mselected _,_) <- matched
                      (_,felst) <- maybeToList mselected
                      (_fe,x) <- felst
-                     case x of
-                       (_,CompVP_CP _cp) -> [] -- CP is not an entity.
-                       (_,CompVP_AP rng_ap) -> do
+                     case referent2CompVP x of
+                       CompVP_CP _cp -> [] -- CP is not an entity.
+                       CompVP_AP rng_ap -> do
                          ap <- maybeToList (cpdpppFromX'Tree x'tr rng_ap _APCase)
                          return (entityFromAP tagged ap)
-                       (trc,CompVP_DP rng_dp) -> do
+                       CompVP_DP rng_dp -> do
                          dp <- maybeToList (cpdpppFromX'Tree x'tr rng_dp _DPCase)
-                         let y@(ei,_) = entityFromDP x'tr tagged (trc,dp)
+                         let y@(ei,_) = entityFromDP x'tr tagged (referent2Trace x,dp)
                          if is _Just (find (== (rng_dp,rng)) depmap)
                            then []
                            else return y
-                       (_,CompVP_PP rng_pp) -> maybeToList $ do
+                       CompVP_PP rng_pp -> maybeToList $ do
                          pp <- cpdpppFromX'Tree x'tr rng_pp _PPCase
                          rng_dp <- pp^?complement._CompPP_DP
                          dp <- cpdpppFromX'Tree x'tr rng_dp _DPCase
@@ -185,20 +186,20 @@ mkRoleEdges vmap matched = do
   i <- maybeToList (HM.lookup (RegularRange rng) rngidxmap)   -- frame
   (_,felst) <- maybeToList mselected
   (fe,x) <- felst
-  (t,rng',mprep) <- case x of
-                      (t,CompVP_CP rng_cp) -> do
-                        cp <- maybeToList (cpdpppFromX'Tree x'tr rng_cp _CPCase)
-                        let mprep = case cp^.headX of
-                                      C_PHI -> Nothing
-                                      C_WORD prep -> if prep == Lemma "that" then Nothing else return (unLemma prep)
-                        return (t,rng_cp,mprep)
-                      (t,CompVP_DP rng_dp) -> return (t,rng_dp,Nothing)
-                      (t,CompVP_AP rng_ap) -> return (t,rng_ap,Nothing)
-                      (t,CompVP_PP rng_pp) -> do
-                        pp <- maybeToList (cpdpppFromX'Tree x'tr rng_pp _PPCase)
-                        return (t,pp^.complement.to (compPPToRange SPH1),pp^?headX.hp_prep._Prep_WORD)
+  (rng',mprep) <- case referent2CompVP x of
+                    CompVP_CP rng_cp -> do
+                      cp <- maybeToList (cpdpppFromX'Tree x'tr rng_cp _CPCase)
+                      let mprep = case cp^.headX of
+                                    C_PHI -> Nothing
+                                    C_WORD prep -> if prep == Lemma "that" then Nothing else return (unLemma prep)
+                      return (rng_cp,mprep)
+                    CompVP_DP rng_dp -> return (rng_dp,Nothing)
+                    CompVP_AP rng_ap -> return (rng_ap,Nothing)
+                    CompVP_PP rng_pp -> do
+                      pp <- maybeToList (cpdpppFromX'Tree x'tr rng_pp _PPCase)
+                      return (pp^.complement.to (compPPToRange SPH1),pp^?headX.hp_prep._Prep_WORD)
   let rng'full = fromMaybe rng' (lookup rng' headfull)
-  case t of
+  case referent2Trace x of
     Just (PRO,j) -> do
       i' <- maybeToList (HM.lookup (VertexPRO j) rngidxmap)  -- frame element
       i'' <- maybeToList (HM.lookup (RegularRange rng'full) rngidxmap)

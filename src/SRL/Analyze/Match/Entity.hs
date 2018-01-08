@@ -18,7 +18,8 @@ import qualified Data.Text           as T
 --
 import           Data.BitreeZipper
 import           Data.Range
-import           NLP.Syntax.Type.Resolve  (retrieveResolved,resolvedSpecTP,resolvedCompVP)
+import           NLP.Syntax.Type.Resolve  (referent2CompVP
+                                          ,retrieveResolved,resolvedSpecTP,resolvedCompVP)
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Type.Verb     (vp_auxiliary)
 import           NLP.Type.NamedEntity
@@ -52,7 +53,7 @@ definiteCorefResolution x'tr tagged dp = do
   cp' <- currentCPDPPP w' ^? _CPCase
   ((do w'' <- parent w'
        cp'' <- currentCPDPPP w'' ^? _CPCase
-       rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._2._SpecTP_DP
+       rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
        dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
        nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
        if nclass == Org
@@ -61,7 +62,7 @@ definiteCorefResolution x'tr tagged dp = do
    <|>
    (do rng_cp'' <- cp'^?specifier._Just.coidx_content._SpecCP_Topic._SpecTopicP_CP
        cp'' <- cpdpppFromX'Tree x'tr rng_cp'' _CPCase
-       rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._2._SpecTP_DP
+       rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
        dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
        nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
        if nclass == Org
@@ -85,7 +86,7 @@ definiteGenitiveCorefResolution x'tr tagged dp = do
   cp' <- currentCPDPPP w' ^? _CPCase
   -- w'' <- parent w'                        -- this need to be revived.
   -- cp'' <- currentCPDPPP w'' ^? _CPCase
-  rng_dp' <- cp'^?complement.specifier.to (resolvedSpecTP resmap)._Just._2._SpecTP_DP
+  rng_dp' <- cp'^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
   dp' <- cpdpppFromX'Tree x'tr rng_dp' _DPCase
   nclass <- dp'^?complement._Just.headX.coidx_content.hn_class._Just
   if nclass == Org
@@ -107,7 +108,7 @@ pronounResolution x'tr dp = do
 
     ((if isgenitive
         then do
-          rng_dp' <- cp'^?complement.specifier.to (resolvedSpecTP resmap)._Just._2._SpecTP_DP
+          rng_dp' <- cp'^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
           dp' <- cpdpppFromX'Tree x'tr rng_dp' _DPCase
           nclass <- dp'^?complement._Just.headX.coidx_content.hn_class._Just
           match (rng_pro,prnclass) (nclass,rng_dp')
@@ -115,14 +116,14 @@ pronounResolution x'tr dp = do
      <|>
      (do w'' <- parent w'
          cp'' <- currentCPDPPP w'' ^? _CPCase
-         rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._2._SpecTP_DP
+         rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
          dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
          nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
          match (rng_pro,prnclass) (nclass,rng_dp''))
      <|>
      (do rng_cp'' <- cp'^?specifier._Just.coidx_content._SpecCP_Topic._SpecTopicP_CP
          cp'' <- cpdpppFromX'Tree x'tr rng_cp'' _CPCase
-         rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._2._SpecTP_DP
+         rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
          dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
          nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
          match (rng_pro,prnclass) (nclass,rng_dp'')))

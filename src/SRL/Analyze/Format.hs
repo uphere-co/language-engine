@@ -32,6 +32,7 @@ import           Lexicon.Type                            (ArgPattern(..),RoleIns
                                                          ,FNFrame(..),FNFrameElement(..))
 import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree,prettyPrint)
+import           NLP.Syntax.Type.Resolve                 (Referent(..),referent2CompVP)
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
 import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),PreAnalysis
                                                          ,CP,X'Tree,Phase(..),SPhase(..)
@@ -54,7 +55,6 @@ import           SRL.Analyze.Type                        (DocStructure(..),SentS
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
                                                          ,vs_vp,ss_x'trs)
 import           SRL.Analyze.Type.Match                  (ExceptionalFrame(..),ONSenseFrameNetInstance(..),FrameMatchResult(..)
-                                                         ,MatchedElement
                                                          ,onfn_senseID,onfn_definition,onfn_frame
                                                          ,tf_frameID,tf_feCore,tf_fePeri
                                                          ,mkPROText)
@@ -209,28 +209,14 @@ formatVerbStructure (VerbStructure vp senses mrmmtoppatts) =
 
 -- maybe "" show (dp^?complement._Just.headX)
 
-showMatchedFE :: PreAnalysis '[Lemma] -> (FNFrameElement,MatchedElement) -> String
---                                         FE   range prep text
-showMatchedFE tagged (fe,(_,CompVP_DP rng_dp)) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("DP" ++ show rng_dp)  ("" :: Text) ("" :: Text) -- (headTextDP tagged rng_dp)
-showMatchedFE tagged (fe,(_,CompVP_AP rng_ap)) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("AP" ++ show rng_ap)  ("" :: Text) ("" :: Text) -- ((T.intercalate " " . tokensByRange tagged) (ap^.maximalProjection))
-showMatchedFE tagged (fe,(_,CompVP_CP rng_cp)) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("CP" ++ show rng_cp) ("" :: Text) ("" :: Text) -- ((T.intercalate " " . tokensByRange tagged) rng_cp)
---  where rng_cp = cp^.maximalProjection
-showMatchedFE tagged (fe,(_,CompVP_PP rng_pp)) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("PP" ++ show rng_pp) ("" :: Text) ("" :: Text) -- ((T.intercalate " " . tokensByRange tagged) rng_cp)
-
-{-
-  let prep = case pp^.headX.hp_prep of
-               Prep_NULL -> ""
-               Prep_WORD p -> p
-      pclass :: Text
-      pclass = case pp^.headX.hp_pclass of
-                 PC_Time -> "time"
-                 PC_Other -> ""
-  in case pp^.complement of
-       CompPP_DP dp    -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) (maybe "" show (dp^?complement._Just.headX)) prep pclass (headTextDP tagged dp)
-       CompPP_Gerund rng -> printf "%-15s: %-7s %3s(%4s) %s" (unFNFrameElement fe) (show rng) prep pclass (T.intercalate " " (tokensByRange tagged rng))
--- showMatchedFE tagged (fe,CompVP_Unresolved rng) = printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) (show rng) ("UNKNOWN" :: Text) (T.intercalate " " (tokensByRange tagged rng))
--}
-
+showMatchedFE :: PreAnalysis '[Lemma] -> (FNFrameElement,Referent (CompVP 'PH1)) -> String
+--                              FE   range prep text
+showMatchedFE tagged (fe,x) =
+  case referent2CompVP x of
+    CompVP_DP rng_dp -> printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("DP" ++ show rng_dp)  ("" :: Text) ("" :: Text)
+    CompVP_AP rng_ap -> printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("AP" ++ show rng_ap)  ("" :: Text) ("" :: Text)
+    CompVP_CP rng_cp -> printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("CP" ++ show rng_cp) ("" :: Text) ("" :: Text)
+    CompVP_PP rng_pp -> printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("PP" ++ show rng_pp) ("" :: Text) ("" :: Text)
 
 
 showMatchedFrame :: FrameDB
