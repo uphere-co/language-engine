@@ -30,7 +30,8 @@ import           FrameNet.Type.Frame          (frame_FE,fe_name)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
-import           NLP.Syntax.Clause            (constructCP,retrieveResolved)
+import           NLP.Syntax.Clause            (constructCP)
+import           NLP.Syntax.Type.Resolve      (retrieveResolved,resolvedCompVP,resolvedSpecTP)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs)

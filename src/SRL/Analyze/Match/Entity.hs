@@ -18,7 +18,7 @@ import qualified Data.Text           as T
 --
 import           Data.BitreeZipper
 import           Data.Range
-import           NLP.Syntax.Clause        (retrieveResolved)
+import           NLP.Syntax.Type.Resolve  (retrieveResolved,resolvedSpecTP,resolvedCompVP)
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Type.Verb     (vp_auxiliary)
 import           NLP.Type.NamedEntity
