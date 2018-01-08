@@ -271,6 +271,9 @@ instance Show (CompVP 'PH1) where
   show (CompVP_PP x) = "PP" ++ show x
   show (CompVP_AP x) = "AP" ++ show x
 
+deriving instance Eq (CompVP 'PH1)
+deriving instance Ord (CompVP 'PH1)
+
 
 type family CoindexCompVP (p :: Phase) where
   CoindexCompVP 'PH0 = Coindex (Either TraceType (Either Range (CompVP 'PH0)))

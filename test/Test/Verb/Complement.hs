@@ -25,7 +25,8 @@ import           WordNet.Type.Lexicographer        (LexicographerFile)
 import           NLP.Syntax                        (syntacticAnalysis)
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Format
-import           NLP.Syntax.Type.Resolve           (retrieveResolved,resolvedSpecTP,resolvedCompVP)
+import           NLP.Syntax.Type.Resolve           (Resolved(..),Referent(..),referent2CompVP
+                                                   ,retrieveResolved,resolvedSpecTP,resolvedCompVP)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                   (mkPreAnalysis)
@@ -316,7 +317,9 @@ checkSubjCompAdjunct c = fromMaybe False $ do
       b_subj = fromMaybe False $ do
                  let subj = cp^.complement.specifier
                  let (sclass,stxt) = fromMaybe (Nothing,"") $ do
-                       spectp <- (^._2) <$> resolvedSpecTP resmap subj
+                       spectp <- resolvedSpecTP resmap subj >>= \case RefRExp x -> return x
+                                                                      RefVariable _ (RBound x _)   -> return x
+                                                                      RefVariable _ (RFree_WHDP r) -> return (SpecTP_DP r)
                        let sclass = do
                              rng_dp <- spectp^?_SpecTP_DP
                              dp <- cpdpppFromX'Tree x'tr rng_dp _DPCase
@@ -327,7 +330,7 @@ checkSubjCompAdjunct c = fromMaybe False $ do
                    Just p -> return (stxt == subj_test^._1 && sclass == Just p)
       lst_comps = do
         c <- cp^.complement.complement.complement
-        r <- (^._2) <$> maybeToList (resolvedCompVP resmap c)
+        r <- referent2CompVP <$> maybeToList (resolvedCompVP resmap c)
         return (compVPToHeadText SPH1 pre x'tr r)
       lst_comps_test = c^._3._2
       b_comps = lst_comps == lst_comps_test

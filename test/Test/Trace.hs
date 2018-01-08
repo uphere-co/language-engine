@@ -23,8 +23,7 @@ import           WordNet.Type.Lexicographer        (LexicographerFile)
 --
 import           NLP.Syntax                        (syntacticAnalysis)
 import           NLP.Syntax.Clause
--- import           NLP.Syntax.Type
-import           NLP.Syntax.Type.Resolve           (retrieveResolved)
+import           NLP.Syntax.Type.Resolve           (retrieveResolved,_RBound)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                   (mkPreAnalysis)
@@ -40,7 +39,7 @@ import NLP.Syntax.Format
 
 data TracePos = Subj | Comp Int
 
-type TestTrace = (Text,Int,[(Int,Text)]{- (TracePos,([TraceType],Text)) -},[(Int,(Lemma,Text))],PennTree
+type TestTrace = (Text,Int,[(Int,Text)],[(Int,(Lemma,Text))],PennTree
                  ,[TagPos TokIdx MarkType]
                  ,[(Int,LexicographerFile)]
                  )
@@ -302,7 +301,7 @@ checkTrace c =
     cp <- (^? _CPCase) . currentCPDPPP =<< (getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'trs
     -- trace ("checktrace4" ++ (formatCP cp)) $ return ()
     x'tr <- listToMaybe x'trs
-    let r = map (_2 %~ (\x -> x^._2 .to (T.intercalate " " . tokensByRange pre))) (retrieveResolved x'tr)
+    let r = map (_2 %~ (\x -> x^._RBound._2.to (T.intercalate " " . tokensByRange pre))) (retrieveResolved x'tr)
     -- trace (show (r,c^._3)) $ return ()
     
     -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (txt,lmatknlst,pt,tagposs,synsets)))) $ return ()
