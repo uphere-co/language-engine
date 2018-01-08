@@ -32,6 +32,9 @@ data Resolved c = RBound c Range  -- ^  resolved maximal projection and head ran
 
 makePrisms ''Resolved
 
+resolved2Range (RBound _ rng)   = rng
+resolved2Range (RFree_WHDP rng) = rng
+
 data Referent c = RefRExp c
                 | RefVariable (TraceType,Int) (Resolved c)
                 deriving (Show,Functor)
