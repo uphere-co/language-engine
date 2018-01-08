@@ -198,7 +198,7 @@ entityFromDP x'tr tagged (trc,dp) =
                   let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
                   return (EI Nothing (RangePair rng_poss rng_poss) Nothing txt_poss False False)
       poss = maybeToList mposs1 ++ maybeToList mposs2
-      eci = case trc of
-              Just (PRO,i) -> Just (ECI_PRO i)
-              _            -> Nothing
-  in (EI eci (RangePair rng rnghead) Nothing headtxt False False, DI mrngtxt' mcoref mcomp poss adjs)
+
+  in case trc of
+       Just (PRO,i) -> (EI (Just (ECI_PRO i)) (RangePair rng rnghead) Nothing headtxt False False,emptyDPInfo)
+       _            -> (EI Nothing (RangePair rng rnghead) Nothing headtxt False False, DI mrngtxt' mcoref mcomp poss adjs)
