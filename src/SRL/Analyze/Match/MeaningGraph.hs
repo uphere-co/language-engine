@@ -15,7 +15,7 @@ import           Data.Bifunctor               (second)
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy,intercalate)
-import           Data.Maybe                   (fromJust,fromMaybe,mapMaybe,maybeToList)
+import           Data.Maybe                   (fromJust,fromMaybe,mapMaybe,maybeToList,listToMaybe)
 import           Data.Monoid                  ((<>))
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
@@ -24,7 +24,7 @@ import           Data.Bitree                  (getRoot1)
 import           Data.BitreeZipper            (current)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Type
-import           NLP.Syntax.Type.Resolve      (referent2CompVP,referent2Trace)
+import           NLP.Syntax.Type.Resolve      (Resolved(..),Referent(..),referent2CompVP,referent2Trace)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util              (GetIntLemma(..),intLemma0)
@@ -55,6 +55,7 @@ import           SRL.Analyze.Type.Match       (DPInfo(..),EmptyCategoryIndex(..)
                                               ,adi_appos,adi_compof,adi_coref,adi_poss,adi_adjs
                                               ,ei_eci,ei_rangePair,ei_prep,ei_isClause,ei_isTime,eiRangeID
                                               ,rp_full,rp_head
+                                              ,emptyDPInfo
                                               )
 
 
@@ -65,7 +66,15 @@ import NLP.Syntax.Format.Internal
 
 
 dependencyOfX'Tree :: X'Tree 'PH1 -> [(Range,Range)]
-dependencyOfX'Tree (PN (rng0,_) xs) = map ((rng0,) . fst . getRoot1) xs ++ concatMap dependencyOfX'Tree xs
+dependencyOfX'Tree (PN (rng0,l) xs) =
+  let deps = map ((rng0,) . fst . getRoot1) xs ++ concatMap dependencyOfX'Tree xs
+  in case l of
+       CPCase cp -> fromMaybe deps $ do
+                      rng_wh <- cp^?specifier._Just.coidx_content._SpecCP_WH
+                      return ((rng_wh,rng0):deps)
+       _ -> deps
+
+
 dependencyOfX'Tree (PL _)           = []
 
 
@@ -108,9 +117,9 @@ mkMGVertices :: (PreAnalysis '[Lemma],[(Range,Range)])
                 )
 mkMGVertices (tagged,depmap) (matched,nmatched) =
   let preds = flip map matched $ \(rng,vprop,x'tr,FMR idiom frm _ _,sense) i
-                                   -> MGPredicate i (toReg rng) frm (PredVerb idiom sense (simplifyVProp vprop))
+                                   -> MGPredicate i (toReg rng) frm (PredVerb idiom sense (vprop^.vp_index,vprop^.vp_index) (simplifyVProp vprop))
       npreds = flip map nmatched $ \(lma,verb,x'tr,(frm,rng_dp),_,_) ->
-                                  \i -> MGPredicate i (toReg rng_dp) frm (PredNominalized lma verb)
+                                  \i -> MGPredicate i (toReg rng_dp) frm (PredNominalized lma rng_dp verb)
       ipreds = zipWith ($) (preds ++ npreds) [1..]
 
       ett_verb :: [(EntityInfo,DPInfo)]
@@ -118,16 +127,27 @@ mkMGVertices (tagged,depmap) (matched,nmatched) =
                      (_,felst) <- maybeToList mselected
                      (_fe,x) <- felst
                      case referent2CompVP x of
-                       CompVP_CP _cp -> [] -- CP is not an entity.
+                       CompVP_CP rng_cp -> do
+                         cp <- maybeToList (cpdpppFromX'Tree x'tr rng_cp _CPCase)
+                         speccp <- cp^..specifier._Just
+                         case speccp^.coidx_content of
+                           SpecCP_WH rng_wh -> let headtxt = T.intercalate " " (tokensByRange tagged rng_wh)
+                                                   ei = EI Nothing (RangePair rng_wh rng_wh) Nothing headtxt True False
+                                               in [(ei,emptyDPInfo)]
+                           _ -> []
                        CompVP_AP rng_ap -> do
                          ap <- maybeToList (cpdpppFromX'Tree x'tr rng_ap _APCase)
                          return (entityFromAP tagged ap)
                        CompVP_DP rng_dp -> do
-                         dp <- maybeToList (cpdpppFromX'Tree x'tr rng_dp _DPCase)
-                         let y@(ei,_) = entityFromDP x'tr tagged (referent2Trace x,dp)
-                         if is _Just (find (== (rng_dp,rng)) depmap)
-                           then []
-                           else return y
+                         case x of
+                           RefVariable _ (RFree_WHDP _) -> do
+                             let headtxt = T.intercalate " " (tokensByRange tagged rng_dp)
+                                 ei = EI Nothing (RangePair rng_dp rng_dp) Nothing headtxt True False
+                             [(ei,emptyDPInfo)]
+                           _ -> do
+                             dp <- maybeToList (cpdpppFromX'Tree x'tr rng_dp _DPCase)
+                             let y@(ei,_) = entityFromDP x'tr tagged (referent2Trace x,dp)
+                             if is _Just (find (== (rng_dp,rng)) depmap) then [] else [y]
                        CompVP_PP rng_pp -> maybeToList $ do
                          pp <- cpdpppFromX'Tree x'tr rng_pp _PPCase
                          rng_dp <- pp^?complement._CompPP_DP
@@ -186,18 +206,19 @@ mkRoleEdges vmap matched = do
   i <- maybeToList (HM.lookup (RegularRange rng) rngidxmap)   -- frame
   (_,felst) <- maybeToList mselected
   (fe,x) <- felst
-  (rng',mprep) <- case referent2CompVP x of
-                    CompVP_CP rng_cp -> do
-                      cp <- maybeToList (cpdpppFromX'Tree x'tr rng_cp _CPCase)
-                      let mprep = case cp^.headX of
-                                    C_PHI -> Nothing
-                                    C_WORD prep -> if prep == Lemma "that" then Nothing else return (unLemma prep)
-                      return (rng_cp,mprep)
-                    CompVP_DP rng_dp -> return (rng_dp,Nothing)
-                    CompVP_AP rng_ap -> return (rng_ap,Nothing)
-                    CompVP_PP rng_pp -> do
-                      pp <- maybeToList (cpdpppFromX'Tree x'tr rng_pp _PPCase)
-                      return (pp^.complement.to (compPPToRange SPH1),pp^?headX.hp_prep._Prep_WORD)
+  (rng',mprep) <- maybeToList $ case referent2CompVP x of
+                                  CompVP_CP rng_cp -> do
+                                    cp <- cpdpppFromX'Tree x'tr rng_cp _CPCase
+                                    let mprep = case cp^.headX of
+                                                  C_PHI -> Nothing
+                                                  C_WORD prep -> if prep == Lemma "that" then Nothing else return (unLemma prep)
+                                    rng' <- (cp^?specifier._Just.coidx_content._SpecCP_WH <|> return rng_cp)
+                                    return (rng',mprep)
+                                  CompVP_DP rng_dp -> return (rng_dp,Nothing)
+                                  CompVP_AP rng_ap -> return (rng_ap,Nothing)
+                                  CompVP_PP rng_pp -> do
+                                    pp <- cpdpppFromX'Tree x'tr rng_pp _PPCase
+                                    return (pp^.complement.to (compPPToRange SPH1),pp^?headX.hp_prep._Prep_WORD)
   let rng'full = fromMaybe rng' (lookup rng' headfull)
   case referent2Trace x of
     Just (PRO,j) -> do

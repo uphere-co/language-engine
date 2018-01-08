@@ -255,7 +255,7 @@ formatMGEdge e = format "i{} -> i{} [label=\"{}\" style=\"{}\" fontsize=12.0 {}]
 
 
 formatMGVertex :: MGVertex -> (Int,Text)
-formatMGVertex (MGPredicate i _ f (PredVerb idiom _ v))
+formatMGVertex (MGPredicate i _ f (PredVerb idiom _ _ v))
   = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
         "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
         "<tr>" <>
@@ -275,7 +275,7 @@ formatMGVertex (MGPredicate i _ f (PredPrep p))
         "<td>"              <> "prep" <> "</td>" <>
         "</tr>" <>
         "</table>" )
-formatMGVertex (MGPredicate i _ f (PredNominalized n _))
+formatMGVertex (MGPredicate i _ f (PredNominalized n _ _))
   = (i, "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">" <>
         "<tr><td colspan=\"4\">" <> unFNFrame f <> "</td></tr>" <>
         "<tr>" <>
