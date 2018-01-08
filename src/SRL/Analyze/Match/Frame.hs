@@ -31,7 +31,7 @@ import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_caus
                                               ,cm_externalAgent,cm_extraMapping)
 import           Lexicon.Type
 import           NLP.Syntax.Clause            (constructCP)
-import           NLP.Syntax.Type.Resolve      (Referent(..),referent2CompVP
+import           NLP.Syntax.Type.Resolve      (Resolved(..),Referent(..),referent2CompVP
                                               ,retrieveResolved,resolvedCompVP,resolvedSpecTP)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -100,10 +100,9 @@ matchSubject :: X'Tree 'PH1
              -> [(PBArg,Text)]
              -> Maybe (Referent (SpecTP 'PH1))
              -> ArgPattern p GRel
-             -> Maybe (FNFrameElement, Referent (CompVP 'PH1))
+             -> Maybe (FNFrameElement,Referent (CompVP 'PH1))
 matchSubject x'tr rolemap mDP patt = do
   ref <- fmap (fmap specTPToCompVP) mDP
-  --     x^._2 of SpecTP_DP r -> return (x^._1,r); _ -> Nothing -- ignore CP for the time being
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
   (,ref) . FNFrameElement <$> lookup p rolemap
 
@@ -130,15 +129,18 @@ matchObjects x'tr rolemap verbp patt = do
   where
     matchNormalObjects cs = do
       (garg,obj) <- zip [GA1,GA2] (filter ((\case CompVP_CP _ -> True; CompVP_DP _ -> True; _ -> False).referent2CompVP) cs)
+      -- trace ("\nmatchNormalObjects: " ++ show (garg,obj)) $ return ()
       (p,a) <- maybeToList (pbArgForGArg garg patt)
-      case referent2CompVP obj of
-        CompVP_CP rng_cp -> do
-          cp <- maybeToList (extractZipperById rng_cp x'tr >>= \w -> currentCPDPPP w ^? _CPCase)
-          guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
-        CompVP_DP rng_dp -> do
-          dp <- maybeToList (extractZipperById rng_dp x'tr >>= \w -> currentCPDPPP w ^? _DPCase)
-          guard (a == GR_NP (Just garg))
-        _            -> []
+      case obj of
+        RefVariable _ (RFree_WHDP rng_dp) -> guard (a == GR_NP (Just garg))
+        _ -> case referent2CompVP obj of
+               CompVP_CP rng_cp -> do
+                 cp <- maybeToList (extractZipperById rng_cp x'tr >>= \w -> currentCPDPPP w ^? _CPCase)
+                 guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
+               CompVP_DP rng_dp -> do
+                 dp <- maybeToList (extractZipperById rng_dp x'tr >>= \w -> currentCPDPPP w ^? _DPCase)
+                 guard (a == GR_NP (Just garg))
+               _            -> []
       fe <- FNFrameElement <$> maybeToList (lookup p rolemap)
       return (fe, obj)
     matchAdj cs = do
