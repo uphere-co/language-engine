@@ -99,3 +99,8 @@ referent2CompVP :: Referent (CompVP 'PH1) -> CompVP 'PH1
 referent2CompVP (RefRExp x)                    = x
 referent2CompVP (RefVariable _ (RBound x _))   = x
 referent2CompVP (RefVariable _ (RFree_WHDP r)) = CompVP_DP r
+
+
+referent2Trace :: Referent a -> Maybe (TraceType,Int)
+referent2Trace (RefVariable t _) = Just t
+referent2Trace _                 = Nothing
