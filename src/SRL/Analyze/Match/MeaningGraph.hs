@@ -117,9 +117,9 @@ mkMGVertices :: (PreAnalysis '[Lemma],[(Range,Range)])
                 )
 mkMGVertices (tagged,depmap) (matched,nmatched) =
   let preds = flip map matched $ \(rng,vprop,x'tr,FMR idiom frm _ _,sense) i
-                                   -> MGPredicate i (toReg rng) frm (PredVerb idiom sense (simplifyVProp vprop))
+                                   -> MGPredicate i (toReg rng) frm (PredVerb idiom sense (vprop^.vp_index,vprop^.vp_index) (simplifyVProp vprop))
       npreds = flip map nmatched $ \(lma,verb,x'tr,(frm,rng_dp),_,_) ->
-                                  \i -> MGPredicate i (toReg rng_dp) frm (PredNominalized lma verb)
+                                  \i -> MGPredicate i (toReg rng_dp) frm (PredNominalized lma rng_dp verb)
       ipreds = zipWith ($) (preds ++ npreds) [1..]
 
       ett_verb :: [(EntityInfo,DPInfo)]

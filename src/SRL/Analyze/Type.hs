@@ -95,10 +95,12 @@ instance FromJSON DocAnalysisInput where
 
 data PredicateInfo = PredVerb { _pi_lemmas :: [Text]               -- ^ for idiom
                               , _pi_sense :: Maybe (SenseID,Bool)  -- ^ (ON sense ID, causation)
+                              , _pi_verb_token_range :: Range
                               , _pi_verb  :: VerbProperty Text
                               }
                    | PredPrep { _pi_prep :: Text }
                    | PredNominalized { pi_noun :: Lemma
+                                     , pi_noun_token_range :: Range
                                      , pi_nominalized :: Lemma }
                    | PredAppos
                    deriving (Generic, Show)

@@ -22,6 +22,7 @@ import           Data.Graph                (Graph,Vertex,topSort)
 import           Data.List                 (delete,find,elem)
 import           Data.Maybe                (catMaybes,fromMaybe,listToMaybe
                                            ,mapMaybe,maybeToList)
+import           Data.Range                (Range)
 import           Data.Text                 (Text)
 --
 import           Lexicon.Mapping.Causation (causeDualMap,cm_causativeFrame,cm_externalAgent)
@@ -110,16 +111,16 @@ findVertex :: [MGVertex] -> Int -> Maybe MGVertex
 findVertex mvs i = find (\mv -> (mv ^. mv_id) == i) mvs
 
 
-findLabel :: [MGVertex] -> Int -> Maybe Text
+findLabel :: [MGVertex] -> Int -> Maybe (Text,Maybe Range)
 findLabel mvs i = do
   v <- findVertex mvs i
   case v of
-    MGEntity {..}           -> Just _mv_text
+    MGEntity {..}           -> Just (_mv_text,_mv_head_range)
     MGPredicate {..}        -> case _mv_pred_info of
-                                 PredVerb idiom _ vrb -> Just (T.intercalate " " idiom)
-                                 PredPrep p           -> Just p
-                                 PredNominalized n _  -> Just (unLemma n)
-                                 PredAppos            -> Just "" -- Nothing -- Just (unFNFrame _mv_frame)
+                                 PredVerb idiom _ rng vrb -> Just (T.intercalate " " idiom,Just rng)
+                                 PredPrep p           -> Just (p,Nothing)
+                                 PredNominalized n rng _  -> Just (unLemma n,Just rng)
+                                 PredAppos            -> Just ("",Nothing)
 
 constructMeaningRole :: ([RoleInstance],MeaningGraph,Graph)
                      -> MGEdge
@@ -134,11 +135,8 @@ constructMeaningRole (rolemap,mg,grph) o = do
         isF = isFrame v'
         blnks = backwardLinks (mg^.mg_edges) oidx
         mlnk = (False,) <$> listToMaybe (forwardLinks (mg^.mg_edges) oidx)
-    -- guard (not isM)
-    -- trace ("\no = " ++ show o) $ return ()
-    -- trace ("\nisM = " ++ show isM) $ return ()
     if isM
-    then return (MeaningRole oidx orole (PrepOr oprep (Terminal "<t>" (Just (True,v'^.mv_id)))))
+    then return (MeaningRole oidx orole (PrepOr oprep (Terminal ("<t>",Nothing)(Just (True,v'^.mv_id)))))
     else if isF
          then do
             lift (modify' (delete oidx))
@@ -170,10 +168,10 @@ constructMeaningTree (rolemap,mg,grph) frmid = do
       MGPredicate {..} ->
         let vid = v^.mv_id
         in case _mv_pred_info of
-             PredVerb _ sns vrb  -> return (vid,unFNFrame _mv_frame,sns,vrb^.vp_negation)
-             PredPrep _          -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
-             PredNominalized _ _ -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
-             PredAppos           -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
+             PredVerb _ sns _ vrb  -> return (vid,unFNFrame _mv_frame,sns,vrb^.vp_negation)
+             PredPrep _            -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
+             PredNominalized _ _ _ -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
+             PredAppos             -> return (vid,unFNFrame _mv_frame,Nothing,Nothing)
   verbtxt <- hoistMaybe $ findLabel (mg^.mg_vertices) frmid
 
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) chldrn0
