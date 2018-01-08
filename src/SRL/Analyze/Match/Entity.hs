@@ -18,13 +18,15 @@ import qualified Data.Text           as T
 --
 import           Data.BitreeZipper
 import           Data.Range
-import           NLP.Syntax.Clause        (retrieveResolved)
+import           NLP.Syntax.Type.Resolve  (referent2CompVP
+                                          ,retrieveResolved,resolvedSpecTP,resolvedCompVP)
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Type.Verb     (vp_auxiliary)
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
 --
-import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..),emptyDPInfo)
+import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..),RangePair(..),EmptyCategoryIndex(..)
+                                          ,emptyDPInfo)
 --
 import Debug.Trace
 import NLP.Syntax.Format.Internal
@@ -51,16 +53,16 @@ definiteCorefResolution x'tr tagged dp = do
   cp' <- currentCPDPPP w' ^? _CPCase
   ((do w'' <- parent w'
        cp'' <- currentCPDPPP w'' ^? _CPCase
-       rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
+       rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
        dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
        nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
        if nclass == Org
          then return (rng_dp,rng_dp'')
          else mzero)
    <|>
-   (do rng_cp'' <- cp'^?specifier._Just.coidx_content._SpecCP_Topic._SpecTopicP_CP -- .trResolved._Just._CompVP_CP
+   (do rng_cp'' <- cp'^?specifier._Just.coidx_content._SpecCP_Topic._SpecTopicP_CP
        cp'' <- cpdpppFromX'Tree x'tr rng_cp'' _CPCase
-       rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
+       rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
        dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
        nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
        if nclass == Org
@@ -84,7 +86,7 @@ definiteGenitiveCorefResolution x'tr tagged dp = do
   cp' <- currentCPDPPP w' ^? _CPCase
   -- w'' <- parent w'                        -- this need to be revived.
   -- cp'' <- currentCPDPPP w'' ^? _CPCase
-  rng_dp' <- cp'^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
+  rng_dp' <- cp'^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
   dp' <- cpdpppFromX'Tree x'tr rng_dp' _DPCase
   nclass <- dp'^?complement._Just.headX.coidx_content.hn_class._Just
   if nclass == Org
@@ -106,7 +108,7 @@ pronounResolution x'tr dp = do
 
     ((if isgenitive
         then do
-          rng_dp' <- cp'^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
+          rng_dp' <- cp'^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
           dp' <- cpdpppFromX'Tree x'tr rng_dp' _DPCase
           nclass <- dp'^?complement._Just.headX.coidx_content.hn_class._Just
           match (rng_pro,prnclass) (nclass,rng_dp')
@@ -114,14 +116,14 @@ pronounResolution x'tr dp = do
      <|>
      (do w'' <- parent w'
          cp'' <- currentCPDPPP w'' ^? _CPCase
-         rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
+         rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
          dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
          nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
          match (rng_pro,prnclass) (nclass,rng_dp''))
      <|>
      (do rng_cp'' <- cp'^?specifier._Just.coidx_content._SpecCP_Topic._SpecTopicP_CP
          cp'' <- cpdpppFromX'Tree x'tr rng_cp'' _CPCase
-         rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just._SpecTP_DP
+         rng_dp'' <- cp''^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
          dp'' <- cpdpppFromX'Tree x'tr rng_dp'' _DPCase
          nclass <- dp''^?complement._Just.headX.coidx_content.hn_class._Just
          match (rng_pro,prnclass) (nclass,rng_dp'')))
@@ -130,6 +132,7 @@ pronounResolution x'tr dp = do
       if | prnclass `elem` [P_He,P_She] && nclass == Person -> return (rng_pro,rng_dp')
          | prnclass `elem` [P_It]       && nclass == Org    -> return (rng_pro,rng_dp')
          | otherwise -> mzero
+
 
 entityTextDP :: PreAnalysis t -> DetP 'PH1 -> Text
 entityTextDP tagged dp =
@@ -144,21 +147,21 @@ entityFromAP :: PreAnalysis '[Lemma]
 entityFromAP tagged ap =
   let rng = ap^.maximalProjection
       txt = T.intercalate " " (tokensByRange tagged rng)
-  in (EI rng rng Nothing txt False False, emptyDPInfo)
+  in (EI Nothing (RangePair rng rng) Nothing txt False False, emptyDPInfo)
 
 
 entityFromDP :: X'Tree 'PH1
              -> PreAnalysis '[Lemma]
-             -> DetP 'PH1
+             -> (Maybe (TraceType,Int),DetP 'PH1)
              -> (EntityInfo,DPInfo)
-entityFromDP x'tr tagged dp =
+entityFromDP x'tr tagged (trc,dp) =
   let rng = dp^.maximalProjection
       rnghead = fromMaybe rng (headRangeDP dp)
       headtxt = entityTextDP tagged dp
 
       mrngtxt' = do rng_sub <- listToMaybe (dp^..specifier.traverse._SpDP_Appos)
                     let txt_sub = T.intercalate " " (tokensByRange tagged rng_sub)
-                    return (EI rng_sub rng_sub Nothing txt_sub False False)                 -- for the time being
+                    return (EI Nothing (RangePair rng_sub rng_sub) Nothing txt_sub False False)  -- for the time being
       mcoref = pronounResolution x'tr dp <|> definiteCorefResolution x'tr tagged dp <|> definiteGenitiveCorefResolution x'tr tagged dp
       mcomp = ((do rng_pp <- dp^?complement._Just.complement._Just._CompDP_PP
                    pp <- cpdpppFromX'Tree x'tr rng_pp _PPCase
@@ -169,13 +172,13 @@ entityFromDP x'tr tagged dp =
                    let rng_comp = rng_dp'
                        rng_head_comp = fromMaybe rng_comp (headRangeDP dp')
                        txt_comp = headTextDP tagged dp'
-                   return (EI rng_comp rng_head_comp (Just "of") txt_comp False False))
+                   return (EI Nothing (RangePair rng_comp rng_head_comp) (Just "of") txt_comp False False))
                <|>
                (do rng_cp <- dp^?complement._Just.complement._Just._CompDP_CP
                    cp <- cpdpppFromX'Tree x'tr rng_cp _CPCase
                    (_,(_,lma)) <- listToMaybe (cp^.complement.complement.headX.vp_auxiliary)
                    guard (lma == "to")
-                   return (EI rng_cp rng_cp Nothing "" True False)))
+                   return (EI Nothing (RangePair rng_cp rng_cp) Nothing "" True False)))
 
       adjs  = do AdjunctDP_PP rng_pp <- dp^.adjunct
                  pp <- maybeToList (cpdpppFromX'Tree x'tr rng_pp _PPCase)
@@ -186,13 +189,16 @@ entityFromDP x'tr tagged dp =
                  let rng_adj = rng_dp'
                      rng_head_adj = fromMaybe rng_adj (headRangeDP dp')
                      txt_adj = headTextDP tagged dp'
-                 return (EI rng_adj rng_head_adj mprep txt_adj False isTime)
+                 return (EI Nothing (RangePair rng_adj rng_head_adj) mprep txt_adj False isTime)
       mposs1 = do (_ptyp,True) <- dp^?headX.hd_class._Pronoun
                   rng_poss <- dp^.headX.hd_range
                   txt_poss <- determinerText tagged (dp^.headX)
-                  return (EI rng_poss rng_poss Nothing txt_poss False False)
+                  return (EI Nothing (RangePair rng_poss rng_poss) Nothing txt_poss False False)
       mposs2 = do rng_poss <- listToMaybe (dp^..specifier.traverse._SpDP_Gen)
                   let txt_poss = T.intercalate " " (tokensByRange tagged rng_poss)
-                  return (EI rng_poss rng_poss Nothing txt_poss False False)
+                  return (EI Nothing (RangePair rng_poss rng_poss) Nothing txt_poss False False)
       poss = maybeToList mposs1 ++ maybeToList mposs2
-  in (EI rng rnghead Nothing headtxt False False, DI mrngtxt' mcoref mcomp poss adjs)
+
+  in case trc of
+       Just (PRO,i) -> (EI (Just (ECI_PRO i)) (RangePair rng rnghead) Nothing headtxt False False,emptyDPInfo)
+       _            -> (EI Nothing (RangePair rng rnghead) Nothing headtxt False False, DI mrngtxt' mcoref mcomp poss adjs)

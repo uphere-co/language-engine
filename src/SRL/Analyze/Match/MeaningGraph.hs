@@ -11,10 +11,12 @@ import           Control.Lens
 import           Control.Lens.Extras          (is)
 import           Control.Monad                (guard)
 import           Data.Bifoldable              (biList)
+import           Data.Bifunctor               (second)
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
 import           Data.List                    (find,groupBy,sortBy,intercalate)
-import           Data.Maybe                   (fromMaybe,mapMaybe,maybeToList)
+import           Data.Maybe                   (fromJust,fromMaybe,mapMaybe,maybeToList)
+import           Data.Monoid                  ((<>))
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
@@ -22,6 +24,7 @@ import           Data.Bitree                  (getRoot1)
 import           Data.BitreeZipper            (current)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Type
+import           NLP.Syntax.Type.Resolve      (referent2CompVP,referent2Trace)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util              (GetIntLemma(..),intLemma0)
@@ -30,22 +33,28 @@ import           NLP.Type.PennTreebankII
 import           SRL.Analyze.Match.Entity
 import           SRL.Analyze.Match.Frame
 import           SRL.Analyze.Match.Preposition (ppRelFrame)
-import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..),MeaningGraph(..)
+import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..)
+                                              ,MeaningGraph(..)
                                               ,SentStructure,AnalyzePredata
                                               ,PredicateInfo(..)
+                                              ,VertexID(..)
                                               ,VertexMap(..)
                                               ,vm_rangeToIndex
                                               -- ,vm_hnrangeToIndex
                                               ,vm_rangeDependency
                                               ,vm_headRangeToFullRange
-                                              ,analyze_framedb
+                                              ,analyze_framedb, isEntity
                                               ,_PredAppos,_MGEntity,_MGPredicate
                                               ,ss_tagged,ss_x'trs
-                                              ,me_relation,mv_range,mv_id,mg_vertices,mg_edges)
+                                              ,me_relation,mv_range,mv_id,mg_vertices,mg_edges
+                                              ,toReg,vidToRange
+                                              )
 
-import           SRL.Analyze.Type.Match       (DPInfo(..), EntityInfo(..),FrameMatchResult(..)
+import           SRL.Analyze.Type.Match       (DPInfo(..),EmptyCategoryIndex(..),EntityInfo(..),FrameMatchResult(..)
+                                              ,RangePair(..)
                                               ,adi_appos,adi_compof,adi_coref,adi_poss,adi_adjs
-                                              ,ei_fullRange,ei_headRange,ei_prep,ei_isClause,ei_isTime
+                                              ,ei_eci,ei_rangePair,ei_prep,ei_isClause,ei_isTime,eiRangeID
+                                              ,rp_full,rp_head
                                               )
 
 
@@ -62,10 +71,13 @@ dependencyOfX'Tree (PL _)           = []
 
 
 mkEntityFun :: (EntityInfo,DPInfo) -> [(Int -> MGVertex)]
-mkEntityFun (EI rng rnghead _mprep txt _ _,di) =
-  let mkRel frm (EI rng' rng'' _ txt' False _) = [ \i'  -> MGEntity i' (Just rng') (Just rng'') txt' []
-                                                 , \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
-      mkRel frm (EI rng' rng'' _ txt' True _)  = [ \i'' -> MGPredicate i'' (Just rng') frm PredAppos ]
+mkEntityFun (EI t (RangePair rng rnghead) _mprep txt _ _,di) =
+  let mkECIVertex Nothing            = toReg rng
+      mkECIVertex (Just ECI_NULL)    = toReg rng
+      mkECIVertex (Just (ECI_PRO j)) = VertexPRO j
+      mkRel frm (EI eci (RangePair rng' rng'') _ txt' False _) = [ \i'  -> MGEntity i' (toReg rng') (Just rng'') txt' []
+                                                                 , \i'' -> MGPredicate i'' (InnerDPRange rng') frm PredAppos ]
+      mkRel frm (EI eci (RangePair rng' rng'') _ txt' True _)  = [ \i'' -> MGPredicate i'' (InnerDPRange rng') frm PredAppos ]
 
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
       comp = do c <- maybeToList (di^.adi_compof)
@@ -79,7 +91,9 @@ mkEntityFun (EI rng rnghead _mprep txt _ _,di) =
                        then [("Time_vector","Event","Landmark_event")]
                        else maybeToList (ppRelFrame p)
                 mkRel (f^._1) a
-  in (\i -> MGEntity i (Just rng) (Just rnghead) txt []) : (appos ++ comp ++ poss ++ adjs)
+  in [ \i -> MGEntity i (mkECIVertex t) (Just rnghead) (case t of Just (ECI_PRO j) -> "PRO_" <> T.pack (show j); _ -> txt) [] ]
+     ++ appos ++ comp ++ poss ++ adjs
+
 
 
 mkMGVertices :: (PreAnalysis '[Lemma],[(Range,Range)])
@@ -94,34 +108,33 @@ mkMGVertices :: (PreAnalysis '[Lemma],[(Range,Range)])
                 )
 mkMGVertices (tagged,depmap) (matched,nmatched) =
   let preds = flip map matched $ \(rng,vprop,x'tr,FMR idiom frm _ _,sense) i
-                                   -> MGPredicate i (Just rng) frm (PredVerb idiom sense (simplifyVProp vprop))
+                                   -> MGPredicate i (toReg rng) frm (PredVerb idiom sense (simplifyVProp vprop))
       npreds = flip map nmatched $ \(lma,verb,x'tr,(frm,rng_dp),_,_) ->
-                                  \i -> MGPredicate i (Just rng_dp) frm (PredNominalized lma verb)
+                                  \i -> MGPredicate i (toReg rng_dp) frm (PredNominalized lma verb)
       ipreds = zipWith ($) (preds ++ npreds) [1..]
 
       ett_verb :: [(EntityInfo,DPInfo)]
       ett_verb  = do (rng,_,x'tr,FMR _ _ mselected _,_) <- matched
                      (_,felst) <- maybeToList mselected
                      (_fe,x) <- felst
-                     case x of
+                     case referent2CompVP x of
                        CompVP_CP _cp -> [] -- CP is not an entity.
                        CompVP_AP rng_ap -> do
                          ap <- maybeToList (cpdpppFromX'Tree x'tr rng_ap _APCase)
                          return (entityFromAP tagged ap)
                        CompVP_DP rng_dp -> do
                          dp <- maybeToList (cpdpppFromX'Tree x'tr rng_dp _DPCase)
-                         let y@(ei,_) = entityFromDP x'tr tagged dp
-                             rng' = ei^.ei_fullRange
-                         if is _Just (find (== (rng',rng)) depmap)
+                         let y@(ei,_) = entityFromDP x'tr tagged (referent2Trace x,dp)
+                         if is _Just (find (== (rng_dp,rng)) depmap)
                            then []
                            else return y
                        CompVP_PP rng_pp -> maybeToList $ do
                          pp <- cpdpppFromX'Tree x'tr rng_pp _PPCase
                          rng_dp <- pp^?complement._CompPP_DP
                          dp <- cpdpppFromX'Tree x'tr rng_dp _DPCase
-                         return (entityFromDP x'tr tagged dp)
+                         return (entityFromDP x'tr tagged (Nothing,dp))
 
-      filterFrame = filter (\(ei,_) -> not (any (\p -> p^.mv_range == Just (ei^.ei_fullRange)) ipreds))
+      filterFrame = filter (\(ei,_) -> not (any (\p -> p^.mv_range.to vidToRange == Just (ei^.ei_rangePair.rp_full)) ipreds))
       --
 
       ett_nominal :: [(EntityInfo,DPInfo)]
@@ -134,8 +147,8 @@ mkMGVertices (tagged,depmap) (matched,nmatched) =
 
       ett_verbnom = filterFrame
                   . map head
-                  . groupBy ((==) `on` (^._1.ei_fullRange))
-                  . sortBy (compare `on` (^._1.ei_fullRange))
+                  . groupBy ((==) `on` (\x->(x^._1.ei_eci,x^._1.ei_rangePair.rp_full)))
+                  . sortBy (compare `on` (\x->(x^._1.ei_eci,x^._1.ei_rangePair.rp_full)))
                   $ (ett_verb ++ ett_nominal)
 
 
@@ -144,7 +157,7 @@ mkMGVertices (tagged,depmap) (matched,nmatched) =
 
       ettfunc_prep = do (_,_,x'tr,FMR _ _ _ lst,_) <- matched
                         (frm,prep,felst) <- lst
-                        return (\i -> ((i,frm,prep,felst),MGPredicate i Nothing frm (PredPrep prep)))
+                        return (\i -> ((i,frm,prep,felst),MGPredicate i (VertexPrep i) frm (PredPrep prep)))
 
       n_ipreds = length ipreds
       n_ettverbnom = length ettfunc_verbnom
@@ -158,12 +171,8 @@ mkMGVertices (tagged,depmap) (matched,nmatched) =
                        poss = di^.adi_poss
                        adjs = di^.adi_adjs
                        eis = ei : (appos ++ compof ++ poss ++ adjs)
-                   in map (\e -> (e^.ei_headRange,e^.ei_fullRange)) eis
-                    {- <- ett_verbnom
-                    <-
-                    return (ei^.ei_headRange,ei^.ei_fullRange) -}
-  in -- trace (intercalate "\n" (map show ett_verb) ++ "\n" ++ intercalate "\n" (map show vertices)) $
-       (vertices,ett_verbnom,iett_prep,headfull)
+                   in map (\e -> (e^.ei_rangePair.rp_head,e^.ei_rangePair.rp_full)) eis
+  in (vertices,ett_verbnom,iett_prep,headfull)
 
 
 mkRoleEdges :: VertexMap
@@ -174,10 +183,10 @@ mkRoleEdges vmap matched = do
       depmap = vmap^.vm_rangeDependency
       headfull = vmap^.vm_headRangeToFullRange
   (rng,_,x'tr,FMR _ _ mselected _,_) <- matched
-  i <- maybeToList (HM.lookup (0,Just rng) rngidxmap)   -- frame
+  i <- maybeToList (HM.lookup (RegularRange rng) rngidxmap)   -- frame
   (_,felst) <- maybeToList mselected
   (fe,x) <- felst
-  (rng',mprep) <- case x of
+  (rng',mprep) <- case referent2CompVP x of
                     CompVP_CP rng_cp -> do
                       cp <- maybeToList (cpdpppFromX'Tree x'tr rng_cp _CPCase)
                       let mprep = case cp^.headX of
@@ -185,14 +194,21 @@ mkRoleEdges vmap matched = do
                                     C_WORD prep -> if prep == Lemma "that" then Nothing else return (unLemma prep)
                       return (rng_cp,mprep)
                     CompVP_DP rng_dp -> return (rng_dp,Nothing)
-                    CompVP_AP rng_ap -> return (rng_ap,Nothing)                    
+                    CompVP_AP rng_ap -> return (rng_ap,Nothing)
                     CompVP_PP rng_pp -> do
                       pp <- maybeToList (cpdpppFromX'Tree x'tr rng_pp _PPCase)
                       return (pp^.complement.to (compPPToRange SPH1),pp^?headX.hp_prep._Prep_WORD)
   let rng'full = fromMaybe rng' (lookup rng' headfull)
-  i' <- maybeToList (HM.lookup (0,Just rng'full) rngidxmap)  -- frame element
-  let b = is _Just (find (== (rng',rng)) depmap)
-  return (MGEdge fe b mprep i i')
+  case referent2Trace x of
+    Just (PRO,j) -> do
+      i' <- maybeToList (HM.lookup (VertexPRO j) rngidxmap)  -- frame element
+      i'' <- maybeToList (HM.lookup (RegularRange rng'full) rngidxmap)
+      [MGEdge fe False mprep i i', MGEdge "PRO" False Nothing i' i'']
+
+    _            -> do
+      i' <- maybeToList (HM.lookup (RegularRange rng'full) rngidxmap)  -- frame element
+      let b = is _Just (find (== (rng',rng)) depmap)
+      [MGEdge fe b mprep i i']
 
 
 mkNomRoleEdges :: VertexMap
@@ -201,12 +217,12 @@ mkNomRoleEdges :: VertexMap
 mkNomRoleEdges vmap nmatched = do
   let rngidxmap = vmap^.vm_rangeToIndex
   (_lma,_verb,_,(_frm,rng_dp),(subj,mei_subj),(obj,ei_obj)) <- nmatched
-  i <- maybeToList (HM.lookup (0,Just rng_dp) rngidxmap)   -- frame
-  let rng_obj = ei_obj ^.ei_fullRange
-  i' <- maybeToList (HM.lookup (0,Just rng_obj) rngidxmap)  -- frame element
+  i <- maybeToList (HM.lookup (RegularRange rng_dp) rngidxmap)   -- frame
+  let rng_obj = ei_obj^.ei_rangePair.rp_full
+  i' <- maybeToList (HM.lookup (RegularRange rng_obj) rngidxmap)  -- frame element
   let lstsubj = case mei_subj of
                   Just ei_subj -> do
-                    i'' <- maybeToList (HM.lookup (0,Just (ei_subj^.ei_fullRange)) rngidxmap)  -- frame element
+                    i'' <- maybeToList (HM.lookup (RegularRange (ei_subj^.ei_rangePair.rp_full)) rngidxmap)  -- frame element
                     [MGEdge subj False Nothing i i'']
                   Nothing -> []
   (MGEdge obj False (ei_obj^.ei_prep) i i') : lstsubj
@@ -218,28 +234,28 @@ mkInnerDPEdges :: VertexMap
                -> [MGEdge]
 mkInnerDPEdges vmap entities = do
     (ei,di) <- entities
-    let mrng = Just (ei^.ei_fullRange)
-        appos = maybe [] (mkRelEdge "Instance" "Type" mrng) (di^.adi_appos)
+    let rng = ei^.ei_rangePair.rp_full
+        appos = maybe [] (mkRelEdge "Instance" "Type" rng) (di^.adi_appos)
         comp = do c <- maybeToList (di^.adi_compof)
                   if (c^.ei_isClause)
-                    then mkRelEdge "Means" "Goal" mrng c
-                    else mkRelEdge "Subset" "Group" mrng c
-        poss = concatMap (mkRelEdge "Possession" "Owner" mrng) (di^.adi_poss)
+                    then mkRelEdge "Means" "Goal" rng c
+                    else mkRelEdge "Subset" "Group" rng c
+        poss = concatMap (mkRelEdge "Possession" "Owner" rng) (di^.adi_poss)
         adjs = do a <- di^.adi_adjs
                   p <- maybeToList (a^.ei_prep)
                   f <- if (a^.ei_isTime)
                          then [("Time_vector","Event","Landmark_event")]
                          else maybeToList (ppRelFrame p)
-                  mkRelEdge (f^._2) (f^._3) mrng a
+                  mkRelEdge (f^._2) (f^._3) rng a
     (appos ++ comp ++ poss ++ adjs)
   where
     rngidxmap = vmap^.vm_rangeToIndex
-    mkRelEdge role1 role2 mrng ei = do
-      let rng' = ei^.ei_fullRange
+    mkRelEdge role1 role2 rng ei = do
+      let rng' = ei^.ei_rangePair.rp_full
           mprep = ei^.ei_prep
-      i_frame <- maybeToList (HM.lookup (1,Just rng') rngidxmap)
-      i_1 <- maybeToList (HM.lookup (0,mrng) rngidxmap)
-      i_2 <- maybeToList (HM.lookup (0,Just rng') rngidxmap)
+      i_frame <- maybeToList (HM.lookup (InnerDPRange rng') rngidxmap)
+      i_1 <- maybeToList (HM.lookup (RegularRange rng) rngidxmap)
+      i_2 <- maybeToList (HM.lookup (RegularRange rng') rngidxmap)
       [MGEdge role1 True Nothing i_frame i_1, MGEdge role2 False mprep i_frame i_2]
 
 
@@ -250,7 +266,7 @@ mkPrepEdges vmap ientities2 = do
   let rngidxmap = vmap^.vm_rangeToIndex
   (i_frame,_frm,_prep,felst) <- map fst ientities2
   (fe,(b,rng)) <- felst
-  i_elem <- maybeToList (HM.lookup (0,Just rng) rngidxmap)
+  i_elem <- maybeToList (HM.lookup (RegularRange rng) rngidxmap)
   [MGEdge fe b Nothing i_frame i_elem]
 
 
@@ -261,8 +277,8 @@ mkCorefEdges vmap entities = do
   let rngidxmap = vmap^.vm_rangeToIndex
   (_,di) <- entities
   (rng0,rng1) <- maybeToList (di^.adi_coref)
-  i_0 <- maybeToList (HM.lookup (0,Just rng0) rngidxmap)
-  i_1 <- maybeToList (HM.lookup (0,Just rng1) rngidxmap)
+  i_0 <- maybeToList (HM.lookup (RegularRange rng0) rngidxmap)
+  i_1 <- maybeToList (HM.lookup (RegularRange rng1) rngidxmap)
   [MGEdge "ref" False Nothing i_0 i_1]
 
 
@@ -281,9 +297,7 @@ mkMGEdges vmap (matched,nmatched) (entities1_0,ientities2) =
       edges1 = mkInnerDPEdges vmap entities1_0
       edges2 = mkPrepEdges vmap ientities2
       edges3 = mkCorefEdges vmap entities1_0
-      edges = edges0 ++ edges01 ++ edges1 ++ edges2 ++ edges3
-  in  {- trace ("\nEDGES\n" ++ intercalate "\n" (map show edges)) $ -} edges
-
+  in edges0 ++ edges01 ++ edges1 ++ edges2 ++ edges3
 
 
 meaningGraph :: AnalyzePredata -> SentStructure -> MeaningGraph
@@ -301,20 +315,12 @@ meaningGraph apredata sstr =
       --
       (vertices,entities1_0,ientities2,headfull) = mkMGVertices (tagged,depmap) (matched,nmatched)
       --
-      rangeid :: MGVertex -> (Int,Maybe Range)
-      rangeid mv = (if mv^?_MGPredicate._4._PredAppos == Just () then 1 else 0, mv^.mv_range)
-      --
-      rngidxmap = HM.fromList [(rangeid v, v^.mv_id) | v <- vertices ]
-      -- hnrngidxmap = HM.fromList [(rng, v^.mv_id) | v <- vertices, rng <- v^.._MGEntity._3._Just ]
-      vmap = VertexMap rngidxmap {- hnrngidxmap -} depmap headfull
+      rngidxmap = HM.fromList [(v^.mv_range, v^.mv_id) | v <- vertices ]
+      vmap = VertexMap rngidxmap depmap headfull
       edges = mkMGEdges vmap (matched,nmatched) (entities1_0,ientities2)
   in MeaningGraph vertices edges
 
 
-isEntity :: MGVertex -> Bool
-isEntity x = case x of
-               MGEntity {..} -> True
-               _             -> False
 
 
 tagMG :: MeaningGraph -> [(Range,Text)] -> MeaningGraph

@@ -51,6 +51,7 @@ library
                        either,
                        errors,
                        filepath,
+                       hashable,
                        haskeline,
                        html-entities,
                        jni,

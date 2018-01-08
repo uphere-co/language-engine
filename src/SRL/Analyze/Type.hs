@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE KindSignatures     #-}
+{-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
 
@@ -9,6 +10,7 @@ module SRL.Analyze.Type where
 
 import           Control.Lens
 import           Data.Aeson
+import           Data.Hashable                 (Hashable)
 import           Data.HashMap.Strict           (HashMap)
 import           Data.Text                     (Text)
 import           GHC.Generics
@@ -29,7 +31,7 @@ import           WordNet.Query                 (WordNetDB)
 --
 import           OntoNotes.Type.SenseInventory (Inventory)
 --
-import           SRL.Analyze.Type.Match        (ONSenseFrameNetInstance)
+import           SRL.Analyze.Type.Match        (ONSenseFrameNetInstance,EmptyCategoryIndex)
 
 
 
@@ -91,20 +93,6 @@ instance FromJSON DocAnalysisInput where
   parseJSON = genericParseJSON defaultOptions
 
 
-
-
-
-
-data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap (Int,Maybe Range) Int
-                           --  , _vm_hnrangeToIndex :: HashMap Range Int
-                           , _vm_rangeDependency :: [(Range,Range)]
-                           , _vm_headRangeToFullRange :: [(Range,Range)]
-                           }
-               deriving Show
-
-makeLenses ''VertexMap
-
-
 data PredicateInfo = PredVerb { _pi_lemmas :: [Text]               -- ^ for idiom
                               , _pi_sense :: Maybe (SenseID,Bool)  -- ^ (ON sense ID, causation)
                               , _pi_verb  :: VerbProperty Text
@@ -118,14 +106,48 @@ data PredicateInfo = PredVerb { _pi_lemmas :: [Text]               -- ^ for idio
 makePrisms ''PredicateInfo
 
 
+data VertexID = RegularRange Range
+              | InnerDPRange Range
+              | VertexPrep Int
+              | VertexPRO Int
+              deriving (Generic,Show,Eq)
+
+makePrisms ''VertexID
+
+instance FromJSON VertexID
+instance ToJSON VertexID
+
+
+
+instance Hashable VertexID
+
+vidToRange :: VertexID -> Maybe Range
+vidToRange (RegularRange rng) = Just rng
+vidToRange (InnerDPRange rng) = Just rng
+vidToRange (VertexPrep _)     = Nothing
+vidToRange (VertexPRO _)      = Nothing
+
+toReg :: Range -> VertexID
+toReg rng = RegularRange rng
+
+data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap VertexID Int     -- (Int,Maybe Range)  (0: outer-DP 1: inner-DP)
+                           , _vm_rangeDependency :: [(Range,Range)]
+                           , _vm_headRangeToFullRange :: [(Range,Range)]
+                           }
+               deriving Show
+
+makeLenses ''VertexMap
+
+
+
 data MGVertex = MGEntity    { _mv_id :: Int
-                            , _mv_range :: Maybe Range
+                            , _mv_range :: VertexID -- Maybe Range
                             , _mv_head_range :: Maybe Range
                             , _mv_text :: Text
                             , _mv_resolved_entities :: [Text]   -- resolved named entity candidates
                             }
               | MGPredicate { _mv_id    :: Int
-                            , _mv_range :: Maybe Range
+                            , _mv_range :: VertexID --  Maybe Range
                             , _mv_frame :: FNFrame
                             , _mv_pred_info :: PredicateInfo
                             }
@@ -135,11 +157,17 @@ data MGVertex = MGEntity    { _mv_id :: Int
 mv_id :: Simple Lens MGVertex Int
 mv_id = lens _mv_id (\f a -> f { _mv_id = a })
 
-mv_range :: Simple Lens MGVertex (Maybe Range)
+mv_range :: Simple Lens MGVertex VertexID -- (Maybe Range)
 mv_range = lens _mv_range (\f a -> f { _mv_range = a })
 
 
 makePrisms ''MGVertex
+
+isEntity :: MGVertex -> Bool
+isEntity x = case x of
+               MGEntity {..} -> True
+               _             -> False
+
 
 -- orphan
 deriving instance Generic (VerbProperty Text)
@@ -161,6 +189,7 @@ instance FromJSON MGVertex
 data MGEdge = MGEdge { _me_relation :: FNFrameElement
                      , _me_ismodifier :: Bool
                      , _me_prep :: Maybe Text
+                     -- , _me_eci :: Maybe EmptyCategoryIndex
                      , _me_start :: Int
                      , _me_end :: Int }
 

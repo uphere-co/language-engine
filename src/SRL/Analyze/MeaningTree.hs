@@ -138,12 +138,7 @@ constructMeaningRole (rolemap,mg,grph) o = do
     -- trace ("\no = " ++ show o) $ return ()
     -- trace ("\nisM = " ++ show isM) $ return ()
     if isM
-    then {- if isF 
-         then do
-            lift (modify' (delete oidx))
-            sub <- constructMeaningTree (rolemap,mg,grph) oidx
-            return (MeaningRole oidx orole (PrepOr oprep (ModifierSubFrame sub)))
-         else -} return (MeaningRole oidx orole (PrepOr oprep (Terminal "<t>" (Just (True,v'^.mv_id)))))
+    then return (MeaningRole oidx orole (PrepOr oprep (Terminal "<t>" (Just (True,v'^.mv_id)))))
     else if isF
          then do
             lift (modify' (delete oidx))
