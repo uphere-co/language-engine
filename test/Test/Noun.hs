@@ -50,7 +50,7 @@ type TestNoun = (Text
 test_possessive_1 :: TestNoun
 test_possessive_1 =
   ( "Britain's Metro Bank Plc"
-  , ("'s",Just ("Metro Bank Plc",Just Org),["Bratain"],Nothing,[])
+  , ("'s",Just ("Metro Bank Plc",Just Org),["Britain"],Nothing,[])
   , [(0,("Britain","Britain")),(1,("'s","'s")),(2,("Metro","Metro")),(3,("Bank","Bank")),(4,("Plc","Plc"))]
   , PN "NP" [PN "NP" [PL ("NNP","Britain"),PL ("POS","'s")],PL ("NNP","Metro"),PL ("NNP","Bank"),PL ("NNP","Plc")]
   , [TagPos (TokIdx 2,TokIdx 5,MarkEntity Org)]

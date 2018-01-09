@@ -51,7 +51,8 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),MarkType(..),Pha
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs,intLemma
                                           ,rootTag)
 --
--- import Debug.Trace
+import NLP.Syntax.Format.Internal
+import Debug.Trace
 
 
 
@@ -108,14 +109,12 @@ splitDP1 tagged (DPTree dp0 lst0) = do
 
 splitDP :: PreAnalysis (Lemma ': as) -> DPTree 'PH0 -> DPTree 'PH0
 splitDP tagged dptr0 =
-  let -- dptr2 = identifyInternalTimePrep tagged dptr1
-      dptr1 = last (dptr0 : unfoldr (splitDP1 tagged >=> \b -> return (b,b)) dptr0) 
+  let dptr1 = last (dptr0 : unfoldr (splitDP1 tagged >=> \b -> return (b,b)) dptr0)
   in dptr1 & (_DPTree._1) %~
-
-                 (identifyDeterminer tagged
-                 .identifyNamedEntity tagged
-                 .bareNounModifier tagged
-                 .(\dp1 -> fromMaybe dp1 (identifyClausalModifier tagged dp1)))
+                (identifyNamedEntity tagged
+                .identifyDeterminer tagged
+                .bareNounModifier tagged
+                .(\dp1 -> fromMaybe dp1 (identifyClausalModifier tagged dp1)))
 
 
 
