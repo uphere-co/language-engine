@@ -30,11 +30,6 @@ import           NLP.Syntax.Type.PreAnalysis
 
 data Phase = PH0 | PH1
 
-
-
--- class SingI s where
---  sing :: s ->
-
 --
 -- singleton instances for pi-type
 --
@@ -77,18 +72,6 @@ data TraceType = NULL | PRO | Moved | WHPRO
 --   * If d is focused, (Right [a,b,c], d)
 --
 
-{-
-data TraceChain a = TraceChain { _trChain    :: Either (ListZipper TraceType) [TraceType]
-                               , _trResolved :: Maybe a
-                               }
-                     deriving (Show,Eq,Ord,Functor)
-
-
-emptyTraceChain :: TraceChain a
-emptyTraceChain = TraceChain (Right []) Nothing
--}
-
--- type Coindex = Int
 
 data Coindex a = Coindex { _coidx_i :: Maybe Int
                          , _coidx_content :: a }
@@ -104,8 +87,8 @@ data SplitType = CLMod | BNMod | APMod
                deriving (Show,Eq,Ord)
 
 
-data CompDP = CompDP_CP Range -- CP
-            | CompDP_PP Range -- PP
+data CompDP = CompDP_CP Range
+            | CompDP_PP Range
 
 
 data AdjunctDP = AdjunctDP_AP Range
@@ -117,8 +100,6 @@ instance Hashable AdjunctDP
 data PronounPerson = P_I | P_You | P_He | P_She | P_It | P_They
                  deriving (Show,Eq,Ord)
 
-
--- data PronounCase = NomAcc | Genitive
 
 identifyPronounPerson :: Text -> Maybe PronounPerson
 identifyPronounPerson txt =
@@ -170,13 +151,9 @@ data DetClass = NoDet
               | GenitiveClitic
               deriving (Show,Eq)
 
--- type NomClass = Maybe NamedEntityClass
-
 data HeadDP = HeadDP { _hd_range :: Maybe Range
                      , _hd_class :: DetClass
                      }
-
-
 
 data SpecDP = SpDP_Appos Range
             | SpDP_Gen Range
@@ -184,7 +161,7 @@ data SpecDP = SpDP_Appos Range
 
 
 data HeadNP = HeadNP { _hn_range :: Range
-                     , _hn_class :: Maybe NamedEntityClass -- NomClass
+                     , _hn_class :: Maybe NamedEntityClass
                      }
                      deriving (Show)
 
@@ -294,6 +271,9 @@ instance Show (CompVP 'PH1) where
   show (CompVP_PP x) = "PP" ++ show x
   show (CompVP_AP x) = "AP" ++ show x
 
+deriving instance Eq (CompVP 'PH1)
+deriving instance Ord (CompVP 'PH1)
+
 
 type family CoindexCompVP (p :: Phase) where
   CoindexCompVP 'PH0 = Coindex (Either TraceType (Either Range (CompVP 'PH0)))
@@ -334,11 +314,7 @@ data SpecCP
   | SpecCP_Topic SpecTopicP
 
 
-    -- (Coindex (Either TraceType (Either Range (CompVP t)))) -- ^ topicalization (AdjunctCP for the time being)
-
-
 data AdjunctCP (p :: Phase) = AdjunctCP_CP (I 'X_C p)
-
 
 
 mkCP :: Complementizer
@@ -354,6 +330,7 @@ data CPDPPP p = CPCase (CP p)
               | DPCase (DetP p)
               | PPCase (PP p)
               | APCase (AP p)
+
 
 instance Show (CPDPPP p) where
   show (CPCase cp) = "CP" ++ show (_maximalProjection cp)
@@ -383,9 +360,6 @@ getSubsFromPPTree :: PPTree p -> [CPDPPP p]
 getSubsFromPPTree (PPTree pp my) = PPCase pp : maybe [] getSubsFromDPTree my
 
 
-
-
-
 type family Property (p :: Phase) (x :: XType) where
   Property _    'X_N = Coindex HeadNP
   Property _    'X_D = HeadDP
@@ -409,7 +383,6 @@ type family Specifier  (p :: Phase) (x :: XType) where
   Specifier  'PH0 'X_T = Coindex (Either TraceType (Either Range (SpecTP 'PH0)))
   Specifier  'PH1 'X_T = Coindex (Either TraceType (SpecTP 'PH1))
   Specifier  _    'X_C = Maybe (Coindex SpecCP)
-  -- Specifier  'PH1 'X_C = Maybe (Coindex (SpecCP 'PH1))
 
 
 type family Adjunct    (p :: Phase) (x :: XType) where
@@ -434,16 +407,12 @@ type family Complement (p :: Phase) (x :: XType) where
   Complement p    'X_C = TP p
 
 
-
-
 data XP p x = XP { _headX             :: Property   p x
                  , _maximalProjection :: Maximal    p x
                  , _specifier         :: Specifier  p x
                  , _adjunct           :: Adjunct    p x
                  , _complement        :: Complement p x
                  }
-
-
 
 
 type NounP p = XP p 'X_N

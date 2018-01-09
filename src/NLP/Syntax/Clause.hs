@@ -528,23 +528,6 @@ bindingPRO x'tr = bimap f f x'tr
                CPCase cp -> (_2._CPCase %~ resolvePRO x'tr) x
                _ -> x
 
-retrieveResolved :: X'Tree 'PH1 -> [(Int,(CompVP 'PH1,Range))]
-retrieveResolved x'tr = bifoldMap f f x'tr
-  where f x = case x^._2 of
-                DPCase dp -> do hn <- dp^..complement._Just.headX
-                                i <- hn^..coidx_i._Just
-                                [(i,(CompVP_DP (dp^.maximalProjection),hn^.coidx_content.hn_range))]
-                CPCase cp -> let lst1 = do spectp <- cp^..complement.specifier
-                                           i <- spectp^..coidx_i._Just
-                                           spectp1 <- spectp^..coidx_content._Right._SpecTP_DP
-                                           [(i,(CompVP_DP spectp1,spectp1))]  -- for the time being, only DP
-                                 lst2 = do speccp <- cp^..specifier._Just
-                                           guard (case speccp^.coidx_content of SpecCP_Topic _ -> True; _ -> False)
-                                           i <- speccp^..coidx_i._Just
-                                           rng_cp <- speccp^..coidx_content._SpecCP_Topic._SpecTopicP_CP
-                                           [(i,(CompVP_CP rng_cp,rng_cp))]
-                             in lst1 ++ lst2
-                _         -> []
 
 
 

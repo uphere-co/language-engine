@@ -31,7 +31,6 @@ import           NLP.Type.PennTreebankII  (ChunkTag(..),POSTag(..),TernaryLogic(
                                           ,getRange,isNoun,posTag,tokenWord,getAnnot)
 import           NLP.Type.TagPos          (TagPos(..))
 --
--- import           NLP.Syntax.Type          (MarkType(..))
 import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),MarkType(..),Phase(..)
                                           ,Prep(..),PrepClass(..),DetP
                                           ,AdjunctDP(..), CompDP(..),HeadDP(..),SpecDP(..)

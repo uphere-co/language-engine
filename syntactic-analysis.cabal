@@ -25,6 +25,7 @@ library
                        NLP.Syntax.Noun
                        NLP.Syntax.Preposition
                        NLP.Syntax.Type.PreAnalysis
+                       NLP.Syntax.Type.Resolve
                        NLP.Syntax.Type.Verb
                        NLP.Syntax.Type.XBar
                        NLP.Syntax.Util

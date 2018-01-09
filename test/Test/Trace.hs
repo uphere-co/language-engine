@@ -23,7 +23,7 @@ import           WordNet.Type.Lexicographer        (LexicographerFile)
 --
 import           NLP.Syntax                        (syntacticAnalysis)
 import           NLP.Syntax.Clause
--- import           NLP.Syntax.Type
+import           NLP.Syntax.Type.Resolve           (retrieveResolved,resolved2Range)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                   (mkPreAnalysis)
@@ -39,7 +39,7 @@ import NLP.Syntax.Format
 
 data TracePos = Subj | Comp Int
 
-type TestTrace = (Text,Int,[(Int,Text)]{- (TracePos,([TraceType],Text)) -},[(Int,(Lemma,Text))],PennTree
+type TestTrace = (Text,Int,[(Int,Text)],[(Int,(Lemma,Text))],PennTree
                  ,[TagPos TokIdx MarkType]
                  ,[(Int,LexicographerFile)]
                  )
@@ -260,15 +260,15 @@ testcases = [ test_silent_pronoun_1
             , test_relative_pronoun_subject
             , test_relative_pronoun_object
             , test_reduced_relative_clause
-            -- , test_passive
+            , test_passive
             -- , test_passive_raising
             {- , test_ECM
-            , test_nonrestrictive_relative_clause
+            , test_nonrestrictive_relative_clause -}
             , test_free_relative_clause_subject_1
             , test_free_relative_clause_subject_2
             , test_free_relative_clause_object_1
             , test_free_relative_clause_object_2
-            , test_topicalization_move
+            {- , test_topicalization_move
             , test_that_clause -}
             ]
 
@@ -282,31 +282,16 @@ checkTrace c =
         pt = c^._5
         tagposs = c^._6
         synsets = c^._7
-        pre = mkPreAnalysis lmatknlst pt tagposs synsets -- (c^._4) (c^._5) (c^._6) (c^._7)
-        vps = mkVPS lmatknlst pt -- (c^._4) (c^._5)
-        -- x'trs0 = identifyCPHierarchy tagged vps
-        x'trs = syntacticAnalysis pre -- map (bindingWH2 . (\tr -> evalState (bindingWH1 tr) 0) . mkX'TreePH1) x'trs0
-        
-        -- x'trs1 = map ((^.xts_tree) {- . bindingAnalysisRaising . resolveCP . bindingAnalysis tagged -} . XTS 0) x'trs0
-        -- trace "checktrace1" $ return ()
-        -- testX'tr = map (bindingWH1 . mkX'TreePH1) x'trs0
-
-
-    -- trace (show testX'tr) $ return ()
+        pre = mkPreAnalysis lmatknlst pt tagposs synsets
+        vps = mkVPS lmatknlst pt
+        x'trs = syntacticAnalysis pre
     vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-    -- trace "checktrace2" $ return ()
     cp0 <- (^._1) <$> constructCP pre vp   -- seems very inefficient. but mcpstr can have memoized one.
                                              -- anyway need to be rewritten.
-    -- trace "checktrace3" $ return ()
-
     cp <- (^? _CPCase) . currentCPDPPP =<< (getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'trs
-    -- trace ("checktrace4" ++ (formatCP cp)) $ return ()
     x'tr <- listToMaybe x'trs
-    let r = map (_2 %~ (\x -> x^._2 .to (T.intercalate " " . tokensByRange pre))) (retrieveResolved x'tr)
-    -- trace (show (r,c^._3)) $ return ()
-    
-    trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (txt,lmatknlst,pt,tagposs,synsets)))) $ return ()
-
+    let r = map (_2 %~ (T.intercalate " " . tokensByRange pre . resolved2Range)) (retrieveResolved x'tr) 
+    -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (txt,lmatknlst,pt,tagposs,synsets)))) $ return ()
     return (r == c^._3)
     {- 
     case c^._3._1 of
