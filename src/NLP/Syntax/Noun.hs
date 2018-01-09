@@ -299,9 +299,10 @@ bareNounModifier tagged dp = fromMaybe dp $ do
 identifyNamedEntity :: PreAnalysis t -> DetP 'PH0 -> DetP 'PH0
 identifyNamedEntity tagged dp =
   fromMaybe dp $ do
+    let rng_dp = dp^.maximalProjection
     rng <- dp^?complement._Just.headX.coidx_content.hn_range
     TagPos (_,_,MarkEntity nec)
-      <- find (\(TagPos (b,e,t)) -> rng == beginEndToRange (b,e) && is _MarkEntity t) (tagged^.tagList)
+      <- find (\(TagPos (b,e,t)) -> let be = beginEndToRange (b,e) in (rng == be || rng_dp == be) && is _MarkEntity t) (tagged^.tagList)
     (return . (complement._Just.headX.coidx_content.hn_class .~ (Just nec))) dp
 
 
