@@ -22,7 +22,7 @@ noprep = PrepOr Nothing
 
 type Frame = Text
 type FrameElement = Text
-type TWord = Text
+type TWord = (Text,Maybe (Int,Int))
 
 
 data MeaningRoleContent = SubFrame MeaningTree
