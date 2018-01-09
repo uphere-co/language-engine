@@ -74,7 +74,9 @@ formatDP dp = "DP"        <> dp^.maximalProjection.to show.to T.pack <>
 formatNP :: NounP p -> Text
 formatNP np = np^.maximalProjection.to show.to T.pack <>
               np^.headX.coidx_content.hn_range.to show.to T.pack <>
-              np^.headX.coidx_i.to (maybe "" (\i -> "_" <> T.pack (show i))) --  <>
+              np^.headX.coidx_content.hn_class.to (maybe "" (T.pack.show)) <>
+              np^.headX.coidx_i.to (maybe "" (\i -> "_" <> T.pack (show i))) 
+
 
 
 
