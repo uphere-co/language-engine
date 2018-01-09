@@ -47,6 +47,7 @@ library
                        FrameNet.Query.Frame
                        FrameNet.Query.LexUnit
                        FrameNet.Type.Common
+                       FrameNet.Type.Definition
                        FrameNet.Type.Header
                        FrameNet.Type.Frame
                        FrameNet.Type.LexUnit

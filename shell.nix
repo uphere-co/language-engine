@@ -1,15 +1,15 @@
 { pkgs ? import <nixpkgs> {}
+, uphere-nix-overlay ? <uphere-nix-overlay>
 }:
 
 with pkgs;
 
 let
+  hsconfig = import <uphere-nix-overlay/nix/haskell-modules/configuration-ghc-8.0.x.nix> { inherit pkgs; };
 
-  #myhaskellpkgs = haskell.packages.ghc802.override {
-  #  overrides = self: super: config1 self super // config2 self super;
-  #}; 
+  haskellPackages1 = haskellPackages.override { overrides = hsconfig; };
 
-  hsenv = haskellPackages.ghcWithPackages (p: with p; [
+  hsenv = haskellPackages1.ghcWithPackages (p: with p; [
             async
             binary-orphans
             monad-loops
@@ -27,4 +27,3 @@ stdenv.mkDerivation {
   shellHook = ''
   '';
 }
-
