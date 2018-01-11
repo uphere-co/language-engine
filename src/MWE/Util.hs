@@ -15,6 +15,6 @@ mkTextFromToken mtoks =
   let toks = catMaybes mtoks
       txts = join $ flip evalStateT 0 $ forM toks $ \t -> do
           s <- get
-          modify' $ (\s -> t ^. token_char_idx_range ^. _2)
+          modify' $ (\_ -> t ^. token_char_idx_range ^. _2)
           return (T.append (T.replicate ((t ^. token_char_idx_range ^. _1) - s) " ") (t ^. token_text))
   in T.intercalate "" txts
