@@ -9,8 +9,6 @@ import qualified Data.Text    as T
 import           WordNet.Parser.Common
 import           WordNet.Type
 import           WordNet.Type.Lexicographer (LexID(..))
-import           WordNet.Type.POS
-
 
 
 parseLexItem :: [Text] -> Maybe LexItem

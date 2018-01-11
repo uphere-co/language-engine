@@ -8,11 +8,11 @@ import           Control.Lens
 import           Data.Attoparsec.Text
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Binary
+import           Data.Hashable                    (Hashable)
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import           Data.HashSet                     (HashSet)
 import qualified Data.HashSet               as HS
-import qualified Data.List                  as L
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                        (Text)
@@ -46,8 +46,8 @@ makeLenses ''SynsetDBFull
 mkSSWord :: Text -> Maybe SSWord
 mkSSWord txt = 
   case parseOnly (fmap (\(w,d,k)->SSWord w d k) p_word_lexid_marker) txt of
-    Left err -> Nothing
-    Right w  -> Just w
+    Left _err -> Nothing
+    Right w   -> Just w
 
 
 mkIndexDB :: [(Text,[Synset])] -> HashMap Text SynsetMap
@@ -55,7 +55,7 @@ mkIndexDB lst =
   HM.fromList . flip map lst $ \(fname,xs) ->
     let sidx2word = zip [1..] (map getSSWords xs)
         word2sidx = [(w,i) | (i,ws) <- sidx2word, w <- ws]
-        word2pointers = [(w,ps) | xs <- map getSSPairs xs, (w,ps) <- xs ]
+        word2pointers = [(w,ps) | ys <- map getSSPairs xs, (w,ps) <- ys ]
     in (fname,SynsetMap (HM.fromList sidx2word) (HM.fromList word2sidx) (HM.fromList word2pointers))
 
 
@@ -65,7 +65,9 @@ mkSynsetDBFull db = SynsetDBFull (mkIndexDB (db^.synsetdb_noun))
                                  (mkIndexDB (db^.synsetdb_adverb))
 
 
+llookup :: (Hashable k, Eq k) => k -> HashMap k v -> [v]
 llookup k = maybeToList . HM.lookup k
+
 
 findSynonym :: SynsetDBFull -> (Text,SSWord) -> [(Text,SSWord)]
 findSynonym db (lexfile,w) = do
@@ -123,7 +125,7 @@ main = do
     findHypernymHierarchy dbfull ("noun.person",fromJust (mkSSWord "doctor"))
   -}
 
-
+formatGraph :: ((Text,SSWord),(Text,SSWord)) -> Text
 formatGraph (x,y) =
   -- T.pack (show x ) <> " -> " <> T.pack (show y)
   formatWord (snd x) <> " -> " <> formatWord (snd y)

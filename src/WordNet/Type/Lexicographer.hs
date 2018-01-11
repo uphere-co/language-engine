@@ -9,7 +9,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
--- {-# LANGUAGE UndecidableInstances #-}
 
 module WordNet.Type.Lexicographer where
 
@@ -19,7 +18,6 @@ import           Data.Hashable
 import           Data.Monoid
 import           Data.Text
 import qualified Data.Text as T
-import           Data.Text.Buildable
 import           Data.Tuple     (swap)
 import           GHC.Generics
 --
@@ -29,8 +27,6 @@ import           WordNet.Type.POS
 newtype LexID = LexID { unLexID :: Char }
               deriving (Show,Ord,Eq,Generic,Binary,Hashable)
 
-
-                                 
 
 data LexicographerFile = AdjAll            -- 00
                        | AdjPert           -- 01
@@ -284,6 +280,8 @@ formatWord w = T.intercalate "_" (w^.ssw_word) <>
                maybe "" (\i -> T.pack (show i)) (w^.ssw_lexid) <>
                maybe "" (\m -> "(" <> formatMarker m <> ")") (w^.ssw_marker) 
 
+
+formatMarker :: Marker -> Text
 formatMarker Marker_P = "p"
 formatMarker Marker_A = "a"
 formatMarker Marker_IP = "ip"

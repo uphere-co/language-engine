@@ -6,11 +6,9 @@ module WordNet.Query where
 
 import           Control.Lens
 import           Control.Monad              (guard,join)
-import           Data.HashMap.Strict        (HashMap)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet        as HS
 import qualified Data.IntMap         as IM
-import           Data.List                  (find)
 import           Data.Maybe                 (catMaybes,mapMaybe,maybeToList)
 import           Data.Monoid                ((<>))
 import           Data.Text                  (Text)
@@ -155,13 +153,13 @@ displayLemmaResult db (pos0,lma) (n,lfid0,xs,ptrs,txt) = do
       pointertxt = T.intercalate " " (mapMaybe (formatPairs (pos0,lfid0)) pairs)
       headtxt = formatLemmaSN (lma,n) <> " | " <> txt
   TIO.putStrLn (headtxt <> "\n - derivationally related:" <> pointertxt)
-  -- print xs
-  -- mapM_ print ptrs
 
+
+formatPairs :: (POS,Int) -> (LexItem,[(Text,((POS,Int),LexItem))]) -> Maybe Text
 formatPairs p0 (lx,ptrs) = case ptrs of
                                [] -> Nothing
                                _ -> Just (" ( " <> formatLI p0 lx <> " --- " <>
-                                          T.intercalate "," (map (\(r,(p1,lx')) -> formatLI p1 lx') ptrs) <> " ) ")
+                                          T.intercalate "," (map (\(_,(p1,lx')) -> formatLI p1 lx') ptrs) <> " ) ")
 
 
 queryLemma :: Text -> POS -> WordNetDB -> IO ()
