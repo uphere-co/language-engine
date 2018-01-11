@@ -106,13 +106,11 @@ pronounResolution x'tr dp = do
     w' <- parent w
     cp' <- currentCPDPPP w' ^? _CPCase
 
-    ((if isgenitive
-        then do
-          rng_dp' <- cp'^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
-          dp' <- cpdpppFromX'Tree x'tr rng_dp' _DPCase
-          nclass <- dp'^?complement._Just.headX.coidx_content.hn_class._Just
-          match (rng_pro,prnclass) (nclass,rng_dp')
-        else mzero)
+    ((do guard isgenitive
+         rng_dp' <- cp'^?complement.specifier.to (resolvedSpecTP resmap)._Just.to (referent2CompVP . fmap specTPToCompVP)._CompVP_DP
+         dp' <- cpdpppFromX'Tree x'tr rng_dp' _DPCase
+         nclass <- dp'^?complement._Just.headX.coidx_content.hn_class._Just
+         match (rng_pro,prnclass) (nclass,rng_dp'))
      <|>
      (do w'' <- parent w'
          cp'' <- currentCPDPPP w'' ^? _CPCase
