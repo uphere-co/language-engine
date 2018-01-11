@@ -59,7 +59,7 @@ data MeaningTree = MeaningTree
   , _mt_predicate :: TWord         -- ^ Predicate word.
   , _mt_isNegated :: Bool          -- ^ Negation information of verb.
   , _mt_arguments :: [MeaningRole] -- ^ A list of MeaningRole's
-  , _mt_subordintaes :: [MeaningTree]
+  , _mt_subordinates :: [MeaningTree]
   } deriving (Eq,Show, Generic)
 
 
