@@ -5,7 +5,7 @@
 with pkgs;
 
 let
-  hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix")
+  hsconfig = import (uphere-nix-overlay+"/nix/haskell-modules/configuration-ghc-8.0.x.nix")
                { inherit pkgs; };
   newHaskellPackages = haskellPackages.override {
     overrides = hsconfig;

@@ -6,16 +6,16 @@ module Data.BitreeZipper where
 import           Control.Lens
 import           Control.Lens.Extras     (is)
 import           Data.Bifoldable         (bifoldMap,biList)
-import           Data.Bitraversable      (bitraverse)
 import           Data.List               (find,unfoldr)
-import           Data.Maybe              (catMaybes)
-import           Data.Monoid             (First(..))
 --
 import           Data.Bitree
 import           Data.ListZipper
 import           Data.Range
 
+
+--
 -- | Surrounding context of the focused item at current level
+--
 data BitreeContext c t = TC { _tc_node_content :: c
                           , _tc_prevs :: [Bitree c t]
                           , _tc_nexts :: [Bitree c t]
@@ -25,7 +25,9 @@ data BitreeContext c t = TC { _tc_node_content :: c
 makeLenses ''BitreeContext
 
 
+--
 -- | Zipper for tree
+--
 data BitreeZipper c t = TZ { _tz_current  :: Bitree c t          -- ^ current item
                          , _tz_contexts :: [BitreeContext c t] -- ^ recusively defined
                                                              --   contexts of current item
@@ -33,7 +35,6 @@ data BitreeZipper c t = TZ { _tz_current  :: Bitree c t          -- ^ current it
                     deriving (Show)
 
 makeLenses ''BitreeZipper
-
 
 
 mkBitreeZipper :: [BitreeContext c t] -> Bitree c t -> Bitree (BitreeZipper c t) (BitreeZipper c t)
@@ -94,18 +95,21 @@ root :: BitreeZipper c t -> BitreeZipper c t
 root z = last (z : unfoldr (\x -> parent x >>= \y -> Just (y,y)) z)
 
 
+--
 -- | unfocus to original tree structure
 --
 toBitree :: BitreeZipper c t -> Bitree c t
 toBitree = current . root
 
 
+--
 -- | replace the whole subtree focused by zipper
 --
 replaceFocusTree :: (Bitree c t -> Bitree c t) -> BitreeZipper c t -> BitreeZipper c t
 replaceFocusTree f = tz_current %~ f
 
 
+--
 -- | replace the root item of the subtree focused by zipper. 
 --
 replaceFocusItem :: (c -> c) -> (t -> t) -> BitreeZipper c t -> BitreeZipper c t
@@ -115,6 +119,7 @@ replaceFocusItem f g z = let tr = case z^.tz_current of
                     in replaceFocusTree (const tr) z
 
 
+--
 -- | Remove currently focused item and return tree.
 --   If it is a single leaf tree, then Nothing.
 --
