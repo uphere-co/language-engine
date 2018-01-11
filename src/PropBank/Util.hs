@@ -7,7 +7,6 @@ import           Data.Discrimination.Grouping      (grouping)
 import           Data.Function                     (on)
 import           Data.List                         (groupBy)
 --
-import           NLP.Type.PennTreebankII
 
 
 merge :: (b -> Int) -> [a] -> [b] -> [(Int,(a,[b]))] 
