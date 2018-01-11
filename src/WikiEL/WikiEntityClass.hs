@@ -3,19 +3,13 @@
 
 module WikiEL.WikiEntityClass where
 
-import           Data.Aeson
 import           Data.Text                             (Text)
-import           Data.Map                              (Map)
-import           Data.Maybe                            (fromMaybe,fromJust)
-import           Data.List                             (any,foldl')
+import           Data.Maybe                            (fromMaybe)
+import           Data.List                             (any)
 import           Control.Arrow                         (second)
 import qualified Data.List                     as L
-import qualified Data.Text                     as T
-import qualified Data.Text.IO                  as T.IO
 import qualified Data.Map                      as M
 import qualified Data.Set                      as S
-import           GHC.Generics                          (Generic)
-
 import           NLP.Type.NamedEntity                  (NamedEntityClass)
 import qualified NLP.Type.NamedEntity          as N
 import           WikiEL.Type                           (ItemClass(..),WikiuidNETag(..))
@@ -31,6 +25,7 @@ buildItemClass x name = ItemClass (itemID x) name
 {-|
   A list of constant values for Wikipedia entity classes
 -}
+otherClass,orgClass,personClass,locationClass,brandClass,occupationClass,humanRuleClass,buildingClass :: ItemClass
 otherClass  = buildItemClass "Q35120"  "Other"-- maps to entity (Q35120), which means "anything"
 orgClass    = buildItemClass "Q43229"  "Organization"
 personClass = buildItemClass "Q215627" "Person"
@@ -39,8 +34,15 @@ brandClass      = buildItemClass "Q431289"   "Brand"
 occupationClass = buildItemClass "Q12737077" "Occupation"
 humanRuleClass  = buildItemClass "Q1151067"  "HumanRule"
 buildingClass   = buildItemClass "Q41176"    "Building"
-extednedClasses = [brandClass,occupationClass,humanRuleClass,buildingClass]
-allClasses      = [otherClass, orgClass, personClass, locationClass] ++ extednedClasses
+
+
+extendedClasses :: [ItemClass]
+extendedClasses = [brandClass,occupationClass,humanRuleClass,buildingClass]
+
+
+allClasses :: [ItemClass]
+allClasses      = [otherClass, orgClass, personClass, locationClass] ++ extendedClasses
+
 
 fromNEClass :: NamedEntityClass -> ItemClass
 fromNEClass N.Org    = orgClass
@@ -79,17 +81,20 @@ fromList :: [(ItemID, ItemClass)] -> WikiuidNETag
 fromList pairs = WikiuidNETag (S.fromList pairs)
   
 hasNETag :: WikiuidNETag -> (ItemID, NamedEntityClass) -> Bool
-hasNETag (WikiuidNETag tags) (id,stag) | stag /= N.Other = S.member (id,fromNEClass stag) tags
-hasNETag (WikiuidNETag tags) (id,stag) = any (\x -> S.member (id,x) tags) extednedClasses
+hasNETag (WikiuidNETag tags) (i,stag) | stag /= N.Other = S.member (i,fromNEClass stag) tags
+                                      | otherwise       = any (\x -> S.member (i,x) tags) extendedClasses
+                                        
+-- hasNETag (WikiuidNETag tags) (i,stag) = any (\x -> S.member (i,x) tags) extendedClasses
 
 guessItemClass :: WikiuidNETag -> ItemID -> ItemClass
-guessItemClass (WikiuidNETag tags) id = fromMaybe otherClass x
+guessItemClass (WikiuidNETag tags) i = fromMaybe otherClass x
   where
-    x = L.find (\x -> S.member (id,x) tags) allClasses
+    x = L.find (\y -> S.member (i,y) tags) allClasses
 
 guessItemClass2 :: WikiuidNETag -> NamedEntityClass -> ItemID -> ItemClass
-guessItemClass2 tags ne id | hasNETag tags (id,ne) = fromNEClass ne
-guessItemClass2 tags ne id = guessItemClass tags id
+guessItemClass2 tags ne i | hasNETag tags (i,ne) = fromNEClass ne
+                          | otherwise            = guessItemClass tags i
+-- guessItemClass2 tags ne i = guessItemClass tags id
   
     
 newtype SubclassUID   = SubclassUID { _sub :: ItemID}
@@ -106,15 +111,15 @@ buildRelations :: [(SubclassUID, SuperclassUID)] -> SuperClasses
 buildRelations relations = M.fromListWith (++) (map (second (\(SuperclassUID x) -> [x])) relations)
 
 getAncestors :: SuperClasses -> ItemID -> [ItemID]
-getAncestors map key = g key (lookups map key)
+getAncestors mp key = g key (lookups mp key)
   where
-    lookups map key = fromMaybe [] (M.lookup (SubclassUID key) map)
-    g key [] = [key]
-    g key vals = key : concatMap (\v -> g v (lookups map v)) vals
+    lookups m k = fromMaybe [] (M.lookup (SubclassUID k) m)
+    g k [] = [k]
+    g k vals = k : concatMap (\v -> g v (lookups mp v)) vals
         
 
 getKeys :: SuperClasses -> [ItemID]
-getKeys = M.foldlWithKey' (\ks (SubclassUID k) x -> k:ks) []
+getKeys = M.foldlWithKey' (\ks (SubclassUID k) _ -> k:ks) []
 
 allRelationPairs :: [(SubclassUID, SuperclassUID)] -> S.Set (SubclassUID, SuperclassUID)
 allRelationPairs relTuples = pairs

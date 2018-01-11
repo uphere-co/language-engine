@@ -6,60 +6,60 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
 
-module WikiEL.WikiNamedEntityTagger 
-( module WikiEL.WikiNamedEntityTagger 
-, WEC.mayCite
-) where
-
-import           Control.Lens                          (makePrisms)
-import           Data.Aeson
-import           Data.Text                             (Text)
-import           Data.Vector                           (Vector,toList,fromList,ifoldr,foldl')
-import           Control.Arrow                         (second)
-import qualified Data.Vector                   as V
-import qualified Data.Text                     as T
-import           GHC.Generics                          (Generic)
-
-import           NLP.Type.NamedEntity                  (NamedEntity,NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
-import           WikiEL.Type                           (EntityToken(..),IRange(..),NameUIDTable
-                                                       ,PreNE(..),RelativePosition(..),WikiuidNETag)
-import           WikiEL.Type.Wikidata                  (ItemID)
-import           WikiEL.Misc                           (relativePos, untilNoOverlap)
-import           WikiEL.WikiEntityTagger               (buildEntityTable,wikiAnnotator)
-import qualified WikiEL.NamedEntity            as N
-import qualified WikiEL.WikiEntityClass        as WEC
-import qualified NLP.Type.NamedEntity          as NE
-
-
 
 {-|
   This module combines Wikidata tagger, WikiEL.WikiEntityTagger, and CoreNLP NER.
   by discarding possiblities that both results are inconsistent.
 -}
+module WikiEL.WikiNamedEntityTagger 
+( module WikiEL.WikiNamedEntityTagger 
+, WEC.mayCite
+) where
+
+import           Data.Text                             (Text)
+import           Data.Vector                           (Vector,toList,fromList,ifoldr,foldl')
+import           Control.Arrow                         (second)
+import qualified Data.Text                     as T
+--
+import           NLP.Type.NamedEntity                  (NamedEntityFrag,NamedEntityClass(Other),parseStr, _ftype,_fstr)
+import           WikiEL.Type                           (EntityToken(..),IRange(..),NameUIDTable
+                                                       ,PreNE(..),RelativePosition(..),WikiuidNETag)
+import           WikiEL.Type.Wikidata                  (ItemID)
+import           WikiEL.Misc                           (relativePos, untilNoOverlap)
+import           WikiEL.WikiEntityTagger               (wikiAnnotator)
+import qualified WikiEL.WikiEntityClass        as WEC
 
 
 parseNERToken :: Text -> EntityToken
 parseNERToken tokenStr = (\(x,y)-> EntityToken (T.dropEnd 1 x) y) $ T.breakOnEnd (T.pack "/") tokenStr
 
+
 parseNEROutputStr :: Text -> [EntityToken]
 parseNEROutputStr str = map parseNERToken (T.words str)
+
 
 parseStanfordNE :: EntityToken -> NamedEntityFrag
 parseStanfordNE (EntityToken word tag) = parseStr word tag
 
+
 loadStanfordNERoutput :: Text -> [NamedEntityFrag]
 loadStanfordNERoutput content = map parseStanfordNE (parseNEROutputStr content)
 
+
 getWords :: [NamedEntityFrag] -> [Text]
 getWords  = map _fstr
+
+
 getNETags :: [NamedEntityFrag] -> [NamedEntityClass]
 getNETags = map _ftype
+
 
 namedEntityAnnotator:: NameUIDTable -> [NamedEntityFrag] -> [(IRange, Vector ItemID)]
 namedEntityAnnotator entities frags = reverse matchedItems
   where
-    words = map _fstr frags
-    matchedItems = wikiAnnotator entities words
+    ws = map _fstr frags
+    matchedItems = wikiAnnotator entities ws
+
 
 partitonFrags:: [NamedEntityFrag] -> [(IRange, NamedEntityClass)]
 partitonFrags frags = ifoldr f [] (fromList frags)
@@ -80,7 +80,7 @@ getStanfordNEs = dropNonNE . partitonFrags
 uidCandidates :: PreNE -> [ItemID]
 uidCandidates (UnresolvedUID _)      = []
 uidCandidates (AmbiguousUID (ids,_)) = ids
-uidCandidates (Resolved     (id,_))  = [id]
+uidCandidates (Resolved     (i,_))  = [i]
 uidCandidates (UnresolvedClass ids)  = ids
 uidCandidates (OnlyTextMatched i _)    = [i]
 
@@ -89,7 +89,7 @@ isResolved (Resolved _ ) = True
 isResolved _ = False
 
 resolvedUID :: PreNE -> Either String ItemID
-resolvedUID (Resolved (id,_))     = Right id
+resolvedUID (Resolved (i,_))     = Right i
 resolvedUID (UnresolvedUID _)     = Left "Unresolved ItemID"
 resolvedUID (AmbiguousUID _)      = Left "Ambiguous ItemID"
 resolvedUID (UnresolvedClass _)   = Left "Unresolved named entity class"
@@ -107,10 +107,10 @@ resolveNEClass ts stag xs = g matchedUIDs
     g uids  = AmbiguousUID (uids, stag)
 
 resolveNEsImpl :: WikiuidNETag -> [(IRange,PreNE)] -> [(IRange, NamedEntityClass)] -> [(IRange, Vector ItemID)] -> [(IRange,PreNE)]
-resolveNEsImpl ts accum [] [] = accum
-resolveNEsImpl ts accum lhss@((lrange,ltag):ls) []  =
+resolveNEsImpl _ts accum [] [] = accum
+resolveNEsImpl ts accum ((lrange,ltag):ls) []  =
   resolveNEsImpl ts ((lrange, UnresolvedUID ltag) : accum) ls []
-resolveNEsImpl ts accum [] rhss@((rrange,rtags):rs) =
+resolveNEsImpl ts accum [] ((rrange,rtags):rs) =
   resolveNEsImpl ts ((rrange, UnresolvedClass (toList rtags)) : accum) [] rs
 resolveNEsImpl ts accum lhss@((lrange,ltag):ls) rhss@((rrange,rtags):rs) =
   --case mergeDecision (relativePos lrange rrange) of

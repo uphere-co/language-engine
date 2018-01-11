@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -7,16 +6,13 @@
 
 module WikiEL.EntityLinking where
 
-import           Control.Lens                          (makePrisms)
-import           Data.Aeson
-import           Data.List                             (inits,foldl')
-import           Data.Vector                           (Vector,toList)
+import           Data.List                             (foldl')
 import           Data.Text                             (Text)
 import qualified Data.Text                  as T
-import           GHC.Generics                          (Generic)
-
+import           Data.Vector                           (Vector,toList)
+--
 import           WikiEL.Misc                           (relativePos,strictSlice,subVector) 
-import           WikiEL.Type                           (EMInfo(..),EntityMention(..),EntityMentionUID(..),IRange(..)
+import           WikiEL.Type                           (EMInfo,EntityMention,EntityMentionUID(..),IRange(..)
                                                        ,PreNE(..),RelativePosition(..)
                                                        ,UIDCite(..))
 import           WikiEL.Type.Wikidata                  (ItemID)
@@ -65,20 +61,20 @@ buildEntityMentions text wikiNEs = zipWith Self uids mentions
 
 
 tryEntityLink :: Eq a => EMInfo a -> EMInfo a -> Maybe (EMInfo a)
-tryEntityLink target@(trange, twords, tNE) src@(srange, swords, sNE) =
+tryEntityLink (trange, twords, tNE) (srange, swords, sNE) =
   f (relativePos trange srange) (strictSlice swords twords) tNE sNE
   where
     g ttag (Resolved (_, s))       = s==ttag
     g ttag (UnresolvedUID stag)    = mayCite stag ttag
     g ttag (AmbiguousUID (_,stag)) = mayCite stag ttag
-    g ttag _                       = False
+    g _ttag _                      = False
     
     f pos textMatch (Resolved (uid,ttag)) src | pos==LbeforeR && textMatch && g ttag src =
       Just (srange,swords, Resolved (uid,ttag))
     f _ _ _ _ = Nothing
 
 entityLinking :: Eq a => [EntityMention a] -> EntityMention a -> EntityMention a
-entityLinking targets src = foldr f src targets
+entityLinking targets source = foldr f source targets
   where
     f target src@(Self idx info)       =
       case tryEntityLink (_info target) info of

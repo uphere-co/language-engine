@@ -2,8 +2,7 @@ module WikiEL.ETL.RDF.Binary where
 
 import qualified Data.Binary                     as B
 import qualified Data.ByteString.Lazy.Char8      as BL
-
-import           WikiEL.Type.RDF.Wikidata
+--
 import           WikiEL.Type.RDF.Yago
 
 

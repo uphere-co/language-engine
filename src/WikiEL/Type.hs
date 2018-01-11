@@ -43,7 +43,7 @@ instance FromJSON IRange where
   parseJSON = genericParseJSON defaultOptions
 
 instance Show IRange where
-  show (IRange beg end) = "IRange [" ++ show beg ++ "," ++ show end ++ ")"
+  show (IRange b e) = "IRange [" ++ show b ++ "," ++ show e ++ ")"
 
 data RelativePosition = LbeforeR | RbeforeL | Coincide | RinL | LinR | LoverlapR | RoverlapL
                       deriving(Show,Eq)
@@ -57,7 +57,7 @@ data ItemClass = ItemClass { _itemID  :: ItemID
 makeLenses ''ItemClass
 
 instance Show ItemClass where
-  show id = "Class:" ++ show (_strName id)
+  show i = "Class:" ++ show (_strName i)
 
 instance ToJSON ItemClass where
   toJSON = genericToJSON defaultOptions
@@ -115,7 +115,7 @@ entityName :: EMInfo Text -> Text
 entityName (_, ws, _) = T.intercalate " " (toList ws)
 
 toString :: EMInfo Text -> String
-toString em@(range, ws, tag) = show range ++ " \"" ++ T.unpack (entityName em) ++  "\", " ++show tag
+toString em@(range, _ws, t) = show range ++ " \"" ++ T.unpack (entityName em) ++  "\", " ++show t
 
 instance (Show a) => Show (UIDCite a (EMInfo Text))  where
   show (Cite uid ref info) = "Cite {" ++ show uid ++ " cites " ++ show ref ++ ",\t" ++ toString info ++ "}"

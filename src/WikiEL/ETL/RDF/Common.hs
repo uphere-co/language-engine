@@ -2,10 +2,9 @@
 
 module WikiEL.ETL.RDF.Common where
 
-
-import           Data.Char                             (isSpace)
-import           Data.Text                             (Text,head)
 import           Data.Attoparsec.Text
+import           Data.Char                             (isSpace)
+import           Data.Text                             (Text)
 import qualified Data.Text                     as T
 
 
@@ -19,6 +18,7 @@ parserObject prefix postfix f = do
   string postfix
   return (f t)
 
+
 parserObject2 :: Text -> Text -> Text -> (Text -> Text -> a) -> Parser a
 parserObject2 prefix sep postfix f = do
   let 
@@ -30,6 +30,7 @@ parserObject2 prefix sep postfix f = do
   t2 <- takeWhile1 (g postfix)
   string postfix
   return (f t1 t2)
+
 
 parserTypedValue   :: (Text -> Text -> a) -> Parser a
 parserTypedValue  = parserObject2 "\"" "\"^^" ""

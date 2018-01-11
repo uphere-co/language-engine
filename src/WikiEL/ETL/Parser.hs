@@ -25,29 +25,37 @@ import           WikiEL.Type.FileFormat
 parserWikidataItemID :: Parser ItemID
 parserWikidataItemID = do
   string "Q"
-  id <- decimal
-  return (QID id)
+  i <- decimal
+  return (QID i)
+
 
 parserBrokenItemID :: Parser ItemID
 parserBrokenItemID = do
   string "Q" <|> string "q"
-  id <- decimal
-  return (QID id)
+  i <- decimal
+  return (QID i)
+
 
 parserWikidataPropertyID :: Parser PropertyID
 parserWikidataPropertyID = do
   string "P"
-  id <- decimal
-  return (PropertyID id)
+  i <- decimal
+  return (PropertyID i)
+
 
 parserWikipediaPageID :: Parser PageID
 parserWikipediaPageID = do
-  id <- decimal
-  return (PageID id)
+  i <- decimal
+  return (PageID i)
 
 
+column :: Parser Text
 column = takeTill (== '\t')
+
+
+sep :: Parser Text
 sep = string "\t"
+
 
 parserPropertyName :: Parser PropertyNameRow
 parserPropertyName = do
@@ -56,14 +64,13 @@ parserPropertyName = do
   name <- column
   return (PropertyNameRow prop name)
 
+
 parserEntityRepr :: Parser EntityReprRow
 parserEntityRepr = do
   item <- parserWikidataItemID
   sep
   repr <- column
   return (EntityReprRow item (ItemRepr repr))
-
-
 
 
 parserSubclassRelation :: Parser SubclassRelationRow
@@ -77,6 +84,7 @@ parserSubclassRelation = do
   _   <- column -- no use for super_title
   return (SubclassRelationRow sub super)
 
+
 parserPublicCompanyLine :: Parser (Text, GICS, GICSsub, Symbol, PageID, ItemID)
 parserPublicCompanyLine = do
   name   <- column
@@ -87,10 +95,11 @@ parserPublicCompanyLine = do
   sep
   gicsSub <- column  
   sep
-  pageID <- parserWikipediaPageID
+  pageid <- parserWikipediaPageID
   sep
-  itemID <- parserWikidataItemID  
-  return (name, GICS gics, GICSsub gicsSub, Symbol symbol, pageID, itemID)
+  itemid <- parserWikidataItemID  
+  return (name, GICS gics, GICSsub gicsSub, Symbol symbol, pageid, itemid)
+
 
 getParseResult :: Parser a -> Text -> a
 getParseResult parser input = f (parseOnly parser input) 
@@ -111,9 +120,11 @@ parserWordNetSynsetYAGO = do
   let
     f acc (x:[a]) = (reverse (x:acc), a)
     f acc (x:xs)    = f (x:acc) xs
-    (words, idxStr) = f [] tokens
+    f _acc [] = error "parserWordNetSynsetYAGO"
+    (ws, idxStr) = f [] tokens
     Right idx = parseOnly decimal idxStr
-  return (SynsetY (T.intercalate "_" words) idx)
+  return (SynsetY (T.intercalate "_" ws) idx)
+
 
 parserWordNetSynset :: Parser Synset
 parserWordNetSynset = do
@@ -122,28 +133,30 @@ parserWordNetSynset = do
   let
     f acc (x:[a,b]) = (reverse (x:acc), a, b)
     f acc (x:xs)    = f (x:acc) xs
-    (words, pos, idxStr) = f [] tokens
+    f _acc [] = error "parserWordNetSynset"
+    (ws, pos, idxStr) = f [] tokens
     Right idx = parseOnly decimal idxStr
-  return (Synset (T.intercalate "-" words) pos idx)
+  return (Synset (T.intercalate "-" ws) pos idx)
+
 
 parserWordNetSynsetRow :: Parser WordNetMappingRow
 parserWordNetSynsetRow = do
   title   <- column
   sep
-  pageID <- parserWikipediaPageID
+  pageid <- parserWikipediaPageID
   sep
-  itemID <- parserBrokenItemID  
+  itemid <- parserBrokenItemID  
   sep
   synset <- parserWordNetSynset
-  return (WordNetMappingRow title pageID itemID synset)
+  return (WordNetMappingRow title pageid itemid synset)
 
 
 parserWikiTitleMappingRow :: Parser WikiTitleMappingRow
 parserWikiTitleMappingRow = do
-  itemID <- parserBrokenItemID  
+  itemid <- parserBrokenItemID  
   sep
   title   <- column
-  return (itemID, title)
+  return (itemid, title)
   
 
 {-!

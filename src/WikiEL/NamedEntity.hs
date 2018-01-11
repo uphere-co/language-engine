@@ -1,12 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module WikiEL.NamedEntity where
 
-import           Data.Maybe                        (mapMaybe,catMaybes)
-import           Data.Text                         (Text)
+import           Data.Maybe                        (mapMaybe)
 import qualified Data.Text                  as T
-import           Data.Monoid
-
+--
 import           NLP.Type.NamedEntity
 
 {-|
@@ -21,7 +20,7 @@ partitionFrags = foldr f []
                       | otherwise              = [e] : xss'
 
 mergeToken :: [NamedEntityFrag] -> Maybe NamedEntity
-mergeToken xs'@(NamedEntityFrag str tag : es) | tag /= Other = Just (NamedEntity ss tag) where ss = T.unwords (map _fstr xs')
+mergeToken xs'@(NamedEntityFrag _str tag : _es) | tag /= Other = Just (NamedEntity ss tag) where ss = T.unwords (map _fstr xs')
 mergeToken _ = Nothing
 
 mergeTokens :: [NamedEntityFrag] -> [NamedEntity]
