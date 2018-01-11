@@ -122,6 +122,7 @@ Executable graph
                         binary,
                         bytestring,
                         filepath,
+                        hashable,
                         lens,
                         optparse-applicative,
                         text,

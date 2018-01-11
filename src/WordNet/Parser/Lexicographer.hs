@@ -94,22 +94,13 @@ p_token = do
 p_lexfile :: Parser (Either Text LexicographerFile)
 p_lexfile = foldl1' (<|>) (map (\(x,y) -> string x *> pure y) lexicographerFileTable)
 
-{- 
-p_word_lexid :: Parser ([Text],Maybe Int)
-p_word_lexid = do
-  ws <- do ws' <- many (p_nonlasttoken <* char '_')
-           w <- p_token
-           return (ws'++[w])
-  md :: Maybe Int <- optional (read <$> many1 digit)
-  return (ws,md)
--}
 
 p_word_lexid_marker :: Parser ([Text],Maybe LexID,Maybe Marker)
 p_word_lexid_marker = do
   ws <- do ws' <- many (p_nonlasttoken <* char '_')
            w <- p_token
            return (ws'++[w])
-  md <- fmap (LexID . head . flip showHex "") <$> optional (read <$> many1 digit)
+  md <- fmap (LexID . head . (flip showHex "" :: Int -> String)) <$> optional (read <$> many1 digit)
   mk <- optional ( (string "(p)"  >> return Marker_P) <|>
                    (string "(a)"  >> return Marker_A) <|>
                    (string "(ip)" >> return Marker_IP)
