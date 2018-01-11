@@ -176,7 +176,11 @@ constructMeaningTree (rolemap,mg,grph) frmid = do
 
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) chldrn0
   arguments :: [MeaningRole] <- lift (catMaybes <$> mapM (constructMeaningRole (rolemap,mg,grph)) rels)
-  return (MeaningTree vid frmtxt verbtxt (maybe False (const True) mneg) arguments)
+  let subs = backwardLinks (mg^.mg_edges) frmid
+  subordinates <- mapM (constructMeaningTree (rolemap,mg,grph)) subs
+  lift (modify' (delete frmid))
+  -- trace ("\nconstructMeaningTree:" ++ show (verbtxt,frmid,subs)) $
+  return (MeaningTree vid frmtxt verbtxt (maybe False (const True) mneg) arguments subordinates)
 
 
 mkMeaningTree1 :: ([RoleInstance],MeaningGraph,Graph) -> State [Vertex] (Maybe MeaningTree)
@@ -191,8 +195,7 @@ mkMeaningTree1 (rolemap,mg,graph) = do
 
 mkMeaningTree :: [RoleInstance] -> MeaningGraph -> [MeaningTree]
 mkMeaningTree rolemap mg = do
-  let -- mg = squashRelFrame mg0
-      mgraph = getGraphFromMG mg
+  let mgraph = getGraphFromMG mg
   graph <- maybeToList mgraph
   let framelst = map (^.mv_id) $ filter isFrame $ mg^. mg_vertices
       vs = filter (`elem` framelst) $ topSort graph
