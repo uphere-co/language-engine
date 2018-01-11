@@ -9,7 +9,6 @@ import           Test.Tasty
 import           NLP.Type.PennTreebankII
 import           NLP.Type.PennTreebankII.Match
 --
-import           PropBank.Match
 
 
 ex1 :: PennTree
