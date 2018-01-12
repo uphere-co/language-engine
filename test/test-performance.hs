@@ -10,8 +10,9 @@ import           Control.Lens                ((^.),(^..),ix,to,makeLenses,_2)
 import           Control.Monad               (void)
 import           Data.Aeson
 import qualified Data.ByteString.Lazy as BL
+import           Data.IntMap                 (IntMap)
 import           Data.List                   (zip4,zip5)
-import           Data.Maybe                  (catMaybes,mapMaybe)
+import           Data.Maybe                  (mapMaybe)
 import           Data.Monoid                 ((<>))
 import           Data.Text                   (Text)
 import qualified Data.Text            as T
@@ -28,12 +29,12 @@ import qualified Text.Blaze.Html5.Attributes as A
 --
 import           Lexicon.Data                (loadLexDataConfig)
 import           MWE.Util                    (mkTextFromToken)
+import           NER.Type                    (CompanyInfo)
 import           NLP.Type.CoreNLP            (sentenceLemma,sentenceToken)
 import           NLP.Type.PennTreebankII     (Lemma(..))
-import           Text.Format.Dot             (mkLabelText)
 --
-import           SRL.Analyze                 (loadJVM,loadConfig,printMeaningGraph)
-import           SRL.Analyze.Format          (dotMeaningGraph,formatDocStructure)
+import           SRL.Analyze                 (loadConfig)
+import           SRL.Analyze.Format          (dotMeaningGraph)
 import           SRL.Analyze.Match.MeaningGraph (meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure (sentStructure,mkWikiList)
 import           SRL.Analyze.Type
@@ -68,7 +69,7 @@ progOption = info pOptions (fullDesc <> progDesc "test generation")
 
 createDotPng :: String -> FilePath -> [(Int,Text,MeaningGraph)] -> IO (FilePath,[(Int,Text,MeaningGraph)])
 createDotPng new fn imglst = do
-  flip mapM imglst $ \(i,title,mg) -> do
+  flip mapM imglst $ \(i,_title,mg) -> do
     let fullfilename = new ++ "_" ++ fn ++ "_" ++ show i
     let dotstr = dotMeaningGraph Nothing mg
     TIO.putStrLn dotstr
@@ -77,9 +78,10 @@ createDotPng new fn imglst = do
   return (fn,imglst)
 
 
+process :: AnalyzePredata -> IntMap CompanyInfo -> String -> Test -> IO (FilePath, [(Int,Text,MeaningGraph)])
 process apredata companyMap new t = do
   TIO.putStrLn (t^.test_id)
-  let dainput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = t^.test_dainput
+  let DocAnalysisInput sents sentidxs _ _ mptrs _ _ = t^.test_dainput
       lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       mtokenss = sents ^.. traverse . sentenceToken
       mergedtags = t^.test_ner
@@ -94,7 +96,7 @@ process apredata companyMap new t = do
   createDotPng new (T.unpack (t^.test_id)) imgs
 
 
-
+mainHtml :: (String,String) -> [(FilePath,[(Int,Text,MeaningGraph)])] -> H.Html
 mainHtml (old,new) fileimgs =
   H.docTypeHtml $ do
     H.head $ do
@@ -104,6 +106,7 @@ mainHtml (old,new) fileimgs =
         mapM_ (onefigure (old,new)) fileimgs
 
 
+onefigure :: (String,String) -> (FilePath,[(Int,Text,MeaningGraph)]) -> H.Html
 onefigure (old,new) (fn,imglst) =
   H.li $ do
     (H.div (H.h1 (H.toHtml (T.pack fn))))
@@ -117,12 +120,12 @@ onefigure (old,new) (fn,imglst) =
         H.div (H.h1 (H.toHtml new))
     H.hr
 
+
 createIndex :: (String,String) -> [(FilePath,[(Int,Text,MeaningGraph)])] -> IO ()
 createIndex (old,new) fileimgs = TLIO.writeFile "index.html" (renderHtml (mainHtml (old,new) fileimgs))
 
 
-
-
+main :: IO ()
 main = do
   tcfg <- execParser progOption
   cfg <- loadLexDataConfig (tcfg^.tconfig_lexconfig) >>= \case Left err -> error err
