@@ -20,22 +20,19 @@ import           WordNet.Type.Lexicographer      (LexicographerFile)
 --
 import           NLP.Syntax.Format.Internal      (formatDP)
 import           NLP.Syntax.Noun                 (splitDP)
--- import           NLP.Syntax.Type                 (MarkType(..))
 import           NLP.Syntax.Type.XBar            (PreAnalysis,DetP,AdjunctDP(..),DPTree(..),MarkType(..)
                                                  ,Phase(..)
-                                                 ,adjunct,complement,headX,maximalProjection,specifier
-                                                 ,coidx_content
-                                                 ,hd_range,hn_class
+                                                 ,adjunct,complement,headX,specifier
+                                                 ,coidx_content,hd_range,hn_class
                                                  ,headText,tokensByRange,mkOrdDP,compDPToRange
-                                                 ,specDPText
-                                                 )
+                                                 ,specDPText)
 import           NLP.Syntax.Util                 (mkBitreeICP,mkPreAnalysis)
 --
 import           Test.Common
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
-import Debug.Trace
+
 
 
 type TestNoun = (Text
@@ -227,6 +224,8 @@ test_infinitive_modifier_1 =
   , []
   )
 
+
+test_np_rrc_1 :: TestNoun
 test_np_rrc_1 =
   ( "documents related to an initial public offering of its fuel distribution unit BR Distribuidora SA"
   , ("",Just ("documents",Nothing),[],Nothing,["related to an initial public offering of its fuel distribution unit BR Distribuidora SA"])

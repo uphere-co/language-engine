@@ -91,11 +91,11 @@ formatCPDetail cp =
         fmtComplementizer C_PHI = ("phi","")
         fmtComplementizer (C_WORD w) = ("",T.unpack (unLemma w))
         --
-        formatSpecCP :: Maybe SpecCP -> (String,String)
-        formatSpecCP Nothing              = ("","")
-        formatSpecCP (Just SpecCP_WHPHI)  = ("phi_WH","")
-        formatSpecCP (Just (SpecCP_WH rng)) = ("WH",show rng)
-        formatSpecCP (Just (SpecCP_Topic (SpecTopicP_CP rng))) = ("Topic","CP" ++ show rng)
+        fmtSpecCP :: Maybe SpecCP -> (String,String)
+        fmtSpecCP Nothing              = ("","")
+        fmtSpecCP (Just SpecCP_WHPHI)  = ("phi_WH","")
+        fmtSpecCP (Just (SpecCP_WH rng)) = ("WH",show rng)
+        fmtSpecCP (Just (SpecCP_Topic (SpecTopicP_CP rng))) = ("Topic","CP" ++ show rng)
         --
         (head1,head2) = fmtComplementizer (cp^.headX)
-        (spec1,spec2) = formatSpecCP (cp^?specifier._Just.coidx_content)
+        (spec1,spec2) = fmtSpecCP (cp^?specifier._Just.coidx_content)

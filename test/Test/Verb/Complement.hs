@@ -11,12 +11,12 @@ module Test.Verb.Complement where
 import           Control.Lens               hiding (levels)
 import           Data.List                         (find)
 import           Data.Maybe                        (fromMaybe,maybeToList)
-import           Data.Monoid                       (First(..),All(All,getAll),mconcat)
+import           Data.Monoid                       (First(..))
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 --
 import           Data.Bitree
-import           Data.BitreeZipper                 (current,extractZipperById,toBitree)
+import           Data.BitreeZipper                 (extractZipperById,toBitree)
 import           NLP.Type.NamedEntity
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos
@@ -24,7 +24,6 @@ import           WordNet.Type.Lexicographer        (LexicographerFile)
 --
 import           NLP.Syntax                        (syntacticAnalysis)
 import           NLP.Syntax.Clause
-import           NLP.Syntax.Format
 import           NLP.Syntax.Type.Resolve           (Resolved(..),Referent(..),referent2CompVP
                                                    ,retrieveResolved,resolvedSpecTP,resolvedCompVP)
 import           NLP.Syntax.Type.Verb
@@ -35,7 +34,6 @@ import           Test.Common
 import           Test.Tasty.HUnit
 import           Test.Tasty
 --
-import Debug.Trace
 
 
 type TestVerbComplement = (Text
@@ -297,18 +295,18 @@ frag_1 =
 
 checkSubjCompAdjunct :: TestVerbComplement -> Bool
 checkSubjCompAdjunct c = fromMaybe False $ do
-  let txt = c^._1
+  let 
       lmatknlst = c^._4
       pt = c^._5
       tagposs = c^._6
       synsets = c^._7
-      pre = mkPreAnalysis lmatknlst pt tagposs synsets
-      vps = mkVPS lmatknlst pt -- (c^._4) (c^._5)
-      x'trs = syntacticAnalysis pre -- map (resolveCP  . identifyCPHierarchy pre) vps
+      a0 = mkPreAnalysis lmatknlst pt tagposs synsets
+      vps = mkVPS lmatknlst pt
+      x'trs = syntacticAnalysis a0
   vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
       -- test subjects
-  cp0 <- (^._1) <$> constructCP pre vp   -- seems very inefficient. but mcpstr can have memoized one.
-                                            -- anyway need to be rewritten.
+  cp0 <- (^._1) <$> constructCP a0 vp   -- seems very inefficient. but mcpstr can have memoized one.
+                                         -- anyway need to be rewritten.
   w <- (getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'trs
   let x'tr = toBitree w
       resmap = retrieveResolved x'tr
@@ -320,22 +318,22 @@ checkSubjCompAdjunct c = fromMaybe False $ do
                        spectp <- resolvedSpecTP resmap subj >>= \case RefRExp x -> return x
                                                                       RefVariable _ (RBound x _)   -> return x
                                                                       RefVariable _ (RFree_WHDP r) -> return (SpecTP_DP r)
-                       let sclass = do
+                       let scls = do
                              rng_dp <- spectp^?_SpecTP_DP
                              dp <- cpdpppFromX'Tree x'tr rng_dp _DPCase
                              return (dp^.headX.hd_class)
-                       return (sclass,compVPToHeadText SPH1 pre x'tr (specTPToCompVP spectp))
+                       return (scls,compVPToHeadText SPH1 a0 x'tr (specTPToCompVP spectp))
                  case subj_test^._2 of
                    Nothing -> return (stxt == subj_test^._1)
                    Just p -> return (stxt == subj_test^._1 && sclass == Just p)
       lst_comps = do
-        c <- cp^.complement.complement.complement
-        r <- referent2CompVP <$> maybeToList (resolvedCompVP resmap c)
-        return (compVPToHeadText SPH1 pre x'tr r)
+        cvp <- cp^.complement.complement.complement
+        r <- referent2CompVP <$> maybeToList (resolvedCompVP resmap cvp)
+        return (compVPToHeadText SPH1 a0 x'tr r)
       lst_comps_test = c^._3._2
       b_comps = lst_comps == lst_comps_test
       -- test adjuncts
-      lst_adjs = cp^..adjunct.traverse._AdjunctCP_CP.to (T.intercalate " " . tokensByRange pre)
+      lst_adjs = cp^..adjunct.traverse._AdjunctCP_CP.to (T.intercalate " " . tokensByRange a0)
       lst_adjs_test = c^._3._3
       b_adjuncts = lst_adjs == lst_adjs_test
       b_topicalized = fromMaybe False $ do
@@ -367,7 +365,7 @@ testcases = [ -- -- main_finite_1
             -- , complexNP_SRParser
             , complexNP_2
             , prepComplement
-              -- -- , rrc_passive_1
+            -- -- , rrc_passive_1
             , rrc_passive_2
             , to_infinitive_1
             , adjp_1

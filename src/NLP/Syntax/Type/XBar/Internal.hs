@@ -12,13 +12,11 @@
 
 module NLP.Syntax.Type.XBar.Internal where
 
-import           Control.Lens                ((^.))
 import           Data.Text                   (Text)
 --
 import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.Hashable
-import           Data.ListZipper
 import           Data.Range
 import           GHC.Generics
 --
@@ -61,27 +59,22 @@ data TraceType = NULL | PRO | Moved | WHPRO
 
 
 
--- | TraceChain represents the current focus of trace chain at a given position of tree.
---   Left case of trChain denodes the focus of the intermediate chain, while Right case
---   of trChain denotes the case in which the final resolved element is currently focused.
---
---   e.g. (a -> b -> c -> d) is a trace chain.
---   * If a is focused, (Left ([],a,[b,c]),d)
---   * If b is focused, (Left ([a],b,[c]), d)
---   * If c is focused, (Left ([a,b],c,[]),d)
---   * If d is focused, (Right [a,b,c], d)
---
-
-
 data Coindex a = Coindex { _coidx_i :: Maybe Int
                          , _coidx_content :: a }
                deriving (Show,Functor,Ord,Eq)
 
+
+emptyCoindex :: Coindex (Either TraceType a)
 emptyCoindex = Coindex Nothing (Left NULL)
 
+
+mkDefCoindex :: a -> Coindex a
 mkDefCoindex = Coindex Nothing
 
+
+mkCoindex :: Int -> a -> Coindex a
 mkCoindex i = Coindex (Just i)
+
 
 data SplitType = CLMod | BNMod | APMod
                deriving (Show,Eq,Ord)
@@ -96,6 +89,7 @@ data AdjunctDP = AdjunctDP_AP Range
                deriving (Show,Eq,Ord,Generic)
 
 instance Hashable AdjunctDP
+
 
 data PronounPerson = P_I | P_You | P_He | P_She | P_It | P_They
                  deriving (Show,Eq,Ord)
