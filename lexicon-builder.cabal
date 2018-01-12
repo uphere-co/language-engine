@@ -121,7 +121,6 @@ Executable verb-subcat-propbank-stat
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
-                       -fno-warn-partial-type-signatures
                        -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:       Lexicon.App.VerbSubcat
