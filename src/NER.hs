@@ -5,7 +5,7 @@ module NER where
 import qualified Data.Aeson.Encode.Pretty   as A
 import qualified Data.ByteString.Lazy.Char8 as BL8
 --
-import           NER.Load                      (getCompanyListFromJSON,constructCompanyListFromCSV,loadNameTable)
+import           NER.Load                      (constructCompanyListFromCSV,loadNameTable)
 
 
 

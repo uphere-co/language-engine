@@ -8,8 +8,8 @@ module WikiEL.EntityMentionPruning where
 import qualified Data.Vector                   as V
 import qualified WikiEL.EntityLinking          as EL
 
-import           NLP.Type.PennTreebankII    (POSTag(..), TernaryLogic(..), isNoun, isVerb)
-import           WikiEL.Type                (EntityMention(..),IRange(..))
+import           NLP.Type.PennTreebankII    (POSTag(..), TernaryLogic(..), isNoun)
+import           WikiEL.Type                (EntityMention,IRange(..))
 
 
 isEntityLinkableTag :: POSTag -> Bool
@@ -25,7 +25,7 @@ isEntityLinkable tags (IRange beg end) = V.any isEntityLinkableTag tokens
   where
     tokens = V.slice beg (end-beg) tags
 
-{-|
+{- |
   filterEMbyPOS requires that a text of an entity mention should contain a noun phrase.
 -}
 filterEMbyPOS :: V.Vector POSTag -> [EntityMention w] -> [EntityMention w]
@@ -33,4 +33,5 @@ filterEMbyPOS wholeTags = filter f
   where
     f mention = isEntityLinkable wholeTags (EL.entityIRange mention)
 
+filterEM :: V.Vector POSTag -> [EntityMention w] -> [EntityMention w]
 filterEM = filterEMbyPOS

@@ -30,11 +30,6 @@ import qualified WikiEL.Type.Wikidata    as WD
 
 
 
-
-
-
-
-
 -- entityResolve = WEL.disambiguateMentions .. seems to have a problem
 
 newNETagger :: IO ([Sentence] -> [EntityMention T.Text])
@@ -43,6 +38,7 @@ newNETagger = do
   let wikiTable = WET.buildEntityTable reprs
       wikiMap = foldl' f HM.empty reprs
         where f !acc (FF.EntityReprRow (WD.QID i) (WD.ItemRepr t)) = HM.insertWith (++) (WD.QID i) [t] acc
+              f _ _ = error "f in newNETagger"
   uidNEtags <- WEC.loadFiles classFilesG -- uidTagFiles
   let tagger = extractFilteredEntityMentions wikiTable uidNEtags
       disambiguatorWorker x (ys,t) =

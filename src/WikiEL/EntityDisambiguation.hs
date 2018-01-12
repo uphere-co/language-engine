@@ -3,30 +3,24 @@ module WikiEL.EntityDisambiguation
 ) where
 
 
-import           Data.Maybe                            (fromJust,mapMaybe,catMaybes)
+import           Data.Maybe                            (fromJust,mapMaybe)
 import           Data.Text                             (Text)
-import qualified Data.Text                     as T
 import qualified Data.Map                      as M
-import qualified Data.Vector.Unboxed           as UV
-
-import           WikiEL.Type                                  (EntityMention,PreNE(..)
-                                                              ,SortedEdges(..),SortedGraph(..),NodeNames(..)
-                                                              ,UIDCite(..),WikiuidNETag)
-import           WikiEL.Type.Wikidata                         (ItemID)
-import qualified NLP.Type.NamedEntity          as NE
+--
 import qualified Graph                         as G
 import qualified Graph.ETL                     as G.E
-import qualified Graph.Internal.Hash           as H  
--- import qualified WikiEL.Graph                  as G
+--
 import qualified WikiEL.EntityLinking          as EL
-import qualified WikiEL.WikiNamedEntityTagger  as NET
-import qualified WikiEL.WikiEntityClass        as WEC
 import qualified WikiEL.ETL.Parser             as P
 import qualified WikiEL.ETL.Util               as U
+import           WikiEL.Type                                  (EntityMention,PreNE(..),SortedGraph(..)
+                                                              ,UIDCite(..),WikiuidNETag)
+import           WikiEL.Type.Wikidata                         (ItemID)
+import qualified WikiEL.WikiNamedEntityTagger  as NET
+import qualified WikiEL.WikiEntityClass        as WEC
 
 
-
-{-
+{- |
 loadAndSortEdges 
 Input format : a text file of a list of directed edges. Node names are Wikipedia title
 Input arguments :
@@ -37,12 +31,13 @@ Output arguments :
 -}
 loadAndSortEdges :: FilePath -> IO SortedGraph
 loadAndSortEdges edgeFiles = do
-    cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph edgeFiles
+    G.E.Graph edges names <- G.E.applyLines G.E.loadGraph edgeFiles
     let
       sorted = G.sortEdges G.From edges
     return (SortedGraph sorted names)
 
-{-
+
+{- |
 loadWikipageMapping
 Input format : See WikiEL.ETL.Parser.WikiTitleMappingFile
 Output : a mapping between Wikidata UIDs and Wikipedia titles
@@ -52,13 +47,14 @@ Output arguments :
 -}
 loadWikipageMapping :: P.WikiTitleMappingFile -> IO (M.Map ItemID Text, M.Map Text ItemID)
 loadWikipageMapping filename = do
-  lines <- U.readlines (P.unWikiTitleMappingFile filename)
+  xs <- U.readlines (P.unWikiTitleMappingFile filename)
   let
-    id2title = map P.wikititleMapping lines
+    id2title = map P.wikititleMapping xs
     title2id = map (\(x,y)->(y,x)) id2title
   return (M.fromList id2title, M.fromList title2id)
 
-{-
+
+{- |
 Entity linking aims to map each entity mention to Wikipedia UID. 
 Until an entity mention is fully resolved, it has UID candidates(one if resolved, many if ambiguous or unresolved).
 toWikipages returns Wikipedia titles of UID candidates.
@@ -66,13 +62,18 @@ toWikipages returns Wikipedia titles of UID candidates.
 toWikipages :: M.Map ItemID Text -> EntityMention a -> [Text]
 toWikipages titles mention = toTitle titles (EL.entityPreNE mention)
   where
-    toTitle titles ne = mapMaybe (`M.lookup` titles) (NET.uidCandidates ne)
+    toTitle ttl ne = mapMaybe (`M.lookup` ttl) (NET.uidCandidates ne)
+
+
 
 updateNE :: (PreNE -> PreNE) -> EntityMention a -> EntityMention a
-updateNE f (Self id     info@(range,vec,ne)) = Self id     (range,vec,f ne)
-updateNE f (Cite id ref info@(range,vec,ne)) = Cite id ref (range,vec,f ne)
+updateNE f (Self i     (range,vec,ne)) = Self i     (range,vec,f ne)
+updateNE f (Cite i ref (range,vec,ne)) = Cite i ref (range,vec,f ne)
 
-{-
+type NameMappings = (M.Map ItemID Text, M.Map Text ItemID)
+
+
+{- |
 tryDisambiguate : a main funtion that does the named entity disambiguation.
 1. Each entity mention is mapped to `[Text]`, a list of Wikipedia titles (of UID candidates)
 2. fTD is a scoring function 
@@ -88,8 +89,6 @@ Input arguments:
 - mentions : input entity mentions
 Output : disambiguated entity mentions.
 -}
-
-type NameMappings = (M.Map ItemID Text, M.Map Text ItemID)
 tryDisambiguate :: WikiuidNETag -> NameMappings -> ([Text] -> [Text] -> Maybe (a,Text,Text)) -> [EntityMention b] -> [EntityMention b]
 tryDisambiguate uidNEtags (i2t,t2i) fTD mentions = map (updateNE f) mentions
   where
@@ -98,7 +97,7 @@ tryDisambiguate uidNEtags (i2t,t2i) fTD mentions = map (updateNE f) mentions
     f x@(AmbiguousUID (ids,stag)) = g (fTD refs titles)
       where
         titles = mapMaybe (`M.lookup` i2t) ids
-        g (Just (score,ref,title)) | WEC.mayCite stag tag = Resolved (uid,tag)
+        g (Just (_score,_ref,title)) | WEC.mayCite stag tag = Resolved (uid,tag)
           where
             uid  = fromJust $ M.lookup title t2i
             tag = WEC.guessItemClass2 uidNEtags stag uid        

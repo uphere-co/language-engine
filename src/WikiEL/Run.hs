@@ -10,8 +10,7 @@ import           NLP.Type.PennTreebankII
 import           System.FilePath                       ((</>))
 import           WikiEL.EntityLinking
 --
-import           WikiEL.Type                           (EntityMention,IRange(..),ItemClass(..)
-                                                       ,beg,end)
+import           WikiEL.Type                           (EntityMention,ItemClass(..),beg,end)
 import           WikiEL.Type.FileFormat
 import qualified WikiEL.WikiEntityClass        as WC
 import qualified WikiEL                        as WEL
