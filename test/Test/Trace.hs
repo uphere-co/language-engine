@@ -4,27 +4,22 @@
 
 module Test.Trace where
 
-import           Control.Arrow                     (first)
+
 import           Control.Lens               hiding (levels)
-import           Control.Monad.Trans.State         (evalState)
-import           Data.Foldable
+-- import           Data.Foldable
 import           Data.Maybe                        (fromMaybe,listToMaybe)
-import           Data.Monoid                       (First(..))
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO
 --
 import           Data.Bitree
-import           Data.BitreeZipper
-import           Data.ListZipper
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos
 import           WordNet.Type.Lexicographer        (LexicographerFile)
 --
 import           NLP.Syntax                        (syntacticAnalysis)
-import           NLP.Syntax.Clause
 import           NLP.Syntax.Type.Resolve           (retrieveResolved,resolved2Range)
-import           NLP.Syntax.Type.Verb
+-- import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Util                   (mkPreAnalysis)
 --
@@ -32,9 +27,6 @@ import           Test.Common
 import           Test.Tasty
 import           Test.Tasty.HUnit
 --
-import Debug.Trace
-import NLP.Syntax.Format
-
 
 
 data TracePos = Subj | Comp Int
@@ -277,38 +269,21 @@ testcases = [ test_silent_pronoun_1
 checkTrace :: TestTrace -> Bool
 checkTrace c =
   fromMaybe False $ do
-    let txt = c^._1
-        lmatknlst = c^._4
+    let lmatknlst = c^._4
         pt = c^._5
         tagposs = c^._6
         synsets = c^._7
-        pre = mkPreAnalysis lmatknlst pt tagposs synsets
-        vps = mkVPS lmatknlst pt
-        x'trs = syntacticAnalysis pre
-    vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
-    cp0 <- (^._1) <$> constructCP pre vp   -- seems very inefficient. but mcpstr can have memoized one.
+        a0 = mkPreAnalysis lmatknlst pt tagposs synsets
+        -- vps = mkVPS lmatknlst pt
+        x'trs = syntacticAnalysis a0
+    -- vp <- find (\vp -> vp^.vp_index == (c^._2)) vps
+    -- cp0 <- (^._1) <$> constructCP a0 vp   -- seems very inefficient. but mcpstr can have memoized one.
                                              -- anyway need to be rewritten.
-    cp <- (^? _CPCase) . currentCPDPPP =<< (getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'trs
+    -- cp <- (^? _CPCase) . currentCPDPPP =<< (getFirst . foldMap (First . extractZipperById (cp0^.maximalProjection))) x'trs
     x'tr <- listToMaybe x'trs
-    let r = map (_2 %~ (T.intercalate " " . tokensByRange pre . resolved2Range)) (retrieveResolved x'tr) 
+    let r = map (_2 %~ (T.intercalate " " . tokensByRange a0 . resolved2Range)) (retrieveResolved x'tr) 
     -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (txt,lmatknlst,pt,tagposs,synsets)))) $ return ()
     return (r == c^._3)
-    {- 
-    case c^._3._1 of
-      Subj   -> do -- let dp = fmap (\case SpecTP_DP dp -> headTextDP tagged dp; _ -> "") (cp ^.complement.specifier)  -- for the time being. ignore CP subject
-                   -- trace ("\ncheckTrace5:" ++ show dp) $ return ()
-                   -- trace ( x'tr) $ return ()
-                   -- trace ("\n" ++ T.unpack (T.intercalate "\n" (formatDetail (c^._1,c^._4,c^._5,c^._6,c^._7)))) $ return ()
-
-                   -- trace ("\n" ++ (T.unpack . T.intercalate "\n" . map formatX'Tree) x'tr) $ return ()
-                   -- return (dp == c ^._3._2)
-                   return False
-      Comp n -> do -- let comps = cp ^.complement.complement.complement
-                   -- comp <- comps ^? ix (n-1)
-                   -- let dp = fmap (compVPToHeadText tagged) comp
-                   -- return (dp == c ^._3._2)
-                   return False
-    -}
 
 
 

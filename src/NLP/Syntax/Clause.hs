@@ -15,13 +15,12 @@ module NLP.Syntax.Clause where
 
 import           Control.Applicative                    ((<|>))
 import           Control.Lens
-import           Control.Lens.Extras                    (is)
-import           Control.Monad                          ((<=<),(>=>),guard,void,when)
+import           Control.Monad                          ((<=<),guard)
 import           Control.Monad.Trans.Class              (lift)
 import           Control.Monad.Trans.Maybe              (MaybeT(..))
-import           Control.Monad.Trans.State              (State,execState,get,put,modify')
+import           Control.Monad.Trans.State              (State,get,put,modify')
 import           Data.Attribute                         (ahead)
-import           Data.Bifoldable                        (bifoldMap,biList)
+import           Data.Bifoldable                        (biList)
 import           Data.Bifunctor                         (second)
 import           Data.Bitraversable                     (bitraverse)
 import           Data.Foldable                          (toList)
@@ -34,7 +33,6 @@ import           Data.Monoid                            (Last(..))
 import           Data.Bitree
 import           Data.BitreeZipper
 import           Data.BitreeZipper.Util
-import           Data.ListZipper
 import           Data.Range                             (rangeTree)
 import           NLP.Type.PennTreebankII
 import qualified NLP.Type.PennTreebankII.Separated as N
@@ -44,14 +42,8 @@ import           NLP.Syntax.Noun                        (splitDP,mkPPFromZipper{
 import           NLP.Syntax.Preposition                 (checkEmptyPrep,checkTimePrep)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,mergeLeftELZ,mergeRightELZ,rootTag)
+import           NLP.Syntax.Util                        (isChunkAs,isPOSAs,rootTag)
 --
-import Debug.Trace
-import           Data.List (intercalate)
-import           Data.Monoid ((<>))
-import qualified Data.Text as T
-import NLP.Syntax.Format.Internal
-
 
 
 
@@ -85,7 +77,6 @@ complementCandidates vprop z_vp =
         -- topicalized CP
         c_frag = do v <- headVP vprop
                     z <- firstSiblingBy next (\x -> rootTag x == Left FRAG) v
-                    let rng = getRange (current z)
                     guard (rootTag (current z) == Left FRAG)
                     z' <- child1 z
                     guard (checkCompVPness (current z'))
@@ -128,10 +119,8 @@ complementsOfVerb :: forall (t :: [*]) (as :: [*]) . (t ~ (Lemma ': as)) =>
 complementsOfVerb tagged vprop z_vp =
   let (cs,mspec,dppps) = let (xs,mtop) = complementCandidates vprop z_vp
                              xs' = map xform xs ++
-                                   maybeToList (mtop >>= \top -> do
-                                     let rng_top = getRange (current top)
-                                         comp = mkDefCoindex (Left Moved)
-                                     return (comp,[]))
+                                   maybeToList (mtop >>= \_ -> do
+                                     return (mkDefCoindex (Left Moved),[]))
                              mspec' = mtop >>= \top -> do
                                         let rng_top = getRange (current top)
                                         return (mkDefCoindex (SpecCP_Topic (SpecTopicP_CP rng_top)))
@@ -223,7 +212,7 @@ constructCP tagged vprop = do
             (subj0,subs2) = identifySubject tagged s z_vp
             subj = fromMaybe subj0 $ do
                      dp <- subj0 ^? coidx_content._Right._Right._SpecTP_DP
-                     let dptr@(DPTree dp' _) = splitDP tagged (DPTree dp [])
+                     let DPTree dp' _ = splitDP tagged (DPTree dp [])
                      return ((coidx_content._Right._Right._SpecTP_DP .~ dp') subj0)
             verbp = mkVerbP rng_vp (simplifyVProp vprop) [] comps
             ppdps = subs ++ subs2
@@ -254,9 +243,9 @@ constructCP tagged vprop = do
                                                                         Just c -> C_WORD c
                                                        in (cmpmntzr,Nothing)
             in return (mkCP cphead rng_cp' cpspec adjs (mkTP rng_tp subj verbp),ppdps)
-          N.CL x -> return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),ppdps)
-          x      -> return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),ppdps)
-      x -> -- reduced relative clause
+          N.CL _ -> return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),ppdps)
+          _      -> return (mkCP C_PHI rng_tp Nothing adjs (mkTP rng_tp subj verbp),ppdps)
+      _ -> -- reduced relative clause
         let (comps,_,ppdps) = complementsOfVerb tagged vprop z_vp
             adjs  = allAdjunctCPOfVerb vprop
             verbp = mkVerbP rng_vp (simplifyVProp vprop) [] comps
@@ -291,45 +280,39 @@ identifyCPHierarchy tagged vps = fromMaybe [] (traverse (bitraverse tofull toful
 
 
 resolveCP :: X'Tree 'PH0 -> X'Tree 'PH0
-resolveCP x'tr = bimap f f x'tr
+resolveCP x'tr = bimap rf rf x'tr
   where
     x'map = biList x'tr
     --
-    f (rng,(CPCase cp)) = (rng,CPCase (replace cp))
-    f x                 = x
+    rf (rng,(CPCase cp)) = (rng,CPCase (replace cp))
+    rf x                 = x
     --
     replace :: CP 'PH0 -> CP 'PH0
     replace = replaceAdjunctCP . replaceCompVP
     --
-    resolve f (Right x)  = Right x
-    resolve f (Left rng) = case lookup rng x'map of
+    resolve _ (Right x)  = Right x
+    resolve h (Left rng) = case lookup rng x'map of
                              Nothing -> Left rng
-                             Just cpdppp -> case f cpdppp of
+                             Just cpdppp -> case h cpdppp of
                                               Nothing -> Left rng
                                               Just y  -> Right y
     --
     replaceCompVP cp =
-      let rng = cp^.maximalProjection
-          xs = cp^.complement.complement.complement
+      let xs = cp^.complement.complement.complement
           (as,xs') =  (partition f . map (coidx_content %~ second (resolve (Just . cpdpppToCompVP)))) xs
             where f x = fromMaybe False $ do
-                          cp <- x^?coidx_content._Right._Right._CompVP_CP
-                          (/= "that") <$> cp^?headX._C_WORD.to unLemma
+                          cp1 <- x^?coidx_content._Right._Right._CompVP_CP
+                          (/= "that") <$> cp1^?headX._C_WORD.to unLemma
           as' = mapMaybe f as
-            where f x = do cp <- x^?coidx_content._Right._Right._CompVP_CP
-                           return (Right (AdjunctCP_CP cp))
-          cp' = cp & (adjunct %~ (++as'))
-                   . (complement.complement.complement .~ xs')
-      in cp'
+            where f x = do cp1 <- x^?coidx_content._Right._Right._CompVP_CP
+                           return (Right (AdjunctCP_CP cp1))
+      in cp & (adjunct %~ (++as'))
+            . (complement.complement.complement .~ xs')
     --
     replaceAdjunctCP cp =
-      let rng = cp^.maximalProjection
-          xs = cp^.adjunct
+      let xs = cp^.adjunct
           xs' = map (resolve cpdpppToAdjunctCP) xs
-          cp' = cp & (adjunct .~ xs')
-      in cp'
-
-
+      in cp & (adjunct .~ xs')
 
 
 issueIndex :: State (X'TreeState p) Int
@@ -342,32 +325,6 @@ issueIndex = do
 updateTree :: X'Tree p -> State (X'TreeState p) ()
 updateTree tr = modify' (xts_tree .~ tr)
 
-
-{-
---
--- | rewrite X'Tree. Now it's focusing on modifier relation, but this should
---   be more generalized.
---
-rewriteX'TreeForModifier :: ((Range, CPDPPP) -> (Range, CPDPPP)) -> X'Zipper -> DetP -> MaybeT (State X'TreeState) ()
-rewriteX'TreeForModifier f w z = do
-  i <- (^.xts_nextIndex) <$> lift get
-  let dprng = z^.maximalProjection
-      -- rewrite X'Tree by modifier relation.
-  case extractZipperById dprng (toBitree w) of
-    Nothing -> do let newtr (PN y ys) = PN (dprng,DPCase z) [PN (f y) ys]
-                      newtr (PL y)    = PN (dprng,DPCase z) [PL (f y)]
-                      w'' = replaceFocusTree newtr w
-                  lift (put (XTS i (toBitree w'')))
-    Just _  -> do let otr = case current w of
-                              PN y ys -> PN (f y) ys
-                              PL y    -> PL (f y)
-                  lift . put . XTS i =<< hoistMaybe (removeFocusTree w)
-                  w' <- MaybeT (extractZipperById dprng . (^.xts_tree) <$> get)
-                  let newtr (PN y ys) = PN y (ys ++ [otr])
-                      newtr (PL y)    = PN y [otr]
-                      w'' =replaceFocusTree newtr w'
-                  lift (put (XTS i (toBitree w'')))
--}
 
 
 retrieveWCP :: Range -> MaybeT (State (X'TreeState 'PH0)) (X'Zipper 'PH0,CP 'PH0)
@@ -525,8 +482,8 @@ resolvePRO x'tr cp = fromMaybe cp $ do
 bindingPRO :: X'Tree 'PH1 -> X'Tree 'PH1
 bindingPRO x'tr = bimap f f x'tr
  where f x = case x^._2 of
-               CPCase cp -> (_2._CPCase %~ resolvePRO x'tr) x
-               _ -> x
+               CPCase _ -> (_2._CPCase %~ resolvePRO x'tr) x
+               _        -> x
 
 
 
@@ -537,164 +494,9 @@ mkX'TreePH1 x'tr = bimap f f x'tr
     f (rng,x) = (rng,mkCPDPPPPH1 x)
 
 
-{-
-
-whMovement :: PreAnalysis (Lemma ': as)
-           -> (X'Zipper 'PH0,CP 'PH0)
-           -> State (X'TreeState 'PH0) (Coindex (Either TraceType (Either Range (SpecTP 'PH0))))
-whMovement tagged (w,cp) = do
-  i <- (^.xts_nextIndex) <$> get
-  -- letter z denotes zipper for PennTree, w denotes zipper for X'Tree
-  let rng_cp = cp^.maximalProjection
-      spec = cp^.complement.specifier
-  -- whMovement process starts with cheking trace in subject
-  case spec^.coidx_content of
-    {- Left c -- (LZ ps c _ns) ->
-      -- with trace in subject
-      -- check subject for relative pronoun
-      case c of -}
-    Left NULL -> do
-      -- ignore ns.
-      -- let xspro = LZ ps PRO []
-      fmap (fromMaybe (mkDefCoindex (Left PRO))) . runMaybeT $ do
-        -- check subject position for relative pronoun
-        z_cp <- hoistMaybe $ listToMaybe (extractZipperByRange rng_cp (tagged^.pennTree))  -- this can be dangerous
-        ((do -- ordinary relative clause
-             z_dp <- hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
-             let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_dp) [])  -- need to rewrite
-             -- rewriteX'TreeForModifier id w dp'
-             i <- lift issueIndex
-             return (mkCoindex i (Left Moved)))              -- (SpecTP_DP dp')
-         <|>
-         (do -- free relative clause
-             rng_wh <- hoistMaybe (cp^?specifier._Just._SpecCP_WH)
-             z_wh <- hoistMaybe (listToMaybe (extractZipperByRange rng_wh (tagged^.pennTree)))
-             let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_wh) [])   -- need to rewrite
-             w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng_cp w dp')
-             i <- lift issueIndex
-             lift (updateTree (toBitree w_dom'))
-             (w',_) <- retrieveWCP rng_cp
-             -- rewriteX'TreeForModifier id w' dp'
-             return (mkCoindex i (Left Moved)))) --  (SpecTP_DP dp')
-    Left _    -> return spec
-    Right _   -> do
-      -- without trace in subject
-      -- check object for relative pronoun
-      void . runMaybeT $ do
-        z_cp <- hoistMaybe $ listToMaybe (extractZipperByRange rng_cp (tagged^.pennTree))  -- this can be dangerous
-        ((do -- ordinary relative clause
-             z_dp <- hoistMaybe (firstSiblingBy prev (isChunkAs NP) z_cp)
-             let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_dp) [])
-             let -- adjust function for complement with relative pronoun resolution
-                 -- rf0 = _2._CPCase.complement.complement.complement
-                 --         %~ ((mkDefCoindex (Left Moved)):)   -- CompVP_DP dp'
-             -- rewrite X'Tree for modifier relation.
-             -- rewriteX'TreeForModifier rf0 w dp')
-             return ())
-         <|>
-         (do -- free relative clause
-             rng_wh <- hoistMaybe (cp^?specifier._Just._SpecCP_WH)
-             z_wh <- hoistMaybe (listToMaybe (extractZipperByRange rng_wh (tagged^.pennTree)))
-             let DPTree dp' _ = splitDP tagged (DPTree (mkOrdDP z_wh) [])
-             w_dom' <- hoistMaybe (rewriteX'TreeForFreeWH rng_cp w dp')
-             lift (put (XTS i (toBitree w_dom')))
-             (w',_) <- retrieveWCP rng_cp
-             let -- adjust function for complement with relative pronoun resolution
-                 -- rf0 = _2._CPCase.complement.complement.complement
-                 --        %~ ((mkDefCoindex (Left Moved)):)  --  CompVP_DP dp'
-             -- rewriteX'TreeForModifier rf0 w' dp'))
-             return ()))
-      return spec
 
 
--}
 
-{-
-resolvePRO :: PreAnalysis (Lemma ': as)
-           -> (X'Zipper 'PH0,CP 'PH0)
-           -> MaybeT (State (X'TreeState 'PH0)) (Coindex (Either TraceType (Either Range (SpecTP 'PH0))))
-resolvePRO tagged (z,cp) = do
-  -- XTS i x'tr <- lift get
-  let spec = cp^.complement.specifier
-  case spec^.coidx_content of
-    Left NULL -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
-                      let rng_cp' = cp'^.maximalProjection
-                      -- Coindex exs' x' <- lift (resolveDP tagged rng_cp')
-                      i <- lift issueIndex
-                      -- lift (put (XTS (i+1) x'tr))
-                      return (mkCoindex i (Left PRO)))
-                  <|>
-                  return (mkDefCoindex (Left PRO)))
-    Left PRO  -> ((do cp'  <- hoistMaybe ((^? _CPCase) . currentCPDPPP =<< parent z)
-                      let rng_cp' = cp'^.maximalProjection
-                      -- Coindex exs' x' <- lift (resolveDP tagged rng_cp')
-                      return (mkDefCoindex (Left PRO))) -- (mergeLeftELZ (Left xs) exs') x'
-                  <|>
-                  return (mkDefCoindex (Left NULL)))
-    _   -> return spec
-
-
---
--- | resolve passive DP-movement. this is ad hoc yet.
---
-resolveVPComp :: Range
-              -> Coindex (Either TraceType (Either Range (SpecTP 'PH0)))
-              -> MaybeT (State (X'TreeState 'PH0)) (Coindex (Either TraceType (Either Range (SpecTP 'PH0))))
-resolveVPComp rng spec = do
-  i <- (^.xts_nextIndex) <$> lift get
-  (w,cp) <- retrieveWCP rng
-  let verbp = cp^.complement.complement
-  case verbp^.headX.vp_voice of
-    Active -> return spec
-    Passive -> do
-      let cs = verbp^.complement
-      case cs of
-        [] -> trace "No complements?" $ return spec
-        c:rest -> do
-          let r :: Maybe (CompVP 'PH0)
-              r = (\case SpecTP_DP dp -> Just (CompVP_DP dp)) =<< spec^?coidx_content._Right._Right  -- ignore CP case for the time being.
-              c' = c -- (mergeLeftELZ (c^.trChain) (spec^.trChain)) r
-              rf = _2._CPCase.complement.complement.complement .~ (c':rest)
-              w' = replaceFocusItem rf rf w
-          lift (put (XTS i (toBitree w')))
-          return spec --  -- (mergeRightELZ (c^.trChain) (spec^.trChain)) (spec^.coidx_content))
--}
-
---
--- | This is the final step to resolve silent pronoun. After CP hierarchy structure is identified,
---   silent pronoun should be linked with the subject DP which c-commands the current CP the subject
---   of TP of which is marked as silent pronoun.
---
-{-
-resolveDP :: PreAnalysis (Lemma ': as)
-          -> Range
-          -> State (X'TreeState 'PH0) (Coindex (Either TraceType (Either Range (SpecTP 'PH0))))
-resolveDP tagged rng = fmap (fromMaybe emptyCoindex) . runMaybeT $ do
-  (w,cp) <- retrieveWCP rng
-  if is _Just (cp^.specifier)  -- relative clause
-    then resolveVPComp rng =<< lift (whMovement tagged (w,cp))
-    else resolveVPComp rng =<< resolvePRO tagged (w,cp)
-
--}
-
-{-
---
--- | Resolve unbound CP argument to bound CP argument.
---
--}
-
-{-
-bindingSpec :: Range
-            -> Coindex (Either TraceType (Either Range (SpecTP 'PH0)))
-            -> MaybeT (State (X'TreeState 'PH0)) () -- X'Zipper
-bindingSpec rng spec = do
-  XTS i x'tr <- lift get
-  z <- hoistMaybe (extractZipperById rng x'tr)
-  let rf = _2._CPCase.complement.specifier .~ spec
-      z' = replaceFocusItem rf rf z
-  lift (put (XTS i (toBitree z')))
-  -- return z'
--}
 {-
 -- consider passive case only now for the time being.
 connectRaisedDP :: Range -> MaybeT (State (X'TreeState 'PH0)) () -- X'Zipper
@@ -713,45 +515,3 @@ connectRaisedDP rng = do
     lift (put (XTS i (toBitree w')))
 -}
 
--- I think we should change the name of these bindingAnalysis.. functions.
-
-{-
---
--- | This is the final step to bind inter-clause trace chain
---
-bindingAnalysis :: PreAnalysis (Lemma ': as) -> X'TreeState 'PH0 -> X'TreeState 'PH0
-bindingAnalysis tagged = rewriteTree $ \rng -> lift (resolveDP tagged rng) >>= bindingSpec rng
--}
-
-{-
---
--- |
---
-bindingAnalysisRaising :: X'TreeState 'PH0 -> X'TreeState 'PH0
-bindingAnalysisRaising = rewriteTree (\rng -> connectRaisedDP rng <|> return ())
--}
-
-{- 
---
--- | This is a generic tree-rewriting operation.
---   It assumes range index is not changed after each operation
---
-rewriteTree :: (Range -> MaybeT (State (X'TreeState 'PH0)) ()) -> X'TreeState 'PH0 -> X'TreeState 'PH0
-rewriteTree action xts = execState (go rng0) xts
-  where getrng = fst . getRoot1 . current
-        rng0 = (either fst fst . getRoot . (^.xts_tree)) xts
-        go rng = void . runMaybeT $ do
-                   action rng
-                   w <- hoistMaybe . extractZipperById rng . (^.xts_tree) =<< lift get
-                   (((do
-                        w' <- hoistMaybe (child1 w)  -- depth first
-                        lift (go (getrng w')))
-                     <|> return ())
-                    >>
-                    ((do
-                         w'' <- hoistMaybe (next w)
-                         lift (go (getrng w'')))
-                     <|> return ()))
-
-
--}

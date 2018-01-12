@@ -5,16 +5,14 @@
 
 module NLP.Syntax.Format.Internal where
 
-import           Control.Lens                       ((^.),(^..),(^?),_Just,_Right,to)
+import           Control.Lens                       ((^.),(^..),(^?),_Just,to)
 import           Data.Bifunctor                     (bimap)
-import           Data.Maybe                         (fromMaybe)
 import           Data.Monoid                        ((<>))
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
 import           Text.Printf                        (printf)
 --
 import           Data.Bitree
-import           Data.ListZipper                    (ListZipper(LZ))
 import           Data.Range                         (Range)
 import           NLP.Type.PennTreebankII            (Lemma(..))
 import           Text.Format.Tree
@@ -100,77 +98,27 @@ formatCoindexOnly :: (a -> Text) -> Coindex a -> Text
 formatCoindexOnly f (Coindex mi e) = f e <> maybe "" (\i -> "_" <> T.pack (show i)) mi
 
 formatCoindex :: (a -> Text) -> Coindex (Either TraceType a) -> Text
-formatCoindex f x@(Coindex mi e) = formatCoindexOnly (either fmt f) x
+formatCoindex f x@(Coindex _ _) = formatCoindexOnly (either fmt f) x
   where
     fmt NULL  = "NUL"
     fmt PRO   = "PRO"
     fmt Moved = "t"
     fmt WHPRO = "WHP"
 
-{-
-formatTraceChain :: (a -> Text) -> TraceChain a -> Text
-formatTraceChain f (TraceChain xs0 x) =
-    case xs0 of
-      Left (LZ ps c ns) -> fmtLst (reverse ps) <> "[" <> fmt c <> "] -> " <> fmtLst ns <> fmtResolved x
-      Right xs          -> fmtLst xs <> "[" <> fmtResolved x <> "]"
-  where
-    fmt NULL      = "*NUL*"
-    fmt SilentPRO = "*PRO*"
-    fmt Moved     = "*MOV*"
-    fmt WHPRO     = "*WHP*"
-    --
-    fmtLst = T.concat . map ((<> " -> ") . fmt)
-    --
-    fmtResolved = maybe "NOT_RESOLVED" f
--}
-
-{-
-formatCP :: CP 'PH0 -> Text
-formatCP cp =
-  let rng = cp^.maximalProjection
-  in "CP" <> showRange rng <>
-     "[C:" <> formatComplementizer (cp^.headX) <>
-     " spec: " <> maybe "" formatSpecCP (cp^.specifier) <>
-     " (TP: spec:" <> formatCoindex (either (T.pack.show) formatSpecTP) (cp^.complement.specifier) <>
-     " (VP: comp:" <>
-     T.intercalate "," (cp^..complement.complement.complement.traverse.coidx_content._Right.to (either (T.pack.show) (formatCompVP SPH0))) <>
-     "))]"
--}
 
 formatX'Tree :: SPhase p -> X'Tree p -> Text
 formatX'Tree s tr = formatBitree fmt tr
-  where
-        fmt (rng, CPCase x) = formatCP s x
-        fmt (_  , DPCase x) = formatDP x
-        fmt (_  , PPCase x) = formatPP x
-        fmt (_  , APCase x) = formatAP x
-
-{-
-formatX'Tree SPH1 tr = formatBitree fmt tr
-  where
-        fmt (rng, CPCase x) = formatCP SPH1 x
-        fmt (_  , DPCase x) = formatDP x
-        fmt (_  , PPCase x) = formatPP x
-        fmt (_  , APCase x) = formatAP x
--}
-
+  where fmt (_, CPCase x) = formatCP s x
+        fmt (_, DPCase x) = formatDP x
+        fmt (_, PPCase x) = formatPP x
+        fmt (_, APCase x) = formatAP x
 
 
 formatSpecCP :: SpecCP -> Text
 formatSpecCP SpecCP_WHPHI     = "WHφ"
 formatSpecCP (SpecCP_WH rng)  = "WH" <> T.pack (show rng)
-formatSpecCP (SpecCP_Topic (SpecTopicP_CP rng)) = "Topic:CP" <> T.pack (show rng) -- (c^.maximalProjection)
---formatSpecCP (SpecCP_Topic (Left c)) = "Topic:Unresolved" <> T.pack (show c)
-    -- formatCoindex (T.pack.show.either id (compVPToRange SPH0)) c
--- formatSpecCP (SpecCP_Topic c) = "Topic:CP" <> T.pack (show c) -- formatCoindex (T.pack.show.compVPToRange SPH1) c
+formatSpecCP (SpecCP_Topic (SpecTopicP_CP rng)) = "Topic:CP" <> T.pack (show rng)
 
-
-{-
-formatSpecCP1 :: SpecCP 'PH1 -> Text
-formatSpecCP1 SpecCP_WHPHI = "WHφ"
-formatSpecCP1 (SpecCP_WH rng) = "WH" <> T.pack (show rng)
-formatSpecCP1 (SpecCP_Topic c) = "Topic" <> formatCoindex (T.pack.show.compVPToRange SPH1) c
--}
 
 formatCP :: SPhase p -> CP p -> Text
 formatCP p cp =
@@ -193,13 +141,3 @@ formatCP p cp =
         SPH1 -> T.intercalate "," (cp^..complement.complement.complement.traverse.to (formatCoindex (formatCompVP SPH1)))) <>
      "))]"
 
-{-
-formatCP SPH1 cp =
-  let rng = cp^.maximalProjection
-  in "CP" <> showRange rng <>
-     "[C:" <> formatComplementizer (cp^.headX) <>
-     " spec: " <> maybe "" (formatSpecCP SPH1) (cp^.specifier) <>
-     " (TP: spec:" <> formatCoindex formatSpecTP (cp^.complement.specifier) <>
-     " (VP: comp:" <> T.intercalate "," (cp^..complement.complement.complement.traverse.coidx_content._Right.to (formatCompVP SPH1)) <>
-     "))]"
--}

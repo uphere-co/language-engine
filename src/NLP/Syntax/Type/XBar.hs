@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Rank2Types        #-}
 {-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeFamilies      #-}
 
@@ -11,8 +12,7 @@ module NLP.Syntax.Type.XBar
 , module NLP.Syntax.Type.XBar
 ) where
 
-import           Control.Error.Safe                 (rightMay)
-import           Control.Lens                       ((^.),(^?),(.~),_1,_2,_Just,_Right,to)
+import           Control.Lens                       (Prism',(^.),(^?),(.~),_1,_2,_Just,to)
 import           Data.Foldable                      (toList)
 import           Data.Maybe                         (fromMaybe,mapMaybe,maybeToList)
 import           Data.Text                          (Text)
@@ -32,7 +32,7 @@ currentCPDPPP :: X'Zipper p -> CPDPPP p
 currentCPDPPP = snd . getRoot1 . current
 
 
-
+cpdpppFromX'Tree :: X'Tree p -> Range -> Prism' (CPDPPP p) xp -> Maybe xp
 cpdpppFromX'Tree x'tr rng prm
   = (^? prm) . currentCPDPPP =<< extractZipperById rng x'tr
 
@@ -176,11 +176,12 @@ mkAdjunctCPPH1 :: AdjunctCP 'PH0 -> AdjunctCP 'PH1
 mkAdjunctCPPH1 (AdjunctCP_CP cp) = AdjunctCP_CP (cp^.maximalProjection)
 
 
-
+mkCompPPPH1 :: CompPP 'PH0 -> CompPP 'PH1
 mkCompPPPH1 (CompPP_DP dp) = CompPP_DP (dp^.maximalProjection)
 mkCompPPPH1 (CompPP_Gerund rng) = CompPP_Gerund rng
 
 
+mkAdjunctVPPH1 :: AdjunctVP 'PH0 -> AdjunctVP 'PH1
 mkAdjunctVPPH1 (AdjunctVP_PP pp) = AdjunctVP_PP (pp^.maximalProjection)
 
 
@@ -210,14 +211,14 @@ mkTPPH1 tp = XP { _headX = _headX tp
 
 
 
-
+mkCompVPPH1 :: CompVP 'PH0 -> CompVP 'PH1
 mkCompVPPH1 (CompVP_CP cp) = CompVP_CP (cp^.maximalProjection)
 mkCompVPPH1 (CompVP_DP dp) = CompVP_DP (dp^.maximalProjection)
 mkCompVPPH1 (CompVP_PP pp) = CompVP_PP (pp^.maximalProjection)
 mkCompVPPH1 (CompVP_AP ap) = CompVP_AP (ap^.maximalProjection)
 
 
-
+mkNPPH1 :: NounP 'PH0 -> NounP 'PH1
 mkNPPH1 np = XP { _headX = _headX np
                 , _maximalProjection = _maximalProjection np
                 , _specifier = _specifier np
@@ -225,6 +226,8 @@ mkNPPH1 np = XP { _headX = _headX np
                 , _complement = _complement np
                 }
 
+
+mkDPPH1 :: DetP 'PH0 -> DetP 'PH1
 mkDPPH1 dp = XP { _headX = _headX dp
                 , _maximalProjection = _maximalProjection dp
                 , _specifier = _specifier dp
@@ -242,7 +245,6 @@ mkAPPH1 ap = XP { _headX = _headX ap
                 }
 
 
-
 mkPPPH1 :: PP 'PH0 -> PP 'PH1
 mkPPPH1 pp = XP { _headX = _headX pp
                 , _maximalProjection = _maximalProjection pp
@@ -250,7 +252,6 @@ mkPPPH1 pp = XP { _headX = _headX pp
                 , _adjunct = _adjunct pp
                 , _complement = mkCompPPPH1 (_complement pp)
                 }
-
 
 
 mkCPPH1 :: CP 'PH0 -> CP 'PH1
@@ -262,6 +263,7 @@ mkCPPH1 cp = XP { _headX = _headX cp
                 }
 
 
+mkCPDPPPPH1 :: CPDPPP 'PH0 -> CPDPPP 'PH1
 mkCPDPPPPH1 (CPCase cp) = CPCase (mkCPPH1 cp)
 mkCPDPPPPH1 (DPCase dp) = DPCase (mkDPPH1 dp)
 mkCPDPPPPH1 (PPCase pp) = PPCase (mkPPPH1 pp)

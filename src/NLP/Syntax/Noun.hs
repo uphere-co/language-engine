@@ -51,9 +51,6 @@ import           NLP.Syntax.Type.XBar     (Zipper,SplitType(..),MarkType(..),Pha
 import           NLP.Syntax.Util          (beginEndToRange,isChunkAs,isPOSAs,isLemmaAs,intLemma
                                           ,rootTag)
 --
-import NLP.Syntax.Format.Internal
-import Debug.Trace
-
 
 
 mkPPFromZipper :: PreAnalysis (Lemma ': as) -> Zipper (Lemma ': as) -> Maybe (PPTree 'PH0)
