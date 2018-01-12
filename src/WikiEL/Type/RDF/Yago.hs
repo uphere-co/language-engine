@@ -6,8 +6,6 @@ module WikiEL.Type.RDF.Yago where
 import           Data.Text                             (Text)
 import           Data.Binary                           (Binary)
 import           GHC.Generics                          (Generic)
-import qualified Data.ByteString.Lazy.Char8      as BL
-
 
 data YagoObject = YagoID        Text
                 | YagoRDFverb   Text

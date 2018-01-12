@@ -1,7 +1,7 @@
 module WikiEL.Misc where
 
 import qualified Data.Vector                   as V
-import           Data.Vector                           (Vector,toList,fromList,ifoldr,foldl')
+import           Data.Vector                           (Vector)
 --
 import           WikiEL.Type                           (IRange(..),RelativePosition(..))
 
@@ -19,8 +19,10 @@ relativePos (IRange lbeg lend) (IRange rbeg rend)
 
 untilNoOverlap :: (a->RelativePosition) -> [a] -> [a]
 untilNoOverlap _ [] = []
-untilNoOverlap f ranges@(r:_) | LbeforeR == f r = ranges
-untilNoOverlap f ranges@(_:rs) = untilNoOverlap f rs
+untilNoOverlap f ranges@(r:rs) | LbeforeR == f r = ranges
+                               | otherwise       = untilNoOverlap f rs
+
+-- untilNoOverlap f (_:rs) = untilNoOverlap f rs
 
 untilOverlapOrNo :: (a->RelativePosition) -> [a] -> [a]
 untilOverlapOrNo _ [] = []

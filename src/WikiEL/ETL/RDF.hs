@@ -13,7 +13,7 @@ module WikiEL.ETL.RDF
 import           Data.Text                             (Text)
 import           Data.Attoparsec.Text                  (parseOnly)
 import qualified Data.Either                     as E
-
+--
 import           WikiEL.Type.RDF.Wikidata
 import           WikiEL.Type.RDF.Yago
 import           WikiEL.ETL.RDF.Wikidata
@@ -34,4 +34,5 @@ readlineYAGO = parseOnly parserRDFrowInTSV
 readlineWikidata :: Text -> Either String (TurtleRelation, TurtleState)
 readlineWikidata = parseRDFline parserWikidataRdfRelation . splitTripleWithState
 
+mapParsed :: (a -> Either s b) -> [a] -> [b]
 mapParsed parser rows = E.rights (map parser rows)

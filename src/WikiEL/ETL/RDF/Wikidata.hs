@@ -19,6 +19,7 @@ import           WikiEL.Type.RDF.Wikidata
 -}
 
 parserWikiAlias,parserWikiTypedValue,parserWikiTextValue,parserURLObject :: Parser WikidataObject
+
 parserWikiAlias = parserObject2 "\"" "\"@" "" f
   where 
     f alias country | country == "en" = Alias alias
@@ -27,8 +28,11 @@ parserWikiAlias = parserObject2 "\"" "\"@" "" f
 parserWikiTypedValue = parserTypedValue f
   where
     f text typeTag = TypedValue typeTag text
+
 parserWikiTextValue = parserObject "\"" "\"" TextValue
+
 parserURLObject = parserObject "<" ">" URLObject
+
 
 parserWikiNamedSpaceObject, parserWikiUnknownObject :: Parser WikidataObject
 parserWikiNamedSpaceObject = do
@@ -48,6 +52,7 @@ wikidataObject = choice [ parserWikiAlias
                         , parserWikiUnknownObject
                         ]
 
+wikidataSep :: Parser ()
 wikidataSep    = skipWhile C.isSpace 
 --wikidataSep =  skipMany1 (skip C.isSpace)
 
@@ -91,11 +96,11 @@ splitTripleWithState line = g row nextState
     nextState = case input of
       "" -> Left "Blank line."
       _  -> f (T.last input)
-    g row (Right state) = Right (row, state)
+    g r (Right state) = Right (r, state)
     g _ (Left msg) = Left msg
 
 parseRDFline :: Parser TurtleRelation -> Either String (Text, TurtleState) -> Either String (TurtleRelation, TurtleState)
-parseRDFline parser (Left msg) = Left msg
+parseRDFline _parser (Left msg) = Left msg
 parseRDFline parser (Right (line, state)) = 
   case parseOnly parser line of
     (Right rel) -> Right (rel, state)
@@ -106,14 +111,16 @@ fromRight :: Either a b -> b
 fromRight (Right x) = x
 fromRight (Left _)  = error "Got something Left."
 
+
 type ParsingState = (TurtleState, WikidataObject, WikidataObject)
+
 initState :: ParsingState
 initState = (End, dummy,dummy)
   where dummy = fromRight (parseOnly wikidataObject "_DUMMY_")
 
 fillMissingSV :: ParsingState -> (TurtleRelation,TurtleState) -> (ParsingState, Either String TurtleRelation)
 fillMissingSV (End, _,_)   (RelationSVO s' v' o', state') = ((state', s',v'), Right (RelationSVO s' v' o'))
-fillMissingSV (Semicolon, s,v) (RelationVO v' o', state') = ((state', s, v'), Right (RelationSVO s v' o'))
+fillMissingSV (Semicolon, s,_v) (RelationVO v' o', state') = ((state', s, v'), Right (RelationSVO s v' o'))
 fillMissingSV (Comma, s,v)     (RelationO  o',    state') = ((state', s, v),  Right (RelationSVO s v o'))
 fillMissingSV x _ = (initState, Left ("Errors in filling missing SVO : " ++ show x))
 

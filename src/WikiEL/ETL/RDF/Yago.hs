@@ -43,10 +43,10 @@ parserYAGOnonEnWikiAlias = parserObject2 "\"" "\"@" "" f
 parserYAGOwikiTitle :: Parser YagoObject
 parserYAGOwikiTitle = do
   char '<'
-  fst <- satisfy (not . C.isLower)
-  rest <- takeWhile1 (/='>')
+  x <- satisfy (not . C.isLower)
+  xs <- takeWhile1 (/='>')
   char '>'
-  let title = T.cons fst rest
+  let title = T.cons x xs
   return (YagoWikiTitle title)
 
 --Title by international wikis, except English one.
@@ -111,6 +111,7 @@ parserRDF3colRowInTSV = do
   ssep
   return (nullID, subj, verb, obj)
 
+parserRDFrowInTSV :: Parser YagoRdfTriple
 parserRDFrowInTSV = choice [ parserRDF4colRowInTSV
                            , parserRDF3colRowInTSV]
 

@@ -31,6 +31,5 @@ readBlocks2 handle fBlock state = do
 readlines :: FilePath -> IO [Text]
 readlines filepath = do
   content <- T.IO.readFile filepath
-  let
-    lines = T.lines content
-  return lines
+  return (T.lines content)
+

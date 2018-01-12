@@ -21,33 +21,30 @@ module WikiEL
   , ItemID
   ) where
 
-import           Data.Text                                    (Text)  
+import           Data.Text                                  (Text)  
 import qualified Data.Vector                        as V
 --
 import qualified Graph                              as G
 import qualified Graph.Internal.Hash                as H
+import           NLP.Type.PennTreebankII                    (POSTag(..))
+import           NLP.Type.NamedEntity                       (NamedEntityClass,NamedEntityFrag(..))
 --
-import           NLP.Type.PennTreebankII                      (POSTag(..))
-import           NLP.Type.NamedEntity                         (NamedEntityClass,NamedEntityFrag(..))
---
-import           WikiEL.Type                                  (NodeNames(..),EntityMention,ItemClass,NameUIDTable,SortedGraph(..),WikiuidNETag)
-import           WikiEL.Type.Wikidata                         (ItemID)
-import           WikiEL.WikiNamedEntityTagger                 (resolveNEs,getStanfordNEs,namedEntityAnnotator)
-import           WikiEL.WikiEntityTagger                      (loadWETagger)
-import           WikiEL.EntityLinking                         (entityLinkings,buildEntityMentions)
-import qualified WikiEL.WikiEntityTagger            as WET
+import qualified WikiEL.EntityDisambiguation        as ED
+import           WikiEL.EntityLinking                       (entityLinkings,buildEntityMentions)
 import qualified WikiEL.EntityLinking               as EL
 import qualified WikiEL.EntityMentionPruning        as EMP
-import qualified WikiEL.ETL.Util                    as U
 import qualified WikiEL.ETL.LoadData                as LD
-import qualified WikiEL.WikiEntityClass             as WEC
-import qualified WikiEL.EntityDisambiguation        as ED
-
+import           WikiEL.Type                                (EntityMention,ItemClass,NameUIDTable,SortedGraph(..),WikiuidNETag)
 import           WikiEL.Type.FileFormat
+
+import           WikiEL.Type.Wikidata                       (ItemID)
+import qualified WikiEL.WikiEntityClass             as WEC
+import qualified WikiEL.WikiEntityTagger            as WET
+import           WikiEL.WikiNamedEntityTagger               (resolveNEs,getStanfordNEs,namedEntityAnnotator)
 import           WikiEL.WordNet -- for WordNet synset lookup. 
 
 
-{-|
+{- |
 This is a module for Wikipedia entity linking. 
 Two high-level functions for client uses.
 
@@ -71,15 +68,15 @@ extractEntityMentions wikiTable uidNEtags neTokens = linked_mentions
     wiki_entities  = namedEntityAnnotator wikiTable stanford_nefs
     wiki_named_entities = resolveNEs uidNEtags named_entities wiki_entities
 
-    words    = V.fromList (map fst neTokens)
-    mentions = buildEntityMentions words wiki_named_entities
+    ws    = V.fromList (map fst neTokens)
+    mentions = buildEntityMentions ws wiki_named_entities
     linked_mentions = entityLinkings mentions
 
 extractFilteredEntityMentions :: NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass, POSTag)] -> [EntityMention Text]
 extractFilteredEntityMentions wikiTable uidNEtags tokens = filtered_mentions
   where    
-    neTokens = map (\(x,y,z)->(x,y)) tokens
-    poss     = map (\(x,y,z)->z)     tokens
+    neTokens = map (\(x,y,_)->(x,y)) tokens
+    poss     = map (\(_,_,z)->z)     tokens
     all_linked_mentions = extractEntityMentions wikiTable uidNEtags neTokens
     filtered_mentions   = EMP.filterEMbyPOS (V.fromList poss) all_linked_mentions
 
@@ -104,7 +101,7 @@ loadFEMtagger wikiNameFile uidTagFiles = do
 
 -- |disambiguateMentions : a high level function for client use to perform the entity mention disambiguation.
 disambiguateMentions :: Eq a => SortedGraph -> WikiuidNETag -> ED.NameMappings -> [EntityMention a] -> [EntityMention a]
-disambiguateMentions (SortedGraph sorted names) uidTag titles mentions = filter EL.hasResolvedUID outputs
+disambiguateMentions (SortedGraph sorted _names) uidTag titles mentions = filter EL.hasResolvedUID outputs
   where
     distance_cut = 1
     score_cut    = 3
