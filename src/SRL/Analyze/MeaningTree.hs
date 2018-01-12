@@ -8,16 +8,13 @@ module SRL.Analyze.MeaningTree where
 
 import           Control.Applicative       ((<|>))
 import           Control.Lens
-import           Control.Lens.Extras
 import           Control.Monad             (guard)
-import           Data.List
 import qualified Data.Text             as T
 import           Control.Monad             (mzero)
 import           Control.Monad.Loops       (unfoldM)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Trans.State (State,evalState,get,put,modify')
-import           Data.Array                ((!))
 import           Data.Graph                (Graph,Vertex,topSort)
 import           Data.List                 (delete,find,elem)
 import           Data.Maybe                (catMaybes,fromMaybe,listToMaybe
@@ -28,16 +25,13 @@ import           Data.Text                 (Text)
 import           Lexicon.Mapping.Causation (causeDualMap,cm_causativeFrame,cm_externalAgent)
 import           Lexicon.Type              (FNFrame(..),FNFrameElement(..),RoleInstance,SenseID)
 import           NLP.Semantics.Type        (MeaningRoleContent(..),MeaningRole(..),MeaningTree(..)
-                                           ,FrameElement,PrepOr(..))
+                                           ,PrepOr(..))
 import           NLP.Syntax.Clause         (hoistMaybe) -- this should be moved somewhere
-import           NLP.Syntax.Type.Verb      (vp_lemma,vp_negation)
-import           NLP.Syntax.Type.XBar      (X'Tree)
+import           NLP.Syntax.Type.Verb      (vp_negation)
 import           NLP.Type.PennTreebankII   (Lemma(..))
--- import           NLP.Shared.Type
 import           SRL.Analyze.Type
 import           SRL.Statistics
 --
-import Debug.Trace
 
 
 -- type VertexTriple = (Vertex, Vertex, [Vertex])
@@ -117,7 +111,7 @@ findLabel mvs i = do
   case v of
     MGEntity {..}           -> Just (_mv_text,_mv_head_range)
     MGPredicate {..}        -> case _mv_pred_info of
-                                 PredVerb idiom _ rng vrb -> Just (T.intercalate " " idiom,Just rng)
+                                 PredVerb idiom _ rng _vrb -> Just (T.intercalate " " idiom,Just rng)
                                  PredPrep p           -> Just (p,Nothing)
                                  PredNominalized n rng _  -> Just (unLemma n,Just rng)
                                  PredAppos            -> Just ("",Nothing)
@@ -159,10 +153,10 @@ constructMeaningTree :: ([RoleInstance],MeaningGraph,Graph)
                      -> Vertex
                      -> MaybeT (State [Vertex]) MeaningTree
 constructMeaningTree (rolemap,mg,grph) frmid = do
-  let chldrn = grph ! frmid
+  let -- chldrn = grph ! frmid
       chldrn0 = forwardLinks (mg^.mg_edges) frmid
   v <- hoistMaybe $ findVertex (mg^.mg_vertices) frmid
-  (vid,frmtxt,msense,mneg) <-
+  (vid,frmtxt,_msense,mneg) <-
     case v of
       MGEntity    {..} -> mzero
       MGPredicate {..} ->

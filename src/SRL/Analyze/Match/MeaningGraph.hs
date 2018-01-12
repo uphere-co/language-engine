@@ -9,25 +9,21 @@ module SRL.Analyze.Match.MeaningGraph where
 import           Control.Applicative          ((<|>))
 import           Control.Lens
 import           Control.Lens.Extras          (is)
-import           Control.Monad                (guard)
 import           Data.Bifoldable              (biList)
-import           Data.Bifunctor               (second)
 import           Data.Function                (on)
 import qualified Data.HashMap.Strict    as HM
-import           Data.List                    (find,groupBy,sortBy,intercalate)
-import           Data.Maybe                   (fromJust,fromMaybe,mapMaybe,maybeToList,listToMaybe)
+import           Data.List                    (find,groupBy,sortBy)
+import           Data.Maybe                   (fromMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                  ((<>))
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
 --
 import           Data.Bitree                  (getRoot1)
-import           Data.BitreeZipper            (current)
 import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
 import           Lexicon.Type
 import           NLP.Syntax.Type.Resolve      (Resolved(..),Referent(..),referent2CompVP,referent2Trace)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util              (GetIntLemma(..),intLemma0)
 import           NLP.Type.PennTreebankII
 --
 import           SRL.Analyze.Match.Entity
@@ -40,28 +36,20 @@ import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..)
                                               ,VertexID(..)
                                               ,VertexMap(..)
                                               ,vm_rangeToIndex
-                                              -- ,vm_hnrangeToIndex
                                               ,vm_rangeDependency
                                               ,vm_headRangeToFullRange
                                               ,analyze_framedb, isEntity
-                                              ,_PredAppos,_MGEntity,_MGPredicate
                                               ,ss_tagged,ss_x'trs
                                               ,me_relation,mv_range,mv_id,mg_vertices,mg_edges
-                                              ,toReg,vidToRange
-                                              )
-
+                                              ,toReg,vidToRange)
 import           SRL.Analyze.Type.Match       (DPInfo(..),EmptyCategoryIndex(..),EntityInfo(..),FrameMatchResult(..)
                                               ,RangePair(..)
                                               ,adi_appos,adi_compof,adi_coref,adi_poss,adi_adjs
-                                              ,ei_eci,ei_rangePair,ei_prep,ei_isClause,ei_isTime,eiRangeID
+                                              ,ei_eci,ei_rangePair,ei_prep,ei_isClause,ei_isTime
                                               ,rp_full,rp_head
                                               ,emptyDPInfo
                                               )
 
-
-import Debug.Trace
-
-import NLP.Syntax.Format.Internal
 
 
 
@@ -84,9 +72,9 @@ mkEntityFun (EI t (RangePair rng rnghead) _mprep txt _ _,di) =
   let mkECIVertex Nothing            = toReg rng
       mkECIVertex (Just ECI_NULL)    = toReg rng
       mkECIVertex (Just (ECI_PRO j)) = VertexPRO j
-      mkRel frm (EI eci (RangePair rng' rng'') _ txt' False _) = [ \i'  -> MGEntity i' (toReg rng') (Just rng'') txt' []
-                                                                 , \i'' -> MGPredicate i'' (InnerDPRange rng') frm PredAppos ]
-      mkRel frm (EI eci (RangePair rng' rng'') _ txt' True _)  = [ \i'' -> MGPredicate i'' (InnerDPRange rng') frm PredAppos ]
+      mkRel frm (EI _eci (RangePair rng' rng'') _ txt' False _) = [ \i'  -> MGEntity i' (toReg rng') (Just rng'') txt' []
+                                                                  , \i'' -> MGPredicate i'' (InnerDPRange rng') frm PredAppos ]
+      mkRel frm (EI _eci (RangePair rng' _) _ _ True _)  = [ \i'' -> MGPredicate i'' (InnerDPRange rng') frm PredAppos ]
 
       appos = maybe [] (mkRel "Instance") (di^.adi_appos)
       comp = do c <- maybeToList (di^.adi_compof)
@@ -116,9 +104,9 @@ mkMGVertices :: (PreAnalysis '[Lemma],[(Range,Range)])
                 ,[(Range,Range)]
                 )
 mkMGVertices (tagged,depmap) (matched,nmatched) =
-  let preds = flip map matched $ \(rng,vprop,x'tr,FMR idiom frm _ _,sense) i
+  let preds = flip map matched $ \(rng,vprop,_,FMR idiom frm _ _,sense) i
                                    -> MGPredicate i (toReg rng) frm (PredVerb idiom sense (vprop^.vp_index,vprop^.vp_index) (simplifyVProp vprop))
-      npreds = flip map nmatched $ \(lma,verb,x'tr,(frm,rng_dp),_,_) ->
+      npreds = flip map nmatched $ \(lma,verb,_,(frm,rng_dp),_,_) ->
                                   \i -> MGPredicate i (toReg rng_dp) frm (PredNominalized lma rng_dp verb)
       ipreds = zipWith ($) (preds ++ npreds) [1..]
 
@@ -146,7 +134,7 @@ mkMGVertices (tagged,depmap) (matched,nmatched) =
                              [(ei,emptyDPInfo)]
                            _ -> do
                              dp <- maybeToList (cpdpppFromX'Tree x'tr rng_dp _DPCase)
-                             let y@(ei,_) = entityFromDP x'tr tagged (referent2Trace x,dp)
+                             let y = entityFromDP x'tr tagged (referent2Trace x,dp)
                              if is _Just (find (== (rng_dp,rng)) depmap) then [] else [y]
                        CompVP_PP rng_pp -> maybeToList $ do
                          pp <- cpdpppFromX'Tree x'tr rng_pp _PPCase
@@ -158,30 +146,26 @@ mkMGVertices (tagged,depmap) (matched,nmatched) =
       --
 
       ett_nominal :: [(EntityInfo,DPInfo)]
-      ett_nominal = do (_lma,_verb,x'tr,(_frm,_rng_dp),(_subj,mei_subj),(_obj,ei_obj)) <- nmatched
+      ett_nominal = do (_lma,_verb,_,(_frm,_rng_dp),(_subj,mei_subj),(_obj,ei_obj)) <- nmatched
                        let lstsubj = case mei_subj of
                                        Just ei_subj -> [(ei_subj,DI Nothing Nothing Nothing [] [])]
                                        _ -> []
                        (ei_obj,DI Nothing Nothing Nothing [] []) : lstsubj
-
-
+      --
       ett_verbnom = filterFrame
                   . map head
                   . groupBy ((==) `on` (\x->(x^._1.ei_eci,x^._1.ei_rangePair.rp_full)))
                   . sortBy (compare `on` (\x->(x^._1.ei_eci,x^._1.ei_rangePair.rp_full)))
                   $ (ett_verb ++ ett_nominal)
-
-
-
+      --
       ettfunc_verbnom = concatMap mkEntityFun ett_verbnom
-
-      ettfunc_prep = do (_,_,x'tr,FMR _ _ _ lst,_) <- matched
+      --
+      ettfunc_prep = do (_,_,_,FMR _ _ _ lst,_) <- matched
                         (frm,prep,felst) <- lst
                         return (\i -> ((i,frm,prep,felst),MGPredicate i (VertexPrep i) frm (PredPrep prep)))
-
+      --
       n_ipreds = length ipreds
       n_ettverbnom = length ettfunc_verbnom
-      -- n_ettprep = length ettfunc_prep
       iett_verbnom = zipWith ($) ettfunc_verbnom (enumFrom (n_ipreds+1))
       iett_prep = zipWith ($) ettfunc_prep (enumFrom (n_ipreds+n_ettverbnom+1))
       vertices = ipreds ++ iett_verbnom ++ (map snd iett_prep)

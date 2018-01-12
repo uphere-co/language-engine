@@ -11,10 +11,10 @@
 module SRL.Analyze.Match.Frame where
 
 import           Control.Applicative
-import           Control.Error.Safe           (headZ,rightMay)
+import           Control.Error.Safe           (headZ)
 import           Control.Lens
 import           Control.Lens.Extras          (is)
-import           Control.Monad                (guard,join)
+import           Control.Monad                (guard)
 import           Data.Function                (on)
 import           Data.List                    (find,group,groupBy,sort,sortBy)
 import qualified Data.HashMap.Strict     as HM
@@ -23,8 +23,8 @@ import           Data.Monoid                  (First(..),(<>))
 import           Data.Text                    (Text)
 import qualified Data.Text               as T
 --
-import           Data.BitreeZipper            (current,extractZipperById,toBitree)
-import           Data.Range                   (Range,isInsideR)
+import           Data.BitreeZipper            (extractZipperById,toBitree)
+import           Data.Range                   (Range)
 import           FrameNet.Query.Frame         (FrameDB,frameDB)
 import           FrameNet.Type.Frame          (frame_FE,fe_name)
 import           Lexicon.Mapping.Causation    (causeDualMap,cm_baseFrame,cm_causativeFrame
@@ -35,7 +35,6 @@ import           NLP.Syntax.Type.Resolve      (Resolved(..),Referent(..),referen
                                               ,retrieveResolved,resolvedCompVP,resolvedSpecTP)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
-import           NLP.Syntax.Util              (GetIntLemma(..),isLemmaAs)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.SyntaxProperty      (Voice(..))
 import           WordNet.Query                (WordNetDB,lookupLemma,getDerivations)
@@ -51,10 +50,6 @@ import           SRL.Analyze.Type             (SentStructure,VerbStructure,Analy
                                               ,vs_roleTopPatts,vs_vp)
 import           SRL.Analyze.Type.Match       (EntityInfo(..),FrameMatchResult(..),RangePair(..))
 --
-import Debug.Trace
-import NLP.Syntax.Format.Internal
-
-
 
 
 mkTriples :: SentStructure -> [(X'Tree 'PH1, VerbStructure, CP 'PH1)]
@@ -101,7 +96,7 @@ matchSubject :: X'Tree 'PH1
              -> Maybe (Referent (SpecTP 'PH1))
              -> ArgPattern p GRel
              -> Maybe (FNFrameElement,Referent (CompVP 'PH1))
-matchSubject x'tr rolemap mDP patt = do
+matchSubject _x'tr rolemap mDP patt = do
   ref <- fmap (fmap specTPToCompVP) mDP
   (p,GR_NP (Just GASBJ)) <- pbArgForGArg GASBJ patt
   (,ref) . FNFrameElement <$> lookup p rolemap
@@ -132,13 +127,13 @@ matchObjects x'tr rolemap verbp patt = do
       -- trace ("\nmatchNormalObjects: " ++ show (garg,obj)) $ return ()
       (p,a) <- maybeToList (pbArgForGArg garg patt)
       case obj of
-        RefVariable _ (RFree_WHDP rng_dp) -> guard (a == GR_NP (Just garg))
+        RefVariable _ (RFree_WHDP _rng_dp) -> guard (a == GR_NP (Just garg))
         _ -> case referent2CompVP obj of
                CompVP_CP rng_cp -> do
                  cp <- maybeToList (extractZipperById rng_cp x'tr >>= \w -> currentCPDPPP w ^? _CPCase)
                  guard (isPhiOrThat cp && a == GR_SBAR (Just garg))
-               CompVP_DP rng_dp -> do
-                 dp <- maybeToList (extractZipperById rng_dp x'tr >>= \w -> currentCPDPPP w ^? _DPCase)
+               CompVP_DP _rng_dp -> do
+                 -- dp <- maybeToList (extractZipperById rng_dp x'tr >>= \w -> currentCPDPPP w ^? _DPCase)
                  guard (a == GR_NP (Just garg))
                _            -> []
       fe <- FNFrameElement <$> maybeToList (lookup p rolemap)
@@ -366,7 +361,7 @@ matchExtraRolesForCPInCompVP check role x'tr cp0 felst = do
         CompVP_CP rng_cp <- maybeToList ((^.to referent2CompVP) <$> resolvedCompVP resmap c)
         cp <- maybeToList (extractZipperById rng_cp x'tr >>= \w -> currentCPDPPP w ^? _CPCase)
         return (rng_cp,cp)
-  (rng_cp,cp) <- find (check.snd) candidates
+  (rng_cp,_cp) <- find (check.snd) candidates
   let matched = matchPPObjectRange x'tr felst rng_cp
   guard (is _Nothing matched)
   guard (is _Nothing (find (\x -> x^?_2.to referent2CompVP._CompVP_CP == Just rng_cp) felst))
@@ -382,12 +377,12 @@ matchExtraRolesForCPInAdjunctCP :: (CP 'PH1 -> Bool)
                                 -> Maybe (FNFrameElement,Referent (CompVP 'PH1))
 matchExtraRolesForCPInAdjunctCP check role x'tr cp0 felst = do
   guard (is _Nothing (find (\x -> x^._1 == role) felst))
-  let resmap = retrieveResolved x'tr
+  -- let resmap = retrieveResolved x'tr
   let candidates = do
         rng_cp <- cp0^..adjunct.traverse._AdjunctCP_CP
         cp <- maybeToList (extractZipperById rng_cp x'tr >>= \w -> currentCPDPPP w ^? _CPCase)
         return (rng_cp,cp)
-  (rng_cp,cp) <- find (check.snd) candidates
+  (rng_cp,_cp) <- find (check.snd) candidates
   let matched = matchPPObjectRange x'tr felst rng_cp
   guard (is _Nothing matched)
   guard (is _Nothing (find (\x -> x^?_2.to referent2CompVP._CompVP_CP == Just rng_cp) felst))
@@ -456,8 +451,7 @@ matchExtraClausalSubframe check prep (frm,fe0,fe1) x'tr cp0 = do
         cp <- maybeToList (extractZipperById rng_cp x'tr >>= \w -> currentCPDPPP w ^? _CPCase)
         return (rng_cp,cp)
       candidates = candidates1 ++ candidates2
-  (rng1,cp1) <- find (check.snd) candidates
-  -- let rng1 = cp1^.maximalProjection
+  (rng1,_cp1) <- find (check.snd) candidates
   return (frm,prep,[(fe0,(True,rng0)),(fe1,(False,rng1))])
 
 

@@ -6,31 +6,18 @@
 
 module SRL.Analyze.Type.Match where
 
-import           Control.Error.Safe            (rightMay)
-import           Control.Lens                  ((^.),(^?),makeLenses,makePrisms,_1,_2,to)
+import           Control.Lens                  ((^.),makeLenses,makePrisms)
 import           Data.Aeson                    (FromJSON,ToJSON)
-import           Data.Bifunctor                (second)
-import           Data.Function                 (on)
 import           Data.Hashable                 (Hashable)
-import           Data.List                     (maximumBy)
-import           Data.Monoid                   (First(..),(<>))
+import           Data.Monoid                   ((<>))
 import           Data.Text                     (Text)
 import qualified Data.Text                as T
 import           GHC.Generics                  (Generic)
 --
-import           Data.BitreeZipper             (extractZipperById)
 import           Data.Range                    (Range)
-import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel
-                                               ,SenseID)
--- import           NLP.Syntax.Clause             (currentCPDPPP)
+import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel,SenseID)
 import           NLP.Syntax.Type.Resolve       (Referent)
-import           NLP.Syntax.Type.XBar          (CompVP,Phase(..),Coindex(..),TraceType(..),SpecTP(..)
-                                               ,SPhase(..)
-                                               ,currentCPDPPP
-                                               ,compVPToSpecTP
-                                               )
-import           NLP.Type.PennTreebankII       (Lemma)
-
+import           NLP.Syntax.Type.XBar          (CompVP,Phase(..))
 
 
 data RangePair = RangePair { _rp_full :: Range
@@ -44,7 +31,7 @@ instance FromJSON RangePair
 instance ToJSON RangePair
 instance Hashable RangePair
 
-data EmptyCategoryIndex = ECI_PRO Int --  RangePair --  (Maybe RangePair)
+data EmptyCategoryIndex = ECI_PRO Int
                         | ECI_NULL
                         deriving (Generic, Show, Eq, Ord)
 
@@ -54,11 +41,13 @@ instance FromJSON EmptyCategoryIndex
 instance ToJSON EmptyCategoryIndex
 instance Hashable EmptyCategoryIndex
 
+
+mkPROText :: EmptyCategoryIndex -> Maybe Text
 mkPROText (ECI_PRO i) = Just ("PRO_" <> T.pack (show i))
 mkPROText _           = Nothing
 
 
-data EntityInfo = EI { _ei_eci :: Maybe EmptyCategoryIndex -- (Range,Range) -- ^ (full,head) -- fullRange :: Range
+data EntityInfo = EI { _ei_eci :: Maybe EmptyCategoryIndex
                      , _ei_rangePair :: RangePair
                      , _ei_prep      :: Maybe Text
                      , _ei_text      :: Text
@@ -70,11 +59,9 @@ data EntityInfo = EI { _ei_eci :: Maybe EmptyCategoryIndex -- (Range,Range) -- ^
 makeLenses ''EntityInfo
 
 
-eiRangeID :: EntityInfo -> Range --  Either EmptyCategoryIndex Range
-eiRangeID e = e^.ei_rangePair.rp_full -- e^.ei_id.to (second (^.rp_full))
+eiRangeID :: EntityInfo -> Range
+eiRangeID e = e^.ei_rangePair.rp_full
 
-
--- type MatchedElement = -- (Maybe (TraceType,Int),CompVP 'PH1)
 
 data FrameMatchResult = FMR { _fmr_lemmas :: [Text]
                             , _fmr_frame :: FNFrame
@@ -95,6 +82,8 @@ data DPInfo = DI { _adi_appos :: Maybe EntityInfo
 
 makeLenses ''DPInfo
 
+
+emptyDPInfo :: DPInfo
 emptyDPInfo = DI Nothing Nothing Nothing [] []
 
 data ExceptionalFrame = FrameCopula  | FrameIdiom | FrameLightVerb | FrameNone

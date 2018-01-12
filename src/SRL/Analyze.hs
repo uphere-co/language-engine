@@ -7,13 +7,12 @@
 
 module SRL.Analyze where
 
-import           Control.Lens                   ((^.),(^..),(.~),(&),_Just,to)
+import           Control.Lens                   ((^.),(^..),(.~),(&),_Just)
 import           Control.Monad                  (forM_,void,when)
 import           Control.Monad.IO.Class         (liftIO)
 import           Control.Monad.Loops            (whileJust_)
 import qualified Data.ByteString.Char8  as B
 import           Data.Default                   (def)
-import           Data.HashMap.Strict            (HashMap)
 import qualified Data.HashMap.Strict    as HM
 import           Data.IntMap                    (IntMap)
 import qualified Data.IntMap            as IM
@@ -44,7 +43,6 @@ import           Lexicon.Data                   (LexDataConfig(..),cfg_framenet_
                                                 ,cfg_ukb_binfile
                                                 ,loadSenseInventory
                                                 )
-import           Lexicon.Type                   (SenseID)
 import           MWE.Util                       (mkTextFromToken)
 import           NER.Load                       (loadCompanies)
 import           NER.Type                       (CompanyInfo(..),alias,companyId)
@@ -68,7 +66,6 @@ import           SRL.Analyze.Match.MeaningGraph (meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure  (docStructure,mkWikiList)
 import           SRL.Analyze.Type
 --
-import Debug.Trace
 
 
 --
@@ -117,14 +114,14 @@ printMeaningGraph apredata companyMap dstr = do
   putStrLn "-------------"
   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
       mtokss = (dstr ^. ds_mtokenss)
-      wikilsts = map (mkWikiList companyMap) sstrs1
+      -- wikilsts = map (mkWikiList companyMap) sstrs1
 
   let mgs = map (\sstr -> (sstr,meaningGraph apredata sstr)) sstrs1
   forM_ (zip mtokss (zip ([1..] :: [Int]) mgs)) $ \(mtks,(i,(sstr,mg'))) -> do
     let title = mkTextFromToken mtks
-        wikilst = mkWikiList companyMap sstr -- sstrs1
+        wikilst = mkWikiList companyMap sstr
         mg = tagMG mg' wikilst
-        x'trs = sstr^.ss_x'trs
+        -- x'trs = sstr^.ss_x'trs
 
     putStrLn "-----------------"
     putStrLn "meaning graph dot"
