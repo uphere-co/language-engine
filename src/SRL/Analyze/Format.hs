@@ -24,7 +24,6 @@ import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top
 import           Text.Printf                             (printf)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens')
-import           Data.BitreeZipper
 import           FrameNet.Query.Frame                    (FrameDB)
 import qualified HTMLEntities.Text             as HTMLT
 import           Lexicon.Format                          (formatArgPattStat,formatRoleMap)
@@ -34,11 +33,8 @@ import           NLP.Syntax.Format
 import           NLP.Printer.PennTreebankII              (formatIndexTokensFromTree,prettyPrint)
 import           NLP.Syntax.Type.Resolve                 (Referent(..),referent2CompVP)
 import           NLP.Syntax.Type.Verb                    (vp_aspect,vp_auxiliary,vp_lemma,vp_negation,vp_tense)
-import           NLP.Syntax.Type.XBar                    (CompVP(..),CompPP(..),Prep(..),PrepClass(..),PreAnalysis
-                                                         ,CP,X'Tree,Phase(..),SPhase(..)
-                                                         ,headTextDP,headX,complement,maximalProjection
-                                                         ,tokensByRange
-                                                         ,hp_prep,hp_pclass)
+import           NLP.Syntax.Type.XBar                    (CompVP(..),PreAnalysis
+                                                         ,CP,X'Tree,Phase(..),SPhase(..))
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
@@ -53,11 +49,10 @@ import           SRL.Analyze.Type                        (DocStructure(..),SentS
                                                          ,_MGPredicate,_MGEntity
                                                          ,mg_vertices,mg_edges
                                                          ,me_relation,me_ismodifier,me_prep,me_start,me_end
-                                                         ,vs_vp,ss_x'trs)
+                                                         ,ss_x'trs)
 import           SRL.Analyze.Type.Match                  (ExceptionalFrame(..),ONSenseFrameNetInstance(..),FrameMatchResult(..)
                                                          ,onfn_senseID,onfn_definition,onfn_frame
-                                                         ,tf_frameID,tf_feCore,tf_fePeri
-                                                         ,mkPROText)
+                                                         ,tf_frameID,tf_feCore,tf_fePeri)
 import           SRL.Analyze.Util                        (addTag,convertTagPosFromTokenToChar,underlineText)
 
 
@@ -207,11 +202,9 @@ formatVerbStructure (VerbStructure vp senses mrmmtoppatts) =
   ]
 
 
--- maybe "" show (dp^?complement._Just.headX)
-
 showMatchedFE :: PreAnalysis '[Lemma] -> (FNFrameElement,Referent (CompVP 'PH1)) -> String
 --                              FE   range prep text
-showMatchedFE tagged (fe,x) =
+showMatchedFE _a0 (fe,x) =
   case referent2CompVP x of
     CompVP_DP rng_dp -> printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("DP" ++ show rng_dp)  ("" :: Text) ("" :: Text)
     CompVP_AP rng_ap -> printf "%-15s: %-7s %3s %s" (unFNFrameElement fe) ("AP" ++ show rng_ap)  ("" :: Text) ("" :: Text)
@@ -225,7 +218,7 @@ showMatchedFrame :: FrameDB
                  -> IO ()
 showMatchedFrame framedb tagged (x'tr,vstr,cp) = do
   T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame framedb x'tr (vstr,cp)) $ \(rng,_,x'tr,FMR idiom frame mselected _,_) -> do
+  flip traverse_ (matchFrame framedb x'tr (vstr,cp)) $ \(rng,_,_,FMR idiom frame mselected _,_) -> do
     putStrLn ("predicate: "  <> show rng)
     T.IO.putStrLn ("Verb: "  <> T.intercalate " " idiom)
     T.IO.putStrLn ("Frame: " <> unFNFrame frame)

@@ -10,16 +10,13 @@ module SRL.Analyze.Match.Entity where
 import           Control.Applicative      ((<|>))
 import           Control.Lens
 import           Control.Monad            (guard,mzero)
-import           Data.Foldable            (foldMap)
 import           Data.Maybe               (fromMaybe,listToMaybe,maybeToList)
-import           Data.Monoid              (First(..))
 import           Data.Text                (Text)
 import qualified Data.Text           as T
 --
 import           Data.BitreeZipper
 import           Data.Range
-import           NLP.Syntax.Type.Resolve  (referent2CompVP
-                                          ,retrieveResolved,resolvedSpecTP,resolvedCompVP)
+import           NLP.Syntax.Type.Resolve  (referent2CompVP,retrieveResolved,resolvedSpecTP)
 import           NLP.Syntax.Type.XBar
 import           NLP.Syntax.Type.Verb     (vp_auxiliary)
 import           NLP.Type.NamedEntity
@@ -28,8 +25,6 @@ import           NLP.Type.PennTreebankII
 import           SRL.Analyze.Type.Match   (DPInfo(..),EntityInfo(..),RangePair(..),EmptyCategoryIndex(..)
                                           ,emptyDPInfo)
 --
-import Debug.Trace
-import NLP.Syntax.Format.Internal
 
 
 --

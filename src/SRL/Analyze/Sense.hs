@@ -32,7 +32,6 @@ import           SRL.Analyze.Type.Match        (ONSenseFrameNetInstance(..),Exce
                                                ,onfn_senseID
                                                )
 --
-import Debug.Trace
 
 
 getSenses :: Lemma

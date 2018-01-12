@@ -19,7 +19,6 @@ import           Data.Range                    (Range)
 import           FrameNet.Query.Frame          (FrameDB)
 import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel
                                                ,RoleInstance,RolePattInstance,SenseID)
--- import           NLP.Syntax.Type               (MarkType(..))
 import           NLP.Syntax.Type.Verb          (VerbProperty(..))
 import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,PreAnalysis,MarkType(..),Phase(..))
 import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
@@ -31,7 +30,7 @@ import           WordNet.Query                 (WordNetDB)
 --
 import           OntoNotes.Type.SenseInventory (Inventory)
 --
-import           SRL.Analyze.Type.Match        (ONSenseFrameNetInstance,EmptyCategoryIndex)
+import           SRL.Analyze.Type.Match        (ONSenseFrameNetInstance)
 
 
 
