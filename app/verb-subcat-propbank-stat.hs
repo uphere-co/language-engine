@@ -44,7 +44,7 @@ progOption = info pOptions (fullDesc <> progDesc "PropBank statistics relevant t
 main :: IO ()
 main = do
   opt <- execParser progOption
-  cfg  <- loadLexDataConfig (opt^.configFile) >>= \case Left err -> error err
+  cfg  <- loadLexDataConfig (opt^.configFile) >>= \case Left e -> error e
                                                         Right x  -> return x
   sensedb <- HM.fromList . map (\si->(si^.inventory_lemma,si)) <$> loadSenseInventory (cfg^.cfg_sense_inventory_file)  
   

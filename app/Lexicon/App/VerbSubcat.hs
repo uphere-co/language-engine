@@ -40,7 +40,6 @@ import           NLP.Syntax.Argument
 import           NLP.Syntax.Clause
 import           NLP.Syntax.Clause.Old
 import           NLP.Syntax.Format
-import           NLP.Syntax.Format.Old
 import           NLP.Syntax.Type                        (PredArgWorkspace,STag)
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
@@ -52,7 +51,6 @@ import           NLP.Type.PennTreebankII.Match
 import qualified NLP.Type.PennTreebankII.Separated as N
 import           NLP.Type.SyntaxProperty                (Voice)
 import           OntoNotes.Corpus.Load
-import           OntoNotes.Corpus.PropBank
 import           OntoNotes.Parser.Sense
 import           OntoNotes.Type.Sense
 import           OntoNotes.Type.SenseInventory
@@ -77,7 +75,7 @@ matchVerbPropertyWithRelation :: PreAnalysis '[Lemma]
 matchVerbPropertyWithRelation tagged verbprops clausetr minst = do
   relidx <- findRelNode (minst^.mi_arguments)
   vp <- find (\vp->vp^.vp_index==relidx) verbprops
-  let x'trs = identifyCPHierarchy tagged verbprops -- (map (bindingAnalysisRaising  . resolveCP . bindingAnalysis tagged) . identifyCPHierarchy tagged) verbprops
+  let x'trs = identifyCPHierarchy tagged verbprops
       mpa = findPAWS tagged clausetr vp x'trs
   return (vp,mpa)
 

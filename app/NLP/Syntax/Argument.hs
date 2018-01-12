@@ -6,7 +6,7 @@
 
 module NLP.Syntax.Argument where
 
-import           Control.Lens                 ((^..),(^.),(^?),_1,_2,_Just,_Right,to)
+import           Control.Lens                 ((^..),(^.),(^?),_1,_2,_Just,_Right)
 import           Control.Monad                (join)
 import           Data.Bifunctor               (bimap)
 import           Data.Foldable                (toList)

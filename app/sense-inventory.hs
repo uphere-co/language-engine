@@ -176,16 +176,12 @@ listSenseWordNet cfg = do
     putStrLn (render doc)
 
 
-
-
-
-
+listIdiom :: LexDataConfig -> IO ()
 listIdiom cfg = do 
   (_ludb,_sensestat,_semlinkmap,sensemap,ws,_wndb) <- loadAllexceptPropBank cfg
   let merged = mergeStatPB2Lemma ws
 
-  forM_ merged $ \(lma,f) -> do
-    -- print lma
+  forM_ merged $ \(lma,_f) -> do
     let lmav = lma <> "-v"
         senses = do
           si <- maybeToList (HM.lookup lmav sensemap)
@@ -197,7 +193,7 @@ listIdiom cfg = do
                 whitelist = ["(UP)ON"]
                 f txt = (T.all (\c -> isUpper c || c == '\'' || c == ',' || c == ';' || c == ':') txt)
                         || (txt `elem` whitelist)
-    forM_ senses $ \((g,n),y,is) -> do
+    forM_ senses $ \((g,n),_y,is) -> do
       let is' = (map (T.toLower . (\ts -> T.intercalate " " (lma : ts))) . filter (not.null) . tail . splitOn [T.toUpper lma]) is
       -- print is'
       when (not (null is')) $
