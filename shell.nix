@@ -1,21 +1,5 @@
 { pkgs ? import <nixpkgs> {}
 , uphere-nix-overlay ? <uphere-nix-overlay>
-, HCoreNLP           ? <HCoreNLP>
-, HFrameNet          ? <HFrameNet>
-, HUKB               ? <HUKB>
-, HWordNet           ? <HWordNet>
-, graph-algorithms   ? <graph-algorithms>
-, lexicon            ? <lexicon>
-, lexicon-builder    ? <lexicon-builder>
-, multi-word-tagger  ? <multi-word-tagger>
-, nlp-types          ? <nlp-types>
-, OntoNotes          ? <OntoNotes>
-, PropBank           ? <PropBank>
-, semantic-types     ? <semantic-types>
-, syntactic-analysis ? <syntactic-analysis>
-, textview           ? <textview>
-, VerbNet            ? <VerbNet>
-, wiki-ner           ? <wiki-ner>
 }:
 
 
@@ -38,46 +22,13 @@ let
   corenlp = res_corenlp.corenlp;
   corenlp_models = res_corenlp.corenlp_models;
 
-  hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix") { pkgs = newpkgs; };
+  hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-semantic-parser-api.nix")
+               { inherit corenlp corenlp_models fasttext fetchgit fetchurl haskellPackages jdk stdenv;
+                 haskellLib = haskell.lib;
+                 pkgs = newpkgs;
+               };
 
-  haskellPackages1 = haskellPackages.override { overrides = hsconfig; };
-
-  fastTextNix = import ./fasttext/default.nix {
-    inherit stdenv;
-    haskellPackages = haskellPackages1;
-  };
-  ukb = import (uphere-nix-overlay + "/nix/cpp-modules/ukb.nix") { inherit stdenv fetchgit fetchurl boost; };
-
-  hsconfig2 =
-    self: super: {
-      "lexicon"        = self.callPackage (import lexicon) {};
-      "multi-word-tagger" = self.callPackage (import multi-word-tagger) {};
-      "nlp-types"      = self.callPackage (import nlp-types) {};
-      "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
-      "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
-      "HFrameNet"      = self.callPackage (import HFrameNet) {};
-      "HWordNet"       = self.callPackage (import HWordNet) {};
-      "graph-algorithms" = self.callPackage (import graph-algorithms) {};
-      "lexicon-builder" = self.callPackage (import lexicon-builder) {};
-      "OntoNotes"      = self.callPackage (import OntoNotes) {};
-      "PropBank"       = self.callPackage (import PropBank) {};
-      "VerbNet"        = self.callPackage (import VerbNet) {};
-      "wiki-ner"       = self.callPackage (import wiki-ner) {};
-      "fastText"       = self.callPackage fastTextNix { inherit fasttext; };
-      "semantic-types" = self.callPackage (import semantic-types) {};
-      "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
-      "textview"       = self.callPackage (import textview) {};
-    };
-  hsconfig3 = import (HUKB + "/HUKB-driver/config.nix") { pkgs = newpkgs; inherit uphere-nix-overlay ukb; };
-  hsconfig4 =
-    self: super: {
-      "HUKB-driver" = self.callPackage (import (HUKB + "/HUKB-driver")) {};
-    };
-
-  newHaskellPackages = haskellPackages.override {
-    overrides = self: super: hsconfig self super // hsconfig2 self super // hsconfig3 self super // hsconfig4 self super;
-  };
-
+  newHaskellPackages = haskellPackages.override { overrides = hsconfig; };
 
   hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
             aeson-pretty
@@ -94,19 +45,14 @@ let
             monad-loops
             optparse-applicative
             split
-            #svm-simple
             text text-format
             yayaml
-
             lens
             mtl
             taggy-lens
-
             fficxx
             fficxx-runtime
-
             foreign-store
-
             p.lexicon
             p.lexicon-builder
             p.multi-word-tagger
