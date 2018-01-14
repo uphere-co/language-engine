@@ -43,6 +43,7 @@ library
                        array,
                        attoparsec,
                        bifunctors,
+                       binary,
                        boxes,
                        bytestring,
                        containers,

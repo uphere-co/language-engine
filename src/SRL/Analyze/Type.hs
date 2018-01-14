@@ -10,6 +10,7 @@ module SRL.Analyze.Type where
 
 import           Control.Lens
 import           Data.Aeson
+import           Data.Binary                   (Binary)
 import           Data.Hashable                 (Hashable)
 import           Data.HashMap.Strict           (HashMap)
 import           Data.Text                     (Text)
@@ -106,6 +107,10 @@ data PredicateInfo = PredVerb { _pi_lemmas :: [Text]               -- ^ for idio
 
 makePrisms ''PredicateInfo
 
+instance FromJSON PredicateInfo
+instance ToJSON PredicateInfo
+instance Binary PredicateInfo
+
 
 data VertexID = RegularRange Range
               | InnerDPRange Range
@@ -117,7 +122,7 @@ makePrisms ''VertexID
 
 instance FromJSON VertexID
 instance ToJSON VertexID
-
+instance Binary VertexID
 
 
 instance Hashable VertexID
@@ -131,14 +136,13 @@ vidToRange (VertexPRO _)      = Nothing
 toReg :: Range -> VertexID
 toReg rng = RegularRange rng
 
-data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap VertexID Int     -- (Int,Maybe Range)  (0: outer-DP 1: inner-DP)
+data VertexMap = VertexMap { _vm_rangeToIndex :: HashMap VertexID Int
                            , _vm_rangeDependency :: [(Range,Range)]
                            , _vm_headRangeToFullRange :: [(Range,Range)]
                            }
                deriving Show
 
 makeLenses ''VertexMap
-
 
 
 data MGVertex = MGEntity    { _mv_id :: Int
@@ -154,6 +158,7 @@ data MGVertex = MGEntity    { _mv_id :: Int
                             }
               deriving (Generic, Show)
 
+instance Binary MGVertex
 
 mv_id :: Simple Lens MGVertex Int
 mv_id = lens _mv_id (\f a -> f { _mv_id = a })
@@ -172,16 +177,11 @@ isEntity x = case x of
 
 -- orphan
 deriving instance Generic (VerbProperty Text)
-
--- orphan
 instance ToJSON (VerbProperty Text)
-
--- orphan
 instance FromJSON (VerbProperty Text)
+instance Binary (VerbProperty Text)
 
-instance FromJSON PredicateInfo
 
-instance ToJSON PredicateInfo
 
 instance ToJSON MGVertex
 
@@ -200,6 +200,7 @@ makeLenses ''MGEdge
 
 instance ToJSON MGEdge
 instance FromJSON MGEdge
+instance Binary MGEdge
 
 data MeaningGraph = MeaningGraph { _mg_vertices :: [MGVertex]
                                  , _mg_edges :: [MGEdge]
@@ -210,3 +211,4 @@ makeLenses ''MeaningGraph
 
 instance ToJSON MeaningGraph
 instance FromJSON MeaningGraph
+instance Binary MeaningGraph
