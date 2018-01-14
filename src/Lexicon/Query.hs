@@ -8,7 +8,9 @@ import           Control.Applicative
 import           Control.Lens
 import           Data.Function                (on)
 import           Data.Hashable                (Hashable)
-import           Data.List                    (foldl',groupBy,maximumBy)
+import           Data.HashMap.Strict          (HashMap)
+import qualified Data.HashMap.Strict  as HM
+import           Data.List                    (foldl',group,groupBy,maximumBy,sort)
 import           Data.Maybe                   (listToMaybe)
 import           Data.Monoid                  ((<>))
 import           Data.Text                    (Text)
@@ -33,6 +35,7 @@ loadRoleInsts :: FilePath -> IO [RoleInstance]
 loadRoleInsts fp = map parseRoleInst . map T.words . T.lines <$> T.IO.readFile fp
 
 
+convertONIDtoSenseID :: Text -> Text -> (Text,POSVorN,Text)
 convertONIDtoSenseID lma sense_num =
   if lma == "hold" && sense_num == "5"       -- this is an ad hoc treatment for group 2
   then (lma,Verb,"2." <> sense_num)
@@ -126,3 +129,16 @@ cutHistogram c xs = let ys = scanl (\(!acc,f) (x,i) -> (acc+i, f . ((x,i):))) (0
                         n = fst (last ys )
                         ncut= fromIntegral n * c
                     in (\x -> (x^._2) []) . head  . snd . break (\x->fromIntegral (x^._1) >= ncut) $ ys
+
+
+
+loadIdioms :: FilePath -> IO (HashMap SenseID [[Text]])
+loadIdioms fp = do
+  txt <- T.IO.readFile fp
+  let ts = map (map T.strip . T.splitOn "\t") (T.lines txt)
+      f !acc (lma:onid:xs) =
+        let sid = (lma,Verb,onid) -- convertONIDtoSenseID lma onid
+            xss = (map (T.words . head) . group . sort) xs
+        in HM.insert sid xss acc
+      f !acc _ = acc
+  return (foldl' f HM.empty ts)

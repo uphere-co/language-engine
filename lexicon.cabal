@@ -29,6 +29,7 @@ library
   build-depends:       base,
                        --
                        aeson,
+                       binary,
                        hashable,
                        lens,
                        text,

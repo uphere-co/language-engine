@@ -11,6 +11,7 @@ module Lexicon.Type where
 
 import           Control.Lens         (makeLenses)
 import           Data.Aeson           (FromJSON,ToJSON)
+import           Data.Binary          (Binary)
 import           Data.Hashable        (Hashable)
 import           Data.String          (IsString)
 import           Data.Text            (Text)
@@ -22,19 +23,19 @@ import           GHC.Generics         (Generic)
 data POSVorN = Verb | Noun deriving (Show,Eq,Ord,Generic)
 
 instance Hashable POSVorN
-
 instance FromJSON POSVorN
 instance ToJSON POSVorN
+instance Binary POSVorN
 
 type SenseID = (Text,POSVorN,Text)
 
 type PBArg = Text
 
 newtype FNFrameElement = FNFrameElement { unFNFrameElement :: Text }
-                       deriving (IsString,Show,Eq,Ord,Hashable,FromJSON,ToJSON)
+                       deriving (IsString,Show,Eq,Ord,Hashable,FromJSON,ToJSON,Generic,Binary)
 
 newtype FNFrame = FNFrame { unFNFrame :: Text }
-                deriving (IsString,Show,Eq,Ord,Hashable,FromJSON,ToJSON)
+                deriving (IsString,Show,Eq,Ord,Hashable,FromJSON,ToJSON,Generic,Binary)
 
 -- | LVSingle = single causation (either with CAUSE or without CAUSE) e.g. rise, raise
 --   LVDual   = dual causation (both with CAUSE and without CAUSE)    e.g. begin
