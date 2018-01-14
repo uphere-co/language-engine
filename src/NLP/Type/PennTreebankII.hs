@@ -410,7 +410,8 @@ type PennTree = Bitree Text (Text,Text)
 
 
 newtype Lemma = Lemma { unLemma :: Text }
-              deriving (Show,Eq,Ord,FromJSON,ToJSON,IsString)
+              deriving (Show,Eq,Ord,FromJSON,ToJSON,IsString,Generic,Binary)
+
 
 type PennTreeIdxG chunk token = PennTreeGen (Range,chunk) (Int,token)
 
