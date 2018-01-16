@@ -9,6 +9,7 @@
 
 module Lexicon.Type where
 
+import           Control.DeepSeq      (NFData)
 import           Control.Lens         (makeLenses)
 import           Data.Aeson           (FromJSON,ToJSON)
 import           Data.Binary          (Binary)
@@ -26,16 +27,17 @@ instance Hashable POSVorN
 instance FromJSON POSVorN
 instance ToJSON POSVorN
 instance Binary POSVorN
+instance NFData POSVorN
 
 type SenseID = (Text,POSVorN,Text)
 
 type PBArg = Text
 
 newtype FNFrameElement = FNFrameElement { unFNFrameElement :: Text }
-                       deriving (IsString,Show,Eq,Ord,Hashable,FromJSON,ToJSON,Generic,Binary)
+                       deriving (IsString,Show,Eq,Ord,Hashable,FromJSON,ToJSON,Generic,Binary,NFData)
 
 newtype FNFrame = FNFrame { unFNFrame :: Text }
-                deriving (IsString,Show,Eq,Ord,Hashable,FromJSON,ToJSON,Generic,Binary)
+                deriving (IsString,Show,Eq,Ord,Hashable,FromJSON,ToJSON,Generic,Binary,NFData)
 
 -- | LVSingle = single causation (either with CAUSE or without CAUSE) e.g. rise, raise
 --   LVDual   = dual causation (both with CAUSE and without CAUSE)    e.g. begin

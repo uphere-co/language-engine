@@ -30,6 +30,7 @@ library
                        --
                        aeson,
                        binary,
+                       deepseq,
                        hashable,
                        lens,
                        text,
