@@ -46,6 +46,7 @@ library
                        bifunctors,
                        binary,
                        containers,
+                       deepseq,
                        discrimination,
                        hashable,
                        lens,
