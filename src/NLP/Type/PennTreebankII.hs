@@ -32,6 +32,7 @@ module NLP.Type.PennTreebankII
 , mkAnnotatable, lemmatize
 ) where
 
+import           Control.DeepSeq                (NFData)
 import           Control.Monad.Trans.State      (evalState,get,put)
 import           Data.Aeson
 import           Data.Bifunctor
@@ -410,7 +411,7 @@ type PennTree = Bitree Text (Text,Text)
 
 
 newtype Lemma = Lemma { unLemma :: Text }
-              deriving (Show,Eq,Ord,FromJSON,ToJSON,IsString,Generic,Binary)
+              deriving (Show,Eq,Ord,FromJSON,ToJSON,IsString,Generic,Binary,NFData)
 
 
 type PennTreeIdxG chunk token = PennTreeGen (Range,chunk) (Int,token)
