@@ -8,6 +8,7 @@
 
 module SRL.Analyze.Type where
 
+import           Control.DeepSeq
 import           Control.Lens
 import           Data.Aeson
 import           Data.Binary                   (Binary)
@@ -110,6 +111,7 @@ makePrisms ''PredicateInfo
 instance FromJSON PredicateInfo
 instance ToJSON PredicateInfo
 instance Binary PredicateInfo
+instance NFData PredicateInfo
 
 
 data VertexID = RegularRange Range
@@ -123,8 +125,7 @@ makePrisms ''VertexID
 instance FromJSON VertexID
 instance ToJSON VertexID
 instance Binary VertexID
-
-
+instance NFData VertexID
 instance Hashable VertexID
 
 vidToRange :: VertexID -> Maybe Range
@@ -159,6 +160,8 @@ data MGVertex = MGEntity    { _mv_id :: Int
               deriving (Generic, Show)
 
 instance Binary MGVertex
+instance NFData MGVertex
+
 
 mv_id :: Simple Lens MGVertex Int
 mv_id = lens _mv_id (\f a -> f { _mv_id = a })
@@ -180,7 +183,7 @@ deriving instance Generic (VerbProperty Text)
 instance ToJSON (VerbProperty Text)
 instance FromJSON (VerbProperty Text)
 instance Binary (VerbProperty Text)
-
+instance NFData (VerbProperty Text)
 
 
 instance ToJSON MGVertex
@@ -201,6 +204,7 @@ makeLenses ''MGEdge
 instance ToJSON MGEdge
 instance FromJSON MGEdge
 instance Binary MGEdge
+instance NFData MGEdge
 
 data MeaningGraph = MeaningGraph { _mg_vertices :: [MGVertex]
                                  , _mg_edges :: [MGEdge]
@@ -212,3 +216,4 @@ makeLenses ''MeaningGraph
 instance ToJSON MeaningGraph
 instance FromJSON MeaningGraph
 instance Binary MeaningGraph
+instance NFData MeaningGraph

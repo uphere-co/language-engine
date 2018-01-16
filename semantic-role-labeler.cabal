@@ -48,6 +48,7 @@ library
                        bytestring,
                        containers,
                        data-default,
+                       deepseq,
                        discrimination,
                        either,
                        errors,
