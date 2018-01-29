@@ -61,8 +61,8 @@ p_content (NodeElement e) = case e^.name of
                               "ex" -> [CEX (p_ex (e^.children))]
                               _     -> []
 
-p_defRoot txt = do e <- txt^..html.allNamed (only "def-root")
-                   p_content =<< (e^.children)
+p_defRoot txt = DefRoot $ do e <- txt^..html.allNamed (only "def-root")
+                             p_content =<< (e^.children)
 
 
 {-
