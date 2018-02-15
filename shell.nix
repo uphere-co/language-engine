@@ -1,9 +1,10 @@
-{ pkgs ? import <nixpkgs> {}
-, uphere-nix-overlay ? <uphere-nix-overlay>
-}:
+{ revision }:
 
+with revision;
 
-let newpkgs = import pkgs.path {
+let pkgs0 = import nixpkgs { config.allowUnfree = true; };
+
+    pkgs = import pkgs0.path {
                 overlays = [ (self: super: {
                                libsvm = import (uphere-nix-overlay + "/nix/cpp-modules/libsvm/default.nix") { inherit (self) stdenv fetchurl; };
                              })
@@ -11,7 +12,7 @@ let newpkgs = import pkgs.path {
               };
 in
 
-with newpkgs;
+with pkgs;
 
 let
   fasttext = import (uphere-nix-overlay + "/nix/cpp-modules/fasttext.nix") { inherit stdenv fetchgit; };
@@ -22,11 +23,11 @@ let
   corenlp = res_corenlp.corenlp;
   corenlp_models = res_corenlp.corenlp_models;
 
-  hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-semantic-parser-api.nix")
-               { inherit corenlp corenlp_models fasttext fetchgit fetchurl haskellPackages jdk stdenv;
+  hsconfig = lib.callPackageWith (pkgs//revision) (uphere-nix-overlay + "/nix/haskell-modules/configuration-semantic-parser-api.nix")
+               { inherit corenlp corenlp_models fasttext;
                  haskellLib = haskell.lib;
-                 pkgs = newpkgs;
                };
+
 
   newHaskellPackages = haskellPackages.override { overrides = hsconfig; };
 
