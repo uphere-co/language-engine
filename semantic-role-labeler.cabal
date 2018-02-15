@@ -18,6 +18,7 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        SRL.Analyze
+                       SRL.Analyze.ARB
                        SRL.Analyze.Config
                        SRL.Analyze.CoreNLP
                        SRL.Analyze.Format
