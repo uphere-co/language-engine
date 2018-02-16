@@ -28,6 +28,7 @@ import           GHC.Generics              (Generic)
 --
 import           Lexicon.Mapping.Causation (causeDualMap,cm_causativeFrame,cm_externalAgent)
 import           Lexicon.Type              (FNFrame(..),FNFrameElement(..),RoleInstance,SenseID)
+import           NLP.Semantics.Type        (FrameElement,PrepOr(..),ARB(..),subjectA)
 import           NLP.Syntax.Clause         (hoistMaybe) -- this should be moved somewhere
 import           NLP.Syntax.Type.Verb      (vp_lemma,vp_negation)
 import           NLP.Syntax.Type.XBar      (X'Tree)
@@ -37,7 +38,7 @@ import           SRL.Analyze.Type
 import           SRL.Statistics
 --
 
-
+{-
 data PrepOr a = PrepOr { _po_prep :: Maybe Text
                        , _po_main :: a
                        }
@@ -53,24 +54,7 @@ noprep = PrepOr Nothing
 type Frame = Text
 type FrameElement = Text
 type TWord = Text
-
--- | ARB is the representation of meaning graph with NER tagging. This is necessary in web interface because original meaning graph is too lengthy to be appeared
---   in webpage. It consists of subject, predicate, object and hashtags. Each item is appeared as a pair of word and its semantic role like Frame or FrameElement.
---   Hashtag will be used to show additional information, but it is not used now. Object can be an (noun) entity or another subsequent ARB, though only an entity
---   can be subject.
-data ARB = ARB
-  { _frameARB :: Frame                -- ^ Unlemma form of verb when predicate. Frame when nominal predicate.
-  , _subjectA :: (FrameElement,TWord) -- ^ FrameElement of subject in a sentence and word itself.
-  , _predicateR :: (Frame,TWord)      -- ^ FrameElement of predicate and word itself. Frame is a duplication to _frameARB.
-  , _isNegated :: Bool                -- ^ Negation information of verb.
-  , _objectB :: [(FrameElement,Either (PrepOr ARB) (PrepOr TWord))] -- ^ A tuple of FrameElement and word, or a tuple of FrameElement and subsequent ARB.
-  , _hashTags :: [TWord] -- ^ A list of words to be presented as hashtags.
-  } deriving (Eq,Show, Generic)
-
-makeLenses ''ARB
-
-instance ToJSON ARB
-instance FromJSON ARB
+-}
 
 type VertexARB = (Vertex, Vertex, [Vertex])
 
