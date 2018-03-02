@@ -1,6 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+--
+-- Semantic type definitions.
+-- 
 module NLP.Semantics.Type where
 
 import           Control.Lens (makeLenses,makePrisms)
@@ -26,9 +29,8 @@ type TWord = (Text,Maybe (Int,Int))
 
 
 data MeaningRoleContent = SubFrame MeaningTree
-                        --  | ModifierSubFrame MeaningTree
                         | Modifier TWord [MeaningTree]
-                        | Terminal TWord (Maybe (Bool,Int))  -- Bool = relative (backward)
+                        | Terminal TWord (Maybe (Bool,Int))
                         deriving (Eq,Show,Generic)
 
 instance ToJSON MeaningRoleContent
