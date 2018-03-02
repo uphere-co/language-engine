@@ -1,6 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+--
+-- Semantic type definitions.
+-- 
 module NLP.Semantics.Type where
 
 import           Control.Lens (makeLenses,makePrisms)
