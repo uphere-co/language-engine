@@ -16,6 +16,7 @@ library
   exposed-modules:     NLP.Semantics.Type
   build-depends:       base,
                        aeson,
+                       hashable,
                        lens,
                        text
   hs-source-dirs:      src

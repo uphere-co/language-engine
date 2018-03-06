@@ -1,5 +1,6 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 --
 -- Semantic type definitions.
@@ -8,6 +9,7 @@ module NLP.Semantics.Type where
 
 import           Control.Lens (makeLenses,makePrisms)
 import           Data.Aeson
+import           Data.Hashable
 import           Data.Text
 import           GHC.Generics
 
@@ -89,3 +91,10 @@ makeLenses ''ARB
 
 instance ToJSON ARB
 instance FromJSON ARB
+
+
+instance Hashable (PrepOr Text)
+
+instance Hashable ARB
+
+instance Hashable (PrepOr ARB)
