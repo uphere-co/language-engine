@@ -42,7 +42,7 @@ data CompanyInfo = CompanyInfo
 makeLenses ''CompanyInfo
 
 instance ToJSON CompanyInfo where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 }
+  toJSON = genericToJSON Data.Aeson.defaultOptions { Data.Aeson.Types.fieldLabelModifier = drop 1 }
   
 instance FromJSON CompanyInfo where
-  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 }
+  parseJSON = genericParseJSON Data.Aeson.defaultOptions { Data.Aeson.Types.fieldLabelModifier = drop 1 }
