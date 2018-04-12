@@ -290,6 +290,7 @@ resolveCP x'tr = bimap rf rf x'tr
     replace :: CP 'PH0 -> CP 'PH0
     replace = replaceAdjunctCP . replaceCompVP
     --
+    resolve :: (CPDPPP 'PH0 -> Maybe a) -> Either Range a -> Either Range a
     resolve _ (Right x)  = Right x
     resolve h (Left rng) = case lookup rng x'map of
                              Nothing -> Left rng
@@ -309,6 +310,7 @@ resolveCP x'tr = bimap rf rf x'tr
       in cp & (adjunct %~ (++as'))
             . (complement.complement.complement .~ xs')
     --
+    replaceAdjunctCP :: CP 'PH0 -> CP 'PH0
     replaceAdjunctCP cp =
       let xs = cp^.adjunct
           xs' = map (resolve cpdpppToAdjunctCP) xs
