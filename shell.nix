@@ -38,14 +38,17 @@ let
             boxes
             discrimination
             directory-tree
-            either
+            # either
             # extra
             haskeline
             lens
             monad-loops
             optparse-applicative
             split
-            text text-format
+            text
+            text-format
+            transformers
+            transformers-either
             yayaml
 
             lens
