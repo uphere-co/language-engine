@@ -44,12 +44,12 @@ let
             monad-loops
             optparse-applicative
             split
-            text text-format
+            taggy-lens
+            text
+            text-format
+            transformers-either
             yayaml
 
-            lens
-            taggy-lens
-            p.HCoreNLP
             p.HCoreNLP-Proto
             p.HFrameNet
             p.HWordNet
