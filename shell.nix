@@ -1,52 +1,32 @@
-{ pkgs               ? import <nixpkgs> {}
-, uphere-nix-overlay ? <uphere-nix-overlay>
-, graph-algorithms   ? <graph-algorithms>
-, HCoreNLP           ? <HCoreNLP>
-, HFrameNet          ? <HFrameNet>
-, HWordNet           ? <HWordNet>
-, lexicon            ? <lexicon>
-, nlp-types          ? <nlp-types>
-, OntoNotes          ? <OntoNotes>
-, PropBank           ? <PropBank>
-, syntactic-analysis ? <syntactic-analysis>
-, VerbNet            ? <VerbNet>
-, wiki-ner           ? <wiki-ner>
-, textview           ? <textview>
-}:
+{ revision }:
+
+with revision;
+
+let pkgs0 = import nixpkgs { config.allowUnfree = true; };
+
+    pkgs = import pkgs0.path {
+                overlays = [ (self: super: {
+                               libsvm = import (uphere-nix-overlay + "/nix/cpp-modules/libsvm/default.nix") { inherit (self) stdenv fetchurl; };
+                             })
+                           ];
+              };
+in
 
 with pkgs;
 
 let
+  fasttext = import (uphere-nix-overlay + "/nix/cpp-modules/fasttext.nix") { inherit stdenv fetchgit; };
+
   res_corenlp = import (uphere-nix-overlay + "/nix/linguistic-resources/corenlp.nix") {
     inherit fetchurl fetchzip srcOnly;
   };
   corenlp = res_corenlp.corenlp;
   corenlp_models = res_corenlp.corenlp_models;
 
-  hsconfig = import (uphere-nix-overlay + "/nix/haskell-modules/configuration-ghc-8.0.x.nix")
-               { inherit pkgs; };
+  hsconfig = lib.callPackageWith (pkgs//revision) (uphere-nix-overlay + "/nix/haskell-modules/configuration-semantic-parser-api.nix")
+               { inherit corenlp corenlp_models fasttext; };
 
-  config2 =
-    self: super: {
-      "graph-algorithms" = self.callPackage (import graph-algorithms) {};
-      "HCoreNLP-Proto" = self.callPackage (import (HCoreNLP + "/HCoreNLP-Proto")) {};
-      "HCoreNLP"       = self.callPackage (import HCoreNLP) { inherit jdk corenlp corenlp_models; };
-      "HFrameNet"      = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HFrameNet)) {};
-      "HWordNet"       = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "run") HWordNet)) {};
-      "lexicon"        = self.callPackage (import (builtins.filterSource (path: type: baseNameOf path != "dist") lexicon)) {};
-      "nlp-types" = self.callPackage (import nlp-types) {};
-      "OntoNotes" = self.callPackage (import OntoNotes) {};
-      "PropBank"  = self.callPackage (import PropBank) {};
-      "syntactic-analysis" = self.callPackage (import syntactic-analysis) {};
-      "textview"  = self.callPackage (import textview) {};
-      "VerbNet"   = self.callPackage (import VerbNet) {};
-      "wiki-ner"  = self.callPackage (import wiki-ner) {};
-
-    };
-  newHaskellPackages = haskellPackages.override {
-    overrides = self: super: hsconfig self super // config2 self super;
-  };
-
+  newHaskellPackages = haskellPackages.override { overrides = hsconfig; };
 
   hsenv = newHaskellPackages.ghcWithPackages (p: with p; [
             cabal-install
@@ -59,8 +39,6 @@ let
             boxes
             discrimination
             directory-tree
-            either
-            # extra
             haskeline
             lens
             monad-loops
@@ -91,7 +69,7 @@ stdenv.mkDerivation {
   buildInputs = [ hsenv ];
   shellHook = ''
     export OMP_NUM_THREADS=12
-    export CLASSPATH="${corenlp_models}:${corenlp}/stanford-corenlp-3.7.0.jar:${corenlp}/protobuf.jar:${corenlp}/joda-time.jar:${corenlp}/jollyday.jar:${hsenv}/share/x86_64-linux-ghc-8.0.2/HCoreNLP-0.1.0.0/HCoreNLPProto.jar";
+    export CLASSPATH="${corenlp_models}:${corenlp}/stanford-corenlp-3.7.0.jar:${corenlp}/protobuf.jar:${corenlp}/joda-time.jar:${corenlp}/jollyday.jar:${hsenv}/share/x86_64-linux-ghc-8.2.2/HCoreNLP-0.1.0.0/HCoreNLPProto.jar";
   '';
 
 }
