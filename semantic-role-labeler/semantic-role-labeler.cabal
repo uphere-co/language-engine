@@ -51,7 +51,6 @@ library
                        data-default,
                        deepseq,
                        discrimination,
-                       either,
                        errors,
                        filepath,
                        hashable,
@@ -69,6 +68,7 @@ library
                        text-format,
                        time,
                        transformers,
+                       transformers-either,
                        unordered-containers,
                        vector,
                        --
@@ -76,7 +76,6 @@ library
                        lexicon,
                        lexicon-builder,
                        multi-word-tagger,
-                       -- nlp-shared-types,
                        nlp-types,
                        HCoreNLP,
                        HCoreNLP-Proto,
