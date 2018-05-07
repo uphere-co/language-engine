@@ -38,8 +38,6 @@ let
             boxes
             discrimination
             directory-tree
-            # either
-            # extra
             haskeline
             lens
             monad-loops
