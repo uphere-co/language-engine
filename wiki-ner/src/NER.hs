@@ -10,9 +10,9 @@ import           NER.Load                      (constructCompanyListFromCSV,load
 
 
 
-saveCompanyInfo :: FilePath -> IO ()
-saveCompanyInfo fp = do
-  nt <- loadNameTable
+saveCompanyInfo :: FilePath -> FilePath -> IO ()
+saveCompanyInfo dataDir fp = do
+  nt <- loadNameTable dataDir
   clist <- constructCompanyListFromCSV nt
   let bstr = A.encodePretty clist
   BL8.writeFile fp  bstr   -- "company.json"

@@ -39,61 +39,70 @@ runEL tagger entityResolve sents  =
   in entityResolve linked_mentions
 
 
-loadWikiData :: IO ([(Text, NamedEntityClass,POSTag)] -> [EntityMention Text], [EntityMention Text] -> [EntityMention Text])
-loadWikiData = do
-  edges  <- WEL.loadAndSortEdges graphFilesG
-  uidTag <- WEL.loadFiles classFilesG
-  titles <- WEL.loadWikipageMapping wikiTitleMappingFileG
-  tagger <- WEL.loadFEMtagger reprFileG classFilesG
+loadWikiData ::
+       FilePath
+    -> IO ( [(Text, NamedEntityClass,POSTag)] -> [EntityMention Text]
+          , [EntityMention Text] -> [EntityMention Text])
+loadWikiData dataDir = do
+  edges  <- WEL.loadAndSortEdges (graphFilesG dataDir)
+  uidTag <- WEL.loadFiles        (classFilesG dataDir)
+  titles <- WEL.loadWikipageMapping (wikiTitleMappingFileG dataDir)
+  tagger <- WEL.loadFEMtagger (reprFileG dataDir) (classFilesG dataDir)
   let entityResolve = WEL.disambiguateMentions edges uidTag titles
   return (tagger,entityResolve)
 
 
-reprFileTinyG :: EntityReprFile
-reprFileTinyG       = EntityReprFile (globalData </> "wiki-ner/data/wikidata.test.entities")
+reprFileTinyG :: FilePath -> EntityReprFile
+reprFileTinyG dataDir =
+  EntityReprFile (dataDir </> "wiki-ner/data/wikidata.test.entities")
 
-orgItemFileG,personItemFileG,brandItemFileG,locationItemFileG,occupationItemFileG,humanRuleItemFileG,buildingItemFileG :: ItemIDFile
-orgItemFileG        = ItemIDFile (globalData </> "wiki-ner/data/ne.org")
-personItemFileG     = ItemIDFile (globalData </> "wiki-ner/data/ne.person")
-brandItemFileG      = ItemIDFile (globalData </> "wiki-ner/data/ne.brand")
-locationItemFileG   = ItemIDFile (globalData </> "wiki-ner/data/ne.loc")
-occupationItemFileG = ItemIDFile (globalData </> "wiki-ner/data/ne.occupation")
-humanRuleItemFileG  = ItemIDFile (globalData </> "wiki-ner/data/ne.human_rule")
-buildingItemFileG   = ItemIDFile (globalData </> "wiki-ner/data/ne.building")
 
-classFilesG :: [(ItemClass,ItemIDFile)]
-classFilesG = [ (WC.personClass, personItemFileG)
-              , (WC.orgClass,    orgItemFileG)
-              , (WC.brandClass,  brandItemFileG)
-              , (WC.occupationClass, occupationItemFileG)
-              , (WC.locationClass,   locationItemFileG)
-              , (WC.humanRuleClass,  humanRuleItemFileG)
-              , (WC.buildingClass,   buildingItemFileG)
-              ]
+orgItemFileG,personItemFileG,brandItemFileG,locationItemFileG,occupationItemFileG,humanRuleItemFileG,buildingItemFileG :: FilePath-> ItemIDFile
+orgItemFileG        dataDir = ItemIDFile (dataDir </> "wiki-ner/data/ne.org")
+personItemFileG     dataDir = ItemIDFile (dataDir </> "wiki-ner/data/ne.person")
+brandItemFileG      dataDir = ItemIDFile (dataDir </> "wiki-ner/data/ne.brand")
+locationItemFileG   dataDir = ItemIDFile (dataDir </> "wiki-ner/data/ne.loc")
+occupationItemFileG dataDir = ItemIDFile (dataDir </> "wiki-ner/data/ne.occupation")
+humanRuleItemFileG  dataDir = ItemIDFile (dataDir </> "wiki-ner/data/ne.human_rule")
+buildingItemFileG   dataDir = ItemIDFile (dataDir </> "wiki-ner/data/ne.building")
 
-reprFileG :: EntityReprFile
-reprFileG     = EntityReprFile (globalData </> "wiki-ner/data/names")
+
+classFilesG :: FilePath -> [(ItemClass,ItemIDFile)]
+classFilesG dataDir =
+  [ (WC.personClass    , personItemFileG     dataDir)
+  , (WC.orgClass       , orgItemFileG        dataDir)
+  , (WC.brandClass     , brandItemFileG      dataDir)
+  , (WC.occupationClass, occupationItemFileG dataDir)
+  , (WC.locationClass  , locationItemFileG   dataDir)
+  , (WC.humanRuleClass , humanRuleItemFileG  dataDir)
+  , (WC.buildingClass  , buildingItemFileG   dataDir)
+  ]
+
+reprFileG :: FilePath -> EntityReprFile
+reprFileG dataDir =
+  EntityReprFile (dataDir </> "wiki-ner/data/names")
 
 -- Full data
 
-wikiTitleMappingFileG :: WikiTitleMappingFile
-wikiTitleMappingFileG = WikiTitleMappingFile (globalData </> "wiki-ner/wiki_id.page_title.txt")
+wikiTitleMappingFileG :: FilePath -> WikiTitleMappingFile
+wikiTitleMappingFileG dataDir =
+  WikiTitleMappingFile (dataDir </> "wiki-ner/wiki_id.page_title.txt")
 
 
-wordnetMappingFileG :: WordNetMappingFile
-wordnetMappingFileG = WordNetMappingFile (globalData </> "wiki-ner/page_id.wiki_id.wordnet.tsv")
+wordnetMappingFileG :: FilePath -> WordNetMappingFile
+wordnetMappingFileG dataDir =
+  WordNetMappingFile (dataDir </> "wiki-ner/page_id.wiki_id.wordnet.tsv")
 
 
-propertyNameFileG :: PropertyNameFile
-propertyNameFileG = PropertyNameFile (globalData </> "wiki-ner/properties.tsv")
+propertyNameFileG :: FilePath -> PropertyNameFile
+propertyNameFileG dataDir =
+  PropertyNameFile (dataDir </> "wiki-ner/properties.tsv")
 
-listedCompanyFileG :: FilePath
-listedCompanyFileG = globalData </> "enwiki/companies"
-
-
-graphFilesG :: FilePath
-graphFilesG = globalData </> "wiki-ner/interlinks.filtered"
+listedCompanyFileG :: FilePath -> FilePath
+listedCompanyFileG dataDir =
+  dataDir </> "enwiki/companies"
 
 
-globalData :: FilePath
-globalData = "/data/groups/uphere/data/Wiki"
+graphFilesG :: FilePath -> FilePath
+graphFilesG dataDir =
+  dataDir </> "wiki-ner/interlinks.filtered"

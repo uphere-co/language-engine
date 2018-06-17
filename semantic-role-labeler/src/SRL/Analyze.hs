@@ -41,10 +41,12 @@ import           Lexicon.Data                   (LexDataConfig(..),cfg_framenet_
                                                 ,cfg_wordnet_dict
                                                 ,cfg_ukb_dictfile
                                                 ,cfg_ukb_binfile
+                                                ,cfg_company_file
+                                                ,cfg_wiki_dir
                                                 ,loadSenseInventory
                                                 )
 import           MWE.Util                       (mkTextFromToken)
-import           NER.Load                       (loadCompanies)
+import           NER.Load                       (getCompanyListFromJSON)
 import           NER.Type                       (CompanyInfo(..),alias,companyId)
 import           NLP.Syntax.Format              (formatX'Tree)
 import           NLP.Syntax.Type.XBar           (SPhase(..))
@@ -131,7 +133,6 @@ printMeaningGraph apredata companyMap dstr = do
     T.IO.writeFile ("test" ++ (show i) ++ ".dot") dotstr
     void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
     --
-    -- mapM_ print (mg^.mg_vertices)
     mapM_ print (mkMeaningTree (apredata^.analyze_rolemap) mg)
 
 
@@ -143,17 +144,17 @@ loadConfig (bypass_ner,bypass_textner) cfg = do
   createUKBDB (cfg^.cfg_ukb_binfile,cfg^.cfg_ukb_dictfile)
   netagger <- if bypass_ner
                 then return (const [])
-                else newNETagger
+                else newNETagger (cfg^.cfg_wiki_dir)
   (forest,companyMap) <-
     if bypass_textner
       then return ([],IM.empty)
-      else do companies <- loadCompanies
+      else do companies <- getCompanyListFromJSON (cfg ^. cfg_company_file)
               let companyMap = IM.fromList (map (\x -> (x^.companyId,x)) companies)
                   clist = do c <- companies
                              let cid = c^.companyId
                              a <- c^.alias
                              return (cid,T.words a)
-              let forest = foldr addTreeItem [] clist  -- [(c^.companyId,c^.alias) |  c <- companies] -- Temporary. Tokenization should be done by CoreNLP.
+              let forest = foldr addTreeItem [] clist
               return (forest,companyMap)
   return (apredata,netagger,forest,companyMap)
 
@@ -171,8 +172,7 @@ loadAnalyzePredata cfg = do
   sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
   rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
-  idioms <- loadIdioms (cfg^.cfg_idiom_file)  -- return (HM.empty) --  for the time being, turn off idiom
-  -- print idioms
+  idioms <- loadIdioms (cfg^.cfg_idiom_file)
   subcats <- adjustRolePattInsts <$> loadRolePattInsts (cfg^.cfg_verb_subcat_file)
   return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats wndb idioms)
 

@@ -13,7 +13,6 @@ import qualified Data.Vector            as V
 import           Data.List                     (foldl',maximumBy,sortBy)
 import qualified Data.HashMap.Strict    as HM
 import           Data.Maybe                    (mapMaybe)
--- import qualified Data.IntMap            as IM
 --
 import           NLP.Type.CoreNLP              (Sentence)
 import           NLP.Type.NamedEntity          (NamedEntityClass(..))
@@ -29,17 +28,14 @@ import qualified WikiEL.Type.FileFormat  as FF
 import qualified WikiEL.Type.Wikidata    as WD
 
 
-
--- entityResolve = WEL.disambiguateMentions .. seems to have a problem
-
-newNETagger :: IO ([Sentence] -> [EntityMention T.Text])
-newNETagger = do
-  reprs <- LD.loadEntityReprs reprFileG
+newNETagger :: FilePath -> IO ([Sentence] -> [EntityMention T.Text])
+newNETagger dataDir = do
+  reprs <- LD.loadEntityReprs (reprFileG dataDir)
   let wikiTable = WET.buildEntityTable reprs
       wikiMap = foldl' f HM.empty reprs
         where f !acc (FF.EntityReprRow (WD.QID i) (WD.ItemRepr t)) = HM.insertWith (++) (WD.QID i) [t] acc
               f _ _ = error "f in newNETagger"
-  uidNEtags <- WEC.loadFiles classFilesG -- uidTagFiles
+  uidNEtags <- WEC.loadFiles (classFilesG dataDir)
   let tagger = extractFilteredEntityMentions wikiTable uidNEtags
       disambiguatorWorker x (ys,t) =
         let lst = sortBy (flip compare `on` (length.snd)) .  mapMaybe (\y-> (y,) <$> HM.lookup y wikiMap) $ ys

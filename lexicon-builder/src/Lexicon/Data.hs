@@ -50,6 +50,8 @@ data LexDataConfig = LexDataConfig { _cfg_sense_inventory_file :: FilePath
                                    , _cfg_verb_subcat_file     :: FilePath
                                    , _cfg_ukb_binfile          :: FilePath
                                    , _cfg_ukb_dictfile         :: FilePath
+                                   , _cfg_company_file         :: FilePath
+                                   , _cfg_wiki_dir             :: FilePath
                                    }
                    deriving (Show,Eq,Ord,Generic)
 
