@@ -1,0 +1,23 @@
+name:                semantic-types
+version:             0.1.0.0
+synopsis:            Types for semantic linguistic analysis
+description:         This package holds common types for semantic analysis.
+license:             OtherLicense
+license-file:        LICENSE
+author:              Ian-Woo Kim
+maintainer:          ianwookim@gmail.com
+-- copyright:
+category:            Language
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+cabal-version:       >=1.10
+
+library
+  exposed-modules:     NLP.Semantics.Type
+  build-depends:       base,
+                       aeson,
+                       hashable,
+                       lens,
+                       text
+  hs-source-dirs:      src
+  default-language:    Haskell2010
