@@ -81,67 +81,67 @@ Executable query
                         --
                         PropBank
 
-Executable corpus
-  Main-is:              corpus.hs
-  hs-source-dirs:       app
-  default-language:    Haskell2010
-  ghc-options:          -Wall -O2
-                        -threaded
-                        -funbox-strict-fields
-                        -fno-warn-unused-do-bind
-                        -fno-warn-orphans
+-- Executable corpus
+--   Main-is:              corpus.hs
+--   hs-source-dirs:       app
+--   default-language:    Haskell2010
+--   ghc-options:          -Wall -O2
+--                         -threaded
+--                         -funbox-strict-fields
+--                         -fno-warn-unused-do-bind
+--                         -fno-warn-orphans
 
-  ghc-prof-options:     -auto-all
-  extra-libraries:
-  c-sources:
-  other-modules:
+--   ghc-prof-options:     -auto-all
+--   extra-libraries:
+--   c-sources:
+--   other-modules:
 
-  build-depends:        base,
-                        --
-                        attoparsec,
-                        containers,
-                        discrimination,
-                        filepath,
-                        lens,
-                        optparse-applicative,
-                        split,
-                        text,
-                        unordered-containers,
-                        --
-                        nlp-types,
-                        --
-                        PropBank
+--   build-depends:        base,
+--                         --
+--                         attoparsec,
+--                         containers,
+--                         discrimination,
+--                         filepath,
+--                         lens,
+--                         optparse-applicative,
+--                         split,
+--                         text,
+--                         unordered-containers,
+--                         --
+--                         nlp-types,
+--                         --
+--                         PropBank
 
-test-suite test-adjust-index
-  type: exitcode-stdio-1.0
-  hs-source-dirs: test
-  main-is: test-adjust-index.hs
-  build-depends:       base
-                     , containers
-                     , lens
-                     , text
-                     --
-                     , tasty
-                     , tasty-hunit
-                     --
-                     , PropBank
-                     , nlp-types
-  default-language:    Haskell2010
-  ghc-options:  -Wall -O2
+-- test-suite test-adjust-index
+--   type: exitcode-stdio-1.0
+--   hs-source-dirs: test
+--   main-is: test-adjust-index.hs
+--   build-depends:       base
+--                      , containers
+--                      , lens
+--                      , text
+--                      --
+--                      , tasty
+--                      , tasty-hunit
+--                      --
+--                      , PropBank
+--                      , nlp-types
+--   default-language:    Haskell2010
+--   ghc-options:  -Wall -O2
 
-test-suite test-match-arg-nodes
-  type: exitcode-stdio-1.0
-  hs-source-dirs: test
-  main-is: test-match-arg-nodes.hs
-  build-depends:       base
-                     , containers
-                     , lens
-                     , text
-                     --
-                     , tasty
-                     , tasty-hunit
-                     --
-                     , PropBank
-                     , nlp-types
-  default-language:    Haskell2010
-  ghc-options:  -Wall -O2
+-- test-suite test-match-arg-nodes
+--   type: exitcode-stdio-1.0
+--   hs-source-dirs: test
+--   main-is: test-match-arg-nodes.hs
+--   build-depends:       base
+--                      , containers
+--                      , lens
+--                      , text
+--                      --
+--                      , tasty
+--                      , tasty-hunit
+--                      --
+--                      , PropBank
+--                      , nlp-types
+--   default-language:    Haskell2010
+--   ghc-options:  -Wall -O2
