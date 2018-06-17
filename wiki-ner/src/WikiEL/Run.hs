@@ -52,6 +52,7 @@ loadWikiData = do
 reprFileTinyG :: EntityReprFile
 reprFileTinyG       = EntityReprFile (globalData </> "wiki-ner/data/wikidata.test.entities")
 
+
 orgItemFileG,personItemFileG,brandItemFileG,locationItemFileG,occupationItemFileG,humanRuleItemFileG,buildingItemFileG :: ItemIDFile
 orgItemFileG        = ItemIDFile (globalData </> "wiki-ner/data/ne.org")
 personItemFileG     = ItemIDFile (globalData </> "wiki-ner/data/ne.person")
@@ -60,6 +61,7 @@ locationItemFileG   = ItemIDFile (globalData </> "wiki-ner/data/ne.loc")
 occupationItemFileG = ItemIDFile (globalData </> "wiki-ner/data/ne.occupation")
 humanRuleItemFileG  = ItemIDFile (globalData </> "wiki-ner/data/ne.human_rule")
 buildingItemFileG   = ItemIDFile (globalData </> "wiki-ner/data/ne.building")
+
 
 classFilesG :: [(ItemClass,ItemIDFile)]
 classFilesG = [ (WC.personClass, personItemFileG)

@@ -43,13 +43,6 @@ loadNameTable = do
   return $ map (\x -> (FF._uid x,(WD._repr . FF._repr) x)) reprs
 
 
-loadCompanies :: IO [CompanyInfo]
-loadCompanies = do
-  -- nt <- loadNameTable
-  companies <- getCompanyListFromJSON "/data/groups/uphere/data/NER/company/company2.json"
-  return companies
-
-
 aliasFinder :: (Hashable t, Hashable k, Eq t, Eq k) => HM.HashMap t k -> HM.HashMap k a -> t -> Maybe a
 aliasFinder nuid uida txt =
   let muid = HM.lookup txt nuid
@@ -67,6 +60,7 @@ getCompanyListFromJSON fp = do
     Just result -> return result
 
 
+
 constructCompanyListFromCSV :: [(WD.ItemID,Text)] -> IO [CompanyInfo]
 constructCompanyListFromCSV nameTable = do
   let nuid = mkNameUIDHM nameTable
@@ -77,7 +71,7 @@ constructCompanyListFromCSV nameTable = do
     txt' <- T.IO.readFile fp
     let tlines = T.lines txt'
         txt = T.intercalate "\n" $ map (T.reverse . (T.drop 2) . T.reverse) tlines
-        bstr = BL8.pack $ T.unpack txt 
+        bstr = BL8.pack $ T.unpack txt
     let (ecompany :: Either String (V.Vector CSVListedCompany)) = C.decode C.HasHeader bstr
     case ecompany of
       Left err -> error err
