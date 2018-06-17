@@ -37,9 +37,9 @@ mkUIDAliasHM nameTable = foldl' (\acc (i,n) -> HM.insertWith (\xs1 -> (\xs2 -> x
 
 
 -- | returns (Wiki UID, Text)
-loadNameTable :: IO [(WD.ItemID,Text)]
-loadNameTable = do
-  reprs <- LD.loadEntityReprs reprFileG
+loadNameTable :: FilePath -> IO [(WD.ItemID,Text)]
+loadNameTable dataDir = do
+  reprs <- LD.loadEntityReprs (reprFileG dataDir)
   return $ map (\x -> (FF._uid x,(WD._repr . FF._repr) x)) reprs
 
 
