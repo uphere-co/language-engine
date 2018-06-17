@@ -33,7 +33,6 @@ import           NLP.Syntax.Clause         (hoistMaybe) -- this should be moved 
 import           NLP.Syntax.Type.Verb      (vp_lemma,vp_negation)
 import           NLP.Syntax.Type.XBar      (X'Tree)
 import           NLP.Type.PennTreebankII   (Lemma(..))
--- import           NLP.Shared.Type
 import           SRL.Analyze.Type
 import           SRL.Statistics
 --
