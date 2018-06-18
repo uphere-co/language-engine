@@ -7,8 +7,8 @@ version:             0.1.0.0
 -- description:
 -- license:
 license-file:        LICENSE
-author:              Jihun Kim
-maintainer:          jihun@uphere.ai
+author:              UpHere, Inc.
+maintainer:          ianwookim@gmail.com
 -- copyright:
 -- category:
 build-type:          Simple
@@ -22,7 +22,6 @@ library
                        WikiEL
                        WikiEL.BinarySearch
                        WikiEL.Convert
-                       -- WikiEL.CoreNLP
                        WikiEL.EntityDisambiguation
                        WikiEL.EntityLinking
                        WikiEL.EntityMentionPruning
@@ -93,37 +92,35 @@ library
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
 
-executable yago-bin
-  hs-source-dirs:      app
-  main-is:             yagoBinaryIO.hs
-  -- other-modules:
-  build-depends:       base
-                     , text
-                     , wiki-ner
-                     , nlp-types
-  default-language: Haskell2010
-  ghc-options: -threaded -O2 -Wall
+-- executable yago-bin
+--   hs-source-dirs:      app
+--   main-is:             yagoBinaryIO.hs
+--   -- other-modules:
+--   build-depends:       base
+--                      , text
+--                      , wiki-ner
+--                      , nlp-types
+--   default-language: Haskell2010
+--   ghc-options:         -O2 -Wall -Werror
+--                        -threaded
+--                        -fno-warn-unused-do-bind
+--                        -fno-warn-orphans
 
 executable wikiel
   hs-source-dirs:      app,test
   main-is:             entityLinking.hs
-  -- other-modules:
+  other-modules:       Test.Data.Filename
+                       Test.Data.POS
   build-depends:       base
                      , text
                      , wiki-ner
                      , graph-algorithms
                      , nlp-types
   default-language: Haskell2010
-  ghc-options: -threaded -O2 -Wall
-
--- executable ner
---   hs-source-dirs:      app
---   main-is:             ner.hs
---   -- other-modules:
---   build-depends:       base
---                      , wiki-ner
---   default-language: Haskell2010
---   ghc-options: -threaded -O2 -Wall
+  ghc-options:         -O2 -Wall -Werror
+                       -threaded
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
 
 
 executable node-filter
@@ -138,47 +135,10 @@ executable node-filter
                      , graph-algorithms
                      , nlp-types
   default-language: Haskell2010
-  ghc-options: -threaded -O2 -Wall
-
-
--- executable testApp
---   hs-source-dirs: test, src
---   other-modules:       Test.Data.Filename
---                      , Test.Data.POS
---                      , Test.NamedEntityTagger
---                      , Test.WikiEntityTagger
---                      , Test.CoreNLPEntity
---   main-is: testApp.hs
---   build-depends:       base
---                      , aeson
---                      , tasty-hunit
---                      , text
---                      , primitive
---                      , vector
---                      , vector-algorithms
---                      , lens
---                      , containers
---                      , attoparsec
---                      , xxhash
---                      , binary
---                      , bytestring
---                      , mwc-random
---                      , raw-strings-qq
---                      , tasty
---                      , nlp-types
---                      , graph-algorithms
---                      , wiki-ner
---                      , foreign-store
---                      , deepseq
---   default-language:    Haskell2010
---   ghc-options:        -threaded
---                       -O2
---   ghc-prof-options:    -caf-all -auto-all
-
--- --                      -prof
--- --                      -fprof-auto
-
-
+  ghc-options:         -O2 -Wall -Werror
+                       -threaded
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
 
 test-suite test
   type: exitcode-stdio-1.0
@@ -210,9 +170,10 @@ test-suite test
                      , graph-algorithms
                      , wiki-ner
   default-language:    Haskell2010
-  ghc-options:        -threaded -O2 -Wall
---                      -prof
---                      -fprof-auto
+  ghc-options:         -O2 -Wall -Werror
+                       -threaded
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
 
 test-suite testRun
   type: exitcode-stdio-1.0
@@ -246,6 +207,7 @@ test-suite testRun
                      , graph-algorithms
                      , wiki-ner
   default-language:    Haskell2010
-  ghc-options:        -threaded -O2 -Wall
---                      -prof
---                      -fprof-auto
+  ghc-options:         -O2 -Wall -Werror
+                       -threaded
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans

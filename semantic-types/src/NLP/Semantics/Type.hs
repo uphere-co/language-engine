@@ -23,6 +23,7 @@ makeLenses ''PrepOr
 instance ToJSON a => ToJSON (PrepOr a)
 instance FromJSON a => FromJSON (PrepOr a)
 
+noprep :: a -> PrepOr a
 noprep = PrepOr Nothing
 
 type Frame = Text

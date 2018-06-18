@@ -13,22 +13,11 @@ module FrameNet.Type.Sentence where
 
 import           Control.Lens
 import           Data.Binary
-import           Data.Binary.Orphans  -- for UTCTime
+import           Data.Binary.Orphans ()
 import           Data.Text
-import           Data.Time.Calendar
 import           Data.Time.Clock
 import           GHC.Generics
 --
-
-{- 
--- orphan instance
-deriving instance Generic Day
-deriving instance Binary Day
-deriving instance Generic DiffTime
-deriving instance Binary DiffTime
-deriving instance Generic UTCTime
-deriving instance Binary UTCTime
--}
 
 data IType = APos | CNI | INI | DNI | INC
            deriving (Show,Eq,Ord,Enum,Bounded,Generic,Binary)

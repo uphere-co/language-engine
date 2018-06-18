@@ -6,15 +6,8 @@ module OntoNotes.Corpus.PropBank where
 import           Control.Lens
 import           Data.Function
 import           Data.List
-import           Data.Text                       (Text)
 --
--- import           NLP.Syntax.Clause
--- import           NLP.Syntax.Type                 (PredArgWorkspace,STag)
--- import           NLP.Syntax.Type.Verb
--- import           NLP.Syntax.Type.XBar
 import           NLP.Type.PennTreebankII
-import           PropBank.Match
-import           PropBank.Type.Match
 
 
 data MatchResult = ExactMatch Range

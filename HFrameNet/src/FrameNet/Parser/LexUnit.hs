@@ -113,11 +113,11 @@ p_annoSet x = AnnoSet <$> (readDecimal =<< x ^. attr "ID")
 -- | parser for FrameNet.Type.Header.FE
 p_header_frame :: Element -> Maybe [FE]
 p_header_frame x = mapM p_fe (getOnly x "FE")
-  where p_fe x = FE <$> x^.attr "name"
-                    <*> optional (x^.attr "abbrev")
-                    <*> (identifyCoreType =<< (x ^. attr "type"))
-                    <*> x^.attr "bgColor"
-                    <*> x^.attr "fgColor"
+  where p_fe z = FE <$> z^.attr "name"
+                    <*> optional (z^.attr "abbrev")
+                    <*> (identifyCoreType =<< (z ^. attr "type"))
+                    <*> z^.attr "bgColor"
+                    <*> z^.attr "fgColor"
 
 
 p_header :: Element -> Maybe Header

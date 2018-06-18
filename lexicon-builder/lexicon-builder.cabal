@@ -94,7 +94,7 @@ Executable sense-inventory
                        -fno-warn-orphans
                        -threaded
   ghc-prof-options:    -caf-all -auto-all
-  other-modules:
+  -- other-modules:
   build-depends:       base,
                        --
                        boxes,
@@ -108,6 +108,8 @@ Executable sense-inventory
                        HFrameNet,
                        HWordNet,
                        lexicon,
+                       -- nlp-types,
+                       -- syntactic-analysis,
                        OntoNotes,
                        --
                        lexicon-builder
@@ -124,6 +126,7 @@ Executable verb-subcat-propbank-stat
                        -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:       Lexicon.App.VerbSubcat
+                       NLP.Syntax.Argument
                        NLP.Syntax.Clause.Old
                        NLP.Syntax.Format.Old
                        NLP.Syntax.Type

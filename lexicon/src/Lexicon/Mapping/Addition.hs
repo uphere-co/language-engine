@@ -2,6 +2,7 @@
 
 module Lexicon.Mapping.Addition where
 
+import           Data.Text             (Text)
 import           NLP.Type.SyntaxProperty
 --
 import           Lexicon.Type          (ArgPattern(..),GArg(..),GRel(..)
@@ -9,13 +10,23 @@ import           Lexicon.Type          (ArgPattern(..),GArg(..),GRel(..)
 --
 import           Prelude        hiding (null)
 
+active :: Maybe Voice
 active = Just Active
-npSBJ = Just (GR_NP (Just GASBJ))
-np1   = Just (GR_NP (Just GA1))
-np2   = Just (GR_NP (Just GA2))
-null = Nothing
-pp x = Just (GR_PP (Just (x,False)))
 
+npSBJ :: Maybe GRel
+npSBJ = Just (GR_NP (Just GASBJ))
+
+np1 :: Maybe GRel
+np1   = Just (GR_NP (Just GA1))
+
+np2 :: Maybe GRel
+np2   = Just (GR_NP (Just GA2))
+
+null :: Maybe GRel
+null = Nothing
+
+pp :: Text -> Maybe GRel
+pp x = Just (GR_PP (Just (x,False)))
 
 additionalMapping :: [(SenseID,ArgPattern Voice GRel)]
 additionalMapping =

@@ -3,10 +3,11 @@
 
 module FrameNet.Type.Definition where
 
-import           Control.Lens         ((^?),(^.),(^..),only)
+import           Control.Lens         ((^.),(^..),only)
 import           Data.List            (intersperse)
 import           Data.Text            (Text)
 import qualified Data.Text       as T
+import qualified Data.Text.Lazy  as TL
 import           Text.Taggy.Lens
 
 -- data Ex =
@@ -61,6 +62,7 @@ p_content (NodeElement e) = case e^.name of
                               "ex" -> [CEX (p_ex (e^.children))]
                               _     -> []
 
+p_defRoot :: TL.Text -> DefRoot
 p_defRoot txt = DefRoot $ do e <- txt^..html.allNamed (only "def-root")
                              p_content =<< (e^.children)
 

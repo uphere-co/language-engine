@@ -4,7 +4,6 @@
 
 module Lexicon.Query where
 
-import           Control.Applicative
 import           Control.Lens
 import           Data.Function                (on)
 import           Data.Hashable                (Hashable)
@@ -25,7 +24,7 @@ import           Lexicon.Type
 
 
 parseRoleInst :: [Text] -> RoleInstance
-parseRoleInst (i:lma:sense:frame:rest)
+parseRoleInst (_i:lma:sense:frame:rest)
   = let lst = map (\w -> let x:y:_ = T.splitOn ":" w in (x,y)) rest
     in ((lma,Verb,sense),("frame",frame):lst)
 parseRoleInst x = error ("parseRoleInstance: " ++ show x)
@@ -42,7 +41,7 @@ convertONIDtoSenseID lma sense_num =
   else (lma,Verb,"1." <> sense_num)
 
 
-
+parseGRel :: Text -> GRel
 parseGRel w = case T.splitOn "-" w of
                 t:ts -> case t of
                           "NP"   -> GR_NP   (listToMaybe ts >>= identifyGA)
@@ -50,11 +49,12 @@ parseGRel w = case T.splitOn "-" w of
                           "SBAR" -> GR_SBAR (listToMaybe ts >>= identifyGA)
                           "PP"   -> case ts of
                                       prep:"ing":_ -> GR_PP (Just (prep,True))
+                                      _prep:_:_     -> error "missing case in parseGRel"
                                       prep:[]      -> GR_PP (Just (prep,False))
                                       []           -> GR_PP Nothing
                           "ADVP" -> GR_ADVP (listToMaybe ts)
                           "ADJP" -> GR_ADJP
-                          x      -> GR_X w
+                          _      -> GR_X w
                 _ -> GR_X w
   where
     identifyGA "SBJ" = Just GASBJ
@@ -82,7 +82,7 @@ parseRolePattInst ws@[lma',sense',mvoice,marg0,marg1,marg2,marg3,marg4,count] =
     )
   where lma = T.intercalate "-" . init . T.splitOn "-" $ lma'
         sid = convertONIDtoSenseID lma sense'
-
+parseRolePattInst _ = error "parseRolePattInst"
 
 
 adjustRolePattInsts :: [RolePattInstance Voice] -> [RolePattInstance Voice]

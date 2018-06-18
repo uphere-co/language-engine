@@ -4,7 +4,6 @@ module VerbNet.Type where
 
 import           Control.Lens
 import           Data.Text
-import           Text.Taggy.Lens
 
 data Description = Description { _desc_primary           :: Text
                                , _desc_secondary         :: Maybe Text

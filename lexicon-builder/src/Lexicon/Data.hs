@@ -9,7 +9,6 @@ module Lexicon.Data where
 
 import           Control.Lens
 import           Data.Aeson
-import           Data.Aeson.Types
 import qualified Data.Binary                as Bi
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Foldable

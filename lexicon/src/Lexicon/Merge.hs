@@ -6,10 +6,8 @@ module Lexicon.Merge where
 
 import           Control.Lens                  ((^.),(%~),(.~),_1,_2)
 import           Data.Function                 (on)
-import qualified Data.HashSet            as HS
 import           Data.List                     (groupBy,sortBy,tails)
 import           Data.Maybe                    (isNothing,mapMaybe,maybeToList)
-import           Data.Text                     (Text)
 --
 import           NLP.Type.PennTreebankII       (TernaryLogic(..))
 import           NLP.Type.SyntaxProperty       (Voice(..))
@@ -19,7 +17,6 @@ import           Lexicon.Type                  (ArgPattern(..), GArg(..), GRel(.
                                                ,patt_arg2,patt_arg3,patt_arg4
                                                ,findGArg)
 
-import Debug.Trace
 
 
 convertPassive :: ArgPattern Voice GRel -> ArgPattern () GRel
@@ -60,6 +57,7 @@ convertNP patt =
         | otherwise                                                           -> patt
 
 
+mergeS :: GRel -> GRel
 mergeS (GR_S x) = GR_SBAR x
 mergeS x        = x
 
@@ -91,14 +89,19 @@ mergePatterns pattstats0 =
   in sortBy (flip compare `on` (^._2)) . map (\xs -> (fst (head xs), sum (map snd xs))) $ pgrps
 
 
+pattern SubPatternOf   :: TernaryLogic
 pattern SubPatternOf   = Yes
+
+pattern SuperPatternOf :: TernaryLogic
 pattern SuperPatternOf = No
+
+pattern Neither        :: TernaryLogic
 pattern Neither        = Unclear
 
 
 patternRelation :: ArgPattern () GRel -> ArgPattern () GRel -> TernaryLogic
-patternRelation x y | x `isSubPatternOf` y = SubPatternOf
-                    | y `isSubPatternOf` x = SuperPatternOf
+patternRelation a b | a `isSubPatternOf` b = SubPatternOf
+                    | b `isSubPatternOf` a = SuperPatternOf
                     | otherwise            = Neither
   where
     each l x y  = (isNothing (x^.l)) || (x^.l == y^.l)
@@ -116,7 +119,7 @@ patternGraph f lst = (concatMap (\(x:xs) -> mapMaybe (link x) (x:xs)) . init . t
                          SubPatternOf   -> Just (i,j)
                          SuperPatternOf -> Just (j,i)
                          Neither        -> Nothing
-
+                         _              -> error "patternGraph"
 
 listOfSupersetSubset :: [(Int,Int)] -> [(Int,[Int],[Int])]
 listOfSupersetSubset xs = let is = map fst xs

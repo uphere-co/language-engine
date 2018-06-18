@@ -34,7 +34,8 @@ import           WikiEL.EntityLinking                       (entityLinkings,buil
 import qualified WikiEL.EntityLinking               as EL
 import qualified WikiEL.EntityMentionPruning        as EMP
 import qualified WikiEL.ETL.LoadData                as LD
-import           WikiEL.Type                                (EntityMention,ItemClass,NameUIDTable,SortedGraph(..),WikiuidNETag)
+import           WikiEL.Type                                (EntityMention,ItemClass,NameUIDTable
+                                                            ,SortedGraph(..),WikiuidNETag)
 import           WikiEL.Type.FileFormat
 
 import           WikiEL.Type.Wikidata                       (ItemID)

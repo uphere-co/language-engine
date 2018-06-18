@@ -8,12 +8,8 @@ module VerbNet.Parser where
 import           Control.Applicative
 import           Control.Lens       hiding (element,elements)
 import           Data.Text                 (Text)
-import qualified Data.Text         as T
-import qualified Data.Text.Lazy.IO as TLIO
 import           Data.Traversable          (traverse)
 import           Text.Taggy.Lens
-import           System.Directory
-import           System.FilePath
 --
 import           Text.Taggy.Lens.Util
 --
@@ -43,10 +39,12 @@ p_selrestrs x = SelRestrs <$> traverse p_selrestr_each (x^..elements)
     p_selrestr_each y = case y^.name of
                           "SELRESTR" -> Left <$> (SelRestr <$> y .: "Value" <*> y .: "type")
                           "SELRESTRS" -> Right <$> p_selrestrs y
-  
+                          _ -> fail "p_selrestr_each"
+
+p_synrestr :: Element -> Either String SynRestr
 p_synrestr x = SynRestr <$> x .: "Value"
                         <*> x .: "type"
-                        
+
 p_restrs :: Element -> Parser (Either SynRestrs SelRestrs)
 p_restrs x = case x ^.. elements of
                []    -> fail "p_restrs: no element"
@@ -55,9 +53,10 @@ p_restrs x = case x ^.. elements of
                                                              <*> optional (x .: "logic" >>= \case
                                                                              ("and" :: Text) -> pure And
                                                                              "or"            -> pure Or
+                                                                             _               -> fail "p_restrs"
                                                                           )
                                                   )
-                          "SELRESTRS" -> Right <$> p_selrestrs y 
+                          "SELRESTRS" -> Right <$> p_selrestrs y
                           z           -> fail ("p_restrs: " ++ show z)
 
 p_syntax :: Element -> Parser [Syntax]
@@ -70,13 +69,14 @@ p_syntax x = let ys = x^..elements
                      "ADV"  -> pure ADV
                      "PREP" -> PREP <$> optional (y .: "value")
                      "LEX"  -> LEX <$> y .: "value"
-                     x      -> fail ("p_syntax: p_each: " ++ show x)
+                     z      -> fail ("p_syntax: p_each: " ++ show z)
 
 p_arg :: Element -> Parser Arg
 p_arg x = Arg <$> (x .: "type"  >>= \case ("Event" :: Text) -> pure Arg_Event
                                           "ThemRole"        -> pure Arg_ThemRole
                                           "VerbSpecific"    -> pure Arg_VerbSpecific
                                           "Constant"        -> pure Arg_Constant
+                                          y                 -> fail ("p_arg: " ++ show y)
                   )
               <*> x .: "value"
 
@@ -84,14 +84,14 @@ p_pred :: Element -> Parser Pred
 p_pred x = Pred <$> p_list p_arg "ARG" "ARGS" x
                 <*> optional (x .: "bool")
                 <*> x .: "value"
-          
+
 p_frame :: Element -> Parser Frame
 p_frame x = Frame <$> (p_description =<< getOnly1 x "DESCRIPTION")
                   <*> p_list (pure . (^.contents)) "EXAMPLE" "EXAMPLES" x
                   <*> (p_syntax =<< getOnly1 x "SYNTAX")
                   <*> p_list p_pred "PRED" "SEMANTICS" x
 
-                  
+
 
 
 p_vnsubclass :: Element -> Parser VNSubclass
@@ -108,5 +108,3 @@ p_vnclass x = VNClass <$> p_list p_member     "MEMBER"     "MEMBERS"    x
                       <*> p_list p_frame      "FRAME"      "FRAMES"     x
                       <*> p_list p_vnsubclass "VNSUBCLASS" "SUBCLASSES" x
                       <*> x .: "ID"
-
-

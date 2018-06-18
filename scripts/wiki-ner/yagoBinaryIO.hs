@@ -2,8 +2,8 @@
 
 import           System.Environment                    (getArgs)
 import           Data.Text                             (Text)
-import           Data.Maybe                            (mapMaybe,catMaybes)
-import           System.IO                             (stdin,stdout)
+import           Data.Maybe                            (mapMaybe)
+import           System.IO                             (stdin)
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 
@@ -13,37 +13,45 @@ import           WikiEL.ETL.RDF.Binary
 import           WikiEL.Type.WordNet                   (SynsetY)
 import           WikiEL.ETL.Parser                     (wordnetSynsetYAGO)
 
--- yagoBinarySave and yagoBinaryLoad are rather experimental. 
+-- yagoBinarySave and yagoBinaryLoad are rather experimental.
 -- For now, a size of binary is too large and no noticeable performance gains.
+
 yagoBinarySave :: IO ()
 yagoBinarySave = do
   let
     input_text = "yago/wordnet"
     --input_text = "wordnet"
-  lines <- readlines input_text
+  ls <- readlines input_text
   let
-    rows = mapParsed readlineYAGO lines
+    rows = mapParsed readlineYAGO ls
     --bin = encode rows
   --mapM_ print (decodeYagoRDF bin)
   --encodeFile "yago/sample.bin" rows
   print (length rows)
   encodeFile (input_text ++ ".bin") rows
-  
+
+
+
 yagoBinaryLoad :: IO ()
 yagoBinaryLoad = do
   --rows <- decodeYAGOFile "yago/sample.bin"
   --rows <- decodeYAGOFile "wordnet.bin"
   rows <- decodeYAGOFile "yago/wordnet.bin"
   print (length rows)
-  
+
+
 
 hasWikiAlias :: Either a YagoRdfTriple -> Maybe (YagoObject, YagoObject)
 hasWikiAlias (Right (_,ts,tv@(YagoVerb v),to@(YagoWikiAlias _))) | v =="redirectedFrom" = Just (ts, to)
 hasWikiAlias _ = Nothing
 
+
+
 isWordNet :: Either a YagoRdfTriple -> Bool
 isWordNet (Right (_,ts,tv,to@(YagoWordnet _))) = True
 isWordNet _ = False
+
+
 
 taxonomyWordNet :: Either a YagoRdfTriple -> Maybe (SynsetY, SynsetY)
 taxonomyWordNet (Right (_,YagoWordnet sub,YagoRDFSprop p,YagoWordnet super))|p == "subClassOf" = Just (x, y)
@@ -95,18 +103,18 @@ selector opt | opt == Opt "typedCat"  = wikicatOfWordNetT.readlineYAGO  -- for g
 selector opt | opt == Opt "interlink" = interWikiLinks . readlineYAGO   -- for generating the `interlinks` file
 selector opt | opt == Opt "synset"    = wordnetType . readlineYAGO
 selector opt | opt == Opt "taxonomy"  = wordnetTaxonomy . readlineYAGO
-selector opt                          = error "Unknown option"
+selector _opt                         = error "Unknown option"
 
 {-|
-  This is for filtering specific RDF triples and print them wiht a custom representation. 
+  This is for filtering specific RDF triples and print them wiht a custom representation.
 -}
 yago :: (Text -> Maybe Text) -> Text -> Text -> IO Text
 yago f prevPartialBlock block = do
   let
     (mainBlock,partialBlock) = T.breakOnEnd "\n" block
-    lines = T.lines (T.append prevPartialBlock mainBlock)    
-    filtered = mapMaybe f lines
-  mapM_ T.IO.putStrLn filtered  
+    ls = T.lines (T.append prevPartialBlock mainBlock)
+    filtered = mapMaybe f ls
+  mapM_ T.IO.putStrLn filtered
   return partialBlock
 
 main :: IO ()
@@ -115,5 +123,3 @@ main = do
   let
     opt = Opt (T.pack (head args))
   readBlocks stdin (yago (selector opt)) ""
-
-
