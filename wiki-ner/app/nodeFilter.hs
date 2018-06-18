@@ -11,19 +11,17 @@ import qualified Data.List                     as L
 import qualified Data.Map.Strict               as M
 import qualified Data.Vector.Unboxed           as UV
 
---import qualified WikiEL.Graph                  as G
 import qualified Graph                         as G
 import qualified Graph.ETL                     as G.E
 import qualified Graph.Internal.Hash           as H
 import           WikiEL.Type                           (NodeNames)
-import qualified WikiEL.EntityDisambiguation   as ED
 import qualified WikiEL.ETL.Util               as E.U
 
 stripEdges :: [a] -> Maybe [a]
 stripEdges vs | length vs <2 = Nothing
 stripEdges vs = Just ((tail . init) vs)
 
-type ToBString   = M.Map H.WordHash G.E.BString
+-- type ToBString   = M.Map H.WordHash G.E.BString
 type SortedEdges = (G.Direction, UV.Vector (H.WordHash, H.WordHash))
 type NodeCounts  = M.Map Text Int
 type Path        = [Text]
@@ -36,20 +34,18 @@ consume :: NodeNames -> SortedEdges -> NodeCounts -> Path -> NodeCounts
 consume _ _ cs ns | length ns < 2 = cs
 consume names sorted cs (a:b:ns) = consume names sorted cs' ns
   where
-    --hash word = H.wordHash (T.pack word)
     hashT = H.wordHash
-    --showPath invs path = catMaybes (UV.foldl' f [] path) where f accum hash = M.lookup hash invs : accum
-    --showPathPairs names = mapM_  (print . (\(x,y)-> reverse (showPath names y) ++ tail (showPath names x)))
     showPath invs path = map T.E.decodeUtf8 (catMaybes (UV.foldl' f [] path))
       where
         f accum hash = M.lookup hash invs : accum
-    showPathPair names (x,y) = reverse (showPath names y) ++ tail (showPath names x)
-  
+    showPathPair names' (x,y) = reverse (showPath names' y) ++ tail (showPath names' x)
+
     getPaths len wp1 wp2 = G.destOverlapUpto (G.neighbor sorted) len (hashT wp1) (hashT wp2)
     paths = map (showPathPair names) (getPaths 1 a b)
     fs = L.foldl' f
       where f accum v = M.insertWith (+) v 1 accum
     cs' = L.foldl' fs cs (mapMaybe stripEdges paths)
+consume _ _ _ _ = error "consume"
 
 {-|
   1. Randomly selects two nodes.
@@ -59,12 +55,12 @@ consume names sorted cs (a:b:ns) = consume names sorted cs' ns
 -}
 countNodes :: FilePath -> FilePath -> Int -> IO [(T.Text, Int)]
 countNodes linkfile nodeSampleFile cutoff = do
-  cc@(G.E.Graph edges names) <- G.E.applyLines G.E.loadGraph linkfile
+  G.E.Graph edges names <- G.E.applyLines G.E.loadGraph linkfile
   let
     sortedEdges = G.sortEdges G.From  edges
-  lines <- E.U.readlines nodeSampleFile
-  let 
-    cs = consume names sortedEdges M.empty (take 1000000 lines)    
+  ls <- E.U.readlines nodeSampleFile
+  let
+    cs = consume names sortedEdges M.empty (take 1000000 ls)
     vs = L.sortOn ((\x -> -x) . snd) (M.toList cs)
     filters = take cutoff vs
   -- mapM_ print filters
@@ -73,10 +69,10 @@ countNodes linkfile nodeSampleFile cutoff = do
 
 main :: IO ()
 main = do
-  args <- getArgs  
+  args <- getArgs
   let
-    -- Regarding how to produce linkefile and weightfile, see README.md 
+    -- Regarding how to produce linkefile and weightfile, see README.md
     [linkfile,weightfile] = args
     n_node = 100  -- cutoff for a number of noisy hub nodes to select
-  filters <- countNodes linkfile weightfile n_node
-  print ""
+  _filters <- countNodes linkfile weightfile n_node
+  putStrLn ""

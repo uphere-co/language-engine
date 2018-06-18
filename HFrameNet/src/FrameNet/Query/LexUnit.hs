@@ -21,10 +21,10 @@ import           Data.Text.Read
 import           System.Console.Haskeline
 import           System.Directory             (getDirectoryContents)
 import           System.FilePath              ((</>),takeExtensions)
-import           Text.Taggy.Lens
+import           Text.Taggy.Lens       hiding (name)
 --
 import           FrameNet.Format.LexUnit      (printLexUnit)
-import           FrameNet.Parser.LexUnit       (p_lexUnit)
+import           FrameNet.Parser.LexUnit      (p_lexUnit)
 import           FrameNet.Type.Common
 import           FrameNet.Type.LexUnit
 

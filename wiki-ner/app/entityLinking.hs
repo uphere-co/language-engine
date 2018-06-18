@@ -3,9 +3,10 @@ module Main where
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T.IO
 
-
-import qualified WikiEL.WikiNamedEntityTagger  as WNET
+import           NLP.Type.NamedEntity                  (NamedEntityClass)
 import qualified WikiEL                        as WEL
+import           WikiEL.Type                           (EntityMention)
+import qualified WikiEL.WikiNamedEntityTagger  as WNET
 import           Test.Data.Filename
 import           Test.Data.POS
 
@@ -15,6 +16,11 @@ import           Test.Data.POS
   While it takes some minutes to load `tagger` and `entityResolve`,
   one can reuse it for different inputs.
 -}
+runEL :: ( [(T.Text,NamedEntityClass,POSTag)] -> [EntityMention T.Text]
+         , [EntityMention T.Text] -> [EntityMention T.Text])
+      -> FilePath
+      -> [(POSTag,T.Text)]
+      -> IO ()
 runEL (tagger,entityResolve) nerFile posFile = do
   input_ner <- T.IO.readFile nerFile
   let
@@ -26,7 +32,8 @@ runEL (tagger,entityResolve) nerFile posFile = do
     disambiguated_mentions = entityResolve linked_mentions
 
   mapM_ print disambiguated_mentions
-  
+
+main :: IO ()
 main = do
   edges  <- WEL.loadAndSortEdges graphFiles
   uidTag <- WEL.loadFiles classFiles  

@@ -86,8 +86,9 @@ data ATNode a = SimpleNode { _atnode_orig :: a }
 
 
 -- now i can experiment flexibly with linked node
+chooseATNode :: ATNode a -> a
 chooseATNode (SimpleNode x) = x
-chooseATNode (LinkedNode x y) = x
+chooseATNode (LinkedNode x _) = x
 
 data ArgTable b = ArgTable { _tbl_rel  :: Maybe Text
                            , _tbl_arg0 :: Maybe b

@@ -49,7 +49,7 @@ library
                        VerbNet
   hs-source-dirs:      src, app
   default-language:    Haskell2010
-  ghc-options:         -O2 -Wall
+  ghc-options:         -O2 -Wall -Werror
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
   ghc-prof-options:    -caf-all -auto-all
@@ -59,7 +59,7 @@ Executable role-mapping-utility
   Main-is:             role-mapping-utility.hs
   hs-source-dirs:      app
   default-language:    Haskell2010
-  ghc-options:         -O2 -Wall
+  ghc-options:         -O2 -Wall -Werror
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
@@ -88,13 +88,13 @@ Executable sense-inventory
   Main-is:             sense-inventory.hs
   hs-source-dirs:      app
   default-language:    Haskell2010
-  ghc-options:         -O2 -Wall
+  ghc-options:         -O2 -Wall -Werror
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
                        -threaded
   ghc-prof-options:    -caf-all -auto-all
-  other-modules:
+  -- other-modules:
   build-depends:       base,
                        --
                        boxes,
@@ -108,6 +108,8 @@ Executable sense-inventory
                        HFrameNet,
                        HWordNet,
                        lexicon,
+                       -- nlp-types,
+                       -- syntactic-analysis,
                        OntoNotes,
                        --
                        lexicon-builder
@@ -117,13 +119,14 @@ Executable verb-subcat-propbank-stat
   Main-is:             verb-subcat-propbank-stat.hs
   hs-source-dirs:      app
   default-language:    Haskell2010
-  ghc-options:         -O2 -Wall
+  ghc-options:         -O2 -Wall -Werror
                        -funbox-strict-fields
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
                        -threaded
   ghc-prof-options:    -caf-all -auto-all
   other-modules:       Lexicon.App.VerbSubcat
+                       NLP.Syntax.Argument
                        NLP.Syntax.Clause.Old
                        NLP.Syntax.Format.Old
                        NLP.Syntax.Type

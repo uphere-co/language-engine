@@ -51,10 +51,9 @@ library
                        FrameNet.Type.Header
                        FrameNet.Type.Frame
                        FrameNet.Type.LexUnit
-                       -- FrameNet.Type.PhraseType
                        FrameNet.Type.Sentence
                        FrameNet.Util
-  ghc-options:         -O2 -Wall -threaded
+  ghc-options:         -O2 -Wall -threaded -Werror
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
   ghc-prof-options:    -caf-all -auto-all

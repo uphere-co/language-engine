@@ -2,7 +2,7 @@
 
 module Graph where
 
-import           Data.Int                              (Int32, Int64)
+import           Data.Int                              (Int32)
 import           Data.Vector.Algorithms.Intro          (sort, sortBy)
 import           Control.Monad.ST                      (runST)
 import qualified Data.Vector.Unboxed           as UV
@@ -51,42 +51,24 @@ unionVecBy hash lv rv = lv ++ snd (L.partition f rv)
 
 intersection :: (UV.Unbox a, Ord a) => [UV.Vector a] -> UV.Vector a
 intersection [] = UV.empty
-intersection vs@(v:vt) = L.foldl' intersectionVec v vt
+intersection (v:vt) = L.foldl' intersectionVec v vt
 
 intersectionBy :: (UV.Unbox a, Ord a) => (b->a) -> [[b]] -> [b]
-intersectionBy hash [] = []
-intersectionBy hash vs@(v:vt) = L.foldl' (intersectionVecBy hash) v vt
+intersectionBy _    []     = []
+intersectionBy hash (v:vt) = L.foldl' (intersectionVecBy hash) v vt
 
 
 union :: (UV.Unbox a, Ord a) => [UV.Vector a] -> UV.Vector a
-union [] = UV.empty
-union vs@(v:vt) = L.foldl' unionVec v vt
+union []     = UV.empty
+union (v:vt) = L.foldl' unionVec v vt
 
 unionBy :: (UV.Unbox a, Ord a) => (b->a) -> [[b]] -> [b]
-unionBy hash [] = []
-unionBy hash vs@(v:vt) = L.foldl' (unionVecBy hash) v vt
+unionBy _    []     = []
+unionBy hash (v:vt) = L.foldl' (unionVecBy hash) v vt
 
 
 type Dist = Int32
 
-{-
--- FlexibleInstances 
--- TypeSynonymInstances 
-
-class Ord n => Edg e where
-  f :: e -> n
-  t :: e -> n
-class Edg e where
-  --f :: (Ord n) => e -> n
-  --t :: (Ord n) => e -> n
-  f :: e -> n
-  t :: e -> n
-  
-
-instance Edg (Int32,Int32) where
-  f  (x,_) = x
-  t  (_,x) = x
--}
 data Direction = From | To
                deriving (Show, Eq)
 
@@ -104,8 +86,8 @@ from = getNode From
 to   = getNode To
 
 orderingByFrom,orderingByTo :: (UV.Unbox a, Ord a) => (a,a) -> (a,a) -> Ordering
-orderingByFrom left@(lf, _) right@(rf, _) = compare lf rf
-orderingByTo   left@(_ ,lt) right@(_ ,rt) = compare lt rt
+orderingByFrom (lf, _) (rf, _) = compare lf rf
+orderingByTo   (_ ,lt) (_ ,rt) = compare lt rt
 
 edgeOrdering :: (UV.Unbox a, Ord a) => Direction -> (a,a) -> (a,a) -> Ordering
 edgeOrdering From = orderingByFrom
@@ -137,8 +119,8 @@ Direction of the edge is determined by the `comp` argument of the `neighbor`
 -}
 
 accumReachable :: (UV.Unbox a, Ord a) => UV.Vector (a,Dist) -> Dist -> (a -> UV.Vector a) -> (UV.Vector a, Dist) ->  UV.Vector (a,Dist)
-accumReachable accum cutoff fn (frontiers,dist) | cutoff==dist = accum
-accumReachable accum cutoff fn (frontiers,dist) = accumReachable (UV.concat [ns, accum]) cutoff fn (nexts, dist+1)
+accumReachable accum cutoff _  (_frontiers,dist) | cutoff==dist = accum
+accumReachable accum cutoff fn ( frontiers,dist) = accumReachable (UV.concat [ns, accum]) cutoff fn (nexts, dist+1)
   where
     reachable = UV.concatMap fn frontiers -- nodes one step away to the frontier nodes
     news = UV.filter (not . isIn (UV.map fst accum)) reachable -- `reachable` edges that are not already visited
@@ -174,7 +156,7 @@ allPaths fn node cutoff = f 0 (V.singleton (UV.singleton node))
 accumPaths :: (UV.Unbox a, Ord a) => (a -> UV.Vector a) -> UV.Vector a -> [UV.Vector a]
 accumPaths fn path = UV.foldl' f [] (fn (UV.last path))
   where
-    f !accum !to = UV.snoc path to : accum
+    f !accum !x = UV.snoc path x : accum
 
 -- all paths of length `cutoff`, starting from the input `node`
 allPathsOf :: (UV.Unbox a, Ord a) => (a -> UV.Vector a) -> a -> Dist -> [UV.Vector a]
@@ -193,19 +175,20 @@ allPathsUpto fn node cutoff = f [] 0 [UV.singleton node]
         nexts = L.concatMap (accumPaths fn) paths
 
 partition2 :: (a->a->Ordering) -> [a] -> [a] -> ([a],[a],[a],[a])
-partition2 comp ls rs = f [] [] [] [] (V.toList sortedL) (V.toList sortedR)
+partition2 comp ls0 rs0 = f [] [] [] [] (V.toList sortedL) (V.toList sortedR)
   where
-    sortedL = GV.modify (sortBy comp) (V.fromList ls)
-    sortedR = GV.modify (sortBy comp) (V.fromList rs)
+    sortedL = GV.modify (sortBy comp) (V.fromList ls0)
+    sortedR = GV.modify (sortBy comp) (V.fromList rs0)
     -- ul : unmatched left
     -- ml : matched left
     -- ur : unmatched right
     -- mr : matched right
-    f ul ml ur mr ls@(l:lt) rs@(r:rt) | comp l r == EQ = f ul (l:ml) ur (r:mr) lt rt
-    f ul ml ur mr ls@(l:lt) rs@(r:rt) | comp l r == LT = f (l:ul) ml ur mr lt rs
-    f ul ml ur mr ls@(l:lt) rs@(r:rt) | comp l r == GT = f ul ml (r:ur) mr ls rt
-    f ul ml ur mr [] rs = (ul,ml,rs++ur,mr)
+    f ul ml ur mr _ls@(l: lt) _rs@(r: rt) | comp l r == EQ = f ul (l:ml) ur (r:mr) lt rt
+    f ul ml ur mr _ls@(l: lt)  rs@(r:_rt) | comp l r == LT = f (l:ul) ml ur mr lt rs
+    f ul ml ur mr  ls@(l:_lt) _rs@(r:rt) | comp l r == GT = f ul ml (r:ur) mr ls rt
+    f ul ml ur mr [] rs  = (ul,ml,rs++ur,mr)
     f ul ml ur mr ls []  = (ls++ul,ml,ur,mr)
+    f _  _  _  _  _  _   =  error "unmatched case in partition2"
 
 neighborOverlap :: (UV.Unbox a, Ord a) => UV.Vector (a,Dist) -> UV.Vector (a,Dist) -> [((a,Dist),(a,Dist))]
 neighborOverlap dists1 dists2 = zip ml mr
@@ -213,7 +196,7 @@ neighborOverlap dists1 dists2 = zip ml mr
     compFst (ln,_) (rn,_) = compare ln rn
     lhs = UV.modify (sortBy compFst) dists1
     rhs = UV.modify (sortBy compFst) dists2
-    (ul,ml, ur,mr) = partition2 compFst (UV.toList lhs) (UV.toList rhs)
+    (_ul, ml,_ur, mr) = partition2 compFst (UV.toList lhs) (UV.toList rhs)
 
 destOverlap :: (UV.Unbox a, Ord a) => [UV.Vector a] -> [UV.Vector a] -> [(UV.Vector a,UV.Vector a)]
 destOverlap left right = zip ml mr
@@ -221,7 +204,7 @@ destOverlap left right = zip ml mr
     compLast l r = compare (UV.last l) (UV.last r)
     ls = GV.modify (sortBy compLast) (V.fromList left)
     rs = GV.modify (sortBy compLast) (V.fromList right)
-    (ul,ml, ur,mr) = partition2 compLast (V.toList ls) (V.toList rs)
+    (_ul, ml,_ur, mr) = partition2 compLast (V.toList ls) (V.toList rs)
     --ls = L.sortBy compLast (B.toList left)
     --rs = L.sortBy compLast (B.toList right)
 
@@ -231,16 +214,16 @@ destOverlapUpto fn halfDist nodeL nodeR = f [] [] [UV.singleton nodeL] [UV.singl
   where
     -- ls, rs : remaining (unmatched) paths
     -- lfs, rfs : frontier paths
-    f ls rs lfs rfs accum d | d == halfDist = accum
+    f _  _  _   _   accum d | d == halfDist = accum
     f ls rs lfs rfs accum d = f ls' rs' lfs' rfs' (matched ++ accum) (d+1)
       where
         hash = UV.last
         comp l r = compare (hash l) (hash r)
         newPathsL = L.concatMap (accumPaths fn) lfs
         newPathsR = L.concatMap (accumPaths fn) rfs
-        (ul1,ml1, ur1,mr1) = partition2 comp newPathsL newPathsR
-        (ul2,ml2, ur2,mr2) = partition2 comp (ls++lfs) newPathsR
-        (ul3,ml3, ur3,mr3) = partition2 comp newPathsL (rs++rfs)
+        ( ul1,ml1, ur1,mr1) = partition2 comp newPathsL newPathsR
+        (_ul2,ml2, ur2,mr2) = partition2 comp (ls++lfs) newPathsR
+        ( ul3,ml3,_ur3,mr3) = partition2 comp newPathsL (rs++rfs)
         matched = zip (L.concat [ml1,ml2,ml3]) (L.concat [mr1,mr2,mr3])
         -- Note that
         -- newPathsR == unionVecBy hash mr1 mr2 ++ intersectionVecBy hash ur1 ur2

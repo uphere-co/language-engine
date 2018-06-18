@@ -4,7 +4,6 @@
 module Lexicon.Mapping.Causation where
 
 import           Control.Lens
-import           Data.Text      (Text)
 --
 import           Lexicon.Type   (FNFrame,FNFrameElement)
 
@@ -17,6 +16,7 @@ data CauseDual = CauseDual { _cm_baseFrame :: FNFrame
 
 makeLenses ''CauseDual
 
+causeDualMap :: [CauseDual]
 causeDualMap =
   [ CauseDual "Process_start"    "Activity_start"       "Agent" [("Event"  ,"Activity")]
   , CauseDual "Process_stop"     "Activity_stop"        "Agent" [("Process","Activity")]

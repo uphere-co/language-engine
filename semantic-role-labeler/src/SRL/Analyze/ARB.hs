@@ -9,29 +9,24 @@ module SRL.Analyze.ARB where
 
 import           Control.Applicative       ((<|>))
 import           Control.Lens
-import           Control.Lens.Extras
 import           Control.Monad             (guard)
-import           Data.List
 import qualified Data.Text             as T
 import           Control.Monad.Loops       (unfoldM)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Trans.State (State,evalState,get,put,modify')
-import           Data.Aeson                (FromJSON(..),ToJSON(..))
 import           Data.Array                ((!))
 import           Data.Graph                (Graph,Vertex,topSort)
 import           Data.List                 (delete,find,elem)
 import           Data.Maybe                (catMaybes,fromMaybe
                                            ,mapMaybe,maybeToList)
 import           Data.Text                 (Text)
-import           GHC.Generics              (Generic)
 --
 import           Lexicon.Mapping.Causation (causeDualMap,cm_causativeFrame,cm_externalAgent)
 import           Lexicon.Type              (FNFrame(..),FNFrameElement(..),RoleInstance,SenseID)
 import           NLP.Semantics.Type        (FrameElement,PrepOr(..),ARB(..),subjectA)
 import           NLP.Syntax.Clause         (hoistMaybe) -- this should be moved somewhere
-import           NLP.Syntax.Type.Verb      (vp_lemma,vp_negation)
-import           NLP.Syntax.Type.XBar      (X'Tree)
+import           NLP.Syntax.Type.Verb      (vp_negation)
 import           NLP.Type.PennTreebankII   (Lemma(..))
 import           SRL.Analyze.Type
 import           SRL.Statistics
@@ -124,7 +119,7 @@ findLabel mvs i = do
   case v of
     MGEntity {..}           -> Just _mv_text
     MGPredicate {..}        -> case _mv_pred_info of
-                                 PredVerb idiom _ _ vrb -> Just (T.intercalate " " idiom) -- (vrb ^. vp_lemma . to unLemma)
+                                 PredVerb idiom _ _ _ -> Just (T.intercalate " " idiom)
                                  PredPrep p     -> Just p
                                  PredNominalized n _ _ -> Just (unLemma n)
                                  PredAppos      -> Just (unFNFrame _mv_frame)
@@ -148,8 +143,8 @@ findSubjectObjects (rolemap,mg,grph) frmid = do
   let rels = mapMaybe (findRel (mg^.mg_edges) frmid) chldrn
       (sidx,subject,b) = fromMaybe (-999,("",""),False) $ do
         e <- find (\e -> isSubject rolemap (FNFrame frmtxt) msense (e^.me_relation)) rels
-        let sidx = e^.me_end
-        (sidx,,e^.me_ismodifier) . (unFNFrameElement (e^.me_relation),) <$> findLabel (mg^.mg_vertices) sidx
+        let sidx' = e^.me_end
+        (sidx',,e^.me_ismodifier) . (unFNFrameElement (e^.me_relation),) <$> findLabel (mg^.mg_vertices) sidx'
   guard (not b)
   (objs :: [(FrameElement,Either (PrepOr ARB) (PrepOr Text))]) <- lift $ do
     fmap catMaybes . flip mapM (filter (\e -> e ^.me_end /= sidx) rels) $ \o -> do

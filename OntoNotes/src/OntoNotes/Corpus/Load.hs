@@ -27,7 +27,6 @@ import           NLP.Parser.PennTreebankII
 import           NLP.Type.CoreNLP
 import           NLP.Type.PennTreebankII
 import           NLP.Type.PennTreebankII.Match
-import           PropBank.Match
 import           PropBank.Parser.Prop
 import           PropBank.Type.Prop
 import           PropBank.Util

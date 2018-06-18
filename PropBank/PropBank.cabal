@@ -27,8 +27,7 @@ library
                    PropBank.Util
   -- other-modules:
   -- other-extensions:
-  ghc-options:     -Wall -O2
-                   -threaded
+  ghc-options:     -Wall -O2 -Werror
                    -funbox-strict-fields
                    -fno-warn-unused-do-bind
                    -fno-warn-orphans

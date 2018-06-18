@@ -4,7 +4,6 @@ module VerbNet.Type.SemLink where
 
 import           Control.Lens
 import           Data.Text
-import           Text.Taggy.Lens
 
 
 --------------------------
