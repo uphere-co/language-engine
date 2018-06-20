@@ -19,9 +19,8 @@ import qualified Data.Text                       as T
 import qualified Data.Text.Format                as T.F
 import qualified Data.Text.Lazy                  as T.L
 import qualified Data.Text.IO                    as T.IO
-
-import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat,render)
 import           Text.Printf                             (printf)
+import           Text.PrettyPrint.Boxes                  (Box,left,hsep,text,top,vcat,render)
 --
 import           CoreNLP.Simple.Convert                  (sentToTokens')
 import           FrameNet.Query.Frame                    (FrameDB)
@@ -119,7 +118,7 @@ formatSenses doesShowOtherSense onfnlst rmtoppatts
                            Nothing -> "Frames: "
                            Just (frm,idiom) -> show idiom ++ " " ++ "Frames: " ++ formatFrame frm
           in framestr ++
-             (formatRoleMap (rm^._2) ++ ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<> argpattstr))))
+             (T.unpack (formatRoleMap (rm^._2)) ++ ("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"<> T.unpack argpattstr))))
      ++ "\n--------------------------------------------------------------------------------------------------\n"
      ++ if doesShowOtherSense
         then "\n\n\n*********************************************\n" ++ intercalate "\n" (map formatSense onfnlst)
