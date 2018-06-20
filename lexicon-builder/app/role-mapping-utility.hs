@@ -22,10 +22,11 @@ import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                        (Text)
 import qualified Data.Text                  as T
+import qualified Data.Text.IO               as TIO
 import           Data.Text.Read                   (decimal)
+import           Formatting                       ((%.),(%),int,left,right,sformat,stext)
 import qualified Options.Applicative        as O
 import           System.Console.Haskeline
-import           Text.Printf
 --
 import           FrameNet.Query.Frame             (FrameDB,frameDB,loadFrameData)
 import           FrameNet.Type.Common             (CoreType(..))
@@ -86,15 +87,18 @@ loadPropBankDB cfg = do
   return (preddb,rolesetdb)
 
 
-formatPBInfos :: (Text,Maybe Text,[Text],[(Text,Maybe Text)]) -> String
-formatPBInfos (rid,mname,examples,roles) = printf "%-20s: %s\n" rid (fromMaybe "" mname)
-                                           ++ intercalate "\n" rolestrs
-                                           ++ "\n-----------\n"
-                                           ++ T.unpack (T.intercalate "\n" examples)
-                                           ++ "\n-----------"
-
+formatPBInfos :: (Text,Maybe Text,[Text],[(Text,Maybe Text)]) -> Text
+formatPBInfos (rid,mname,examples,roles) =
+       sformat (ls 20 % ": " % stext % "\n" ) rid (fromMaybe "" mname)
+    <> T.intercalate "\n" rolestrs
+    <> "\n-----------\n"
+    <> T.intercalate "\n" examples
+    <> "\n-----------"
   where
-    rolestrs = flip map roles $ \(n,mdesc) -> printf "arg%1s: %s" n (fromMaybe "" mdesc)
+    ls n = left n ' ' %. stext
+    rs n = right n ' ' %. stext
+    rolestrs = flip map roles $ \(n,mdesc) ->
+                 sformat ("arg"  % rs 1 % ": " % stext) n (fromMaybe "" mdesc)
 
 
 numberedFEs :: Frame -> ([(Int,FE)],[(Int,FE)],[(Int,FE)])
@@ -109,9 +113,14 @@ numberedFEs frame =
   in (icorefes,iperifes,iextrafes)
 
 
-formatFEs :: ([(Int,FE)],[(Int,FE)],[(Int,FE)]) -> String
-formatFEs (icorefes,iperifes,iextrafes) = formatf icorefes ++ " | " ++ formatf iperifes ++ " | " ++ formatf iextrafes
-  where formatf fes = intercalate ", " (map (\(i,fe) -> printf "%2d-%s" (i :: Int) (fe^.fe_name)) fes)
+formatFEs :: ([(Int,FE)],[(Int,FE)],[(Int,FE)]) -> Text
+formatFEs (icorefes,iperifes,iextrafes) =
+    formatf icorefes <> " | " <> formatf iperifes <> " | " <> formatf iextrafes
+  where formatf fes =
+          T.intercalate ", "
+            (flip map fes (\(i,fe) ->
+                            sformat ((right 2 ' ' %. int) % "-" % stext) (i :: Int) (fe^.fe_name)))
+
 
 
 problemID :: (Int,(Text,Sense,Frame,[RoleSet],RolePattInstance Voice)) -> SenseID
@@ -120,33 +129,34 @@ problemID (_,(lma,osense,_frame,_pbs,_)) = let sid = osense^.sense_group <> "." 
 
 
 formatProblem :: (Int,(Text,Sense,Frame,[RoleSet],RolePattInstance Voice))
-              -> (String,String,String,String,String)
+              -> (Text,Text,Text,Text,Text)
 formatProblem (i,(lma,osense,frame,pbs,subcat)) =
   let sid = osense^.sense_group <> "." <> osense^.sense_n
-      headstr = printf "%d th item: %s %s" i lma sid
-      sensestr = printf "definition: %s\n%s" (osense^.sense_name) (osense^.sense_examples)
+      headstr = sformat (int % " th item: " % stext % " " % stext) i lma sid
+      sensestr = sformat ("definition: " % stext % "\n" % stext) (osense^.sense_name) (osense^.sense_examples)
       fes = numberedFEs frame
-      framestr = printf "%s" (frame^.frame_name) ++ "\n" ++ formatFEs fes
-      argpattstr = intercalate "\n" $ flip map (Prelude.take 10 (subcat^._2)) $ \(patt,n) ->
-                     printf "%s     #count: %5d" (formatArgPatt "voice" patt) (n :: Int)
+      framestr = sformat (stext % "\n" % stext) (frame^.frame_name) (formatFEs fes)
+      argpattstr = T.intercalate "\n" $ flip map (Prelude.take 10 (subcat^._2)) $ \(patt,n) ->
+                     sformat (stext % "     #count: " % (right 5 ' ' %. int))
+                       (formatArgPatt "voice" patt) (n :: Int)
       pbinfos = map (\pb -> (pb^.roleset_id,pb^.roleset_name,extractPBExamples pb,extractPBRoles pb)) pbs
-      pbinfostr = intercalate "\n" $ map formatPBInfos pbinfos
+      pbinfostr = T.intercalate "\n" $ map formatPBInfos pbinfos
   in (headstr,sensestr,framestr,argpattstr,pbinfostr)
 
 
 showProblem :: (Int,(Text,Sense,Frame,[RoleSet],RolePattInstance Voice)) -> IO ()
 showProblem prob = do
   let (headstr,sensestr,framestr,argpattstr,pbinfostr) = formatProblem prob
-  putStrLn "========================================================================================================="
-  putStrLn headstr
-  putStrLn sensestr
-  putStrLn "---------------------------------------------------------------------------------------------------------\n"
-  putStrLn framestr
-  putStrLn "---------------------------------------------------------------------------------------------------------\n"
-  putStrLn argpattstr
-  putStrLn "---------------------------------------------------------------------------------------------------------\n"
-  putStrLn pbinfostr
-  putStrLn "---------------------------------------------------------------------------------------------------------\n"
+  TIO.putStrLn "========================================================================================================="
+  TIO.putStrLn headstr
+  TIO.putStrLn sensestr
+  TIO.putStrLn "---------------------------------------------------------------------------------------------------------\n"
+  TIO.putStrLn framestr
+  TIO.putStrLn "---------------------------------------------------------------------------------------------------------\n"
+  TIO.putStrLn argpattstr
+  TIO.putStrLn "---------------------------------------------------------------------------------------------------------\n"
+  TIO.putStrLn pbinfostr
+  TIO.putStrLn "---------------------------------------------------------------------------------------------------------\n"
 
 
 mkRoleInstance :: (Int,(Text,Sense,Frame,[RoleSet],RolePattInstance Voice)) -> Text -> [(Text,Text)]
@@ -188,7 +198,7 @@ prompt = do
           let r1 = mkRoleInstance o (T.pack x)
           liftIO $ print r1
           let nresult = result ++ [(o^._1,(problemID o,r1))]
-          liftIO $ writeFile "temp.txt" (concatMap formatRoleMapTSV nresult)
+          liftIO $ TIO.writeFile "temp.txt" (T.concat (map formatRoleMapTSV nresult))
           lift (put (nresult,os))
           prompt
 
@@ -230,7 +240,7 @@ main = do
       r <- flip execStateT (([] :: [(Int,RoleInstance)]),iflattened_being_processed) $ runInputT defaultSettings prompt
       print (fst r)
       let filename = "final" ++ show n ++ "-" ++ show (n+length (fst r)-1) ++ ".txt"
-      writeFile filename (concatMap formatRoleMapTSV (fst r))
+      TIO.writeFile filename (T.concat (map formatRoleMapTSV (fst r)))
     "show" -> do
       flip mapM_ iflattened $ \prob -> do
         let (headstr,sensestr,framestr,argpattstr,_pbinfostr) = formatProblem prob
@@ -238,14 +248,14 @@ main = do
           Nothing -> return ()
           Just rm -> do
             let argmap = rm^._2
-            putStrLn "\n\n\n========================================================================================================="
-            putStrLn headstr
-            putStrLn sensestr
-            putStrLn "---------------------------------------------------------------------------------------------------------"
-            putStrLn framestr
-            putStrLn "---------------------------------------------------------------------------------------------------------"
-            putStrLn $ formatRoleMap argmap
-            putStrLn "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-            putStrLn argpattstr
-            putStrLn "========================================================================================================="
-    cmd -> putStrLn (cmd ++ " cannot be processed")
+            TIO.putStrLn "\n\n\n========================================================================================================="
+            TIO.putStrLn headstr
+            TIO.putStrLn sensestr
+            TIO.putStrLn "---------------------------------------------------------------------------------------------------------"
+            TIO.putStrLn framestr
+            TIO.putStrLn "---------------------------------------------------------------------------------------------------------"
+            TIO.putStrLn $ formatRoleMap argmap
+            TIO.putStrLn "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+            TIO.putStrLn argpattstr
+            TIO.putStrLn "========================================================================================================="
+    cmd -> TIO.putStrLn (T.pack cmd <> " cannot be processed")

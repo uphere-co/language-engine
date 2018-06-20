@@ -37,6 +37,7 @@ library
                        bifunctors,
                        containers,
                        errors,
+                       formatting,
                        hashable,
                        lens,
                        monad-loops,
@@ -70,6 +71,7 @@ test-suite test-syntax-property
   main-is: test-syntax-property.hs
   build-depends:       base
                      , containers
+                     , formatting
                      , lens
                      , text
                      , transformers
