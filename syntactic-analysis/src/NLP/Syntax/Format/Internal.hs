@@ -10,7 +10,7 @@ import           Data.Bifunctor                     (bimap)
 import           Data.Monoid                        ((<>))
 import           Data.Text                          (Text)
 import qualified Data.Text                     as T
-import           Text.Printf                        (printf)
+import           Formatting                         ((%.),sformat,left,stext)
 --
 import           Data.Bitree
 import           Data.Range                         (Range)
@@ -21,7 +21,7 @@ import           NLP.Syntax.Type.XBar
 
 
 showRange :: Range -> Text
-showRange rng = T.pack (printf "%-7s" (show rng))
+showRange rng = sformat (left 7 ' ' %. stext) (T.pack (show rng))
 
 
 formatBitree :: (a -> Text) ->  Bitree a a -> Text

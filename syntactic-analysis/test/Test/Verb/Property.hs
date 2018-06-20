@@ -4,11 +4,12 @@
 module Test.Verb.Property where
 
 import           Control.Lens               hiding (levels)
-import           Data.List                         (find, intercalate)
+import           Data.List                         (find)
 import           Data.Maybe                        (fromMaybe)
+import           Data.Monoid                       ((<>))
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
-import qualified Data.Text.IO               as T.IO
+import qualified Data.Text.IO               as TIO
 import           Text.Printf
 --
 import           Data.Bitree                       (getRoot)
@@ -337,7 +338,7 @@ unitTests :: TestTree
 unitTests =
   testGroup "verb property" . flip map testcases $ \c ->
     testCase (formatTitle c) $
-      (checkVP c == True) @? (intercalate "\n" ((mkVPS (c^._4) (c^._5))^..traverse.to (formatVerbProperty fmtfunc))  ++ "\n" ++ T.unpack (prettyPrint 0 (c^._5)))
+      (checkVP c == True) @? T.unpack (T.intercalate "\n" ((mkVPS (c^._4) (c^._5))^..traverse.to (formatVerbProperty fmtfunc))  <> "\n" <> prettyPrint 0 (c^._5))
 
 
 fmtfunc :: Zipper as -> Text
@@ -349,5 +350,5 @@ mainShow :: IO ()
 mainShow = do
   flip mapM_ testcases $ \c -> do
     putStrLn "--------------------------------------------------------------------------"
-    T.IO.putStrLn (c^._1)
-    mapM_ (putStrLn.formatVerbProperty fmtfunc) (mkVPS (c^._4) (c^._5))
+    TIO.putStrLn (c^._1)
+    mapM_ (TIO.putStrLn . formatVerbProperty fmtfunc) (mkVPS (c^._4) (c^._5))
