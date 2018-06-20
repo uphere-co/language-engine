@@ -10,7 +10,7 @@ import           Data.Monoid                       ((<>))
 import           Data.Text                         (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
-import           Text.Printf
+import           Formatting                        ((%.),(%),left,right,sformat,stext)
 --
 import           Data.Bitree                       (getRoot)
 import           Data.BitreeZipper                 (current)
@@ -324,20 +324,24 @@ checkVP (_txt,i,expresult,lmatknlst,pt) =
        _       -> False
 
 
-formatTitle :: TestVerbProp -> String
-formatTitle c = printf "- %-80s %4s%4s%4s: %-10s: %-5s"
-                 (c^._1)
-                 (formatTense  (c^._3._1))
-                 (formatAspect (c^._3._2))
-                 (formatVoice  (c^._3._3))
-                 (T.intercalate " " (c^._3._4))
-                 (fromMaybe "" (c^._3._5)) 
+formatTitle :: TestVerbProp -> Text
+formatTitle c =
+    sformat ("- " % ls 80 % " " % rs 4 % rs 4 % rs 4 % ": " % ls 10 % ": " % ls 5)
+            (c^._1)
+            (formatTense  (c^._3._1))
+            (formatAspect (c^._3._2))
+            (formatVoice  (c^._3._3))
+            (T.intercalate " " (c^._3._4))
+            (fromMaybe "" (c^._3._5))
+  where
+    ls n = left n ' ' %. stext
+    rs n = right n ' ' %. stext
 
 
 unitTests :: TestTree
 unitTests =
   testGroup "verb property" . flip map testcases $ \c ->
-    testCase (formatTitle c) $
+    testCase (T.unpack (formatTitle c)) $
       (checkVP c == True) @? T.unpack (T.intercalate "\n" ((mkVPS (c^._4) (c^._5))^..traverse.to (formatVerbProperty fmtfunc))  <> "\n" <> prettyPrint 0 (c^._5))
 
 

@@ -11,8 +11,8 @@ module Lexicon.App.VerbSubcat where
 
 import           Control.Lens
 import           Control.Monad
-import           Control.Monad.Trans.Either
-import           Data.Either.Extra
+import           Control.Monad.Trans.Either (runEitherT)
+import           Data.Either.Extra (eitherToMaybe,rights)
 import           Data.Foldable
 import           Data.Function                          (on)
 import           Data.HashMap.Strict                    (HashMap)
@@ -21,13 +21,13 @@ import           Data.IntMap                            (IntMap)
 import qualified Data.IntMap                      as IM
 import           Data.List
 import           Data.Maybe
-import           Data.Monoid
+import           Data.Monoid                            ((<>))
 import           Data.Text                              (Text)
 import qualified Data.Text                        as T
-import qualified Data.Text.IO                     as T.IO
+import qualified Data.Text.IO                     as TIO
+import           Formatting                             ((%),(%.),stext,int,sformat,left,right)
 import           System.FilePath
 import           System.IO
-import           Text.Printf
 --
 import           Data.Attribute
 import           Data.Bitree                            (getRoot)
@@ -95,35 +95,46 @@ maybeNumberedArgument (NumberedArgument n) = Just n
 maybeNumberedArgument _                    = Nothing
 
 
-formatArgMap :: Bool -> [(Text,Text)] -> String
+formatArgMap :: Bool -> [(Text,Text)] -> Text
 formatArgMap isStat argmap =
   (if isStat
-     then printf " %-20s " (fromMaybe "frame" (lookup "frame" argmap))
-     else printf " %-20s         " (fromMaybe "frame" (lookup "frame" argmap)))
-  ++ printf "arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s\n"
+     then sformat (" " % ls 20 % " ") (fromMaybe "frame" (lookup "frame" argmap))
+     else sformat (" " % ls 20 % "         ") (fromMaybe "frame" (lookup "frame" argmap)))
+  <> sformat ("arg0: " % ls 10 % "   arg1: " % ls 10 % "   arg2: " % ls 10 % "   arg3: " % ls 10 % "   arg4: " % ls 10 % "\n")
        (fromMaybe "" (lookup "arg0" argmap))
        (fromMaybe "" (lookup "arg1" argmap))
        (fromMaybe "" (lookup "arg2" argmap))
        (fromMaybe "" (lookup "arg3" argmap))
        (fromMaybe "" (lookup "arg4" argmap))
-  ++ "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
-
+  <> "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
+  where
+    ls n = left n ' ' %. stext
 
 formatArgTable :: Maybe (VerbProperty (Zipper '[Lemma]), Maybe (PredArgWorkspace (Either (Range,STag) (Int,POSTag))))
                -> ArgTable GRel
-               -> String
-formatArgTable mvpmva tbl = printf "%-15s (%-10s)  arg0: %-10s   arg1: %-10s   arg2: %-10s   arg3: %-10s   arg4: %-10s            ## %10s sentence %3d token %3d"
-                              (fromMaybe "" (tbl^.tbl_rel))
-                              (maybe "unmatched" (\(vp,_) -> show (vp^.vp_voice)) mvpmva)
-                              (maybe "" formatGRel (tbl^.tbl_arg0))
-                              (maybe "" formatGRel (tbl^.tbl_arg1))
-                              (maybe "" formatGRel (tbl^.tbl_arg2))
-                              (maybe "" formatGRel (tbl^.tbl_arg3))
-                              (maybe "" formatGRel (tbl^.tbl_arg4))
-                              (tbl^.tbl_file_sid_tid._1)
-                              (tbl^.tbl_file_sid_tid._2)
-                              (tbl^.tbl_file_sid_tid._3)
-
+               -> Text
+formatArgTable mvpmva tbl =
+    sformat (ls 15 % " (" % ls 10
+                   % ")  arg0: " % ls 10
+                   % "   arg1: " % ls 10
+                   % "   arg2: " % ls 10
+                   % "   arg3: " % ls 10
+                   % "   arg4: " % ls 10
+                   % "            ## " % ls 10
+                   % " sentence " % ri 3 % " token " % ri 3)
+            (fromMaybe "" (tbl^.tbl_rel))
+            (maybe "unmatched" (\(vp,_) -> T.pack (show (vp^.vp_voice))) mvpmva)
+            (maybe "" formatGRel (tbl^.tbl_arg0))
+            (maybe "" formatGRel (tbl^.tbl_arg1))
+            (maybe "" formatGRel (tbl^.tbl_arg2))
+            (maybe "" formatGRel (tbl^.tbl_arg3))
+            (maybe "" formatGRel (tbl^.tbl_arg4))
+            (T.pack (tbl^.tbl_file_sid_tid._1))
+            (tbl^.tbl_file_sid_tid._2)
+            (tbl^.tbl_file_sid_tid._3)
+  where
+    ls n = left n ' ' %. stext
+    ri n = right n ' ' %. int
 
 dummyMatch :: PennTree -> Instance -> MatchedInstance
 dummyMatch tr0 inst
@@ -160,7 +171,7 @@ adjustedLemmaMap lemmamap proptr = IM.fromList
 
 formatInst :: Bool  -- ^ show detail?
            -> ((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)
-           -> String
+           -> Text
 formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,_sense) =
   let args = inst^.inst_arguments
       lemmamap = IM.fromList (map (_2 %~ Lemma) (corenlp^._2))
@@ -186,15 +197,17 @@ formatInst doesShowDetail (filesidtid,corenlp,proptr,inst,_sense) =
 
       fmtfunc = either (const "") (tokenWord.snd) . getRoot . current
   in (if doesShowDetail
-       then "\n\n\n================================================================\n" ++
-            T.unpack (formatIndexTokensFromTree 0 proptr)                          ++
-            "\n"                                                                   ++
-            "\n================================================================\n" ++
-            T.unpack (prettyPrint 0 proptr) ++ "\n" ++
-            intercalate "\n" (map (formatVerbProperty fmtfunc) verbprops) ++ "\n"
+       then    "\n\n\n================================================================\n"
+            <> formatIndexTokensFromTree 0 proptr
+            <> "\n"
+            <> "\n================================================================\n"
+            <> prettyPrint 0 proptr
+            <> "\n"
+            <> T.intercalate "\n" (map (formatVerbProperty fmtfunc) verbprops)
+            <> "\n"
        else ""
      )
-     ++ formatArgTable mvpmva argtable
+     <> formatArgTable mvpmva argtable
 
 
 getArgMapFromRoleMap :: (Text,Text) -> [(SenseID, [(Text,Text)])] -> Maybe [(Text,Text)]
@@ -207,27 +220,32 @@ formatStatInst :: Bool
                -> Text
                -> ((Text,Text),Int)
                -> (Maybe Text, [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)])
-               -> String
+               -> Text
 formatStatInst doesShowDetail rolemap lma ((sense,sense_num),count) (mdefn,insts) =
   let sensetxt = (sense <> "." <> sense_num)
       margmap = getArgMapFromRoleMap (lma,sense_num) rolemap
-  in "\n============================================================================\n"
-     ++ printf "%20s : %6d :  %s\n" sensetxt  count (fromMaybe "" mdefn)
-     ++ "============================================================================\n"
-     ++ maybe "" (formatArgMap False) margmap
-     ++ (intercalate "\n" . map (formatInst doesShowDetail)) insts
+      rs n = right n ' ' %. stext
+      ri n = right n ' ' %. int
+  in    "\n============================================================================\n"
+     <> sformat (rs 20 % " : "% ri 6 % " :  " % stext %  "\n") sensetxt  count (fromMaybe "" mdefn)
+     <> "============================================================================\n"
+     <> maybe "" (formatArgMap False) margmap
+     <> (T.intercalate "\n" . map (formatInst doesShowDetail)) insts
 
 
 printHeader :: (Text,Int) -> IO ()
 printHeader (lma,count) = do
-  let headstr = printf "%20s:%6d" lma count :: String
-  putStrLn "\n\n\n\n\n*************************************************************"
-  putStrLn "*************************************************************"
-  putStrLn "****                                                     ****"
-  putStrLn (printf "****             %27s             ****" headstr)
-  putStrLn "****                                                     ****"
-  putStrLn "*************************************************************"
-  putStrLn "*************************************************************"
+  let rs n = right n ' ' %. stext
+      ri n = right n ' ' %. int
+      headstr = sformat (rs 20 % ":" % ri 6) lma count :: Text
+
+  TIO.putStrLn "\n\n\n\n\n*************************************************************"
+  TIO.putStrLn "*************************************************************"
+  TIO.putStrLn "****                                                     ****"
+  TIO.putStrLn (sformat ("****             " % rs 27 %"             ****") headstr)
+  TIO.putStrLn "****                                                     ****"
+  TIO.putStrLn "*************************************************************"
+  TIO.putStrLn "*************************************************************"
 
 
 getDefInst :: HashMap Text Inventory
@@ -283,7 +301,9 @@ showStat :: Bool                        -- ^ is tab separated format
          -> HashMap (Text,Text) [((FilePath,Int,Int),(PennTree,LemmaList),PennTree,Instance,SenseInstance)]
          -> IO ()
 showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
-  let lst = HM.toList classified_inst_map
+  let ls n = left n ' ' %. stext
+      ri n = right n ' ' %. int
+      lst = HM.toList classified_inst_map
   forM_ lemmastat $ \(lma,f) -> do
     when (not isTSV) $ printHeader (lma,f)
     forM_ (countSenseForLemma lma lst) $ \((sense,sense_num),count) -> do
@@ -293,28 +313,31 @@ showStat isTSV rolemap sensedb lemmastat classified_inst_map = do
           statlst = (sortBy (flip compare `on` snd) . HM.toList) statmap
           sensetxt = sense <> "." <> sense_num
           senseheader = "\n============================================================================\n"
-                        ++ printf "%20s : %6d :  %s\n" sensetxt count (fromMaybe "" mdefn)
-                        ++ "============================================================================\n"
+                        <> sformat (ls 10 % " : " % ri 6 % " :  " % stext % "\n") sensetxt count (fromMaybe "" mdefn)
+                        <> "============================================================================\n"
       if (not isTSV)
         then do
-          putStrLn senseheader
+          TIO.putStrLn senseheader
           let margmap = getArgMapFromRoleMap (lma,sense_num) rolemap
-          traverse_ (putStrLn . formatArgMap True) margmap
+          traverse_ (TIO.putStrLn . formatArgMap True) margmap
           forM_ statlst $ \(patt,n :: Int) -> do
-            let str1 = formatArgPatt "voice" patt :: String
-            putStrLn (printf "%s     #count: %5d" str1 n)
+            let str1 = formatArgPatt "voice" patt
+            TIO.putStrLn (sformat (stext % "     #count: " % ri 5) str1 n)
         else do
           forM_ statlst $ \(patt, n :: Int) -> do
-            putStrLn $ printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d"
-                         sense
-                         sense_num
-                         (maybe "null" show (patt^.patt_property))
-                         (maybe "null" formatGRel (patt^.patt_arg0))
-                         (maybe "null" formatGRel (patt^.patt_arg1))
-                         (maybe "null" formatGRel (patt^.patt_arg2))
-                         (maybe "null" formatGRel (patt^.patt_arg3))
-                         (maybe "null" formatGRel (patt^.patt_arg4))
-                         n
+            TIO.putStrLn $
+              sformat ( stext % "\t" % stext % "\t" % stext % "\t"
+                      % stext % "\t" % stext % "\t" % stext % "\t"
+                      % stext % "\t" % stext % "\t" % int)
+                      sense
+                      sense_num
+                      (maybe "null" (T.pack . show) (patt^.patt_property))
+                      (maybe "null" formatGRel (patt^.patt_arg0))
+                      (maybe "null" formatGRel (patt^.patt_arg1))
+                      (maybe "null" formatGRel (patt^.patt_arg2))
+                      (maybe "null" formatGRel (patt^.patt_arg3))
+                      (maybe "null" formatGRel (patt^.patt_arg4))
+                      n
 
 showStatInst :: Bool
              -> [RoleInstance]
@@ -329,8 +352,7 @@ showStatInst doesShowDetail rolemap sensedb lemmastat classified_inst_map = do
       printHeader (lma,freq)
       forM_ (countSenseForLemma lma lst) $ \x -> do
         let definsts = getDefInst sensedb classified_inst_map (fst x)
-            str = formatStatInst doesShowDetail rolemap lma x definsts
-        putStrLn str
+        TIO.putStrLn (formatStatInst doesShowDetail rolemap lma x definsts)
 
 
 showError :: Either String a -> IO ()
@@ -339,7 +361,8 @@ showError (Right _) = return ()
 
 
 readSenseInsts :: FilePath -> IO [SenseInstance]
-readSenseInsts sensefile = fmap (rights . map parseSenseInst . map T.words . T.lines) (T.IO.readFile sensefile)
+readSenseInsts sensefile =
+  fmap (rights . map parseSenseInst . map T.words . T.lines) (TIO.readFile sensefile)
 
 
 -- | need parse tree to adjust index (deleting none and hyphen)

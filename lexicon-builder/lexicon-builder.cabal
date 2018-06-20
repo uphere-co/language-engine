@@ -68,6 +68,7 @@ Executable role-mapping-utility
   other-modules:
   build-depends:       base,
                        --
+                       formatting,
                        haskeline,
                        lens,
                        optparse-applicative,
@@ -108,8 +109,6 @@ Executable sense-inventory
                        HFrameNet,
                        HWordNet,
                        lexicon,
-                       -- nlp-types,
-                       -- syntactic-analysis,
                        OntoNotes,
                        --
                        lexicon-builder
@@ -140,6 +139,7 @@ Executable verb-subcat-propbank-stat
                        directory-tree,
                        extra,
                        filepath,
+                       formatting,
                        lens,
                        optparse-applicative,
                        text,
