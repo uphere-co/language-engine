@@ -1,0 +1,16 @@
+packages:
+  graph-algorithms/
+  HFrameNet/
+  -- HWordNet/
+  lexicon/
+  lexicon-builder/
+  multi-word-tagger/
+  -- nlp-types
+  OntoNotes/
+  PropBank/
+  semantic-role-labeler/
+  semantic-types/
+  syntactic-analysis/
+  time-tagger/
+  VerbNet/
+  wiki-ner/
