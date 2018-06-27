@@ -54,6 +54,7 @@ library
                        discrimination,
                        errors,
                        filepath,
+                       formatting,
                        hashable,
                        haskeline,
                        html-entities,
