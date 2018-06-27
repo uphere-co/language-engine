@@ -22,6 +22,7 @@ library
                        SRL.Analyze.Config
                        SRL.Analyze.CoreNLP
                        SRL.Analyze.Format
+                       SRL.Analyze.Format.OGDF
                        SRL.Analyze.Match
                        SRL.Analyze.Match.Entity
                        SRL.Analyze.Match.Frame
@@ -61,6 +62,7 @@ library
                        lens,
                        monad-loops,
                        mtl,
+                       OGDF,
                        process,
                        protocol-buffers,
                        split,
