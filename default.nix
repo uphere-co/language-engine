@@ -62,7 +62,6 @@ in
                  "time-tagger"
                  "VerbNet"
                  "wiki-ner"
-
                ];
   };
 })
