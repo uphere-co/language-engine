@@ -1,21 +1,22 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-missing-signatures -fno-warn-type-defaults #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-missing-signatures -fno-warn-type-defaults -fno-warn-name-shadowing #-}
 
 module SRL.Analyze.Format.OGDF where
 
-import Control.Monad (void, when)
-import Control.Monad.Loops (iterateUntilM)
-import Data.Bits ((.|.))
-import Data.Foldable (forM_)
+import           Control.Monad (void, when)
+import           Control.Monad.Loops (iterateUntilM)
+import           Data.Bits ((.|.))
+import           Data.Foldable (forM_)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Foreign.C.String (withCString)
-import Foreign.C.Types
-import Foreign.Ptr
-import Foreign.Storable
+import           Foreign.C.String (withCString)
+import           Foreign.C.Types
+import           Foreign.Ptr
+import           Foreign.Storable
 import           Formatting ((%),(%.))
 import qualified Formatting as F
+import           System.IO (hPutStrLn, stderr)
 
 import OGDF.CppString
 import OGDF.Deletable
@@ -25,7 +26,13 @@ import OGDF.EdgeElement
 import OGDF.Graph
 import OGDF.GraphAttributes
 import OGDF.GraphIO
+import OGDF.LayoutModule
+import OGDF.MedianHeuristic
 import OGDF.NodeElement
+import OGDF.OptimalHierarchyLayout
+import OGDF.OptimalRanking
+import OGDF.SugiyamaLayout
+
 
 nodeGraphics     = 0x000001
 edgeGraphics     = 0x000002
@@ -46,8 +53,8 @@ threeD           = 0x010000
 
 len = 11
 
-main :: IO ()
-main = do
+example :: IO ()
+example = do
   g <- newGraph
   ga <- newGraphAttributes g (nodeGraphics .|. edgeGraphics)
 
@@ -99,6 +106,64 @@ main = do
       TIO.putStrLn txt
       nodeElementsucc n
 
+  withCString "test.svg" $ \cstr -> do
+    str <- newCppString cstr
+    graphIOdrawSVG ga str
+    delete str
+
   delete ga
   delete g
   pure ()
+
+
+example2 :: IO ()
+example2 = do
+  g <- newGraph
+  ga <- newGraphAttributes g (   nodeGraphics
+                             .|. edgeGraphics
+                             .|. nodeLabel
+                             .|. edgeStyle
+                             .|. nodeStyle
+                             .|. nodeTemplate )
+
+  withCString "unix-history.gml" $ \cstr -> do
+    str <- newCppString cstr
+    b <- graphIOreadGML ga g str
+
+    if (b == 0)
+      then hPutStrLn stderr "Could not load unix-history.gml"
+      else do
+        sl <- newSugiyamaLayout
+        putStrLn "sl created"
+        or <- newOptimalRanking
+        putStrLn "or created"
+        sugiyamaLayoutsetRanking sl or
+        putStrLn "setRanking done"
+        mh <- newMedianHeuristic
+        putStrLn "mh created"
+        sugiyamaLayoutsetCrossMin sl mh
+        putStrLn "setCrossMin"
+
+        ohl <- newOptimalHierarchyLayout
+        putStrLn "ohl created"
+        optimalHierarchyLayoutlayerDistance ohl 30.0
+        optimalHierarchyLayoutnodeDistance ohl 25.0
+        optimalHierarchyLayoutweightBalancing ohl 0.8
+        sugiyamaLayoutsetLayout sl ohl
+        putStrLn "setLayout ohl"
+        call sl ga
+        putStrLn "SL.call(GA)"
+        -- cstrout <- newCString "unix-history-layout.gml"
+        -- strout <- newCppString cstrout
+        -- graphIOwriteGML ga strout
+        -- delete strout
+        delete sl
+        pure ()
+
+        withCString "test2.svg" $ \cstrsvg -> do
+          strsvg <- newCppString cstrsvg
+          graphIOdrawSVG ga strsvg
+          delete strsvg
+
+  delete g
+  delete ga
