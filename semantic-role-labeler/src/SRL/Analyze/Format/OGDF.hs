@@ -80,11 +80,23 @@ example = do
     poke p_height2 (fromIntegral (10*(len+1-i)))
 
     e <- graphnewEdge g left bottom
+
     poly <- graphAttributesbends ga e
     pt1 <- newDPoint 10 (fromIntegral (-20*i))
-    pt2 <- newDPoint (fromIntegral (20*(len-i))) (-10)
+    -- pt15 <- newDPoint 0 0
+    _pt2 <- newDPoint (fromIntegral (20*(len-i))) (-10)
     dPolylinepushBack poly pt1
-    dPolylinepushBack poly pt2
+    --dPolylinepushBack poly pt15
+    -- dPolylinepushBack poly pt2
+
+    pure ()
+
+
+  withCString "manual_graph_test.gml" $ \cstr -> do
+    str <- newCppString cstr
+    graphIOwriteGML ga str
+    delete str
+
 
   n0@(NodeElement n0') <- graphfirstNode g
 
@@ -146,9 +158,9 @@ example2 = do
 
         ohl <- newOptimalHierarchyLayout
         putStrLn "ohl created"
-        optimalHierarchyLayoutlayerDistance ohl 30.0
-        optimalHierarchyLayoutnodeDistance ohl 25.0
-        optimalHierarchyLayoutweightBalancing ohl 0.8
+        optimalHierarchyLayoutlayerDistance ohl 15.0
+        optimalHierarchyLayoutnodeDistance ohl 12.5
+        optimalHierarchyLayoutweightBalancing ohl 10.0
         sugiyamaLayoutsetLayout sl ohl
         putStrLn "setLayout ohl"
         call sl ga
@@ -159,6 +171,12 @@ example2 = do
         -- delete strout
         delete sl
         pure ()
+
+        withCString "test2.gml" $ \cstr -> do
+          str <- newCppString cstr
+          graphIOwriteGML ga str
+          delete str
+
 
         withCString "test2.svg" $ \cstrsvg -> do
           strsvg <- newCppString cstrsvg
