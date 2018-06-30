@@ -1,15 +1,22 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-missing-signatures -fno-warn-type-defaults -fno-warn-name-shadowing #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-missing-signatures -fno-warn-type-defaults -fno-warn-name-shadowing -fno-warn-unused-matches -fno-warn-unused-top-binds #-}
 
-module SRL.Analyze.Format.OGDF where
+module SRL.Analyze.Format.OGDF (
+    mkOGDFSVG
+  , example
+  , example2
+  ) where
 
+import           Control.Lens ((^.))
 import           Control.Monad (void, when)
 import           Control.Monad.Loops (iterateUntilM)
 import           Data.Bits ((.|.))
 import           Data.Foldable (forM_)
+import           Data.List (find)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import           Data.Traversable (forM)
 import           Foreign.C.String (withCString)
 import           Foreign.C.Types
 import           Foreign.Ptr
@@ -17,21 +24,25 @@ import           Foreign.Storable
 import           Formatting ((%),(%.))
 import qualified Formatting as F
 import           System.IO (hPutStrLn, stderr)
-
-import OGDF.CppString
-import OGDF.Deletable
-import OGDF.DPoint
-import OGDF.DPolyline
-import OGDF.EdgeElement
-import OGDF.Graph
-import OGDF.GraphAttributes
-import OGDF.GraphIO
-import OGDF.LayoutModule
-import OGDF.MedianHeuristic
-import OGDF.NodeElement
-import OGDF.OptimalHierarchyLayout
-import OGDF.OptimalRanking
-import OGDF.SugiyamaLayout
+--
+import           OGDF.NCppString
+import           OGDF.Deletable
+import           OGDF.DPoint
+import           OGDF.DPolyline
+import           OGDF.EdgeElement
+import           OGDF.Graph
+import           OGDF.GraphAttributes
+import           OGDF.GraphIO
+import           OGDF.LayoutModule
+import           OGDF.MedianHeuristic
+import           OGDF.NodeElement
+import           OGDF.OptimalHierarchyLayout
+import           OGDF.OptimalRanking
+import           OGDF.SugiyamaLayout
+--
+import           SRL.Analyze.Type (MeaningGraph,mg_vertices,mg_edges
+                                  ,me_start,me_end,mv_id
+                                  )
 
 
 nodeGraphics     = 0x000001
@@ -51,10 +62,65 @@ edgeSubGraphs    = 0x002000
 nodeWeight       = 0x004000
 threeD           = 0x010000
 
-len = 11
+
+defaultSugiyama ga = do
+  sl <- newSugiyamaLayout
+  or <- newOptimalRanking
+  sugiyamaLayoutsetRanking sl or
+  mh <- newMedianHeuristic
+  sugiyamaLayoutsetCrossMin sl mh
+
+  ohl <- newOptimalHierarchyLayout
+  optimalHierarchyLayoutlayerDistance ohl 15.0
+  optimalHierarchyLayoutnodeDistance ohl 12.5
+  optimalHierarchyLayoutweightBalancing ohl 10.0
+  sugiyamaLayoutsetLayout sl ohl
+  call sl ga
+  delete sl
+
+
+
+mkOGDFSVG :: MeaningGraph -> IO ()
+mkOGDFSVG mg = do
+  putStrLn "mkOGDFSVG"
+  g <- newGraph
+  ga <- newGraphAttributes g (nodeGraphics
+                             .|. edgeGraphics
+                             .|. nodeLabel
+                             .|. edgeStyle
+                             .|. nodeStyle
+                             .|. nodeTemplate
+                             )
+
+  ivs <- forM (mg^.mg_vertices) $ \v -> do
+           n <- graphnewNode g
+           str <- graphAttributeslabel ga n
+           withCString "abcdef" $ \cstrnew -> do
+             strnew <- newNCppString cstrnew
+             nCppStringappend str strnew
+           pure (v^.mv_id,n)
+  forM_ (mg^.mg_edges) $ \e -> do
+    let Just (_,n1) = find (\(i,_) -> i == e^.me_start) ivs
+        Just (_,n2) = find (\(i,_) -> i == e^.me_end) ivs
+    graphnewEdge g n1 n2
+    pure ()
+
+  -- v^.mv_id
+  defaultSugiyama ga
+
+  withCString "test_mg.svg" $ \cstrsvg -> do
+    strsvg <- newNCppString cstrsvg
+    graphIOdrawSVG ga strsvg
+    delete strsvg
+
+  delete g
+  delete ga
+
 
 example :: IO ()
 example = do
+  let len = 11
+
   g <- newGraph
   ga <- newGraphAttributes g (nodeGraphics .|. edgeGraphics)
 
@@ -93,7 +159,7 @@ example = do
 
 
   withCString "manual_graph_test.gml" $ \cstr -> do
-    str <- newCppString cstr
+    str <- newNCppString cstr
     graphIOwriteGML ga str
     delete str
 
@@ -119,7 +185,7 @@ example = do
       nodeElementsucc n
 
   withCString "test.svg" $ \cstr -> do
-    str <- newCppString cstr
+    str <- newNCppString cstr
     graphIOdrawSVG ga str
     delete str
 
@@ -139,7 +205,7 @@ example2 = do
                              .|. nodeTemplate )
 
   withCString "unix-history.gml" $ \cstr -> do
-    str <- newCppString cstr
+    str <- newNCppString cstr
     b <- graphIOreadGML ga g str
 
     if (b == 0)
@@ -165,21 +231,17 @@ example2 = do
         putStrLn "setLayout ohl"
         call sl ga
         putStrLn "SL.call(GA)"
-        -- cstrout <- newCString "unix-history-layout.gml"
-        -- strout <- newCppString cstrout
-        -- graphIOwriteGML ga strout
-        -- delete strout
         delete sl
         pure ()
 
         withCString "test2.gml" $ \cstr -> do
-          str <- newCppString cstr
+          str <- newNCppString cstr
           graphIOwriteGML ga str
           delete str
 
 
         withCString "test2.svg" $ \cstrsvg -> do
-          strsvg <- newCppString cstrsvg
+          strsvg <- newNCppString cstrsvg
           graphIOdrawSVG ga strsvg
           delete strsvg
 
