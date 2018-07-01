@@ -106,6 +106,10 @@ mkOGDFSVG mg = do
                    MGEntity {..}    -> _mv_text
                    MGPredicate {..} -> unFNFrame _mv_frame
                bstr = TE.encodeUtf8 txt
+               width = (T.length txt) * 6
+           graphAttributeswidth ga n >>= \p -> poke p (fromIntegral width)
+           graphAttributesheight ga n >>= \p -> poke p 20
+
            useAsCString bstr $ \cstrnode -> do
              strnode <- newCppString cstrnode
              cppStringappend str strnode
