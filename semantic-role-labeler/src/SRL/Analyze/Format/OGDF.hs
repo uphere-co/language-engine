@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-missing-signatures -fno-warn-type-defaults -fno-warn-name-shadowing -fno-warn-unused-matches -fno-warn-unused-top-binds #-}
 
@@ -12,9 +13,11 @@ import           Control.Lens ((^.))
 import           Control.Monad (void, when)
 import           Control.Monad.Loops (iterateUntilM)
 import           Data.Bits ((.|.))
+import           Data.ByteString.Char8 (useAsCString)
 import           Data.Foldable (forM_)
 import           Data.List (find)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text.IO as TIO
 import           Data.Traversable (forM)
 import           Foreign.C.String (withCString)
@@ -25,8 +28,8 @@ import           Formatting ((%),(%.))
 import qualified Formatting as F
 import           System.IO (hPutStrLn, stderr)
 --
-import           OGDF.NCppString
-import           OGDF.Deletable
+import           STD.CppString
+import           STD.Deletable
 import           OGDF.DPoint
 import           OGDF.DPolyline
 import           OGDF.EdgeElement
@@ -40,7 +43,10 @@ import           OGDF.OptimalHierarchyLayout
 import           OGDF.OptimalRanking
 import           OGDF.SugiyamaLayout
 --
-import           SRL.Analyze.Type (MeaningGraph,mg_vertices,mg_edges
+import           Lexicon.Type (FNFrame(..))
+import           SRL.Analyze.Type (MeaningGraph
+                                  ,MGVertex(..)
+                                  ,mg_vertices,mg_edges
                                   ,me_start,me_end,mv_id
                                   )
 
@@ -95,9 +101,13 @@ mkOGDFSVG mg = do
   ivs <- forM (mg^.mg_vertices) $ \v -> do
            n <- graphnewNode g
            str <- graphAttributeslabel ga n
-           withCString "abcdef" $ \cstrnew -> do
-             strnew <- newNCppString cstrnew
-             nCppStringappend str strnew
+           let txt = case v of
+                   MGEntity {..}    -> _mv_text
+                   MGPredicate {..} -> unFNFrame _mv_frame
+               bstr = TE.encodeUtf8 txt
+           useAsCString bstr $ \cstrnode -> do
+             strnode <- newCppString cstrnode
+             cppStringappend str strnode
            pure (v^.mv_id,n)
   forM_ (mg^.mg_edges) $ \e -> do
     let Just (_,n1) = find (\(i,_) -> i == e^.me_start) ivs
@@ -109,7 +119,7 @@ mkOGDFSVG mg = do
   defaultSugiyama ga
 
   withCString "test_mg.svg" $ \cstrsvg -> do
-    strsvg <- newNCppString cstrsvg
+    strsvg <- newCppString cstrsvg
     graphIOdrawSVG ga strsvg
     delete strsvg
 
@@ -159,7 +169,7 @@ example = do
 
 
   withCString "manual_graph_test.gml" $ \cstr -> do
-    str <- newNCppString cstr
+    str <- newCppString cstr
     graphIOwriteGML ga str
     delete str
 
@@ -185,7 +195,7 @@ example = do
       nodeElementsucc n
 
   withCString "test.svg" $ \cstr -> do
-    str <- newNCppString cstr
+    str <- newCppString cstr
     graphIOdrawSVG ga str
     delete str
 
@@ -205,7 +215,7 @@ example2 = do
                              .|. nodeTemplate )
 
   withCString "unix-history.gml" $ \cstr -> do
-    str <- newNCppString cstr
+    str <- newCppString cstr
     b <- graphIOreadGML ga g str
 
     if (b == 0)
@@ -235,13 +245,13 @@ example2 = do
         pure ()
 
         withCString "test2.gml" $ \cstr -> do
-          str <- newNCppString cstr
+          str <- newCppString cstr
           graphIOwriteGML ga str
           delete str
 
 
         withCString "test2.svg" $ \cstrsvg -> do
-          strsvg <- newNCppString cstrsvg
+          strsvg <- newCppString cstrsvg
           graphIOdrawSVG ga strsvg
           delete strsvg
 
