@@ -14,6 +14,7 @@ import           Data.Bits ((.|.))
 import           Data.ByteString.Char8 (useAsCString)
 import           Data.Foldable (forM_)
 import           Data.List (find)
+import           Data.Monoid ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.IO as TIO
@@ -41,11 +42,12 @@ import           OGDF.OptimalHierarchyLayout
 import           OGDF.OptimalRanking
 import           OGDF.SugiyamaLayout
 --
-import           Lexicon.Type (FNFrame(..))
+import           Lexicon.Type (FNFrame(..),FNFrameElement(..))
 import           SRL.Analyze.Type (MeaningGraph
                                   ,MGVertex(..)
                                   ,mg_vertices,mg_edges
-                                  ,me_start,me_end,mv_id
+                                  ,me_start,me_end,me_prep,me_relation
+                                  ,mv_id
                                   )
 
 
@@ -91,6 +93,7 @@ mkOGDFSVG mg = do
   ga <- newGraphAttributes g (nodeGraphics
                              .|. edgeGraphics
                              .|. nodeLabel
+                             .|. edgeLabel
                              .|. edgeStyle
                              .|. nodeStyle
                              .|. nodeTemplate
@@ -110,7 +113,14 @@ mkOGDFSVG mg = do
   forM_ (mg^.mg_edges) $ \e -> do
     let Just (_,n1) = find (\(i,_) -> i == e^.me_start) ivs
         Just (_,n2) = find (\(i,_) -> i == e^.me_end) ivs
-    graphnewEdge g n1 n2
+    e' <- graphnewEdge g n1 n2
+    str <- graphAttributeslabelE ga e'
+    let txt = unFNFrameElement (e^.me_relation) <> maybe "" (":" <>) (e^.me_prep)
+        bstr = TE.encodeUtf8 txt
+    useAsCString bstr $ \cstredge -> do
+      stredge <- newCppString cstredge
+      cppStringappend str stredge
+
     pure ()
 
   -- v^.mv_id
