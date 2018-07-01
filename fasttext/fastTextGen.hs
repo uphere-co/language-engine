@@ -20,6 +20,7 @@ cabalgen acincs acsrcs =
         , cabal_moduleprefix = "FastText.Binding"
         , cabal_additional_c_incs = acincs
         , cabal_additional_c_srcs = acsrcs
+        , cabal_additional_pkgdeps = [ ]
         }
 
 extraDep = []
