@@ -12,6 +12,35 @@ import FFICXX.Generate.Type.Module
 import FFICXX.Generate.Type.PackageInterface
 
 
+-- -------------------------------------------------------------------
+-- import from stdcxx
+-- -------------------------------------------------------------------
+
+-- import from stdcxx
+stdcxx_cabal = Cabal { cabal_pkgname = "stdcxx"
+                     , cabal_cheaderprefix = "STD"
+                     , cabal_moduleprefix = "STD"
+                     , cabal_additional_c_incs = []
+                     , cabal_additional_c_srcs = []
+                     , cabal_additional_pkgdeps = []
+                     }
+
+-- import from stdcxx
+deletable :: Class
+deletable =
+  AbstractClass stdcxx_cabal "Deletable" [] mempty Nothing
+  [ Destructor Nothing
+  ]
+
+
+-- import from stdcxx
+string :: Class
+string =
+  Class stdcxx_cabal "string" [ ] mempty  (Just "CppString") [ ]
+
+-- -------------------------------------------------------------------
+-- fastText definition
+-- -------------------------------------------------------------------
 
 
 cabalgen acincs acsrcs =
@@ -20,11 +49,11 @@ cabalgen acincs acsrcs =
         , cabal_moduleprefix = "FastText.Binding"
         , cabal_additional_c_incs = acincs
         , cabal_additional_c_srcs = acsrcs
-        , cabal_additional_pkgdeps = [ ]
+        , cabal_additional_pkgdeps = [ CabalName "stdcxx" ]
         }
 
 extraDep = []
-  
+
 cabalattr =
   CabalAttr
   { cabalattr_license = Just "BSD3"
@@ -33,29 +62,20 @@ cabalattr =
   , cabalattr_extralibdirs = []
   , cabalattr_extrafiles = []
   }
-  
-string :: ReaderT Cabal IO Class
-string = do
-  cabal <- ask
-  return $
-    Class cabal "string" [] mempty  (Just "CppString")
-      [ Constructor [ cstring "p" ] Nothing
-      , NonVirtual cstring_ "c_str" [] Nothing
-      ]
+
 
 fasttext :: ReaderT Cabal IO Class
 fasttext = do
-  string' <- string
   vector' <- vector
-  cabal <- ask 
+  cabal <- ask
   return $
     Class cabal "FastText" [] mempty Nothing
       [ Constructor [] Nothing
-      , NonVirtual void_ "loadModel" [cppclassref string' "filename" ] Nothing
+      , NonVirtual void_ "loadModel" [cppclassref string "filename" ] Nothing
       , NonVirtual void_ "printWordVectors" [ ] Nothing
-      , NonVirtual void_ "getVector" [cppclassref vector' "vec", cppclassref string' "word"] Nothing
+      , NonVirtual void_ "getVector" [cppclassref vector' "vec", cppclassref string "word"] Nothing
       ]
-  
+
 vector :: ReaderT Cabal IO Class
 vector = do
   cabal <- ask
@@ -67,29 +87,28 @@ vector = do
     ]
 
 classes :: ReaderT Cabal IO [Class]
-classes = sequenceA [string,fasttext,vector]
-  
+classes = sequenceA [fasttext,vector]
+
 toplevelfunctions = []
-                      
+
 templates = []
 
 headerMap = [ ("FastText", ([NS "fasttext", NS "std"], [HdrName "fasttext.h"]))
             , ("Vector"  , ([NS "fasttext"          ], [HdrName "vectorwrapper.h"  ]))
-            , ("string"  , ([NS "std"               ], [HdrName "string"    ]))
             ]
-            
+
 main :: IO ()
 main = do
   args <- getArgs
   let file0 = args !! 0
       file1 = args !! 1
-      
+
   cnts0 <- readFile file0
   cnts1 <- readFile file1
   let acincs = [ AddCInc "vectorwrapper.h" cnts0 ]
-      acsrcs = [ AddCSrc "wrapper.cc" cnts1 ] 
-  
+      acsrcs = [ AddCSrc "wrapper.cc" cnts1 ]
+
   flip runReaderT (cabalgen acincs acsrcs) $ do
     cs <- classes
-    cabal <- ask 
+    cabal <- ask
     lift $ simpleBuilder "FastText.Binding" headerMap (cabal,cabalattr,cs,toplevelfunctions,templates) [ "fasttext" ] extraDep
