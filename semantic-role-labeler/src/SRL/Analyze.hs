@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections     #-}
-
+{-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-unused-matches #-}
 module SRL.Analyze where
 
 import           Control.Lens                   ((^.),(^..),(.~),(&),_Just)
@@ -63,6 +63,7 @@ import           SRL.Analyze.MeaningTree        (mkMeaningTree)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP            (runParser)
 import           SRL.Analyze.Format             (dotMeaningGraph,formatDocStructure,showMatchedFrame)
+import           SRL.Analyze.Format.OGDF        (mkOGDFSVG)
 import           SRL.Analyze.Match.Frame        (mkTriples)
 import           SRL.Analyze.Match.MeaningGraph (meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure  (docStructure,mkWikiList)
@@ -130,8 +131,9 @@ printMeaningGraph apredata companyMap dstr = do
     putStrLn "-----------------"
     let dotstr = dotMeaningGraph (Just (mkLabelText title)) mg
     T.IO.putStrLn dotstr
-    T.IO.writeFile ("test" ++ (show i) ++ ".dot") dotstr
-    void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
+    mkOGDFSVG mg
+    -- T.IO.writeFile ("test" ++ (show i) ++ ".dot") dotstr
+    -- void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
     --
     mapM_ print (mkMeaningTree (apredata^.analyze_rolemap) mg)
 
