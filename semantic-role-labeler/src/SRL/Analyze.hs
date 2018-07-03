@@ -131,10 +131,20 @@ printMeaningGraph apredata companyMap dstr = do
     putStrLn "-----------------"
     let dotstr = dotMeaningGraph (Just (mkLabelText title)) mg
     T.IO.putStrLn dotstr
-    mkOGDFSVG mg
-    -- T.IO.writeFile ("test" ++ (show i) ++ ".dot") dotstr
-    -- void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
+    putStrLn "-----------------"
+    putStrLn "create dot png"
+    putStrLn "-----------------"
+    T.IO.writeFile ("test" ++ (show i) ++ ".dot") dotstr
+    void (readProcess "dot" ["-Tpng","test" ++ (show i) ++ ".dot","-otest" ++ (show i) ++ ".png"] "")
+
+    putStrLn "-----------------"
+    putStrLn "creating meaning graph OGDF-SVG"
+    putStrLn "-----------------"
+    mkOGDFSVG ("testogdf" ++ show i ++ ".svg") mg
     --
+    putStrLn "-----------------"
+    putStrLn "meaning tree"
+    putStrLn "-----------------"
     mapM_ print (mkMeaningTree (apredata^.analyze_rolemap) mg)
 
 

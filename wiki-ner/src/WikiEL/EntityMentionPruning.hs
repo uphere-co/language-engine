@@ -13,7 +13,7 @@ import           WikiEL.Type                (EntityMention,IRange(..))
 
 
 isEntityLinkableTag :: POSTag -> Bool
-isEntityLinkableTag = f . n -- || isVerb tag
+isEntityLinkableTag = f . n
   where
     n PRP = No
     n x   = isNoun x
