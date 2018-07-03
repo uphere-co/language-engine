@@ -86,8 +86,8 @@ defaultSugiyama ga = do
 
 
 
-mkOGDFSVG :: MeaningGraph -> IO ()
-mkOGDFSVG mg = do
+mkOGDFSVG :: FilePath -> MeaningGraph -> IO ()
+mkOGDFSVG file mg = do
   putStrLn "mkOGDFSVG"
   g <- newGraph
   ga <- newGraphAttributes g (nodeGraphics
@@ -130,7 +130,7 @@ mkOGDFSVG mg = do
   -- v^.mv_id
   defaultSugiyama ga
 
-  withCString "test_mg.svg" $ \cstrsvg -> do
+  withCString file $ \cstrsvg -> do
     strsvg <- newCppString cstrsvg
     graphIOdrawSVG ga strsvg
     delete strsvg
