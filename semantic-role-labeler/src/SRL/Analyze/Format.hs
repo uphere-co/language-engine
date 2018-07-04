@@ -184,7 +184,7 @@ formatSentStructure :: Bool -> SentStructure -> [Text]
 formatSentStructure _showdetail ss@(SentStructure i ptr _ _ _ _ vstrs) =
    let subline1 = [ T.pack (printf "-- Sentence %3d ----------------------------------------------------------------------------------" i)
                   , formatIndexTokensFromTree 0 ptr
-                  , prettyPrint 0 ptr ] 
+                  , prettyPrint 0 ptr ]
 
        subline1_1 = [ "--------------------------------------------------------------------------------------------------" ] ++
                     map (formatX'Tree SPH1) (ss^.ss_x'trs) ++
@@ -214,14 +214,15 @@ showMatchedFE _a0 (fe,x) =
 showMatchedFrame :: FrameDB
                  -> PreAnalysis '[Lemma]
                  -> (X'Tree 'PH1,VerbStructure, CP 'PH1)
-                 -> IO ()
-showMatchedFrame framedb tagged (x'tr,vstr,cp) = do
-  T.IO.putStrLn "---------------------------"
-  flip traverse_ (matchFrame framedb x'tr (vstr,cp)) $ \(rng,_,_,FMR idiom frame mselected _,_) -> do
-    putStrLn ("predicate: "  <> show rng)
-    T.IO.putStrLn ("Verb: "  <> T.intercalate " " idiom)
-    T.IO.putStrLn ("Frame: " <> unFNFrame frame)
-    flip traverse_ mselected $ \(_,felst) -> mapM_ (putStrLn . showMatchedFE tagged) felst
+                 -> [String]
+showMatchedFrame framedb tagged (x'tr,vstr,cp) =
+  let x = "---------------------------"
+      xs = flip concatMap (matchFrame framedb x'tr (vstr,cp)) $ \(rng,_,_,FMR idiom frame mselected _,_) ->
+             ([ "predicate: "  <> show rng
+              , T.unpack ("Verb: "  <> T.intercalate " " idiom)
+              , T.unpack ("Frame: " <> unFNFrame frame) ]
+              ++ (flip concatMap mselected (\(_,felst) -> map (showMatchedFE tagged) felst)))
+  in x:xs
 
 
 

@@ -16,7 +16,9 @@ import           Data.Default                   (def)
 import qualified Data.HashMap.Strict    as HM
 import           Data.IntMap                    (IntMap)
 import qualified Data.IntMap            as IM
+import           Data.List                      (intercalate)
 import           Data.Maybe
+import           Data.Monoid                    ((<>))
 import           Data.Text                      (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.IO           as T.IO
@@ -28,7 +30,7 @@ import           System.Process                 (readProcess)
 --
 import           CoreNLP.Simple                 (prepare)
 import           CoreNLP.Simple.Type            (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
-import           FrameNet.Query.Frame           (loadFrameData)
+import           FrameNet.Query.Frame           (FrameDB,loadFrameData)
 import           HUKB.PPR                       (createUKBDB)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                  (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts,loadIdioms)
@@ -67,9 +69,28 @@ import           SRL.Analyze.Format.OGDF        (mkOGDFSVG)
 import           SRL.Analyze.Match.Frame        (mkTriples)
 import           SRL.Analyze.Match.MeaningGraph (meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure  (docStructure,mkWikiList)
-import           SRL.Analyze.Type
+import           SRL.Analyze.Type               (AnalyzePredata(AnalyzePredata)
+                                                ,analyze_framedb,analyze_rolemap
+                                                ,DocStructure
+                                                ,ds_mtokenss,ds_sentStructures
+                                                ,ss_tagged,ss_x'trs
+                                                ,ConsoleOutput(..),outputX'tree
+                                                ,outputDocStructure,outputMatchedFrames)
+
 --
 
+
+
+consoleOutput :: FrameDB -> DocStructure -> ConsoleOutput
+consoleOutput frmdb dstr =
+  let sstrs = catMaybes (dstr^.ds_sentStructures)
+      matchedframes = do s <- sstrs
+                         x <- mkTriples s
+                         pure (s^.ss_tagged,x)
+  in ConsoleOutput { _outputX'tree = T.intercalate "\n" (map (formatX'Tree SPH1) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'trs . traverse))
+                   , _outputDocStructure = T.intercalate "\n" (formatDocStructure True dstr)
+                   , _outputMatchedFrames = T.pack (intercalate "\n" (concatMap (uncurry (showMatchedFrame frmdb)) matchedframes))
+                   }
 
 --
 -- | main query loop
@@ -90,20 +111,19 @@ queryProcess config pp apredata netagger (forest,companyMap) =
                   txt <- T.IO.readFile fp
                   dainput <- runParser pp txt
                   dstr <- docStructure apredata netagger (forest,companyMap) dainput
+                  let cout = consoleOutput frmdb dstr
+                  T.IO.putStrLn (cout^.outputX'tree)
                   when (config^.Analyze.showDetail) $
-                    mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap (\s -> [(s^.ss_tagged,x)| x <- mkTriples s ]) . catMaybes $ (dstr^.ds_sentStructures)
-
+                    T.IO.putStrLn (cout^.outputDocStructure)
+                  T.IO.putStrLn (cout^.outputMatchedFrames)
       ":v " -> do dainput <- runParser pp rest
                   dstr <- docStructure apredata netagger (forest,companyMap) dainput
-                  mapM_ (T.IO.putStrLn . formatX'Tree SPH1) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'trs . traverse)
-                  when (config^.Analyze.showDetail) $ do
-                    mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-
-                  mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap (\s -> [(s^.ss_tagged,x)|  x <- mkTriples s]) . catMaybes $ (dstr^.ds_sentStructures)
-                  --
+                  let cout = consoleOutput frmdb dstr
+                  T.IO.putStrLn (cout^.outputX'tree)
+                  when (config^.Analyze.showDetail) $
+                    T.IO.putStrLn (cout^.outputDocStructure)
+                  T.IO.putStrLn (cout^.outputMatchedFrames)
                   printMeaningGraph apredata companyMap dstr
-                  --
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
@@ -169,7 +189,6 @@ loadConfig (bypass_ner,bypass_textner) cfg = do
               let forest = foldr addTreeItem [] clist
               return (forest,companyMap)
   return (apredata,netagger,forest,companyMap)
-
 
 
 --

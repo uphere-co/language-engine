@@ -217,3 +217,17 @@ instance ToJSON MeaningGraph
 instance FromJSON MeaningGraph
 instance Binary MeaningGraph
 instance NFData MeaningGraph
+
+
+data ConsoleOutput = ConsoleOutput { _outputX'tree :: Text
+                                   , _outputDocStructure :: Text
+                                   , _outputMatchedFrames :: Text
+                                   }
+                   deriving (Show,Generic)
+
+makeLenses ''ConsoleOutput
+
+instance ToJSON   ConsoleOutput
+instance FromJSON ConsoleOutput
+instance Binary   ConsoleOutput
+instance NFData   ConsoleOutput
