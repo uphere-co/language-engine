@@ -16,7 +16,9 @@ import           Data.Default                   (def)
 import qualified Data.HashMap.Strict    as HM
 import           Data.IntMap                    (IntMap)
 import qualified Data.IntMap            as IM
+import           Data.List                      (intercalate)
 import           Data.Maybe
+import           Data.Monoid                    ((<>))
 import           Data.Text                      (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.IO           as T.IO
@@ -28,7 +30,7 @@ import           System.Process                 (readProcess)
 --
 import           CoreNLP.Simple                 (prepare)
 import           CoreNLP.Simple.Type            (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
-import           FrameNet.Query.Frame           (loadFrameData)
+import           FrameNet.Query.Frame           (FrameDB,loadFrameData)
 import           HUKB.PPR                       (createUKBDB)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                  (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts,loadIdioms)
@@ -92,15 +94,26 @@ queryProcess config pp apredata netagger (forest,companyMap) =
                   dstr <- docStructure apredata netagger (forest,companyMap) dainput
                   when (config^.Analyze.showDetail) $
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
-                  mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap (\s -> [(s^.ss_tagged,x)| x <- mkTriples s ]) . catMaybes $ (dstr^.ds_sentStructures)
+                  let sstrs = catMaybes (dstr^.ds_sentStructures)
+                      matchedframes = do s <- sstrs
+                                         x <- mkTriples s
+                                         pure (s^.ss_tagged,x)
+                  putStrLn (intercalate "\n" (concatMap (uncurry (showMatchedFrame frmdb)) matchedframes))
+
+                  -- mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap (\s -> [(s^.ss_tagged,x)| x <- mkTriples s ]) . catMaybes $ (dstr^.ds_sentStructures)
 
       ":v " -> do dainput <- runParser pp rest
                   dstr <- docStructure apredata netagger (forest,companyMap) dainput
                   mapM_ (T.IO.putStrLn . formatX'Tree SPH1) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'trs . traverse)
                   when (config^.Analyze.showDetail) $ do
                     mapM_ T.IO.putStrLn (formatDocStructure (config^.Analyze.showFullDetail) dstr)
+                  let sstrs = catMaybes (dstr^.ds_sentStructures)
+                      matchedframes = do s <- sstrs
+                                         x <- mkTriples s
+                                         pure (s^.ss_tagged,x)
+                  putStrLn (intercalate "\n" (concatMap (uncurry (showMatchedFrame frmdb)) matchedframes))
 
-                  mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap (\s -> [(s^.ss_tagged,x)|  x <- mkTriples s]) . catMaybes $ (dstr^.ds_sentStructures)
+                  -- mapM_ (uncurry (showMatchedFrame frmdb)) . concatMap (\s -> [(s^.ss_tagged,x)|  x <- mkTriples s]) . catMaybes $ (dstr^.ds_sentStructures)
                   --
                   printMeaningGraph apredata companyMap dstr
                   --
@@ -169,6 +182,16 @@ loadConfig (bypass_ner,bypass_textner) cfg = do
               let forest = foldr addTreeItem [] clist
               return (forest,companyMap)
   return (apredata,netagger,forest,companyMap)
+
+consoleOutput :: FrameDB -> DocStructure -> Text
+consoleOutput frmdb dstr =
+  let sstrs = catMaybes (dstr^.ds_sentStructures)
+      matchedframes = do s <- sstrs
+                         x <- mkTriples s
+                         pure (s^.ss_tagged,x)
+  in T.intercalate "\n" (map (formatX'Tree SPH1) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'trs . traverse))
+  <> T.intercalate "\n" (formatDocStructure True dstr)
+  <> T.pack (intercalate "\n" (concatMap (uncurry (showMatchedFrame frmdb)) matchedframes))
 
 
 
