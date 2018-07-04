@@ -87,9 +87,9 @@ consoleOutput frmdb dstr =
       matchedframes = do s <- sstrs
                          x <- mkTriples s
                          pure (s^.ss_tagged,x)
-  in ConsoleOutput { _outputX'tree = T.intercalate "\n" (map (formatX'Tree SPH1) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'trs . traverse))
-                   , _outputDocStructure = T.intercalate "\n" (formatDocStructure True dstr)
-                   , _outputMatchedFrames = T.pack (intercalate "\n" (concatMap (uncurry (showMatchedFrame frmdb)) matchedframes))
+  in ConsoleOutput { _outputX'tree = T.unlines (map (formatX'Tree SPH1) (dstr ^.. ds_sentStructures . traverse . _Just . ss_x'trs . traverse))
+                   , _outputDocStructure = T.unlines (formatDocStructure True dstr)
+                   , _outputMatchedFrames = T.unlines (concatMap (uncurry (showMatchedFrame frmdb)) matchedframes)
                    }
 
 --

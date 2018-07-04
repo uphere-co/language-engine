@@ -9,11 +9,11 @@ import           Control.Lens                                 ((^.),(^..),(.~),(
 import           Control.Monad                                (guard)
 import           Data.Foldable                                (toList)
 import           Data.Maybe                                   (mapMaybe)
-import           Data.List                                    (intercalate)
 import           Data.Text                                    (Text)
 import qualified Data.Text                             as T
 import           Data.Text.Read                               (decimal)
-import           Text.Printf                                  (printf)
+import           Formatting                                   (Format,(%),(%.),sformat,stext,int)
+import qualified Formatting                            as F   (left,right)
 --
 import           CoreNLP.Simple.Convert                       (mkLemmaMap)
 import           HUKB.PPR                                     (ppr)
@@ -30,6 +30,15 @@ import           NLP.Type.PennTreebankII                      (Lemma(..),PennTre
 
 import Data.Attribute (ahead)
 import NLP.Syntax.Util (mkBitreeICP)
+
+-- note that left/right are reversed
+rs,ls :: Int -> Format r (Text -> r)
+rs n = F.left  n ' ' %. stext
+ls n = F.right n ' ' %. stext
+
+rd,ld :: (Integral a) => Int -> Format r (a -> r)
+rd n = F.left  n ' ' %. int
+ld n = F.right n ' ' %. int
 
 
 posTagToPOS :: POSTag -> Maybe POS
@@ -59,10 +68,12 @@ ukbLookupSynset db u = let s = do (s0,pos) <- parsesyn (u^.ukbrw_syn)
                         else Nothing
                      
     
-formatUKBResult :: UKBResult (Maybe Text) -> String
-formatUKBResult r = intercalate "\n" $ map formatUKBResultWord (r^.ukbresult_words)
+formatUKBResult :: UKBResult (Maybe Text) -> Text
+formatUKBResult r = T.unlines $ map formatUKBResultWord (r^.ukbresult_words)
   where
-    formatUKBResultWord u = printf "%-3d: %-20s: %s" (u^.ukbrw_id) (u^.ukbrw_word) (maybe "" (T.pack . show) (u^.ukbrw_syn)) :: String
+    formatUKBResultWord u =
+      sformat (ld 3 % ": " % ls 20 % ": " % stext)
+        (u^.ukbrw_id) (u^.ukbrw_word) (maybe "" (T.pack . show) (u^.ukbrw_syn))
 
 
 runUKB :: WordNetDB -> ([Sentence],[Maybe PennTree]) -> IO [[(Int,LexicographerFile)]]
