@@ -149,7 +149,7 @@ formatTaggedSentences :: (a -> Text)
                       -> Box
 formatTaggedSentences f sents_tagged =
   let txts = concatMap (\(s,a) -> underlineText f (s^._2) (s^._3) a) sents_tagged
-  in vcat top $ map (text . T.unpack) txts
+  in vcat top $ map text txts
 
 
 formatPreNE :: PreNE -> Text
@@ -171,7 +171,7 @@ formatTagged mtokenss sentitems tlst =
       clst = mapMaybe (convertTagPosFromTokenToChar toks) tlst
       sents_tagged = map (addTag clst) sentitems
       doc1 = formatTaggedSentences (either (T.pack . show . _emuid . _uid) (T.singleton . (^._1))) sents_tagged
-      doc2 = vcat top . intersperse (text "") . map (text . T.unpack . either formatLinkedMention formatIndexedTimex) $ map (\(TagPos (_,_,x)) -> x) clst
+      doc2 = vcat top . intersperse (text "") . map (text . either formatLinkedMention formatIndexedTimex) $ map (\(TagPos (_,_,x)) -> x) clst
   in hsep 10 left [doc1,doc2]
 
 
@@ -181,7 +181,7 @@ formatDocStructure :: Bool -> DocStructure -> [Text]
 formatDocStructure showdetail (DocStructure mtokenss sentitems mergedtags sstrs) =
   let line1 = [ "=================================================================================================="
               , "-- Time and NER tagged text ----------------------------------------------------------------------"
-              , T.pack (render (formatTagged mtokenss sentitems mergedtags))
+              , render (formatTagged mtokenss sentitems mergedtags)
               , "--------------------------------------------------------------------------------------------------"
               , "-- Sentence analysis -----------------------------------------------------------------------------"
               , "--------------------------------------------------------------------------------------------------" ]
