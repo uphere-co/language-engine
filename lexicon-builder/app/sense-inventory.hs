@@ -44,13 +44,13 @@ verbnet :: HashMap (Text,Text) [Text] -> Text -> Text -> Box
 verbnet semlinkmap lma txt =
   let (_,cls') = T.breakOn "-" txt
   in if T.null cls'
-     then text (printf "%-43s" ("" :: String))
+     then text (T.pack (printf "%-43s" ("" :: String)))
      else let cls = T.tail cls'
               frms = fromMaybe [] (HM.lookup (lma,cls) semlinkmap)
-          in text (printf "%-8s -> " cls) <+>
+          in text (T.pack (printf "%-8s -> " cls)) <+>
              vcat top (if null frms
-                       then [text (printf "%-30s" ("":: String))]
-                       else map (text.printf "%-30s") frms
+                       then [text (T.pack (printf "%-30s" ("":: String)))]
+                       else map (text.T.pack.printf "%-30s") frms
                       )
 
 
@@ -69,28 +69,28 @@ formatSenses lma vorn sensemap semlinkmap sensestat = do
   si <- maybeToList (HM.lookup lmav sensemap)
   s <- si^.inventory_senses
   let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
-      txt1 = text (printf "%2s.%-6s (%4d cases) |  " (s^.sense_group) (s^.sense_n) num )
+      txt1 = text $ T.pack $ printf "%2s.%-6s (%4d cases) |  " (s^.sense_group) (s^.sense_n) num
       mappings = s^.sense_mappings
       txt_pb = vcat top $ let lst = T.splitOn "," (mappings^.mappings_pb)
                           in if null lst
-                             then [text (printf "%-20s" ("" :: String))]
-                             else map (text.printf "%-20s") lst
+                             then [text (T.pack (printf "%-20s" ("" :: String)))]
+                             else map (text.T.pack.printf "%-20s") lst
       txt_fn = vcat top $ let lst = maybe [] (T.splitOn ",") (mappings^.mappings_fn)
                           in if null lst
-                             then [text (printf "%-30s" ("" :: String))]
-                             else map (text.printf "%-30s") lst
-      txt_wn = vcat top $ let lst = map (text.printf "%-30s") (catMaybes (mappings^..mappings_wn.traverse.wn_lemma))
-                          in if null lst then [text (printf "%-30s" ("" :: String))] else lst
+                             then [text (T.pack (printf "%-30s" ("" :: String)))]
+                             else map (text.T.pack.printf "%-30s") lst
+      txt_wn = vcat top $ let lst = map (text.T.pack.printf "%-30s") (catMaybes (mappings^..mappings_wn.traverse.wn_lemma))
+                          in if null lst then [text (T.pack (printf "%-30s" ("" :: String)))] else lst
       txt_vn = case vorn of
                  Verb -> vcat top $
                            let lst = maybe [] (map (verbnet semlinkmap lma) . T.splitOn ",") (mappings^.mappings_vn)
                            in if null lst
-                              then [text (printf "%-43s" ("" :: String))]
+                              then [text (T.pack (printf "%-43s" ("" :: String)))]
                               else lst --  map (text.printf "%-20s") lst
-                 Noun -> vcat top [text (printf "%-42s" ("" :: String))]
-      txt_definition = text ("definition: " ++ T.unpack (s^.sense_name))
-      txt_commentary = text (T.unpack (fromMaybe "" (s^.sense_commentary)))
-      txt_examples   = text (T.unpack (s^.sense_examples))
+                 Noun -> vcat top [text (T.pack (printf "%-42s" ("" :: String)))]
+      txt_definition = text ("definition: " <> (s^.sense_name))
+      txt_commentary = text (fromMaybe "" (s^.sense_commentary))
+      txt_examples   = text (s^.sense_examples)
       txt_detail = vcat left [txt_definition,txt_commentary,txt_examples]
   return (vcat left [(txt1 <+> txt_pb <+> txt_fn <+> txt_vn <+> txt_wn),txt_detail])
 
@@ -105,7 +105,7 @@ formatWordNet lma vorn sensemap sensestat wndb = do
   si <- maybeToList (HM.lookup lmav sensemap)
   s <- si^.inventory_senses
   let num = fromMaybe 0 (HM.lookup (lma,s^.sense_n) sensestat)
-      txt1 = text (printf "%2s.%-6s (%4d cases) |  " (s^.sense_group) (s^.sense_n) num )
+      txt1 = text (T.pack (printf "%2s.%-6s (%4d cases) |  " (s^.sense_group) (s^.sense_n) num ))
       mappings = s^.sense_mappings
       wns = mappings^..mappings_wn.traverse
       wndatas = do wn <- wns
@@ -124,26 +124,27 @@ formatWordNet lma vorn sensemap sensestat wndb = do
       txt_wn_senses = do (wnsense,(_,d)) <- wndatas
                          let wnverbframes = show (d^..data_frames.traverse.to ((,)<$> view frame_f_num <*> view frame_w_num))
                              lfid = d^.data_lex_filenum
-                             restxt = printf "%-20s: %-45s | %25s | %-s  "
-                                        wnsense
-                                        (T.intercalate "," (map (formatLI (POS_V,lfid)) (d^.data_word_lex_id)))
-                                        wnverbframes
-                                        (d^.data_gloss)
+                             restxt = T.pack $
+                                        printf "%-20s: %-45s | %25s | %-s  "
+                                          wnsense
+                                          (T.intercalate "," (map (formatLI (POS_V,lfid)) (d^.data_word_lex_id)))
+                                          wnverbframes
+                                          (d^.data_gloss)
                          return (text restxt)
       wn_frames = map head . group .  sort $ wndatas^..traverse._2._2.data_frames.traverse.frame_f_num
-      txt_wn_frames = text ("All frames: " ++ show wn_frames)
+      txt_wn_frames = text ("All frames: " <> T.pack (show wn_frames))
       txt_wn = vcat left (txt_wn_senses ++ [txt_wn_frames])
 
-      txt_definition = map (text . T.unpack . T.strip) $ T.lines (s^.sense_name)
-      txt_commentary = map (text . T.unpack . T.strip) $ T.lines (fromMaybe "" (s^.sense_commentary))
-      txt_examples   = map (text . T.unpack . T.strip) $ T.lines (s^.sense_examples)
+      txt_definition = map (text . T.strip) $ T.lines (s^.sense_name)
+      txt_commentary = map (text . T.strip) $ T.lines (fromMaybe "" (s^.sense_commentary))
+      txt_examples   = map (text . T.strip) $ T.lines (s^.sense_examples)
       txt_detail = vcat left (txt_definition ++ txt_commentary ++ txt_examples)
   return $ (txt1 <+> vcat left [txt_detail,txt_wn]) //
            text "---------------------------------------------------------------------------------------------------------------"
 
 
-formatStat :: ((Text,Text),Int) -> String
-formatStat ((lma,sens),num) = printf "%20s.%-5s : %5d" lma sens num
+formatStat :: ((Text,Text),Int) -> Text
+formatStat ((lma,sens),num) = T.pack (printf "%20s.%-5s : %5d" lma sens num)
 
 
 listSenseDetail :: LexDataConfig -> IO ()
@@ -154,11 +155,11 @@ listSenseDetail cfg = do
   forM_ merged $ \(lma,f) -> do
     T.IO.hPutStrLn stderr lma
     let frms = framesFromLU ludb (lma <> ".v")
-        doc = text (printf "%20s:%6d " lma f) //
+        doc = text (T.pack (printf "%20s:%6d " lma f)) //
               vcat top (formatSenses lma Verb sensemap semlinkmap sensestat )
-    putStrLn "====================================================================================================================="
-    putStrLn $ "From FrameNet Lexical Unit " ++ show (lma <> ".v") ++ ": " ++ show frms
-    putStrLn (render doc)
+    T.IO.putStrLn "====================================================================================================================="
+    T.IO.putStrLn $ "From FrameNet Lexical Unit " <> lma <> ".v" <> ": " <> T.pack (show frms)
+    T.IO.putStrLn (render doc)
 
 
 listSenseWordNet :: LexDataConfig -> IO ()
@@ -170,14 +171,14 @@ listSenseWordNet cfg = do
   forM_ merged $ \(lma,f) -> do
     T.IO.hPutStrLn stderr lma
     let doc = text "=====================================================================================================================" //
-              text (printf "%20s:%6d " lma f) //
+              text (T.pack (printf "%20s:%6d " lma f)) //
               text "---------------------------------------------------------------------------------------------------------------" //
               vcat top (formatWordNet lma Verb sensemap sensestat wndb)
-    putStrLn (render doc)
+    T.IO.putStrLn (render doc)
 
 
 listIdiom :: LexDataConfig -> IO ()
-listIdiom cfg = do 
+listIdiom cfg = do
   (_ludb,_sensestat,_semlinkmap,sensemap,ws,_wndb) <- loadAllexceptPropBank cfg
   let merged = mergeStatPB2Lemma ws
 
