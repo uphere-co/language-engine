@@ -7,6 +7,7 @@ import Data.Traversable           (sequenceA)
 import System.Environment
 --
 import FFICXX.Generate.Builder
+import FFICXX.Generate.Code.Primitive
 import FFICXX.Generate.Type.Class
 import FFICXX.Generate.Type.Module
 import FFICXX.Generate.Type.PackageInterface
