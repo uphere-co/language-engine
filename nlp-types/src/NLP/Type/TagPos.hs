@@ -6,9 +6,11 @@
 
 module NLP.Type.TagPos where
 
+import           Control.DeepSeq                               (NFData)
 import           Control.Lens
 import           Data.Aeson
 import           Data.Aeson.Types                              (typeMismatch)
+import           Data.Binary                                   (Binary)
 import           Data.Function                                 (on)
 import           Data.List                                     (sortBy)
 import           Data.Maybe                                    (mapMaybe)
@@ -20,13 +22,13 @@ import           GHC.Generics                                  (Generic)
 
 type SentIdx = Int
 
-newtype TokIdx = TokIdx { unTokIdx :: Int } deriving (Num,Eq,Ord,Show,Generic)
+newtype TokIdx = TokIdx { unTokIdx :: Int } deriving (Num,Eq,Ord,Show,Generic,NFData,Binary)
 
-newtype CharIdx = ChIdx { unChIdx :: Int } deriving (Num,Eq,Ord,Show,Generic)
+newtype CharIdx = ChIdx { unChIdx :: Int } deriving (Num,Eq,Ord,Show,Generic,NFData,Binary)
 
 type BeginEnd i = (i,i)
 
-newtype TagPos i a = TagPos (i,i,a) deriving (Eq,Show,Generic)
+newtype TagPos i a = TagPos (i,i,a) deriving (Eq,Show,Generic,NFData,Binary)
 
 instance Functor (TagPos i) where
   fmap f (TagPos (i,j,x)) = TagPos (i,j,f x)

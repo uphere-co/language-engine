@@ -119,6 +119,8 @@ instance ToJSON POSTag where
 
 instance Binary POSTag
 
+instance NFData POSTag
+
 isNone :: POSTag -> Bool
 isNone D_NONE = True
 isNone _      = False
@@ -210,6 +212,7 @@ instance ToJSON ChunkTag where
 
 instance Binary ChunkTag
 
+instance NFData ChunkTag
 
 isWHphrase :: ChunkTag -> Bool
 isWHphrase WHADJP = True
