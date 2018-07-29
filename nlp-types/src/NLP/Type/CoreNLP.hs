@@ -1,8 +1,10 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass  #-}
+{-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module NLP.Type.CoreNLP where
 
+import           Control.DeepSeq               (NFData)
 import           Control.Lens
 import           Data.Aeson
 import           Data.Binary                   (Binary)
@@ -24,36 +26,18 @@ data SentenceIndex = SentenceIndex { _sent_index      :: Int
                                    , _sent_charRange  :: (Int,Int)
                                    , _sent_tokenRange :: (Int,Int)
                                    } 
-                   deriving (Generic, Show)
+                   deriving (Generic, Show, ToJSON, FromJSON, Binary, NFData)
 
 makeLenses ''SentenceIndex
-
-instance ToJSON SentenceIndex where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON SentenceIndex where
-  parseJSON = genericParseJSON defaultOptions
-
-instance Binary SentenceIndex
-
 
 data Token = Token { _token_tok_idx_range :: (Int,Int)
                    , _token_char_idx_range :: (Int,Int)
                    , _token_text :: Text
                    , _token_pos :: POSTag
                    , _token_lemma :: Text }
-           deriving (Generic, Show)
+           deriving (Generic, Show, ToJSON, FromJSON, Binary, NFData)
 
 makeLenses ''Token
-
-instance ToJSON Token where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON Token where
-  parseJSON = genericParseJSON defaultOptions
-
-instance Binary Token
-
 
 type Node = (Int,Text)
 
@@ -61,32 +45,18 @@ type Edge = ((Int,Int),U.DependencyRelation)
 
 
 data Dependency = Dependency Int [Node] [Edge]
-                deriving (Show,Eq,Ord,Generic)
-
-instance ToJSON Dependency where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON Dependency where
-  parseJSON = genericParseJSON defaultOptions
-
-instance Binary Dependency
+                deriving (Show,Eq,Ord,Generic,ToJSON,FromJSON,Binary,NFData)
 
 
 data Sentence = Sentence { _sentenceLemma :: [Text]
                          , _sentenceToken :: [Maybe Token]
                          , _sentenceWord  :: [Maybe Text]
                          , _sentenceNER   :: [Maybe Text]
-                         } deriving (Generic, Show)
+                         }
+              deriving (Generic,Show,ToJSON,FromJSON,Binary,NFData)
 
 makeLenses ''Sentence
 
-instance ToJSON Sentence where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON Sentence where
-  parseJSON = genericParseJSON defaultOptions
-
-instance Binary Sentence
 
 dependencyIndexTree :: Dependency -> Tree G.Vertex
 dependencyIndexTree (Dependency root nods edgs0) =

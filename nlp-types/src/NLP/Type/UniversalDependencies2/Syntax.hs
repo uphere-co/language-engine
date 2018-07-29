@@ -1,10 +1,12 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module NLP.Type.UniversalDependencies2.Syntax where
 
+import           Control.DeepSeq   (NFData)
 import           Data.Aeson
-import           Data.Binary
+import           Data.Binary       (Binary)
 import           Data.Text         (Text)
 import qualified Data.Text    as T (unpack)
 import           GHC.Generics
@@ -52,16 +54,7 @@ data DependencyRelation = ACL        -- ^ clausal modifier of noun (adjectival c
                         | ROOT       -- ^ root
                         | VOCATIVE   -- ^ vocative
                         | XCOMP      -- ^ open clausal complement
-                        deriving (Show,Eq,Ord,Enum,Bounded,Generic)
-
-instance FromJSON DependencyRelation where
-  parseJSON = genericParseJSON defaultOptions
-
-instance ToJSON DependencyRelation where
-  toJSON = genericToJSON defaultOptions
-
-instance Binary DependencyRelation
-
+                        deriving (Show,Eq,Ord,Enum,Bounded,Generic,FromJSON,ToJSON,Binary,NFData)
 
 parseDepRel :: Text -> Either String DependencyRelation
 parseDepRel "acl"        = Right ACL

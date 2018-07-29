@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE KindSignatures     #-}
@@ -8,14 +9,14 @@
 
 module SRL.Analyze.Type where
 
-import           Control.DeepSeq
+import           Control.DeepSeq               (NFData)
 import           Control.Lens
-import           Data.Aeson
+import           Data.Aeson                    (ToJSON,FromJSON)
 import           Data.Binary                   (Binary)
 import           Data.Hashable                 (Hashable)
 import           Data.HashMap.Strict           (HashMap)
 import           Data.Text                     (Text)
-import           GHC.Generics
+import           GHC.Generics                  (Generic)
 --
 import           Data.Range                    (Range)
 import           FrameNet.Query.Frame          (FrameDB)
@@ -83,16 +84,10 @@ data DocAnalysisInput = DocAnalysisInput { _dainput_sents     :: [Sentence]
                                          , _dainput_mptrs     :: [Maybe PennTree]
                                          , _dainput_deps      :: [Dependency]
                                          , _dainput_mtmxs     :: Maybe [TagPos TokIdx (Maybe Text)]
-                                         } deriving (Show, Generic)
+                                         }
+                      deriving (Show, Generic, ToJSON, FromJSON, NFData, Binary)
 
 makeLenses ''DocAnalysisInput
-
-instance ToJSON DocAnalysisInput where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON DocAnalysisInput where
-  parseJSON = genericParseJSON defaultOptions
-
 
 data PredicateInfo = PredVerb { _pi_lemmas :: [Text]               -- ^ for idiom
                               , _pi_sense :: Maybe (SenseID,Bool)  -- ^ (ON sense ID, causation)

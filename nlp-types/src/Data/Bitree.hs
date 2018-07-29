@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE DeriveFoldable    #-}
 {-# LANGUAGE DeriveGeneric     #-}
@@ -6,6 +7,7 @@
 
 module Data.Bitree where
 
+import           Control.DeepSeq (NFData)
 import           Control.Lens
 import           Data.Aeson
 import           Data.Bifoldable
@@ -20,7 +22,7 @@ import           GHC.Generics
 --
 data Bitree n l = PN n [Bitree n l]
                 | PL l
-                deriving (Show, Eq, Functor, Foldable, Traversable, Generic)
+                deriving (Show, Eq, Functor, Foldable, Traversable, Generic, NFData)
 
 makePrisms ''Bitree
 
