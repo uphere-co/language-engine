@@ -1,15 +1,16 @@
-{-# LANGUAGE LambdaCase      #-}
-{-# LANGUAGE TemplateHaskell #-}
-
+{-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE TypeApplications #-}
 module Main where
 
 import           Control.Lens                            ((^.))
+import           Data.Aeson                              (eitherDecode')
+import qualified Data.ByteString.Lazy         as BL
 import           Data.Monoid                             ((<>))
 import qualified Options.Applicative          as O
 --
-import           Lexicon.Data                            (loadLexDataConfig)
---
 import           SRL.Analyze                             (runAnalysis)
+import           SRL.Analyze.Config                      (SRLConfig)
 import qualified SRL.Analyze.Config           as Analyze
 
 
@@ -30,6 +31,8 @@ progOption = O.info pOptions (O.fullDesc <> O.progDesc "analyze text")
 main :: IO ()
 main = do
   acfg <- O.execParser progOption
-  cfg  <- loadLexDataConfig (acfg^. Analyze.configFile) >>= \case Left err -> error err
-                                                                  Right x  -> return x
+  cfg  <-do e <- eitherDecode' @SRLConfig <$> BL.readFile (acfg ^. Analyze.configFile)
+            case e of
+              Left err -> error err
+              Right x -> return x
   runAnalysis cfg acfg

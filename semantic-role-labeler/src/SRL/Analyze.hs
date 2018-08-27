@@ -34,19 +34,7 @@ import           FrameNet.Query.Frame           (FrameDB,loadFrameData)
 import           HUKB.PPR                       (createUKBDB)
 import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
 import           Lexicon.Query                  (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts,loadIdioms)
-import           Lexicon.Data                   (LexDataConfig(..),cfg_framenet_framedir
-                                                ,cfg_rolemap_file
-                                                ,cfg_idiom_file
-                                                ,cfg_sense_inventory_file
-                                                ,cfg_verb_subcat_file
-                                                ,cfg_wsj_directory
-                                                ,cfg_wordnet_dict
-                                                ,cfg_ukb_dictfile
-                                                ,cfg_ukb_binfile
-                                                ,cfg_company_file
-                                                ,cfg_wiki_dir
-                                                ,loadSenseInventory
-                                                )
+import           Lexicon.Data                   (loadSenseInventory)
 import           MWE.Util                       (mkTextFromToken)
 import           NER.Load                       (getCompanyListFromJSON)
 import           NER.Type                       (CompanyInfo(..),alias,companyId)
@@ -62,6 +50,18 @@ import           WikiEL.WikiNewNET              (newNETagger)
 import           WordNet.Query                  (loadDB)
 --
 import           SRL.Analyze.MeaningTree        (mkMeaningTree)
+import           SRL.Analyze.Config             (SRLConfig
+                                                ,srlcfg_framenet_framedir
+                                                ,srlcfg_rolemap_file
+                                                ,srlcfg_idiom_file
+                                                ,srlcfg_sense_inventory_file
+                                                ,srlcfg_verb_subcat_file
+                                                ,srlcfg_wsj_directory
+                                                ,srlcfg_wordnet_dict
+                                                ,srlcfg_ukb_dictfile
+                                                ,srlcfg_ukb_binfile
+                                                ,srlcfg_company_file
+                                                ,srlcfg_wiki_dir)
 import qualified SRL.Analyze.Config as Analyze
 import           SRL.Analyze.CoreNLP            (runParser)
 import           SRL.Analyze.Format             (dotMeaningGraph,formatDocStructure,showMatchedFrame)
@@ -167,20 +167,20 @@ printMeaningGraph apredata companyMap dstr = do
     putStrLn "-----------------"
     mapM_ print (mkMeaningTree (apredata^.analyze_rolemap) mg)
 
-
+-- TODO: make records for return type.
 loadConfig :: (Bool,Bool)
-           -> LexDataConfig
+           -> SRLConfig
            -> IO (AnalyzePredata,[Sentence]->[EntityMention Text],Forest (Either Int Text),IntMap CompanyInfo)
 loadConfig (bypass_ner,bypass_textner) cfg = do
   apredata <- loadAnalyzePredata cfg
-  createUKBDB (cfg^.cfg_ukb_binfile,cfg^.cfg_ukb_dictfile)
+  createUKBDB (cfg^.srlcfg_ukb_binfile,cfg^.srlcfg_ukb_dictfile)
   netagger <- if bypass_ner
                 then return (const [])
-                else newNETagger (cfg^.cfg_wiki_dir)
+                else newNETagger (cfg^.srlcfg_wiki_dir)
   (forest,companyMap) <-
     if bypass_textner
       then return ([],IM.empty)
-      else do companies <- getCompanyListFromJSON (cfg ^. cfg_company_file)
+      else do companies <- getCompanyListFromJSON (cfg^.srlcfg_company_file)
               let companyMap = IM.fromList (map (\x -> (x^.companyId,x)) companies)
                   clist = do c <- companies
                              let cid = c^.companyId
@@ -194,19 +194,19 @@ loadConfig (bypass_ner,bypass_textner) cfg = do
 --
 -- | Load all pre-analysis data
 --
-loadAnalyzePredata :: LexDataConfig -> IO AnalyzePredata
+-- loadAnalyzePredata :: LexDataConfig -> IO AnalyzePredata
+loadAnalyzePredata :: SRLConfig -> IO AnalyzePredata
 loadAnalyzePredata cfg = do
-  framedb <- loadFrameData (cfg^.cfg_framenet_framedir)
-  wndb <- loadDB (cfg^.cfg_wordnet_dict)
+  framedb <- loadFrameData (cfg^.srlcfg_framenet_framedir)
+  wndb <- loadDB (cfg^.srlcfg_wordnet_dict)
   let ontomap = HM.fromList mapFromONtoFN
-  sensestat <- senseInstStatistics (cfg^.cfg_wsj_directory)
-  sis <- loadSenseInventory (cfg^.cfg_sense_inventory_file)
+  sensestat <- senseInstStatistics (cfg^.srlcfg_wsj_directory)
+  sis <- loadSenseInventory (cfg^.srlcfg_sense_inventory_file)
   let sensemap = HM.fromList (map (\si -> (si^.inventory_lemma,si)) sis)
-  rolemap <- loadRoleInsts (cfg^.cfg_rolemap_file)
-  idioms <- loadIdioms (cfg^.cfg_idiom_file)
-  subcats <- adjustRolePattInsts <$> loadRolePattInsts (cfg^.cfg_verb_subcat_file)
+  rolemap <- loadRoleInsts (cfg^.srlcfg_rolemap_file)
+  idioms <- loadIdioms (cfg^.srlcfg_idiom_file)
+  subcats <- adjustRolePattInsts <$> loadRolePattInsts (cfg^.srlcfg_verb_subcat_file)
   return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats wndb idioms)
-
 
 
 loadJVM :: IO (J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))
@@ -222,9 +222,10 @@ loadJVM = prepare (def & (tokenizer .~ True)
 --
 -- | main program entry point
 --
-runAnalysis :: LexDataConfig -> Analyze.Config -> IO ()
+runAnalysis :: SRLConfig -> Analyze.Config -> IO ()
 runAnalysis cfg acfg = do
-  (apredata,netagger,forest,companyMap) <- loadConfig (acfg^.Analyze.bypassNER,acfg^.Analyze.bypassTEXTNER) cfg
+  (apredata,netagger,forest,companyMap) <-
+    loadConfig (acfg^.Analyze.bypassNER,acfg^.Analyze.bypassTEXTNER) cfg
 
   clspath <- getEnv "CLASSPATH"
   J.withJVM [ B.pack ("-Djava.class.path=" ++ clspath) ] $ do
