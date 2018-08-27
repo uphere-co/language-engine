@@ -62,7 +62,8 @@ instance FromJSON LexDataConfig where
 instance ToJSON LexDataConfig where
   toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 5}
 
-
+-- TODO: Generalize this like
+--       loadConfig :: (FromJSON a) => FilePath -> IO (Either String a)
 loadLexDataConfig :: FilePath -> IO (Either String (LexDataConfig))
 loadLexDataConfig fp = eitherDecode' <$> BL.readFile fp
 

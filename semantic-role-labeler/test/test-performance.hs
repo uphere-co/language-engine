@@ -2,7 +2,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
-
+{-# LANGUAGE TypeApplications  #-}
 module Main where
 
 import           Control.Applicative         ((<$>),(<*>))
@@ -27,13 +27,14 @@ import           Text.Blaze.Html5              ((!))
 import qualified Text.Blaze.Html5            as H
 import qualified Text.Blaze.Html5.Attributes as A
 --
-import           Lexicon.Data                (loadLexDataConfig)
+-- import           Lexicon.Data                (loadLexDataConfig)
 import           MWE.Util                    (mkTextFromToken)
 import           NER.Type                    (CompanyInfo)
 import           NLP.Type.CoreNLP            (sentenceLemma,sentenceToken)
 import           NLP.Type.PennTreebankII     (Lemma(..))
 --
 import           SRL.Analyze                 (loadConfig)
+import           SRL.Analyze.Config          (SRLCOnfig)
 import           SRL.Analyze.Format          (dotMeaningGraph)
 import           SRL.Analyze.Match.MeaningGraph (meaningGraph,tagMG)
 import           SRL.Analyze.SentenceStructure (sentStructure,mkWikiList)
@@ -43,7 +44,7 @@ import           SRL.Analyze.UKB             (runUKB)
 import Type
 
 
-data TestConfig = TestConfig { _tconfig_lexconfig :: FilePath
+data TestConfig = TestConfig { _tconfig_srlconfig :: FilePath
                              , _tconfig_testset   :: FilePath
                              , _tconfig_outputdir :: FilePath
                              , _tconfig_old       :: FilePath
@@ -128,8 +129,10 @@ createIndex (old,new) fileimgs = TLIO.writeFile "index.html" (renderHtml (mainHt
 main :: IO ()
 main = do
   tcfg <- execParser progOption
-  cfg <- loadLexDataConfig (tcfg^.tconfig_lexconfig) >>= \case Left err -> error err
-                                                               Right x -> return x
+  cfg <- do e <- eitherDecode' @SRLConfig <$> readFile (tcfg^.tconfig_srlconfig))
+            case e of
+              Left err -> error err
+              Right x -> return x
   (apredata,_netagger,_,companyList) <- loadConfig (True,True) cfg
   let old = tcfg^.tconfig_old
       new = tcfg^.tconfig_new

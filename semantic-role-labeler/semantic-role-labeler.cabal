@@ -120,6 +120,8 @@ Executable analyze
   other-modules:
   build-depends:       base,
                        --
+                       aeson,
+                       bytestring,
                        lens,
                        optparse-applicative,
                        --
