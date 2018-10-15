@@ -8,7 +8,7 @@ module WordNet.Type where
 import           Control.Lens
 import           Data.Hashable
 import           Data.Maybe
-import           Data.Monoid
+-- import           Data.Monoid
 import           Data.Text              (Text)
 import qualified Data.Text        as T
 import           GHC.Generics

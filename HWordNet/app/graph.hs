@@ -14,7 +14,7 @@ import qualified Data.HashMap.Strict        as HM
 import           Data.HashSet                     (HashSet)
 import qualified Data.HashSet               as HS
 import           Data.Maybe
-import           Data.Monoid
+-- import           Data.Monoid
 import           Data.Text                        (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO

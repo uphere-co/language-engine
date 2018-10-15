@@ -13,7 +13,7 @@ import           Data.Aeson
 import           Data.Bifoldable
 import           Data.Binary
 import           Data.Bitraversable
-import           Data.Monoid
+-- import           Data.Monoid
 import qualified Data.Tree            as Tr
 import           GHC.Generics
 

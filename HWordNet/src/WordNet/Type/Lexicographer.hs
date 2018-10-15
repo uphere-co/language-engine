@@ -15,7 +15,6 @@ module WordNet.Type.Lexicographer where
 import           Control.Lens
 import           Data.Binary
 import           Data.Hashable
-import           Data.Monoid
 import           Data.Text
 import qualified Data.Text as T
 import           Data.Tuple     (swap)
@@ -264,7 +263,7 @@ getLexFile :: SSPointer -> Maybe Text
 getLexFile p = case p^.ssp_lex_filename of
                  Nothing -> Nothing
                  Just e -> f e
-  where f x = lookup x (fmap swap lexicographerFileTable) 
+  where f x = lookup x (fmap swap lexicographerFileTable)
 
 
 getSSPairs :: Synset -> [(SSWord,[SSPointer])]
@@ -278,7 +277,7 @@ getSSPairs s = let xs = s^.ssn_words_or_wordpointers
 formatWord :: SSWord -> Text
 formatWord w = T.intercalate "_" (w^.ssw_word) <>
                maybe "" (\i -> T.pack (show i)) (w^.ssw_lexid) <>
-               maybe "" (\m -> "(" <> formatMarker m <> ")") (w^.ssw_marker) 
+               maybe "" (\m -> "(" <> formatMarker m <> ")") (w^.ssw_marker)
 
 
 formatMarker :: Marker -> Text

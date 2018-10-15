@@ -1,7 +1,5 @@
 { revision }:
 
-
-
 (import ./reflex-platform {}).project ({ pkgs, ... }:
 
 let
@@ -43,12 +41,12 @@ in
             # TODO: move this code to uphere-nix-overlay
             let corenlpenv = pkgs.makeSetupHook { }
                   (pkgs.writeText "setup-hook.sh" ''
-                     export CLASSPATH="${corenlp_models}:${corenlp}/stanford-corenlp-3.7.0.jar:${corenlp}/protobuf.jar:${corenlp}/joda-time.jar:${corenlp}/jollyday.jar:${ghc.HCoreNLP}/share/x86_64-linux-ghc-8.2.1/HCoreNLP-0.1.0.0/HCoreNLPProto.jar"
+                     export CLASSPATH="${corenlp_models}:${corenlp}/stanford-corenlp-3.7.0.jar:${corenlp}/protobuf.jar:${corenlp}/joda-time.jar:${corenlp}/jollyday.jar:${ghc.HCoreNLP}/share/x86_64-linux-ghc-8.4.3/HCoreNLP-0.1.0.0/HCoreNLPProto.jar"
                   '');
             in [ corenlpenv ] ;
 
   shells = {
-    ghc8_2_1 = [ 
+    ghc      = [
                  "graph-algorithms"
                  "HFrameNet"
                  "lexicon"
@@ -65,5 +63,3 @@ in
                ];
   };
 })
-
-

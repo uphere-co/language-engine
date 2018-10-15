@@ -7,7 +7,7 @@ module PropBank.Format where
 import           Control.Lens
 import           Data.Foldable               (toList)
 import qualified Data.List            as L   (lookup)
-import           Data.Monoid
+-- import           Data.Monoid
 import qualified Data.Text           as T
 import qualified Data.Text.IO        as T.IO
 --

@@ -19,7 +19,6 @@ import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict        as HM
 import           Data.List
 import           Data.Maybe
-import           Data.Monoid
 import           Data.Text                        (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
