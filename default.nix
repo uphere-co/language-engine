@@ -23,9 +23,9 @@ let
   hsconfig = pkgs.lib.callPackageWith
                (pkgs//revision)
                (revision.uphere-nix-overlay + "/nix/haskell-modules/configuration-language-engine.nix")
-               { inherit fasttext;
-                 corenlp = corenlp_pkgs.corenlp;
-                 corenlp_models = corenlp_pkgs.corenlp_models;
+               {
+                 inherit fasttext;
+                 inherit (corenlp_pkgs) corenlp corenlp_models;
                };
 
 in
