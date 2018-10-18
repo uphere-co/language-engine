@@ -5,7 +5,6 @@ module Main where
 import           Control.Lens
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Binary
--- import           Data.Monoid
 import           Options.Applicative
 --
 import           WordNet.Query.SynsetDB
