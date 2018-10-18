@@ -1,23 +1,34 @@
 { revision }:
 
-
-
 (import ./reflex-platform {}).project ({ pkgs, ... }:
 
 let
 
   fasttext = import (revision.uphere-nix-overlay + "/nix/cpp-modules/fasttext.nix") { inherit (pkgs) stdenv fetchgit; };
-  res_corenlp = import (revision.uphere-nix-overlay + "/nix/linguistic-resources/corenlp.nix") {
-    inherit (pkgs) fetchurl fetchzip srcOnly;
-  };
-  corenlp = res_corenlp.corenlp;
-  corenlp_models = res_corenlp.corenlp_models;
 
-  hsconfig = pkgs.lib.callPackageWith (pkgs//revision) (revision.uphere-nix-overlay + "/nix/haskell-modules/configuration-language-engine.nix")
-               { inherit corenlp corenlp_models fasttext; };
+  corenlp_pkgs =
+    import (revision.uphere-nix-overlay + "/nix/linguistic-resources/corenlp.nix") {
+      inherit (pkgs) fetchurl fetchzip srcOnly;
+    };
+
+  env-hook-gen =
+    haskellPackages:
+      import (revision.uphere-nix-overlay + "/nix/env/corenlp.nix") {
+        inherit (pkgs) makeSetupHook writeText;
+        inherit haskellPackages;
+        corenlp = corenlp_pkgs.corenlp;
+        corenlp_models = corenlp_pkgs.corenlp_models;
+      };
+
+  hsconfig = pkgs.lib.callPackageWith
+               (pkgs//revision)
+               (revision.uphere-nix-overlay + "/nix/haskell-modules/configuration-language-engine.nix")
+               {
+                 inherit fasttext;
+                 inherit (corenlp_pkgs) corenlp corenlp_models;
+               };
 
 in
-
 
 {
   packages = {
@@ -39,31 +50,24 @@ in
 
   overrides = hsconfig;
 
-  tools = ghc:
-            # TODO: move this code to uphere-nix-overlay
-            let corenlpenv = pkgs.makeSetupHook { }
-                  (pkgs.writeText "setup-hook.sh" ''
-                     export CLASSPATH="${corenlp_models}:${corenlp}/stanford-corenlp-3.7.0.jar:${corenlp}/protobuf.jar:${corenlp}/joda-time.jar:${corenlp}/jollyday.jar:${ghc.HCoreNLP}/share/x86_64-linux-ghc-8.2.1/HCoreNLP-0.1.0.0/HCoreNLPProto.jar"
-                  '');
-            in [ corenlpenv ] ;
+  tools = ghc: let env-hook = env-hook-gen ghc;
+               in [ env-hook ];  # NOTE: you cannot have non-variable in this list.
 
   shells = {
-    ghc8_2_1 = [ 
-                 "graph-algorithms"
-                 "HFrameNet"
-                 "lexicon"
-                 "lexicon-builder"
-                 "multi-word-tagger"
-                 "OntoNotes"
-                 "PropBank"
-                 "semantic-role-labeler"
-                 "semantic-types"
-                 "syntactic-analysis"
-                 "time-tagger"
-                 "VerbNet"
-                 "wiki-ner"
-               ];
+    ghc = [
+            "graph-algorithms"
+            "HFrameNet"
+            "lexicon"
+            "lexicon-builder"
+            "multi-word-tagger"
+            "OntoNotes"
+            "PropBank"
+            "semantic-role-labeler"
+            "semantic-types"
+            "syntactic-analysis"
+            "time-tagger"
+            "VerbNet"
+            "wiki-ner"
+          ];
   };
 })
-
-

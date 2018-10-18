@@ -16,7 +16,6 @@ import qualified Data.IntMap                as IM
 import           Data.List
 import           Data.List.Split                  (splitOn)
 import           Data.Maybe
-import           Data.Monoid
 import           Data.Text                        (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as T.IO

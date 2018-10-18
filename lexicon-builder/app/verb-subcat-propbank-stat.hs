@@ -13,7 +13,6 @@ import           Control.Lens
 import           Data.Foldable
 import qualified Data.HashMap.Strict          as HM
 import           Data.List                          (sort)
-import           Data.Monoid
 import           Options.Applicative         hiding (str)
 import           System.Directory.Tree
 --
