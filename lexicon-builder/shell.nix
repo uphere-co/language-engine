@@ -47,7 +47,6 @@ let
             taggy-lens
             text
             text-format
-            transformers-either
             yayaml
 
             p.HCoreNLP-Proto

@@ -35,6 +35,7 @@ library
                        data-default,
                        directory,
                        directory-tree,
+                       errors,
                        extra,
                        filepath,
                        jni,
@@ -48,7 +49,6 @@ library
                        text,
                        time,
                        transformers,
-                       transformers-either,
                        unordered-containers,
                        vector,
                        --

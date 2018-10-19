@@ -34,7 +34,6 @@ library
                        taggy-lens,
                        text,
                        time,
-                       transformers-either,
                        unordered-containers,
                        --
                        HCoreNLP,
@@ -143,7 +142,7 @@ Executable verb-subcat-propbank-stat
                        lens,
                        optparse-applicative,
                        text,
-                       transformers-either,
+                       transformers,
                        unordered-containers,
                        --
                        lexicon,

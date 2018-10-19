@@ -3,10 +3,11 @@
 
 module OntoNotes.Corpus.Load where
 
+import           Control.Error.Util                 (hoistEither)
 import           Control.Exception
 import           Control.Lens                hiding ((<.>))
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Either
+import           Control.Monad.Trans.Except         (ExceptT(..))
 import           Data.Aeson                  hiding (pairs)
 import qualified Data.Attoparsec.Text       as A
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -35,15 +36,15 @@ import           OntoNotes.Parser.Sense
 import           OntoNotes.Type.Sense
 
 
-readJSONList :: (FromJSON a) => FilePath -> EitherT String IO [a]
-readJSONList f = EitherT $ eitherDecode <$> liftIO (BL.readFile f)
+readJSONList :: (FromJSON a) => FilePath -> ExceptT String IO [a]
+readJSONList f = ExceptT $ eitherDecode <$> liftIO (BL.readFile f)
 
 
-readPropBank :: FilePath -> EitherT String IO [Instance]
+readPropBank :: FilePath -> ExceptT String IO [Instance]
 readPropBank propfile = liftIO $ parsePropWithFileField NoOmit <$> T.IO.readFile propfile
 
 
-readOrigPennTree :: FilePath -> EitherT String IO [PennTree]
+readOrigPennTree :: FilePath -> ExceptT String IO [PennTree]
 readOrigPennTree pennfile
   = hoistEither . A.parseOnly (A.many1 (A.skipSpace *> pnode))
     =<< liftIO (T.IO.readFile pennfile)
@@ -59,7 +60,7 @@ prepareFilePaths basedir = do
 
 
 loadMatchArticle :: FilePath -> FilePath -> String
-                 -> EitherT String IO (Maybe [(Int,(((PennTree,Dependency,[(Int,Text)]),PennTree),[Instance]))])
+                 -> ExceptT String IO (Maybe [(Int,(((PennTree,Dependency,[(Int,Text)]),PennTree),[Instance]))])
 loadMatchArticle ptreedir basedir article = do
   (props,trees) <- liftIO $ prepareFilePaths basedir
   let findf = find (\f -> takeBaseName f == article)
@@ -117,4 +118,3 @@ mergeStatPB2Lemma ws =
      . sortBy (flip compare `on` fst)
      . map (\(l,f)-> let (lma,_) = T.break (== '.') l in (lma,f))
      $ ws
-

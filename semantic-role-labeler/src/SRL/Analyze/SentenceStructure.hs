@@ -9,7 +9,7 @@ module SRL.Analyze.SentenceStructure where
 import           Control.Applicative                       (many)
 import           Control.Lens                              ((^.),(^..),(^?),_1,_2,_3,to,_head,_last)
 import           Control.Monad.State.Lazy                  (runState)
-import           Control.Monad.Trans.Either                (runEitherT)
+import           Control.Monad.Trans.Except                (runExceptT)
 import           Data.Bifunctor                            (first)
 import           Data.Either                               (lefts,rights)
 import           Data.Foldable                             (toList)
@@ -115,7 +115,7 @@ docStructure apredata netagger (forest,companyMap) docinput@(DocAnalysisInput se
       mtokenss = sents ^.. traverse . sentenceToken
       linked_mentions_resolved = netagger (docinput^.dainput_sents)
 
-  let entitiesByNER = map (\tokens -> fst $ runState (runEitherT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens) (map catMaybes mtokenss)
+  let entitiesByNER = map (\tokens -> fst $ runState (runExceptT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens) (map catMaybes mtokenss)
   let ne = concat $ rights entitiesByNER
   let tne = mapMaybe (tokenToTagPos companyMap) (zip [10001..] ne)
   let tnerange = map getRangeFromEntityMention tne
