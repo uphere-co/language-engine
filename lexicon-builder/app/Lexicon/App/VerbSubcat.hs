@@ -11,7 +11,7 @@ module Lexicon.App.VerbSubcat where
 
 import           Control.Lens
 import           Control.Monad
-import           Control.Monad.Trans.Either (runEitherT)
+import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Either.Extra (eitherToMaybe,rights)
 import           Data.Foldable
 import           Data.Function                          (on)
@@ -391,7 +391,7 @@ process cfg (statonly,tsv,showdetail) sensedb fps = do
       hPutStrLn stderr article
       (mprops :: Maybe [(Int,(((PennTree,Dependency,[(Int,Text)]),PennTree),[Instance]))])
         <- join . eitherToMaybe <$>
-             runEitherT (loadMatchArticle (cfg^.cfg_wsj_corenlp_directory) (cfg^.cfg_wsj_directory) article)
+             runExceptT (loadMatchArticle (cfg^.cfg_wsj_corenlp_directory) (cfg^.cfg_wsj_directory) article)
       senses <- readSenseInsts sensefile
       let match (i,r) = let ss = filter (\s -> s^.sinst_sentence_id == i) senses
                         in ((article,i),(r,ss))
