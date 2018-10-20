@@ -22,16 +22,6 @@ import           FFICXX.Generate.Type.Class
 import           FFICXX.Generate.Type.Module
 import           FFICXX.Generate.Type.PackageInterface
 
-{-
-import Data.Monoid                (mempty)
-import Data.Traversable           (sequenceA)
---
-import FFICXX.Generate.Builder
-import FFICXX.Generate.Code.Primitive
-import FFICXX.Generate.Type.Class
-import FFICXX.Generate.Type.Module
-import FFICXX.Generate.Type.PackageInterface
--}
 
 -- -------------------------------------------------------------------
 -- import from stdcxx
