@@ -72,15 +72,15 @@ threeD           = 0x010000
 defaultSugiyama ga = do
   sl <- newSugiyamaLayout
   or <- newOptimalRanking
-  sugiyamaLayoutsetRanking sl or
+  sugiyamaLayout_setRanking sl or
   mh <- newMedianHeuristic
-  sugiyamaLayoutsetCrossMin sl mh
+  sugiyamaLayout_setCrossMin sl mh
 
   ohl <- newOptimalHierarchyLayout
-  optimalHierarchyLayoutlayerDistance ohl 15.0
-  optimalHierarchyLayoutnodeDistance ohl 12.5
-  optimalHierarchyLayoutweightBalancing ohl 10.0
-  sugiyamaLayoutsetLayout sl ohl
+  optimalHierarchyLayout_layerDistance ohl 15.0
+  optimalHierarchyLayout_nodeDistance ohl 12.5
+  optimalHierarchyLayout_weightBalancing ohl 10.0
+  sugiyamaLayout_setLayout sl ohl
   call sl ga
   delete sl
 
@@ -100,30 +100,30 @@ mkOGDFSVG file mg = do
                              )
 
   ivs <- forM (mg^.mg_vertices) $ \v -> do
-           n <- graphnewNode g
-           str <- graphAttributeslabel ga n
+           n <- graph_newNode g
+           str <- graphAttributes_label ga n
            let txt = case v of
                    MGEntity {..}    -> _mv_text
                    MGPredicate {..} -> unFNFrame _mv_frame
                bstr = TE.encodeUtf8 txt
                width = (T.length txt) * 6
-           graphAttributeswidth ga n >>= \p -> poke p (fromIntegral width)
-           graphAttributesheight ga n >>= \p -> poke p 20
+           graphAttributes_width ga n >>= \p -> poke p (fromIntegral width)
+           graphAttributes_height ga n >>= \p -> poke p 20
 
            useAsCString bstr $ \cstrnode -> do
              strnode <- newCppString cstrnode
-             cppStringappend str strnode
+             cppString_append str strnode
            pure (v^.mv_id,n)
   forM_ (mg^.mg_edges) $ \e -> do
     let Just (_,n1) = find (\(i,_) -> i == e^.me_start) ivs
         Just (_,n2) = find (\(i,_) -> i == e^.me_end) ivs
-    e' <- graphnewEdge g n1 n2
+    e' <- graph_newEdge g n1 n2
     str <- graphAttributeslabelE ga e'
     let txt = unFNFrameElement (e^.me_relation) <> maybe "" (":" <>) (e^.me_prep)
         bstr = TE.encodeUtf8 txt
     useAsCString bstr $ \cstredge -> do
       stredge <- newCppString cstredge
-      cppStringappend str stredge
+      cppString_append str stredge
 
     pure ()
 
@@ -132,7 +132,7 @@ mkOGDFSVG file mg = do
 
   withCString file $ \cstrsvg -> do
     strsvg <- newCppString cstrsvg
-    graphIOdrawSVG ga strsvg
+    graphIO_drawSVG ga strsvg
     delete strsvg
 
   delete g
