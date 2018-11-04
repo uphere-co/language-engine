@@ -80,7 +80,6 @@ library
                      , unordered-containers
                      , vector
                      , vector-algorithms
-                     , xxhash-ffi
                      --
                      , nlp-types
                      , graph-algorithms
