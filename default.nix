@@ -56,6 +56,7 @@ in
     time-tagger           = ./time-tagger;
     VerbNet               = ./VerbNet;
     wiki-ner              = ./wiki-ner;
+    xxhash-ffi-renamed    = ./xxhash-ffi-renamed;
   };
 
 
@@ -79,6 +80,7 @@ in
             "time-tagger"
             "VerbNet"
             "wiki-ner"
+            "xxhash-ffi-renamed"
           ];
   };
 })

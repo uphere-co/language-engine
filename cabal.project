@@ -14,3 +14,4 @@ packages:
   time-tagger/
   VerbNet/
   wiki-ner/
+  xxhash-ffi-renamed/
