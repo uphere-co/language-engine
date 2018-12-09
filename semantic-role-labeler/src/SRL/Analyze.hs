@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections     #-}
-{-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-unused-matches #-}
+-- {-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-unused-matches #-}
 module SRL.Analyze where
 
 import           Control.Lens             ( (^.), (^..), (.~), (&), _Just )
@@ -16,9 +16,7 @@ import           Data.Default             ( def )
 import qualified Data.HashMap.Strict as HM
 import           Data.IntMap              ( IntMap )
 import qualified Data.IntMap as IM
-import           Data.List                ( intercalate )
 import           Data.Maybe               ( catMaybes )
-import           Data.Monoid              ( (<>) )
 import           Data.Text                ( Text )
 import qualified Data.Text as T
 import qualified Data.Text.IO as T.IO
@@ -45,13 +43,12 @@ import           NER.Load                 ( getCompanyListFromJSON )
 import           NER.Type                 ( CompanyInfo(..), alias, companyId )
 import           NLP.Syntax.Format        ( formatX'Tree )
 import           NLP.Syntax.Type.XBar     ( SPhase(..) )
-import           NLP.Type.CoreNLP         ( Sentence )
 import           OntoNotes.Corpus.Load    ( senseInstStatistics )
 import           OntoNotes.Type.SenseInventory ( inventory_lemma )
 import           Text.Format.Dot          ( mkLabelText )
 import           Text.Search.New.Generic.SearchTree ( addTreeItem )
 import           WikiEL.NETagger          ( dummyNETagger, newNETagger )
-import           WikiEL.Type              ( EntityMention, NETagger(..) )
+import           WikiEL.Type              ( NETagger(..) )
 import           WordNet.Query            ( loadDB )
 --
 import           SRL.Analyze.MeaningTree  ( mkMeaningTree )

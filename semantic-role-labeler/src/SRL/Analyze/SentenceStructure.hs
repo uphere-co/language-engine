@@ -52,9 +52,10 @@ import           SRL.Analyze.Type
 import           SRL.Analyze.UKB                           (runUKB)
 
 
-
-
-tokenToTagPos  :: IntMap CompanyInfo -> (Int,(Int,[Token])) -> Maybe (EntityMention Text)
+tokenToTagPos ::
+     IntMap CompanyInfo
+  -> (Int,(Int,[Token]))
+  -> Maybe (EntityMention Text)
 tokenToTagPos _cmap (i,(cid,tks)) = do
   ft <- tks ^? _head
   lt <- tks ^? _last
@@ -62,15 +63,19 @@ tokenToTagPos _cmap (i,(cid,tks)) = do
       e = lt ^. token_tok_idx_range . _2
       txts = tks ^.. traverse . token_text
       ctyp = PublicCompany -- for the time being
-  return (Self (EntityMentionUID i) (IRange b e, V.fromList txts, OnlyTextMatched (CID cid) ctyp))
+  pure $
+    Self
+      (EntityMentionUID i)
+      (IRange b e, V.fromList txts, OnlyTextMatched (CID cid) ctyp)
 
 
 adjustWikiRange :: (Int,Int) -> (Int,Int)
 adjustWikiRange (a,b) = (a,b-1)
 
 
-linkedMentionToTagPos :: (EntityMention Text)
-                      -> (TagPos TokIdx (EntityMention Text))
+linkedMentionToTagPos ::
+     EntityMention Text
+  -> TagPos TokIdx (EntityMention Text)
 linkedMentionToTagPos linked_mention =
   let IRange b e = (_info linked_mention)^._1
   in TagPos (TokIdx b, TokIdx e,linked_mention)
@@ -91,11 +96,11 @@ mkWikiList cmap sstr =
   in wikilst
 
 
-
-nerDocument :: AnalyzePredata
-          -> ([Sentence] -> [EntityMention Text])
-          -> DocAnalysisInput
-          -> [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text))] -- IO DocStructure
+nerDocument ::
+     AnalyzePredata
+  -> ([Sentence] -> [EntityMention Text])
+  -> DocAnalysisInput
+  -> [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text))]
 nerDocument _apredata netagger docinput@(DocAnalysisInput _ _ _ _ _ _ mtmxs) =
   let linked_mentions_resolved = netagger (docinput^.dainput_sents)
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
@@ -103,14 +108,14 @@ nerDocument _apredata netagger docinput@(DocAnalysisInput _ _ _ _ _ _ mtmxs) =
   in maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
 
 
---
 -- | Finding the structure of the sentence and formatting it.
 --
-docStructure :: AnalyzePredata
-             -> NETagger
-             -> (Forest (Either Int Text), IntMap CompanyInfo)
-             -> DocAnalysisInput
-             -> IO DocStructure
+docStructure ::
+     AnalyzePredata
+  -> NETagger
+  -> (Forest (Either Int Text), IntMap CompanyInfo)
+  -> DocAnalysisInput
+  -> IO DocStructure
 docStructure apredata netagger (forest,companyMap) docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       -- need to revive
@@ -122,8 +127,7 @@ docStructure apredata netagger (forest,companyMap) docinput@(DocAnalysisInput se
   let ne = concat $ rights entitiesByNER
   let tne = mapMaybe (tokenToTagPos companyMap) (zip [10001..] ne)
   let tnerange = map getRangeFromEntityMention tne
-      -- wnerange = map getRangeFromEntityMention linked_mentions_resolved
-      lnk_mntns1 = tne -- filter (\mntn -> not $ elemIsInsideR (getRangeFromEntityMention mntn) wnerange) tne
+      lnk_mntns1 = tne
       lnk_mntns2 = filter (\mntn -> not $ elemIsStrictlyInsideR (getRangeFromEntityMention mntn) tnerange) linked_mentions_resolved
       lnk_mntns_tagpos = map linkedMentionToTagPos (lnk_mntns1 ++ lnk_mntns2)
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
@@ -133,7 +137,8 @@ docStructure apredata netagger (forest,companyMap) docinput@(DocAnalysisInput se
   return (DocStructure mtokenss sentitems mergedtags sentStructures)
 
 
-tagToMark :: Either (EntityMention Text) (Char,Maybe Text) -> Maybe MarkType
+tagToMark ::
+     Either (EntityMention Text) (Char,Maybe Text) -> Maybe MarkType
 tagToMark (Right _) = Just MarkTime -- time is special
 tagToMark (Left x)  = case entityPreNE x of
                         Resolved (_,c) ->
@@ -156,9 +161,10 @@ tagToMark (Left x)  = case entityPreNE x of
                         _ -> Nothing
 
 
-adjustTokenIndexForSentence :: Maybe SentenceIndex
-                            -> [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text))]
-                            -> [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text), MarkType)]
+adjustTokenIndexForSentence ::
+     Maybe SentenceIndex
+  -> [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text))]
+  -> [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text), MarkType)]
 adjustTokenIndexForSentence midx tagged
   = fromMaybe [] $ do
       (b0,e0) <- (^.sent_tokenRange) <$> midx
@@ -168,12 +174,11 @@ adjustTokenIndexForSentence midx tagged
           then return (TagPos (TokIdx (b-b0),TokIdx (e-b0),(t,t')))
           else Nothing
 
-
-
-sentStructure :: AnalyzePredata
-              -> [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text))]
-              -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree,[(Int,LexicographerFile)])
-              -> Maybe SentStructure
+sentStructure ::
+     AnalyzePredata
+  -> [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text))]
+  -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree,[(Int,LexicographerFile)])
+  -> Maybe SentStructure
 sentStructure apredata taglst (i,midx,lmas,mptr,synsets) =
   flip fmap mptr $ \ptr ->
     let taglst' = adjustTokenIndexForSentence midx taglst
@@ -183,12 +188,15 @@ sentStructure apredata taglst (i,midx,lmas,mptr,synsets) =
         pre = mkPreAnalysis lmatkns ptr taglstMarkOnly synsets
         vps = verbPropertyFromPennTree lemmamap (pre^.pennTree)
         x'tr = syntacticAnalysis pre
-          -- (map (bindingAnalysisRaising . resolveCP . bindingAnalysis taggedMarkOnly) . identifyCPHierarchy taggedMarkOnly) vps
         verbStructures = map (verbStructure apredata pre) vps
     in SentStructure i ptr vps x'tr taglst' pre verbStructures
 
 
-verbStructure :: AnalyzePredata -> PreAnalysis '[Lemma] -> VerbProperty (Zipper '[Lemma]) -> VerbStructure
+verbStructure ::
+     AnalyzePredata
+  -> PreAnalysis '[Lemma]
+  -> VerbProperty (Zipper '[Lemma])
+  -> VerbStructure
 verbStructure apredata tagged vp =
   let i = vp^.vp_index
       l = vp^.vp_lemma

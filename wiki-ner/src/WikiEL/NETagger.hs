@@ -58,16 +58,21 @@ loadNEData dataDir = do
   pure $ NEData reprs wikiTable wikiMap uidNEtags
 
 
--- | Create a new NETagger object.
-newNETagger :: FilePath -> IO NETagger
-newNETagger dataDir = do
-  NEData reprs wikiTable wikiMap uidNEtags <- loadNEData dataDir
+showNEDataStatus :: NEData -> IO ()
+showNEDataStatus (NEData reprs wikiTable wikiMap uidNEtags) = do
   -- NOTE: for test
   putStrLn $ "length of reprs = " ++ show (length reprs)
   putStrLn $ "wikiTable: length(uid)   = " ++ (wikiTable ^. WT.uids . to V.length . to show)
   putStrLn $ "wikiTable: length(names) = " ++ (wikiTable ^. WT.names . to V.length . to show)
   putStrLn $ "wikiMap: size = " ++ show (HM.size wikiMap)
   putStrLn $ "length of uidNEtags = " ++ show (S.size (uidNEtags ^. WT.set))
+
+
+-- | Create a new NETagger object.
+newNETagger :: FilePath -> IO NETagger
+newNETagger dataDir = do
+  nedata@(NEData _reprs wikiTable wikiMap uidNEtags) <- loadNEData dataDir
+  showNEDataStatus nedata
   let tagger = extractFilteredEntityMentions wikiTable uidNEtags
       disambiguatorWorker x (ys,t) =
         let lst = sortBy (flip compare `on` (length.snd)) .  mapMaybe (\y-> (y,) <$> HM.lookup y wikiMap) $ ys
