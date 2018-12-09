@@ -2,14 +2,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections     #-}
 
-module WikiEL.NETagger where
+module WikiEL.NETagger
+  ( dummyNETagger
+  , newNETagger
+  ) where
 
 import           Control.Lens         ( (^.), _1, _3, to )
 import           Data.Function        ( on )
 import qualified Data.Set as S
+import           Data.Text            ( Text )
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import           Data.List            ( foldl', maximumBy, sortBy )
+import           Data.HashMap.Strict  ( HashMap )
 import qualified Data.HashMap.Strict as HM
 import           Data.Maybe           ( mapMaybe )
 ------ other language-engine
@@ -22,9 +27,10 @@ import           WikiEL.Type          ( PreNE(..), UIDCite(..)
 import           WikiEL.Run           ( runEL, classFilesG, reprFileG )
 import qualified WikiEL.EntityLinking    as EL
 import qualified WikiEL.ETL.LoadData     as LD
-import           WikiEL.Type          ( NETagger(..) )
+import           WikiEL.Type          ( NameUIDTable, NETagger(..), WikiuidNETag )
 import qualified WikiEL.Type             as WT
-import qualified WikiEL.Type.FileFormat  as FF
+import           WikiEL.Type.FileFormat ( EntityReprRow(..) )
+import           WikiEL.Type.Wikidata   ( ItemID )
 import qualified WikiEL.Type.Wikidata    as WD
 import qualified WikiEL.WikiEntityClass  as WEC
 import qualified WikiEL.WikiEntityTagger as WET
@@ -34,24 +40,33 @@ import qualified WikiEL.WikiEntityTagger as WET
 dummyNETagger :: NETagger
 dummyNETagger = NETagger (const [])
 
+data NEData = NEData { _nedataReprs     :: [EntityReprRow]
+                     , _nedataWikiTable :: NameUIDTable
+                     , _nedataWikiMap   :: HashMap ItemID [Text]
+                     , _nedataUIDNETags :: WikiuidNETag
+                     }
+
+-- | Load table informations
+loadNEData :: FilePath -> IO NEData
+loadNEData dataDir = do
+  reprs <- LD.loadEntityReprs (reprFileG dataDir)
+  let wikiTable = WET.buildEntityTable reprs
+      wikiMap = foldl' f HM.empty reprs
+        where f !acc (EntityReprRow (WD.QID i) (WD.ItemRepr t)) = HM.insertWith (++) (WD.QID i) [t] acc
+              f _ _ = error "f in newNETagger"
+  uidNEtags <- WEC.loadFiles (classFilesG dataDir)
+  pure $ NEData reprs wikiTable wikiMap uidNEtags
+
 
 -- | Create a new NETagger object.
 newNETagger :: FilePath -> IO NETagger
 newNETagger dataDir = do
-  reprs <- LD.loadEntityReprs (reprFileG dataDir)
+  NEData reprs wikiTable wikiMap uidNEtags <- loadNEData dataDir
   -- NOTE: for test
   putStrLn $ "length of reprs = " ++ show (length reprs)
-  let wikiTable = WET.buildEntityTable reprs
-  -- NOTE: for test
   putStrLn $ "wikiTable: length(uid)   = " ++ (wikiTable ^. WT.uids . to V.length . to show)
   putStrLn $ "wikiTable: length(names) = " ++ (wikiTable ^. WT.names . to V.length . to show)
-  let wikiMap = foldl' f HM.empty reprs
-        where f !acc (FF.EntityReprRow (WD.QID i) (WD.ItemRepr t)) = HM.insertWith (++) (WD.QID i) [t] acc
-              f _ _ = error "f in newNETagger"
-  -- NOTE: for test
   putStrLn $ "wikiMap: size = " ++ show (HM.size wikiMap)
-  uidNEtags <- WEC.loadFiles (classFilesG dataDir)
-  -- NOTE: for test
   putStrLn $ "length of uidNEtags = " ++ show (S.size (uidNEtags ^. WT.set))
   let tagger = extractFilteredEntityMentions wikiTable uidNEtags
       disambiguatorWorker x (ys,t) =
