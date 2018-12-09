@@ -38,8 +38,11 @@ import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..
 import           Text.Search.New.ParserCustom              (pTreeAdvGBy)
 import           WikiEL.Convert                            (getRangeFromEntityMention)
 import           WikiEL.EntityLinking                      (entityPreNE,entityName)
-import           WikiEL.Type                               (EntityMention,EntityMentionUID(..),IRange(..),TextMatchedEntityType(..)
-                                                           ,PreNE(..),UIDCite(..))
+import           WikiEL.Type                               ( EntityMention, EntityMentionUID(..)
+                                                           , IRange(..), NETagger(..)
+                                                           , TextMatchedEntityType(..)
+                                                           , PreNE(..), UIDCite(..)
+                                                           )
 import           WikiEL.Type.Wikidata                      (ItemID(..))
 import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
 import           WordNet.Type.Lexicographer                (LexicographerFile)
@@ -104,7 +107,7 @@ nerDocument _apredata netagger docinput@(DocAnalysisInput _ _ _ _ _ _ mtmxs) =
 -- | Finding the structure of the sentence and formatting it.
 --
 docStructure :: AnalyzePredata
-             -> ([Sentence] -> [EntityMention Text])
+             -> NETagger
              -> (Forest (Either Int Text), IntMap CompanyInfo)
              -> DocAnalysisInput
              -> IO DocStructure
@@ -113,7 +116,7 @@ docStructure apredata netagger (forest,companyMap) docinput@(DocAnalysisInput se
       -- need to revive
       -- mergedtags = nerDocument apredata netagger docinput
       mtokenss = sents ^.. traverse . sentenceToken
-      linked_mentions_resolved = netagger (docinput^.dainput_sents)
+      linked_mentions_resolved = unNETagger netagger (docinput^.dainput_sents)
 
   let entitiesByNER = map (\tokens -> fst $ runState (runExceptT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens) (map catMaybes mtokenss)
   let ne = concat $ rights entitiesByNER

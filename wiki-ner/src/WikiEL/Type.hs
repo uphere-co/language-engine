@@ -6,23 +6,25 @@
 
 module WikiEL.Type where
 
-import           Control.Lens              (makeLenses,makePrisms)
+import           Control.Lens              ( makeLenses, makePrisms )
 import           Data.Aeson
 import qualified Data.Map            as M
 import qualified Data.Set            as S
-import           Data.Text                 (Text)
+import           Data.Text                 ( Text )
 import qualified Data.Text           as T
-import           Data.Vector               (Vector,toList)
+import           Data.Vector               ( Vector, toList )
 import qualified Data.Vector.Unboxed as UV
-import           GHC.Generics              (Generic)
---
+import           GHC.Generics              ( Generic )
+------ other language-engine
 import qualified Graph               as G
 import qualified Graph.ETL           as G.E
 import qualified Graph.Internal.Hash as H
-import           Graph.Internal.Hash       (WordHash)
-import           NLP.Type.NamedEntity      (NamedEntityClass)
---
-import           WikiEL.Type.Wikidata      (ItemID)
+import           Graph.Internal.Hash       ( WordHash )
+import           NLP.Type.CoreNLP          ( Sentence )
+import           NLP.Type.NamedEntity      ( NamedEntityClass )
+------ wiki-ner
+import           WikiEL.Type.Wikidata      ( ItemID )
+
 
 data EntityToken = EntityToken { _word :: Text
                                , _tag  :: Text
@@ -151,3 +153,5 @@ data WikiuidNETag = WikiuidNETag { _set :: S.Set (ItemID, ItemClass)
 
 makeLenses ''WikiuidNETag
 
+
+newtype NETagger = NETagger { unNETagger :: [Sentence] -> [EntityMention Text] }

@@ -2,33 +2,41 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections     #-}
 
-module WikiEL.WikiNewNET where
+module WikiEL.NETagger where
 
-import           Control.Lens                  ((^.),_1,_3,to)
-import           Data.Function                 (on)
+import           Control.Lens         ( (^.), _1, _3, to )
+import           Data.Function        ( on )
 import qualified Data.Set as S
-import qualified Data.Text              as T
-import qualified Data.Vector            as V
-import           Data.List                     (foldl',maximumBy,sortBy)
-import qualified Data.HashMap.Strict    as HM
-import           Data.Maybe                    (mapMaybe)
---
-import           NLP.Type.CoreNLP              (Sentence)
-import           NLP.Type.NamedEntity          (NamedEntityClass(..))
---
-import           WikiEL.Type                   (EntityMention,PreNE(..),UIDCite(..),beg,end)
-import           WikiEL.Run                    (runEL,classFilesG,reprFileG)
-import           WikiEL                        (extractFilteredEntityMentions)
-import qualified WikiEL.WikiEntityClass  as WEC
-import qualified WikiEL.WikiEntityTagger as WET
+import qualified Data.Text as T
+import qualified Data.Vector as V
+import           Data.List            ( foldl', maximumBy, sortBy )
+import qualified Data.HashMap.Strict as HM
+import           Data.Maybe           ( mapMaybe )
+------ other language-engine
+import           NLP.Type.NamedEntity ( NamedEntityClass(..) )
+------ wiki-ner
+import           WikiEL               ( extractFilteredEntityMentions )
+import           WikiEL.Type          ( PreNE(..), UIDCite(..)
+                                      , beg, end
+                                      )
+import           WikiEL.Run           ( runEL, classFilesG, reprFileG )
 import qualified WikiEL.EntityLinking    as EL
 import qualified WikiEL.ETL.LoadData     as LD
+import           WikiEL.Type          ( NETagger(..) )
 import qualified WikiEL.Type             as WT
 import qualified WikiEL.Type.FileFormat  as FF
 import qualified WikiEL.Type.Wikidata    as WD
+import qualified WikiEL.WikiEntityClass  as WEC
+import qualified WikiEL.WikiEntityTagger as WET
 
 
-newNETagger :: FilePath -> IO ([Sentence] -> [EntityMention T.Text])
+-- | Dummy NETagger if one wants to bypass NETagger
+dummyNETagger :: NETagger
+dummyNETagger = NETagger (const [])
+
+
+-- | Create a new NETagger object.
+newNETagger :: FilePath -> IO NETagger
 newNETagger dataDir = do
   reprs <- LD.loadEntityReprs (reprFileG dataDir)
   -- NOTE: for test
@@ -71,4 +79,5 @@ newNETagger dataDir = do
                          in disambiguatorWorker x (rids,t)
             else x
           _ -> x
-  return (runEL tagger (map disambiguator))
+  let netagger = NETagger (runEL tagger (map disambiguator))
+  pure netagger
