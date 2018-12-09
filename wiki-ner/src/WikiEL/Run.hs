@@ -13,7 +13,7 @@ import           WikiEL.EntityLinking
 import           WikiEL.Type                           (EntityMention,ItemClass(..),beg,end)
 import           WikiEL.Type.FileFormat
 import qualified WikiEL.WikiEntityClass        as WC
-import qualified WikiEL                        as WEL
+-- import qualified WikiEL                        as WEL
 
 
 prepareWNP :: [Sentence] -> [(Text,NamedEntityClass,POSTag)]
@@ -38,7 +38,7 @@ runEL tagger entityResolve sents  =
       linked_mentions = tagger wnps
   in entityResolve linked_mentions
 
-
+{-
 loadWikiData ::
        FilePath
     -> IO ( [(Text, NamedEntityClass,POSTag)] -> [EntityMention Text]
@@ -50,7 +50,7 @@ loadWikiData dataDir = do
   tagger <- WEL.loadFEMtagger (reprFileG dataDir) (classFilesG dataDir)
   let entityResolve = WEL.disambiguateMentions edges uidTag titles
   return (tagger,entityResolve)
-
+-}
 
 reprFileTinyG :: FilePath -> EntityReprFile
 reprFileTinyG dataDir =

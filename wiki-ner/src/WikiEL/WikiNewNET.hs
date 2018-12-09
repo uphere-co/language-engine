@@ -4,10 +4,9 @@
 
 module WikiEL.WikiNewNET where
 
-import           Control.Lens                  ((^.),_1,_3)
-
+import           Control.Lens                  ((^.),_1,_3,to)
 import           Data.Function                 (on)
-
+import qualified Data.Set as S
 import qualified Data.Text              as T
 import qualified Data.Vector            as V
 import           Data.List                     (foldl',maximumBy,sortBy)
@@ -24,6 +23,7 @@ import qualified WikiEL.WikiEntityClass  as WEC
 import qualified WikiEL.WikiEntityTagger as WET
 import qualified WikiEL.EntityLinking    as EL
 import qualified WikiEL.ETL.LoadData     as LD
+import qualified WikiEL.Type             as WT
 import qualified WikiEL.Type.FileFormat  as FF
 import qualified WikiEL.Type.Wikidata    as WD
 
@@ -31,11 +31,20 @@ import qualified WikiEL.Type.Wikidata    as WD
 newNETagger :: FilePath -> IO ([Sentence] -> [EntityMention T.Text])
 newNETagger dataDir = do
   reprs <- LD.loadEntityReprs (reprFileG dataDir)
+  -- NOTE: for test
+  putStrLn $ "length of reprs = " ++ show (length reprs)
   let wikiTable = WET.buildEntityTable reprs
-      wikiMap = foldl' f HM.empty reprs
+  -- NOTE: for test
+  putStrLn $ "wikiTable: length(uid)   = " ++ (wikiTable ^. WT.uids . to V.length . to show)
+  putStrLn $ "wikiTable: length(names) = " ++ (wikiTable ^. WT.names . to V.length . to show)
+  let wikiMap = foldl' f HM.empty reprs
         where f !acc (FF.EntityReprRow (WD.QID i) (WD.ItemRepr t)) = HM.insertWith (++) (WD.QID i) [t] acc
               f _ _ = error "f in newNETagger"
+  -- NOTE: for test
+  putStrLn $ "wikiMap: size = " ++ show (HM.size wikiMap)
   uidNEtags <- WEC.loadFiles (classFilesG dataDir)
+  -- NOTE: for test
+  putStrLn $ "length of uidNEtags = " ++ show (S.size (uidNEtags ^. WT.set))
   let tagger = extractFilteredEntityMentions wikiTable uidNEtags
       disambiguatorWorker x (ys,t) =
         let lst = sortBy (flip compare `on` (length.snd)) .  mapMaybe (\y-> (y,) <$> HM.lookup y wikiMap) $ ys

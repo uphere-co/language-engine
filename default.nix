@@ -63,7 +63,7 @@ in
   overrides = hsconfig;
 
   tools = ghc: let env-hook = env-hook-gen ghc;
-               in [ env-hook ];  # NOTE: you cannot have non-variable in this list.
+               in [ env-hook pkgs.graphviz ];  # NOTE: you cannot have non-variable in this list.
 
   shells = {
     ghc = [
