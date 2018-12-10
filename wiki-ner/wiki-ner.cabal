@@ -19,6 +19,9 @@ library
   hs-source-dirs:      src
   exposed-modules:
                        Assert
+                       NER
+                       NER.Load
+                       NER.Type
                        WikiEL
                        WikiEL.BinarySearch
                        WikiEL.Convert
@@ -33,14 +36,11 @@ library
                        WikiEL.ETL.RDF.Wikidata
                        WikiEL.ETL.RDF.Yago
                        WikiEL.ETL.Util
-
-                       NER
-                       NER.Load
-                       NER.Type
-
                        WikiEL.Investopedia
                        WikiEL.Misc
                        WikiEL.NamedEntity
+                       WikiEL.NETagger
+                       WikiEL.Old
                        WikiEL.Run
                        WikiEL.Type
                        WikiEL.Type.Equity
@@ -50,11 +50,9 @@ library
                        WikiEL.Type.Wikidata
                        WikiEL.Type.Wikipedia
                        WikiEL.Type.WordNet
-
                        WikiEL.WikiEntityClass
                        WikiEL.WikiEntityTagger
                        WikiEL.WikiNamedEntityTagger
-                       WikiEL.WikiNewNET
                        WikiEL.WordNet
 
   other-extensions:    OverloadedStrings
@@ -138,4 +136,3 @@ executable node-filter
                        -threaded
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
-

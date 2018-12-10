@@ -1,19 +1,34 @@
 module WikiEL.Run where
 
-import           Control.Lens                          ((^.),(^..))
-import           Data.Maybe
---
-import           Data.Text                             (Text)
-import           NLP.Type.CoreNLP
-import           NLP.Type.NamedEntity
-import           NLP.Type.PennTreebankII
-import           System.FilePath                       ((</>))
-import           WikiEL.EntityLinking
---
-import           WikiEL.Type                           (EntityMention,ItemClass(..),beg,end)
-import           WikiEL.Type.FileFormat
+import           Control.Lens                          ( (^.), (^..) )
+import           Data.Maybe                            ( catMaybes, fromMaybe )
+import           Data.Text                             ( Text )
+import           System.FilePath                       ( (</>) )
+------
+import           NLP.Type.CoreNLP                      ( Sentence
+                                                       , sentenceNER
+                                                       , sentenceToken
+                                                       , sentenceWord
+                                                       , token_pos
+                                                       )
+import           NLP.Type.NamedEntity                  ( NamedEntityClass
+                                                       , classify
+                                                       )
+import           NLP.Type.PennTreebankII               ( POSTag )
+------
+import           WikiEL.EntityLinking                  ( entityIRange )
+import           WikiEL.Type                           ( EntityMention
+                                                       , ItemClass(..)
+                                                       , beg, end
+                                                       )
+import           WikiEL.Type.FileFormat                ( EntityReprFile(..)
+                                                       , ItemIDFile(..)
+                                                       , PropertyNameFile(..)
+                                                       , WikiTitleMappingFile(..)
+                                                       , WordNetMappingFile(..)
+                                                       )
 import qualified WikiEL.WikiEntityClass        as WC
-import qualified WikiEL                        as WEL
+-- import qualified WikiEL                        as WEL
 
 
 prepareWNP :: [Sentence] -> [(Text,NamedEntityClass,POSTag)]
@@ -37,19 +52,6 @@ runEL tagger entityResolve sents  =
   let wnps = prepareWNP sents
       linked_mentions = tagger wnps
   in entityResolve linked_mentions
-
-
-loadWikiData ::
-       FilePath
-    -> IO ( [(Text, NamedEntityClass,POSTag)] -> [EntityMention Text]
-          , [EntityMention Text] -> [EntityMention Text])
-loadWikiData dataDir = do
-  edges  <- WEL.loadAndSortEdges (graphFilesG dataDir)
-  uidTag <- WEL.loadFiles        (classFilesG dataDir)
-  titles <- WEL.loadWikipageMapping (wikiTitleMappingFileG dataDir)
-  tagger <- WEL.loadFEMtagger (reprFileG dataDir) (classFilesG dataDir)
-  let entityResolve = WEL.disambiguateMentions edges uidTag titles
-  return (tagger,entityResolve)
 
 
 reprFileTinyG :: FilePath -> EntityReprFile

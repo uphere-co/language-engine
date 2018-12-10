@@ -4,81 +4,87 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections     #-}
-{-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-unused-matches #-}
+-- {-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-unused-matches #-}
 module SRL.Analyze where
 
-import           Control.Lens                   ((^.),(^..),(.~),(&),_Just)
-import           Control.Monad                  (forM_,void,when)
-import           Control.Monad.IO.Class         (liftIO)
-import           Control.Monad.Loops            (whileJust_)
-import qualified Data.ByteString.Char8  as B
-import           Data.Default                   (def)
-import qualified Data.HashMap.Strict    as HM
-import           Data.IntMap                    (IntMap)
-import qualified Data.IntMap            as IM
-import           Data.List                      (intercalate)
-import           Data.Maybe
-import           Data.Monoid                    ((<>))
-import           Data.Text                      (Text)
-import qualified Data.Text              as T
-import qualified Data.Text.IO           as T.IO
-import           Data.Tree                      (Forest)
-import qualified Language.Java          as J
-import           System.Console.Haskeline       (runInputT,defaultSettings,getInputLine)
-import           System.Environment             (getEnv)
-import           System.Process                 (readProcess)
+import           Control.Lens             ( (^.), (^..), (.~), (&), _Just )
+import           Control.Monad            ( forM_, void, when )
+import           Control.Monad.IO.Class   ( liftIO )
+import           Control.Monad.Loops      ( whileJust_ )
+import qualified Data.ByteString.Char8 as B
+import           Data.Default             ( def )
+import qualified Data.HashMap.Strict as HM
+import           Data.IntMap              ( IntMap )
+import qualified Data.IntMap as IM
+import           Data.Maybe               ( catMaybes )
+import           Data.Text                ( Text )
+import qualified Data.Text as T
+import qualified Data.Text.IO as T.IO
+import           Data.Tree                ( Forest )
+import qualified Language.Java as J
+import           System.Console.Haskeline ( runInputT, defaultSettings, getInputLine )
+import           System.Environment       ( getEnv )
+import           System.Process           ( readProcess )
+------ other language-engine
+import           CoreNLP.Simple           ( prepare )
+import           CoreNLP.Simple.Type      ( tokenizer, words2sentences
+                                          , postagger, lemma, sutime
+                                          , constituency, ner
+                                          )
+import           FrameNet.Query.Frame     ( FrameDB, loadFrameData )
+import           HUKB.PPR                 ( createUKBDB )
+import           Lexicon.Mapping.OntoNotesFrameNet ( mapFromONtoFN )
+import           Lexicon.Query            ( adjustRolePattInsts, loadRoleInsts
+                                          , loadRolePattInsts, loadIdioms
+                                          )
+import           Lexicon.Data             ( loadSenseInventory )
+import           MWE.Util                 ( mkTextFromToken )
+import           NER.Load                 ( getCompanyListFromJSON )
+import           NER.Type                 ( CompanyInfo(..), alias, companyId )
+import           NLP.Syntax.Format        ( formatX'Tree )
+import           NLP.Syntax.Type.XBar     ( SPhase(..) )
+import           OntoNotes.Corpus.Load    ( senseInstStatistics )
+import           OntoNotes.Type.SenseInventory ( inventory_lemma )
+import           Text.Format.Dot          ( mkLabelText )
+import           Text.Search.New.Generic.SearchTree ( addTreeItem )
+import           WikiEL.NETagger          ( dummyNETagger, newNETagger )
+import           WikiEL.Type              ( NETagger(..) )
+import           WordNet.Query            ( loadDB )
 --
-import           CoreNLP.Simple                 (prepare)
-import           CoreNLP.Simple.Type            (tokenizer,words2sentences,postagger,lemma,sutime,constituency,ner)
-import           FrameNet.Query.Frame           (FrameDB,loadFrameData)
-import           HUKB.PPR                       (createUKBDB)
-import           Lexicon.Mapping.OntoNotesFrameNet (mapFromONtoFN)
-import           Lexicon.Query                  (adjustRolePattInsts,loadRoleInsts,loadRolePattInsts,loadIdioms)
-import           Lexicon.Data                   (loadSenseInventory)
-import           MWE.Util                       (mkTextFromToken)
-import           NER.Load                       (getCompanyListFromJSON)
-import           NER.Type                       (CompanyInfo(..),alias,companyId)
-import           NLP.Syntax.Format              (formatX'Tree)
-import           NLP.Syntax.Type.XBar           (SPhase(..))
-import           NLP.Type.CoreNLP               (Sentence)
-import           OntoNotes.Corpus.Load          (senseInstStatistics)
-import           OntoNotes.Type.SenseInventory  (inventory_lemma)
-import           Text.Format.Dot                (mkLabelText)
-import           Text.Search.New.Generic.SearchTree (addTreeItem)
-import           WikiEL.Type                    (EntityMention)
-import           WikiEL.WikiNewNET              (newNETagger)
-import           WordNet.Query                  (loadDB)
---
-import           SRL.Analyze.MeaningTree        (mkMeaningTree)
-import           SRL.Analyze.Config             (SRLConfig
-                                                ,srlcfg_framenet_framedir
-                                                ,srlcfg_rolemap_file
-                                                ,srlcfg_idiom_file
-                                                ,srlcfg_sense_inventory_file
-                                                ,srlcfg_verb_subcat_file
-                                                ,srlcfg_wsj_directory
-                                                ,srlcfg_wordnet_dict
-                                                ,srlcfg_ukb_dictfile
-                                                ,srlcfg_ukb_binfile
-                                                ,srlcfg_company_file
-                                                ,srlcfg_wiki_dir)
+import           SRL.Analyze.MeaningTree  ( mkMeaningTree )
+import           SRL.Analyze.Config       ( SRLConfig
+                                          , srlcfg_framenet_framedir
+                                          , srlcfg_rolemap_file
+                                          , srlcfg_idiom_file
+                                          , srlcfg_sense_inventory_file
+                                          , srlcfg_verb_subcat_file
+                                          , srlcfg_wsj_directory
+                                          , srlcfg_wordnet_dict
+                                          , srlcfg_ukb_dictfile
+                                          , srlcfg_ukb_binfile
+                                          , srlcfg_company_file
+                                          , srlcfg_wiki_dir
+                                          )
 import qualified SRL.Analyze.Config as Analyze
-import           SRL.Analyze.CoreNLP            (runParser)
-import           SRL.Analyze.Format             (dotMeaningGraph,formatDocStructure,showMatchedFrame)
-import           SRL.Analyze.Format.OGDF        (mkOGDFSVG)
-import           SRL.Analyze.Match.Frame        (mkTriples)
-import           SRL.Analyze.Match.MeaningGraph (meaningGraph,tagMG)
-import           SRL.Analyze.SentenceStructure  (docStructure,mkWikiList)
-import           SRL.Analyze.Type               (AnalyzePredata(AnalyzePredata)
-                                                ,analyze_framedb,analyze_rolemap
-                                                ,DocStructure
-                                                ,ds_mtokenss,ds_sentStructures
-                                                ,ss_tagged,ss_x'trs
-                                                ,ConsoleOutput(..),outputX'tree
-                                                ,outputDocStructure,outputMatchedFrames)
-
---
-
+import           SRL.Analyze.CoreNLP      ( runParser )
+import           SRL.Analyze.Format       ( dotMeaningGraph
+                                          , formatDocStructure
+                                          , showMatchedFrame
+                                          )
+import           SRL.Analyze.Format.OGDF  ( mkOGDFSVG )
+import           SRL.Analyze.Match.Frame  ( mkTriples )
+import           SRL.Analyze.Match.MeaningGraph ( meaningGraph, tagMG )
+import           SRL.Analyze.SentenceStructure ( docStructure, mkWikiList )
+import           SRL.Analyze.Type         ( AnalyzePredata(AnalyzePredata)
+                                          , ConsoleOutput(..)
+                                          , DocStructure
+                                          , analyze_framedb, analyze_rolemap
+                                          , ds_mtokenss, ds_sentStructures
+                                          , ss_tagged, ss_x'trs
+                                          , outputX'tree
+                                          , outputDocStructure
+                                          , outputMatchedFrames
+                                          )
 
 
 consoleOutput :: FrameDB -> DocStructure -> ConsoleOutput
@@ -92,13 +98,13 @@ consoleOutput frmdb dstr =
                    , _outputMatchedFrames = T.unlines (concatMap (uncurry (showMatchedFrame frmdb)) matchedframes)
                    }
 
---
+
 -- | main query loop
 --
 queryProcess :: Analyze.Config
              -> J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
              -> AnalyzePredata
-             -> ([Sentence] -> [EntityMention Text])
+             -> NETagger
              -> (Forest (Either Int Text),IntMap CompanyInfo)
              -> IO ()
 queryProcess config pp apredata netagger (forest,companyMap) =
@@ -128,8 +134,6 @@ queryProcess config pp apredata netagger (forest,companyMap) =
     putStrLn "=================================================================================================\n\n\n\n"
 
 
-
-
 printMeaningGraph :: AnalyzePredata -> IntMap CompanyInfo -> DocStructure -> IO ()
 printMeaningGraph apredata companyMap dstr = do
   putStrLn "-------------"
@@ -137,14 +141,11 @@ printMeaningGraph apredata companyMap dstr = do
   putStrLn "-------------"
   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
       mtokss = (dstr ^. ds_mtokenss)
-      -- wikilsts = map (mkWikiList companyMap) sstrs1
-
-  let mgs = map (\sstr -> (sstr,meaningGraph apredata sstr)) sstrs1
+      mgs = map (\sstr -> (sstr,meaningGraph apredata sstr)) sstrs1
   forM_ (zip mtokss (zip ([1..] :: [Int]) mgs)) $ \(mtks,(i,(sstr,mg'))) -> do
     let title = mkTextFromToken mtks
         wikilst = mkWikiList companyMap sstr
         mg = tagMG mg' wikilst
-        -- x'trs = sstr^.ss_x'trs
 
     putStrLn "-----------------"
     putStrLn "meaning graph dot"
@@ -167,15 +168,16 @@ printMeaningGraph apredata companyMap dstr = do
     putStrLn "-----------------"
     mapM_ print (mkMeaningTree (apredata^.analyze_rolemap) mg)
 
+
 -- TODO: make records for return type.
 loadConfig :: (Bool,Bool)
            -> SRLConfig
-           -> IO (AnalyzePredata,[Sentence]->[EntityMention Text],Forest (Either Int Text),IntMap CompanyInfo)
+           -> IO (AnalyzePredata, NETagger, Forest (Either Int Text),IntMap CompanyInfo)
 loadConfig (bypass_ner,bypass_textner) cfg = do
   apredata <- loadAnalyzePredata cfg
   createUKBDB (cfg^.srlcfg_ukb_binfile,cfg^.srlcfg_ukb_dictfile)
   netagger <- if bypass_ner
-                then return (const [])
+                then pure dummyNETagger
                 else newNETagger (cfg^.srlcfg_wiki_dir)
   (forest,companyMap) <-
     if bypass_textner
@@ -219,7 +221,6 @@ loadJVM = prepare (def & (tokenizer .~ True)
                        . (ner .~ True))
 
 
---
 -- | main program entry point
 --
 runAnalysis :: SRLConfig -> Analyze.Config -> IO ()
