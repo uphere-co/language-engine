@@ -40,6 +40,7 @@ library
                        WikiEL.Misc
                        WikiEL.NamedEntity
                        WikiEL.NETagger
+                       WikiEL.Old
                        WikiEL.Run
                        WikiEL.Type
                        WikiEL.Type.Equity
