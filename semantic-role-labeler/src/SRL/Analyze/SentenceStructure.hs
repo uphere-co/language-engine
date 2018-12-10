@@ -8,7 +8,7 @@ module SRL.Analyze.SentenceStructure where
 
 import           Control.Applicative                       (many)
 import           Control.Lens                              ((^.),(^..),(^?),_1,_2,_3,to,_head,_last)
-import           Control.Monad.State.Lazy                  (runState)
+import           Control.Monad.State.Lazy                  (evalState)
 import           Control.Monad.Trans.Except                (runExceptT)
 import           Data.Bifunctor                            (first)
 import           Data.Either                               (lefts,rights)
@@ -20,7 +20,6 @@ import           Data.Maybe                                (catMaybes,fromMaybe,
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
-import           Data.Tree                                 (Forest)
 import qualified Data.Vector                       as V
 --
 import           CoreNLP.Simple.Convert                    (mkLemmaMap)
@@ -32,7 +31,13 @@ import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemm
 import           NLP.Syntax.Type.XBar                      (MarkType(..),Zipper,PreAnalysis,lemmaList,pennTree)
 import           NLP.Syntax.Util                           (mkPreAnalysis)
 import qualified NLP.Type.NamedEntity              as N
-import           NLP.Type.CoreNLP                          (Sentence,SentenceIndex,Token,sentenceToken,sentenceLemma,sent_tokenRange,token_text,token_tok_idx_range)
+import           NLP.Type.CoreNLP                          ( SentenceIndex, Token
+                                                           , sentenceToken
+                                                           , sentenceLemma
+                                                           , sent_tokenRange
+                                                           , token_text
+                                                           , token_tok_idx_range
+                                                           )
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
 import           Text.Search.New.ParserCustom              (pTreeAdvGBy)
@@ -97,12 +102,11 @@ mkWikiList cmap sstr =
 
 
 nerDocument ::
-     AnalyzePredata
-  -> ([Sentence] -> [EntityMention Text])
+     NETagger
   -> DocAnalysisInput
   -> [TagPos TokIdx (Either (EntityMention Text) (Char, Maybe Text))]
-nerDocument _apredata netagger docinput@(DocAnalysisInput _ _ _ _ _ _ mtmxs) =
-  let linked_mentions_resolved = netagger (docinput^.dainput_sents)
+nerDocument netagger docinput@(DocAnalysisInput _ _ _ _ _ _ mtmxs) =
+  let linked_mentions_resolved = unNETagger netagger (docinput^.dainput_sents)
       lnk_mntns_tagpos = map linkedMentionToTagPos linked_mentions_resolved
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
   in maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
@@ -111,29 +115,35 @@ nerDocument _apredata netagger docinput@(DocAnalysisInput _ _ _ _ _ _ mtmxs) =
 -- | Finding the structure of the sentence and formatting it.
 --
 docStructure ::
-     AnalyzePredata
-  -> NETagger
-  -> (Forest (Either Int Text), IntMap CompanyInfo)
+     AnalysisData
   -> DocAnalysisInput
   -> IO DocStructure
-docStructure apredata netagger (forest,companyMap) docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
+docStructure adata
+  -- (AnalysisData sdata netagger (CompanyMap forest companyMap))
+  docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       -- need to revive
-      -- mergedtags = nerDocument apredata netagger docinput
+      -- mergedtags = nerDocument sdata netagger docinput
       mtokenss = sents ^.. traverse . sentenceToken
-      linked_mentions_resolved = unNETagger netagger (docinput^.dainput_sents)
-
-  let entitiesByNER = map (\tokens -> fst $ runState (runExceptT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens) (map catMaybes mtokenss)
-  let ne = concat $ rights entitiesByNER
-  let tne = mapMaybe (tokenToTagPos companyMap) (zip [10001..] ne)
-  let tnerange = map getRangeFromEntityMention tne
+      linked_mentions_resolved =
+        adata^.analysis_NETagger^.to unNETagger $ docinput^.dainput_sents
+      CompanyMap forest companyMap = adata ^. analysis_CompanyMap
+      entitiesByNER =
+        map (evalState $ runExceptT $ many $ pTreeAdvGBy (\t -> (== (t ^. token_text))) forest) $
+          map catMaybes mtokenss
+      ne = concat $ rights entitiesByNER
+      -- TODO: remove this hard-coded index (10001).
+      tne = mapMaybe (tokenToTagPos companyMap) (zip [10001..] ne)
+      tnerange = map getRangeFromEntityMention tne
       lnk_mntns1 = tne
       lnk_mntns2 = filter (\mntn -> not $ elemIsStrictlyInsideR (getRangeFromEntityMention mntn) tnerange) linked_mentions_resolved
       lnk_mntns_tagpos = map linkedMentionToTagPos (lnk_mntns1 ++ lnk_mntns2)
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
-  synsetss <- runUKB (apredata^.analyze_wordnet)(sents,mptrs)
+  synsetss <- runUKB (adata^.analysis_SRLData.srldata_wordnet)(sents,mptrs)
   let mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
-  let sentStructures = map (sentStructure apredata mergedtags) (zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss)
+  let sentStructures =
+        map (sentStructure (adata^.analysis_SRLData) mergedtags) $
+          zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss
   return (DocStructure mtokenss sentitems mergedtags sentStructures)
 
 
@@ -175,11 +185,11 @@ adjustTokenIndexForSentence midx tagged
           else Nothing
 
 sentStructure ::
-     AnalyzePredata
+     SRLData
   -> [TagPos TokIdx (Either (EntityMention Text) (Char,Maybe Text))]
   -> (Int,Maybe SentenceIndex,[Lemma],Maybe PennTree,[(Int,LexicographerFile)])
   -> Maybe SentStructure
-sentStructure apredata taglst (i,midx,lmas,mptr,synsets) =
+sentStructure sdata taglst (i,midx,lmas,mptr,synsets) =
   flip fmap mptr $ \ptr ->
     let taglst' = adjustTokenIndexForSentence midx taglst
         taglstMarkOnly = map (fmap snd) taglst'
@@ -188,18 +198,18 @@ sentStructure apredata taglst (i,midx,lmas,mptr,synsets) =
         pre = mkPreAnalysis lmatkns ptr taglstMarkOnly synsets
         vps = verbPropertyFromPennTree lemmamap (pre^.pennTree)
         x'tr = syntacticAnalysis pre
-        verbStructures = map (verbStructure apredata pre) vps
+        verbStructures = map (verbStructure sdata pre) vps
     in SentStructure i ptr vps x'tr taglst' pre verbStructures
 
 
 verbStructure ::
-     AnalyzePredata
+     SRLData
   -> PreAnalysis '[Lemma]
   -> VerbProperty (Zipper '[Lemma])
   -> VerbStructure
-verbStructure apredata tagged vp =
+verbStructure sdata tagged vp =
   let i = vp^.vp_index
       l = vp^.vp_lemma
       ls = (map (^._2._1) . filter (\(j,_) -> j >= i)) (tagged^.lemmaList)
-      (senses,rmtoppatts) = getVerbSenses apredata (l,ls)
+      (senses,rmtoppatts) = getVerbSenses sdata (l,ls)
   in VerbStructure vp senses rmtoppatts

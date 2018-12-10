@@ -17,31 +17,44 @@ import           Data.Maybe                   (fromMaybe,mapMaybe,maybeToList)
 import           Data.Monoid                  ((<>))
 import qualified Data.Text              as T
 import           Data.Text                    (Text)
---
-import           Data.Bitree                  (getRoot1)
-import           Data.Range                   (Range,elemRevIsInsideR,isInsideR)
+------ other language-engine
+import           Data.Bitree                  ( getRoot1 )
+import           Data.Range                   ( Range, elemRevIsInsideR, isInsideR )
 import           Lexicon.Type
-import           NLP.Syntax.Type.Resolve      (Resolved(..),Referent(..),referent2CompVP,referent2Trace)
+import           NLP.Syntax.Type.Resolve      ( Resolved(..), Referent(..)
+                                              , referent2CompVP
+                                              , referent2Trace
+                                              )
 import           NLP.Syntax.Type.Verb
 import           NLP.Syntax.Type.XBar
 import           NLP.Type.PennTreebankII
---
+----- semantic-role-labeler
 import           SRL.Analyze.Match.Entity
 import           SRL.Analyze.Match.Frame
 import           SRL.Analyze.Match.Preposition (ppRelFrame)
-import           SRL.Analyze.Type             (MGVertex(..),MGEdge(..)
-                                              ,MeaningGraph(..)
-                                              ,SentStructure,AnalyzePredata
-                                              ,PredicateInfo(..)
-                                              ,VertexID(..)
-                                              ,VertexMap(..)
-                                              ,vm_rangeToIndex
-                                              ,vm_rangeDependency
-                                              ,vm_headRangeToFullRange
-                                              ,analyze_framedb, isEntity
-                                              ,ss_tagged,ss_x'trs
-                                              ,me_relation,mv_range,mv_id,mg_vertices,mg_edges
-                                              ,toReg,vidToRange)
+import           SRL.Analyze.Type             ( MGVertex(..)
+                                              , MGEdge(..)
+                                              , MeaningGraph(..)
+                                              , PredicateInfo(..)
+                                              , SentStructure
+                                              , SRLData
+                                              , VertexID(..)
+                                              , VertexMap(..)
+                                              , vm_rangeToIndex
+                                              , vm_rangeDependency
+                                              , vm_headRangeToFullRange
+                                              , srldata_framedb
+                                              , isEntity
+                                              , ss_tagged
+                                              , ss_x'trs
+                                              , me_relation
+                                              , mv_range
+                                              , mv_id
+                                              , mg_vertices
+                                              , mg_edges
+                                              , toReg
+                                              , vidToRange
+                                              )
 import           SRL.Analyze.Type.Match       (DPInfo(..),EmptyCategoryIndex(..),EntityInfo(..),FrameMatchResult(..)
                                               ,RangePair(..)
                                               ,adi_appos,adi_compof,adi_coref,adi_poss,adi_adjs
@@ -305,22 +318,27 @@ mkMGEdges vmap (matched,nmatched) (entities1_0,ientities2) =
   in edges0 ++ edges01 ++ edges1 ++ edges2 ++ edges3
 
 
-meaningGraph :: AnalyzePredata -> SentStructure -> MeaningGraph
-meaningGraph apredata sstr =
+meaningGraph :: SRLData -> SentStructure -> MeaningGraph
+meaningGraph sdata sstr =
   let lst_x'trvstrcp = mkTriples sstr
       tagged = sstr^.ss_tagged
-      matched = mapMaybe (\(x'tr,vstr,cp) -> matchFrame (apredata^.analyze_framedb) x'tr (vstr,cp)) lst_x'trvstrcp
+      matched =
+        mapMaybe
+          (\(x'tr,vstr,cp) -> matchFrame (sdata^.srldata_framedb) x'tr (vstr,cp))
+          lst_x'trvstrcp
       depmap = do x'tr <- sstr^.ss_x'trs
                   dependencyOfX'Tree x'tr
       --
       dps = do x'tr <- sstr^.ss_x'trs
                (_,DPCase dp) <- biList x'tr
                return (x'tr,dp)
-      nmatched = mapMaybe (\(x'tr,dp) -> matchNomFrame apredata x'tr tagged dp) dps
+      nmatched = mapMaybe (\(x'tr,dp) -> matchNomFrame sdata x'tr tagged dp) dps
       --
-      (vertices,entities1_0,ientities2,headfull) = mkMGVertices (tagged,depmap) (matched,nmatched)
+      (vertices,entities1_0,ientities2,headfull) =
+        mkMGVertices (tagged,depmap) (matched,nmatched)
       --
-      rngidxmap = HM.fromList [(v^.mv_range, v^.mv_id) | v <- vertices ]
+      rngidxmap =
+        HM.fromList [(v^.mv_range, v^.mv_id) | v <- vertices ]
       vmap = VertexMap rngidxmap depmap headfull
       edges = mkMGEdges vmap (matched,nmatched) (entities1_0,ientities2)
   in MeaningGraph vertices edges

@@ -23,10 +23,10 @@ import           NLP.Type.SyntaxProperty       (Voice)
 import           OntoNotes.Type.SenseInventory (Inventory(..),sense_group,sense_n,sense_name,inventory_senses)
 --
 import           SRL.Analyze.Parameter         (thresholdPattStat)
-import           SRL.Analyze.Type              (AnalyzePredata(..)
-                                               ,analyze_framedb,analyze_idioms
-                                               ,analyze_ontomap,analyze_rolemap,analyze_sensemap
-                                               ,analyze_sensestat,analyze_subcats
+import           SRL.Analyze.Type              (SRLData(..)
+                                               ,srldata_framedb,srldata_idioms
+                                               ,srldata_ontomap,srldata_rolemap,srldata_sensemap
+                                               ,srldata_sensestat,srldata_subcats
                                                )
 import           SRL.Analyze.Type.Match        (ONSenseFrameNetInstance(..),ExceptionalFrame(..),TextifiedFrame(..)
                                                ,onfn_senseID
@@ -79,18 +79,18 @@ getTopPatternsFromONFNInst rolemap subcats ((inst,n),idiom) = do
   return ((idiom,rm,n),toppatts_cut)
 
 
-getVerbSenses :: AnalyzePredata
+getVerbSenses :: SRLData
               -> (Lemma,[Lemma])
               -> ([((ONSenseFrameNetInstance,Int),[Text])]
                  ,[(([Text],RoleInstance,Int), [(ArgPattern () GRel, Int)])])
-getVerbSenses apredata (lma,lmas) =
-  let sensemap  = apredata^.analyze_sensemap
-      sensestat = apredata^.analyze_sensestat
-      framedb   = apredata^.analyze_framedb
-      ontomap   = apredata^.analyze_ontomap
-      rolemap   = apredata^.analyze_rolemap
-      subcats   = apredata^.analyze_subcats
-      idioms    = apredata^.analyze_idioms
+getVerbSenses sdata (lma,lmas) =
+  let sensemap  = sdata^.srldata_sensemap
+      sensestat = sdata^.srldata_sensestat
+      framedb   = sdata^.srldata_framedb
+      ontomap   = sdata^.srldata_ontomap
+      rolemap   = sdata^.srldata_rolemap
+      subcats   = sdata^.srldata_subcats
+      idioms    = sdata^.srldata_idioms
       senses    = getSenses lma sensemap sensestat framedb ontomap
       matched_idioms = do sid <- senses^..traverse._1.onfn_senseID
                           idmlst <- maybeToList (HM.lookup sid idioms)
