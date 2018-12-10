@@ -75,10 +75,10 @@ import           SRL.Analyze.Format.OGDF  ( mkOGDFSVG )
 import           SRL.Analyze.Match.Frame  ( mkTriples )
 import           SRL.Analyze.Match.MeaningGraph ( meaningGraph, tagMG )
 import           SRL.Analyze.SentenceStructure ( docStructure, mkWikiList )
-import           SRL.Analyze.Type         ( AnalyzePredata(AnalyzePredata)
+import           SRL.Analyze.Type         ( SRLData(SRLData)
                                           , ConsoleOutput(..)
                                           , DocStructure
-                                          , analyze_framedb, analyze_rolemap
+                                          , srldata_framedb, srldata_rolemap
                                           , ds_mtokenss, ds_sentStructures
                                           , ss_tagged, ss_x'trs
                                           , outputX'tree
@@ -103,45 +103,45 @@ consoleOutput frmdb dstr =
 --
 queryProcess :: Analyze.Config
              -> J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline")
-             -> AnalyzePredata
+             -> SRLData
              -> NETagger
              -> (Forest (Either Int Text),IntMap CompanyInfo)
              -> IO ()
-queryProcess config pp apredata netagger (forest,companyMap) =
+queryProcess config pp sdata netagger (forest,companyMap) =
   runInputT defaultSettings $ whileJust_ (getInputLine "% ") $ \input' -> liftIO $ do
     let input = T.pack input'
         (command,rest) = T.splitAt 3 input
-        frmdb = apredata^.analyze_framedb
+        frmdb = sdata^.srldata_framedb
     case command of
       ":l " -> do let fp = T.unpack (T.strip rest)
                   txt <- T.IO.readFile fp
                   dainput <- runParser pp txt
-                  dstr <- docStructure apredata netagger (forest,companyMap) dainput
+                  dstr <- docStructure sdata netagger (forest,companyMap) dainput
                   let cout = consoleOutput frmdb dstr
                   T.IO.putStrLn (cout^.outputX'tree)
                   when (config^.Analyze.showDetail) $
                     T.IO.putStrLn (cout^.outputDocStructure)
                   T.IO.putStrLn (cout^.outputMatchedFrames)
       ":v " -> do dainput <- runParser pp rest
-                  dstr <- docStructure apredata netagger (forest,companyMap) dainput
+                  dstr <- docStructure sdata netagger (forest,companyMap) dainput
                   let cout = consoleOutput frmdb dstr
                   T.IO.putStrLn (cout^.outputX'tree)
                   when (config^.Analyze.showDetail) $
                     T.IO.putStrLn (cout^.outputDocStructure)
                   T.IO.putStrLn (cout^.outputMatchedFrames)
-                  printMeaningGraph apredata companyMap dstr
+                  printMeaningGraph sdata companyMap dstr
       _     ->    putStrLn "cannot understand the command"
     putStrLn "=================================================================================================\n\n\n\n"
 
 
-printMeaningGraph :: AnalyzePredata -> IntMap CompanyInfo -> DocStructure -> IO ()
-printMeaningGraph apredata companyMap dstr = do
+printMeaningGraph :: SRLData -> IntMap CompanyInfo -> DocStructure -> IO ()
+printMeaningGraph sdata companyMap dstr = do
   putStrLn "-------------"
   putStrLn "meaning graph"
   putStrLn "-------------"
   let sstrs1 = catMaybes (dstr^.ds_sentStructures)
       mtokss = (dstr ^. ds_mtokenss)
-      mgs = map (\sstr -> (sstr,meaningGraph apredata sstr)) sstrs1
+      mgs = map (\sstr -> (sstr,meaningGraph sdata sstr)) sstrs1
   forM_ (zip mtokss (zip ([1..] :: [Int]) mgs)) $ \(mtks,(i,(sstr,mg'))) -> do
     let title = mkTextFromToken mtks
         wikilst = mkWikiList companyMap sstr
@@ -166,15 +166,15 @@ printMeaningGraph apredata companyMap dstr = do
     putStrLn "-----------------"
     putStrLn "meaning tree"
     putStrLn "-----------------"
-    mapM_ print (mkMeaningTree (apredata^.analyze_rolemap) mg)
+    mapM_ print (mkMeaningTree (sdata^.srldata_rolemap) mg)
 
 
 -- TODO: make records for return type.
 loadConfig :: (Bool,Bool)
            -> SRLConfig
-           -> IO (AnalyzePredata, NETagger, Forest (Either Int Text),IntMap CompanyInfo)
+           -> IO (SRLData, NETagger, Forest (Either Int Text),IntMap CompanyInfo)
 loadConfig (bypass_ner,bypass_textner) cfg = do
-  apredata <- loadAnalyzePredata cfg
+  sdata <- loadSRLData cfg
   createUKBDB (cfg^.srlcfg_ukb_binfile,cfg^.srlcfg_ukb_dictfile)
   netagger <- if bypass_ner
                 then pure dummyNETagger
@@ -190,15 +190,14 @@ loadConfig (bypass_ner,bypass_textner) cfg = do
                              return (cid,T.words a)
               let forest = foldr addTreeItem [] clist
               return (forest,companyMap)
-  return (apredata,netagger,forest,companyMap)
+  return (sdata,netagger,forest,companyMap)
 
 
 --
--- | Load all pre-analysis data
+-- | Load SRLData
 --
--- loadAnalyzePredata :: LexDataConfig -> IO AnalyzePredata
-loadAnalyzePredata :: SRLConfig -> IO AnalyzePredata
-loadAnalyzePredata cfg = do
+loadSRLData :: SRLConfig -> IO SRLData
+loadSRLData cfg = do
   framedb <- loadFrameData (cfg^.srlcfg_framenet_framedir)
   wndb <- loadDB (cfg^.srlcfg_wordnet_dict)
   let ontomap = HM.fromList mapFromONtoFN
@@ -208,7 +207,7 @@ loadAnalyzePredata cfg = do
   rolemap <- loadRoleInsts (cfg^.srlcfg_rolemap_file)
   idioms <- loadIdioms (cfg^.srlcfg_idiom_file)
   subcats <- adjustRolePattInsts <$> loadRolePattInsts (cfg^.srlcfg_verb_subcat_file)
-  return (AnalyzePredata sensemap sensestat framedb ontomap rolemap subcats wndb idioms)
+  return (SRLData sensemap sensestat framedb ontomap rolemap subcats wndb idioms)
 
 
 loadJVM :: IO (J.J ('J.Class "edu.stanford.nlp.pipeline.AnnotationPipeline"))

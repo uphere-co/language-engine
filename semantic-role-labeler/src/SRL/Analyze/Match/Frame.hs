@@ -42,13 +42,21 @@ import           WordNet.Type                 (lex_word)
 import           WordNet.Type.POS             (POS(..))
 --
 import           SRL.Analyze.Match.Preposition (ppRelFrame,ppExtraRoles,ppExtraRoleMap)
-import           SRL.Analyze.Parameter        (roleMatchWeightFactor)
-import           SRL.Analyze.Sense            (getVerbSenses)
-import           SRL.Analyze.Type             (SentStructure,VerbStructure,AnalyzePredata(..)
-                                              ,analyze_wordnet
-                                              ,ss_x'trs,ss_tagged,ss_verbStructures
-                                              ,vs_roleTopPatts,vs_vp)
-import           SRL.Analyze.Type.Match       (EntityInfo(..),FrameMatchResult(..),RangePair(..))
+import           SRL.Analyze.Parameter        ( roleMatchWeightFactor )
+import           SRL.Analyze.Sense            ( getVerbSenses )
+import           SRL.Analyze.Type             ( SentStructure
+                                              , VerbStructure
+                                              , SRLData(..)
+                                              , srldata_wordnet
+                                              , ss_x'trs, ss_tagged
+                                              , ss_verbStructures
+                                              , vs_roleTopPatts
+                                              , vs_vp
+                                              )
+import           SRL.Analyze.Type.Match       ( EntityInfo(..)
+                                              , FrameMatchResult(..)
+                                              , RangePair(..)
+                                              )
 --
 
 
@@ -577,14 +585,21 @@ subjObjSBAR argpatt =
 
 
 
-matchNomFrame :: AnalyzePredata
-              -> X'Tree 'PH1
-              -> PreAnalysis '[Lemma]
-              -> DetP 'PH1
-              -> Maybe (Lemma,Lemma,X'Tree 'PH1,(FNFrame,Range),(FNFrameElement,Maybe EntityInfo),(FNFrameElement,EntityInfo))
-matchNomFrame apredata x'tr tagged dp = do
+matchNomFrame ::
+     SRLData
+  -> X'Tree 'PH1
+  -> PreAnalysis '[Lemma]
+  -> DetP 'PH1
+  -> Maybe ( Lemma
+           , Lemma
+           , X'Tree 'PH1
+           , (FNFrame,Range)
+           , (FNFrameElement, Maybe EntityInfo)
+           , (FNFrameElement, EntityInfo)
+           )
+matchNomFrame sdata x'tr tagged dp = do
     let rng_dp = dp^.maximalProjection
-        wndb = apredata^.analyze_wordnet
+        wndb = sdata^.srldata_wordnet
     (b,e) <- dp^?complement._Just.headX.coidx_content.hn_range
     -- for the time being, treat only single word nominal as frame
     guard (b==e)
@@ -604,7 +619,7 @@ matchNomFrame apredata x'tr tagged dp = do
           return (EI Nothing (RangePair rng rng) Nothing txt False False)
     (verb,_senses,rmtoppatts) <- getFirst . mconcat $ do
       verb <- extractNominalizedVerb wndb lma
-      let (senses,rmtoppatts) = getVerbSenses apredata (verb,[verb])
+      let (senses,rmtoppatts) = getVerbSenses sdata (verb,[verb])
       guard ((not.null) senses && (not.null) rmtoppatts)
       (return . First . Just) (verb,senses,rmtoppatts)
     ((_,(_sid,rolemap),_),patts) <- listToMaybe (sortBy (flip compare `on` (^._1._3) ) rmtoppatts)   -- choose most frequent

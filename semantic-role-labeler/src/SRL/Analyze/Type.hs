@@ -37,17 +37,17 @@ import           SRL.Analyze.Type.Match        (ONSenseFrameNetInstance)
 
 
 
-data AnalyzePredata = AnalyzePredata { _analyze_sensemap  :: HashMap Text Inventory
-                                     , _analyze_sensestat :: HashMap (Text,Text) Int
-                                     , _analyze_framedb   :: FrameDB
-                                     , _analyze_ontomap   :: HashMap Text [(Text,FNFrame)]
-                                     , _analyze_rolemap   :: [RoleInstance]
-                                     , _analyze_subcats   :: [RolePattInstance Voice]
-                                     , _analyze_wordnet   :: WordNetDB
-                                     , _analyze_idioms    :: HashMap SenseID [[Text]]
-                                     }
+data SRLData = SRLData { _srldata_sensemap  :: HashMap Text Inventory
+                       , _srldata_sensestat :: HashMap (Text,Text) Int
+                       , _srldata_framedb   :: FrameDB
+                       , _srldata_ontomap   :: HashMap Text [(Text,FNFrame)]
+                       , _srldata_rolemap   :: [RoleInstance]
+                       , _srldata_subcats   :: [RolePattInstance Voice]
+                       , _srldata_wordnet   :: WordNetDB
+                       , _srldata_idioms    :: HashMap SenseID [[Text]]
+                       }
 
-makeLenses ''AnalyzePredata
+makeLenses ''SRLData
 
 
 data VerbStructure = VerbStructure { _vs_vp           :: VerbProperty (Zipper '[Lemma])
@@ -142,13 +142,13 @@ makeLenses ''VertexMap
 
 
 data MGVertex = MGEntity    { _mv_id :: Int
-                            , _mv_range :: VertexID -- Maybe Range
+                            , _mv_range :: VertexID
                             , _mv_head_range :: Maybe Range
                             , _mv_text :: Text
                             , _mv_resolved_entities :: [Text]   -- resolved named entity candidates
                             }
               | MGPredicate { _mv_id    :: Int
-                            , _mv_range :: VertexID --  Maybe Range
+                            , _mv_range :: VertexID
                             , _mv_frame :: FNFrame
                             , _mv_pred_info :: PredicateInfo
                             }
@@ -161,7 +161,7 @@ instance NFData MGVertex
 mv_id :: Simple Lens MGVertex Int
 mv_id = lens _mv_id (\f a -> f { _mv_id = a })
 
-mv_range :: Simple Lens MGVertex VertexID -- (Maybe Range)
+mv_range :: Simple Lens MGVertex VertexID
 mv_range = lens _mv_range (\f a -> f { _mv_range = a })
 
 
@@ -188,7 +188,6 @@ instance FromJSON MGVertex
 data MGEdge = MGEdge { _me_relation :: FNFrameElement
                      , _me_ismodifier :: Bool
                      , _me_prep :: Maybe Text
-                     -- , _me_eci :: Maybe EmptyCategoryIndex
                      , _me_start :: Int
                      , _me_end :: Int }
 
