@@ -3,8 +3,7 @@
 {-# LANGUAGE TupleSections     #-}
 
 module WikiEL.NETagger
-  ( dummyNETagger
-  , newNETagger
+  ( newNETagger
   ) where
 
 import           Control.Lens         ( (^.), _1, _3, to )
@@ -35,10 +34,6 @@ import qualified WikiEL.Type.Wikidata    as WD
 import qualified WikiEL.WikiEntityClass  as WEC
 import qualified WikiEL.WikiEntityTagger as WET
 
-
--- | Dummy NETagger if one wants to bypass NETagger
-dummyNETagger :: NETagger
-dummyNETagger = NETagger (const [])
 
 data NEData = NEData { _nedataReprs     :: [EntityReprRow]
                      , _nedataWikiTable :: NameUIDTable

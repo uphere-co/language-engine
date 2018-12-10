@@ -8,7 +8,7 @@ module SRL.Analyze.SentenceStructure where
 
 import           Control.Applicative                       (many)
 import           Control.Lens                              ((^.),(^..),(^?),_1,_2,_3,to,_head,_last)
-import           Control.Monad.State.Lazy                  (runState)
+import           Control.Monad.State.Lazy                  (evalState)
 import           Control.Monad.Trans.Except                (runExceptT)
 import           Data.Bifunctor                            (first)
 import           Data.Either                               (lefts,rights)
@@ -20,7 +20,6 @@ import           Data.Maybe                                (catMaybes,fromMaybe,
 import           Data.Monoid                               ((<>))
 import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
-import           Data.Tree                                 (Forest)
 import qualified Data.Vector                       as V
 --
 import           CoreNLP.Simple.Convert                    (mkLemmaMap)
@@ -116,29 +115,35 @@ nerDocument netagger docinput@(DocAnalysisInput _ _ _ _ _ _ mtmxs) =
 -- | Finding the structure of the sentence and formatting it.
 --
 docStructure ::
-     SRLData
-  -> NETagger
-  -> (Forest (Either Int Text), IntMap CompanyInfo)
+     AnalysisData
   -> DocAnalysisInput
   -> IO DocStructure
-docStructure sdata netagger (forest,companyMap) docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
+docStructure adata
+  -- (AnalysisData sdata netagger (CompanyMap forest companyMap))
+  docinput@(DocAnalysisInput sents sentidxs sentitems _ mptrs _ mtmxs) = do
   let lmass = sents ^.. traverse . sentenceLemma . to (map Lemma)
       -- need to revive
       -- mergedtags = nerDocument sdata netagger docinput
       mtokenss = sents ^.. traverse . sentenceToken
-      linked_mentions_resolved = unNETagger netagger (docinput^.dainput_sents)
-
-  let entitiesByNER = map (\tokens -> fst $ runState (runExceptT (many $ pTreeAdvGBy (\t -> (\w -> w == (t ^. token_text))) forest)) tokens) (map catMaybes mtokenss)
-  let ne = concat $ rights entitiesByNER
-  let tne = mapMaybe (tokenToTagPos companyMap) (zip [10001..] ne)
-  let tnerange = map getRangeFromEntityMention tne
+      linked_mentions_resolved =
+        adata^.analysis_NETagger^.to unNETagger $ docinput^.dainput_sents
+      CompanyMap forest companyMap = adata ^. analysis_CompanyMap
+      entitiesByNER =
+        map (evalState $ runExceptT $ many $ pTreeAdvGBy (\t -> (== (t ^. token_text))) forest) $
+          map catMaybes mtokenss
+      ne = concat $ rights entitiesByNER
+      -- TODO: remove this hard-coded index (10001).
+      tne = mapMaybe (tokenToTagPos companyMap) (zip [10001..] ne)
+      tnerange = map getRangeFromEntityMention tne
       lnk_mntns1 = tne
       lnk_mntns2 = filter (\mntn -> not $ elemIsStrictlyInsideR (getRangeFromEntityMention mntn) tnerange) linked_mentions_resolved
       lnk_mntns_tagpos = map linkedMentionToTagPos (lnk_mntns1 ++ lnk_mntns2)
       mkidx = zipWith (\i x -> fmap (i,) x) (cycle ['a'..'z'])
-  synsetss <- runUKB (sdata^.srldata_wordnet)(sents,mptrs)
+  synsetss <- runUKB (adata^.analysis_SRLData.srldata_wordnet)(sents,mptrs)
   let mergedtags = maybe (map (fmap Left) lnk_mntns_tagpos) (mergeTagPos lnk_mntns_tagpos . mkidx) mtmxs
-  let sentStructures = map (sentStructure sdata mergedtags) (zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss)
+  let sentStructures =
+        map (sentStructure (adata^.analysis_SRLData) mergedtags) $
+          zip5 ([1..] :: [Int]) sentidxs lmass mptrs synsetss
   return (DocStructure mtokenss sentitems mergedtags sentStructures)
 
 

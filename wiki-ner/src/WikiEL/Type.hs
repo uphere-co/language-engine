@@ -155,3 +155,7 @@ makeLenses ''WikiuidNETag
 
 
 newtype NETagger = NETagger { unNETagger :: [Sentence] -> [EntityMention Text] }
+
+-- | Dummy NETagger if one wants to bypass NETagger
+emptyNETagger :: NETagger
+emptyNETagger = NETagger (const [])

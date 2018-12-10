@@ -9,31 +9,40 @@
 
 module SRL.Analyze.Type where
 
-import           Control.DeepSeq               (NFData)
+import           Control.DeepSeq               ( NFData)
 import           Control.Lens
-import           Data.Aeson                    (ToJSON,FromJSON)
-import           Data.Binary                   (Binary)
-import           Data.Hashable                 (Hashable)
-import           Data.HashMap.Strict           (HashMap)
-import           Data.Text                     (Text)
-import           GHC.Generics                  (Generic)
---
-import           Data.Range                    (Range)
-import           FrameNet.Query.Frame          (FrameDB)
-import           Lexicon.Type                  (ArgPattern,FNFrame,FNFrameElement,GRel
-                                               ,RoleInstance,RolePattInstance,SenseID)
-import           NLP.Syntax.Type.Verb          (VerbProperty(..))
-import           NLP.Syntax.Type.XBar          (Zipper,X'Tree,PreAnalysis,MarkType(..),Phase(..))
-import           NLP.Type.CoreNLP              (Dependency,Sentence,SentenceIndex,Token)
-import           NLP.Type.PennTreebankII       (Lemma,PennTree)
-import           NLP.Type.SyntaxProperty       (Voice)
-import           NLP.Type.TagPos               (CharIdx,SentItem,TagPos,TokIdx)
-import           WikiEL.Type                   (EntityMention)
-import           WordNet.Query                 (WordNetDB)
---
-import           OntoNotes.Type.SenseInventory (Inventory)
---
-import           SRL.Analyze.Type.Match        (ONSenseFrameNetInstance)
+import           Data.Aeson                    ( ToJSON, FromJSON )
+import           Data.Binary                   ( Binary )
+import           Data.Hashable                 ( Hashable )
+import           Data.HashMap.Strict           ( HashMap )
+import           Data.IntMap                   ( IntMap )
+import qualified Data.IntMap as IM
+import           Data.Text                     ( Text )
+import           Data.Tree                     ( Forest )
+import           GHC.Generics                  ( Generic )
+------ other language-engine
+import           Data.Range                    ( Range )
+import           FrameNet.Query.Frame          ( FrameDB )
+import           Lexicon.Type                  ( ArgPattern
+                                               , FNFrame
+                                               , FNFrameElement
+                                               , GRel
+                                               , RoleInstance
+                                               , RolePattInstance
+                                               , SenseID
+                                               )
+import           NER.Type                      ( CompanyInfo )
+import           NLP.Syntax.Type.Verb          ( VerbProperty(..))
+import           NLP.Syntax.Type.XBar          ( Zipper,X'Tree,PreAnalysis,MarkType(..),Phase(..))
+import           NLP.Type.CoreNLP              ( Dependency,Sentence,SentenceIndex,Token)
+import           NLP.Type.PennTreebankII       ( Lemma,PennTree)
+import           NLP.Type.SyntaxProperty       ( Voice)
+import           NLP.Type.TagPos               ( CharIdx,SentItem,TagPos,TokIdx)
+import           OntoNotes.Type.SenseInventory ( Inventory)
+import           WikiEL.Type                   ( EntityMention, NETagger )
+import           WordNet.Query                 ( WordNetDB)
+------
+import           SRL.Analyze.Type.Match        ( ONSenseFrameNetInstance )
 
 
 
@@ -225,3 +234,24 @@ instance ToJSON   ConsoleOutput
 instance FromJSON ConsoleOutput
 instance Binary   ConsoleOutput
 instance NFData   ConsoleOutput
+
+-- | Company information map
+data CompanyMap =
+  CompanyMap { _cmap_forest :: Forest (Either Int Text)
+             , _cmap_map    :: IntMap CompanyInfo
+             }
+
+makeLenses ''CompanyMap
+
+emptyCompanyMap :: CompanyMap
+emptyCompanyMap = CompanyMap [] IM.empty
+
+
+-- | SRLData + NER Data
+data AnalysisData =
+  AnalysisData { _analysis_SRLData    :: SRLData
+               , _analysis_NETagger   :: NETagger
+               , _analysis_CompanyMap :: CompanyMap
+               }
+
+makeLenses ''AnalysisData
