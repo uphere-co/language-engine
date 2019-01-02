@@ -136,3 +136,23 @@ executable node-filter
                        -threaded
                        -fno-warn-unused-do-bind
                        -fno-warn-orphans
+
+executable wiki-etl
+  hs-source-dirs:      app/wiki-etl
+  main-is:             Main.hs
+  other-modules:
+  build-depends:       base
+                     , bytestring
+                     , pipes
+                     , pipes-bytestring
+                     , pipes-text
+                     , pipes-zlib
+                     , resourcet
+                     , text
+
+  default-language: Haskell2010
+  ghc-options:         -O2
+                       -Wall
+                       -threaded
+                       -fno-warn-unused-do-bind
+                       -fno-warn-orphans
