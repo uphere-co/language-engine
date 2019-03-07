@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Control.Monad (void)
@@ -28,9 +29,10 @@ main :: IO ()
 main = do
   putStrLn "wiki-etl"
 
-  withFile fileCategoryLinks ReadMode $ \h -> do
-    runEffect $
-          void (decodeIso8859_1 (PZ.decompress (PB.fromHandle h)))
-      >-> PT.take 2500
-      >-> P.chain TIO.putStr
-      >-> P.drain
+  withFile "test.dat" WriteMode $ \hout -> do
+    withFile fileCategoryLinks ReadMode $ \hin -> do
+      runEffect $
+            void (decodeIso8859_1 (PZ.decompress (PB.fromHandle hin)))
+        >-> PT.take 2500
+        >-> P.chain (TIO.hPutStr hout)
+        >-> P.drain
