@@ -1,9 +1,6 @@
-module WikiEL.Misc where
+module WikiEL.Util where
 
-import qualified Data.Vector                   as V
-import           Data.Vector                           (Vector)
---
-import           WikiEL.Type                           (IRange(..),RelativePosition(..))
+-- old WikiEL.Misc
 
 relativePos :: IRange -> IRange -> RelativePosition
 relativePos (IRange lbeg lend) (IRange rbeg rend)
@@ -24,14 +21,6 @@ untilNoOverlap f ranges@(r:rs) | LbeforeR == f r = ranges
 
 -- untilNoOverlap f (_:rs) = untilNoOverlap f rs
 
-untilOverlapOrNo :: (a->RelativePosition) -> [a] -> [a]
-untilOverlapOrNo _ [] = []
-untilOverlapOrNo f ranges@(r:rs) = case f r of
-  LbeforeR  -> ranges
-  LoverlapR -> ranges
-  _ -> untilOverlapOrNo f rs
-
-
 -- Vector algorithms
 -- isContain : check whether a slice of a 2nd input vector is a 1st input vector.
 isContain :: Eq a => Vector a -> Vector a -> Bool
@@ -47,3 +36,4 @@ strictSlice sub vec = isContain sub vec && (V.length sub < V.length vec)
 
 subVector :: IRange -> Vector a -> Vector a
 subVector (IRange beg end) = V.slice beg (end-beg)
+

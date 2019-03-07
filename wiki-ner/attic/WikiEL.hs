@@ -61,25 +61,6 @@ Two high-level functions for client uses.
 -}
 
 
-extractEntityMentions :: NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass)] -> [EntityMention Text]
-extractEntityMentions wikiTable uidNEtags neTokens = linked_mentions
-  where    
-    stanford_nefs  = map (uncurry NamedEntityFrag) neTokens
-    named_entities = getStanfordNEs stanford_nefs
-    wiki_entities  = namedEntityAnnotator wikiTable stanford_nefs
-    wiki_named_entities = resolveNEs uidNEtags named_entities wiki_entities
-
-    ws    = V.fromList (map fst neTokens)
-    mentions = buildEntityMentions ws wiki_named_entities
-    linked_mentions = entityLinkings mentions
-
-extractFilteredEntityMentions :: NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass, POSTag)] -> [EntityMention Text]
-extractFilteredEntityMentions wikiTable uidNEtags tokens = filtered_mentions
-  where    
-    neTokens = map (\(x,y,_)->(x,y)) tokens
-    poss     = map (\(_,_,z)->z)     tokens
-    all_linked_mentions = extractEntityMentions wikiTable uidNEtags neTokens
-    filtered_mentions   = EMP.filterEMbyPOS (V.fromList poss) all_linked_mentions
 
 -- |loadEMtagger : a high level function for entity linking module
 loadEMtagger :: EntityReprFile -> [(ItemClass, ItemIDFile)] -> IO( [(Text, NamedEntityClass)] -> [EntityMention Text] )

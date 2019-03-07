@@ -18,42 +18,45 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:
-                       Assert
-                       NER
-                       NER.Load
-                       NER.Type
-                       WikiEL
-                       WikiEL.BinarySearch
-                       WikiEL.Convert
-                       WikiEL.EntityDisambiguation
-                       WikiEL.EntityLinking
-                       WikiEL.EntityMentionPruning
-                       WikiEL.ETL.LoadData
-                       WikiEL.ETL.Parser
-                       WikiEL.ETL.RDF
-                       WikiEL.ETL.RDF.Binary
-                       WikiEL.ETL.RDF.Common
-                       WikiEL.ETL.RDF.Wikidata
-                       WikiEL.ETL.RDF.Yago
-                       WikiEL.ETL.Util
-                       WikiEL.Investopedia
-                       WikiEL.Misc
-                       WikiEL.NamedEntity
+                       -- Assert
+                       -- NER
+                       -- NER.Load
+                       -- NER.Type
+                       -- WikiEL
+                       -- WikiEL.BinarySearch
+                       -- WikiEL.Convert
+                       -- WikiEL.EntityDisambiguation
+                       -- WikiEL.EntityLinking
+                       -- WikiEL.EntityMentionPruning
+                       -- WikiEL.ETL.LoadData
+                       -- WikiEL.ETL.Parser
+                       -- WikiEL.ETL.RDF
+                       -- WikiEL.ETL.RDF.Binary
+                       -- WikiEL.ETL.RDF.Common
+                       -- WikiEL.ETL.RDF.Wikidata
+                       -- WikiEL.ETL.RDF.Yago
+                       -- WikiEL.ETL.Util
+                       -- WikiEL.Investopedia
+                       -- WikiEL.Misc
+                       -- WikiEL.NamedEntity
                        WikiEL.NETagger
-                       WikiEL.Old
-                       WikiEL.Run
+                       WikiEL.Parser
                        WikiEL.Type
-                       WikiEL.Type.Equity
-                       WikiEL.Type.FileFormat
-                       WikiEL.Type.RDF.Wikidata
-                       WikiEL.Type.RDF.Yago
-                       WikiEL.Type.Wikidata
-                       WikiEL.Type.Wikipedia
-                       WikiEL.Type.WordNet
-                       WikiEL.WikiEntityClass
-                       WikiEL.WikiEntityTagger
-                       WikiEL.WikiNamedEntityTagger
-                       WikiEL.WordNet
+                       WikiEL.Util
+                       -- WikiEL.Old
+                       -- WikiEL.Run
+                       -- WikiEL.Type
+                       -- WikiEL.Type.Equity
+                       -- WikiEL.Type.FileFormat
+                       -- WikiEL.Type.RDF.Wikidata
+                       -- WikiEL.Type.RDF.Yago
+                       -- WikiEL.Type.Wikidata
+                       -- WikiEL.Type.Wikipedia
+                       -- WikiEL.Type.WordNet
+                       -- WikiEL.WikiEntityClass
+                       -- WikiEL.WikiEntityTagger
+                       -- WikiEL.WikiNamedEntityTagger
+                       -- WikiEL.WordNet
 
   other-extensions:    OverloadedStrings
                        GeneralizedNewtypeDeriving

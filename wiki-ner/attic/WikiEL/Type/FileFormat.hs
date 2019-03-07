@@ -19,21 +19,6 @@ data PropertyNameRow = PropertyNameRow { _prop     :: PropertyID
                      deriving (Show)
 
 --
-newtype EntityReprFile = EntityReprFile { unEntityReprFile :: FilePath }
-                        deriving (Show)
-
-data EntityReprRow = EntityReprRow { _uid  :: ItemID
-                                   , _repr :: ItemRepr
-                                   }
-                    deriving (Show)
-
---
-newtype ItemIDFile = ItemIDFile { unItemIDFile :: FilePath }
-                   deriving (Show)
-
-type ItemIDRow = ItemID
-
---
 newtype SubclassRelationFile = SubclassRelationFile { unSubclassRelationFile :: FilePath }
                              deriving (Show)
 

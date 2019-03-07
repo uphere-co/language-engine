@@ -1,9 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module WikiEL.ETL.Parser (
-  module WikiEL.ETL.Parser
-, module WikiEL.Type.FileFormat
-) where
+module WikiEL.Parser where
 
 import           Data.Text                             (Text)
 import           Control.Applicative                   ((<|>))
@@ -11,11 +8,8 @@ import           Data.Attoparsec.Text
 import qualified Data.Text                     as T
 
 
-import           WikiEL.Type.Wikidata
-import           WikiEL.Type.Wikipedia
-import           WikiEL.Type.WordNet
-import           WikiEL.Type.Equity
-import           WikiEL.Type.FileFormat
+import           WikiEL.Type
+
 
 {-!
   Attoparsec parsers for various types. 
