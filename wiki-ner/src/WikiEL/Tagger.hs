@@ -5,9 +5,7 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TupleSections      #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
-module WikiEL.Tagger
-  ( newNETagger
-  ) where
+module WikiEL.Tagger where
 
 import           Control.Arrow        ( second )
 import           Control.Lens         ( (^.), (^..), _1, _3, to )

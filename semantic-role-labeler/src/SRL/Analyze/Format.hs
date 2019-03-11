@@ -38,9 +38,7 @@ import           NLP.Syntax.Type.XBar                    (CompVP(..),PreAnalysis
 import           NLP.Type.CoreNLP                        (Token,token_lemma,token_pos)
 import           NLP.Type.PennTreebankII
 import           NLP.Type.TagPos                         (CharIdx,TokIdx,TagPos(..),SentItem)
-import qualified WikiEL                        as WEL
-import           WikiEL.Type                             (EMInfo,EntityMention,PreNE,UIDCite(..),_emuid)
-import           WikiEL.WikiNamedEntityTagger            (resolvedUID)
+import           WikiEL.Type                             (EMInfo,EntityMention,PreNE,UIDCite(..),_emuid,entityName,resolvedUID)
 --
 import           SRL.Analyze.Match.Frame                 (matchFrame)
 import           SRL.Analyze.Type                        (DocStructure(..),SentStructure(..),VerbStructure(..)
@@ -159,7 +157,7 @@ formatPreNE tag = case resolvedUID tag of
 
 
 formatEMInfo :: EMInfo Text -> Text
-formatEMInfo em@(_,_,tag) = sformat (ls 25 % " " % ls 20) (WEL.entityName em) (formatPreNE tag)
+formatEMInfo em@(_,_,tag) = sformat (ls 25 % " " % ls 20) (entityName em) (formatPreNE tag)
 
 
 formatTagged :: [[Maybe Token]]

@@ -21,6 +21,7 @@ import           Data.Text                     ( Text )
 import           Data.Tree                     ( Forest )
 import           GHC.Generics                  ( Generic )
 ------ other language-engine
+import           CompanyEL.Type                ( CompanyInfo )
 import           Data.Range                    ( Range )
 import           FrameNet.Query.Frame          ( FrameDB )
 import           Lexicon.Type                  ( ArgPattern
@@ -31,7 +32,6 @@ import           Lexicon.Type                  ( ArgPattern
                                                , RolePattInstance
                                                , SenseID
                                                )
-import           NER.Type                      ( CompanyInfo )
 import           NLP.Syntax.Type.Verb          ( VerbProperty(..))
 import           NLP.Syntax.Type.XBar          ( Zipper,X'Tree,PreAnalysis,MarkType(..),Phase(..))
 import           NLP.Type.CoreNLP              ( Dependency,Sentence,SentenceIndex,Token)

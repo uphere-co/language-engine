@@ -56,24 +56,5 @@ getNETags = map _ftype
 
 
 
-uidCandidates :: PreNE -> [ItemID]
-uidCandidates (UnresolvedUID _)      = []
-uidCandidates (AmbiguousUID (ids,_)) = ids
-uidCandidates (Resolved     (i,_))  = [i]
-uidCandidates (UnresolvedClass ids)  = ids
-uidCandidates (OnlyTextMatched i _)    = [i]
-
-isResolved :: PreNE -> Bool
-isResolved (Resolved _ ) = True
-isResolved _ = False
-
-resolvedUID :: PreNE -> Either String ItemID
-resolvedUID (Resolved (i,_))     = Right i
-resolvedUID (UnresolvedUID _)     = Left "Unresolved ItemID"
-resolvedUID (AmbiguousUID _)      = Left "Ambiguous ItemID"
-resolvedUID (UnresolvedClass _)   = Left "Unresolved named entity class"
-resolvedUID (OnlyTextMatched i _) = Right i
-
-
     
 

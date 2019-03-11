@@ -39,6 +39,8 @@ library
                        -- WikiEL.Investopedia
                        -- WikiEL.Misc
                        -- WikiEL.NamedEntity
+                       CompanyEL.Load
+                       CompanyEL.Type
                        WikiEL.Match
                        WikiEL.Parser
                        WikiEL.Tagger

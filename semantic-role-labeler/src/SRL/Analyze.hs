@@ -23,6 +23,8 @@ import           System.Console.Haskeline ( runInputT, defaultSettings, getInput
 import           System.Environment       ( getEnv )
 import           System.Process           ( readProcess )
 ------ other language-engine
+import           CompanyEL.Load           ( getCompanyListFromJSON )
+import           CompanyEL.Type           ( CompanyInfo(..), alias, companyId )
 import           CoreNLP.Simple           ( prepare )
 import           CoreNLP.Simple.Type      ( tokenizer, words2sentences
                                           , postagger, lemma, sutime
@@ -36,15 +38,13 @@ import           Lexicon.Query            ( adjustRolePattInsts, loadRoleInsts
                                           )
 import           Lexicon.Data             ( loadSenseInventory )
 import           MWE.Util                 ( mkTextFromToken )
-import           NER.Load                 ( getCompanyListFromJSON )
-import           NER.Type                 ( CompanyInfo(..), alias, companyId )
 import           NLP.Syntax.Format        ( formatX'Tree )
 import           NLP.Syntax.Type.XBar     ( SPhase(..) )
 import           OntoNotes.Corpus.Load    ( senseInstStatistics )
 import           OntoNotes.Type.SenseInventory ( inventory_lemma )
 import           Text.Format.Dot          ( mkLabelText )
 import           Text.Search.New.Generic.SearchTree ( addTreeItem )
-import           WikiEL.NETagger          ( newNETagger )
+import           WikiEL.Tagger            ( newNETagger )
 import           WikiEL.Type              ( emptyNETagger )
 import           WordNet.Query            ( loadDB )
 --
