@@ -2,9 +2,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module WikiEL.Type where
 
-import           Control.Lens  ( makeLenses, makePrisms )
+import           Control.Lens  ( (^.), makeLenses, makePrisms )
 import           Data.Aeson    ( FromJSON(..), ToJSON(..), defaultOptions
                                , genericParseJSON, genericToJSON )
 import           Data.Hashable ( Hashable )
@@ -18,8 +19,8 @@ import GHC.Generics (Generic)
 ------ other language-engine
 import           Graph.Internal.Hash  ( WordHash )
 import           NLP.Type.CoreNLP     ( Sentence )
-import           NLP.Type.NamedEntity ( NamedEntityClass(..) )
-
+import           NLP.Type.NamedEntity ( NamedEntity, NamedEntityClass(..), OrderedNamedEntity )
+import qualified NLP.Type.NamedEntity as N
 
 -- old WikiEL.Type.Wikidata
 
@@ -295,3 +296,85 @@ newtype GICSsub = GICSsub { _gicsSub :: Text }
 
 instance Show GICSsub where
   show (GICSsub sector) = "GICS_sub:" ++ show sector
+
+-- old WikiEL.Convert
+
+getNameFromEntityMention :: EntityMention Text -> Text
+getNameFromEntityMention x =
+  case x of
+    Cite _uid _ref _info@(_ir,v,_ne) -> T.intercalate " " (V.toList v)
+    Self _uid      _info@(_ir,v,_ne) -> T.intercalate " " (V.toList v)
+
+
+getRangeFromEntityMention :: EntityMention Text -> (Int,Int)
+getRangeFromEntityMention x =
+  case x of
+    Cite _uid _ref _info@(ir,_v,_ne) -> (ir ^. beg,ir ^. end)
+    Self _uid      _info@(ir,_v,_ne) -> (ir ^. beg,ir ^. end)
+
+
+getUIDFromEntityMention :: EntityMention Text -> Int
+getUIDFromEntityMention x =
+  case x of
+    Cite uid _ref _info@(_ir,_v,_ne) -> (_emuid uid)
+    Self uid      _info@(_ir,_v,_ne) -> (_emuid uid)
+
+
+getNEFromEntityMention :: EntityMention Text -> Text
+getNEFromEntityMention x =
+  case x of
+    Cite _uid _ref _info@(_ir,_v,ne) -> (T.pack $ show ne)
+    Self _uid      _info@(_ir,_v,ne) -> (T.pack $ show ne)
+
+
+
+-- old WikiEL.WikiNamedEntityTagger
+
+uidCandidates :: PreNE -> [ItemID]
+uidCandidates (UnresolvedUID _)      = []
+uidCandidates (AmbiguousUID (ids,_)) = ids
+uidCandidates (Resolved     (i,_))  = [i]
+uidCandidates (UnresolvedClass ids)  = ids
+uidCandidates (OnlyTextMatched i _)    = [i]
+
+isResolved :: PreNE -> Bool
+isResolved (Resolved _ ) = True
+isResolved _ = False
+
+resolvedUID :: PreNE -> Either String ItemID
+resolvedUID (Resolved (i,_))     = Right i
+resolvedUID (UnresolvedUID _)     = Left "Unresolved ItemID"
+resolvedUID (AmbiguousUID _)      = Left "Ambiguous ItemID"
+resolvedUID (UnresolvedClass _)   = Left "Unresolved named entity class"
+resolvedUID (OnlyTextMatched i _) = Right i
+
+
+-- old WikiEL.EntityLinking
+
+mayRefer :: NamedEntity -> NamedEntity -> Bool
+mayRefer src target = (N._type src == N._type target) && T.isInfixOf (N._str src) (N._str target)
+
+canRefer :: OrderedNamedEntity -> OrderedNamedEntity -> Bool
+canRefer src target = (N._order src > N._order target) && mayRefer (N._entity src) (N._entity target)
+
+
+entityUID :: EntityMention w -> Either String ItemID
+entityUID m = resolvedUID tag
+  where
+    (_,_,tag) = _info m
+
+mentionedEntityName :: EntityMention Text -> Text
+mentionedEntityName em = entityName (_info em)
+
+entityUIDcandidates :: EntityMention w -> [ItemID]
+entityUIDcandidates m = uidCandidates tag
+  where
+    (_,_,tag) = _info m
+
+
+entityPreNE :: EntityMention a -> PreNE
+entityPreNE mention = ne
+  where (_,_, ne) = _info mention
+
+hasResolvedUID :: EntityMention a -> Bool
+hasResolvedUID mention  = isResolved (entityPreNE mention)
