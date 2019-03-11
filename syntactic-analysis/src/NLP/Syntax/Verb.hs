@@ -20,7 +20,6 @@ import           Data.IntMap                                 (IntMap)
 import           Data.List                                   (sortBy)
 import           Data.Text                                   (Text)
 import           Data.Maybe
-import           Data.Monoid
 --
 import           Data.Attribute
 import           Data.Bitree

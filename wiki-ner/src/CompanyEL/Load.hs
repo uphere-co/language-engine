@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module NER.Load where
+module CompanyEL.Load where
 
 import           Control.Lens               ((^.),_2)
 import           Control.Monad              (forM)
@@ -19,13 +19,15 @@ import qualified Data.Text.IO         as T.IO
 import qualified Data.Vector          as V
 import           System.FilePath            ((</>))
 --
-import           NER.Type
+import           CompanyEL.Type
 import qualified WikiEL.ETL.LoadData     as LD
 import           WikiEL.Run                    (reprFileG)
 import qualified WikiEL.Type.FileFormat  as FF
 import qualified WikiEL.Type.Wikidata    as WD
 
 
+companyDataDir = "/data/groups/uphere/data/NER/company"
+wikiDataDir = "/data/groups/uphere/wikidata"
 
 
 mkNameUIDHM :: [(WD.ItemID,Text)] -> HM.HashMap Text WD.ItemID
@@ -40,7 +42,7 @@ mkUIDAliasHM nameTable = foldl' (\acc (i,n) -> HM.insertWith (\xs1 -> (\xs2 -> x
 loadNameTable :: FilePath -> IO [(WD.ItemID,Text)]
 loadNameTable dataDir = do
   reprs <- LD.loadEntityReprs (reprFileG dataDir)
-  return $ map (\x -> (FF._uid x,(WD._repr . FF._repr) x)) reprs
+  pure $ map (\x -> (FF._uid x,(WD._repr . FF._repr) x)) reprs
 
 
 aliasFinder :: (Hashable t, Hashable k, Eq t, Eq k) => HM.HashMap t k -> HM.HashMap k a -> t -> Maybe a
@@ -57,7 +59,8 @@ getCompanyListFromJSON fp = do
   let mresult = A.decode lbstr
   case mresult of
     Nothing     -> error "Company list is not valid."
-    Just result -> return result
+    Just result -> pure result
+
 
 
 
@@ -66,7 +69,7 @@ constructCompanyListFromCSV nameTable = do
   let nuid = mkNameUIDHM nameTable
       uida = mkUIDAliasHM nameTable
 
-  let fps = map ("/data/groups/uphere/data/NER/company" </>) ["AMEX.csv","NASDAQ.csv","NYSE.csv"]
+  let fps = map (companyDataDir </>) ["AMEX.csv","NASDAQ.csv","NYSE.csv"]
   clist <- fmap concat $ forM fps $ \fp -> do
     txt' <- T.IO.readFile fp
     let tlines = T.lines txt'
@@ -75,23 +78,31 @@ constructCompanyListFromCSV nameTable = do
     let (ecompany :: Either String (V.Vector CSVListedCompany)) = C.decode C.HasHeader bstr
     case ecompany of
       Left err -> error err
-      Right  v -> return $ V.toList v
+      Right  v -> pure $ V.toList v
 
   aList <- flip mapM clist $ \c -> do
-    let cinfo = \i -> CompanyInfo i (c ^. csvTicker) (c ^. csvName) (fromMaybe [c ^. csvName] $ aliasFinder nuid uida (c ^. csvName)) (c ^. csvSector) (c ^. csvIndustry)
-    return cinfo
+    let cinfo = \i -> CompanyInfo i
+                        (c ^. csvTicker)
+                        (c ^. csvName)
+                        (fromMaybe [c ^. csvName] $ aliasFinder nuid uida (c ^. csvName))
+                        (c ^. csvSector) (c ^. csvIndustry)
+    pure cinfo
 
-  bstr <- BL.readFile "/data/groups/uphere/wikidata/public_companies.csv"
+  bstr <- BL.readFile (wikiDataDir </> "public_companies.csv")
   let ecompany = C.decode C.HasHeader bstr
 
   -- (wikipage_name,name,wikipage_market,market)
   (clist2 :: [(Text,Text,Text,Text)]) <- case ecompany of
     Left err -> error err
     Right v -> do
-      return (V.toList v)
+      pure (V.toList v)
 
   aList2 <- flip mapM clist2 $ \c -> do
-    let cinfo = \i -> CompanyInfo i "" (c ^. _2) (fromMaybe [c ^. _2] $ aliasFinder nuid uida (c ^. _2)) "" ""
-    return cinfo
+    let cinfo = \i -> CompanyInfo i ""
+                        (c ^. _2)
+                        (fromMaybe [c ^. _2] $ aliasFinder nuid uida (c ^. _2))
+                        ""
+                        ""
+    pure cinfo
 
-  return (zipWith (\x f -> f x) [1..] (aList ++ aList2))
+  pure (zipWith (\x f -> f x) [1..] (aList ++ aList2))

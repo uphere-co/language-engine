@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-module NER.Type where
+module CompanyEL.Type where
 
 import Control.Lens.TH  (makeLenses)
 import Data.Aeson
