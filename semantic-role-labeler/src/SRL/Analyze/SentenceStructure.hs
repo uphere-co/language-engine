@@ -22,9 +22,9 @@ import qualified Data.Text                         as T
 import           Data.Text                                 (Text)
 import qualified Data.Vector                       as V
 --
+import           CompanyEL.Type                            (CompanyInfo(..),ticker)
 import           CoreNLP.Simple.Convert                    (mkLemmaMap)
 import           Data.Range                                (elemIsStrictlyInsideR)
-import           NER.Type                                  (CompanyInfo(..),ticker)
 import           NLP.Syntax                                (syntacticAnalysis)
 import           NLP.Syntax.Verb                           (verbPropertyFromPennTree)
 import           NLP.Syntax.Type.Verb                      (VerbProperty,vp_lemma,vp_index)
@@ -41,15 +41,21 @@ import           NLP.Type.CoreNLP                          ( SentenceIndex, Toke
 import           NLP.Type.PennTreebankII                   (Lemma(..),PennTree)
 import           NLP.Type.TagPos                           (TagPos(..),TokIdx(..),mergeTagPos)
 import           Text.Search.New.ParserCustom              (pTreeAdvGBy)
-import           WikiEL.Convert                            (getRangeFromEntityMention)
-import           WikiEL.EntityLinking                      (entityPreNE,entityName)
-import           WikiEL.Type                               ( EntityMention, EntityMentionUID(..)
-                                                           , IRange(..), NETagger(..)
-                                                           , TextMatchedEntityType(..)
-                                                           , PreNE(..), UIDCite(..)
+import           WikiEL.Tagger                             ( orgClass
+                                                           , personClass
+                                                           , brandClass
                                                            )
-import           WikiEL.Type.Wikidata                      (ItemID(..))
-import           WikiEL.WikiEntityClass                    (orgClass,personClass,brandClass)
+import           WikiEL.Type                               ( EntityMention
+                                                           , EntityMentionUID(..)
+                                                           , IRange(..), ItemID(..)
+                                                           , NETagger(..)
+                                                           , TextMatchedEntityType(..)
+                                                           , PreNE(..)
+                                                           , UIDCite(..)
+                                                           , entityName
+                                                           , entityPreNE
+                                                           , getRangeFromEntityMention
+                                                           )
 import           WordNet.Type.Lexicographer                (LexicographerFile)
 --
 import           SRL.Analyze.Sense                         (getVerbSenses)
