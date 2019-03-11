@@ -1,43 +1,38 @@
-{-# LANGUAGE BangPatterns      #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TupleSections     #-}
-
-module WikiEL.NETagger
+{-# LANGUAGE BangPatterns       #-}
+{-# LANGUAGE ExplicitNamespaces #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TupleSections      #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+module WikiEL.Tagger
   ( newNETagger
   ) where
 
 import           Control.Arrow        ( second )
-import           Control.Lens         ( (^.), (^..), _1, _3, makeLenses, makePrisms, to )
-import           Control.Monad.Primitive               (PrimMonad, PrimState)
-import           Data.Aeson           ( FromJSON(..), ToJSON(..), defaultOptions
-                                      , genericParseJSON, genericToJSON
-                                      )
+import           Control.Lens         ( (^.), (^..), _1, _3, to )
 import           Data.Function        ( on )
-import           Data.Hashable        ( Hashable )
 import qualified Data.List as L
 import           Data.Maybe           ( catMaybes, fromMaybe )
-import           Data.Ord                              (Ord)
 import qualified Data.Set as S
 import           Data.Text            ( Text )
 import qualified Data.Text as T
 import qualified Data.Text.IO as T.IO
 import           Data.Vector          ( Vector )
 import qualified Data.Vector as V
-import qualified Data.Vector.Algorithms.Search as VS
-import           Data.Vector.Generic.Mutable (MVector)
+import qualified Data.Vector.Algorithms.Intro as VA
 import qualified Data.Vector.Unboxed as UV
 import           Data.List            ( foldl', maximumBy, sortBy )
 import           Data.HashMap.Strict  ( HashMap )
 import qualified Data.HashMap.Strict as HM
 import           Data.Maybe           ( mapMaybe )
-import           GHC.Generics         ( Generic )
 import           System.FilePath      ( (</>) )
 ------ other language-engine
-import           Graph.Internal.Hash  ( WordHash )
-import           NLP.Type.NamedEntity ( NamedEntityClass(..), NamedEntityFrag(..) )
+import           Graph.Internal.Hash  ( wordHash )
+import           NLP.Type.NamedEntity ( NamedEntityClass(..)
+                                      , NamedEntityFrag(..)
+                                      , classify
+                                      )
 import           NLP.Type.PennTreebankII ( POSTag(..), TernaryLogic(..), isNoun )
 import           NLP.Type.CoreNLP     ( Sentence
                                       , sentenceNER
@@ -46,145 +41,48 @@ import           NLP.Type.CoreNLP     ( Sentence
                                       , token_pos
                                       )
 ------ wiki-ner
-import WikiEL.Parser (entityRepr)
--- import           WikiEL               ( extractFilteredEntityMentions )
--- import           WikiEL.Type          ( PreNE(..), UIDCite(..)
---                                       , beg, end
---                                      )
--- import           WikiEL.Run           ( runEL, classFilesG, reprFileG )
--- import qualified WikiEL.EntityLinking    as EL
--- import qualified WikiEL.ETL.LoadData     as LD
--- import           WikiEL.Type          ( NameUIDTable, NETagger(..), WikiuidNETag )
--- import qualified WikiEL.Type             as WT
--- import           WikiEL.Type.FileFormat ( EntityReprRow(..) )
--- import           WikiEL.Type.Wikidata   ( ItemID )
--- import qualified WikiEL.Type.Wikidata    as WD
--- import qualified WikiEL.WikiEntityClass  as WEC
--- import qualified WikiEL.WikiEntityTagger as WET
-
-
--- old WikiEL.BinarySearch
-
-
-binarySearchLR :: (PrimMonad m, MVector v e, Ord e) => v (PrimState m) e -> e -> m (Int,Int)
-binarySearchLR vec elm = do
-  idxL <- VS.binarySearchL vec elm
-  idxR <- VS.binarySearchR vec elm
-  return (idxL, idxR)
-
-binarySearchLRBy :: (PrimMonad m, MVector v e) => VS.Comparison e -> v (PrimState m) e -> e -> m (Int,Int)
-binarySearchLRBy comp vec elm = do
-  idxL <- VS.binarySearchLBy comp vec elm
-  idxR <- VS.binarySearchRBy comp vec elm
-  return (idxL, idxR)
-
-binarySearchLRByBounds :: (PrimMonad m, MVector v e) => VS.Comparison e -> v (PrimState m) e -> e -> Int -> Int -> m (Int,Int)
-binarySearchLRByBounds comp vec elm l u = do
-  idxL <- VS.binarySearchLByBounds comp vec elm l u
-  idxR <- VS.binarySearchRByBounds comp vec elm l u
-  return (idxL, idxR)
-
--- old WikiEL.Misc
-
-relativePos :: IRange -> IRange -> RelativePosition
-relativePos (IRange lbeg lend) (IRange rbeg rend)
-  -- Note ordering is crucial for correct pattern matching; do not change it unless unavoidable.
-  | lend <= rbeg = LbeforeR
-  | rend <= lbeg = RbeforeL
-  | lbeg == rbeg && rend == lend = Coincide
-  | lbeg <= rbeg && rend <= lend = RinL
-  | rbeg <= lbeg && lend <= rend = LinR
-  | rbeg < lbeg &&  rend < lend = RoverlapL
-  | lbeg < rbeg &&  lend < rend = LoverlapR
-  | otherwise = error "Logical bug in nextIRange"
-
-untilNoOverlap :: (a->RelativePosition) -> [a] -> [a]
-untilNoOverlap _ [] = []
-untilNoOverlap f ranges@(r:rs) | LbeforeR == f r = ranges
-                               | otherwise       = untilNoOverlap f rs
-
--- untilNoOverlap f (_:rs) = untilNoOverlap f rs
-
--- Vector algorithms
--- isContain : check whether a slice of a 2nd input vector is a 1st input vector.
-isContain :: Eq a => Vector a -> Vector a -> Bool
-isContain = f 
-  where
-    zipEq x y = V.all (uncurry (==)) (V.zip x y)
-    f sub vec | V.length sub > V.length vec = False
-    f sub vec | zipEq sub vec = True
-    f sub vec                 = f sub (V.tail vec)
---
-strictSlice :: Eq a => Vector a -> Vector a -> Bool
-strictSlice sub vec = isContain sub vec && (V.length sub < V.length vec)
-
-subVector :: IRange -> Vector a -> Vector a
-subVector (IRange beg end) = V.slice beg (end-beg)
-
--- old WikiEL.WikiEntityTagger
-
-
-greedyMatchImpl :: Vector WordsHash -> WordsHash -> (Int, IRange) -> (Int, IRange)
-greedyMatchImpl entities ws (i, IRange beg end) = runST $ do
-  mvec <- V.unsafeThaw entities
-  (idxL, idxR) <- binarySearchLRByBounds (ithElementOrdering i) mvec ws beg end
-  if idxL==idxR
-    then return (i, IRange beg end)
-    else return (greedyMatchImpl entities ws (i+1, IRange idxL idxR))
-
-
-
-
-greedyMatch :: Vector WordsHash -> WordsHash -> (Int, IRange)
-greedyMatch entities ws = greedyMatchImpl entities ws (0, IRange 0 (length entities))
-
-
-
-getMatchedIndexes :: Vector WordsHash -> (Int, IRange) -> (Int, Vector Int)
-getMatchedIndexes vec (len, IRange beg end) = (len, matchedIdxs)
-  where
-    ivec = V.indexed vec
-    tmp  = V.slice beg (end-beg) ivec
-    f (i,x) | UV.length x == len = Just i
-    f _ = Nothing
-    matchedIdxs = V.mapMaybe f tmp    
-
-
-greedyMatchedItems :: Vector WordsHash-> WordsHash-> (Int, Vector Int)
-greedyMatchedItems entities = getMatchedIndexes entities . greedyMatch entities
-
-
-greedyAnnotationImpl :: Vector WordsHash -> WordsHash -> Int -> [(IRange, Vector Int)] -> [(IRange, Vector Int)]
-greedyAnnotationImpl entities text offset results | text == (UV.empty :: WordsHash) = results
-                                                  | otherwise  =
-  let
-    (len, matched) = greedyMatchedItems entities text
-    r = (IRange offset (offset+len), matched)
-  in
-    if len==0 || null matched
-      -- According to Hackage, UV.tail and UV.drop yield elements "without copying"
-      then greedyAnnotationImpl entities (UV.tail text) (offset+1) results
-      else greedyAnnotationImpl entities (UV.drop len text) (offset+len) (r:results)
-
---
--- | Vector Int : indexes of matched elements. To be converted to ItemIDs using _uids.
---
-greedyAnnotation :: Vector WordsHash -> WordsHash -> [(IRange, Vector Int)]
-greedyAnnotation entities text = greedyAnnotationImpl entities text 0 []
+import WikiEL.Match ( greedyAnnotation )
+import WikiEL.Parser (getEntityRepr,getItemID)
+import WikiEL.Type ( EntityMention
+                   , EntityMentionUID(..)
+                   , EntityReprFile(..)
+                   , EntityReprRow(..)
+                   , EMInfo
+                   , IRange(..)
+                   , ItemClass(..)
+                   , ItemID(..)
+                   , ItemIDRow
+                   , ItemIDFile(..)
+                   , ItemRepr(..)
+                   , NameUIDTable(..)
+                   , NETagger(..)
+                   , PreNE(..)
+                   , RelativePosition(..)
+                   , UIDCite(..)
+                   , WikiuidNETag(..)
+                   , type WordsHash
+                   , beg
+                   , end
+                   , set
+                   , uids
+                   , names
+                   , entityName
+                   )
+import WikiEL.Util ( relativePos, strictSlice, subVector, untilNoOverlap )
 
 
 buildEntityTable :: [EntityReprRow] -> NameUIDTable
 buildEntityTable entities = NameUIDTable uids names
   where
     nameOrdering (_lhsUID, lhsName) (_rhsUID, rhsName) = compare lhsName rhsName
-    entitiesByName = V.modify (sortBy nameOrdering) (V.fromList (map itemTuple entities))
+    entitiesByName = V.modify (VA.sortBy nameOrdering) (V.fromList (map itemTuple entities))
     uids  = V.map fst entitiesByName
     names = V.map snd entitiesByName
 
 wikiAnnotator:: NameUIDTable -> [Text] -> [(IRange, Vector ItemID)]
 wikiAnnotator entities ws = matchedItems
   where
-    tokens    = wordsHash ws  
+    tokens    = wordsHash ws
     matchedIdxs  = greedyAnnotation (_names entities) tokens
     matchedItems = map (second (V.map (V.unsafeIndex (_uids entities)))) matchedIdxs
 
@@ -211,18 +109,18 @@ humanRuleClass  = buildItemClass "Q1151067"  "HumanRule"
 buildingClass   = buildItemClass "Q41176"    "Building"
 
 buildItemClass :: Text -> Text -> ItemClass
-buildItemClass x name = ItemClass (itemID x) name
+buildItemClass x name = ItemClass (getItemID x) name
 
 wec_loadFiles :: [(ItemClass, ItemIDFile)] -> IO WikiuidNETag
 wec_loadFiles pairs = do
   lists <- mapM loadTypedUIDs pairs
   return $ WikiuidNETag (S.fromList (mconcat lists))
 
-{-| 
-  Since CoreNLP NER classes, NEClass, are more coarse, we need inclusion, or a sort of subclass, relationship 
+{-|
+  Since CoreNLP NER classes, NEClass, are more coarse, we need inclusion, or a sort of subclass, relationship
   between ItemClass and NEClass.
 -}
-mayCite :: NamedEntityClass -> ItemClass -> Bool 
+mayCite :: NamedEntityClass -> ItemClass -> Bool
 mayCite Org    c | c==orgClass      = True
 mayCite Person c | c==personClass   = True
 mayCite Loc    c | c==locationClass = True
@@ -242,7 +140,7 @@ guessItemClass2 :: WikiuidNETag -> NamedEntityClass -> ItemID -> ItemClass
 guessItemClass2 tags ne i | hasNETag tags (i,ne) = fromNEClass ne
                           | otherwise            = guessItemClass tags i
 -- guessItemClass2 tags ne i = guessItemClass tags id
-  
+
 
 fromNEClass :: NamedEntityClass -> ItemClass
 fromNEClass Org    = orgClass
@@ -250,6 +148,21 @@ fromNEClass Person = personClass
 fromNEClass Loc    = locationClass
 fromNEClass _      = otherClass
 
+
+
+
+loadTypedUIDs :: (ItemClass , ItemIDFile) -> IO [(ItemID, ItemClass)]
+loadTypedUIDs (tag, fileName) = do
+  items <- loadItemIDs fileName
+  let
+    uids = map (\x -> (x, tag)) items
+  return uids
+
+hasNETag :: WikiuidNETag -> (ItemID, NamedEntityClass) -> Bool
+hasNETag (WikiuidNETag tags) (i,stag) | stag /= Other = S.member (i,fromNEClass stag) tags
+                                      | otherwise     = any (\x -> S.member (i,x) tags) extendedClasses
+
+-- hasNETag (WikiuidNETag tags) (i,stag) = any (\x -> S.member (i,x) tags) extendedClasses
 
 -- old WikiEL.ETL.LoadData
 
@@ -262,7 +175,10 @@ loadFile p f file = do
 
 
 loadEntityReprs :: EntityReprFile -> IO [EntityReprRow]
-loadEntityReprs = loadFile unEntityReprFile entityRepr
+loadEntityReprs = loadFile unEntityReprFile getEntityRepr
+
+loadItemIDs :: ItemIDFile -> IO [ItemIDRow]
+loadItemIDs = loadFile unItemIDFile getItemID
 
 -- old WikiEL.EntityLinking
 
@@ -285,7 +201,7 @@ tryEntityLink (trange, twords, tNE) (srange, swords, sNE) =
     g ttag (UnresolvedUID stag)    = mayCite stag ttag
     g ttag (AmbiguousUID (_,stag)) = mayCite stag ttag
     g _ttag _                      = False
-    
+
     f pos textMatch (Resolved (uid,ttag)) src | pos==LbeforeR && textMatch && g ttag src =
       Just (srange,swords, Resolved (uid,ttag))
     f _ _ _ _ = Nothing
@@ -387,6 +303,24 @@ filterEMbyPOS wholeTags = filter f
 
 
 -- old WikiEL.WikiNamedEntityTagger
+
+
+
+wordsHash :: [Text] -> WordsHash
+wordsHash = UV.fromList . map wordHash
+
+
+nameWordsHash :: ItemRepr -> WordsHash
+nameWordsHash (ItemRepr name) = wordsHash (T.words name)
+
+
+itemTuple :: EntityReprRow -> (ItemID, WordsHash)
+itemTuple (EntityReprRow uid name) = (uid, nameWordsHash name)
+
+
+
+
+
 namedEntityAnnotator:: NameUIDTable -> [NamedEntityFrag] -> [(IRange, Vector ItemID)]
 namedEntityAnnotator entities frags = reverse matchedItems
   where
@@ -463,7 +397,7 @@ resolveNEs ts lhss rhss = map (second assumeCorrectAnnotation) xs
 
 extractEntityMentions :: NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass)] -> [EntityMention Text]
 extractEntityMentions wikiTable uidNEtags neTokens = linked_mentions
-  where    
+  where
     stanford_nefs  = map (uncurry NamedEntityFrag) neTokens
     named_entities = getStanfordNEs stanford_nefs
     wiki_entities  = namedEntityAnnotator wikiTable stanford_nefs
@@ -477,7 +411,7 @@ extractEntityMentions wikiTable uidNEtags neTokens = linked_mentions
 
 extractFilteredEntityMentions :: NameUIDTable -> WikiuidNETag -> [(Text, NamedEntityClass, POSTag)] -> [EntityMention Text]
 extractFilteredEntityMentions wikiTable uidNEtags tokens = filtered_mentions
-  where    
+  where
     neTokens = map (\(x,y,_)->(x,y)) tokens
     poss     = map (\(_,_,z)->z)     tokens
     all_linked_mentions = extractEntityMentions wikiTable uidNEtags neTokens

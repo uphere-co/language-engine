@@ -1,4 +1,11 @@
+{-# LANGUAGE ExplicitNamespaces #-}
 module WikiEL.Util where
+
+import           Data.Vector      ( Vector )
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
+
+import           WikiEL.Type      ( IRange(..), RelativePosition(..), type WordsHash )
 
 -- old WikiEL.Misc
 
@@ -21,6 +28,15 @@ untilNoOverlap f ranges@(r:rs) | LbeforeR == f r = ranges
 
 -- untilNoOverlap f (_:rs) = untilNoOverlap f rs
 
+
+untilOverlapOrNo :: (a->RelativePosition) -> [a] -> [a]
+untilOverlapOrNo _ [] = []
+untilOverlapOrNo f ranges@(r:rs) = case f r of
+  LbeforeR  -> ranges
+  LoverlapR -> ranges
+  _ -> untilOverlapOrNo f rs
+
+
 -- Vector algorithms
 -- isContain : check whether a slice of a 2nd input vector is a 1st input vector.
 isContain :: Eq a => Vector a -> Vector a -> Bool
@@ -36,4 +52,9 @@ strictSlice sub vec = isContain sub vec && (V.length sub < V.length vec)
 
 subVector :: IRange -> Vector a -> Vector a
 subVector (IRange beg end) = V.slice beg (end-beg)
+
+ithElementOrdering :: Int -> WordsHash -> WordsHash -> Ordering
+ithElementOrdering i lhs rhs | UV.length lhs <= i = LT
+                             | UV.length rhs <= i = GT
+                             | otherwise = compare (lhs UV.! i) (rhs UV.!i)
 

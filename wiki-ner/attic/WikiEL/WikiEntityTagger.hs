@@ -32,24 +32,7 @@ import qualified WikiEL.Type.Wikidata         as Wiki
 -}
 
 
-ithElementOrdering :: Int -> WordsHash -> WordsHash -> Ordering
-ithElementOrdering i lhs rhs | UV.length lhs <= i = LT
-                             | UV.length rhs <= i = GT
-                             | otherwise = compare (lhs!i) (rhs!i)
 
-
-
-
-wordsHash :: [Text] -> WordsHash
-wordsHash = UV.fromList . map wordHash
-
-
-nameWordsHash :: Wiki.ItemRepr -> WordsHash
-nameWordsHash (Wiki.ItemRepr name) = wordsHash (T.words name)
-
-
-itemTuple :: EntityReprRow -> (ItemID, WordsHash)
-itemTuple (EntityReprRow uid name) = (uid, nameWordsHash name)
 
 
 

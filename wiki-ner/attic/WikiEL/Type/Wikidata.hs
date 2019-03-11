@@ -12,9 +12,4 @@ import           GHC.Generics                          (Generic)
 
 
 
-newtype PropertyID = PropertyID { _propID :: Int }
-               deriving (Eq, Ord)
-instance Show PropertyID where
-  show (PropertyID uid) = "P" ++ show uid
-
 

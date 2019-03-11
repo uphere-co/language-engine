@@ -28,21 +28,10 @@ import           WikiEL.ETL.Parser
 
 
 
-loadTypedUIDs :: (ItemClass , ItemIDFile) -> IO [(ItemID, ItemClass)]
-loadTypedUIDs (tag, fileName) = do
-  items <- loadItemIDs fileName
-  let 
-    uids = map (\x -> (x, tag)) items
-  return uids
 
 fromList :: [(ItemID, ItemClass)] -> WikiuidNETag
 fromList pairs = WikiuidNETag (S.fromList pairs)
   
-hasNETag :: WikiuidNETag -> (ItemID, NamedEntityClass) -> Bool
-hasNETag (WikiuidNETag tags) (i,stag) | stag /= N.Other = S.member (i,fromNEClass stag) tags
-                                      | otherwise       = any (\x -> S.member (i,x) tags) extendedClasses
-                                        
--- hasNETag (WikiuidNETag tags) (i,stag) = any (\x -> S.member (i,x) tags) extendedClasses
 
     
 newtype SubclassUID   = SubclassUID { _sub :: ItemID}

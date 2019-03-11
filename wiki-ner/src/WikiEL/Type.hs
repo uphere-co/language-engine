@@ -1,4 +1,25 @@
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module WikiEL.Type where
+
+import           Control.Lens  ( makeLenses, makePrisms )
+import           Data.Aeson    ( FromJSON(..), ToJSON(..), defaultOptions
+                               , genericParseJSON, genericToJSON )
+import           Data.Hashable ( Hashable )
+import qualified Data.Set as S
+import           Data.Text     ( Text )
+import qualified Data.Text as T
+import           Data.Vector   ( Vector )
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
+import GHC.Generics (Generic)
+------ other language-engine
+import           Graph.Internal.Hash  ( WordHash )
+import           NLP.Type.CoreNLP     ( Sentence )
+import           NLP.Type.NamedEntity ( NamedEntityClass(..) )
+
 
 -- old WikiEL.Type.Wikidata
 
@@ -30,6 +51,11 @@ instance Show ItemID where
 newtype ItemRepr = ItemRepr { _repr :: Text}
                  deriving (Show, Eq, Ord)
 
+
+newtype PropertyID = PropertyID { _propID :: Int }
+               deriving (Eq, Ord)
+instance Show PropertyID where
+  show (PropertyID uid) = "P" ++ show uid
 
 -- old WikiEL.Type
 
@@ -79,10 +105,10 @@ data TextMatchedEntityType = PublicCompany | PrivateCompany deriving (Show,Eq,Ge
 instance ToJSON TextMatchedEntityType
 instance FromJSON TextMatchedEntityType
 
-data PreNE = UnresolvedUID NamedEntityClass           -- Tagged by CoreNLP NER, but no matched Wikidata UID                
+data PreNE = UnresolvedUID NamedEntityClass           -- Tagged by CoreNLP NER, but no matched Wikidata UID
            | AmbiguousUID ([ItemID],NamedEntityClass) -- Tagged by CoreNLP NER, and matched Wikidata UIDs of the NamedEntityClass
-           | Resolved (ItemID, ItemClass)             -- A wikidata UID of a CoreNLP NER Class type.                                
-           | UnresolvedClass [ItemID]                 -- Not tagged by CoreNLP NER, but matched Wikidata UID(s)                     
+           | Resolved (ItemID, ItemClass)             -- A wikidata UID of a CoreNLP NER Class type.
+           | UnresolvedClass [ItemID]                 -- Not tagged by CoreNLP NER, but matched Wikidata UID(s)
            | OnlyTextMatched ItemID TextMatchedEntityType
            deriving(Show, Eq, Generic)
 
@@ -107,7 +133,7 @@ instance Show EntityMentionUID where
 -}
 data UIDCite uid info = Cite { _uid  :: uid
                              , _ref  :: uid
-                             , _info :: info} 
+                             , _info :: info}
                       | Self { _uid  :: uid
                              , _info :: info}
                       deriving(Eq,Generic)
@@ -186,3 +212,86 @@ newtype ItemIDFile = ItemIDFile { unItemIDFile :: FilePath }
 type ItemIDRow = ItemID
 
 
+data PropertyNameRow = PropertyNameRow { _prop     :: PropertyID
+                                       , _propName :: Text
+                                       }
+                     deriving (Show)
+
+
+data Synset = Synset { _synsetRepr :: Text
+                     , _synsetPos  :: Text
+                     , _synsetIdx  :: Int
+                     }
+            deriving (Eq,Show)
+
+data SynsetY = SynsetY { _synsetYName :: Text
+                       , _synsetYId  :: Int
+                       }
+            deriving (Eq,Show)
+
+data WordNetMappingRow = WordNetMappingRow { _wordNetPageTitle :: Text
+                                           , _wordNetPageID    :: PageID
+                                           , _wordNetItemID    :: ItemID
+                                           , _wordNetSynset    :: Synset
+                                           }
+                       deriving (Show)
+
+type WikiTitleMappingRow = (ItemID, Text)
+
+
+
+data SubclassRelationRow = SubclassRelationRow { _sub :: ItemID
+                                               , _super :: ItemID
+                                               }
+                          deriving (Show,Eq)
+
+
+
+-- old WikiEL.Type.Wikipedia
+
+
+
+{-|
+  Each Wikipedia entity has their own page with a unique title.
+  Internally, each title has an unique page ID, too.
+  This IDs are appeared in Wikipedia dumps.
+  PageTitle is for representing Wikipedia title.
+  PageID is for representing a page id of a title.
+-}
+
+newtype PageID = PageID {_id :: Int }
+               deriving (Eq, Ord)
+
+instance Show PageID where
+  show (PageID uid) = "W" ++ show uid
+
+newtype PageTitle = PageTitle {_title :: Int }
+               deriving (Eq, Ord)
+
+instance Show PageTitle where
+  show (PageTitle title) = "enwiki/" ++ show title
+
+-- old WikiEL.Type.Equity
+
+newtype Symbol = Symbol { _symbol :: Text }
+               deriving (Eq, Ord, Show)
+newtype Exchange = Exchange { _exchange :: Text }
+                 deriving (Eq, Ord, Show)
+data EquityTicker = EquityTicker Exchange Symbol
+                  deriving (Eq, Ord)
+
+instance Show EquityTicker where
+  show (EquityTicker e s) = show (_exchange e) ++ ":" ++ show (_symbol s)
+
+
+newtype GICS = GICS { _gics :: Text }
+             deriving (Eq, Ord)
+
+instance Show GICS where
+  show (GICS sector) = "GICS:" ++ show sector
+
+newtype GICSsub = GICSsub { _gicsSub :: Text }
+             deriving (Eq, Ord)
+
+instance Show GICSsub where
+  show (GICSsub sector) = "GICS_sub:" ++ show sector

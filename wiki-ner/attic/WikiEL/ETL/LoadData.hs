@@ -22,8 +22,6 @@ loadPropertyNames = loadFile unPropertyNameFile propertyName
 
 
 
-loadItemIDs :: ItemIDFile -> IO [ItemIDRow]
-loadItemIDs = loadFile unItemIDFile itemID
 
 
 loadSubclassRelations :: SubclassRelationFile -> IO [SubclassRelationRow]

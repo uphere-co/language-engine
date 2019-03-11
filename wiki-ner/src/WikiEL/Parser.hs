@@ -2,13 +2,33 @@
 
 module WikiEL.Parser where
 
-import           Data.Text                             (Text)
-import           Control.Applicative                   ((<|>))
-import           Data.Attoparsec.Text
-import qualified Data.Text                     as T
+import           Data.Text            ( Text )
+import           Control.Applicative  ( (<|>) )
+import           Data.Attoparsec.Text ( Parser
+                                      , decimal
+                                      , parseOnly
+                                      , sepBy
+                                      , string
+                                      , takeTill
+                                      , takeWhile1
+                                      )
+import qualified Data.Text as T
 
-
-import           WikiEL.Type
+import           WikiEL.Type          ( EntityReprRow(..)
+                                      , GICS(..)
+                                      , GICSsub(..)
+                                      , ItemID(..)
+                                      , ItemRepr(..)
+                                      , PageID(..)
+                                      , PropertyID(..)
+                                      , PropertyNameRow(..)
+                                      , SubclassRelationRow(..)
+                                      , Symbol(..)
+                                      , Synset(..)
+                                      , SynsetY(..)
+                                      , WordNetMappingRow(..)
+                                      , WikiTitleMappingRow
+                                      )
 
 
 {-!
@@ -157,35 +177,35 @@ parserWikiTitleMappingRow = do
   Wrapping functions of above parsers for ease of usages.
 -}
   
-itemID :: Text -> ItemID
-itemID = getParseResult parserWikidataItemID
+getItemID :: Text -> ItemID
+getItemID = getParseResult parserWikidataItemID
 
-propertyID :: Text -> PropertyID
-propertyID = getParseResult parserWikidataPropertyID
+getPropertyID :: Text -> PropertyID
+getPropertyID = getParseResult parserWikidataPropertyID
 
-pageID :: Text -> PageID
-pageID = getParseResult parserWikipediaPageID
+getPageID :: Text -> PageID
+getPageID = getParseResult parserWikipediaPageID
 
-wordnetSynset :: Text -> Synset
-wordnetSynset = getParseResult parserWordNetSynset
+getWordnetSynset :: Text -> Synset
+getWordnetSynset = getParseResult parserWordNetSynset
 
-wordnetSynsetYAGO :: Text -> SynsetY
-wordnetSynsetYAGO = getParseResult parserWordNetSynsetYAGO
+getWordnetSynsetYAGO :: Text -> SynsetY
+getWordnetSynsetYAGO = getParseResult parserWordNetSynsetYAGO
 
-subclassRelation :: Text -> SubclassRelationRow
-subclassRelation = getParseResult parserSubclassRelation
+getSubclassRelation :: Text -> SubclassRelationRow
+getSubclassRelation = getParseResult parserSubclassRelation
 
-publicCompany :: Text -> (Text, GICS, GICSsub, Symbol, PageID, ItemID)
-publicCompany = getParseResult parserPublicCompanyLine
+getPublicCompany :: Text -> (Text, GICS, GICSsub, Symbol, PageID, ItemID)
+getPublicCompany = getParseResult parserPublicCompanyLine
 
-propertyName :: Text -> PropertyNameRow
-propertyName = getParseResult parserPropertyName
+getPropertyName :: Text -> PropertyNameRow
+getPropertyName = getParseResult parserPropertyName
 
-entityRepr :: Text -> EntityReprRow
-entityRepr = getParseResult parserEntityRepr
+getEntityRepr :: Text -> EntityReprRow
+getEntityRepr = getParseResult parserEntityRepr
 
-wordNetMapping :: Text -> WordNetMappingRow
-wordNetMapping = getParseResult parserWordNetSynsetRow
+getWordNetMapping :: Text -> WordNetMappingRow
+getWordNetMapping = getParseResult parserWordNetSynsetRow
 
-wikititleMapping :: Text -> WikiTitleMappingRow
-wikititleMapping = getParseResult parserWikiTitleMappingRow
+getWikititleMapping :: Text -> WikiTitleMappingRow
+getWikititleMapping = getParseResult parserWikiTitleMappingRow
