@@ -1,9 +1,13 @@
-module WikiEL.Misc where
+{-# LANGUAGE ExplicitNamespaces #-}
+module WikiEL.Util where
 
-import qualified Data.Vector                   as V
-import           Data.Vector                           (Vector)
---
-import           WikiEL.Type                           (IRange(..),RelativePosition(..))
+import           Data.Vector      ( Vector )
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
+
+import           WikiEL.Type      ( IRange(..), RelativePosition(..), type WordsHash )
+
+-- old WikiEL.Misc
 
 relativePos :: IRange -> IRange -> RelativePosition
 relativePos (IRange lbeg lend) (IRange rbeg rend)
@@ -23,6 +27,7 @@ untilNoOverlap f ranges@(r:rs) | LbeforeR == f r = ranges
                                | otherwise       = untilNoOverlap f rs
 
 -- untilNoOverlap f (_:rs) = untilNoOverlap f rs
+
 
 untilOverlapOrNo :: (a->RelativePosition) -> [a] -> [a]
 untilOverlapOrNo _ [] = []
@@ -47,3 +52,9 @@ strictSlice sub vec = isContain sub vec && (V.length sub < V.length vec)
 
 subVector :: IRange -> Vector a -> Vector a
 subVector (IRange beg end) = V.slice beg (end-beg)
+
+ithElementOrdering :: Int -> WordsHash -> WordsHash -> Ordering
+ithElementOrdering i lhs rhs | UV.length lhs <= i = LT
+                             | UV.length rhs <= i = GT
+                             | otherwise = compare (lhs UV.! i) (rhs UV.!i)
+

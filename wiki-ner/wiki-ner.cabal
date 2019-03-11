@@ -18,42 +18,46 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:
-                       Assert
-                       NER
-                       NER.Load
-                       NER.Type
-                       WikiEL
-                       WikiEL.BinarySearch
-                       WikiEL.Convert
-                       WikiEL.EntityDisambiguation
-                       WikiEL.EntityLinking
-                       WikiEL.EntityMentionPruning
-                       WikiEL.ETL.LoadData
-                       WikiEL.ETL.Parser
-                       WikiEL.ETL.RDF
-                       WikiEL.ETL.RDF.Binary
-                       WikiEL.ETL.RDF.Common
-                       WikiEL.ETL.RDF.Wikidata
-                       WikiEL.ETL.RDF.Yago
-                       WikiEL.ETL.Util
-                       WikiEL.Investopedia
-                       WikiEL.Misc
-                       WikiEL.NamedEntity
-                       WikiEL.NETagger
-                       WikiEL.Old
-                       WikiEL.Run
+                       -- Assert
+                       -- NER
+                       -- NER.Load
+                       -- NER.Type
+                       -- WikiEL
+                       -- WikiEL.BinarySearch
+                       -- WikiEL.Convert
+                       -- WikiEL.EntityDisambiguation
+                       -- WikiEL.EntityLinking
+                       -- WikiEL.EntityMentionPruning
+                       -- WikiEL.ETL.LoadData
+                       -- WikiEL.ETL.Parser
+                       -- WikiEL.ETL.RDF
+                       -- WikiEL.ETL.RDF.Binary
+                       -- WikiEL.ETL.RDF.Common
+                       -- WikiEL.ETL.RDF.Wikidata
+                       -- WikiEL.ETL.RDF.Yago
+                       -- WikiEL.ETL.Util
+                       -- WikiEL.Investopedia
+                       -- WikiEL.Misc
+                       -- WikiEL.NamedEntity
+                       WikiEL.Match
+                       WikiEL.Parser
+                       WikiEL.Tagger
                        WikiEL.Type
-                       WikiEL.Type.Equity
-                       WikiEL.Type.FileFormat
-                       WikiEL.Type.RDF.Wikidata
-                       WikiEL.Type.RDF.Yago
-                       WikiEL.Type.Wikidata
-                       WikiEL.Type.Wikipedia
-                       WikiEL.Type.WordNet
-                       WikiEL.WikiEntityClass
-                       WikiEL.WikiEntityTagger
-                       WikiEL.WikiNamedEntityTagger
-                       WikiEL.WordNet
+                       WikiEL.Util
+                       -- WikiEL.Old
+                       -- WikiEL.Run
+                       -- WikiEL.Type
+                       -- WikiEL.Type.Equity
+                       -- WikiEL.Type.FileFormat
+                       -- WikiEL.Type.RDF.Wikidata
+                       -- WikiEL.Type.RDF.Yago
+                       -- WikiEL.Type.Wikidata
+                       -- WikiEL.Type.Wikipedia
+                       -- WikiEL.Type.WordNet
+                       -- WikiEL.WikiEntityClass
+                       -- WikiEL.WikiEntityTagger
+                       -- WikiEL.WikiNamedEntityTagger
+                       -- WikiEL.WordNet
 
   other-extensions:    OverloadedStrings
                        GeneralizedNewtypeDeriving
@@ -103,56 +107,56 @@ library
 --                        -fno-warn-unused-do-bind
 --                        -fno-warn-orphans
 
-executable wikiel
-  hs-source-dirs:      app,test
-  main-is:             entityLinking.hs
-  other-modules:       Test.Data.Filename
-                       Test.Data.POS
-  build-depends:       base
-                     , text
-                     , wiki-ner
-                     , graph-algorithms
-                     , nlp-types
-  default-language: Haskell2010
-  ghc-options:         -O2 -Wall -Werror
-                       -threaded
-                       -fno-warn-unused-do-bind
-                       -fno-warn-orphans
+-- executable wikiel
+--   hs-source-dirs:      app,test
+--   main-is:             entityLinking.hs
+--   other-modules:       Test.Data.Filename
+--                        Test.Data.POS
+--   build-depends:       base
+--                      , text
+--                      , wiki-ner
+--                      , graph-algorithms
+--                      , nlp-types
+--   default-language: Haskell2010
+--   ghc-options:         -O2 -Wall -Werror
+--                        -threaded
+--                        -fno-warn-unused-do-bind
+--                        -fno-warn-orphans
 
 
-executable node-filter
-  hs-source-dirs:      app
-  main-is:             nodeFilter.hs
-  -- other-modules:
-  build-depends:       base
-                     , text
-                     , containers
-                     , vector
-                     , wiki-ner
-                     , graph-algorithms
-                     , nlp-types
-  default-language: Haskell2010
-  ghc-options:         -O2 -Wall -Werror
-                       -threaded
-                       -fno-warn-unused-do-bind
-                       -fno-warn-orphans
+-- executable node-filter
+--   hs-source-dirs:      app
+--   main-is:             nodeFilter.hs
+--   -- other-modules:
+--   build-depends:       base
+--                      , text
+--                      , containers
+--                      , vector
+--                      , wiki-ner
+--                      , graph-algorithms
+--                      , nlp-types
+--   default-language: Haskell2010
+--   ghc-options:         -O2 -Wall -Werror
+--                        -threaded
+--                        -fno-warn-unused-do-bind
+--                        -fno-warn-orphans
 
-executable wiki-etl
-  hs-source-dirs:      app/wiki-etl
-  main-is:             Main.hs
-  other-modules:
-  build-depends:       base
-                     , bytestring
-                     , pipes
-                     , pipes-bytestring
-                     , pipes-text
-                     , pipes-zlib
-                     , resourcet
-                     , text
+-- executable wiki-etl
+--   hs-source-dirs:      app/wiki-etl
+--   main-is:             Main.hs
+--   other-modules:
+--   build-depends:       base
+--                      , bytestring
+--                      , pipes
+--                      , pipes-bytestring
+--                      , pipes-text
+--                      , pipes-zlib
+--                      , resourcet
+--                      , text
 
-  default-language: Haskell2010
-  ghc-options:         -O2
-                       -Wall
-                       -threaded
-                       -fno-warn-unused-do-bind
-                       -fno-warn-orphans
+--   default-language: Haskell2010
+--   ghc-options:         -O2
+--                        -Wall
+--                        -threaded
+--                        -fno-warn-unused-do-bind
+--                        -fno-warn-orphans

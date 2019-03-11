@@ -14,24 +14,14 @@ import qualified WikiEL.Type.Equity            as E
 import qualified WikiEL.Type.Wikidata          as W
 
 
-loadFile :: (a->FilePath) -> (Text->b) -> a -> IO [b]
-loadFile p f file = do
-  filetxt <- T.IO.readFile (p file)
-  let
-    rows = map f (T.lines filetxt)
-  return rows
 
 
 loadPropertyNames :: PropertyNameFile -> IO [PropertyNameRow]
 loadPropertyNames = loadFile unPropertyNameFile propertyName
 
 
-loadEntityReprs :: EntityReprFile -> IO [EntityReprRow]
-loadEntityReprs = loadFile unEntityReprFile entityRepr
 
 
-loadItemIDs :: ItemIDFile -> IO [ItemIDRow]
-loadItemIDs = loadFile unItemIDFile itemID
 
 
 loadSubclassRelations :: SubclassRelationFile -> IO [SubclassRelationRow]
