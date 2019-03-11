@@ -19,16 +19,16 @@ import qualified Data.Text.IO as TIO
 import qualified Data.Vector as V
 import           System.FilePath     ( (</>) )
 --
-import           CompanyEL.Type
--- import qualified WikiEL.ETL.LoadData     as LD
-import           WikiEL.Tagger    ( loadEntityReprs, reprFileG )
-import           WikiEL.Type      ( ItemID(..), ItemRepr(..), EntityReprRow(..) )
--- import qualified WikiEL.Type.FileFormat  as FF
--- import qualified WikiEL.Type.Wikidata    as WD
+import           CompanyEL.Type      ( CompanyInfo(..)
+                                     , CSVListedCompany
+                                     , csvIndustry
+                                     , csvName
+                                     , csvSector
+                                     , csvTicker
+                                     )
+import           WikiEL.Tagger       ( loadEntityReprs, reprFileG )
+import           WikiEL.Type         ( ItemID(..), ItemRepr(..), EntityReprRow(..) )
 
-
--- companyDataDir = "/data/groups/uphere/data/NER/company"
--- wikiDataDir = "/data/groups/uphere/wikidata"
 
 
 mkNameUIDHM :: [(ItemID,Text)] -> HashMap Text ItemID
@@ -61,6 +61,11 @@ getCompanyListFromJSON fp = do
   case mresult of
     Nothing     -> error "Company list is not valid."
     Just result -> pure result
+
+
+-- NOTE: In demo, we used companyDataDir = "/data/groups/uphere/data/NER/company"
+-- and wikiDataDir = "/data/groups/uphere/wikidata". We should make a configuration
+-- setup for the location of the files.
 
 
 constructCompanyListFromCSV ::
